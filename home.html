@@ -23,11 +23,11 @@
         .main-wrapper {
             display: flex;
             width: 100%;
-            /* Removed max-width and min-height here as sidebar is fixed and content area will manage its size */
-            background-color: #ffffff; /* This background will be mostly covered by content-area */
+            max-width: 1400px; /* Increased max-width for sidebar */
+            background-color: #ffffff;
             border-radius: 12px;
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-            overflow: hidden; /* Ensures rounded corners are respected */
+            min-height: 90vh; /* Ensure it's tall enough */
         }
 
         /* Sidebar Styling */
@@ -41,13 +41,6 @@
             flex-direction: column;
             color: white;
             box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
-
-            /* Fixed positioning for static sidebar */
-            position: fixed;
-            top: 20px; /* Matches body padding */
-            left: 20px; /* Matches body padding */
-            height: calc(100vh - 40px); /* Full viewport height minus body padding */
-            z-index: 500; /* Ensure it's above other content if needed */
         }
 
         aside .logo-container {
@@ -138,11 +131,8 @@
             background-color: #ffffff;
             border-top-right-radius: 12px;
             border-bottom-right-radius: 12px;
-            margin-left: 270px; /* Adjust margin to account for fixed sidebar (sidebar width + its padding + some gap) */
-            width: calc(100% - 270px - 40px); /* 100% - sidebar width - body padding */
-            min-height: calc(100vh - 40px); /* Ensure content area takes full height of viewport minus body padding */
-            box-sizing: border-box; /* Include padding in height and width calculation */
-            overflow-y: auto; /* Allow vertical scrolling for content if it overflows */
+            min-height: calc(90vh - 60px); /* Adjust based on header height */
+            box-sizing: border-box; /* Include padding in height calculation */
         }
 
         /* Header Styling (within content-area) */
@@ -277,7 +267,7 @@
 
         /* Table Styling */
         .table-container {
-            overflow-x: auto; /* Only table will scroll horizontally */
+            overflow-x: auto;
             margin-top: 25px;
         }
 
@@ -626,10 +616,6 @@
             .dashboard-card p {
                 font-size: 1.8em;
             }
-            .content-area {
-                margin-left: 240px; /* Adjust margin for smaller sidebar */
-                width: calc(100% - 240px - 40px);
-            }
         }
 
         @media (max-width: 768px) {
@@ -641,14 +627,11 @@
                 border-radius: 12px; /* Reset for full width */
             }
             aside {
-                position: relative; /* Make sidebar relative on mobile */
                 width: 100%;
                 border-radius: 12px 12px 0 0; /* Rounded top corners */
                 padding: 15px 20px;
                 box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-                height: auto; /* Allow height to adjust */
-                top: auto;
-                left: auto;
+                position: relative; /* Allow for hamburger icon positioning */
             }
             aside .logo-container {
                 display: none; /* Hide logo on small screens to save space */
@@ -679,9 +662,6 @@
                 padding: 20px;
                 border-top-right-radius: 0;
                 border-bottom-left-radius: 12px; /* Rounded bottom corners */
-                margin-left: 0; /* Remove left margin on mobile */
-                width: 100%; /* Full width on mobile */
-                min-height: auto; /* Allow height to adjust */
             }
             .header {
                 flex-direction: column;
@@ -982,7 +962,33 @@
                             </div>
                         </div>
 
-                        <!-- The filtered bookings table is removed from here as per request -->
+                        <h4 style="margin-top: 30px; border-top: 1px solid #e0e0e0; padding-top: 15px;">Filtered Bookings Report</h4>
+                        <div class="table-container">
+                            <table id="filtered-bookings-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Room</th>
+                                        <th>Check-in</th>
+                                        <th>Check-out</th>
+                                        <th>Nights</th>
+                                        <th>Amt/Night</th>
+                                        <th>Total Due</th>
+                                        <th>Amount Paid</th>
+                                        <th>Balance</th>
+                                        <th>Payment Status</th>
+                                        <th>People</th>
+                                        <th>Nationality</th>
+                                        <th>Address</th>
+                                        <th>Phone</th>
+                                        <th>National ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Filtered bookings will be dynamically loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <!-- Admin/Reception Section -->
@@ -1163,7 +1169,7 @@
         const filterRoomNumberInput = document.getElementById('filter-room-number');
         const filterPaymentStatusSelect = document.getElementById('filter-payment-status');
         const filterRoomTypeSelect = document.getElementById('filter-room-type');
-        // Removed filteredBookingsTableBody as the table is no longer in the dashboard section.
+        const filteredBookingsTableBody = document.querySelector('#filtered-bookings-table tbody');
 
         // Sidebar navigation list items for dynamic visibility
         const navDashboardLi = document.getElementById('nav-dashboard-li');
@@ -1247,8 +1253,10 @@
             numberOfNightsInput.value = nights;
 
             const amountPerNight = parseFloat(amountPerNightInput.value) || 0;
-            // The total amount due is calculated and stored in the booking object.
-            // No need for a separate display field in the form.
+            const totalAmountDue = amountPerNight * nights;
+            // Note: amountDue is not a direct input anymore, it's calculated.
+            // We don't have a display field for "Total Due" in the form, only in the table.
+            // The form's purpose is input, table is output.
         }
 
         // Add event listeners for date changes to automatically calculate nights
@@ -1475,7 +1483,8 @@
                 displayBookings(); // Refresh bookings table
             } else if (sectionId === 'dashboard') {
                 dashboardSection.classList.remove('hidden');
-                applyReportFilters(); // Apply filters to the report and update dashboard cards
+                updateDashboard(bookings); // Show all bookings in dashboard initially
+                applyReportFilters(); // Apply filters to the report table
             } else if (sectionId === 'housekeeping') {
                 housekeepingSection.classList.remove('hidden');
                 displayRoomStatus(); // Refresh room status
@@ -1900,11 +1909,6 @@
                 checkOutDate.setHours(0, 0, 0, 0);
 
                 // Count guests checked in today or currently staying
-                // This logic is for "guests checked in today" or "currently checked in"
-                // For "guests checked in for a particular day filtered by dates",
-                // we need to check if the booking period overlaps with the filter date range.
-                // For simplicity, keeping it as currently checked-in for the dashboard card.
-                // The filter section will handle date range for the report values.
                 if (booking.status === 'active' && checkInDate <= today && checkOutDate > today) {
                     guestsCheckedIn += booking.numPeople || 0;
                 }
@@ -1932,7 +1936,8 @@
         }
 
         /**
-         * Applies filters to the bookings and updates the dashboard summary cards based on these filters.
+         * Applies filters to the bookings and displays them in the filtered reports table,
+         * and updates the dashboard summary cards.
          */
         function applyReportFilters() {
             let filteredBookings = [...bookings]; // Start with a copy of all bookings
@@ -1974,14 +1979,15 @@
                 });
             }
 
-            // Update dashboard cards with the *filtered* data
+            // Update dashboard cards with the filtered data
             updateDashboard(filteredBookings);
 
-            // No table to display in the dashboard section, only the summary cards are updated.
+            // Display the filtered bookings in the table below the dashboard cards
+            displayFilteredBookings(filteredBookings);
         }
 
         /**
-         * Clears all report filters and re-applies them to show overall data.
+         * Clears all report filters and re-displays all bookings in the report table.
          */
         function clearReportFilters() {
             filterStartDateInput.value = '';
@@ -1992,6 +1998,57 @@
             filterRoomTypeSelect.value = '';
             applyReportFilters(); // Re-apply filters which will now show all
         }
+
+        /**
+         * Displays a list of bookings in the filtered reports table.
+         * @param {Array<Object>} bookingsToDisplay - The array of booking objects to display.
+         */
+        function displayFilteredBookings(bookingsToDisplay) {
+            filteredBookingsTableBody.innerHTML = ''; // Clear existing rows
+            if (bookingsToDisplay.length === 0) {
+                const row = filteredBookingsTableBody.insertRow();
+                row.innerHTML = `<td colspan="15" style="text-align: center; padding: 20px;">No bookings found for the selected filters.</td>`;
+                return;
+            }
+
+            bookingsToDisplay.forEach(booking => {
+                const row = filteredBookingsTableBody.insertRow();
+                let paymentStatusClass = '';
+                if (booking.paymentStatus === 'Paid') {
+                    paymentStatusClass = 'status-paid';
+                } else if (booking.paymentStatus === 'Pending') {
+                    paymentStatusClass = 'status-pending';
+                } else if (booking.paymentStatus === 'Partial') {
+                    paymentStatusClass = 'status-partial';
+                }
+
+                row.innerHTML = `
+                    <td>${booking.customerName}</td>
+                    <td>${booking.roomNumber}</td>
+                    <td>${formatDate(booking.checkInDate)}</td>
+                    <td>${formatDate(booking.checkOutDate)}</td>
+                    <td>${booking.numberOfNights || 'N/A'}</td>
+                    <td>$${(booking.amountPerNight || 0).toFixed(2)}</td>
+                    <td>$${booking.amountDue.toFixed(2)}</td>
+                    <td>$${booking.amountPaid.toFixed(2)}</td>
+                    <td>$${booking.balance.toFixed(2)}</td>
+                    <td><span class="status-badge ${paymentStatusClass}">${booking.paymentStatus}</span></td>
+                    <td>${booking.numPeople}</td>
+                    <td>${booking.nationality || 'N/A'}</td>
+                    <td>${booking.address || 'N/A'}</td>
+                    <td>${booking.telephoneNumber || 'N/A'}</td>
+                    <td>${booking.nationalIdNumber || 'N/A'}</td>
+                `;
+            });
+        }
+
+        // --- Event Listeners for Dashboard Filters ---
+        filterStartDateInput.addEventListener('change', applyReportFilters);
+        filterEndDateInput.addEventListener('change', applyReportFilters);
+        filterCustomerNameInput.addEventListener('input', applyReportFilters);
+        filterRoomNumberInput.addEventListener('input', applyReportFilters);
+        filterPaymentStatusSelect.addEventListener('change', applyReportFilters);
+        filterRoomTypeSelect.addEventListener('change', applyReportFilters);
 
 
         // --- Initial Load ---
