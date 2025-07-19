@@ -514,14 +514,18 @@
             td:nth-of-type(2):before { content: "Room:"; }
             td:nth-of-type(3):before { content: "Check-in:"; }
             td:nth-of-type(4):before { content: "Check-out:"; }
-            td:nth-of-type(5):before { content: "Amount Due:"; }
-            td:nth-of-type(6):before { content: "Amount Paid:"; }
-            td:nth-of-type(7):before { content: "Balance:"; }
-            td:nth-of-type(8):before { content: "Payment Status:"; }
-            td:nth-of-type(9):before { content: "People:"; }
-            td:nth-of-type(10):before { content: "Nationality:"; }
-            td:nth-of-type(11):before { content: "Address:"; }
-            td:nth-of-type(12):before { content: "Actions:"; }
+            td:nth-of-type(5):before { content: "Nights:"; } /* Updated label */
+            td:nth-of-type(6):before { content: "Amt/Night:"; } /* Updated label */
+            td:nth-of-type(7):before { content: "Total Due:"; } /* New label for total */
+            td:nth-of-type(8):before { content: "Amount Paid:"; }
+            td:nth-of-type(9):before { content: "Balance:"; }
+            td:nth-of-type(10):before { content: "Payment Status:"; }
+            td:nth-of-type(11):before { content: "People:"; }
+            td:nth-of-type(12):before { content: "Nationality:"; }
+            td:nth-of-type(13):before { content: "Address:"; }
+            td:nth-of-type(14):before { content: "Phone:"; } /* New label */
+            td:nth-of-type(15):before { content: "National ID:"; } /* New label */
+            td:nth-of-type(16):before { content: "Actions:"; }
 
             .action-buttons {
                 display: flex;
@@ -615,13 +619,17 @@
                                 <th>Room</th>
                                 <th>Check-in</th>
                                 <th>Check-out</th>
-                                <th>Amount Due</th>
+                                <th>Nights</th>
+                                <th>Amt/Night</th>
+                                <th>Total Due</th>
                                 <th>Amount Paid</th>
                                 <th>Balance</th>
                                 <th>Payment Status</th>
                                 <th>People</th>
                                 <th>Nationality</th>
                                 <th>Address</th>
+                                <th>Phone</th>
+                                <th>National ID</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -668,8 +676,12 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="amount-due">Amount Due:</label>
-                    <input type="number" id="amount-due" step="0.01" required>
+                    <label for="amount-per-night">Amount per Night:</label>
+                    <input type="number" id="amount-per-night" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="number-of-nights">Number of Nights:</label>
+                    <input type="number" id="number-of-nights" min="1" required>
                 </div>
                 <div class="form-group">
                     <label for="amount-paid">Amount Paid:</label>
@@ -686,6 +698,14 @@
                 <div class="form-group">
                     <label for="address">Address (Optional):</label>
                     <input type="text" id="address">
+                </div>
+                <div class="form-group">
+                    <label for="telephone-number">Telephone Number (Optional):</label>
+                    <input type="text" id="telephone-number">
+                </div>
+                <div class="form-group">
+                    <label for="national-id-number">National ID Number (Optional):</label>
+                    <input type="text" id="national-id-number">
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn-primary">Add Booking</button>
@@ -737,11 +757,15 @@
         const checkInDateInput = document.getElementById('check-in-date');
         const checkOutDateInput = document.getElementById('check-out-date');
         const roomNumberSelect = document.getElementById('room-number');
-        const amountDueInput = document.getElementById('amount-due');
+        const amountPerNightInput = document.getElementById('amount-per-night'); // Renamed
+        const numberOfNightsInput = document.getElementById('number-of-nights'); // New field
         const amountPaidInput = document.getElementById('amount-paid');
         const numPeopleInput = document.getElementById('num-people');
-        const nationalityInput = document.getElementById('nationality'); // New field
-        const addressInput = document.getElementById('address');       // New field
+        const nationalityInput = document.getElementById('nationality');
+        const addressInput = document.getElementById('address');
+        const telephoneNumberInput = document.getElementById('telephone-number'); // New field
+        const nationalIdNumberInput = document.getElementById('national-id-number'); // New field
+
 
         // --- Utility Functions ---
 
@@ -787,6 +811,20 @@
             if (day.length < 2) day = '0' + day;
 
             return [year, month, day].join('-');
+        }
+
+        /**
+         * Calculates the number of nights between two dates.
+         * @param {string} checkInDateStr - Check-in date string (YYYY-MM-DD).
+         * @param {string} checkOutDateStr - Check-out date string (YYYY-MM-DD).
+         * @returns {number} The number of nights.
+         */
+        function calculateNights(checkInDateStr, checkOutDateStr) {
+            const checkIn = new Date(checkInDateStr);
+            const checkOut = new Date(checkOutDateStr);
+            const diffTime = Math.abs(checkOut - checkIn);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
         }
 
         /**
@@ -952,11 +990,14 @@
             checkInDateInput.value = '';
             checkOutDateInput.value = '';
             roomNumberSelect.value = '';
-            amountDueInput.value = '';
+            amountPerNightInput.value = ''; // Renamed
+            numberOfNightsInput.value = ''; // New field
             amountPaidInput.value = '0';
             numPeopleInput.value = '';
-            nationalityInput.value = ''; // Clear new field
-            addressInput.value = '';      // Clear new field
+            nationalityInput.value = '';
+            addressInput.value = '';
+            telephoneNumberInput.value = ''; // New field
+            nationalIdNumberInput.value = ''; // New field
             bookingForm.querySelector('button[type="submit"]').textContent = 'Add Booking';
             populateRoomDropdown(); // Re-populate to enable previously selected room if not editing
         }
@@ -973,15 +1014,18 @@
             const checkInDate = checkInDateInput.value;
             const checkOutDate = checkOutDateInput.value;
             const roomNumber = parseInt(roomNumberSelect.value);
-            const amountDue = parseFloat(amountDueInput.value);
+            const amountPerNight = parseFloat(amountPerNightInput.value); // Renamed
+            const numberOfNights = parseInt(numberOfNightsInput.value); // New field
             const amountPaid = parseFloat(amountPaidInput.value);
             const numPeople = parseInt(numPeopleInput.value);
-            const nationality = nationalityInput.value.trim(); // Get new field
-            const address = addressInput.value.trim();       // Get new field
+            const nationality = nationalityInput.value.trim();
+            const address = addressInput.value.trim();
+            const telephoneNumber = telephoneNumberInput.value.trim(); // New field
+            const nationalIdNumber = nationalIdNumberInput.value.trim(); // New field
 
             // Basic validation
-            if (!customerName || !checkInDate || !checkOutDate || isNaN(roomNumber) || isNaN(amountDue) || isNaN(numPeople)) {
-                showMessage('Please fill in all required fields.', 'error');
+            if (!customerName || !checkInDate || !checkOutDate || isNaN(roomNumber) || isNaN(amountPerNight) || isNaN(numberOfNights) || isNaN(numPeople)) {
+                showMessage('Please fill in all required fields (Customer Name, Dates, Room, Amount per Night, Number of Nights, People).', 'error');
                 return;
             }
 
@@ -996,6 +1040,10 @@
             }
             if (checkIn < today && !bookingId) { // For new bookings, check-in cannot be in the past
                 showMessage('Check-in date cannot be in the past for new bookings.', 'error');
+                return;
+            }
+            if (numberOfNights <= 0) {
+                showMessage('Number of nights must be at least 1.', 'error');
                 return;
             }
 
@@ -1016,12 +1064,14 @@
             // Check if the selected room is dirty
             const selectedRoom = rooms.find(r => r.id === roomNumber);
             if (selectedRoom && selectedRoom.status === 'dirty' && !bookingId) {
-                showMessage(`Room ${roomNumber} is dirty and cannot be booked until cleaned.`, 'error');
+                showMessage(`Room ${roomNumber} is dirty and cannot be booked until booked.`, 'error');
                 return;
             }
 
+            // Calculate total amount due
+            const totalAmountDue = amountPerNight * numberOfNights;
+            const balance = totalAmountDue - amountPaid;
 
-            const balance = amountDue - amountPaid;
             let paymentStatus = 'Pending';
             if (balance <= 0) {
                 paymentStatus = 'Paid';
@@ -1039,13 +1089,17 @@
                         checkInDate,
                         checkOutDate,
                         roomNumber,
-                        amountDue,
+                        amountPerNight, // Save new field
+                        numberOfNights, // Save new field
+                        amountDue: totalAmountDue, // Update amountDue to be the total calculated
                         amountPaid,
                         balance,
                         paymentStatus,
                         numPeople,
-                        nationality, // Save new field
-                        address      // Save new field
+                        nationality,
+                        address,
+                        telephoneNumber, // Save new field
+                        nationalIdNumber // Save new field
                     };
                     showMessage('Booking updated successfully!');
                 }
@@ -1057,13 +1111,17 @@
                     checkInDate,
                     checkOutDate,
                     roomNumber,
-                    amountDue,
+                    amountPerNight, // Save new field
+                    numberOfNights, // Save new field
+                    amountDue: totalAmountDue, // Save total calculated amount
                     amountPaid,
                     balance,
                     paymentStatus,
                     numPeople,
-                    nationality, // Save new field
-                    address,     // Save new field
+                    nationality,
+                    address,
+                    telephoneNumber, // Save new field
+                    nationalIdNumber, // Save new field
                     status: 'active' // Initial status for a new booking
                 };
                 bookings.push(newBooking);
@@ -1105,13 +1163,17 @@
                     <td>${booking.roomNumber}</td>
                     <td>${formatDate(booking.checkInDate)}</td>
                     <td>${formatDate(booking.checkOutDate)}</td>
-                    <td>$${booking.amountDue.toFixed(2)}</td>
+                    <td>${booking.numberOfNights || 'N/A'}</td> <!-- Display new field -->
+                    <td>$${(booking.amountPerNight || 0).toFixed(2)}</td> <!-- Display new field -->
+                    <td>$${booking.amountDue.toFixed(2)}</td> <!-- This is now the total due -->
                     <td>$${booking.amountPaid.toFixed(2)}</td>
                     <td>$${booking.balance.toFixed(2)}</td>
                     <td><span class="status-badge ${paymentStatusClass}">${booking.paymentStatus}</span></td>
                     <td>${booking.numPeople}</td>
-                    <td>${booking.nationality || 'N/A'}</td> <!-- Display new field -->
-                    <td>${booking.address || 'N/A'}</td>    <!-- Display new field -->
+                    <td>${booking.nationality || 'N/A'}</td>
+                    <td>${booking.address || 'N/A'}</td>
+                    <td>${booking.telephoneNumber || 'N/A'}</td> <!-- Display new field -->
+                    <td>${booking.nationalIdNumber || 'N/A'}</td> <!-- Display new field -->
                     <td class="action-buttons">
                         <button onclick="editBooking('${booking.id}')" class="btn-secondary">Edit</button>
                         <button onclick="deleteBooking('${booking.id}')" class="btn-danger">Delete</button>
@@ -1134,11 +1196,14 @@
                 customerNameInput.value = booking.customerName;
                 checkInDateInput.value = booking.checkInDate;
                 checkOutDateInput.value = booking.checkOutDate;
-                amountDueInput.value = booking.amountDue;
+                amountPerNightInput.value = booking.amountPerNight; // Populate new field
+                numberOfNightsInput.value = booking.numberOfNights; // Populate new field
                 amountPaidInput.value = booking.amountPaid;
                 numPeopleInput.value = booking.numPeople;
-                nationalityInput.value = booking.nationality || ''; // Populate new field
-                addressInput.value = booking.address || '';      // Populate new field
+                nationalityInput.value = booking.nationality || '';
+                addressInput.value = booking.address || '';
+                telephoneNumberInput.value = booking.telephoneNumber || ''; // Populate new field
+                nationalIdNumberInput.value = booking.nationalIdNumber || ''; // Populate new field
                 bookingForm.querySelector('button[type="submit"]').textContent = 'Update Booking';
 
                 populateRoomDropdown(booking.roomNumber); // Pass current room ID to allow re-selection
