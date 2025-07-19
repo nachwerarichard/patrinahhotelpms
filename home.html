@@ -23,10 +23,11 @@
         .main-wrapper {
             display: flex;
             width: 100%;
-            max-width: 1400px; /* Increased max-width for sidebar */
-            background-color: #ffffff;
+            max-width: 1400px; /* Reverted: Increased max-width for sidebar */
+            background-color: #ffffff; /* This background will be mostly covered by content-area */
             border-radius: 12px;
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden; /* Ensures rounded corners are respected */
             min-height: 90vh; /* Ensure it's tall enough */
         }
 
@@ -41,6 +42,13 @@
             flex-direction: column;
             color: white;
             box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+
+            /* Fixed positioning for static sidebar */
+            position: fixed;
+            top: 20px; /* Matches body padding */
+            left: 20px; /* Matches body padding */
+            height: calc(100vh - 40px); /* Full viewport height minus body padding */
+            z-index: 500; /* Ensure it's above other content if needed */
         }
 
         aside .logo-container {
@@ -131,8 +139,11 @@
             background-color: #ffffff;
             border-top-right-radius: 12px;
             border-bottom-right-radius: 12px;
-            min-height: calc(90vh - 60px); /* Adjust based on header height */
-            box-sizing: border-box; /* Include padding in height calculation */
+            margin-left: 270px; /* Adjust margin to account for fixed sidebar (sidebar width + its padding + some gap) */
+            width: calc(100% - 270px - 40px); /* 100% - sidebar width - body padding */
+            min-height: calc(100vh - 40px); /* Ensure content area takes full height of viewport minus body padding */
+            box-sizing: border-box; /* Include padding in height and width calculation */
+            overflow-y: auto; /* Allow vertical scrolling for content if it overflows */
         }
 
         /* Header Styling (within content-area) */
@@ -267,7 +278,7 @@
 
         /* Table Styling */
         .table-container {
-            overflow-x: auto;
+            overflow-x: auto; /* Only table will scroll horizontally */
             margin-top: 25px;
         }
 
@@ -616,6 +627,10 @@
             .dashboard-card p {
                 font-size: 1.8em;
             }
+            .content-area {
+                margin-left: 240px; /* Adjust margin for smaller sidebar */
+                width: calc(100% - 240px - 40px);
+            }
         }
 
         @media (max-width: 768px) {
@@ -627,11 +642,14 @@
                 border-radius: 12px; /* Reset for full width */
             }
             aside {
+                position: relative; /* Make sidebar relative on mobile */
                 width: 100%;
                 border-radius: 12px 12px 0 0; /* Rounded top corners */
                 padding: 15px 20px;
                 box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-                position: relative; /* Allow for hamburger icon positioning */
+                height: auto; /* Allow height to adjust */
+                top: auto;
+                left: auto;
             }
             aside .logo-container {
                 display: none; /* Hide logo on small screens to save space */
@@ -662,6 +680,9 @@
                 padding: 20px;
                 border-top-right-radius: 0;
                 border-bottom-left-radius: 12px; /* Rounded bottom corners */
+                margin-left: 0; /* Remove left margin on mobile */
+                width: 100%; /* Full width on mobile */
+                min-height: auto; /* Allow height to adjust */
             }
             .header {
                 flex-direction: column;
@@ -1253,10 +1274,8 @@
             numberOfNightsInput.value = nights;
 
             const amountPerNight = parseFloat(amountPerNightInput.value) || 0;
-            const totalAmountDue = amountPerNight * nights;
-            // Note: amountDue is not a direct input anymore, it's calculated.
-            // We don't have a display field for "Total Due" in the form, only in the table.
-            // The form's purpose is input, table is output.
+            // The total amount due is calculated and stored in the booking object.
+            // No need for a separate display field in the form.
         }
 
         // Add event listeners for date changes to automatically calculate nights
@@ -1483,8 +1502,7 @@
                 displayBookings(); // Refresh bookings table
             } else if (sectionId === 'dashboard') {
                 dashboardSection.classList.remove('hidden');
-                updateDashboard(bookings); // Show all bookings in dashboard initially
-                applyReportFilters(); // Apply filters to the report table
+                applyReportFilters(); // Apply filters to the report and update dashboard cards
             } else if (sectionId === 'housekeeping') {
                 housekeepingSection.classList.remove('hidden');
                 displayRoomStatus(); // Refresh room status
@@ -1568,10 +1586,7 @@
                 showMessage('Check-out date must be after check-in date.', 'error');
                 return;
             }
-            if (checkIn < today && !bookingId) { // For new bookings, check-in cannot be in the past
-                showMessage('Check-in date cannot be in the past for new bookings.', 'error');
-                return;
-            }
+            // Removed: if (checkIn < today && !bookingId) { showMessage('Check-in date cannot be in the past for new bookings.', 'error'); return; }
             if (numberOfNights <= 0) {
                 showMessage('Number of nights must be at least 1.', 'error');
                 return;
@@ -1909,6 +1924,11 @@
                 checkOutDate.setHours(0, 0, 0, 0);
 
                 // Count guests checked in today or currently staying
+                // This logic is for "guests checked in today" or "currently checked in"
+                // For "guests checked in for a particular day filtered by dates",
+                // we need to check if the booking period overlaps with the filter date range.
+                // For simplicity, keeping it as currently checked-in for the dashboard card.
+                // The filter section will handle date range for the report values.
                 if (booking.status === 'active' && checkInDate <= today && checkOutDate > today) {
                     guestsCheckedIn += booking.numPeople || 0;
                 }
@@ -1936,8 +1956,7 @@
         }
 
         /**
-         * Applies filters to the bookings and displays them in the filtered reports table,
-         * and updates the dashboard summary cards.
+         * Applies filters to the bookings and updates the dashboard summary cards and table based on these filters.
          */
         function applyReportFilters() {
             let filteredBookings = [...bookings]; // Start with a copy of all bookings
@@ -1979,7 +1998,7 @@
                 });
             }
 
-            // Update dashboard cards with the filtered data
+            // Update dashboard cards with the *filtered* data
             updateDashboard(filteredBookings);
 
             // Display the filtered bookings in the table below the dashboard cards
@@ -1987,7 +2006,7 @@
         }
 
         /**
-         * Clears all report filters and re-displays all bookings in the report table.
+         * Clears all report filters and re-applies them to show overall data.
          */
         function clearReportFilters() {
             filterStartDateInput.value = '';
@@ -2041,6 +2060,7 @@
                 `;
             });
         }
+
 
         // --- Event Listeners for Dashboard Filters ---
         filterStartDateInput.addEventListener('change', applyReportFilters);
