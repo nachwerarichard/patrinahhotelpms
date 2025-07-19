@@ -131,6 +131,8 @@
             background-color: #ffffff;
             border-top-right-radius: 12px;
             border-bottom-right-radius: 12px;
+            min-height: calc(90vh - 60px); /* Adjust based on header height */
+            box-sizing: border-box; /* Include padding in height calculation */
         }
 
         /* Header Styling (within content-area) */
@@ -901,19 +903,19 @@
                         <h3 class="section-title">Dashboard Overview</h3>
                         <div class="dashboard-cards">
                             <div class="dashboard-card green">
-                                <h4>Total Collected (All Time)</h4>
+                                <h4>Total Collected (Filtered)</h4>
                                 <p id="total-collected">$0.00</p>
                             </div>
                             <div class="dashboard-card red">
-                                <h4>Total Balances Remaining</h4>
+                                <h4>Total Balances Remaining (Filtered)</h4>
                                 <p id="total-balances">$0.00</p>
                             </div>
                             <div class="dashboard-card blue">
-                                <h4>Guests Checked In (Today)</h4>
+                                <h4>Guests Checked In (Filtered)</h4>
                                 <p id="guests-checked-in">0</p>
                             </div>
                             <div class="dashboard-card purple">
-                                <h4>Most Booked Room Type</h4>
+                                <h4>Most Booked Room Type (Filtered)</h4>
                                 <p id="most-booked-room-type">N/A</p>
                             </div>
                         </div>
@@ -1066,7 +1068,7 @@
                 </div>
                 <div class="form-group">
                     <label for="number-of-nights">Number of Nights:</label>
-                    <input type="number" id="number-of-nights" min="1" required>
+                    <input type="number" id="number-of-nights" min="1" readonly> <!-- Made readonly -->
                 </div>
                 <div class="form-group">
                     <label for="amount-paid">Amount Paid:</label>
@@ -1110,7 +1112,7 @@
         let rooms = JSON.parse(localStorage.getItem('hotelRooms')) || [
             { id: 101, status: 'clean', type: 'Standard' },
             { id: 102, status: 'clean', type: 'Standard' },
-            { id: 103, status: 'clean', type: 'Deluxe' }, // Corrected initial status
+            { id: 103, status: 'clean', type: 'Deluxe' },
             { id: 104, status: 'clean', type: 'Deluxe' },
             { id: 201, status: 'clean', type: 'Suite' },
             { id: 202, status: 'clean', type: 'Standard' },
@@ -1225,15 +1227,42 @@
          * Calculates the number of nights between two dates.
          * @param {string} checkInDateStr - Check-in date string (YYYY-MM-DD).
          * @param {string} checkOutDateStr - Check-out date string (YYYY-MM-DD).
-         * @returns {number} The number of nights.
+         * @returns {number} The number of nights. Returns 0 if dates are invalid or check-out is before check-in.
          */
         function calculateNights(checkInDateStr, checkOutDateStr) {
+            if (!checkInDateStr || !checkOutDateStr) {
+                return 0;
+            }
             const checkIn = new Date(checkInDateStr);
             const checkOut = new Date(checkOutDateStr);
+
+            if (checkIn >= checkOut) {
+                return 0; // Check-out must be after check-in
+            }
+
             const diffTime = Math.abs(checkOut - checkIn);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             return diffDays;
         }
+
+        /**
+         * Updates the number of nights input and recalculates total amount due.
+         */
+        function updateNightsAndAmount() {
+            const nights = calculateNights(checkInDateInput.value, checkOutDateInput.value);
+            numberOfNightsInput.value = nights;
+
+            const amountPerNight = parseFloat(amountPerNightInput.value) || 0;
+            const totalAmountDue = amountPerNight * nights;
+            // Note: amountDue is not a direct input anymore, it's calculated.
+            // We don't have a display field for "Total Due" in the form, only in the table.
+            // The form's purpose is input, table is output.
+        }
+
+        // Add event listeners for date changes to automatically calculate nights
+        checkInDateInput.addEventListener('change', updateNightsAndAmount);
+        checkOutDateInput.addEventListener('change', updateNightsAndAmount);
+        amountPerNightInput.addEventListener('input', updateNightsAndAmount); // Also update if amount per night changes
 
         /**
          * Populates the room number dropdown with available rooms.
@@ -1344,6 +1373,7 @@
             clearForm(); // Ensure form is empty for new booking
             populateRoomDropdown(); // Populate dropdown for new booking
             openModal();
+            updateNightsAndAmount(); // Initial calculation for new booking
         }
 
         // --- Authentication ---
@@ -1453,8 +1483,8 @@
                 displayBookings(); // Refresh bookings table
             } else if (sectionId === 'dashboard') {
                 dashboardSection.classList.remove('hidden');
-                updateDashboard(); // Refresh dashboard data
-                applyReportFilters(); // Initial display of filtered bookings
+                updateDashboard(bookings); // Show all bookings in dashboard initially
+                applyReportFilters(); // Apply filters to the report table
             } else if (sectionId === 'housekeeping') {
                 housekeepingSection.classList.remove('hidden');
                 displayRoomStatus(); // Refresh room status
@@ -1491,7 +1521,7 @@
             checkOutDateInput.value = '';
             roomNumberSelect.value = '';
             amountPerNightInput.value = '';
-            numberOfNightsInput.value = '';
+            numberOfNightsInput.value = ''; // Clear calculated nights
             amountPaidInput.value = '0';
             numPeopleInput.value = '';
             nationalityInput.value = '';
@@ -1515,7 +1545,7 @@
             const checkOutDate = checkOutDateInput.value;
             const roomNumber = parseInt(roomNumberSelect.value);
             const amountPerNight = parseFloat(amountPerNightInput.value);
-            const numberOfNights = parseInt(numberOfNightsInput.value);
+            const numberOfNights = parseInt(numberOfNightsInput.value); // Read the calculated value
             const amountPaid = parseFloat(amountPaidInput.value);
             const numPeople = parseInt(numPeopleInput.value);
             const nationality = nationalityInput.value.trim();
@@ -1632,7 +1662,7 @@
             displayBookings();
             closeModal(); // Close modal after successful submission
             populateRoomDropdown(); // Re-populate dropdown to reflect new room availability
-            updateDashboard(); // Update dashboard after booking changes
+            updateDashboard(bookings); // Update dashboard with ALL bookings after a new booking/edit
         });
 
         /**
@@ -1711,6 +1741,7 @@
                 roomNumberSelect.value = booking.roomNumber; // Set the selected room
 
                 openModal(); // Open the modal
+                updateNightsAndAmount(); // Ensure nights are calculated on edit load
                 showMessage('Editing booking: ' + booking.customerName);
             }
         }
@@ -1727,7 +1758,7 @@
                 saveData();
                 displayBookings();
                 updateRoomStatusesBasedOnBookings(); // Recalculate room statuses
-                updateDashboard(); // Update dashboard after booking changes
+                updateDashboard(bookings); // Update dashboard with ALL bookings after deletion
                 showMessage('Booking deleted successfully!');
             }
         }
@@ -1754,7 +1785,7 @@
                 saveData();
                 displayBookings(); // Re-render bookings table
                 displayRoomStatus(); // Re-render room status for housekeeping
-                updateDashboard(); // Update dashboard after booking changes
+                updateDashboard(bookings); // Update dashboard with ALL bookings after check-out
                 showMessage(`Guest ${booking.customerName} checked out from Room ${booking.roomNumber}. Room marked dirty.`);
             }
         }
@@ -1849,7 +1880,7 @@
                 saveData();
                 displayRoomStatus(); // Re-render room status
                 populateRoomDropdown(); // Update dropdown for admin
-                updateDashboard(); // Update dashboard after room status change
+                updateDashboard(bookings); // Update dashboard with ALL bookings after room status change
                 showMessage(`Room ${roomId} marked as clean!`);
             }
         }
@@ -1858,8 +1889,9 @@
 
         /**
          * Updates the dashboard summary cards with current data.
+         * @param {Array<Object>} dataToAggregate - The array of booking objects to aggregate data from.
          */
-        function updateDashboard() {
+        function updateDashboard(dataToAggregate) {
             let totalCollected = 0;
             let totalBalances = 0;
             let guestsCheckedIn = 0;
@@ -1867,7 +1899,7 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            bookings.forEach(booking => {
+            dataToAggregate.forEach(booking => {
                 totalCollected += booking.amountPaid || 0;
                 totalBalances += booking.balance || 0;
 
@@ -1901,13 +1933,11 @@
                 }
             }
             mostBookedRoomTypeDisplay.textContent = mostBookedType;
-
-            // Apply filters to the report table initially
-            applyReportFilters();
         }
 
         /**
-         * Applies filters to the bookings and displays them in the filtered reports table.
+         * Applies filters to the bookings and displays them in the filtered reports table,
+         * and updates the dashboard summary cards.
          */
         function applyReportFilters() {
             let filteredBookings = [...bookings]; // Start with a copy of all bookings
@@ -1949,6 +1979,10 @@
                 });
             }
 
+            // Update dashboard cards with the filtered data
+            updateDashboard(filteredBookings);
+
+            // Display the filtered bookings in the table below the dashboard cards
             displayFilteredBookings(filteredBookings);
         }
 
