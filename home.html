@@ -866,15 +866,15 @@
                     </div>
                     <nav id="main-nav">
                         <ul>
-                            <li><a href="#" id="nav-dashboard" onclick="showSection('dashboard', this)">
+                            <li id="nav-dashboard-li"><a href="#" id="nav-dashboard" onclick="showSection('dashboard', this)">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
                                 Dashboard
                             </a></li>
-                            <li><a href="#" id="nav-bookings" onclick="showSection('admin', this)">
+                            <li id="nav-bookings-li"><a href="#" id="nav-bookings" onclick="showSection('admin', this)">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M19 4h-3V2h-2v2h-4V2H8v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h2v2H7zm0 4h2v2H7zm4-4h2v2h-2zm0 4h2v2h-2zm4-4h2v2h-2zm0 4h2v2h-2z"/></svg>
                                 Booking Management
                             </a></li>
-                            <li><a href="#" id="nav-housekeeping" onclick="showSection('housekeeping', this)">
+                            <li id="nav-housekeeping-li"><a href="#" id="nav-housekeeping" onclick="showSection('housekeeping', this)">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M19 10h-2V7c0-1.66-1.34-3-3-3s-3 1.34-3 3v3H5c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-2c0-1.1-.9-2-2-2zm-4-3c0-.55.45-1 1-1s1 .45 1 1v3h-2V7z"/></svg>
                                 Housekeeping
                             </a></li>
@@ -1110,7 +1110,7 @@
         let rooms = JSON.parse(localStorage.getItem('hotelRooms')) || [
             { id: 101, status: 'clean', type: 'Standard' },
             { id: 102, status: 'clean', type: 'Standard' },
-            { id: 103, status: 'Deluxe', type: 'Deluxe' },
+            { id: 103, status: 'clean', type: 'Deluxe' }, // Corrected initial status
             { id: 104, status: 'clean', type: 'Deluxe' },
             { id: 201, status: 'clean', type: 'Suite' },
             { id: 202, status: 'clean', type: 'Standard' },
@@ -1168,6 +1168,11 @@
         const filterPaymentStatusSelect = document.getElementById('filter-payment-status');
         const filterRoomTypeSelect = document.getElementById('filter-room-type');
         const filteredBookingsTableBody = document.querySelector('#filtered-bookings-table tbody');
+
+        // Sidebar navigation list items for dynamic visibility
+        const navDashboardLi = document.getElementById('nav-dashboard-li');
+        const navBookingsLi = document.getElementById('nav-bookings-li');
+        const navHousekeepingLi = document.getElementById('nav-housekeeping-li');
 
 
         // --- Utility Functions ---
@@ -1364,6 +1369,9 @@
                 appSection.classList.remove('hidden');
                 welcomeMessage.textContent = `Welcome, ${currentUsername.charAt(0).toUpperCase() + currentUsername.slice(1)}!`;
 
+                // Update sidebar visibility based on role
+                updateSidebarVisibility();
+
                 // Show initial section based on role
                 if (currentRole === 'admin') {
                     showSection('dashboard', document.getElementById('nav-dashboard')); // Default to dashboard for admin
@@ -1390,16 +1398,46 @@
             dashboardSection.classList.add('hidden'); // Hide dashboard
             usernameInput.value = '';
             passwordInput.value = '';
+            // Reset sidebar visibility on logout
+            updateSidebarVisibility();
             showMessage('Logged out successfully!');
         }
 
         /**
+         * Updates the visibility of sidebar navigation links based on current user role.
+         */
+        function updateSidebarVisibility() {
+            if (currentRole === 'admin') {
+                navDashboardLi.classList.remove('hidden');
+                navBookingsLi.classList.remove('hidden');
+                navHousekeepingLi.classList.remove('hidden');
+            } else if (currentRole === 'housekeeper') {
+                navDashboardLi.classList.add('hidden');
+                navBookingsLi.classList.add('hidden');
+                navHousekeepingLi.classList.remove('hidden');
+            } else { // Not logged in
+                navDashboardLi.classList.add('hidden');
+                navBookingsLi.classList.add('hidden');
+                navHousekeepingLi.classList.add('hidden');
+            }
+        }
+
+        /**
          * Shows the selected application section and updates active navigation link.
+         * Enforces role-based access control.
          * @param {string} sectionId - The ID of the section to show ('dashboard', 'admin', 'housekeeping').
          * @param {HTMLElement} clickedLink - The navigation link element that was clicked.
          */
         function showSection(sectionId, clickedLink) {
-            // Hide all sections first
+            // Check authorization first
+            if (currentRole === 'housekeeper' && (sectionId === 'dashboard' || sectionId === 'admin')) {
+                showMessage('Access Denied: Housekeepers can only access the Housekeeping section.', 'error');
+                // Redirect them to housekeeping if they try to access other sections
+                sectionId = 'housekeeping';
+                clickedLink = document.getElementById('nav-housekeeping');
+            }
+
+            // Hide all sections
             adminSection.classList.add('hidden');
             housekeepingSection.classList.add('hidden');
             dashboardSection.classList.add('hidden');
@@ -1409,26 +1447,19 @@
                 link.classList.remove('active');
             });
 
-            // Show the selected section based on role
-            if (currentRole === 'admin') {
-                if (sectionId === 'admin') {
-                    adminSection.classList.remove('hidden');
-                    displayBookings(); // Refresh bookings table
-                } else if (sectionId === 'dashboard') {
-                    dashboardSection.classList.remove('hidden');
-                    updateDashboard(); // Refresh dashboard data
-                    applyReportFilters(); // Initial display of filtered bookings
-                }
-            } else if (currentRole === 'housekeeper' && sectionId === 'housekeeping') {
+            // Show the selected section and add active class
+            if (sectionId === 'admin') {
+                adminSection.classList.remove('hidden');
+                displayBookings(); // Refresh bookings table
+            } else if (sectionId === 'dashboard') {
+                dashboardSection.classList.remove('hidden');
+                updateDashboard(); // Refresh dashboard data
+                applyReportFilters(); // Initial display of filtered bookings
+            } else if (sectionId === 'housekeeping') {
                 housekeepingSection.classList.remove('hidden');
                 displayRoomStatus(); // Refresh room status
-            } else {
-                // Fallback or unauthorized access attempt
-                showMessage('Unauthorized access to this section.', 'error');
-                return;
             }
 
-            // Add active class to the clicked link
             if (clickedLink) {
                 clickedLink.classList.add('active');
             }
@@ -1998,6 +2029,7 @@
             // Perform initial room status update based on existing bookings
             updateRoomStatusesBasedOnBookings();
             populateRoomTypeFilterDropdown(); // Populate room type filter on load
+            updateSidebarVisibility(); // Set initial sidebar visibility
         };
 
     </script>
