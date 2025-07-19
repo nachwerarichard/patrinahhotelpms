@@ -605,7 +605,7 @@
             <!-- Admin/Reception Section -->
             <div id="admin-section" class="hidden">
                 <h3 class="section-title">Booking Management</h3>
-                <button onclick="openBookingModal('add')" class="btn-primary" style="margin-bottom: 20px;">Add New Booking</button>
+                <button onclick="openBookingModal()" class="btn-primary" style="margin-bottom: 20px;">Add New Booking</button>
 
                 <div class="table-container">
                     <table id="bookings-table">
@@ -860,6 +860,7 @@
          * Opens the booking modal.
          */
         function openModal() {
+            bookingModal.classList.remove('hidden'); // Ensure the modal is no longer hidden
             bookingModal.classList.add('show');
         }
 
@@ -868,6 +869,10 @@
          */
         function closeModal() {
             bookingModal.classList.remove('show');
+            // Add hidden after a slight delay to allow the fade-out transition to complete
+            setTimeout(() => {
+                bookingModal.classList.add('hidden');
+            }, 300); // Match CSS transition duration
             clearForm(); // Always clear form when closing modal
         }
 
