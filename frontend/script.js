@@ -280,6 +280,7 @@ function handleNavigation(event) {
     // Special handling for the 'nav-booking' link to map to 'booking-management' section
     if (event.target.id === 'nav-booking') {
         targetId = 'booking-management';
+        renderBookings();
     }
 
     // Prevent navigation if the user's role doesn't permit it
@@ -338,6 +339,7 @@ function handleNavigation(event) {
     // Handle booking nav mapping
     if (event.target.id === 'nav-booking') {
         targetId = 'booking-management';
+        renderBookings();
     }
 
     // Housekeeper should not access other sections
