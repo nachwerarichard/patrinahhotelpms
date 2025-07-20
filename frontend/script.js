@@ -264,6 +264,12 @@ function applyRoleAccess(role) {
     sections.forEach(section => {
         const sectionId = section.id;
         if (role === 'admin') {
+            if (sectionId === 'booking') {
+                section.style.display = 'block'; // Housekeeper only sees housekeeping
+            } 
+            else {
+                section.style.display = 'block';
+            }
             // Sections are now controlled solely by the 'active' class via CSS and handleNavigation
             // No explicit display: none here for admin sections
         } else if (role === 'housekeeper') {
