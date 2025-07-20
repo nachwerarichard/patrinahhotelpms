@@ -893,7 +893,7 @@
                     <label for="password">Password:</label>
                     <input type="password" id="password" placeholder="Enter password">
                 </div>
-                <button onclick="login()" class="btn-primary">Login</button>
+                <button id="login-button" class="btn-primary">Login</button>
                 <p id="login-error" class="hidden">Invalid username or password.</p>
             </div>
         </div>
@@ -1169,6 +1169,7 @@
         let mainNav;
         let sidebarLogoutSection;
         let hamburgerMenu;
+        let loginButton; // New variable for the login button
 
         // Modal specific elements
         let bookingModal;
@@ -1363,16 +1364,14 @@
             uniqueRoomTypes.sort(); // Sort alphabetically for consistent display
 
             // Populate dashboard filter
-            if (filterRoomTypeSelect) { // Check if element exists before populating
-                filterRoomTypeSelect.innerHTML = '<option value="">All</option>';
-                uniqueRoomTypes.forEach(type => {
-                    const option = document.createElement('option');
-                    option.value = type;
-                    option.textContent = type;
-                    filterRoomTypeSelect.appendChild(option);
-                });
-            }
-
+            // filterRoomTypeSelect is not defined globally, so this check is important
+            // However, the dashboard filter for room type is not present in the HTML.
+            // This part of the function might be vestigial or intended for a future feature.
+            // For now, it's safe to keep the `if (filterRoomTypeSelect)` check.
+            // If it were present, it would be assigned in window.onload.
+            // The current HTML does not have an element with id="filter-room-type".
+            // So, `filterRoomTypeSelect` will always be undefined. I'll remove the `if` check
+            // and the code inside it to avoid confusion, as it's not used.
 
             // Populate booking management filter
             if (bookingFilterRoomTypeSelect) { // Check if element exists before populating
@@ -2083,6 +2082,7 @@
             mainNav = document.getElementById('main-nav');
             sidebarLogoutSection = document.getElementById('sidebar-logout-section');
             hamburgerMenu = document.querySelector('.hamburger-menu');
+            loginButton = document.getElementById('login-button'); // Assign the login button
 
             bookingModal = document.getElementById('booking-modal');
             modalTitle = document.getElementById('modal-title');
@@ -2125,6 +2125,7 @@
             dashboardSection.classList.add('hidden'); // Ensure dashboard is hidden initially
 
             // 3. Attach ALL event listeners (now that elements are assigned)
+            if (loginButton) loginButton.addEventListener('click', login); // Attach event listener for login button
             if (checkInDateInput) checkInDateInput.addEventListener('change', updateNightsAndAmount);
             if (checkOutDateInput) checkOutDateInput.addEventListener('change', updateNightsAndAmount);
             if (amountPerNightInput) amountPerNightInput.addEventListener('input', updateNightsAndAmount);
