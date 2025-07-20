@@ -1,0 +1,2049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* General Body and Container Styling */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to top for better content flow */
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            color: #333;
+        }
+
+        .main-wrapper {
+            display: flex;
+            width: 100%;
+            max-width: 1400px; /* Max-width for the overall application content */
+            background-color: #ffffff; /* This background will be mostly covered by content-area */
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden; /* Ensures rounded corners are respected */
+            min-height: 90vh; /* Ensure it's tall enough */
+        }
+
+        /* Sidebar Styling */
+        aside {
+            width: 250px;
+            background-color: #2c3e50; /* Darker sidebar background */
+            padding: 20px;
+            border-top-left-radius: 12px;
+            border-bottom-left-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            color: white;
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+
+            /* Fixed positioning for static sidebar */
+            position: fixed;
+            top: 20px; /* Matches body padding */
+            left: 20px; /* Matches body padding */
+            height: calc(100vh - 40px); /* Full viewport height minus body padding */
+            z-index: 500; /* Ensure it's above other content if needed */
+        }
+
+        aside .logo-container {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        aside .logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: #3498db; /* Logo background color */
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5em;
+            font-weight: 700;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        aside nav {
+            flex-grow: 1;
+        }
+
+        aside nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        aside nav ul li {
+            margin-bottom: 10px;
+        }
+
+        aside nav ul li a {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            font-weight: 500;
+        }
+
+        aside nav ul li a:hover,
+        aside nav ul li a.active {
+            background-color: #3498db; /* Active/hover color */
+            color: white;
+        }
+
+        aside nav ul li a svg {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
+            fill: currentColor; /* Inherit color from parent */
+        }
+
+        aside .logout-section {
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        aside .logout-section button {
+            width: 100%;
+            background-color: #e74c3c;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        aside .logout-section button:hover {
+            background-color: #c0392b;
+        }
+
+        /* Main Content Area */
+        .content-area {
+            flex-grow: 1;
+            padding: 30px;
+            background-color: #ffffff;
+            border-top-right-radius: 12px;
+            border-bottom-right-radius: 12px;
+            margin-left: 270px; /* Adjust margin to account for fixed sidebar (sidebar width + its padding + some gap) */
+            width: calc(100% - 270px - 40px); /* 100% - sidebar width - body padding */
+            min-height: calc(100vh - 40px); /* Ensure content area takes full height of viewport minus body padding */
+            box-sizing: border-box; /* Include padding in height and width calculation */
+            overflow-y: auto; /* Allow vertical scrolling for content if it overflows */
+        }
+
+        /* Header Styling (within content-area) */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .header h2 {
+            font-size: 2.2em;
+            font-weight: 700;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        /* Section Titles */
+        .section-title {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        /* Consistent section sizing for content areas */
+        #dashboard-section,
+        #admin-section,
+        #housekeeping-section {
+            min-height: calc(100% - 80px); /* Adjust based on header/footer space if any, to fill content area */
+            overflow-y: auto; /* Allow internal scrolling if content overflows */
+        }
+
+
+        /* Form Styling */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 0; /* No padding here, modal content handles it */
+            margin-bottom: 0; /* No margin here, modal content handles it */
+        }
+
+        .form-group {
+            margin-bottom: 0; /* Handled by grid gap */
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group input[type="date"],
+        .form-group input[type="password"],
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 1em;
+            color: #444;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+            outline: none;
+        }
+
+        .form-actions {
+            grid-column: 1 / -1; /* Span all columns */
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        /* Button Styling */
+        button {
+            padding: 12px 22px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #2980b9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #c0392b;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-success {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #27ae60;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Table Styling */
+        .table-container {
+            overflow-x: auto; /* Only table will scroll horizontally */
+            margin-top: 25px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        th, td {
+            padding: 14px 18px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            font-weight: 600;
+            color: #555;
+            text-transform: uppercase;
+            font-size: 0.9em;
+        }
+
+        tr:nth-child(even) {
+            background-color: #fcfcfc;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .action-buttons button {
+            margin-right: 8px;
+            padding: 8px 14px;
+            font-size: 0.85em;
+            box-shadow: none;
+        }
+        .action-buttons button:last-child {
+            margin-right: 0;
+        }
+        .action-buttons button:hover {
+            transform: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+
+        /* Status Badges */
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: 600;
+            display: inline-block;
+            text-align: center;
+            min-width: 70px;
+        }
+
+        .status-paid {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-pending {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status-partial {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        /* Room Status Specific Badges */
+        .status-clean {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-dirty {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status-occupied {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+
+        /* Housekeeping Section Styling */
+        #room-status-list {
+            background-color: #f9f9f9;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .room-status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .room-status-item:last-child {
+            border-bottom: none;
+        }
+        .room-status-item span {
+            font-weight: 500;
+            color: #333;
+            font-size: 1.1em;
+        }
+        .room-status-item button {
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+
+        /* Login Section Specific */
+        #login-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            width: 100%; /* Ensure it takes full width of container */
+        }
+
+        #login-section .login-box {
+            background-color: #f9f9f9;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        #login-section h2 {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+
+        #login-section .form-group {
+            margin-bottom: 20px;
+        }
+
+        #login-section input {
+            background-color: #fdfdff;
+        }
+
+        #login-section button {
+            width: 100%;
+            padding: 14px;
+            font-size: 1.1em;
+            margin-top: 10px;
+        }
+
+        #login-error {
+            color: #e74c3c;
+            margin-top: 15px;
+            font-weight: 500;
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none !important; /* Use !important to ensure override */
+        }
+
+        /* Message Box */
+        .message-box {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #2ecc71; /* Default success */
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            font-weight: 500;
+        }
+
+        .message-box.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .message-box.error {
+            background-color: #e74c3c;
+        }
+
+        /* Modal Specific Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: relative;
+            max-width: 90%;
+            width: 700px; /* Max width for the modal */
+            max-height: 90vh; /* Max height to allow scrolling if content is long */
+            overflow-y: auto; /* Enable scrolling for long content */
+            transform: translateY(-50px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.show .modal-content {
+            transform: translateY(0);
+        }
+
+        .close-button {
+            position: absolute;
+            top: 15px;
+            right: 25px;
+            font-size: 2em;
+            cursor: pointer;
+            color: #888;
+            transition: color 0.2s ease;
+        }
+
+        .close-button:hover {
+            color: #555;
+        }
+
+        /* Dashboard Specific Styles */
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .dashboard-card {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+
+        .dashboard-card h4 {
+            font-size: 1.2em;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .dashboard-card p {
+            font-size: 2em;
+            font-weight: 700;
+            color: #3498db;
+            margin: 0;
+        }
+
+        .dashboard-card.red p { color: #e74c3c; }
+        .dashboard-card.green p { color: #2ecc71; }
+        .dashboard-card.blue p { color: #3498db; }
+        .dashboard-card.purple p { color: #9b59b6; }
+
+        .dashboard-card .room-type-list {
+            font-size: 1em;
+            font-weight: 500;
+            color: #333;
+            list-style: none;
+            padding: 0;
+            margin-top: 10px;
+            text-align: left;
+        }
+        .dashboard-card .room-type-list li {
+            margin-bottom: 5px;
+            padding-left: 10px;
+            border-left: 3px solid #ddd;
+        }
+
+
+        .filter-section {
+            background-color: #f9f9f9;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+        }
+
+        .filter-section h4 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-grid .form-group {
+            margin-bottom: 0;
+        }
+
+        .filter-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 1024px) {
+            th, td {
+                padding: 12px 15px;
+            }
+            .header h2 {
+                font-size: 2em;
+            }
+            .section-title {
+                font-size: 1.6em;
+            }
+            aside {
+                width: 200px; /* Slightly smaller sidebar */
+                padding: 15px;
+            }
+            aside .logo {
+                width: 60px;
+                height: 60px;
+                font-size: 2em;
+            }
+            aside nav ul li a {
+                padding: 10px 12px;
+                font-size: 0.9em;
+            }
+            aside nav ul li a svg {
+                width: 18px;
+                height: 18px;
+            }
+            .dashboard-cards {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+            .dashboard-card p {
+                font-size: 1.8em;
+            }
+            .content-area {
+                margin-left: 240px; /* Adjust margin for smaller sidebar */
+                width: calc(100% - 240px - 40px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            .main-wrapper {
+                flex-direction: column;
+                border-radius: 12px; /* Reset for full width */
+            }
+            aside {
+                position: relative; /* Make sidebar relative on mobile */
+                width: 100%;
+                border-radius: 12px 12px 0 0; /* Rounded top corners */
+                padding: 15px 20px;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+                height: auto; /* Allow height to adjust */
+                top: auto;
+                left: auto;
+            }
+            aside .logo-container {
+                display: none; /* Hide logo on small screens to save space */
+            }
+            aside nav {
+                display: none; /* Hidden by default, toggled by hamburger */
+                flex-direction: column;
+                width: 100%;
+                margin-top: 10px;
+            }
+            aside nav.show {
+                display: flex;
+            }
+            aside nav ul li {
+                margin-bottom: 5px;
+            }
+            aside nav ul li a {
+                justify-content: center; /* Center links in mobile */
+            }
+            aside .logout-section {
+                display: none; /* Hidden by default, toggled by hamburger */
+            }
+            aside .logout-section.show {
+                display: block;
+            }
+
+            .content-area {
+                padding: 20px;
+                border-top-right-radius: 0;
+                border-bottom-left-radius: 12px; /* Rounded bottom corners */
+                margin-left: 0; /* Remove left margin on mobile */
+                width: 100%; /* Full width on mobile */
+                min-height: auto; /* Allow height to adjust */
+            }
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .header h2 {
+                margin-bottom: 15px;
+                font-size: 1.8em;
+            }
+            .section-title {
+                font-size: 1.4em;
+            }
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            .form-actions {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .form-actions button {
+                width: 100%;
+            }
+            .action-buttons button {
+                margin-right: 0;
+                margin-bottom: 8px;
+                width: 100%;
+            }
+            .table-container {
+                /* Force horizontal scroll for small screens if table is too wide */
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            }
+            table, thead, tbody, th, td, tr {
+                display: block; /* Make table elements behave like block elements */
+            }
+            thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            tr {
+                border: 1px solid #eee;
+                margin-bottom: 15px;
+                border-radius: 8px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            }
+            td {
+                border: none;
+                position: relative;
+                padding-left: 50%; /* Space for the label */
+                text-align: right;
+            }
+            td:before {
+                position: absolute;
+                left: 6px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                text-align: left;
+                font-weight: 600;
+                color: #555;
+            }
+            /* Labeling the cells for mobile view */
+            td:nth-of-type(1):before { content: "Name:"; }
+            td:nth-of-type(2):before { content: "Room:"; }
+            td:nth-of-type(3):before { content: "Check-in:"; }
+            td:nth-of-type(4):before { content: "Check-out:"; }
+            td:nth-of-type(5):before { content: "Nights:"; } /* Updated label */
+            td:nth-of-type(6):before { content: "Amt/Night:"; } /* Updated label */
+            td:nth-of-type(7):before { content: "Total Due:"; } /* New label for total */
+            td:nth-of-type(8):before { content: "Amount Paid:"; }
+            td:nth-of-type(9):before { content: "Balance:"; }
+            td:nth-of-type(10):before { content: "Payment Status:"; }
+            td:nth-of-type(11):before { content: "People:"; }
+            td:nth-of-type(12):before { content: "Nationality:"; }
+            td:nth-of-type(13):before { content: "Address:"; }
+            td:nth-of-type(14):before { content: "Phone:"; } /* New label */
+            td:nth-of-type(15):before { content: "National ID:"; } /* New label */
+            td:nth-of-type(16):before { content: "Actions:"; }
+
+            .action-buttons {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+                gap: 8px;
+                padding-top: 10px;
+                border-top: 1px solid #eee;
+            }
+            .action-buttons button {
+                flex-grow: 1; /* Allow buttons to grow */
+                min-width: 120px; /* Minimum width for buttons */
+            }
+
+            .modal-content {
+                padding: 20px;
+            }
+            .close-button {
+                font-size: 1.8em;
+                top: 10px;
+                right: 15px;
+            }
+            #login-section .login-box {
+                padding: 30px;
+            }
+
+            .hamburger-menu {
+                display: block; /* Show hamburger on small screens */
+                position: absolute;
+                top: 15px;
+                right: 20px;
+                width: 30px;
+                height: 25px;
+                cursor: pointer;
+                z-index: 10;
+            }
+
+            .hamburger-menu span {
+                display: block;
+                height: 3px;
+                background-color: white;
+                margin-bottom: 5px;
+                border-radius: 2px;
+                transition: transform 0.3s ease, opacity 0.3s ease;
+            }
+
+            .hamburger-menu.active span:nth-child(1) {
+                transform: translateY(8px) rotate(45deg);
+            }
+            .hamburger-menu.active span:nth-child(2) {
+                opacity: 0;
+            }
+            .hamburger-menu.active span:nth-child(3) {
+                transform: translateY(-8px) rotate(-45deg);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .login-box {
+                padding: 20px;
+            }
+            #login-section h2 {
+                font-size: 2em;
+            }
+            .header h2 {
+                font-size: 1.5em;
+            }
+            .section-title {
+                font-size: 1.2em;
+            }
+            .status-badge {
+                padding: 4px 8px;
+                font-size: 0.7em;
+            }
+            button {
+                padding: 10px 18px;
+                font-size: 0.9em;
+            }
+            .room-status-item span {
+                font-size: 1em;
+            }
+            .dashboard-cards {
+                grid-template-columns: 1fr; /* Stack cards on very small screens */
+            }
+            .filter-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Section -->
+        <div id="login-section">
+            <h2 class="text-center">Hotel Login</h2>
+            <div class="login-box">
+                <div class="login-logo-container" style="margin-bottom: 30px;">
+                    <img src="https://placehold.co/100x100/3498db/ffffff?text=H" alt="Hotel Logo" style="border-radius: 50%; display: block; margin: 0 auto;">
+                </div>
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" placeholder="Enter username">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" placeholder="Enter password">
+                </div>
+                <button onclick="login()" class="btn-primary">Login</button>
+                <p id="login-error" class="hidden">Invalid username or password.</p>
+            </div>
+        </div>
+
+        <!-- Main Application Section -->
+        <div id="app-section" class="hidden">
+            <div class="main-wrapper">
+                <!-- Sidebar -->
+                <aside id="sidebar">
+                    <div class="logo-container">
+                        <div class="logo">H</div>
+                    </div>
+                    <div class="hamburger-menu" onclick="toggleSidebar()">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <nav id="main-nav">
+                        <ul>
+                            <li id="nav-dashboard-li"><a href="#" id="nav-dashboard" onclick="showSection('dashboard', this)">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+                                Dashboard
+                            </a></li>
+                            <li id="nav-bookings-li"><a href="#" id="nav-bookings" onclick="showSection('admin', this)">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M19 4h-3V2h-2v2h-4V2H8v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h2v2H7zm0 4h2v2H7zm4-4h2v2h-2zm0 4h2v2h-2zm4-4h2v2h-2zm0 4h2v2h-2z"/></svg>
+                                Booking Management
+                            </a></li>
+                            <li id="nav-housekeeping-li"><a href="#" id="nav-housekeeping" onclick="showSection('housekeeping', this)">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M19 10h-2V7c0-1.66-1.34-3-3-3s-3 1.34-3 3v3H5c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-2c0-1.1-.9-2-2-2zm-4-3c0-.55.45-1 1-1s1 .45 1 1v3h-2V7z"/></svg>
+                                Housekeeping
+                            </a></li>
+                        </ul>
+                    </nav>
+                    <div class="logout-section" id="sidebar-logout-section">
+                        <button onclick="logout()">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" style="vertical-align: middle; margin-right: 8px;"><path fill="white" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+                            Logout
+                        </button>
+                    </div>
+                </aside>
+
+                <!-- Main Content Area -->
+                <div class="content-area">
+                    <div class="header">
+                        <h2 id="welcome-message">Welcome!</h2>
+                        <!-- Logout button for larger screens, hidden on mobile as it's in sidebar -->
+                        <button onclick="logout()" class="logout-btn hidden-on-mobile">Logout</button>
+                    </div>
+
+                    <!-- Dashboard Section -->
+                    <div id="dashboard-section" class="hidden">
+                        <h3 class="section-title">Dashboard Overview</h3>
+                        <div class="dashboard-cards">
+                            <div class="dashboard-card green">
+                                <h4>Total Collected (Filtered)</h4>
+                                <p id="total-collected">$0.00</p>
+                            </div>
+                            <div class="dashboard-card red">
+                                <h4>Total Balances Remaining (Filtered)</h4>
+                                <p id="total-balances">$0.00</p>
+                            </div>
+                            <div class="dashboard-card blue">
+                                <h4>Total Guests (Filtered)</h4>
+                                <p id="total-guests">0</p>
+                            </div>
+                            <div class="dashboard-card purple">
+                                <h4>Room Type Bookings (Most to Least)</h4>
+                                <div id="room-type-bookings-list" class="room-type-list">
+                                    <!-- Room types will be dynamically loaded here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="filter-section">
+                            <h4>Filter Reports</h4>
+                            <div class="filter-grid">
+                                <div class="form-group">
+                                    <label for="filter-start-date">Start Date:</label>
+                                    <input type="date" id="filter-start-date">
+                                </div>
+                                <div class="form-group">
+                                    <label for="filter-end-date">End Date:</label>
+                                    <input type="date" id="filter-end-date">
+                                </div>
+                                <div class="form-group">
+                                    <label for="filter-customer-name">Customer Name:</label>
+                                    <input type="text" id="filter-customer-name" placeholder="Filter by name">
+                                </div>
+                                <div class="form-group">
+                                    <label for="filter-room-number">Room Number:</label>
+                                    <input type="number" id="filter-room-number" placeholder="Filter by room">
+                                </div>
+                                <div class="form-group">
+                                    <label for="filter-payment-status">Payment Status:</label>
+                                    <select id="filter-payment-status">
+                                        <option value="">All</option>
+                                        <option value="Paid">Paid</option>
+                                        <option value="Partial">Partial</option>
+                                        <option value="Pending">Pending</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="filter-room-type">Room Type:</label>
+                                    <select id="filter-room-type">
+                                        <option value="">All</option>
+                                        <!-- Options populated by JS -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="filter-actions">
+                                <button onclick="applyReportFilters()" class="btn-primary">Apply Filters</button>
+                                <button onclick="clearReportFilters()" class="btn-secondary">Clear Filters</button>
+                            </div>
+                        </div>
+                        <!-- The filtered bookings table is removed from here -->
+                    </div>
+
+                    <!-- Admin/Reception Section -->
+                    <div id="admin-section" class="hidden">
+                        <h3 class="section-title">Booking Management</h3>
+                        <button onclick="openBookingModal()" class="btn-primary" style="margin-bottom: 20px;">Add New Booking</button>
+
+                        <div class="table-container">
+                            <table id="bookings-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Room</th>
+                                        <th>Check-in</th>
+                                        <th>Check-out</th>
+                                        <th>Nights</th>
+                                        <th>Amt/Night</th>
+                                        <th>Total Due</th>
+                                        <th>Amount Paid</th>
+                                        <th>Balance</th>
+                                        <th>Payment Status</th>
+                                        <th>People</th>
+                                        <th>Nationality</th>
+                                        <th>Address</th>
+                                        <th>Phone</th>
+                                        <th>National ID</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Bookings will be dynamically loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Housekeeping Section -->
+                    <div id="housekeeping-section" class="hidden">
+                        <h3 class="section-title">Housekeeping Room Status</h3>
+                        <div id="room-status-list">
+                            <!-- Room statuses will be dynamically loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking/Edit Modal -->
+    <div id="booking-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal()">&times;</span>
+            <h3 id="modal-title" class="section-title" style="margin-top: 0; padding-top: 0; border-top: none;">Add New Booking</h3>
+            <form id="booking-form" class="form-grid">
+                <input type="hidden" id="booking-id">
+                <div class="form-group">
+                    <label for="customer-name">Customer Name:</label>
+                    <input type="text" id="customer-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="check-in-date">Check-in Date:</label>
+                    <input type="date" id="check-in-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="check-out-date">Check-out Date:</label>
+                    <input type="date" id="check-out-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="room-number">Room Number:</label>
+                    <select id="room-number" required>
+                        <!-- Options will be dynamically loaded -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="amount-per-night">Amount per Night:</label>
+                    <input type="number" id="amount-per-night" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="number-of-nights">Number of Nights:</label>
+                    <input type="number" id="number-of-nights" min="1" readonly> <!-- Made readonly -->
+                </div>
+                <div class="form-group">
+                    <label for="amount-paid">Amount Paid:</label>
+                    <input type="number" id="amount-paid" step="0.01" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="num-people">Number of People:</label>
+                    <input type="number" id="num-people" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="nationality">Nationality (Optional):</label>
+                    <input type="text" id="nationality">
+                </div>
+                <div class="form-group">
+                    <label for="address">Address (Optional):</label>
+                    <input type="text" id="address">
+                </div>
+                <div class="form-group">
+                    <label for="telephone-number">Telephone Number (Optional):</label>
+                    <input type="text" id="telephone-number">
+                </div>
+                <div class="form-group">
+                    <label for="national-id-number">National ID Number (Optional):</label>
+                    <input type="text" id="national-id-number">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Add Booking</button>
+                    <button type="button" onclick="closeModal()" class="btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Message Box for notifications -->
+    <div id="message-box" class="message-box"></div>
+
+    <script>
+        // --- Global Data Storage (Simulated Backend with localStorage) ---
+        // Load data from localStorage or initialize with default values
+        let bookings = JSON.parse(localStorage.getItem('hotelBookings')) || [];
+        let rooms = JSON.parse(localStorage.getItem('hotelRooms')) || [
+            { id: 101, status: 'clean', type: 'Standard' },
+            { id: 102, status: 'clean', type: 'Standard' },
+            { id: 103, status: 'clean', type: 'Deluxe 1' },
+            { id: 104, status: 'clean', type: 'Deluxe 1' },
+            { id: 201, status: 'clean', type: 'Deluxe 2' },
+            { id: 202, status: 'clean', type: 'Deluxe 2' },
+            { id: 203, status: 'clean', type: 'Junior Suite' },
+            { id: 204, status: 'clean', type: 'Junior Suite' },
+        ];
+        let currentRole = null; // 'admin' or 'housekeeper'
+        let currentUsername = null;
+
+        // --- DOM Elements ---
+        const loginSection = document.getElementById('login-section');
+        const appSection = document.getElementById('app-section');
+        const adminSection = document.getElementById('admin-section');
+        const housekeepingSection = document.getElementById('housekeeping-section');
+        const dashboardSection = document.getElementById('dashboard-section'); // New dashboard section
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const loginError = document.getElementById('login-error');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const bookingsTableBody = document.querySelector('#bookings-table tbody');
+        const roomStatusList = document.getElementById('room-status-list');
+        const messageBox = document.getElementById('message-box');
+        const sidebar = document.getElementById('sidebar');
+        const mainNav = document.getElementById('main-nav');
+        const sidebarLogoutSection = document.getElementById('sidebar-logout-section');
+        const hamburgerMenu = document.querySelector('.hamburger-menu');
+
+        // Modal specific elements
+        const bookingModal = document.getElementById('booking-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const bookingForm = document.getElementById('booking-form');
+        const bookingIdInput = document.getElementById('booking-id');
+        const customerNameInput = document.getElementById('customer-name');
+        const checkInDateInput = document.getElementById('check-in-date');
+        const checkOutDateInput = document.getElementById('check-out-date');
+        const roomNumberSelect = document.getElementById('room-number');
+        const amountPerNightInput = document.getElementById('amount-per-night');
+        const numberOfNightsInput = document.getElementById('number-of-nights');
+        const amountPaidInput = document.getElementById('amount-paid');
+        const numPeopleInput = document.getElementById('num-people');
+        const nationalityInput = document.getElementById('nationality');
+        const addressInput = document.getElementById('address');
+        const telephoneNumberInput = document.getElementById('telephone-number');
+        const nationalIdNumberInput = document.getElementById('national-id-number');
+
+        // Dashboard specific elements
+        const totalCollectedDisplay = document.getElementById('total-collected');
+        const totalBalancesDisplay = document.getElementById('total-balances');
+        const totalGuestsDisplay = document.getElementById('total-guests'); // Changed from guestsCheckedInDisplay
+        const roomTypeBookingsList = document.getElementById('room-type-bookings-list'); // Changed from mostBookedRoomTypeDisplay
+        const filterStartDateInput = document.getElementById('filter-start-date');
+        const filterEndDateInput = document.getElementById('filter-end-date');
+        const filterCustomerNameInput = document.getElementById('filter-customer-name');
+        const filterRoomNumberInput = document.getElementById('filter-room-number');
+        const filterPaymentStatusSelect = document.getElementById('filter-payment-status');
+        const filterRoomTypeSelect = document.getElementById('filter-room-type');
+        // Removed filteredBookingsTableBody as the table is no longer in the dashboard section.
+
+        // Sidebar navigation list items for dynamic visibility
+        const navDashboardLi = document.getElementById('nav-dashboard-li');
+        const navBookingsLi = document.getElementById('nav-bookings-li');
+        const navHousekeepingLi = document.getElementById('nav-housekeeping-li');
+
+
+        // --- Utility Functions ---
+
+        /**
+         * Saves current bookings and room data to localStorage.
+         */
+        function saveData() {
+            localStorage.setItem('hotelBookings', JSON.stringify(bookings));
+            localStorage.setItem('hotelRooms', JSON.stringify(rooms));
+        }
+
+        /**
+         * Displays a temporary message box notification.
+         * @param {string} message - The message to display.
+         * @param {string} type - 'success' or 'error' (determines color).
+         */
+        function showMessage(message, type = 'success') {
+            messageBox.textContent = message;
+            messageBox.className = 'message-box show'; // Reset classes and add 'show'
+            if (type === 'error') {
+                messageBox.classList.add('error');
+            } else {
+                messageBox.classList.remove('error');
+            }
+
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 3000); // Message disappears after 3 seconds
+        }
+
+        /**
+         * Formats a date string to YYYY-MM-DD.
+         * @param {Date} date - The date object.
+         * @returns {string} Formatted date string.
+         */
+        function formatDate(date) {
+            const d = new Date(date);
+            let month = '' + (d.getMonth() + 1);
+            let day = '' + d.getDate();
+            const year = d.getFullYear();
+
+            if (month.length < 2) month = '0' + month;
+            if (day.length < 2) day = '0' + day;
+
+            return [year, month, day].join('-');
+        }
+
+        /**
+         * Calculates the number of nights between two dates.
+         * @param {string} checkInDateStr - Check-in date string (YYYY-MM-DD).
+         * @param {string} checkOutDateStr - Check-out date string (YYYY-MM-DD).
+         * @returns {number} The number of nights. Returns 0 if dates are invalid or check-out is before check-in.
+         */
+        function calculateNights(checkInDateStr, checkOutDateStr) {
+            if (!checkInDateStr || !checkOutDateStr) {
+                return 0;
+            }
+            const checkIn = new Date(checkInDateStr);
+            const checkOut = new Date(checkOutDateStr);
+
+            if (checkIn >= checkOut) {
+                return 0; // Check-out must be after check-in
+            }
+
+            const diffTime = Math.abs(checkOut - checkIn);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+        }
+
+        /**
+         * Updates the number of nights input and recalculates total amount due.
+         */
+        function updateNightsAndAmount() {
+            const nights = calculateNights(checkInDateInput.value, checkOutDateInput.value);
+            numberOfNightsInput.value = nights;
+
+            const amountPerNight = parseFloat(amountPerNightInput.value) || 0;
+            // The total amount due is calculated and stored in the booking object.
+            // No need for a separate display field in the form.
+        }
+
+        // Add event listeners for date changes to automatically calculate nights
+        checkInDateInput.addEventListener('change', updateNightsAndAmount);
+        checkOutDateInput.addEventListener('change', updateNightsAndAmount);
+        amountPerNightInput.addEventListener('input', updateNightsAndAmount); // Also update if amount per night changes
+
+        /**
+         * Populates the room number dropdown with available rooms.
+         * Rooms are considered unavailable if they are occupied by an active booking
+         * or if they are currently dirty and cannot be booked until cleaned.
+         * @param {number} [currentBookingRoomId=null] - The room ID of the booking being edited, to allow it to be re-selected.
+         */
+        function populateRoomDropdown(currentBookingRoomId = null) {
+            roomNumberSelect.innerHTML = '<option value="">Select Room</option>';
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Normalize to start of day
+
+            rooms.forEach(room => {
+                let isBookedDuringPeriod = false;
+                // Check if the room is actively booked for any future or current dates
+                bookings.forEach(booking => {
+                    const bookingCheckIn = new Date(booking.checkInDate);
+                    const bookingCheckOut = new Date(booking.checkOutDate);
+                    bookingCheckIn.setHours(0, 0, 0, 0);
+                    bookingCheckOut.setHours(0, 0, 0, 0);
+
+                    // A room is considered occupied if there's an active booking for it
+                    // and it's not the current booking being edited.
+                    if (booking.roomNumber === room.id && booking.id !== currentBookingRoomId) {
+                        // Check if the booking period overlaps with today or future
+                        if (bookingCheckOut > today) { // Check if booking ends after or on today
+                             isBookedDuringPeriod = true;
+                        }
+                    }
+                });
+
+                const option = document.createElement('option');
+                option.value = room.id;
+                option.textContent = `Room ${room.id} (${room.type})`;
+
+                let statusText = '';
+                let isDisabled = false;
+
+                if (isBookedDuringPeriod) {
+                    statusText = ' (Occupied by another booking)';
+                    isDisabled = true;
+                } else if (room.status === 'dirty') {
+                    statusText = ' (Dirty - Needs Cleaning)';
+                    isDisabled = true;
+                } else if (room.status === 'occupied') {
+                    statusText = ' (Occupied)';
+                    // This status is set by the system for current check-ins.
+                    // It should not be selectable for new bookings unless explicitly available.
+                    // For simplicity, if it's marked 'occupied' by the system, it's unavailable.
+                    isDisabled = true;
+                } else {
+                    statusText = ' (Clean and Available)';
+                }
+
+                option.textContent += statusText;
+                option.disabled = isDisabled;
+
+                // If editing a booking, allow the currently selected room to be re-selected
+                if (currentBookingRoomId && room.id === currentBookingRoomId) {
+                    option.disabled = false;
+                    // Note: We don't set option.selected here directly, it's handled by editBooking
+                }
+
+                roomNumberSelect.appendChild(option);
+            });
+        }
+
+        /**
+         * Populates the room type filter dropdown in the dashboard.
+         */
+        function populateRoomTypeFilterDropdown() {
+            filterRoomTypeSelect.innerHTML = '<option value="">All</option>';
+            const uniqueRoomTypes = [...new Set(rooms.map(room => room.type))];
+            uniqueRoomTypes.sort().forEach(type => { // Sort alphabetically for consistent display
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                filterRoomTypeSelect.appendChild(option);
+            });
+        }
+
+        // --- Modal Functions ---
+        /**
+         * Opens the booking modal.
+         */
+        function openModal() {
+            bookingModal.classList.remove('hidden'); // Ensure the modal is no longer hidden
+            bookingModal.classList.add('show');
+        }
+
+        /**
+         * Closes the booking modal and clears the form.
+         */
+        function closeModal() {
+            bookingModal.classList.remove('show');
+            // Add hidden after a slight delay to allow the fade-out transition to complete
+            setTimeout(() => {
+                bookingModal.classList.add('hidden');
+            }, 300); // Match CSS transition duration
+            clearForm(); // Always clear form when closing modal
+        }
+
+        /**
+         * Opens the modal for adding a new booking.
+         */
+        function openBookingModal() {
+            modalTitle.textContent = 'Add New Booking';
+            clearForm(); // Ensure form is empty for new booking
+            populateRoomDropdown(); // Populate dropdown for new booking
+            openModal();
+            updateNightsAndAmount(); // Initial calculation for new booking
+        }
+
+        // --- Authentication ---
+
+        /**
+         * Handles user login.
+         */
+        function login() {
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            // Hardcoded credentials
+            const users = {
+                'admin': 'admin123',
+                'housekeeper': 'housekeep123'
+            };
+
+            if (users[username] === password) {
+                currentUsername = username;
+                currentRole = username; // Role is same as username for simplicity
+                loginError.classList.add('hidden');
+                loginSection.classList.add('hidden'); // Hide login form completely
+                appSection.classList.remove('hidden');
+                welcomeMessage.textContent = `Welcome, ${currentUsername.charAt(0).toUpperCase() + currentUsername.slice(1)}!`;
+
+                // Update sidebar visibility based on role
+                updateSidebarVisibility();
+
+                // Show initial section based on role
+                if (currentRole === 'admin') {
+                    showSection('dashboard', document.getElementById('nav-dashboard')); // Default to dashboard for admin
+                } else if (currentRole === 'housekeeper') {
+                    showSection('housekeeping', document.getElementById('nav-housekeeping'));
+                }
+                showMessage(`Logged in as ${currentUsername}!`);
+            } else {
+                loginError.classList.remove('hidden');
+                showMessage('Invalid username or password.', 'error');
+            }
+        }
+
+        /**
+         * Handles user logout.
+         */
+        function logout() {
+            currentRole = null;
+            currentUsername = null;
+            appSection.classList.add('hidden');
+            loginSection.classList.remove('hidden'); // Show login form again
+            adminSection.classList.add('hidden');
+            housekeepingSection.classList.add('hidden');
+            dashboardSection.classList.add('hidden'); // Hide dashboard
+            usernameInput.value = '';
+            passwordInput.value = '';
+            // Reset sidebar visibility on logout
+            updateSidebarVisibility();
+            showMessage('Logged out successfully!');
+        }
+
+        /**
+         * Updates the visibility of sidebar navigation links based on current user role.
+         */
+        function updateSidebarVisibility() {
+            if (currentRole === 'admin') {
+                navDashboardLi.classList.remove('hidden');
+                navBookingsLi.classList.remove('hidden');
+                navHousekeepingLi.classList.remove('hidden');
+            } else if (currentRole === 'housekeeper') {
+                navDashboardLi.classList.add('hidden');
+                navBookingsLi.classList.add('hidden');
+                navHousekeepingLi.classList.remove('hidden');
+            } else { // Not logged in
+                navDashboardLi.classList.add('hidden');
+                navBookingsLi.classList.add('hidden');
+                navHousekeepingLi.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Shows the selected application section and updates active navigation link.
+         * Enforces role-based access control.
+         * @param {string} sectionId - The ID of the section to show ('dashboard', 'admin', 'housekeeping').
+         * @param {HTMLElement} clickedLink - The navigation link element that was clicked.
+         */
+        function showSection(sectionId, clickedLink) {
+            // Check authorization first
+            if (currentRole === 'housekeeper' && (sectionId === 'dashboard' || sectionId === 'admin')) {
+                showMessage('Access Denied: Housekeepers can only access the Housekeeping section.', 'error');
+                // Redirect them to housekeeping if they try to access other sections
+                sectionId = 'housekeeping';
+                clickedLink = document.getElementById('nav-housekeeping');
+            }
+
+            // Hide all sections
+            adminSection.classList.add('hidden');
+            housekeepingSection.classList.add('hidden');
+            dashboardSection.classList.add('hidden');
+
+            // Remove active class from all nav links
+            document.querySelectorAll('#main-nav ul li a').forEach(link => {
+                link.classList.remove('active');
+            });
+
+            // Show the selected section and add active class
+            if (sectionId === 'admin') {
+                adminSection.classList.remove('hidden');
+                displayBookings(); // Refresh bookings table
+            } else if (sectionId === 'dashboard') {
+                dashboardSection.classList.remove('hidden');
+                applyReportFilters(); // Apply filters to the report and update dashboard cards
+            } else if (sectionId === 'housekeeping') {
+                housekeepingSection.classList.remove('hidden');
+                displayRoomStatus(); // Refresh room status
+            }
+
+            if (clickedLink) {
+                clickedLink.classList.add('active');
+            }
+
+            // Close sidebar on mobile after selection
+            if (window.innerWidth <= 768) {
+                toggleSidebar();
+            }
+        }
+
+        /**
+         * Toggles the visibility of the sidebar navigation on mobile.
+         */
+        function toggleSidebar() {
+            mainNav.classList.toggle('show');
+            sidebarLogoutSection.classList.toggle('show');
+            hamburgerMenu.classList.toggle('active');
+        }
+
+        // --- Booking Management (Admin Role) ---
+
+        /**
+         * Clears the booking form.
+         */
+        function clearForm() {
+            bookingIdInput.value = '';
+            customerNameInput.value = '';
+            checkInDateInput.value = '';
+            checkOutDateInput.value = '';
+            roomNumberSelect.value = '';
+            amountPerNightInput.value = '';
+            numberOfNightsInput.value = ''; // Clear calculated nights
+            amountPaidInput.value = '0';
+            numPeopleInput.value = '';
+            nationalityInput.value = '';
+            addressInput.value = '';
+            telephoneNumberInput.value = '';
+            nationalIdNumberInput.value = '';
+            bookingForm.querySelector('button[type="submit"]').textContent = 'Add Booking';
+            populateRoomDropdown(); // Re-populate to enable previously selected room if not editing
+        }
+
+        /**
+         * Handles form submission for adding/updating bookings.
+         * @param {Event} event - The form submission event.
+         */
+        bookingForm.addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const bookingId = bookingIdInput.value;
+            const customerName = customerNameInput.value.trim();
+            const checkInDate = checkInDateInput.value;
+            const checkOutDate = checkOutDateInput.value;
+            const roomNumber = parseInt(roomNumberSelect.value);
+            const amountPerNight = parseFloat(amountPerNightInput.value);
+            const numberOfNights = parseInt(numberOfNightsInput.value); // Read the calculated value
+            const amountPaid = parseFloat(amountPaidInput.value);
+            const numPeople = parseInt(numPeopleInput.value);
+            const nationality = nationalityInput.value.trim();
+            const address = addressInput.value.trim();
+            const telephoneNumber = telephoneNumberInput.value.trim();
+            const nationalIdNumber = nationalIdNumberInput.value.trim();
+
+            // Basic validation
+            if (!customerName || !checkInDate || !checkOutDate || isNaN(roomNumber) || isNaN(amountPerNight) || isNaN(numberOfNights) || isNaN(numPeople)) {
+                showMessage('Please fill in all required fields (Customer Name, Dates, Room, Amount per Night, Number of Nights, People).', 'error');
+                return;
+            }
+
+            const checkIn = new Date(checkInDate);
+            const checkOut = new Date(checkOutDate);
+
+            if (checkIn >= checkOut) {
+                showMessage('Check-out date must be after check-in date.', 'error');
+                return;
+            }
+            if (numberOfNights <= 0) {
+                showMessage('Number of nights must be at least 1.', 'error');
+                return;
+            }
+
+            // Check for room availability
+            const isRoomAvailable = !bookings.some(b =>
+                b.roomNumber === roomNumber &&
+                b.id !== bookingId && // Exclude current booking if editing
+                new Date(b.checkOutDate) > checkIn && // Existing booking ends after new booking starts
+                new Date(b.checkInDate) < checkOut && // Existing booking starts before new booking ends
+                b.status !== 'checked_out' // A room is occupied until checked out
+            );
+
+            if (!isRoomAvailable) {
+                showMessage(`Room ${roomNumber} is not available for the selected dates.`, 'error');
+                return;
+            }
+
+            // Check if the selected room is dirty
+            const selectedRoom = rooms.find(r => r.id === roomNumber);
+            if (selectedRoom && selectedRoom.status === 'dirty' && !bookingId) {
+                showMessage(`Room ${roomNumber} is dirty and cannot be booked until cleaned.`, 'error');
+                return;
+            }
+
+            // Calculate total amount due
+            const totalAmountDue = amountPerNight * numberOfNights;
+            const balance = totalAmountDue - amountPaid;
+
+            let paymentStatus = 'Pending';
+            if (balance <= 0) {
+                paymentStatus = 'Paid';
+            } else if (amountPaid > 0) {
+                paymentStatus = 'Partial';
+            }
+
+            if (bookingId) {
+                // Update existing booking
+                const index = bookings.findIndex(b => b.id === bookingId);
+                if (index !== -1) {
+                    bookings[index] = {
+                        ...bookings[index], // Keep existing properties like 'status' if not explicitly changed
+                        customerName,
+                        checkInDate,
+                        checkOutDate,
+                        roomNumber,
+                        amountPerNight,
+                        numberOfNights,
+                        amountDue: totalAmountDue, // Update amountDue to be the total calculated
+                        amountPaid,
+                        balance,
+                        paymentStatus,
+                        numPeople,
+                        nationality,
+                        address,
+                        telephoneNumber,
+                        nationalIdNumber
+                    };
+                    showMessage('Booking updated successfully!');
+                }
+            } else {
+                // Add new booking
+                const newBooking = {
+                    id: 'booking_' + Date.now(), // Simple unique ID
+                    customerName,
+                    checkInDate,
+                    checkOutDate,
+                    roomNumber,
+                    amountPerNight,
+                    numberOfNights,
+                    amountDue: totalAmountDue, // Save total calculated amount
+                    amountPaid,
+                    balance,
+                    paymentStatus,
+                    numPeople,
+                    nationality,
+                    address,
+                    telephoneNumber,
+                    nationalIdNumber,
+                    status: 'active' // Initial status for a new booking
+                };
+                bookings.push(newBooking);
+                showMessage('Booking added successfully!');
+            }
+
+            saveData();
+            displayBookings();
+            closeModal(); // Close modal after successful submission
+            populateRoomDropdown(); // Re-populate dropdown to reflect new room availability
+            updateDashboard(bookings); // Update dashboard with ALL bookings after a new booking/edit
+        });
+
+        /**
+         * Displays all bookings in the table.
+         */
+        function displayBookings() {
+            bookingsTableBody.innerHTML = ''; // Clear existing rows
+            bookings.forEach(booking => {
+                const row = bookingsTableBody.insertRow();
+
+                // Determine payment status class
+                let paymentStatusClass = '';
+                if (booking.paymentStatus === 'Paid') {
+                    paymentStatusClass = 'status-paid';
+                } else if (booking.paymentStatus === 'Pending') {
+                    paymentStatusClass = 'status-pending';
+                } else if (booking.paymentStatus === 'Partial') {
+                    paymentStatusClass = 'status-partial';
+                }
+
+                // Check if check-out button should be enabled
+                const isCheckOutDue = new Date(booking.checkOutDate) <= new Date() && booking.status !== 'checked_out';
+                const checkOutButtonHtml = isCheckOutDue ?
+                                          `<button onclick="checkOut('${booking.id}')" class="btn-success">Check-out</button>` :
+                                          `<button class="btn-secondary" disabled>Check-out</button>`;
+
+                row.innerHTML = `
+                    <td>${booking.customerName}</td>
+                    <td>${booking.roomNumber}</td>
+                    <td>${formatDate(booking.checkInDate)}</td>
+                    <td>${formatDate(booking.checkOutDate)}</td>
+                    <td>${booking.numberOfNights || 'N/A'}</td>
+                    <td>$${(booking.amountPerNight || 0).toFixed(2)}</td>
+                    <td>$${booking.amountDue.toFixed(2)}</td>
+                    <td>$${booking.amountPaid.toFixed(2)}</td>
+                    <td>$${booking.balance.toFixed(2)}</td>
+                    <td><span class="status-badge ${paymentStatusClass}">${booking.paymentStatus}</span></td>
+                    <td>${booking.numPeople}</td>
+                    <td>${booking.nationality || 'N/A'}</td>
+                    <td>${booking.address || 'N/A'}</td>
+                    <td>${booking.telephoneNumber || 'N/A'}</td>
+                    <td>${booking.nationalIdNumber || 'N/A'}</td>
+                    <td class="action-buttons">
+                        <button onclick="editBooking('${booking.id}')" class="btn-secondary">Edit</button>
+                        <button onclick="deleteBooking('${booking.id}')" class="btn-danger">Delete</button>
+                        ${checkOutButtonHtml}
+                    </td>
+                `;
+            });
+            updateRoomStatusesBasedOnBookings(); // Update room statuses after displaying bookings
+        }
+
+        /**
+         * Loads booking data into the form for editing and opens the modal.
+         * @param {string} id - The ID of the booking to edit.
+         */
+        function editBooking(id) {
+            const booking = bookings.find(b => b.id === id);
+            if (booking) {
+                modalTitle.textContent = 'Edit Booking'; // Set modal title for editing
+                bookingIdInput.value = booking.id;
+                customerNameInput.value = booking.customerName;
+                checkInDateInput.value = booking.checkInDate;
+                checkOutDateInput.value = booking.checkOutDate;
+                amountPerNightInput.value = booking.amountPerNight;
+                numberOfNightsInput.value = booking.numberOfNights;
+                amountPaidInput.value = booking.amountPaid;
+                numPeopleInput.value = booking.numPeople;
+                nationalityInput.value = booking.nationality || '';
+                addressInput.value = booking.address || '';
+                telephoneNumberInput.value = booking.telephoneNumber || '';
+                nationalIdNumberInput.value = booking.nationalIdNumber || '';
+                bookingForm.querySelector('button[type="submit"]').textContent = 'Update Booking';
+
+                populateRoomDropdown(booking.roomNumber); // Pass current room ID to allow re-selection
+                roomNumberSelect.value = booking.roomNumber; // Set the selected room
+
+                openModal(); // Open the modal
+                updateNightsAndAmount(); // Ensure nights are calculated on edit load
+                showMessage('Editing booking: ' + booking.customerName);
+            }
+        }
+
+        /**
+         * Deletes a booking.
+         * @param {string} id - The ID of the booking to delete.
+         */
+        function deleteBooking(id) {
+            // In a real app, you'd have a confirmation modal here
+            if (confirm('Are you sure you want to delete this booking? This action cannot be undone.')) {
+                const bookingToDelete = bookings.find(b => b.id === id);
+                bookings = bookings.filter(b => b.id !== id);
+                saveData();
+                displayBookings();
+                updateRoomStatusesBasedOnBookings(); // Recalculate room statuses
+                updateDashboard(bookings); // Update dashboard with ALL bookings after deletion
+                showMessage('Booking deleted successfully!');
+            }
+        }
+
+        /**
+         * Handles the check-out process for a booking.
+         * Marks the booking as 'checked_out' and the room as 'dirty'.
+         * @param {string} id - The ID of the booking to check out.
+         */
+        function checkOut(id) {
+            const bookingIndex = bookings.findIndex(b => b.id === id);
+            if (bookingIndex !== -1) {
+                const booking = bookings[bookingIndex];
+
+                // Update booking status
+                booking.status = 'checked_out';
+
+                // Mark the room as dirty
+                const room = rooms.find(r => r.id === booking.roomNumber);
+                if (room) {
+                    room.status = 'dirty';
+                }
+
+                saveData();
+                displayBookings(); // Re-render bookings table
+                displayRoomStatus(); // Re-render room status for housekeeping
+                updateDashboard(bookings); // Update dashboard with ALL bookings after check-out
+                showMessage(`Guest ${booking.customerName} checked out from Room ${booking.roomNumber}. Room marked dirty.`);
+            }
+        }
+
+        /**
+         * Updates the status of rooms based on active bookings.
+         * This function ensures rooms are marked 'occupied' if they have an active booking
+         * that overlaps with the current date, and 'clean' or 'dirty' otherwise.
+         */
+        function updateRoomStatusesBasedOnBookings() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            rooms.forEach(room => {
+                const activeBookingForRoom = bookings.find(booking =>
+                    booking.roomNumber === room.id &&
+                    new Date(booking.checkInDate) <= today && // Check-in date is today or in the past
+                    new Date(booking.checkOutDate) > today && // Check-out date is in the future
+                    booking.status !== 'checked_out' // Not already checked out
+                );
+
+                if (activeBookingForRoom) {
+                    room.status = 'occupied';
+                } else {
+                    // If no active booking, check if it was checked out and needs cleaning
+                    const wasCheckedOutDirty = bookings.some(b =>
+                        b.roomNumber === room.id &&
+                        b.status === 'checked_out' &&
+                        new Date(b.checkOutDate) <= today && // Booking ended
+                        room.status !== 'clean' // And room isn't clean yet
+                    );
+
+                    if (!wasCheckedOutDirty && room.status !== 'dirty') {
+                        room.status = 'clean'; // Default to clean if no active booking and not manually set dirty
+                    }
+                    // If it's dirty (either from check-out or manually set), it stays dirty until housekeeping cleans it.
+                }
+            });
+            saveData();
+            populateRoomDropdown(); // Update dropdown with latest room statuses
+            populateRoomTypeFilterDropdown(); // Update dashboard filter dropdown
+        }
+
+
+        // --- Housekeeping Management (Housekeeper Role) ---
+
+        /**
+         * Displays the status of all rooms for housekeeping.
+         */
+        function displayRoomStatus() {
+            roomStatusList.innerHTML = ''; // Clear existing list
+            rooms.forEach(room => {
+                const roomDiv = document.createElement('div');
+                roomDiv.classList.add('room-status-item');
+
+                let statusClass = '';
+                let statusText = '';
+                let buttonHtml = '';
+
+                if (room.status === 'clean') {
+                    statusClass = 'status-clean';
+                    statusText = 'Clean';
+                    buttonHtml = '<button class="btn-secondary" disabled>Clean</button>';
+                } else if (room.status === 'dirty') {
+                    statusClass = 'status-dirty';
+                    statusText = 'Dirty';
+                    buttonHtml = `<button onclick="markRoomClean(${room.id})" class="btn-success">Mark Clean</button>`;
+                } else if (room.status === 'occupied') {
+                    statusClass = 'status-occupied';
+                    statusText = 'Occupied';
+                    // Housekeepers cannot mark an occupied room clean
+                    buttonHtml = '<button class="btn-secondary" disabled>Clean</button>';
+                }
+
+                roomDiv.innerHTML = `
+                    <span>Room ${room.id} (${room.type}):</span>
+                    <span class="status-badge ${statusClass}">${statusText}</span>
+                    ${buttonHtml}
+                `;
+                roomStatusList.appendChild(roomDiv);
+            });
+        }
+
+        /**
+         * Marks a room as clean.
+         * @param {number} roomId - The ID of the room to mark clean.
+         */
+        function markRoomClean(roomId) {
+            const room = rooms.find(r => r.id === roomId);
+            if (room) {
+                room.status = 'clean';
+                saveData();
+                displayRoomStatus(); // Re-render room status
+                populateRoomDropdown(); // Update dropdown for admin
+                updateDashboard(bookings); // Update dashboard with ALL bookings after room status change
+                showMessage(`Room ${roomId} marked as clean!`);
+            }
+        }
+
+        // --- Dashboard Functions ---
+
+        /**
+         * Updates the dashboard summary cards with current data.
+         * @param {Array<Object>} dataToAggregate - The array of booking objects to aggregate data from.
+         */
+        function updateDashboard(dataToAggregate) {
+            let totalCollected = 0;
+            let totalBalances = 0;
+            let guestsCount = 0;
+            const roomTypeCounts = {};
+
+            dataToAggregate.forEach(booking => {
+                totalCollected += booking.amountPaid || 0;
+                totalBalances += booking.balance || 0;
+                guestsCount += booking.numPeople || 0; // Sum all people from filtered bookings
+
+                // Count room types for most booked
+                const room = rooms.find(r => r.id === booking.roomNumber);
+                if (room && room.type) {
+                    roomTypeCounts[room.type] = (roomTypeCounts[room.type] || 0) + 1;
+                }
+            });
+
+            totalCollectedDisplay.textContent = `$${totalCollected.toFixed(2)}`;
+            totalBalancesDisplay.textContent = `$${totalBalances.toFixed(2)}`;
+            totalGuestsDisplay.textContent = guestsCount; // Use totalGuestsDisplay here
+
+            // Generate ordered list of room types
+            const sortedRoomTypes = Object.entries(roomTypeCounts)
+                .sort(([, countA], [, countB]) => countB - countA); // Sort descending by count
+
+            roomTypeBookingsList.innerHTML = ''; // Clear existing list
+            if (sortedRoomTypes.length === 0) {
+                roomTypeBookingsList.textContent = 'N/A';
+            } else {
+                sortedRoomTypes.forEach(([type, count]) => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `${type}: ${count} bookings`;
+                    roomTypeBookingsList.appendChild(listItem);
+                });
+            }
+        }
+
+        /**
+         * Applies filters to the bookings and updates the dashboard summary cards based on these filters.
+         */
+        function applyReportFilters() {
+            let filteredBookings = [...bookings]; // Start with a copy of all bookings
+
+            const startDate = filterStartDateInput.value ? new Date(filterStartDateInput.value) : null;
+            const endDate = filterEndDateInput.value ? new Date(filterEndDateInput.value) : null;
+            const customerName = filterCustomerNameInput.value.trim().toLowerCase();
+            const roomNumber = filterRoomNumberInput.value ? parseInt(filterRoomNumberInput.value) : null;
+            const paymentStatus = filterPaymentStatusSelect.value;
+            const roomType = filterRoomTypeSelect.value;
+
+            if (startDate && endDate) {
+                // Filter for bookings whose stay (check-in or check-out) overlaps with the filter date range
+                startDate.setHours(0, 0, 0, 0);
+                endDate.setHours(23, 59, 59, 999); // End of day
+
+                filteredBookings = filteredBookings.filter(booking => {
+                    const bookingCheckIn = new Date(booking.checkInDate);
+                    const bookingCheckOut = new Date(booking.checkOutDate);
+                    bookingCheckIn.setHours(0, 0, 0, 0);
+                    bookingCheckOut.setHours(0, 0, 0, 0);
+
+                    // Check for overlap: (StartA <= EndB) and (EndA >= StartB)
+                    return (bookingCheckIn <= endDate) && (bookingCheckOut >= startDate);
+                });
+            } else if (startDate) {
+                // If only start date is provided, filter bookings that start on or after this date
+                startDate.setHours(0, 0, 0, 0);
+                filteredBookings = filteredBookings.filter(booking => new Date(booking.checkInDate) >= startDate);
+            } else if (endDate) {
+                // If only end date is provided, filter bookings that end on or before this date
+                endDate.setHours(23, 59, 59, 999);
+                filteredBookings = filteredBookings.filter(booking => new Date(booking.checkOutDate) <= endDate);
+            }
+
+
+            if (customerName) {
+                filteredBookings = filteredBookings.filter(booking =>
+                    booking.customerName.toLowerCase().includes(customerName)
+                );
+            }
+            if (roomNumber) {
+                filteredBookings = filteredBookings.filter(booking =>
+                    booking.roomNumber === roomNumber
+                );
+            }
+            if (paymentStatus) {
+                filteredBookings = filteredBookings.filter(booking =>
+                    booking.paymentStatus === paymentStatus
+                );
+            }
+            if (roomType) {
+                filteredBookings = filteredBookings.filter(booking => {
+                    const room = rooms.find(r => r.id === booking.roomNumber);
+                    return room && room.type === roomType;
+                });
+            }
+
+            // Update dashboard cards with the *filtered* data
+            updateDashboard(filteredBookings);
+
+            // No table to display in the dashboard section, only the summary cards are updated.
+        }
+
+        /**
+         * Clears all report filters and re-applies them to show overall data.
+         */
+        function clearReportFilters() {
+            filterStartDateInput.value = '';
+            filterEndDateInput.value = '';
+            filterCustomerNameInput.value = '';
+            filterRoomNumberInput.value = '';
+            filterPaymentStatusSelect.value = '';
+            filterRoomTypeSelect.value = '';
+            applyReportFilters(); // Re-apply filters which will now show all
+        }
+
+
+        // --- Event Listeners for Dashboard Filters ---
+        filterStartDateInput.addEventListener('change', applyReportFilters);
+        filterEndDateInput.addEventListener('change', applyReportFilters);
+        filterCustomerNameInput.addEventListener('input', applyReportFilters);
+        filterRoomNumberInput.addEventListener('input', applyReportFilters);
+        filterPaymentStatusSelect.addEventListener('change', applyReportFilters);
+        filterRoomTypeSelect.addEventListener('change', applyReportFilters);
+
+
+        // --- Initial Load ---
+        window.onload = function() {
+            // Ensure login section is visible and app section is hidden on initial load
+            loginSection.classList.remove('hidden');
+            appSection.classList.add('hidden');
+            adminSection.classList.add('hidden');
+            housekeepingSection.classList.add('hidden');
+            dashboardSection.classList.add('hidden'); // Ensure dashboard is hidden initially
+
+            // Perform initial room status update based on existing bookings
+            updateRoomStatusesBasedOnBookings();
+            populateRoomTypeFilterDropdown(); // Populate room type filter on load
+            updateSidebarVisibility(); // Set initial sidebar visibility
+        };
+
+    </script>
+</body>
+</html>
