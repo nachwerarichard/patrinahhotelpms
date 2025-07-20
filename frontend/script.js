@@ -331,22 +331,68 @@ navLinks.forEach(link => {
     link.addEventListener('click', handleNavigation);
 });
 
+function handleNavigation(event) {
+    event.preventDefault();
+    let targetId = event.target.id.replace('nav-', '');
+
+    // Handle booking nav mapping
+    if (event.target.id === 'nav-booking') {
+        targetId = 'booking-management';
+    }
+
+    // Housekeeper should not access other sections
+    if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping') {
+        showMessageBox('Access Denied', 'Housekeepers can only access the Housekeeping section.');
+        return;
+    }
+
+    // Hide all sections and remove active classes
+    navLinks.forEach(link => link.classList.remove('active'));
+    sections.forEach(section => section.classList.remove('active'));
+
+    // Show the selected section
+    event.target.classList.add('active');
+    const targetSection = document.getElementById(targetId);
+    if (targetSection) {
+        targetSection.classList.add('active');
+    }
+
+    // Load relevant data for the section
+    if (targetId === 'booking-management') {
+        renderBookings();
+    } else if (targetId === 'housekeeping') {
+        renderHousekeepingRooms();
+    } else if (targetId === 'reports') {
+        reportDateInput.valueAsDate = new Date();
+        generateReport();
+    }
+}
 
 /**
  * Applies access restrictions and visibility based on the user's role.
  * @param {string} role - The role of the current user ('admin' or 'housekeeper').
  */
 function applyRoleAccess(role) {
-    // Control visibility of navigation links (sidebar items)
+    // Hide all sections and deactivate all nav links first
+    sections.forEach(section => section.classList.remove('active'));
+    navLinks.forEach(link => link.classList.remove('active'));
+
+    // Show/hide sidebar navigation based on role
     document.getElementById('nav-booking').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
     document.getElementById('nav-reports').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
-    document.getElementById('nav-housekeeping').parentElement.style.display = 'block'; // Always visible
-    document.getElementById('logoutBtn').parentElement.style.display = 'block'; // Always visible
+    document.getElementById('nav-housekeeping').parentElement.style.display = 'block';
+    document.getElementById('logoutBtn').parentElement.style.display = 'block';
 
-    // Ensure only the relevant section is displayed upon role application
-    sections.forEach(section => {
-        section.classList.remove('active'); // Deactivate all sections initially
-    });
+    // Automatically show appropriate default section
+    if (role === 'admin') {
+        document.getElementById('nav-booking').classList.add('active');
+        document.getElementById('booking-management').classList.add('active');
+        renderBookings(); // Load bookings for admin
+    } else if (role === 'housekeeper') {
+        document.getElementById('nav-housekeeping').classList.add('active');
+        document.getElementById('housekeeping').classList.add('active');
+        renderHousekeepingRooms(); // Load housekeeping rooms
+    }
 }
 
 
