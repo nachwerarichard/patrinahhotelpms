@@ -1,31 +1,13 @@
-// --- Data Simulation (In lieu of Backend) ---
-let rooms = [
-    { id: '101', type: 'Delux 1', number: '101', status: 'clean' },
-    { id: '102', type: 'Delux 1', number: '102', status: 'clean' },
-    { id: '103', type: 'Delux 1', number: '103', status: 'clean' },
-    { id: '104', type: 'Delux 2', number: '104', status: 'clean' },
-    { id: '105', type: 'Delux 2', number: '105', status: 'clean' },
-    { id: '106', type: 'Delux 2', number: '106', status: 'clean' },
-    { id: '201', type: 'Standard', number: '201', status: 'clean' },
-    { id: '202', type: 'Standard', number: '202', status: 'clean' },
-];
+// script.js - Frontend Logic for Hotel Management System
+// Connected to Node.js Backend deployed on Render
 
-let bookings = JSON.parse(localStorage.getItem('hotelBookings')) || [];
+// --- Configuration ---
+const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api'; // Your Render backend URL
+
+// --- Data (will be fetched from backend) ---
+let rooms = [];
+let bookings = [];
 let currentUserRole = null; // To store the role of the logged-in user
-
-// Ensure rooms are blocked based on existing bookings on load
-bookings.forEach(booking => {
-    const room = rooms.find(r => r.number === booking.room);
-    if (room) {
-        const checkOutDate = new Date(booking.checkOut);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // Normalize today's date
-        if (checkOutDate >= today) { // Room is blocked if checkout is today or in the future
-            room.status = 'blocked';
-        }
-    }
-});
-
 
 // --- DOM Elements ---
 const loginContainer = document.getElementById('login-container');
@@ -37,7 +19,6 @@ const loginMessageBox = document.getElementById('loginMessageBox');
 const loginMessageBoxTitle = document.getElementById('loginMessageBoxTitle');
 const loginMessageBoxContent = document.getElementById('loginMessageBoxContent');
 
-// Corrected: Select only navigation links for sections, exclude logout button
 const navLinks = document.querySelectorAll('aside nav ul li a:not(#logoutBtn)');
 const sections = document.querySelectorAll('main .section');
 const bookingModal = document.getElementById('bookingModal');
@@ -86,11 +67,6 @@ function closeLoginMessageBox() {
     loginMessageBox.style.display = 'none';
 }
 
-// Saves bookings to localStorage
-function saveBookings() {
-    localStorage.setItem('hotelBookings', JSON.stringify(bookings));
-}
-
 // Calculates nights between two dates
 function calculateNights() {
     const checkInDate = new Date(checkInInput.value);
@@ -129,57 +105,85 @@ function calculateTotalDue() {
 }
 
 // Populates the room dropdown in the booking modal
-function populateRoomDropdown(selectedRoomId = null) {
+async function populateRoomDropdown(selectedRoomNumber = null) {
     roomSelect.innerHTML = '<option value="">Select a Room</option>';
-    const availableRooms = rooms.filter(room => room.status === 'clean' || room.number === selectedRoomId);
-
-    // Group rooms by type
-    const roomTypes = {};
-    availableRooms.forEach(room => {
-        if (!roomTypes[room.type]) {
-            roomTypes[room.type] = [];
+    try {
+        const response = await fetch(`${API_BASE_URL}/rooms`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
-        roomTypes[room.type].push(room);
-    });
+        const fetchedRooms = await response.json();
+        rooms = fetchedRooms; // Update local rooms array
 
-    for (const type in roomTypes) {
-        const optgroup = document.createElement('optgroup');
-        optgroup.label = type;
-        roomTypes[type].forEach(room => {
-            const option = document.createElement('option');
-            option.value = room.number;
-            option.textContent = `Room ${room.number}`;
-            if (selectedRoomId && room.number === selectedRoomId) {
-                option.selected = true;
+        const availableRooms = rooms.filter(room => room.status === 'clean' || room.number === selectedRoomNumber);
+
+        // Group rooms by type
+        const roomTypes = {};
+        availableRooms.forEach(room => {
+            if (!roomTypes[room.type]) {
+                roomTypes[room.type] = [];
             }
-            optgroup.appendChild(option);
+            roomTypes[room.type].push(room);
         });
-        roomSelect.appendChild(optgroup);
+
+        for (const type in roomTypes) {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = type;
+            roomTypes[type].forEach(room => {
+                const option = document.createElement('option');
+                option.value = room.number;
+                option.textContent = `Room ${room.number}`;
+                if (selectedRoomNumber && room.number === selectedRoomNumber) {
+                    option.selected = true;
+                }
+                optgroup.appendChild(option);
+            });
+            roomSelect.appendChild(optgroup);
+        }
+    } catch (error) {
+        console.error('Error populating room dropdown:', error);
+        showMessageBox('Error', 'Failed to load rooms for dropdown. Please try again.');
     }
 }
 
 // --- Login and Role Management ---
-loginForm.addEventListener('submit', function(event) {
+loginForm.addEventListener('submit', async function(event) {
     event.preventDefault();
     const username = usernameInput.value;
     const password = passwordInput.value;
 
-    if (username === 'user' && password === 'password') {
-        currentUserRole = 'admin';
-        loginContainer.style.display = 'none';
-        mainContent.style.display = 'flex';
-        applyRoleAccess(currentUserRole);
-        // Automatically click the 'Booking Management' link for admin
-        document.getElementById('nav-booking').click();
-    } else if (username === 'hk' && password === 'hkpass') {
-        currentUserRole = 'housekeeper';
-        loginContainer.style.display = 'none';
-        mainContent.style.display = 'flex';
-        applyRoleAccess(currentUserRole);
-        // Automatically click the 'Housekeeping' link for housekeeper
-        document.getElementById('nav-housekeeping').click();
-    } else {
-        showLoginMessageBox('Login Failed', 'Invalid username or password.');
+    try {
+        const response = await fetch(`${API_BASE_URL}/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            currentUserRole = data.role;
+            loginContainer.style.display = 'none';
+            mainContent.style.display = 'flex';
+            applyRoleAccess(currentUserRole);
+
+            // Initialize rooms in backend if empty (run once)
+            await fetch(`${API_BASE_URL}/rooms/init`, { method: 'POST' });
+
+            // Automatically click the appropriate navigation link based on role
+            if (currentUserRole === 'admin') {
+                document.getElementById('nav-booking').click();
+            } else if (currentUserRole === 'housekeeper') {
+                document.getElementById('nav-housekeeping').click();
+            }
+        } else {
+            showLoginMessageBox('Login Failed', data.message || 'Invalid username or password.');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        showLoginMessageBox('Login Error', 'Could not connect to the server. Please try again later.');
     }
 });
 
@@ -219,7 +223,7 @@ function handleNavigation(event) {
         targetSection.classList.add('active');
     } else {
         console.error(`Error: Section with ID "${targetId}" not found.`);
-        // Optionally, redirect to a default accessible section if targetId is invalid
+        // Fallback to a default accessible section if targetId is invalid
         if (currentUserRole === 'admin') {
              document.getElementById('booking-management').classList.add('active');
              document.getElementById('nav-booking').classList.add('active');
@@ -253,8 +257,8 @@ function applyRoleAccess(role) {
     sections.forEach(section => {
         const sectionId = section.id;
         if (role === 'admin') {
-            // Removed: section.style.display = 'none';
             // Sections are now controlled solely by the 'active' class via CSS and handleNavigation
+            // No explicit display: none here for admin sections
         } else if (role === 'housekeeper') {
             if (sectionId === 'housekeeping') {
                 section.style.display = 'block'; // Housekeeper only sees housekeeping
@@ -268,16 +272,40 @@ function applyRoleAccess(role) {
 
 // --- Booking Management Functions ---
 
-// Renders the bookings table
-function renderBookings(filteredBookings = bookings) {
+// Renders the bookings table by fetching from backend
+async function renderBookings(filteredBookings = null) {
     bookingsTableBody.innerHTML = ''; // Clear existing rows
 
-    if (filteredBookings.length === 0) {
+    if (currentUserRole !== 'admin') {
+        bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px;">Access Denied. Only Admin can view bookings.</td></tr>';
+        return;
+    }
+
+    let currentBookings = [];
+    if (filteredBookings) {
+        currentBookings = filteredBookings; // Use provided filtered data
+    } else {
+        try {
+            const response = await fetch(`${API_BASE_URL}/bookings`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            currentBookings = await response.json();
+            bookings = currentBookings; // Update local bookings array
+        } catch (error) {
+            console.error('Error fetching bookings:', error);
+            showMessageBox('Error', 'Failed to load bookings. Please check backend connection.');
+            bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px; color: red;">Failed to load bookings.</td></tr>';
+            return;
+        }
+    }
+
+    if (currentBookings.length === 0) {
         bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px;">No bookings found.</td></tr>';
         return;
     }
 
-    filteredBookings.forEach(booking => {
+    currentBookings.forEach(booking => {
         const row = bookingsTableBody.insertRow();
         row.dataset.id = booking.id; // Store booking ID for easy access
 
@@ -311,24 +339,24 @@ function renderBookings(filteredBookings = bookings) {
     });
 }
 
-// Filters bookings based on search input
+// Filters bookings based on search input (uses local 'bookings' array)
 function filterBookings() {
     const searchTerm = bookingSearchInput.value.toLowerCase();
     const filtered = bookings.filter(booking =>
         booking.name.toLowerCase().includes(searchTerm) ||
         booking.room.toLowerCase().includes(searchTerm) ||
-        booking.nationalIdNo.toLowerCase().includes(searchTerm) ||
-        booking.phoneNo.toLowerCase().includes(searchTerm)
+        (booking.nationalIdNo && booking.nationalIdNo.toLowerCase().includes(searchTerm)) ||
+        (booking.phoneNo && booking.phoneNo.toLowerCase().includes(searchTerm))
     );
-    renderBookings(filtered);
+    renderBookings(filtered); // Pass filtered data to render
 }
 
 // Opens the booking modal for adding a new booking
-function openBookingModal() {
+async function openBookingModal() {
     document.getElementById('modalTitle').textContent = 'Add New Booking';
     bookingForm.reset(); // Clear previous form data
     document.getElementById('bookingId').value = ''; // Clear hidden ID
-    populateRoomDropdown(); // Populate with all clean rooms
+    await populateRoomDropdown(); // Populate with all clean rooms from backend
     nightsInput.value = 0;
     totalDueInput.value = 0;
     balanceInput.value = 0;
@@ -342,10 +370,10 @@ function closeBookingModal() {
 }
 
 // Handles form submission for adding/editing bookings
-bookingForm.addEventListener('submit', function(event) {
+bookingForm.addEventListener('submit', async function(event) {
     event.preventDefault();
 
-    const id = document.getElementById('bookingId').value || crypto.randomUUID(); // Generate unique ID
+    const id = document.getElementById('bookingId').value; // Will be empty for new, existing for edit
     const name = document.getElementById('name').value;
     const roomNumber = document.getElementById('room').value;
     const checkIn = document.getElementById('checkIn').value;
@@ -362,128 +390,130 @@ bookingForm.addEventListener('submit', function(event) {
     const phoneNo = document.getElementById('phoneNo').value;
     const nationalIdNo = document.getElementById('nationalIdNo').value;
 
-    const newBooking = {
-        id, name, room: roomNumber, checkIn, checkOut, nights, amtPerNight,
+    const bookingData = {
+        name, room: roomNumber, checkIn, checkOut, nights, amtPerNight,
         totalDue, amountPaid, balance, paymentStatus, people, nationality,
         address, phoneNo, nationalIdNo
     };
 
-    const existingBookingIndex = bookings.findIndex(b => b.id === id);
+    try {
+        let response;
+        let message;
+        if (id) {
+            // Edit existing booking
+            response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bookingData)
+            });
+            message = 'Booking updated successfully!';
+        } else {
+            // Add new booking
+            response = await fetch(`${API_BASE_URL}/bookings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bookingData)
+            });
+            message = 'New booking added successfully!';
+        }
 
-    if (existingBookingIndex > -1) {
-        // Update existing booking
-        const oldRoomNumber = bookings[existingBookingIndex].room;
-        if (oldRoomNumber !== roomNumber) {
-            // If room changed, unblock old room and block new one
-            const oldRoom = rooms.find(r => r.number === oldRoomNumber);
-            if (oldRoom) oldRoom.status = 'clean';
-            const newRoom = rooms.find(r => r.number === roomNumber);
-            if (newRoom) newRoom.status = 'blocked';
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
-        bookings[existingBookingIndex] = newBooking;
-        showMessageBox('Success', 'Booking updated successfully!');
-    } else {
-        // Add new booking
-        const room = rooms.find(r => r.number === roomNumber);
-        if (room) {
-            room.status = 'blocked'; // Block the room
-        }
-        bookings.push(newBooking);
-        showMessageBox('Success', 'New booking added successfully!');
+
+        showMessageBox('Success', message);
+        renderBookings(); // Re-render to show updated list
+        closeBookingModal();
+        renderHousekeepingRooms(); // Update housekeeping view as room status might change
+    } catch (error) {
+        console.error('Error saving booking:', error);
+        showMessageBox('Error', `Failed to save booking: ${error.message}`);
     }
-
-    saveBookings();
-    renderBookings();
-    closeBookingModal();
-    renderHousekeepingRooms(); // Update housekeeping view
 });
 
 // Populates the modal with booking data for editing
-function editBooking(id) {
-    const booking = bookings.find(b => b.id === id);
-    if (!booking) return;
+async function editBooking(id) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings`); // Fetch all bookings to find the one to edit
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const allBookings = await response.json();
+        const booking = allBookings.find(b => b.id === id);
 
-    document.getElementById('modalTitle').textContent = 'Edit Booking';
-    document.getElementById('bookingId').value = booking.id;
-    document.getElementById('name').value = booking.name;
-    populateRoomDropdown(booking.room); // Pass current room to keep it selected even if blocked
-    document.getElementById('checkIn').value = booking.checkIn;
-    document.getElementById('checkOut').value = booking.checkOut;
-    nightsInput.value = booking.nights;
-    amtPerNightInput.value = booking.amtPerNight;
-    totalDueInput.value = booking.totalDue;
-    amountPaidInput.value = booking.amountPaid;
-    balanceInput.value = booking.balance;
-    document.getElementById('paymentStatus').value = booking.paymentStatus;
-    document.getElementById('people').value = booking.people;
-    document.getElementById('nationality').value = booking.nationality;
-    document.getElementById('address').value = booking.address;
-    document.getElementById('phoneNo').value = booking.phoneNo;
-    document.getElementById('nationalIdNo').value = booking.nationalIdNo;
+        if (!booking) {
+            showMessageBox('Error', 'Booking not found for editing.');
+            return;
+        }
 
-    bookingModal.style.display = 'flex';
+        document.getElementById('modalTitle').textContent = 'Edit Booking';
+        document.getElementById('bookingId').value = booking.id;
+        document.getElementById('name').value = booking.name;
+        await populateRoomDropdown(booking.room); // Pass current room to keep it selected even if blocked
+        document.getElementById('checkIn').value = booking.checkIn;
+        document.getElementById('checkOut').value = booking.checkOut;
+        nightsInput.value = booking.nights;
+        amtPerNightInput.value = booking.amtPerNight;
+        totalDueInput.value = booking.totalDue;
+        amountPaidInput.value = booking.amountPaid;
+        balanceInput.value = booking.balance;
+        document.getElementById('paymentStatus').value = booking.paymentStatus;
+        document.getElementById('people').value = booking.people;
+        document.getElementById('nationality').value = booking.nationality;
+        document.getElementById('address').value = booking.address;
+        document.getElementById('phoneNo').value = booking.phoneNo;
+        document.getElementById('nationalIdNo').value = booking.nationalIdNo;
+
+        bookingModal.style.display = 'flex';
+    } catch (error) {
+        console.error('Error fetching booking for edit:', error);
+        showMessageBox('Error', `Failed to load booking for editing: ${error.message}`);
+    }
 }
 
 // Deletes a booking
-function deleteBooking(id) {
+async function deleteBooking(id) {
     const confirmed = confirm('Are you sure you want to delete this booking?');
     if (confirmed) {
-        const bookingToDelete = bookings.find(b => b.id === id);
-        if (bookingToDelete) {
-            // Unblock the room if it was blocked by this booking
-            const room = rooms.find(r => r.number === bookingToDelete.room);
-            if (room && room.status === 'blocked') {
-                // Check if other bookings still block this room
-                const otherBookingsForRoom = bookings.filter(b =>
-                    b.room === room.number && b.id !== id && new Date(b.checkOut) >= new Date()
-                );
-                if (otherBookingsForRoom.length === 0) {
-                    room.status = 'clean'; // Only unblock if no other active bookings
-                }
+        try {
+            const response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
+
+            showMessageBox('Success', 'Booking deleted successfully!');
+            renderBookings(); // Re-render to show updated list
+            renderHousekeepingRooms(); // Update housekeeping view as room status might change
+        } catch (error) {
+            console.error('Error deleting booking:', error);
+            showMessageBox('Error', `Failed to delete booking: ${error.message}`);
         }
-        bookings = bookings.filter(b => b.id !== id);
-        saveBookings();
-        renderBookings();
-        renderHousekeepingRooms(); // Update housekeeping view
-        showMessageBox('Success', 'Booking deleted successfully!');
     }
 }
 
 // Handles room checkout
-function checkoutBooking(id) {
-    const booking = bookings.find(b => b.id === id);
-    if (booking) {
-        const room = rooms.find(r => r.number === booking.room);
-        if (room) {
-            room.status = 'dirty'; // Mark room as dirty
-            // Also, ensure the room is no longer 'blocked' by this specific booking
-            // If there are other overlapping bookings, the room might remain 'blocked'
-            // For simplicity, we assume one booking blocks one room for its duration.
-            // A more robust system would check for current active bookings.
-            const now = new Date();
-            now.setHours(0,0,0,0);
-            const checkInDate = new Date(booking.checkIn);
-            checkInDate.setHours(0,0,0,0);
-            const checkOutDate = new Date(booking.checkOut);
-            checkOutDate.setHours(0,0,0,0);
+async function checkoutBooking(id) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings/${id}/checkout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
 
-
-            // Only unblock if the checkout date is past or today
-            if (checkOutDate <= now) {
-                const activeBookingsForRoom = bookings.filter(b =>
-                    b.room === room.number && b.id !== id && new Date(b.checkOut) >= now && new Date(b.checkIn) <= now
-                );
-                if (activeBookingsForRoom.length === 0) {
-                    // If no other active bookings, set to dirty (as per requirement)
-                    room.status = 'dirty';
-                }
-            }
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
-        saveBookings();
+
+        const data = await response.json();
+        showMessageBox('Success', data.message);
         renderBookings(); // Re-render to update checkout button visibility
         renderHousekeepingRooms(); // Update housekeeping view
-        showMessageBox('Success', `Room ${booking.room} marked as dirty upon checkout.`);
+    } catch (error) {
+        console.error('Error during checkout:', error);
+        showMessageBox('Error', `Failed to process checkout: ${error.message}`);
     }
 }
 
@@ -497,10 +527,22 @@ amountPaidInput.addEventListener('input', calculateTotalDue);
 // --- Reports Functions ---
 
 // Generates and displays report data
-function generateReport() {
+async function generateReport() {
     const selectedDateStr = reportDateInput.value;
     if (!selectedDateStr) {
         showMessageBox('Error', 'Please select a date for the report.');
+        return;
+    }
+
+    // Fetch all bookings to generate report locally
+    let allBookings = [];
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        allBookings = await response.json();
+    } catch (error) {
+        console.error('Error fetching bookings for report:', error);
+        showMessageBox('Error', 'Failed to load bookings for report generation.');
         return;
     }
 
@@ -512,7 +554,7 @@ function generateReport() {
     let guestsCheckedIn = 0;
     const roomTypeCounts = {}; // To count most booked room type
 
-    bookings.forEach(booking => {
+    allBookings.forEach(booking => {
         const checkIn = new Date(booking.checkIn);
         checkIn.setHours(0, 0, 0, 0);
         const checkOut = new Date(booking.checkOut);
@@ -524,7 +566,7 @@ function generateReport() {
             totalBalance += booking.balance;
             guestsCheckedIn += booking.people;
 
-            const room = rooms.find(r => r.number === booking.room);
+            const room = rooms.find(r => r.number === booking.room); // Use locally cached rooms for type
             if (room) {
                 roomTypeCounts[room.type] = (roomTypeCounts[room.type] || 0) + 1;
             }
@@ -549,13 +591,28 @@ function generateReport() {
 
 // --- Housekeeping Functions ---
 
-// Renders the room cards for housekeeping
-function renderHousekeepingRooms() {
+// Renders the room cards for housekeeping by fetching from backend
+async function renderHousekeepingRooms() {
     housekeepingRoomGrid.innerHTML = ''; // Clear existing cards
+
+    let currentRooms = [];
+    try {
+        const response = await fetch(`${API_BASE_URL}/rooms`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        currentRooms = await response.json();
+        rooms = currentRooms; // Update local rooms array
+    } catch (error) {
+        console.error('Error fetching rooms for housekeeping:', error);
+        showMessageBox('Error', 'Failed to load rooms for housekeeping. Please check backend connection.');
+        housekeepingRoomGrid.innerHTML = '<p style="text-align: center; padding: 20px; color: red;">Failed to load rooms.</p>';
+        return;
+    }
 
     // Group rooms by type for better organization
     const roomTypes = {};
-    rooms.forEach(room => {
+    currentRooms.forEach(room => {
         if (!roomTypes[room.type]) {
             roomTypes[room.type] = [];
         }
@@ -601,28 +658,34 @@ function renderHousekeepingRooms() {
 }
 
 // Updates room status
-function updateRoomStatus(roomId, newStatus) {
+async function updateRoomStatus(roomId, newStatus) {
     const room = rooms.find(r => r.id === roomId);
-    if (room) {
-        // Prevent changing status if room is currently blocked by an *active* reservation
-        const isRoomCurrentlyBlocked = bookings.some(b =>
-            b.room === room.number &&
-            new Date(b.checkIn) <= new Date() && // Booking has started
-            new Date(b.checkOut) >= new Date()   // Booking has not ended
-        );
+    if (!room) {
+        showMessageBox('Error', 'Room not found.');
+        return;
+    }
 
-        if (isRoomCurrentlyBlocked && newStatus !== 'blocked') { // Allow 'blocked' to be selected if it's already blocked
-            showMessageBox('Warning', `Room ${room.number} is currently reserved. Its status cannot be manually changed from 'blocked'.`);
-            // Revert the dropdown selection visually
-            renderHousekeepingRooms();
-            return;
+    try {
+        const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
 
-        room.status = newStatus;
-        // To persist room status, you'd need to save the 'rooms' array to localStorage too.
-        // localStorage.setItem('hotelRooms', JSON.stringify(rooms)); // Uncomment to persist room status
+        const data = await response.json();
+        // Update the local rooms array with the new status
+        room.status = data.room.status;
+        showMessageBox('Success', `Room ${room.number} status updated to ${data.room.status.replace('-', ' ')}.`);
         renderHousekeepingRooms(); // Re-render to update UI
-        showMessageBox('Success', `Room ${room.number} status updated to ${newStatus.replace('-', ' ')}.`);
+    } catch (error) {
+        console.error('Error updating room status:', error);
+        showMessageBox('Error', `Failed to update room status: ${error.message}`);
+        renderHousekeepingRooms(); // Revert UI if update failed
     }
 }
 
@@ -641,10 +704,8 @@ document.addEventListener('DOMContentLoaded', () => {
         link.addEventListener('click', handleNavigation);
     });
 
-    // Initial render of bookings and housekeeping rooms (will only be visible after login)
-    renderBookings();
-    renderHousekeepingRooms();
-    generateReport(); // Generate report for today's date on load
+    // Initial renders will be triggered after successful login via handleNavigation
+    // No direct renderBookings() or renderHousekeepingRooms() here on DOMContentLoaded
 });
 
 // Add event listener for nights, total due, balance calculation on modal open
