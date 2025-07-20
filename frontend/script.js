@@ -114,6 +114,7 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
         }
         const fetchedRooms = await response.json();
         rooms = fetchedRooms; // Update local rooms array
+        console.log('Fetched rooms for dropdown:', rooms); // DEBUGGING LOG
 
         const availableRooms = rooms.filter(room => room.status === 'clean' || room.number === selectedRoomNumber);
 
@@ -170,6 +171,7 @@ loginForm.addEventListener('submit', async function(event) {
             applyRoleAccess(currentUserRole);
 
             // Initialize rooms in backend if empty (run once)
+            // This call is crucial for populating the DB initially
             await fetch(`${API_BASE_URL}/rooms/init`, { method: 'POST' });
 
             // Automatically click the appropriate navigation link based on role
@@ -435,7 +437,8 @@ bookingForm.addEventListener('submit', async function(event) {
 // Populates the modal with booking data for editing
 async function editBooking(id) {
     try {
-        const response = await fetch(`${API_BASE_URL}/bookings`); // Fetch all bookings to find the one to edit
+        // Fetch all bookings to find the one to edit (could optimize to fetch single booking if backend supported)
+        const response = await fetch(`${API_BASE_URL}/bookings`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const allBookings = await response.json();
         const booking = allBookings.find(b => b.id === id);
