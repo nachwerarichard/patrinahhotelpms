@@ -175,6 +175,7 @@ loginForm.addEventListener('submit', async function(event) {
             // Automatically click the appropriate navigation link based on role
             if (currentUserRole === 'admin') {
                 document.getElementById('nav-booking').click();
+                 renderBookings();
             } else if (currentUserRole === 'housekeeper') {
                 document.getElementById('nav-housekeeping').click();
             }
