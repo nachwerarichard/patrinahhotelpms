@@ -204,7 +204,12 @@ logoutBtn.addEventListener('click', () => {
 // Handles navigation clicks
 function handleNavigation(event) {
     event.preventDefault();
-    const targetId = event.target.id.replace('nav-', '');
+    let targetId = event.target.id.replace('nav-', ''); // Use let because we might reassign
+
+    // Special handling for the 'nav-booking' link to map to 'booking-management' section
+    if (event.target.id === 'nav-booking') {
+        targetId = 'booking-management';
+    }
 
     // Prevent navigation if the user's role doesn't permit it
     if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping') {
