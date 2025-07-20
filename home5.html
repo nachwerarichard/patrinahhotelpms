@@ -1136,36 +1136,10 @@
 
         // Applies access restrictions based on user role
         function applyRoleAccess(role) {
-            const adminSections = ['booking-management', 'reports', 'housekeeping'];
-            const housekeeperSections = ['housekeeping'];
-
             // Hide/show navigation links
             document.getElementById('nav-booking').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
             document.getElementById('nav-reports').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
             document.getElementById('nav-housekeeping').parentElement.style.display = 'block'; // Always visible
-
-            // Hide/show sections
-            sections.forEach(section => {
-                const sectionId = section.id;
-                if (role === 'admin') {
-                    if (adminSections.includes(sectionId)) {
-                        section.style.display = section.classList.contains('active') ? 'block' : 'none';
-                    } else {
-                        section.style.display = 'none';
-                    }
-                } else if (role === 'housekeeper') {
-                    if (housekeeperSections.includes(sectionId)) {
-                        section.style.display = section.classList.contains('active') ? 'block' : 'none';
-                    } else {
-                        section.style.display = 'none';
-                    }
-                }
-            });
-
-            // If a housekeeper is logged in and not on housekeeping, redirect them
-            if (role === 'housekeeper' && !document.getElementById('housekeeping').classList.contains('active')) {
-                document.getElementById('nav-housekeeping').click();
-            }
 
             // Disable/enable booking management buttons for housekeepers
             const addBookingBtn = document.querySelector('.btn-add-booking');
@@ -1205,6 +1179,9 @@
             allEditButtons.forEach(btn => btn.disabled = (role !== 'admin'));
             allDeleteButtons.forEach(btn => btn.disabled = (role !== 'admin'));
             allCheckoutButtons.forEach(btn => btn.disabled = (role !== 'admin'));
+
+            // Re-evaluate housekeeping room dropdowns as their disabled state depends on currentUserRole
+            renderHousekeepingRooms(); // This will re-render and apply the correct disabled state
         }
 
 
@@ -1605,7 +1582,7 @@
             // Set default date for reports
             reportDateInput.valueAsDate = new Date();
 
-            // Apply role-based access
+            // Apply role-based access (this now only handles nav visibility and control disabling)
             applyRoleAccess(role);
 
             // Add event listeners for navigation (only once)
@@ -1614,10 +1591,17 @@
                 link.addEventListener('click', handleNavigation);
             });
 
-            // Initial render of bookings and housekeeping rooms
-            renderBookings();
-            renderHousekeepingRooms();
-            generateReport(); // Generate report for today's date on load
+            // Ensure the correct section is displayed and active based on the role
+            let defaultSectionId = 'booking-management';
+            if (role === 'housekeeper') {
+                defaultSectionId = 'housekeeping';
+            }
+
+            // Programmatically click the default navigation link to activate the section
+            // This will ensure the correct section is displayed and others are hidden,
+            // and also trigger the necessary rendering functions (renderBookings, renderHousekeepingRooms, generateReport)
+            // via the handleNavigation function.
+            document.getElementById(`nav-${defaultSectionId}`).click();
         }
 
         document.addEventListener('DOMContentLoaded', () => {
