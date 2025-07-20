@@ -177,7 +177,7 @@ loginForm.addEventListener('submit', async function(event) {
             // Automatically click the appropriate navigation link based on role
             if (currentUserRole === 'admin') {
                 document.getElementById('nav-booking').click();
-                 renderBookings();
+                 
             } else if (currentUserRole === 'housekeeper') {
                 document.getElementById('nav-housekeeping').click();
             }
@@ -265,12 +265,6 @@ function applyRoleAccess(role) {
     sections.forEach(section => {
         const sectionId = section.id;
         if (role === 'admin') {
-            if (sectionId === 'booking') {
-                section.style.display = 'block'; // Housekeeper only sees housekeeping
-            } 
-            else {
-                section.style.display = 'block';
-            }
             // Sections are now controlled solely by the 'active' class via CSS and handleNavigation
             // No explicit display: none here for admin sections
         } else if (role === 'housekeeper') {
