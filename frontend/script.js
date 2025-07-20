@@ -224,6 +224,7 @@ loginForm.addEventListener('submit', async function(event) {
 
         if (response.ok) {
             currentUserRole = data.role;
+            localStorage.setItem('currentUserRole', currentUserRole); // Store role in localStorage
             loginContainer.style.display = 'none';
             mainContent.style.display = 'flex';
             applyRoleAccess(currentUserRole);
@@ -249,6 +250,7 @@ loginForm.addEventListener('submit', async function(event) {
 
 logoutBtn.addEventListener('click', () => {
     currentUserRole = null;
+    localStorage.removeItem('currentUserRole'); // Clear role from localStorage on logout
     loginContainer.style.display = 'flex';
     mainContent.style.display = 'none';
     usernameInput.value = '';
@@ -888,9 +890,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set default date for reports
     reportDateInput.valueAsDate = new Date();
 
-    // Hide main content and show login on initial load
-    mainContent.style.display = 'none';
-    loginContainer.style.display = 'flex';
+    // Check for stored user role on page load for persistent login
+    const storedRole = localStorage.getItem('currentUserRole');
+    if (storedRole) {
+        currentUserRole = storedRole;
+        loginContainer.style.display = 'none';
+        mainContent.style.display = 'flex';
+        applyRoleAccess(currentUserRole);
+
+        // Automatically click the appropriate navigation link based on role
+        if (currentUserRole === 'admin') {
+            document.getElementById('nav-booking').click();
+        } else if (currentUserRole === 'housekeeper') {
+            document.getElementById('nav-housekeeping').click();
+        }
+    } else {
+        // Hide main content and show login on initial load if no stored role
+        mainContent.style.display = 'none';
+        loginContainer.style.display = 'flex';
+    }
 
     // Add event listeners for navigation
     navLinks.forEach(link => {
