@@ -9,6 +9,13 @@
     --header-footer-bg: #2c3e50;
     --nav-hover-bg: #34495e;
 }
+.section {
+    display: none; /* Hide all sections by default */
+}
+
+.section.active {
+    display: block; /* Show only the active section */
+}
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
