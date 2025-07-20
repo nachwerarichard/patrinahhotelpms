@@ -17,7 +17,7 @@ app.use(cors()); // Enable CORS for all origins (for development, restrict in pr
 // IMPORTANT: Replace '<YOUR_MONGODB_CONNECTION_STRING>' with your actual MongoDB Atlas
 // connection string or a local MongoDB connection string (e.g., 'mongodb://localhost:27017/hoteldb').
 // Make sure your MongoDB user has read/write access to the database.
-const mongoURI = 'mongodb+srv://nachwerarichard:hotelpms@bookingengine.vra586l.mongodb.net/?retryWrites=true&w=majority&appName=bookingengine'; // Example: Replace with your actual connection string
+const mongoURI = 'mongodb+srv://nachwerarichard:hotelpms@cluster0.g4cjpwg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'; // Example: Replace with your actual connection string
 
 mongoose.connect(mongoURI)
     .then(() => console.log('MongoDB connected successfully!'))
