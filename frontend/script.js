@@ -52,6 +52,9 @@ let currentConfirmationCallback = null; // Stores the callback for confirmation
 
 const logoutBtn = document.getElementById('logoutBtn');
 
+// Report section specific elements for loading indicator
+const reportSummaryContainer = document.getElementById('reportSummary');
+
 
 // --- Utility Functions ---
 
@@ -300,6 +303,9 @@ function handleNavigation(event) {
     }
 
     // Re-render sections when active
+    // This is where data fetching for the specific section is triggered.
+    // Ensure your CSS hides sections that do NOT have the 'active' class.
+    // Example CSS: .section { display: none; } .section.active { display: block; }
     if (targetId === 'booking-management') {
         renderBookings();
     } else if (targetId === 'housekeeping') {
@@ -326,7 +332,7 @@ function applyRoleAccess(role) {
         const sectionId = section.id;
         if (role === 'admin') {
             // Sections are now controlled solely by the 'active' class via CSS and handleNavigation
-            // No explicit display: none here for admin sections
+            // No explicit display: none here for admin sections, rely on CSS for .section:not(.active)
         } else if (role === 'housekeeper') {
             if (sectionId === 'housekeeping') {
                 section.style.display = 'block'; // Housekeeper only sees housekeeping
@@ -345,7 +351,7 @@ function applyRoleAccess(role) {
  * @param {Array|null} filteredBookings - Optional array of bookings to render (for search/filter).
  */
 async function renderBookings(filteredBookings = null) {
-    bookingsTableBody.innerHTML = ''; // Clear existing rows
+    bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px;">Loading bookings...</td></tr>'; // Loading indicator
 
     if (currentUserRole !== 'admin') {
         bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px;">Access Denied. Only Admin can view bookings.</td></tr>';
@@ -353,23 +359,29 @@ async function renderBookings(filteredBookings = null) {
     }
 
     let currentBookings = [];
-    if (filteredBookings) {
-        currentBookings = filteredBookings; // Use provided filtered data
-    } else {
-        try {
+    try {
+        if (filteredBookings) {
+            currentBookings = filteredBookings; // Use provided filtered data
+        } else {
             const response = await fetch(`${API_BASE_URL}/bookings`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             currentBookings = await response.json();
             bookings = currentBookings; // Update local bookings array
-        } catch (error) {
-            console.error('Error fetching bookings:', error);
-            showMessageBox('Error', 'Failed to load bookings. Please check backend connection.');
-            bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px; color: red;">Failed to load bookings.</td></tr>';
-            return;
+        }
+    } catch (error) {
+        console.error('Error fetching bookings:', error);
+        showMessageBox('Error', 'Failed to load bookings. Please check backend connection.');
+        bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px; color: red;">Failed to load bookings.</td></tr>';
+        return;
+    } finally {
+        // Ensure loading message is cleared even if there's an error
+        if (bookingsTableBody.innerHTML.includes('Loading bookings...')) {
+             bookingsTableBody.innerHTML = ''; // Clear loading message if no data to display
         }
     }
+
 
     if (currentBookings.length === 0) {
         bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px;">No bookings found.</td></tr>';
@@ -678,9 +690,17 @@ roomSelect.addEventListener('change', () => {
  * Generates and displays report data for a selected date.
  */
 async function generateReport() {
+    // Clear previous report data and show loading indicator
+    document.getElementById('totalAmountReport').textContent = 'Loading...';
+    document.getElementById('totalBalanceReport').textContent = 'Loading...';
+    document.getElementById('mostBookedRoomType').textContent = 'Loading...';
+    document.getElementById('guestsCheckedIn').textContent = 'Loading...';
+    reportSummaryContainer.style.opacity = '0.5'; // Dim the content
+
     const selectedDateStr = reportDateInput.value;
     if (!selectedDateStr) {
         showMessageBox('Error', 'Please select a date for the report.');
+        reportSummaryContainer.style.opacity = '1'; // Restore opacity
         return;
     }
 
@@ -693,7 +713,10 @@ async function generateReport() {
     } catch (error) {
         console.error('Error fetching bookings for report:', error);
         showMessageBox('Error', 'Failed to load bookings for report generation.');
+        reportSummaryContainer.style.opacity = '1'; // Restore opacity
         return;
+    } finally {
+        reportSummaryContainer.style.opacity = '1'; // Restore opacity after fetch
     }
 
     const selectedDate = new Date(selectedDateStr);
@@ -745,7 +768,7 @@ async function generateReport() {
  * Renders the room cards for housekeeping by fetching from backend.
  */
 async function renderHousekeepingRooms() {
-    housekeepingRoomGrid.innerHTML = ''; // Clear existing cards
+    housekeepingRoomGrid.innerHTML = '<p style="text-align: center; padding: 20px;">Loading rooms for housekeeping...</p>'; // Loading indicator
 
     let currentRooms = [];
     try {
@@ -760,6 +783,11 @@ async function renderHousekeepingRooms() {
         showMessageBox('Error', 'Failed to load rooms for housekeeping. Please check backend connection.');
         housekeepingRoomGrid.innerHTML = '<p style="text-align: center; padding: 20px; color: red;">Failed to load rooms.</p>';
         return;
+    } finally {
+        // Clear loading message if it's still there
+        if (housekeepingRoomGrid.innerHTML.includes('Loading rooms for housekeeping...')) {
+            housekeepingRoomGrid.innerHTML = '';
+        }
     }
 
     // Group rooms by type for better organization
