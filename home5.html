@@ -1579,6 +1579,12 @@
 
         // --- Initial App Initialization ---
         function initializeApp(role) {
+            // Hide all sections initially to prevent flicker
+            sections.forEach(section => {
+                section.classList.remove('active');
+                section.style.display = 'none'; // Ensure they are hidden
+            });
+
             // Set default date for reports
             reportDateInput.valueAsDate = new Date();
 
@@ -1591,7 +1597,7 @@
                 link.addEventListener('click', handleNavigation);
             });
 
-            // Ensure the correct section is displayed and active based on the role
+            // Determine the default section to activate
             let defaultSectionId = 'booking-management';
             if (role === 'housekeeper') {
                 defaultSectionId = 'housekeeping';
@@ -1601,7 +1607,11 @@
             // This will ensure the correct section is displayed and others are hidden,
             // and also trigger the necessary rendering functions (renderBookings, renderHousekeepingRooms, generateReport)
             // via the handleNavigation function.
-            document.getElementById(`nav-${defaultSectionId}`).click();
+            // Using a setTimeout of 0 to ensure this click happens after the current call stack clears,
+            // which can sometimes help with rendering consistency.
+            setTimeout(() => {
+                document.getElementById(`nav-${defaultSectionId}`).click();
+            }, 0);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
