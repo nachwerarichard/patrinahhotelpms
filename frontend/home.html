@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="login-container">
+        <div class="login-box">
+            <h2>Login</h2>
+            <form id="loginForm">
+                <div class="input-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="input-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Login</button>
+                <p class="login-info">Admin: user/password | Housekeeper: hk/hkpass</p>
+            </form>
+            <div id="loginMessageBox" class="message-box" style="display: none;">
+                <h3 id="loginMessageBoxTitle"></h3>
+                <p id="loginMessageBoxContent"></p>
+                <button onclick="closeLoginMessageBox()" class="btn btn-primary">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-content" style="display: none;">
+        <aside>
+            <nav>
+                <ul>
+                    <li><a href="#" id="nav-booking" class="active">Booking Management</a></li>
+                    <li><a href="#" id="nav-housekeeping">Housekeeping</a></li>
+                    <li><a href="#" id="nav-reports">Reports</a></li>
+                    <li><a href="#" id="logoutBtn">Logout</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main>
+            <section id="booking-management" class="section active">
+                <h2>Booking Management</h2>
+                <div class="controls">
+                    <input type="text" id="bookingSearch" placeholder="Search bookings...">
+                    <button class="btn btn-primary" onclick="openBookingModal()">Add New Booking</button>
+                </div>
+                <div class="table-container">
+                    <table id="bookingsTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Room</th>
+                                <th>Check-in</th>
+                                <th>Check-out</th>
+                                <th>Nights</th>
+                                <th>Amt/Night</th>
+                                <th>Total Due</th>
+                                <th>Amount Paid</th>
+                                <th>Balance</th>
+                                <th>Payment Status</th>
+                                <th>People</th>
+                                <th>Nationality</th>
+                                <th>Address</th>
+                                <th>Phone No.</th>
+                                <th>National ID</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="housekeeping" class="section">
+                <h2>Housekeeping</h2>
+                <div id="housekeepingRoomGrid" class="room-grid">
+                    </div>
+            </section>
+
+            <section id="reports" class="section">
+                <h2>Reports</h2>
+                <div class="report-controls">
+                    <label for="reportDate">Select Date:</label>
+                    <input type="date" id="reportDate">
+                    <button class="btn btn-primary" onclick="generateReport()">Generate Report</button>
+                </div>
+                <div class="report-summary">
+                    <p>Total Amount for Date: <span id="totalAmountReport">0.00</span></p>
+                    <p>Total Balance Outstanding: <span id="totalBalanceReport">0.00</span></p>
+                    <p>Most Booked Room Type: <span id="mostBookedRoomType">N/A</span></p>
+                    <p>Guests Checked In: <span id="guestsCheckedIn">0</span></p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="bookingModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeBookingModal()">&times;</span>
+            <h2 id="modalTitle">Add New Booking</h2>
+            <form id="bookingForm">
+                <input type="hidden" id="bookingId">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label for="name">Guest Name:</label>
+                        <input type="text" id="name" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="room">Room Number:</label>
+                        <select id="room" required>
+                            <option value="">Select a Room</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="checkIn">Check-in Date:</label>
+                        <input type="date" id="checkIn" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="checkOut">Check-out Date:</label>
+                        <input type="date" id="checkOut" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="nights">Nights:</label>
+                        <input type="number" id="nights" readonly>
+                    </div>
+                    <div class="input-group">
+                        <label for="amtPerNight">Amount Per Night:</label>
+                        <input type="number" id="amtPerNight" step="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="totalDue">Total Due:</label>
+                        <input type="number" id="totalDue" step="0.01" readonly>
+                    </div>
+                    <div class="input-group">
+                        <label for="amountPaid">Amount Paid:</label>
+                        <input type="number" id="amountPaid" step="0.01">
+                    </div>
+                    <div class="input-group">
+                        <label for="balance">Balance:</label>
+                        <input type="number" id="balance" step="0.01" readonly>
+                    </div>
+                    <div class="input-group">
+                        <label for="paymentStatus">Payment Status:</label>
+                        <select id="paymentStatus" required>
+                            <option value="Pending">Pending</option>
+                            <option value="Partially Paid">Partially Paid</option>
+                            <option value="Paid">Paid</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="people">Number of People:</label>
+                        <input type="number" id="people" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="nationality">Nationality:</label>
+                        <input type="text" id="nationality">
+                    </div>
+                    <div class="input-group">
+                        <label for="address">Address:</label>
+                        <input type="text" id="address">
+                    </div>
+                    <div class="input-group">
+                        <label for="phoneNo">Phone Number:</label>
+                        <input type="text" id="phoneNo">
+                    </div>
+                    <div class="input-group">
+                        <label for="nationalIdNo">National ID No.:</label>
+                        <input type="text" id="nationalIdNo">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Booking</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="messageBox" class="message-box" style="display: none;">
+        <h3 id="messageBoxTitle"></h3>
+        <p id="messageBoxContent"></p>
+        <button onclick="closeMessageBox()" class="btn btn-primary">OK</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
