@@ -17,7 +17,7 @@ app.use(cors()); // Enable CORS for all origins (for development, restrict in pr
 // IMPORTANT: Replace '<YOUR_MONGODB_CONNECTION_STRING>' with your actual MongoDB Atlas
 // connection string or a local MongoDB connection string (e.g., 'mongodb://localhost:27017/hoteldb').
 // Make sure your MongoDB user has read/write access to the database.
-const mongoURI = 'mongodb+srv://nachwerarichard:hotelpms@cluster0.g4cjpwg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'; // Example: Replace with your actual connection string
+const mongoURI = 'mongodb+srv://nachwerarichard:hotelpms@cluster0.g4cjpwg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'; // Your MongoDB Atlas connection string
 
 mongoose.connect(mongoURI)
     .then(() => console.log('MongoDB connected successfully!'))
@@ -27,7 +27,7 @@ mongoose.connect(mongoURI)
 
 // Room Schema
 const roomSchema = new mongoose.Schema({
-    id: { type: String, required: true, unique: true }, // Unique ID for the room (e.g., '101')
+    id: { type: String, required: true, unique: true }, // Custom ID for the room (e.g., 'R101')
     type: { type: String, required: true },
     number: { type: String, required: true, unique: true }, // Room number (e.g., '101')
     status: { type: String, required: true, enum: ['clean', 'dirty', 'under-maintenance', 'blocked'], default: 'clean' }
@@ -43,9 +43,9 @@ const bookingSchema = new mongoose.Schema({
     checkOut: { type: String, required: true }, // Stored as YYYY-MM-DD string
     nights: { type: Number, required: true },
     amtPerNight: { type: Number, required: true },
-    totalDue: { type: Number, required: true },
-    amountPaid: { type: Number, default: 0 },
-    balance: { type: Number, default: 0 },
+    totalDue: { type: Number, required: true }, // This is ROOM total due
+    amountPaid: { type: Number, default: 0 }, // This is ROOM amount paid
+    balance: { type: Number, default: 0 }, // This is ROOM balance
     paymentStatus: { type: String, required: true, enum: ['Pending', 'Paid', 'Partially Paid'], default: 'Pending' },
     people: { type: Number, required: true },
     nationality: { type: String },
@@ -62,7 +62,12 @@ const incidentalChargeSchema = new mongoose.Schema({
         ref: 'Booking',
         required: true
     },
-    guestName: { // Storing guest name for easy lookup, though bookingId links to full details
+    bookingCustomId: { type: String, required: true }, // Custom booking ID (e.g., BKG001) for easier frontend lookup
+    guestName: {
+        type: String,
+        required: true
+    },
+    roomNumber: { // Added for easier filtering/display
         type: String,
         required: true
     },
@@ -175,6 +180,7 @@ app.put('/api/rooms/:id', async (req, res) => {
         }
 
         // Prevent changing status if room is currently blocked by an *active* reservation
+        // This check ensures that a room currently occupied cannot be manually set to 'clean' or 'under-maintenance'
         const now = new Date();
         now.setHours(0,0,0,0);
         const isRoomCurrentlyBlocked = await Booking.exists({
@@ -183,8 +189,10 @@ app.put('/api/rooms/:id', async (req, res) => {
             checkOut: { $gt: now.toISOString().split('T')[0] }  // Booking has not ended (checkOut is later than today)
         });
 
+        // If the room is currently blocked by an active booking and the new status is not 'blocked', prevent the change.
+        // This is to prevent housekeepers from accidentally unblocking an occupied room.
         if (isRoomCurrentlyBlocked && status !== 'blocked' && room.status === 'blocked') {
-            return res.status(400).json({ message: `Room ${room.number} is currently reserved. Its status cannot be manually changed from 'blocked'.` });
+            return res.status(400).json({ message: `Room ${room.number} is currently reserved. Its status cannot be manually changed from 'blocked' while occupied.` });
         }
 
         room.status = status;
@@ -197,12 +205,27 @@ app.put('/api/rooms/:id', async (req, res) => {
 
 
 // --- Bookings API ---
-// Get all bookings (admin only)
+// Get all bookings with pagination (admin only)
 app.get('/api/bookings', async (req, res) => {
-    // Add authentication/authorization if needed, e.g., authorizeRole('admin')
     try {
-        const bookings = await Booking.find({});
-        res.json(bookings);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 5; // Default to 5 records per page
+        const skip = (page - 1) * limit;
+
+        const totalCount = await Booking.countDocuments();
+        const totalPages = Math.ceil(totalCount / limit);
+
+        const bookings = await Booking.find({})
+                                      .skip(skip)
+                                      .limit(limit)
+                                      .sort({ checkIn: -1 }); // Sort by check-in date descending
+
+        res.json({
+            bookings,
+            totalPages,
+            currentPage: page,
+            totalCount
+        });
     } catch (error) {
         res.status(500).json({ message: 'Error fetching bookings', error: error.message });
     }
@@ -210,31 +233,29 @@ app.get('/api/bookings', async (req, res) => {
 
 // Add a new booking (admin only)
 app.post('/api/bookings', async (req, res) => {
-    // Add authentication/authorization if needed, e.g., authorizeRole('admin')
     const newBookingData = req.body;
     try {
         // Generate a unique ID for the new booking if not provided by client
-        newBookingData.id = newBookingData.id || `BKG${Math.floor(Math.random() * 100000) + 1000}`; // Example: BKG12345
+        newBookingData.id = newBookingData.id || `BKG${Math.floor(Math.random() * 90000) + 10000}`; // Example: BKG12345
 
         const room = await Room.findOne({ number: newBookingData.room });
         if (!room) {
             return res.status(404).json({ message: 'Room not found for booking' });
         }
 
-        // Check if room is already blocked by an *active* booking that isn't this one (for update scenarios)
-        const now = new Date();
-        now.setHours(0,0,0,0);
+        // Check for conflicting bookings for the chosen room and dates
         const conflictingBooking = await Booking.findOne({
             room: newBookingData.room,
-            checkIn: { $lte: newBookingData.checkOut }, // New booking starts before or on current booking's checkout
-            checkOut: { $gt: newBookingData.checkIn }, // New booking ends after current booking's checkin
-            _id: { $ne: newBookingData._id } // Exclude current booking being updated if _id exists (for PUT, handled separately)
+            $or: [
+                { checkIn: { $lt: newBookingData.checkOut, $gte: newBookingData.checkIn } }, // New booking starts within existing
+                { checkOut: { $gt: newBookingData.checkIn, $lte: newBookingData.checkOut } }, // New booking ends within existing
+                { checkIn: { $lte: newBookingData.checkIn }, checkOut: { $gte: newBookingData.checkOut } } // Existing booking fully encompasses new
+            ]
         });
 
         if (conflictingBooking) {
             return res.status(400).json({ message: `Room ${newBookingData.room} is already booked for a conflicting period.` });
         }
-
 
         // Update room status to 'blocked'
         room.status = 'blocked';
@@ -250,13 +271,27 @@ app.post('/api/bookings', async (req, res) => {
 
 // Update an existing booking (admin only)
 app.put('/api/bookings/:id', async (req, res) => {
-    // Add authentication/authorization if needed, e.g., authorizeRole('admin')
     const { id } = req.params; // This `id` refers to your custom `id` field (e.g., BKG001)
     const updatedBookingData = req.body;
     try {
         const oldBooking = await Booking.findOne({ id: id });
         if (!oldBooking) {
             return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        // Check for conflicting bookings for the chosen room and dates, excluding the current booking being updated
+        const conflictingBooking = await Booking.findOne({
+            id: { $ne: id }, // Exclude the current booking
+            room: updatedBookingData.room,
+            $or: [
+                { checkIn: { $lt: updatedBookingData.checkOut, $gte: updatedBookingData.checkIn } },
+                { checkOut: { $gt: updatedBookingData.checkIn, $lte: updatedBookingData.checkOut } },
+                { checkIn: { $lte: updatedBookingData.checkIn }, checkOut: { $gte: updatedBookingData.checkOut } }
+            ]
+        });
+
+        if (conflictingBooking) {
+            return res.status(400).json({ message: `Room ${updatedBookingData.room} is already booked for a conflicting period.` });
         }
 
         // If room number changed, update old room status to clean (if no other active bookings) and new room status to blocked
@@ -295,7 +330,6 @@ app.put('/api/bookings/:id', async (req, res) => {
 
 // Delete a booking (admin only)
 app.delete('/api/bookings/:id', async (req, res) => {
-    // Add authentication/authorization if needed, e.g., authorizeRole('admin')
     const { id } = req.params;
     try {
         const bookingToDelete = await Booking.findOne({ id: id });
@@ -321,8 +355,8 @@ app.delete('/api/bookings/:id', async (req, res) => {
             }
         }
 
-        // Delete associated incidental charges
-        await IncidentalCharge.deleteMany({ bookingId: bookingToDelete._id }); // Use MongoDB _id for relationship
+        // Delete associated incidental charges using the MongoDB _id
+        await IncidentalCharge.deleteMany({ bookingId: bookingToDelete._id });
 
         await Booking.deleteOne({ id: id });
         res.json({ message: 'Booking deleted successfully!' });
@@ -333,7 +367,6 @@ app.delete('/api/bookings/:id', async (req, res) => {
 
 // Checkout a booking (admin only, marks room as dirty)
 app.post('/api/bookings/:id/checkout', async (req, res) => {
-    // Add authentication/authorization if needed, e.g., authorizeRole('admin')
     const { id } = req.params;
     try {
         const booking = await Booking.findOne({ id: id });
@@ -361,8 +394,7 @@ app.post('/api/bookings/:id/checkout', async (req, res) => {
 
 // Add a new incidental charge (admin only)
 app.post('/api/incidental-charges', async (req, res) => {
-    // Add authentication/authorization if needed, e.g., authorizeRole('admin')
-    const { bookingId, guestName, type, description, amount } = req.body;
+    const { bookingId, bookingCustomId, guestName, roomNumber, type, description, amount } = req.body;
     try {
         // Validate that bookingId (MongoDB _id) is a valid ObjectId
         if (!mongoose.Types.ObjectId.isValid(bookingId)) {
@@ -377,7 +409,9 @@ app.post('/api/incidental-charges', async (req, res) => {
 
         const newCharge = new IncidentalCharge({
             bookingId,
+            bookingCustomId, // Store the custom ID as well
             guestName: guestName || booking.name, // Use provided guestName or fallback to booking's name
+            roomNumber: roomNumber || booking.room, // Use provided roomNumber or fallback to booking's room
             type,
             description,
             amount
@@ -389,7 +423,7 @@ app.post('/api/incidental-charges', async (req, res) => {
     }
 });
 
-// Get all incidental charges for a specific booking (by booking ObjectId)
+// Get all incidental charges for a specific booking (by booking MongoDB _id)
 app.get('/api/incidental-charges/booking/:bookingObjectId', async (req, res) => {
     const { bookingObjectId } = req.params;
     try {
@@ -402,6 +436,18 @@ app.get('/api/incidental-charges/booking/:bookingObjectId', async (req, res) => 
         res.status(500).json({ message: 'Error fetching incidental charges for booking', error: error.message });
     }
 });
+
+// Get all incidental charges for a specific booking (by custom booking ID)
+app.get('/api/incidental-charges/booking-custom-id/:bookingCustomId', async (req, res) => {
+    const { bookingCustomId } = req.params;
+    try {
+        const charges = await IncidentalCharge.find({ bookingCustomId: bookingCustomId }).sort({ date: 1 });
+        res.json(charges);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching incidental charges for booking by custom ID', error: error.message });
+    }
+});
+
 
 // Delete an incidental charge
 app.delete('/api/incidental-charges/:chargeId', async (req, res) => {
@@ -446,13 +492,14 @@ app.listen(port, () => {
     console.log(`- POST /api/rooms/init (Run once to populate initial rooms)`);
     console.log(`- GET /api/rooms`);
     console.log(`- PUT /api/rooms/:id`);
-    console.log(`- GET /api/bookings`);
+    console.log(`- GET /api/bookings?page={num}&limit={num}`);
     console.log(`- POST /api/bookings`);
     console.log(`- PUT /api/bookings/:id`);
     console.log(`- DELETE /api/bookings/:id`);
     console.log(`- POST /api/bookings/:id/checkout`);
     console.log(`- POST /api/incidental-charges`);
-    console.log(`- GET /api/incidental-charges/booking/:bookingObjectId`);
+    console.log(`- GET /api/incidental-charges/booking/:bookingObjectId (by MongoDB _id)`);
+    console.log(`- GET /api/incidental-charges/booking-custom-id/:bookingCustomId (by custom ID)`);
     console.log(`- DELETE /api/incidental-charges/:chargeId`);
     console.log(`- PUT /api/incidental-charges/pay-all/:bookingObjectId`);
 });
