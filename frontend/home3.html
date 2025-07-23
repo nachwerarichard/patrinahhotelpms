@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Your Stay - Hotel Name</title>
+    <link rel="stylesheet" href="public_booking.css">
+    <!-- Optional: Add a favicon -->
+    <!-- <link rel="icon" href="favicon.ico" type="image/x-icon"> -->
+  <style>
+    :root {
+    --primary-color: #3498db;
+    --secondary-color: #2ecc71;
+    --danger-color: #e74c3c;
+    --background-color: #f0f2f5;
+    --text-color: #333;
+    --border-color: #ddd;
+    --box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.booking-container {
+    width: 100%;
+    max-width: 600px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: var(--box-shadow);
+    padding: 30px;
+    box-sizing: border-box;
+}
+
+.booking-box h2 {
+    text-align: center;
+    color: var(--primary-color);
+    margin-bottom: 10px;
+    font-size: 2em;
+}
+
+.booking-box .tagline {
+    text-align: center;
+    color: #666;
+    margin-bottom: 30px;
+    font-size: 1.1em;
+}
+
+.form-section {
+    background-color: #f9f9f9;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 25px;
+}
+
+.form-section h3 {
+    color: #555;
+    margin-top: 0;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.input-group {
+    margin-bottom: 18px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #555;
+    font-size: 0.95em;
+}
+
+.input-group input[type="date"],
+.input-group input[type="number"],
+.input-group input[type="text"],
+.input-group input[type="email"],
+.input-group input[type="tel"],
+.input-group select {
+    width: calc(100% - 20px); /* Account for padding */
+    padding: 12px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    font-size: 1rem;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+}
+
+.input-group input:focus,
+.input-group select:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+.input-group select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23000000%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-6.5%200-12.3%203.3-15.9%208.9-3.6%205.5-3.6%2012.3%200%2017.8l128%20128c3.5%203.5%208.1%205.4%2012.9%205.4s9.4-1.9%2012.9-5.4l128-128c3.6-5.6%203.6-12.3%200-17.8z%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 12px;
+    padding-right: 30px;
+}
+
+.btn {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 10px;
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+}
+
+.btn-success {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #27ae60;
+}
+
+.message {
+    margin-top: 15px;
+    font-size: 0.95em;
+    text-align: center;
+    color: #555;
+    min-height: 20px; /* Reserve space */
+}
+
+.message.success {
+    color: var(--secondary-color);
+    font-weight: bold;
+}
+
+.message.error {
+    color: var(--danger-color);
+    font-weight: bold;
+}
+
+/* Custom Message Box for Public Form */
+.message-box {
+    display: none; /* Hidden by default */
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    z-index: 1001;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+}
+
+.message-box h3 {
+    margin-top: 0;
+    color: var(--primary-color);
+    font-size: 1.4em;
+    margin-bottom: 15px;
+}
+
+.message-box p {
+    margin-bottom: 20px;
+    font-size: 1.1em;
+    color: #555;
+}
+
+@media (max-width: 600px) {
+    .booking-container {
+        padding: 20px;
+    }
+
+    .form-section {
+        padding: 20px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        font-size: 1rem;
+    }
+}
+
+  </style>
+</head>
+<body>
+    <div class="booking-container">
+        <div class="booking-box">
+            <h2>Book Your Stay</h2>
+            <p class="tagline">Check availability and book your perfect room!</p>
+
+            <form id="publicBookingForm">
+                <div class="form-section">
+                    <h3>1. Select Dates</h3>
+                    <div class="input-group">
+                        <label for="publicCheckIn">Check-in Date:</label>
+                        <input type="date" id="publicCheckIn" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="publicCheckOut">Check-out Date:</label>
+                        <input type="date" id="publicCheckOut" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="publicNights">Nights:</label>
+                        <input type="number" id="publicNights" readonly value="0">
+                    </div>
+                    <button type="button" id="checkAvailabilityBtn" class="btn btn-primary">Check Availability</button>
+                    <p id="availabilityMessage" class="message"></p>
+                </div>
+
+                <div class="form-section" id="roomSelectionSection" style="display: none;">
+                    <h3>2. Choose Your Room</h3>
+                    <div class="input-group">
+                        <label for="publicRoom">Available Rooms:</label>
+                        <select id="publicRoom" required>
+                            <option value="">-- Select a Room --</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="publicAmtPerNight">Price Per Night:</label>
+                        <input type="number" id="publicAmtPerNight" step="0.01" readonly value="0.00">
+                    </div>
+                    <div class="input-group">
+                        <label for="publicTotalDue">Room Total Due:</label>
+                        <input type="number" id="publicTotalDue" step="0.01" readonly value="0.00">
+                    </div>
+                </div>
+
+                <div class="form-section" id="guestDetailsSection" style="display: none;">
+                    <h3>3. Your Details</h3>
+                    <div class="input-group">
+                        <label for="publicName">Full Name:</label>
+                        <input type="text" id="publicName" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="publicEmail">Email:</label>
+                        <input type="email" id="publicEmail" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="publicPhoneNo">Phone Number:</label>
+                        <input type="tel" id="publicPhoneNo" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="publicPeople">Number of Guests:</label>
+                        <input type="number" id="publicPeople" min="1" value="1" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="publicNationality">Nationality (Optional):</label>
+                        <input type="text" id="publicNationality">
+                    </div>
+                    <div class="input-group">
+                        <label for="publicAddress">Address (Optional):</label>
+                        <input type="text" id="publicAddress">
+                    </div>
+                    <div class="input-group">
+                        <label for="publicNationalIdNo">National ID / Passport No. (Optional):</label>
+                        <input type="text" id="publicNationalIdNo">
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBookingBtn" class="btn btn-success" style="display: none;">Confirm Booking</button>
+            </form>
+
+            <div id="publicMessageBox" class="message-box" style="display: none;">
+                <h3 id="publicMessageBoxTitle"></h3>
+                <p id="publicMessageBoxContent"></p>
+                <button onclick="closePublicMessageBox()" class="btn btn-primary">OK</button>
+            </div>
+        </div>
+    </div>
+<script>
+  // public_booking.js - Frontend for public booking form
+
+// --- Configuration ---
+const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api'; // Your Render backend URL
+
+// --- DOM Elements ---
+const publicBookingForm = document.getElementById('publicBookingForm');
+const publicCheckInInput = document.getElementById('publicCheckIn');
+const publicCheckOutInput = document.getElementById('publicCheckOut');
+const publicNightsInput = document.getElementById('publicNights');
+const checkAvailabilityBtn = document.getElementById('checkAvailabilityBtn');
+const availabilityMessage = document.getElementById('availabilityMessage');
+const publicRoomSelect = document.getElementById('publicRoom');
+const publicAmtPerNightInput = document.getElementById('publicAmtPerNight');
+const publicTotalDueInput = document.getElementById('publicTotalDue');
+
+const roomSelectionSection = document.getElementById('roomSelectionSection');
+const guestDetailsSection = document.getElementById('guestDetailsSection');
+const submitBookingBtn = document.getElementById('submitBookingBtn');
+
+const publicNameInput = document.getElementById('publicName');
+const publicEmailInput = document.getElementById('publicEmail');
+const publicPhoneNoInput = document.getElementById('publicPhoneNo');
+const publicPeopleInput = document.getElementById('publicPeople');
+const publicNationalityInput = document.getElementById('publicNationality');
+const publicAddressInput = document.getElementById('publicAddress');
+const publicNationalIdNoInput = document.getElementById('publicNationalIdNo');
+
+const publicMessageBox = document.getElementById('publicMessageBox');
+const publicMessageBoxTitle = document.getElementById('publicMessageBoxTitle');
+const publicMessageBoxContent = document.getElementById('publicMessageBoxContent');
+
+let availableRoomsData = []; // To store rooms returned by availability check
+
+// --- Utility Functions ---
+
+/**
+ * Displays a custom message box for the public form.
+ * @param {string} title - The title of the message box.
+ * @param {string} message - The content message.
+ */
+function showPublicMessageBox(title, message) {
+    publicMessageBoxTitle.textContent = title;
+    publicMessageBoxContent.textContent = message;
+    publicMessageBox.style.display = 'block';
+}
+
+/**
+ * Closes the custom public message box.
+ */
+function closePublicMessageBox() {
+    publicMessageBox.style.display = 'none';
+}
+
+/**
+ * Calculates the number of nights between two dates.
+ * Updates the nights input field and triggers total due calculation.
+ */
+function calculateNights() {
+    const checkInDate = new Date(publicCheckInInput.value);
+    const checkOutDate = new Date(publicCheckOutInput.value);
+
+    if (checkInDate && checkOutDate && checkOutDate > checkInDate) {
+        const diffTime = Math.abs(checkOutDate - checkInDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        publicNightsInput.value = diffDays;
+    } else {
+        publicNightsInput.value = 0;
+    }
+    calculatePublicTotalDue();
+}
+
+/**
+ * Calculates total room due based on selected room's price per night and nights.
+ */
+function calculatePublicTotalDue() {
+    const nights = parseFloat(publicNightsInput.value) || 0;
+    const amtPerNight = parseFloat(publicAmtPerNightInput.value) || 0;
+    publicTotalDueInput.value = (nights * amtPerNight).toFixed(2);
+}
+
+/**
+ * Resets the room selection and guest details sections.
+ */
+function resetFormSections() {
+    roomSelectionSection.style.display = 'none';
+    guestDetailsSection.style.display = 'none';
+    submitBookingBtn.style.display = 'none';
+    publicRoomSelect.innerHTML = '<option value="">-- Select a Room --</option>';
+    publicAmtPerNightInput.value = '0.00';
+    publicTotalDueInput.value = '0.00';
+    publicNameInput.value = '';
+    publicEmailInput.value = '';
+    publicPhoneNoInput.value = '';
+    publicPeopleInput.value = '1';
+    publicNationalityInput.value = '';
+    publicAddressInput.value = '';
+    publicNationalIdNoInput.value = '';
+}
+
+// --- Event Listeners ---
+
+// Update nights when dates change
+publicCheckInInput.addEventListener('change', calculateNights);
+publicCheckOutInput.addEventListener('change', calculateNights);
+
+// Trigger availability check when dates change
+publicCheckInInput.addEventListener('change', () => {
+    resetFormSections(); // Hide sections until availability is checked again
+    availabilityMessage.textContent = '';
+});
+publicCheckOutInput.addEventListener('change', () => {
+    resetFormSections(); // Hide sections until availability is checked again
+    availabilityMessage.textContent = '';
+});
+
+
+// Check Availability Button Click
+checkAvailabilityBtn.addEventListener('click', async () => {
+    const checkIn = publicCheckInInput.value;
+    const checkOut = publicCheckOutInput.value;
+
+    availabilityMessage.textContent = 'Checking availability...';
+    availabilityMessage.className = 'message'; // Reset class
+
+    if (!checkIn || !checkOut) {
+        availabilityMessage.textContent = 'Please select both check-in and check-out dates.';
+        availabilityMessage.classList.add('error');
+        resetFormSections();
+        return;
+    }
+
+    if (new Date(checkIn) >= new Date(checkOut)) {
+        availabilityMessage.textContent = 'Check-out date must be after check-in date.';
+        availabilityMessage.classList.add('error');
+        resetFormSections();
+        return;
+    }
+
+    try {
+        const url = `${API_BASE_URL}/rooms/available?checkIn=${checkIn}&checkOut=${checkOut}`;
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        availableRoomsData = await response.json(); // Store for later use
+
+        publicRoomSelect.innerHTML = '<option value="">-- Select a Room --</option>'; // Clear previous options
+
+        if (availableRoomsData.length === 0) {
+            availabilityMessage.textContent = 'No rooms available for the selected dates. Please try different dates.';
+            availabilityMessage.classList.add('error');
+            resetFormSections();
+        } else {
+            // Group rooms by type
+            const roomTypes = {};
+            availableRoomsData.forEach(room => {
+                if (!roomTypes[room.type]) {
+                    roomTypes[room.type] = [];
+                }
+                roomTypes[room.type].push(room);
+            });
+
+            for (const type in roomTypes) {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = type;
+                roomTypes[type].sort((a, b) => parseInt(a.number) - parseInt(b.number)).forEach(room => {
+                    const option = document.createElement('option');
+                    option.value = room.number;
+                    option.textContent = `Room ${room.number} (${room.type})`;
+                    option.dataset.amtPerNight = room.amtPerNight || 100; // Default price if not set in room data
+                    optgroup.appendChild(option);
+                });
+                publicRoomSelect.appendChild(optgroup);
+            }
+
+            availabilityMessage.textContent = `Found ${availableRoomsData.length} available rooms.`;
+            availabilityMessage.classList.add('success');
+            roomSelectionSection.style.display = 'block'; // Show room selection
+            guestDetailsSection.style.display = 'block'; // Show guest details
+            submitBookingBtn.style.display = 'block'; // Show submit button
+        }
+    } catch (error) {
+        console.error('Error checking room availability:', error);
+        availabilityMessage.textContent = 'Failed to check availability. Please try again later.';
+        availabilityMessage.classList.add('error');
+        resetFormSections();
+    }
+});
+
+// Update price and total due when a room is selected
+publicRoomSelect.addEventListener('change', () => {
+    const selectedOption = publicRoomSelect.options[publicRoomSelect.selectedIndex];
+    if (selectedOption && selectedOption.value) {
+        const selectedRoomNumber = selectedOption.value;
+        const room = availableRoomsData.find(r => r.number === selectedRoomNumber);
+        if (room) {
+            // Assuming rooms fetched from /api/rooms/available also contain amtPerNight
+            // If not, you might need to fetch room details separately or store prices in frontend
+            publicAmtPerNightInput.value = (room.amtPerNight || 100).toFixed(2); // Default if not present
+        } else {
+            publicAmtPerNightInput.value = '0.00';
+        }
+    } else {
+        publicAmtPerNightInput.value = '0.00';
+    }
+    calculatePublicTotalDue();
+});
+
+// Recalculate total due if amount per night changes (though it's readonly here)
+publicAmtPerNightInput.addEventListener('input', calculatePublicTotalDue);
+
+
+// Handle form submission
+publicBookingForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const checkIn = publicCheckInInput.value;
+    const checkOut = publicCheckOutInput.value;
+    const roomNumber = publicRoomSelect.value;
+    const nights = parseFloat(publicNightsInput.value);
+    const amtPerNight = parseFloat(publicAmtPerNightInput.value);
+    const totalDue = parseFloat(publicTotalDueInput.value);
+
+    const name = publicNameInput.value;
+    const email = publicEmailInput.value; // Not stored in backend, but good for public form
+    const phoneNo = publicPhoneNoInput.value;
+    const people = parseInt(publicPeopleInput.value);
+    const nationality = publicNationalityInput.value;
+    const address = publicAddressInput.value;
+    const nationalIdNo = publicNationalIdNoInput.value;
+
+    if (!roomNumber) {
+        showPublicMessageBox('Booking Error', 'Please check availability and select a room.');
+        return;
+    }
+
+    if (nights <= 0) {
+        showPublicMessageBox('Booking Error', 'Number of nights must be greater than zero.');
+        return;
+    }
+
+    const bookingData = {
+        name,
+        room: roomNumber,
+        checkIn,
+        checkOut,
+        nights,
+        amtPerNight,
+        totalDue,
+        amountPaid: 0, // Initial booking, no payment yet
+        balance: totalDue, // Full balance initially
+        paymentStatus: 'Pending',
+        people,
+        nationality,
+        address,
+        phoneNo,
+        nationalIdNo
+    };
+
+    try {
+        submitBookingBtn.disabled = true;
+        submitBookingBtn.textContent = 'Booking...';
+
+        const response = await fetch(`${API_BASE_URL}/bookings`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(bookingData)
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showPublicMessageBox('Booking Confirmed!', `Thank you, ${name}! Your booking for Room ${roomNumber} from ${checkIn} to ${checkOut} has been confirmed. Your booking ID is: ${data.booking.id}. We will contact you shortly.`);
+            publicBookingForm.reset();
+            resetFormSections(); // Clear and hide sections after successful booking
+            availabilityMessage.textContent = ''; // Clear availability message
+            publicNightsInput.value = '0'; // Reset nights explicitly
+        } else {
+            showPublicMessageBox('Booking Failed', data.message || 'An error occurred during booking. Please try again.');
+        }
+    } catch (error) {
+        console.error('Booking error:', error);
+        showPublicMessageBox('Booking Error', 'Could not connect to the server or an unexpected error occurred. Please try again later.');
+    } finally {
+        submitBookingBtn.disabled = false;
+        submitBookingBtn.textContent = 'Confirm Booking';
+    }
+});
+
+// --- Initial Load ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Set min date for check-in to today
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0];
+    publicCheckInInput.min = todayString;
+    publicCheckOutInput.min = todayString; // Check-out can't be before check-in, but this sets a floor
+});
+
+
+</script>
+    <script src="public_booking.js"></script>
+</body>
+</html>
