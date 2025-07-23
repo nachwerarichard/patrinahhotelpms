@@ -3,137 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hotel Management System</title>
-    <link rel="stylesheet" href="styles2.css">
-  
+    <title>Patrina Hotel PMS</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
     <div id="login-container">
         <div class="login-box">
-            <h2>Login</h2>
+            <h2>Patrina Hotel PMS Login</h2>
             <form id="loginForm">
                 <div class="input-group">
                     <label for="username">Username:</label>
-                    <input type="text" id="username" required>
+                    <input type="text" id="username" name="username" required>
                 </div>
                 <div class="input-group">
                     <label for="password">Password:</label>
-                    <input type="password" id="password" required>
+                    <input type="password" id="password" name="password" required>
                 </div>
                 <button type="submit" class="btn btn-primary">Login</button>
-                <p class="login-info">Admin: user/password | Housekeeper: hk/hkpass</p>
             </form>
             <div id="loginMessageBox" class="message-box" style="display: none;">
                 <h3 id="loginMessageBoxTitle"></h3>
                 <p id="loginMessageBoxContent"></p>
-                <button onclick="closeLoginMessageBox()" class="btn btn-primary">OK</button>
+                <button class="btn btn-primary" onclick="closeLoginMessageBox()">OK</button>
             </div>
         </div>
     </div>
 
     <div id="main-content" style="display: none;">
         <aside>
+            <div class="logo">Patrina Hotel</div>
             <nav>
                 <ul>
-                    <li><a href="#" id="nav-booking" class="active">Booking Management</a></li>
-                    <li><a href="#" id="nav-housekeeping">Housekeeping</a></li>
-                    <li><a href="#" id="nav-reports">Reports</a></li>
-                  <li><a href="#" id="nav-charges">Post Charges</a></li>
-
-                    <li><a href="#" id="logoutBtn">Logout</a></li>
+                    <li><a href="#" id="nav-booking" class="active"><i class="fas fa-book"></i> Booking Management</a></li>
+                    <li><a href="#" id="nav-housekeeping"><i class="fas fa-broom"></i> Housekeeping</a></li>
+                    <li><a href="#" id="nav-charges"><i class="fas fa-dollar-sign"></i> Post Charges</a></li>
+                    <li><a href="#" id="nav-reports"><i class="fas fa-chart-line"></i> Reports</a></li>
+                    <li><a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
                 </ul>
             </nav>
         </aside>
 
         <main>
-<li><a href="#" id="nav-charges">Post Charges</a></li>
-    <h2>Post Incidental Charges</h2>
-    <div class="search-guest-container">
-        <label for="guestSearchInput">Find Guest by Name or Room:</label>
-        <input type="text" id="guestSearchInput" placeholder="Guest Name or Room Number">
-        <button class="btn btn-primary" onclick="searchForGuestBookings()">Search</button>
-    </div>
-
-    <div id="foundBookingsList">
-        <p style="text-align: center; margin-top: 20px;">Use the search bar to find a guest/booking to post charges against.</p>
-    </div>
-
-    <div id="postChargeFormContainer" style="display: none; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-        <h3>Add New Charge for <span id="selectedGuestName"></span> (Room <span id="selectedRoomNumber"></span>)</h3>
-        <form id="serviceChargeForm">
-            <input type="hidden" id="selectedBookingId">
-            <div class="form-grid">
-                <div class="input-group">
-                    <label for="serviceChargeType">Charge Type:</label>
-                    <select id="serviceChargeType" required>
-                        <option value="">Select Type</option>
-                        <option value="Room Service">Room Service</option>
-                        <option value="Spa">Spa</option>
-                        <option value="Restaurant">Restaurant</option>
-                        <option value="Bar">Bar</option>
-                        <option value="Laundry">Laundry</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label for="serviceChargeDescription">Description (Optional):</label>
-                    <input type="text" id="serviceChargeDescription">
-                </div>
-                <div class="input-group">
-                    <label for="serviceChargeAmount">Amount:</label>
-                    <input type="number" id="serviceChargeAmount" step="0.01" required>
-                </div>
-            </div>
-            <button type="submit" class="btn btn-primary">Submit Charge</button>
-        </form>
-    </div>
-
-    <div id="currentChargesForSelectedBooking" style="display: none; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-        <h3>Outstanding Charges for this Guest:</h3>
-        <div class="table-container">
-            <table id="serviceChargesTable">
-                <thead>
-                    <tr>
-                        <th>Type</th>
-                        <th>Description</th>
-                        <th>Amount</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    </tbody>
-            </table>
-        </div>
-        <p style="text-align: right; margin-top: 10px;"><strong>Total Unpaid: <span id="serviceIncidentalTotalDue">0.00</span></strong></p>
-    </div>
-</section>
+            <header>
+                <h1>Hotel Management System</h1>
+            </header>
 
             <section id="booking-management" class="section active">
                 <h2>Booking Management</h2>
                 <div class="controls">
-                    <input type="text" id="bookingSearch" placeholder="Search bookings...">
                     <button class="btn btn-primary" onclick="openBookingModal()">Add New Booking</button>
+                    <input type="text" id="bookingSearch" placeholder="Search bookings (Name, Room, ID, Phone)">
                 </div>
                 <div class="table-container">
                     <table id="bookingsTable">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Room</th>
+                                <th>Guest Name</th>
+                                <th>Room No.</th>
                                 <th>Check-in</th>
                                 <th>Check-out</th>
                                 <th>Nights</th>
                                 <th>Amt/Night</th>
                                 <th>Total Due</th>
-                                <th>Amount Paid</th>
+                                <th>Amt Paid</th>
                                 <th>Balance</th>
                                 <th>Payment Status</th>
                                 <th>People</th>
                                 <th>Nationality</th>
                                 <th>Address</th>
                                 <th>Phone No.</th>
-                                <th>National ID</th>
+                                <th>National ID No.</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -149,18 +89,77 @@
                     </div>
             </section>
 
+            <section id="charges-posting" class="section">
+                <h2>Post Incidental Charges</h2>
+                <div class="search-guest-container">
+                    <label for="guestSearchInput">Search Guest/Booking:</label>
+                    <input type="text" id="guestSearchInput" placeholder="Enter guest name, room number, or ID">
+                    <button class="btn btn-primary" onclick="searchForGuestBookings()">Search</button>
+                </div>
+                <div id="foundBookingsList" class="search-results-list">
+                    <p style="text-align: center; margin-top: 20px;">Use the search bar to find a guest/booking to post charges against.</p>
+                </div>
+
+                <div id="postChargeFormContainer" class="form-container" style="display: none;">
+                    <h3>Post Charge for: <span id="selectedGuestName"></span> (Room: <span id="selectedRoomNumber"></span>)</h3>
+                    <input type="hidden" id="selectedBookingId">
+                    <form id="serviceChargeForm">
+                        <div class="input-group">
+                            <label for="serviceChargeType">Charge Type:</label>
+                            <select id="serviceChargeType" required>
+                                <option value="">Select Type</option>
+                                <option value="Bar">Bar</option>
+                                <option value="Restaurant">Restaurant</option>
+                                <option value="Laundry">Laundry</option>
+                                <option value="Spa">Spa</option>
+                                <option value="Minibar">Minibar</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="serviceChargeDescription">Description:</label>
+                            <input type="text" id="serviceChargeDescription" placeholder="e.g., Dinner for two">
+                        </div>
+                        <div class="input-group">
+                            <label for="serviceChargeAmount">Amount (UGX):</label>
+                            <input type="number" id="serviceChargeAmount" step="0.01" min="0" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Charge</button>
+                    </form>
+                </div>
+
+                <div id="currentChargesForSelectedBooking" class="table-container" style="display: none;">
+                    <h3>Current Incidental Charges for this Guest</h3>
+                    <table id="serviceChargesTable">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Amount (UGX)</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="serviceChargesTable tbody">
+                            </tbody>
+                    </table>
+                    <p class="total-line">Total Incidental Balance: UGX <span id="serviceIncidentalTotalDue">0.00</span></p>
+                </div>
+            </section>
+
+
             <section id="reports" class="section">
                 <h2>Reports</h2>
-                <div class="report-controls">
-                    <label for="reportDate">Select Date:</label>
+                <div class="controls">
+                    <label for="reportDate">Report Date:</label>
                     <input type="date" id="reportDate">
                     <button class="btn btn-primary" onclick="generateReport()">Generate Report</button>
                 </div>
                 <div class="report-summary">
-                    <p>Total Amount for Date: <span id="totalAmountReport">0.00</span></p>
-                    <p>Total Balance Outstanding: <span id="totalBalanceReport">0.00</span></p>
-                    <p>Most Booked Room Type: <span id="mostBookedRoomType">N/A</span></p>
-                    <p>Guests Checked In: <span id="guestsCheckedIn">0</span></p>
+                    <p>Total Revenue (for selected date): UGX <span id="totalAmountReport">0.00</span></p>
+                    <p>Outstanding Balance (for selected date): UGX <span id="totalBalanceReport">0.00</span></p>
+                    <p>Guests Checked In (on selected date): <span id="guestsCheckedIn">0</span></p>
+                    <p>Most Booked Room Type (on selected date): <span id="mostBookedRoomType">N/A</span></p>
                 </div>
             </section>
         </main>
@@ -172,218 +171,211 @@
             <h2 id="modalTitle">Add New Booking</h2>
             <form id="bookingForm">
                 <input type="hidden" id="bookingId">
-                <div class="form-grid">
-                    <div class="input-group">
-                        <label for="name">Guest Name:</label>
-                        <input type="text" id="name" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="room">Room Number:</label>
-                        <select id="room" required>
-                            <option value="">Select a Room</option>
+                <div class="input-group">
+                    <label for="name">Guest Name:</label>
+                    <input type="text" id="name" required>
+                </div>
+                <div class="input-group">
+                    <label for="room">Room Number:</label>
+                    <select id="room" required>
+                        <option value="">Select a Room</option>
                         </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="checkIn">Check-in Date:</label>
-                        <input type="date" id="checkIn" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="checkOut">Check-out Date:</label>
-                        <input type="date" id="checkOut" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="nights">Nights:</label>
-                        <input type="number" id="nights" readonly>
-                    </div>
-                    <div class="input-group">
-                        <label for="amtPerNight">Amount Per Night:</label>
-                        <input type="number" id="amtPerNight" step="0.01" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="totalDue">Total Due:</label>
-                        <input type="number" id="totalDue" step="0.01" readonly>
-                    </div>
-                    <div class="input-group">
-                        <label for="amountPaid">Amount Paid:</label>
-                        <input type="number" id="amountPaid" step="0.01">
-                    </div>
-                    <div class="input-group">
-                        <label for="balance">Balance:</label>
-                        <input type="number" id="balance" step="0.01" readonly>
-                    </div>
-                    <div class="input-group">
-                        <label for="paymentStatus">Payment Status:</label>
-                        <select id="paymentStatus" required>
-                            <option value="Pending">Pending</option>
-                            <option value="Partially Paid">Partially Paid</option>
-                            <option value="Paid">Paid</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="people">Number of People:</label>
-                        <input type="number" id="people" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="nationality">Nationality:</label>
-                        <input type="text" id="nationality">
-                    </div>
-                    <div class="input-group">
-                        <label for="address">Address:</label>
-                        <input type="text" id="address">
-                    </div>
-                    <div class="input-group">
-                        <label for="phoneNo">Phone Number:</label>
-                        <input type="text" id="phoneNo">
-                    </div>
-                    <div class="input-group">
-                        <label for="nationalIdNo">National ID No.:</label>
-                        <input type="text" id="nationalIdNo">
-                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="checkIn">Check-in Date:</label>
+                    <input type="date" id="checkIn" required>
+                </div>
+                <div class="input-group">
+                    <label for="checkOut">Check-out Date:</label>
+                    <input type="date" id="checkOut" required>
+                </div>
+                <div class="input-group">
+                    <label for="nights">Nights:</label>
+                    <input type="number" id="nights" readonly>
+                </div>
+                <div class="input-group">
+                    <label for="amtPerNight">Amount Per Night (UGX):</label>
+                    <input type="number" id="amtPerNight" step="0.01" min="0" required>
+                </div>
+                <div class="input-group">
+                    <label for="totalDue">Total Due (UGX):</label>
+                    <input type="number" id="totalDue" step="0.01" readonly>
+                </div>
+                <div class="input-group">
+                    <label for="amountPaid">Amount Paid (UGX):</label>
+                    <input type="number" id="amountPaid" step="0.01" min="0" required>
+                </div>
+                <div class="input-group">
+                    <label for="balance">Balance (UGX):</label>
+                    <input type="number" id="balance" step="0.01" readonly>
+                </div>
+                <div class="input-group">
+                    <label for="paymentStatus">Payment Status:</label>
+                    <select id="paymentStatus" required>
+                        <option value="Pending">Pending</option>
+                        <option value="Partially Paid">Partially Paid</option>
+                        <option value="Paid">Paid</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="people">Number of People:</label>
+                    <input type="number" id="people" min="1" required>
+                </div>
+                <div class="input-group">
+                    <label for="nationality">Nationality:</label>
+                    <input type="text" id="nationality">
+                </div>
+                <div class="input-group">
+                    <label for="address">Address:</label>
+                    <input type="text" id="address">
+                </div>
+                <div class="input-group">
+                    <label for="phoneNo">Phone Number:</label>
+                    <input type="text" id="phoneNo">
+                </div>
+                <div class="input-group">
+                    <label for="nationalIdNo">National ID/Passport No.:</label>
+                    <input type="text" id="nationalIdNo">
                 </div>
                 <button type="submit" class="btn btn-primary">Save Booking</button>
             </form>
         </div>
     </div>
 
-<div id="chargesModal" class="modal">
-    <div class="modal-content">
-        <span class="close-button" onclick="closeChargesModal()">&times;</span>
-        <h2 id="chargesModalTitle">Incidental Charges for Booking <span id="chargesBookingName"></span></h2>
-        <form id="chargesForm">
+    <div id="chargesModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeChargesModal()">&times;</span>
+            <h2>Manage Incidental Charges for: <span id="chargesBookingName"></span></h2>
             <input type="hidden" id="chargesBookingId">
-            <div class="input-group">
-                <label for="chargeType">Charge Type:</label>
-                <select id="chargeType" required>
-                    <option value="">Select Type</option>
-                    <option value="Room Service">Room Service</option>
-                    <option value="Spa">Spa</option>
-                    <option value="Restaurant">Restaurant</option>
-                    <option value="Bar">Bar</option>
-                    <option value="Laundry">Laundry</option>
-                    <option value="Other">Other</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <label for="chargeDescription">Description (Optional):</label>
-                <input type="text" id="chargeDescription">
-            </div>
-            <div class="input-group">
-                <label for="chargeAmount">Amount:</label>
-                <input type="number" id="chargeAmount" step="0.01" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Add New Charge</button>
-        </form>
 
-        <h3>Current Incidental Charges:</h3>
-        <div class="table-container">
-            <table id="currentChargesTable">
-                <thead>
-                    <tr>
-                        <th>Type</th>
-                        <th>Description</th>
-                        <th>Amount</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    </tbody>
-            </table>
-        </div>
+            <div class="form-section">
+                <h3>Add New Charge</h3>
+                <form id="chargesForm">
+                    <div class="input-group">
+                        <label for="chargeType">Charge Type:</label>
+                        <select id="chargeType" required>
+                            <option value="">Select Type</option>
+                            <option value="Bar">Bar</option>
+                            <option value="Restaurant">Restaurant</option>
+                            <option value="Laundry">Laundry</option>
+                            <option value="Spa">Spa</option>
+                            <option value="Minibar">Minibar</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="chargeDescription">Description:</label>
+                        <input type="text" id="chargeDescription" placeholder="e.g., Bottle of water">
+                    </div>
+                    <div class="input-group">
+                        <label for="chargeAmount">Amount (UGX):</label>
+                        <input type="number" id="chargeAmount" step="0.01" min="0" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Charge</button>
+                </form>
+            </div>
 
-        <div class="charges-summary">
-            <p><strong>Total Incidental Amount Due: <span id="incidentalTotalDue">0.00</span></strong></p>
-            <button class="btn btn-success" id="payIncidentalChargesBtn" onclick="payIncidentalCharges()">Mark All Unpaid as Paid</button>
+            <div class="table-section">
+                <h3>Current Charges</h3>
+                <table id="currentChargesTable">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th>Amount (UGX)</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+                <p class="total-line">Total Incidental Balance: UGX <span id="incidentalTotalDue">0.00</span></p>
+                <button class="btn btn-success" id="payIncidentalChargesBtn" onclick="payIncidentalCharges()" disabled>Mark All as Paid</button>
+            </div>
         </div>
     </div>
-</div>
-<button class="btn btn-secondary" onclick="openChargesModal('${booking.id}', '${booking.name}')">Charges</button>    
 
-    
-    <div id="messageBox" class="message-box" style="display: none;">
-        <h3 id="messageBoxTitle"></h3>
-        <p id="messageBoxContent"></p>
-        <button onclick="closeMessageBox()" class="btn btn-primary">OK</button>
-    </div>
-
-   <div id="receiptModal" class="modal">
-    <div class="modal-content receipt-content">
-        <span class="close-button" onclick="closeReceiptModal()">&times;</span>
-        <div id="receiptContent">
-            <h2 style="text-align: center; margin-bottom: 20px;">Hotel Patrinah - Guest Folio</h2>
+    <div id="receiptModal" class="modal">
+        <div class="modal-content receipt-content" id="receiptContent">
+            <span class="close-button print-hide" onclick="closeReceiptModal()">&times;</span>
             <div class="receipt-header">
+                <h3>Patrina Hotel - Guest Receipt</h3>
+                <p>Date Generated: <span id="receiptDateGenerated"></span></p>
+            </div>
+
+            <div class="receipt-section guest-details">
+                <h4>Guest & Booking Details</h4>
                 <p><strong>Booking ID:</strong> <span id="receiptBookingId"></span></p>
                 <p><strong>Guest Name:</strong> <span id="receiptGuestName"></span></p>
                 <p><strong>Room Number:</strong> <span id="receiptRoomNumber"></span></p>
                 <p><strong>Check-in:</strong> <span id="receiptCheckIn"></span></p>
                 <p><strong>Check-out:</strong> <span id="receiptCheckOut"></span></p>
-                <p><strong>Date Generated:</strong> <span id="receiptDateGenerated"></span></p>
             </div>
 
-            <hr>
-
-            <h3>Room Charges</h3>
-            <div class="table-container no-scroll">
-                <table class="receipt-table">
-                    <thead>
-                        <tr>
-                            <th>Description</th>
-                            <th>Nights</th>
-                            <th>Amt/Night</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Room Charge</td>
-                            <td id="receiptRoomNights"></td>
-                            <td id="receiptAmtPerNight"></td>
-                            <td id="receiptRoomTotal"></td>
-                        </tr>
-                    </tbody>
+            <div class="receipt-section room-charges">
+                <h4>Room Charges</h4>
+                <table>
+                    <tr>
+                        <td>Nights:</td>
+                        <td class="align-right"><span id="receiptRoomNights"></span></td>
+                    </tr>
+                    <tr>
+                        <td>Amount per Night:</td>
+                        <td class="align-right">UGX <span id="receiptAmtPerNight"></span></td>
+                    </tr>
+                    <tr class="total-row">
+                        <td><strong>Room Total:</strong></td>
+                        <td class="align-right"><strong>UGX <span id="receiptRoomTotal"></span></strong></td>
+                    </tr>
+                    <tr>
+                        <td>Amount Paid (Room):</td>
+                        <td class="align-right">UGX <span id="receiptRoomAmountPaid"></span></td>
+                    </tr>
+                    <tr class="balance-row">
+                        <td><strong>Room Balance Due:</strong></td>
+                        <td class="align-right"><strong>UGX <span id="receiptRoomBalance"></span></strong></td>
+                    </tr>
                 </table>
             </div>
-            <p style="text-align: right; margin-top: 10px;"><strong>Room Amount Paid:</strong> <span id="receiptRoomAmountPaid"></span></p>
-            <p style="text-align: right;"><strong>Room Balance Due:</strong> <span id="receiptRoomBalance"></span></p>
 
-
-            <h3 style="margin-top: 20px;">Incidental Charges</h3>
-            <div class="table-container no-scroll">
-                <table class="receipt-table">
+            <div class="receipt-section incidental-charges">
+                <h4>Incidental Charges</h4>
+                <table>
                     <thead>
                         <tr>
                             <th>Date</th>
                             <th>Type</th>
                             <th>Description</th>
-                            <th>Amount</th>
+                            <th>Amount (UGX)</th>
                         </tr>
                     </thead>
                     <tbody id="receiptIncidentalChargesBody">
                         </tbody>
                 </table>
+                <p class="total-line">Total Incidental Charges: UGX <span id="receiptIncidentalTotal">0.00</span></p>
+                <p class="total-line">Incidental Amount Paid: UGX <span id="receiptIncidentalAmountPaid">0.00</span></p>
+                <p class="total-line balance-row"><strong>Incidental Balance Due:</strong> UGX <span id="receiptIncidentalBalance">0.00</span></p>
             </div>
-            <p style="text-align: right; margin-top: 10px;"><strong>Total Incidental Charges:</strong> <span id="receiptIncidentalTotal"></span></p>
-            <p style="text-align: right;"><strong>Incidental Amount Paid:</strong> <span id="receiptIncidentalAmountPaid"></span></p> <p style="text-align: right;"><strong>Incidental Balance Due:</strong> <span id="receiptIncidentalBalance"></span></p>
 
-
-            <hr style="margin-top: 30px;">
-
-            <h3 style="text-align: right; font-size: 1.5em;">Grand Total Due: <span id="receiptGrandTotal"></span></h3>
-
-            <div class="receipt-footer" style="text-align: center; margin-top: 40px; font-size: 0.9em;">
-                <p>Thank you for staying with us!</p>
-                <p>Patrinah Hotel Management</p>
+            <div class="receipt-section grand-total">
+                <p class="grand-total-line"><strong>GRAND TOTAL DUE: UGX <span id="receiptGrandTotal">0.00</span></strong></p>
             </div>
-        </div>
-        <div class="modal-actions" style="margin-top: 20px; text-align: center;">
-            <button class="btn btn-primary" onclick="printReceipt()">Print Receipt</button>
-            <button class="btn btn-secondary" onclick="closeReceiptModal()">Close</button>
+
+            <div class="modal-actions print-hide">
+                <button class="btn btn-primary" onclick="printReceipt()">Print Receipt</button>
+            </div>
         </div>
     </div>
-</div>
 
-<button class="btn btn-success" onclick="generateClientReceipt('${booking.id}')">Receipt</button>
-    <script src="script2.js"></script>
 
+    <div id="messageBox" class="message-box" style="display: none;">
+        <h3 id="messageBoxTitle"></h3>
+        <p id="messageBoxContent"></p>
+        <button class="btn btn-primary" onclick="closeMessageBox()">OK</button>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
