@@ -899,8 +899,8 @@ async function payIncidentalCharges() {
 // will NOT be affected by these incidental charges, as the backend's booking
 // update/create logic should no longer be manipulating 'charges' array directly
 // within the Booking model. This is key to keeping them separate.
-.
-  .
+
+  
     // --- DOM Elements (Add these near other DOM element declarations) ---
 const navChargesLink = document.getElementById('nav-charges');
 const chargesPostingSection = document.getElementById('charges-posting');
