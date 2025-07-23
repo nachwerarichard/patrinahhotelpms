@@ -279,15 +279,15 @@ logoutBtn.addEventListener('click', () => {
 // Handles navigation clicks
 function handleNavigation(event) {
     event.preventDefault();
-    const targetId = event.target.id.replace('nav-', '');
+    const targetId = event.target.id.replace('nav-', ''); // e.g., 'booking', 'housekeeping', 'charges', 'reports'
 
     // Prevent navigation if the user's role doesn't permit it
-    if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping' && targetId !== 'charges-posting') {
+    if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping' && targetId !== 'charges') { // Changed 'charges-posting' to 'charges'
         showMessageBox('Access Denied', 'Housekeepers can only access Housekeeping and Post Charges sections.');
         return;
     }
-    
-    if (currentUserRole === 'admin' && (targetId === 'charges-posting' || targetId === 'housekeeping' || targetId === 'booking')) {
+
+    if (currentUserRole === 'admin' && (targetId === 'charges' || targetId === 'housekeeping' || targetId === 'booking')) {
         // Admins can access all, but we might want specific initial renders
     }
 
@@ -300,34 +300,34 @@ function handleNavigation(event) {
     event.target.classList.add('active');
 
     // Add 'active' class to the corresponding section
-    const targetSection = document.getElementById(targetId);
+    const targetSection = document.getElementById(targetId); // Will now correctly look for 'booking', 'housekeeping', 'charges', 'reports'
     if (targetSection) {
         targetSection.classList.add('active');
     } else {
         console.error(`Error: Section with ID "${targetId}" not found.`);
         // Fallback to a default accessible section if targetId is invalid
         if (currentUserRole === 'admin') {
-            document.getElementById('booking-management').classList.add('active');
+            document.getElementById('booking').classList.add('active'); // Changed from 'booking-management' to 'booking'
             document.getElementById('nav-booking').classList.add('active');
         } else if (currentUserRole === 'housekeeper') {
             document.getElementById('housekeeping').classList.add('active');
             document.getElementById('nav-housekeeping').classList.add('active');
         } else if (currentUserRole === 'service_staff') {
-            document.getElementById('charges-posting').classList.add('active');
+            document.getElementById('charges').classList.add('active'); // Changed from 'charges-posting' to 'charges'
             document.getElementById('nav-charges').classList.add('active');
         }
         return;
     }
 
     // Re-render sections when active
-    if (targetId === 'booking-management') {
+    if (targetId === 'booking') { // Changed from 'booking-management' to 'booking'
         renderBookings();
     } else if (targetId === 'housekeeping') {
         renderHousekeepingRooms();
     } else if (targetId === 'reports') {
         reportDateInput.valueAsDate = new Date();
         generateReport();
-    } else if (targetId === 'charges-posting') {
+    } else if (targetId === 'charges') { // Changed from 'charges-posting' to 'charges'
         // Reset the charges posting section when navigating to it
         guestSearchInput.value = '';
         foundBookingsList.innerHTML = '<p style="text-align: center; margin-top: 20px;">Use the search bar to find a guest/booking to post charges against.</p>';
@@ -335,7 +335,6 @@ function handleNavigation(event) {
         currentChargesForSelectedBooking.style.display = 'none';
     }
 }
-
 // Applies access restrictions based on user role
 function applyRoleAccess(role) {
     // Control visibility of navigation links
