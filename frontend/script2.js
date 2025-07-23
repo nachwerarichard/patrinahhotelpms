@@ -850,7 +850,6 @@ async function viewCharges(bookingCustomId) {
                     <td>${charge.description || '-'}</td>
                     <td>${parseFloat(charge.amount).toFixed(2)}</td>
                     <td>${new Date(charge.date).toLocaleDateString()}</td>
-                    <td>${charge.isPaid ? 'Yes' : 'No'}</td>
                     <td>
                         <button class="btn btn-danger btn-sm" onclick="deleteIncidentalCharge('${charge._id}', '${bookingCustomId}')">Delete</button>
                     </td>
