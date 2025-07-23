@@ -21,6 +21,78 @@ body {
     overflow-y: scroll;
 }
 
+.receipt-content {
+    width: 80%; /* Adjust as needed */
+    max-width: 700px;
+    padding: 30px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    border-radius: 8px;
+    background-color: #fff;
+    font-family: 'Arial', sans-serif;
+    color: #333;
+}
+
+.receipt-header p {
+    margin: 5px 0;
+}
+
+.receipt-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.receipt-table th, .receipt-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.receipt-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.no-scroll {
+    overflow-x: hidden; /* Prevent horizontal scrollbar on small tables */
+}
+
+/* Print Specific Styles */
+@media print {
+    body > *:not(#receiptModal) {
+        display: none !important; /* Hide everything except the receipt modal */
+    }
+
+    #receiptModal {
+        position: static !important; /* Position static for print */
+        width: auto !important;
+        height: auto !important;
+        overflow: visible !important;
+        display: block !important; /* Ensure it's visible */
+        margin: 0;
+        padding: 0;
+        box-shadow: none !important;
+    }
+
+    #receiptModal .modal-content {
+        width: 100% !important;
+        max-width: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background-color: #fff;
+    }
+
+    .modal-actions {
+        display: none !important; /* Hide print/close buttons on printed page */
+    }
+
+    /* Any other styles you want to optimize for print */
+    h2, h3 {
+        color: #000 !important; /* Ensure black text for printing */
+    }
+}
 /* --- Login Page Styles --- */
 #login-container {
     display: flex;
