@@ -721,7 +721,7 @@ bookingModal.addEventListener('input', (event) => {
 // Add event listener for search input
 bookingSearchInput.addEventListener('keyup', filterBookings);
 
-.
+
   // --- DOM Elements (Add these or ensure they exist) ---
 const chargesModal = document.getElementById('chargesModal');
 const chargesForm = document.getElementById('chargesForm');
