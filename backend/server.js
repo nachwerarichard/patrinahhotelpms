@@ -27,7 +27,7 @@ mongoose.connect(mongoURI)
 
 // Room Schema
 const roomSchema = new mongoose.Schema({
-    id: { type: String, required: true, unique: true }, // Unique ID for the room
+    id: { type: String, required: true, unique: true }, // Unique ID for the room (e.g., '101')
     type: { type: String, required: true },
     number: { type: String, required: true, unique: true }, // Room number (e.g., '101')
     status: { type: String, required: true, enum: ['clean', 'dirty', 'under-maintenance', 'blocked'], default: 'clean' }
@@ -36,7 +36,7 @@ const Room = mongoose.model('Room', roomSchema);
 
 // Booking Schema
 const bookingSchema = new mongoose.Schema({
-    id: { type: String, required: true, unique: true }, // Unique ID for the booking
+    id: { type: String, required: true, unique: true }, // Your custom booking ID (e.g., 'BKG001')
     name: { type: String, required: true },
     room: { type: String, required: true }, // Room number, references Room model
     checkIn: { type: String, required: true }, // Stored as YYYY-MM-DD string
@@ -54,6 +54,40 @@ const bookingSchema = new mongoose.Schema({
     nationalIdNo: { type: String }
 });
 const Booking = mongoose.model('Booking', bookingSchema);
+
+// Incidental Charge Schema
+const incidentalChargeSchema = new mongoose.Schema({
+    bookingId: { // This will store the MongoDB _id of the Booking document
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Booking',
+        required: true
+    },
+    guestName: { // Storing guest name for easy lookup, though bookingId links to full details
+        type: String,
+        required: true
+    },
+    type: { // e.g., 'Room Service', 'Spa', 'Restaurant', 'Bar', 'Laundry', 'Other'
+        type: String,
+        required: true
+    },
+    description: {
+        type: String
+    },
+    amount: {
+        type: Number,
+        required: true
+    },
+    date: {
+        type: Date,
+        default: Date.now
+    },
+    isPaid: { // To track if this specific charge has been paid
+        type: Boolean,
+        default: false
+    }
+});
+const IncidentalCharge = mongoose.model('IncidentalCharge', incidentalChargeSchema);
+
 
 // --- 6. Hardcoded Users for Authentication (Highly Insecure for Production!) ---
 const users = [
@@ -93,20 +127,20 @@ app.post('/api/login', authenticateUser, (req, res) => {
 });
 
 // --- Rooms API ---
-// Initialize rooms in DB if empty (run once)
+// Initialize rooms in DB if empty (run once manually or on first boot)
 app.post('/api/rooms/init', async (req, res) => {
     try {
         const count = await Room.countDocuments();
         if (count === 0) {
             const initialRooms = [
-                { id: '101', type: 'Delux 1', number: '101', status: 'clean' },
-                { id: '102', type: 'Delux 1', number: '102', status: 'clean' },
-                { id: '103', type: 'Delux 1', number: '103', status: 'clean' },
-                { id: '104', type: 'Delux 2', number: '104', status: 'clean' },
-                { id: '105', type: 'Delux 2', number: '105', status: 'clean' },
-                { id: '106', type: 'Delux 2', number: '106', status: 'clean' },
-                { id: '201', type: 'Standard', number: '201', status: 'clean' },
-                { id: '202', type: 'Standard', number: '202', status: 'clean' },
+                { id: 'R101', type: 'Delux 1', number: '101', status: 'clean' },
+                { id: 'R102', type: 'Delux 1', number: '102', status: 'clean' },
+                { id: 'R103', type: 'Delux 1', number: '103', status: 'clean' },
+                { id: 'R104', type: 'Delux 2', number: '104', status: 'clean' },
+                { id: 'R105', type: 'Delux 2', number: '105', status: 'clean' },
+                { id: 'R106', type: 'Delux 2', number: '106', status: 'clean' },
+                { id: 'R201', type: 'Standard', number: '201', status: 'clean' },
+                { id: 'R202', type: 'Standard', number: '202', status: 'clean' },
             ];
             await Room.insertMany(initialRooms);
             console.log('Initial rooms added to DB.');
@@ -132,10 +166,10 @@ app.get('/api/rooms', async (req, res) => {
 
 // Update room status (accessible by admin and housekeeper)
 app.put('/api/rooms/:id', async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.params; // This `id` is the custom room `id` (e.g., R101)
     const { status } = req.body;
     try {
-        const room = await Room.findOne({ id: id });
+        const room = await Room.findOne({ id: id }); // Find by custom `id`
         if (!room) {
             return res.status(404).json({ message: 'Room not found' });
         }
@@ -144,12 +178,12 @@ app.put('/api/rooms/:id', async (req, res) => {
         const now = new Date();
         now.setHours(0,0,0,0);
         const isRoomCurrentlyBlocked = await Booking.exists({
-            room: room.number,
-            checkIn: { $lte: now.toISOString().split('T')[0] }, // Booking has started
-            checkOut: { $gte: now.toISOString().split('T')[0] }  // Booking has not ended
+            room: room.number, // Check bookings by room number
+            checkIn: { $lte: now.toISOString().split('T')[0] }, // Booking has started or starts today
+            checkOut: { $gt: now.toISOString().split('T')[0] }  // Booking has not ended (checkOut is later than today)
         });
 
-        if (isRoomCurrentlyBlocked && status !== 'blocked') {
+        if (isRoomCurrentlyBlocked && status !== 'blocked' && room.status === 'blocked') {
             return res.status(400).json({ message: `Room ${room.number} is currently reserved. Its status cannot be manually changed from 'blocked'.` });
         }
 
@@ -165,6 +199,7 @@ app.put('/api/rooms/:id', async (req, res) => {
 // --- Bookings API ---
 // Get all bookings (admin only)
 app.get('/api/bookings', async (req, res) => {
+    // Add authentication/authorization if needed, e.g., authorizeRole('admin')
     try {
         const bookings = await Booking.find({});
         res.json(bookings);
@@ -175,15 +210,31 @@ app.get('/api/bookings', async (req, res) => {
 
 // Add a new booking (admin only)
 app.post('/api/bookings', async (req, res) => {
+    // Add authentication/authorization if needed, e.g., authorizeRole('admin')
     const newBookingData = req.body;
     try {
-        // Generate a unique ID for the new booking
-        newBookingData.id = newBookingData.id || new mongoose.Types.ObjectId().toHexString();
+        // Generate a unique ID for the new booking if not provided by client
+        newBookingData.id = newBookingData.id || `BKG${Math.floor(Math.random() * 100000) + 1000}`; // Example: BKG12345
 
         const room = await Room.findOne({ number: newBookingData.room });
         if (!room) {
             return res.status(404).json({ message: 'Room not found for booking' });
         }
+
+        // Check if room is already blocked by an *active* booking that isn't this one (for update scenarios)
+        const now = new Date();
+        now.setHours(0,0,0,0);
+        const conflictingBooking = await Booking.findOne({
+            room: newBookingData.room,
+            checkIn: { $lte: newBookingData.checkOut }, // New booking starts before or on current booking's checkout
+            checkOut: { $gt: newBookingData.checkIn }, // New booking ends after current booking's checkin
+            _id: { $ne: newBookingData._id } // Exclude current booking being updated if _id exists (for PUT, handled separately)
+        });
+
+        if (conflictingBooking) {
+            return res.status(400).json({ message: `Room ${newBookingData.room} is already booked for a conflicting period.` });
+        }
+
 
         // Update room status to 'blocked'
         room.status = 'blocked';
@@ -199,7 +250,8 @@ app.post('/api/bookings', async (req, res) => {
 
 // Update an existing booking (admin only)
 app.put('/api/bookings/:id', async (req, res) => {
-    const { id } = req.params;
+    // Add authentication/authorization if needed, e.g., authorizeRole('admin')
+    const { id } = req.params; // This `id` refers to your custom `id` field (e.g., BKG001)
     const updatedBookingData = req.body;
     try {
         const oldBooking = await Booking.findOne({ id: id });
@@ -207,22 +259,22 @@ app.put('/api/bookings/:id', async (req, res) => {
             return res.status(404).json({ message: 'Booking not found' });
         }
 
-        // If room number changed, update old room status to clean and new room status to blocked
+        // If room number changed, update old room status to clean (if no other active bookings) and new room status to blocked
         if (oldBooking.room !== updatedBookingData.room) {
             const oldRoom = await Room.findOne({ number: oldBooking.room });
             if (oldRoom) {
-                // Check if the old room is still blocked by other active bookings
+                // Check if the old room is still blocked by other active bookings (excluding the current booking)
                 const now = new Date();
                 now.setHours(0,0,0,0);
                 const otherActiveBookings = await Booking.exists({
                     room: oldRoom.number,
                     id: { $ne: oldBooking.id }, // Exclude the current booking being updated
                     checkIn: { $lte: now.toISOString().split('T')[0] },
-                    checkOut: { $gte: now.toISOString().split('T')[0] }
+                    checkOut: { $gt: now.toISOString().split('T')[0] }
                 });
 
                 if (!otherActiveBookings) {
-                    oldRoom.status = 'clean';
+                    oldRoom.status = 'clean'; // Only unblock if no other active bookings
                     await oldRoom.save();
                 }
             }
@@ -243,6 +295,7 @@ app.put('/api/bookings/:id', async (req, res) => {
 
 // Delete a booking (admin only)
 app.delete('/api/bookings/:id', async (req, res) => {
+    // Add authentication/authorization if needed, e.g., authorizeRole('admin')
     const { id } = req.params;
     try {
         const bookingToDelete = await Booking.findOne({ id: id });
@@ -259,7 +312,7 @@ app.delete('/api/bookings/:id', async (req, res) => {
                 room: room.number,
                 id: { $ne: bookingToDelete.id }, // Exclude the current booking being deleted
                 checkIn: { $lte: now.toISOString().split('T')[0] },
-                checkOut: { $gte: now.toISOString().split('T')[0] }
+                checkOut: { $gt: now.toISOString().split('T')[0] }
             });
 
             if (!otherActiveBookings) {
@@ -267,6 +320,9 @@ app.delete('/api/bookings/:id', async (req, res) => {
                 await room.save();
             }
         }
+
+        // Delete associated incidental charges
+        await IncidentalCharge.deleteMany({ bookingId: bookingToDelete._id }); // Use MongoDB _id for relationship
 
         await Booking.deleteOne({ id: id });
         res.json({ message: 'Booking deleted successfully!' });
@@ -277,6 +333,7 @@ app.delete('/api/bookings/:id', async (req, res) => {
 
 // Checkout a booking (admin only, marks room as dirty)
 app.post('/api/bookings/:id/checkout', async (req, res) => {
+    // Add authentication/authorization if needed, e.g., authorizeRole('admin')
     const { id } = req.params;
     try {
         const booking = await Booking.findOne({ id: id });
@@ -300,39 +357,86 @@ app.post('/api/bookings/:id/checkout', async (req, res) => {
     }
 });
 
-// In a new file, e.g., models/IncidentalCharge.js
+// --- Incidental Charges API ---
 
-const incidentalChargeSchema = new mongoose.Schema({
-    bookingId: {
-        type: mongoose.Schema.Types.ObjectId, // Link to your Booking model's _id
-        ref: 'Booking',
-        required: true
-    },
-    guestName: { // Storing guest name for easy lookup, though bookingId links to full details
-        type: String,
-        required: true
-    },
-    type: { // e.g., 'Room Service', 'Spa', 'Restaurant', 'Bar', 'Laundry', 'Other'
-        type: String,
-        required: true
-    },
-    description: {
-        type: String
-    },
-    amount: {
-        type: Number,
-        required: true
-    },
-    date: {
-        type: Date,
-        default: Date.now
-    },
-    isPaid: { // To track if this specific charge has been paid
-        type: Boolean,
-        default: false
+// Add a new incidental charge (admin only)
+app.post('/api/incidental-charges', async (req, res) => {
+    // Add authentication/authorization if needed, e.g., authorizeRole('admin')
+    const { bookingId, guestName, type, description, amount } = req.body;
+    try {
+        // Validate that bookingId (MongoDB _id) is a valid ObjectId
+        if (!mongoose.Types.ObjectId.isValid(bookingId)) {
+            return res.status(400).json({ message: 'Invalid booking ID provided.' });
+        }
+
+        // Ensure the booking exists
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ message: 'Associated booking not found.' });
+        }
+
+        const newCharge = new IncidentalCharge({
+            bookingId,
+            guestName: guestName || booking.name, // Use provided guestName or fallback to booking's name
+            type,
+            description,
+            amount
+        });
+        await newCharge.save();
+        res.status(201).json({ message: 'Incidental charge added successfully!', charge: newCharge });
+    } catch (error) {
+        res.status(500).json({ message: 'Error adding incidental charge', error: error.message });
     }
-    // You could also add a 'paymentMethod' field if needed
 });
+
+// Get all incidental charges for a specific booking (by booking ObjectId)
+app.get('/api/incidental-charges/booking/:bookingObjectId', async (req, res) => {
+    const { bookingObjectId } = req.params;
+    try {
+        if (!mongoose.Types.ObjectId.isValid(bookingObjectId)) {
+            return res.status(400).json({ message: 'Invalid booking ID format.' });
+        }
+        const charges = await IncidentalCharge.find({ bookingId: bookingObjectId }).sort({ date: 1 });
+        res.json(charges);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching incidental charges for booking', error: error.message });
+    }
+});
+
+// Delete an incidental charge
+app.delete('/api/incidental-charges/:chargeId', async (req, res) => {
+    const { chargeId } = req.params;
+    try {
+        if (!mongoose.Types.ObjectId.isValid(chargeId)) {
+            return res.status(400).json({ message: 'Invalid charge ID format.' });
+        }
+        const deletedCharge = await IncidentalCharge.findByIdAndDelete(chargeId);
+        if (!deletedCharge) {
+            return res.status(404).json({ message: 'Incidental charge not found.' });
+        }
+        res.json({ message: 'Incidental charge deleted successfully!' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting incidental charge', error: error.message });
+    }
+});
+
+// Mark all unpaid incidental charges for a booking as paid
+app.put('/api/incidental-charges/pay-all/:bookingObjectId', async (req, res) => {
+    const { bookingObjectId } = req.params;
+    try {
+        if (!mongoose.Types.ObjectId.isValid(bookingObjectId)) {
+            return res.status(400).json({ message: 'Invalid booking ID format.' });
+        }
+        const result = await IncidentalCharge.updateMany(
+            { bookingId: bookingObjectId, isPaid: false },
+            { $set: { isPaid: true } }
+        );
+        res.json({ message: `${result.modifiedCount} charges marked as paid.`, modifiedCount: result.modifiedCount });
+    } catch (error) {
+        res.status(500).json({ message: 'Error marking charges as paid', error: error.message });
+    }
+});
+
 
 // --- 8. Start the Server ---
 app.listen(port, () => {
@@ -347,4 +451,8 @@ app.listen(port, () => {
     console.log(`- PUT /api/bookings/:id`);
     console.log(`- DELETE /api/bookings/:id`);
     console.log(`- POST /api/bookings/:id/checkout`);
+    console.log(`- POST /api/incidental-charges`);
+    console.log(`- GET /api/incidental-charges/booking/:bookingObjectId`);
+    console.log(`- DELETE /api/incidental-charges/:chargeId`);
+    console.log(`- PUT /api/incidental-charges/pay-all/:bookingObjectId`);
 });
