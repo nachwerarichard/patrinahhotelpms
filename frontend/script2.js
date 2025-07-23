@@ -268,7 +268,8 @@ logoutBtn.addEventListener('click', () => {
  */
 function handleNavigation(event) {
     event.preventDefault();
-    const targetId = event.target.id.replace('nav-', '');
+    // Correctly map 'nav-booking' to 'booking-management'
+    const targetId = event.target.id === 'nav-booking' ? 'booking-management' : event.target.id.replace('nav-', '');
 
     // Prevent navigation if the user's role doesn't permit it
     if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping') {
@@ -784,6 +785,7 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 bookingId: booking._id, // Use MongoDB _id
+                bookingCustomId, // Pass custom ID to backend
                 guestName,
                 roomNumber, // Pass room number to backend
                 type,
