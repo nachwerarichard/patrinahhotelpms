@@ -287,7 +287,7 @@ function handleNavigation(event) {
         return;
     }
     
-    if (currentUserRole === 'admin' && (targetId === 'charges-posting' || targetId === 'housekeeping')) {
+    if (currentUserRole === 'admin' && (targetId === 'charges-posting' || targetId === 'housekeeping' || targetId === 'booking')) {
         // Admins can access all, but we might want specific initial renders
     }
 
