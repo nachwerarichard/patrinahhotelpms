@@ -169,6 +169,38 @@ app.get('/api/rooms', async (req, res) => {
     }
 });
 
+// Get available rooms for a specific date range
+app.get('/api/rooms/available', async (req, res) => {
+    const { checkIn, checkOut } = req.query;
+
+    if (!checkIn || !checkOut) {
+        return res.status(400).json({ message: 'Check-in and check-out dates are required.' });
+    }
+
+    try {
+        // Find all bookings that overlap with the requested period
+        // A booking conflicts if its checkIn is before the requested checkOut AND its checkOut is after the requested checkIn
+        const conflictingBookings = await Booking.find({
+            checkIn: { $lt: checkOut },
+            checkOut: { $gt: checkIn }
+        });
+
+        // Get the room numbers of the conflicting bookings
+        const bookedRoomNumbers = conflictingBookings.map(booking => booking.room);
+
+        // Find all rooms that are 'clean' and not in the list of booked rooms
+        const availableRooms = await Room.find({
+            status: 'clean',
+            number: { $nin: bookedRoomNumbers } // $nin means "not in"
+        });
+
+        res.json(availableRooms);
+    } catch (error) {
+        res.status(500).json({ message: 'Error checking room availability', error: error.message });
+    }
+});
+
+
 // Update room status (accessible by admin and housekeeper)
 app.put('/api/rooms/:id', async (req, res) => {
     const { id } = req.params; // This `id` is the custom room `id` (e.g., R101)
@@ -226,7 +258,8 @@ app.get('/api/bookings', async (req, res) => {
             currentPage: page,
             totalCount
         });
-    } catch (error) {
+    } catch (error)
+    {
         res.status(500).json({ message: 'Error fetching bookings', error: error.message });
     }
 });
@@ -247,15 +280,15 @@ app.post('/api/bookings', async (req, res) => {
         const conflictingBooking = await Booking.findOne({
             room: newBookingData.room,
             $or: [
-                { checkIn: { $lt: newBookingData.checkOut, $gte: newBookingData.checkIn } }, // New booking starts within existing
-                { checkOut: { $gt: newBookingData.checkIn, $lte: newBookingData.checkOut } }, // New booking ends within existing
-                { checkIn: { $lte: newBookingData.checkIn }, checkOut: { $gte: newBookingData.checkOut } } // Existing booking fully encompasses new
+                // New booking starts within an existing booking
+                { checkIn: { $lt: newBookingData.checkOut }, checkOut: { $gt: newBookingData.checkIn } }
             ]
         });
 
         if (conflictingBooking) {
             return res.status(400).json({ message: `Room ${newBookingData.room} is already booked for a conflicting period.` });
         }
+
 
         // Update room status to 'blocked'
         room.status = 'blocked';
@@ -284,9 +317,7 @@ app.put('/api/bookings/:id', async (req, res) => {
             id: { $ne: id }, // Exclude the current booking
             room: updatedBookingData.room,
             $or: [
-                { checkIn: { $lt: updatedBookingData.checkOut, $gte: updatedBookingData.checkIn } },
-                { checkOut: { $gt: updatedBookingData.checkIn, $lte: updatedBookingData.checkOut } },
-                { checkIn: { $lte: updatedBookingData.checkIn }, checkOut: { $gte: updatedBookingData.checkOut } }
+                { checkIn: { $lt: updatedBookingData.checkOut }, checkOut: { $gt: updatedBookingData.checkIn } }
             ]
         });
 
@@ -491,6 +522,7 @@ app.listen(port, () => {
     console.log(`- POST /api/login`);
     console.log(`- POST /api/rooms/init (Run once to populate initial rooms)`);
     console.log(`- GET /api/rooms`);
+    console.log(`- GET /api/rooms/available?checkIn={date}&checkOut={date}`);
     console.log(`- PUT /api/rooms/:id`);
     console.log(`- GET /api/bookings?page={num}&limit={num}`);
     console.log(`- POST /api/bookings`);
