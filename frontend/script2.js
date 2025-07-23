@@ -5,17 +5,16 @@
 // IMPORTANT: This API_BASE_URL is a placeholder. In a real scenario,
 // you would replace this with your actual Render backend URL.
 // For this fully frontend-only version, API calls are simulated.
-const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
 
 // script.js - Frontend Logic for Hotel Management System
-// Now directly interacting with your Node.js Backend
+// Connected to Node.js Backend deployed on Render
 
 // --- Configuration ---
-// IMPORTANT: This API_BASE_URL should match where your Node.js backend is running.
-// If your backend is on localhost:3000, keep this as is.
-// If deployed, replace with your actual deployed backend URL (e.g., 'https://your-hotel-pms-backend.onrender.com/api').
+const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api'; // Your Render backend URL
 
-// --- Global Variables ---
+// --- Data (will be fetched from backend) ---
+let rooms = [];
+let bookings = [];
 let currentUserRole = null; // To store the role of the logged-in user
 
 // --- DOM Elements ---
@@ -28,14 +27,8 @@ const loginMessageBox = document.getElementById('loginMessageBox');
 const loginMessageBoxTitle = document.getElementById('loginMessageBoxTitle');
 const loginMessageBoxContent = document.getElementById('loginMessageBoxContent');
 
-const navLinks = document.querySelectorAll('aside nav ul li a'); // Select all nav links
-const sections = document.querySelectorAll('main .section'); // Select all content sections
-const navItemBooking = document.getElementById('nav-item-booking');
-const navItemHousekeeping = document.getElementById('nav-item-housekeeping'); // Correctly defined
-const navItemCharges = document.getElementById('nav-item-charges');
-const navItemReports = document.getElementById('nav-item-reports');
-const logoutBtn = document.getElementById('logoutBtn');
-
+const navLinks = document.querySelectorAll('aside nav ul li a:not(#logoutBtn)');
+const sections = document.querySelectorAll('main .section');
 const bookingModal = document.getElementById('bookingModal');
 const bookingForm = document.getElementById('bookingForm');
 const bookingsTableBody = document.querySelector('#bookingsTable tbody');
@@ -50,6 +43,10 @@ const balanceInput = document.getElementById('balance');
 const bookingSearchInput = document.getElementById('bookingSearch');
 const reportDateInput = document.getElementById('reportDate');
 const housekeepingRoomGrid = document.getElementById('housekeepingRoomGrid');
+const messageBox = document.getElementById('messageBox');
+const messageBoxTitle = document.getElementById('messageBoxTitle');
+const messageBoxContent = document.getElementById('messageBoxContent');
+const logoutBtn = document.getElementById('logoutBtn');
 
 // Incidental Charges Modal (Admin View)
 const chargesModal = document.getElementById('chargesModal');
@@ -63,7 +60,9 @@ const currentChargesTableBody = document.querySelector('#currentChargesTable tbo
 const incidentalTotalDueSpan = document.getElementById('incidentalTotalDue');
 const payIncidentalChargesBtn = document.getElementById('payIncidentalChargesBtn');
 
-// Post Charges Section (Admin View only, as per requirement)
+// Post Charges Section (Service Staff View)
+const navChargesLink = document.getElementById('nav-charges');
+const chargesPostingSection = document.getElementById('charges-posting');
 const guestSearchInput = document.getElementById('guestSearchInput');
 const foundBookingsList = document.getElementById('foundBookingsList');
 const postChargeFormContainer = document.getElementById('postChargeFormContainer');
@@ -80,6 +79,7 @@ const serviceIncidentalTotalDueSpan = document.getElementById('serviceIncidental
 
 // Receipt Modal
 const receiptModal = document.getElementById('receiptModal');
+const receiptContent = document.getElementById('receiptContent');
 const receiptBookingId = document.getElementById('receiptBookingId');
 const receiptGuestName = document.getElementById('receiptGuestName');
 const receiptRoomNumber = document.getElementById('receiptRoomNumber');
@@ -97,85 +97,34 @@ const receiptIncidentalAmountPaid = document.getElementById('receiptIncidentalAm
 const receiptIncidentalBalance = document.getElementById('receiptIncidentalBalance');
 const receiptGrandTotal = document.getElementById('receiptGrandTotal');
 
-// General Message Box (replaces alert/confirm)
-const messageBox = document.getElementById('messageBox');
-const messageBoxTitle = document.getElementById('messageBoxTitle');
-const messageBoxContent = document.getElementById('messageBoxContent');
-// const messageBoxCloseBtn = messageBox.querySelector('.btn-primary'); // Removed, using specific button in HTML for clarity
-
-// Confirmation Dialog (for delete/pay actions)
-const confirmationDialog = document.getElementById('confirmationDialog');
-const confirmationTitle = document.getElementById('confirmationTitle');
-const confirmationContent = document.getElementById('confirmationContent');
-const confirmYesBtn = document.getElementById('confirmYesBtn');
-const confirmNoBtn = document.getElementById('confirmNoBtn');
 
 // --- Utility Functions ---
 
-/**
- * Displays a custom message box.
- * @param {string} title - The title of the message box.
- * @param {string} message - The content of the message.
- */
+// Function to show a custom message box
 function showMessageBox(title, message) {
     messageBoxTitle.textContent = title;
     messageBoxContent.textContent = message;
-    messageBox.style.display = 'flex';
+    messageBox.style.display = 'block';
 }
 
-/**
- * Closes the custom message box.
- */
+// Function to close the custom message box
 function closeMessageBox() {
     messageBox.style.display = 'none';
 }
 
-/**
- * Displays a custom login-specific message box.
- * @param {string} title - The title of the message box.
- * @param {string} message - The content of the message.
- */
+// Function to show a custom login message box
 function showLoginMessageBox(title, message) {
     loginMessageBoxTitle.textContent = title;
     loginMessageBoxContent.textContent = message;
     loginMessageBox.style.display = 'block';
 }
 
-/**
- * Closes the custom login-specific message box.
- */
+// Function to close the custom login message box
 function closeLoginMessageBox() {
     loginMessageBox.style.display = 'none';
 }
 
-/**
- * Displays a custom confirmation dialog.
- * @param {string} title - The title of the dialog.
- * @param {string} message - The message content.
- * @param {function(boolean): void} onConfirm - Callback function when user confirms (true for Yes, false for No).
- */
-function showConfirmationDialog(title, message, onConfirm) {
-    confirmationTitle.textContent = title;
-    confirmationContent.textContent = message;
-    confirmationDialog.style.display = 'flex';
-
-    // Clear previous event listeners to prevent multiple calls
-    confirmYesBtn.onclick = null;
-    confirmNoBtn.onclick = null;
-
-    confirmYesBtn.onclick = () => {
-        confirmationDialog.style.display = 'none';
-        onConfirm(true);
-    };
-    confirmNoBtn.onclick = () => {
-        confirmationDialog.style.display = 'none';
-        onConfirm(false);
-    };
-}
-
-/**
- * Calculates nights between check-in and check-out dates and updates the UI.
- */
+// Calculates nights between two dates
 function calculateNights() {
     const checkInDate = new Date(checkInInput.value);
     const checkOutDate = new Date(checkOutInput.value);
@@ -190,9 +139,7 @@ function calculateNights() {
     calculateTotalDue();
 }
 
-/**
- * Calculates total due and balance for room booking based on nights and amount per night.
- */
+// Calculates total due and balance for room booking
 function calculateTotalDue() {
     const nights = parseFloat(nightsInput.value) || 0;
     const amtPerNight = parseFloat(amtPerNightInput.value) || 0;
@@ -202,6 +149,7 @@ function calculateTotalDue() {
     totalDueInput.value = totalDue.toFixed(2);
     balanceInput.value = (totalDue - amountPaid).toFixed(2);
 
+    // Update payment status based on balance
     const balance = parseFloat(balanceInput.value);
     const paymentStatusSelect = document.getElementById('paymentStatus');
     if (balance <= 0) {
@@ -213,21 +161,21 @@ function calculateTotalDue() {
     }
 }
 
-/**
- * Populates the room dropdown in the booking modal with available rooms from the backend.
- * @param {string|null} selectedRoomNumber - The room number to pre-select, if any.
- */
+// Populates the room dropdown in the booking modal
 async function populateRoomDropdown(selectedRoomNumber = null) {
     roomSelect.innerHTML = '<option value="">Select a Room</option>';
     try {
         const response = await fetch(`${API_BASE_URL}/rooms`);
-        if (!response.ok) throw new Error('Failed to fetch rooms.');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const fetchedRooms = await response.json();
+        rooms = fetchedRooms; // Update local rooms array
 
+        const availableRooms = rooms.filter(room => room.status === 'clean' || room.number === selectedRoomNumber);
+
+        // Group rooms by type
         const roomTypes = {};
-        // Filter for 'clean' rooms unless it's the `selectedRoomNumber` (for editing existing bookings)
-        const availableRooms = fetchedRooms.filter(room => room.status === 'clean' || room.number === selectedRoomNumber);
-
         availableRooms.forEach(room => {
             if (!roomTypes[room.type]) {
                 roomTypes[room.type] = [];
@@ -251,28 +199,22 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
         }
     } catch (error) {
         console.error('Error populating room dropdown:', error);
-        showMessageBox('Error', 'Could not load rooms. Please try again.');
+        showMessageBox('Error', 'Failed to load rooms for dropdown. Please try again.');
     }
 }
 
-/**
- * Closes the Admin's incidental charges modal.
- */
+// Closes the Admin's incidental charges modal
 function closeChargesModal() {
     chargesModal.style.display = 'none';
     renderBookings(); // Re-render main bookings table just in case a payment status changed
 }
 
-/**
- * Closes the client receipt modal.
- */
+// Closes the client receipt modal
 function closeReceiptModal() {
     receiptModal.style.display = 'none';
 }
 
-/**
- * Triggers the browser's print dialog for the receipt.
- */
+// Prints the receipt
 function printReceipt() {
     const modalActions = receiptModal.querySelector('.modal-actions');
     if (modalActions) {
@@ -286,13 +228,9 @@ function printReceipt() {
     }
 }
 
-// --- Login & Logout Handlers ---
 
-/**
- * Handles user login.
- * @param {Event} event - The form submission event.
- */
-async function handleLogin(event) {
+// --- Login and Role Management ---
+loginForm.addEventListener('submit', async function(event) {
     event.preventDefault();
     const username = usernameInput.value;
     const password = passwordInput.value;
@@ -300,40 +238,41 @@ async function handleLogin(event) {
     try {
         const response = await fetch(`${API_BASE_URL}/login`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({ username, password })
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Login failed.');
-        }
-
         const data = await response.json();
-        currentUserRole = data.role; // Set the current user role
 
-        loginMessageBox.style.display = 'none'; // Hide login message box
-        loginContainer.style.display = 'none'; // Hide login container
-        mainContent.style.display = 'flex'; // Show main content
+        if (response.ok) {
+            currentUserRole = data.role;
+            loginContainer.style.display = 'none';
+            mainContent.style.display = 'flex';
+            applyRoleAccess(currentUserRole);
 
-        applyRoleAccess(currentUserRole); // Apply role-based visibility
+            // Initialize rooms in backend if empty (run once)
+            await fetch(`${API_BASE_URL}/rooms/init`, { method: 'POST' });
 
-        // Automatically click the appropriate navigation link based on role
-        if (currentUserRole === 'admin') {
-            document.getElementById('nav-booking').click(); // Default for admin
-        } else if (currentUserRole === 'housekeeper') {
-            document.getElementById('nav-housekeeping').click(); // Default for housekeeper
+            // Automatically click the appropriate navigation link based on role
+            if (currentUserRole === 'admin') {
+                document.getElementById('nav-booking').click();
+            } else if (currentUserRole === 'housekeeper') {
+                document.getElementById('nav-housekeeping').click();
+            } else if (currentUserRole === 'service_staff') { // New role check
+                document.getElementById('nav-charges').click();
+            }
+        } else {
+            showLoginMessageBox('Login Failed', data.message || 'Invalid username or password.');
         }
     } catch (error) {
         console.error('Login error:', error);
-        showLoginMessageBox('Login Failed', error.message);
+        showLoginMessageBox('Login Error', 'Could not connect to the server. Please try again later.');
     }
-}
+});
 
-/**
- * Handles user logout.
- */
-function handleLogout() {
+logoutBtn.addEventListener('click', () => {
     currentUserRole = null;
     loginContainer.style.display = 'flex';
     mainContent.style.display = 'none';
@@ -342,49 +281,27 @@ function handleLogout() {
     // Reset active state for navigation links and sections
     navLinks.forEach(link => link.classList.remove('active'));
     sections.forEach(section => section.classList.remove('active'));
-    showMessageBox('Logged Out', 'You have been successfully logged out.');
-}
+});
 
-// --- Navigation Handling and Role-Based Access ---
 
-/**
- * Applies access restrictions to navigation items and content sections based on user role.
- * @param {string} role - The role of the current user ('admin' or 'housekeeper').
- */
-function applyRoleAccess(role) {
-    // Control visibility of navigation list items
-    navItemBooking.classList.toggle('hidden', role !== 'admin');
-    navItemCharges.classList.toggle('hidden', role !== 'admin');
-    // Housekeeper can see housekeeping and reports (always visible for both roles)
-    navItemHousekeeping.classList.remove('hidden');
-    navItemReports.classList.remove('hidden');
-
-    // Ensure all sections are hidden first, then handle initial active state via handleNavigation
-    sections.forEach(section => section.style.display = 'none');
-
-    // Clear search results and hide forms in charges section when role access changes
-    if (foundBookingsList) foundBookingsList.innerHTML = '';
-    if (postChargeFormContainer) postChargeFormContainer.style.display = 'none';
-    if (currentChargesForSelectedBooking) currentChargesForSelectedBooking.style.display = 'none';
-}
-
-/**
- * Handles navigation clicks to show/hide sections and trigger data rendering.
- * Enforces role-based access.
- * @param {Event} event - The click event from the navigation link.
- */
-async function handleNavigation(event) {
+// Handles navigation clicks
+function handleNavigation(event) {
     event.preventDefault();
-    const targetId = event.target.id.replace('nav-', ''); // e.g., 'booking', 'housekeeping', 'charges', 'reports'
+    const targetId = event.target.id.replace('nav-', '');
 
-    // Frontend Role-Based Access Control
-    if (currentUserRole === 'housekeeper') {
-        // Housekeepers can ONLY access 'housekeeping' and 'reports'
-        if (targetId !== 'housekeeping' && targetId !== 'reports') {
-            showMessageBox('Access Denied', 'Housekeepers can only access Housekeeping and Reports sections.');
-            return; // Stop navigation if not allowed
-        }
+    // Prevent navigation if the user's role doesn't permit it
+    if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping' && targetId !== 'charges-posting') {
+        showMessageBox('Access Denied', 'Housekeepers can only access Housekeeping and Post Charges sections.');
+        return;
     }
+    if (currentUserRole === 'service_staff' && targetId !== 'charges-posting') {
+        showMessageBox('Access Denied', 'Service Staff can only access the Post Charges section.');
+        return;
+    }
+    if (currentUserRole === 'admin' && (targetId === 'charges-posting' || targetId === 'housekeeping')) {
+        // Admins can access all, but we might want specific initial renders
+    }
+
 
     // Remove 'active' class from all nav links and sections
     navLinks.forEach(link => link.classList.remove('active'));
@@ -399,29 +316,29 @@ async function handleNavigation(event) {
         targetSection.classList.add('active');
     } else {
         console.error(`Error: Section with ID "${targetId}" not found.`);
-        showMessageBox('Navigation Error', `The section "${targetId}" could not be found. Please contact support.`);
         // Fallback to a default accessible section if targetId is invalid
         if (currentUserRole === 'admin') {
-            document.getElementById('booking').classList.add('active');
+            document.getElementById('booking-management').classList.add('active');
             document.getElementById('nav-booking').classList.add('active');
-            await renderBookings(); // Re-render fallback section
         } else if (currentUserRole === 'housekeeper') {
             document.getElementById('housekeeping').classList.add('active');
             document.getElementById('nav-housekeeping').classList.add('active');
-            await renderHousekeepingRooms(); // Re-render fallback section
+        } else if (currentUserRole === 'service_staff') {
+            document.getElementById('charges-posting').classList.add('active');
+            document.getElementById('nav-charges').classList.add('active');
         }
         return;
     }
 
-    // Re-render sections when active, fetching data from backend
-    if (targetId === 'booking') {
-        await renderBookings();
+    // Re-render sections when active
+    if (targetId === 'booking-management') {
+        renderBookings();
     } else if (targetId === 'housekeeping') {
-        await renderHousekeepingRooms();
+        renderHousekeepingRooms();
     } else if (targetId === 'reports') {
-        reportDateInput.valueAsDate = new Date(); // Set to today's date
-        await generateReport();
-    } else if (targetId === 'charges') {
+        reportDateInput.valueAsDate = new Date();
+        generateReport();
+    } else if (targetId === 'charges-posting') {
         // Reset the charges posting section when navigating to it
         guestSearchInput.value = '';
         foundBookingsList.innerHTML = '<p style="text-align: center; margin-top: 20px;">Use the search bar to find a guest/booking to post charges against.</p>';
@@ -430,12 +347,48 @@ async function handleNavigation(event) {
     }
 }
 
+// Applies access restrictions based on user role
+function applyRoleAccess(role) {
+    // Control visibility of navigation links
+    document.getElementById('nav-booking').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
+    document.getElementById('nav-reports').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
+    document.getElementById('nav-housekeeping').parentElement.style.display = 'block'; // Always visible for housekeepers and admins
+    navChargesLink.parentElement.style.display = (role === 'admin' || role === 'service_staff' || role === 'housekeeper') ? 'block' : 'none'; // Allow service_staff or housekeepers to post charges
+    document.getElementById('logoutBtn').parentElement.style.display = 'block'; // Always visible
+
+    // Control visibility of sections (actual content areas)
+    sections.forEach(section => {
+        const sectionId = section.id;
+        // Initially hide all sections for all roles to be explicitly shown by handleNavigation or specific roles
+        section.style.display = 'none';
+
+        if (role === 'admin') {
+            // Admins can see all, handled by initial click or handleNavigation
+        } else if (role === 'housekeeper') {
+            if (sectionId === 'housekeeping' || sectionId === 'charges-posting') {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        } else if (role === 'service_staff') { // New role
+            if (sectionId === 'charges-posting') {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        }
+    });
+
+    // Clear search results and hide forms when role access changes
+    foundBookingsList.innerHTML = '';
+    postChargeFormContainer.style.display = 'none';
+    currentChargesForSelectedBooking.style.display = 'none';
+}
+
+
 // --- Booking Management Functions ---
 
-/**
- * Renders the bookings table by fetching data from the backend.
- * @param {Array<Object>|null} [filteredBookings=null] - Optional array of bookings to render if already filtered.
- */
+// Renders the bookings table by fetching from backend
 async function renderBookings(filteredBookings = null) {
     bookingsTableBody.innerHTML = ''; // Clear existing rows
 
@@ -445,18 +398,22 @@ async function renderBookings(filteredBookings = null) {
     }
 
     let currentBookings = [];
-    try {
-        const response = await fetch(`${API_BASE_URL}/bookings`);
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to fetch bookings.');
+    if (filteredBookings) {
+        currentBookings = filteredBookings; // Use provided filtered data
+    } else {
+        try {
+            const response = await fetch(`${API_BASE_URL}/bookings`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            currentBookings = await response.json();
+            bookings = currentBookings; // Update local bookings array
+        } catch (error) {
+            console.error('Error fetching bookings:', error);
+            showMessageBox('Error', 'Failed to load bookings. Please check backend connection.');
+            bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px; color: red;">Failed to load bookings.</td></tr>';
+            return;
         }
-        const fetchedBookings = await response.json();
-        currentBookings = filteredBookings || fetchedBookings; // Use filtered or all fetched bookings
-    } catch (error) {
-        console.error('Error fetching bookings:', error);
-        bookingsTableBody.innerHTML = `<tr><td colspan="16" style="text-align: center; padding: 20px; color: ${getComputedStyle(document.documentElement).getPropertyValue('--danger-color')};">Error loading bookings: ${error.message}</td></tr>`;
-        return;
     }
 
     if (currentBookings.length === 0) {
@@ -466,24 +423,7 @@ async function renderBookings(filteredBookings = null) {
 
     currentBookings.forEach(booking => {
         const row = bookingsTableBody.insertRow();
-        row.dataset.id = booking.id; // Store booking ID from DB
-
-        // Check if check-out date is today or in the past
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        const checkoutDate = new Date(booking.checkOut);
-        checkoutDate.setHours(0,0,0,0);
-        const isCheckoutDue = checkoutDate <= today;
-
-        // Fetch current room status to determine if checkout button should be enabled
-        // In a real app, you might include room status with booking data or fetch all rooms once
-        // For now, we'll assume room status is 'clean' if not blocked, or check against rooms
-        // This is a simplification; a live system would handle this more robustly.
-        // For the sake of matching your backend logic (room blocked means it's reserved),
-        // we won't disable checkout just because the room is 'dirty' from housekeeping.
-        // It's mainly about the `isCheckoutDue` here for the button logic.
-        // The backend `checkout` endpoint sets room to 'dirty'.
-        const canCheckout = isCheckoutDue;
+        row.dataset.id = booking.id; // Store booking ID for easy access
 
         row.innerHTML = `
             <td>${booking.name}</td>
@@ -495,7 +435,7 @@ async function renderBookings(filteredBookings = null) {
             <td>${parseFloat(booking.totalDue).toFixed(2)}</td>
             <td>${parseFloat(booking.amountPaid).toFixed(2)}</td>
             <td>${parseFloat(booking.balance).toFixed(2)}</td>
-            <td class="status-${booking.paymentStatus.replace(' ', '')}">${booking.paymentStatus}</td>
+            <td>${booking.paymentStatus}</td>
             <td>${booking.people}</td>
             <td>${booking.nationality || ''}</td>
             <td>${booking.address || ''}</td>
@@ -503,55 +443,38 @@ async function renderBookings(filteredBookings = null) {
             <td>${booking.nationalIdNo || ''}</td>
             <td>
                 <div class="action-buttons">
-                    <button class="btn btn-info" onclick="editBooking('${booking.id}')">Edit</button>
-                    <button class="btn btn-danger" onclick="deleteBooking('${booking.id}')">Delete</button>
-                    <button class="btn btn-secondary" onclick="openChargesModal('${booking.id}', '${booking.name}')">Charges</button>
-                    <button class="btn btn-primary" onclick="generateClientReceipt('${booking.id}')">Receipt</button>
-                    <button class="btn btn-success" ${canCheckout ? '' : 'disabled'} onclick="checkoutBooking('${booking.id}')">Check-out</button>
+                    <button class="btn btn-info btn-sm" onclick="editBooking('${booking.id}')">Edit</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteBooking('${booking.id}')">Delete</button>
+                    <button class="btn btn-secondary btn-sm" onclick="openChargesModal('${booking.id}', '${booking.name}')">Charges</button>
+                    <button class="btn btn-primary btn-sm" onclick="generateClientReceipt('${booking.id}')">Receipt</button>
+                    ${new Date(booking.checkOut) <= new Date() && rooms.find(r => r.number === booking.room)?.status !== 'dirty' ?
+                        `<button class="btn btn-success btn-sm" onclick="checkoutBooking('${booking.id}')">Check-out</button>` :
+                        ''
+                    }
                 </div>
             </td>
         `;
     });
 }
 
-/**
- * Filters bookings based on search input by fetching from backend with a query.
- */
-async function filterBookings() {
+// Filters bookings based on search input (uses local 'bookings' array)
+function filterBookings() {
     const searchTerm = bookingSearchInput.value.toLowerCase();
-    // In a real API, you'd send this searchTerm to your backend for filtered results.
-    // For now, we'll fetch all and filter client-side, or you can implement a backend search endpoint.
-    // Assuming backend returns all bookings, then filter here:
-    try {
-        const response = await fetch(`${API_BASE_URL}/bookings`);
-        if (!response.ok) throw new Error('Failed to fetch bookings for filtering.');
-        const allBookings = await response.json();
-
-        const filtered = allBookings.filter(booking =>
-            booking.name.toLowerCase().includes(searchTerm) ||
-            booking.room.toLowerCase().includes(searchTerm) ||
-            (booking.nationalIdNo && booking.nationalIdNo.toLowerCase().includes(searchTerm)) ||
-            (booking.phoneNo && booking.phoneNo.toLowerCase().includes(searchTerm))
-        );
-        renderBookings(filtered); // Pass filtered data to render
-    } catch (error) {
-        console.error('Error filtering bookings:', error);
-        showMessageBox('Error', `Could not filter bookings: ${error.message}`);
-    }
+    const filtered = bookings.filter(booking =>
+        booking.name.toLowerCase().includes(searchTerm) ||
+        booking.room.toLowerCase().includes(searchTerm) ||
+        (booking.nationalIdNo && booking.nationalIdNo.toLowerCase().includes(searchTerm)) ||
+        (booking.phoneNo && booking.phoneNo.toLowerCase().includes(searchTerm))
+    );
+    renderBookings(filtered); // Pass filtered data to render
 }
 
-/**
- * Opens the booking modal for adding a new booking.
- */
+// Opens the booking modal for adding a new booking
 async function openBookingModal() {
-    if (currentUserRole !== 'admin') {
-        showMessageBox('Access Denied', 'Only Admin can add new bookings.');
-        return;
-    }
     document.getElementById('modalTitle').textContent = 'Add New Booking';
     bookingForm.reset(); // Clear previous form data
     document.getElementById('bookingId').value = ''; // Clear hidden ID
-    await populateRoomDropdown(); // Populate with all clean rooms
+    await populateRoomDropdown(); // Populate with all clean rooms from backend
     nightsInput.value = 0;
     totalDueInput.value = 0;
     balanceInput.value = 0;
@@ -559,21 +482,16 @@ async function openBookingModal() {
     bookingModal.style.display = 'flex';
 }
 
-/**
- * Closes the booking modal.
- */
+// Closes the booking modal
 function closeBookingModal() {
     bookingModal.style.display = 'none';
 }
 
-/**
- * Handles form submission for adding/editing bookings, making API calls.
- * @param {Event} event - The form submission event.
- */
+// Handles form submission for adding/editing bookings
 bookingForm.addEventListener('submit', async function(event) {
     event.preventDefault();
 
-    const id = document.getElementById('bookingId').value;
+    const id = document.getElementById('bookingId').value; // Will be empty for new, existing for edit
     const name = document.getElementById('name').value;
     const roomNumber = document.getElementById('room').value;
     const checkIn = document.getElementById('checkIn').value;
@@ -596,53 +514,47 @@ bookingForm.addEventListener('submit', async function(event) {
         address, phoneNo, nationalIdNo
     };
 
-    let url = `${API_BASE_URL}/bookings`;
-    let method = 'POST';
-    let message = '';
-
-    if (id) {
-        url += `/${id}`;
-        method = 'PUT';
-        message = 'Booking updated successfully!';
-        bookingData.id = id; // Ensure ID is part of the update payload if backend expects it
-    } else {
-        message = 'New booking added successfully!';
-    }
-
     try {
-        const response = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(bookingData)
-        });
+        let response;
+        let message;
+        if (id) {
+            // Edit existing booking
+            response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bookingData)
+            });
+            message = 'Booking updated successfully!';
+        } else {
+            // Add new booking
+            response = await fetch(`${API_BASE_URL}/bookings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bookingData)
+            });
+            message = 'New booking added successfully!';
+        }
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || `Failed to ${id ? 'update' : 'add'} booking.`);
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
 
         showMessageBox('Success', message);
-        await renderBookings(); // Re-render to show updated list
+        renderBookings(); // Re-render to show updated list
         closeBookingModal();
-        await renderHousekeepingRooms(); // Update housekeeping view as room status might change
+        renderHousekeepingRooms(); // Update housekeeping view as room status might change
     } catch (error) {
-        console.error(`Error ${id ? 'updating' : 'adding'} booking:`, error);
-        showMessageBox('Error', `Error ${id ? 'updating' : 'adding'} booking: ${error.message}`);
+        console.error('Error saving booking:', error);
+        showMessageBox('Error', `Failed to save booking: ${error.message}`);
     }
 });
 
-/**
- * Populates the modal with booking data for editing, fetching from backend.
- * @param {string} id - The ID of the booking to edit.
- */
+// Populates the modal with booking data for editing
 async function editBooking(id) {
-    if (currentUserRole !== 'admin') {
-        showMessageBox('Access Denied', 'Only Admin can edit bookings.');
-        return;
-    }
     try {
-        const response = await fetch(`${API_BASE_URL}/bookings`);
-        if (!response.ok) throw new Error('Failed to fetch bookings for editing.');
+        const response = await fetch(`${API_BASE_URL}/bookings`); // Fetch all bookings to find the one to edit
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const allBookings = await response.json();
         const booking = allBookings.find(b => b.id === id);
 
@@ -671,83 +583,68 @@ async function editBooking(id) {
 
         bookingModal.style.display = 'flex';
     } catch (error) {
-        console.error('Error editing booking:', error);
-        showMessageBox('Error', `Error loading booking for edit: ${error.message}`);
+        console.error('Error fetching booking for edit:', error);
+        showMessageBox('Error', `Failed to load booking for editing: ${error.message}`);
     }
 }
 
-/**
- * Deletes a booking, making an API call.
- * @param {string} id - The ID of the booking to delete.
- */
+// Deletes a booking
 async function deleteBooking(id) {
-    if (currentUserRole !== 'admin') {
-        showMessageBox('Access Denied', 'Only Admin can delete bookings.');
-        return;
-    }
-    showConfirmationDialog('Confirm Delete', 'Are you sure you want to delete this booking?', async (confirmed) => {
-        if (confirmed) {
-            try {
-                const response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
-                    method: 'DELETE',
-                });
+    const confirmed = confirm('Are you sure you want to delete this booking?');
+    if (confirmed) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
+                method: 'DELETE'
+            });
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Failed to delete booking.');
-                }
-
-                showMessageBox('Success', 'Booking deleted successfully!');
-                await renderBookings(); // Re-render to show updated list
-                await renderHousekeepingRooms(); // Update housekeeping view as room status might change
-                // Also, consider deleting associated incidental charges if your backend handles that
-                // or if you implement a separate endpoint for it.
-            } catch (error) {
-                console.error('Error deleting booking:', error);
-                showMessageBox('Error', `Error deleting booking: ${error.message}`);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
+
+            showMessageBox('Success', 'Booking deleted successfully!');
+            renderBookings(); // Re-render to show updated list
+            renderHousekeepingRooms(); // Update housekeeping view as room status might change
+        } catch (error) {
+            console.error('Error deleting booking:', error);
+            showMessageBox('Error', `Failed to delete booking: ${error.message}`);
         }
-    });
+    }
 }
 
-/**
- * Handles room checkout, making an API call to mark room as dirty.
- * @param {string} id - The ID of the booking to checkout.
- */
+// Handles room checkout
 async function checkoutBooking(id) {
-    if (currentUserRole !== 'admin') {
-        showMessageBox('Access Denied', 'Only Admin can checkout bookings.');
-        return;
-    }
-    showConfirmationDialog('Confirm Checkout', 'Are you sure you want to check out this booking? This will mark the room as dirty.', async (confirmed) => {
-        if (confirmed) {
-            try {
-                const response = await fetch(`${API_BASE_URL}/bookings/${id}/checkout`, {
-                    method: 'POST', // Using POST for an action that changes state
-                });
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings/${id}/checkout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Failed to checkout booking.');
-                }
-
-                const data = await response.json();
-                showMessageBox('Success', data.message);
-                await renderBookings(); // Re-render to update checkout button visibility
-                await renderHousekeepingRooms(); // Update housekeeping view
-            } catch (error) {
-                console.error('Error during checkout:', error);
-                showMessageBox('Error', `Error during checkout: ${error.message}`);
-            }
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
-    });
+
+        const data = await response.json();
+        showMessageBox('Success', data.message);
+        renderBookings(); // Re-render to update checkout button visibility
+        renderHousekeepingRooms(); // Update housekeeping view
+    } catch (error) {
+        console.error('Error during checkout:', error);
+        showMessageBox('Error', `Failed to process checkout: ${error.message}`);
+    }
 }
+
+// Event listeners for date and amount changes to calculate nights, total due, balance
+checkInInput.addEventListener('change', calculateNights);
+checkOutInput.addEventListener('change', calculateNights);
+amtPerNightInput.addEventListener('input', calculateTotalDue);
+amountPaidInput.addEventListener('input', calculateTotalDue);
+
 
 // --- Reports Functions ---
 
-/**
- * Generates and displays report data by fetching relevant booking info from the backend.
- */
+// Generates and displays report data
 async function generateReport() {
     const selectedDateStr = reportDateInput.value;
     if (!selectedDateStr) {
@@ -755,138 +652,137 @@ async function generateReport() {
         return;
     }
 
+    // Fetch all bookings to generate report locally
+    let allBookings = [];
     try {
-        // Fetch all bookings and rooms to generate report client-side based on date
-        const bookingsResponse = await fetch(`${API_BASE_URL}/bookings`);
-        if (!bookingsResponse.ok) throw new Error('Failed to fetch bookings for report.');
-        const allBookings = await bookingsResponse.json();
+        const response = await fetch(`${API_BASE_URL}/bookings`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        allBookings = await response.json();
+    } catch (error) {
+        console.error('Error fetching bookings for report:', error);
+        showMessageBox('Error', 'Failed to load bookings for report generation.');
+        return;
+    }
 
-        const roomsResponse = await fetch(`${API_BASE_URL}/rooms`);
-        if (!roomsResponse.ok) throw new Error('Failed to fetch rooms for report.');
-        const allRooms = await roomsResponse.json();
-        const roomsMap = new Map(allRooms.map(room => [room.number, room]));
+    const selectedDate = new Date(selectedDateStr);
+    selectedDate.setHours(0, 0, 0, 0); // Normalize to start of day
 
+    let totalAmount = 0;
+    let totalBalance = 0;
+    let guestsCheckedIn = 0;
+    const roomTypeCounts = {}; // To count most booked room type
 
-        const selectedDate = new Date(selectedDateStr);
-        selectedDate.setHours(0, 0, 0, 0); // Normalize to start of day
+    allBookings.forEach(booking => {
+        const checkIn = new Date(booking.checkIn);
+        checkIn.setHours(0, 0, 0, 0);
+        const checkOut = new Date(booking.checkOut);
+        checkOut.setHours(0, 0, 0, 0);
 
-        let totalAmount = 0;
-        let totalBalance = 0;
-        let guestsCheckedIn = 0;
-        const roomTypeCounts = {}; // To count most booked room type
+        // Check if the booking spans the selected date
+        if (selectedDate >= checkIn && selectedDate < checkOut) {
+            totalAmount += booking.totalDue;
+            totalBalance += booking.balance;
+            guestsCheckedIn += booking.people;
 
-        allBookings.forEach(booking => {
-            const checkIn = new Date(booking.checkIn);
-            checkIn.setHours(0, 0, 0, 0);
-            const checkOut = new Date(booking.checkOut);
-            checkOut.setHours(0, 0, 0, 0);
-
-            // Check if the booking spans the selected date
-            if (selectedDate >= checkIn && selectedDate < checkOut) {
-                totalAmount += booking.totalDue;
-                totalBalance += booking.balance;
-                guestsCheckedIn += booking.people;
-
-                const room = roomsMap.get(booking.room);
-                if (room) {
-                    roomTypeCounts[room.type] = (roomTypeCounts[room.type] || 0) + 1;
-                }
-            }
-        });
-
-        let mostBookedRoomType = 'N/A';
-        let maxCount = 0;
-        for (const type in roomTypeCounts) {
-            if (roomTypeCounts[type] > maxCount) {
-                maxCount = roomTypeCounts[type];
-                mostBookedRoomType = type;
+            const room = rooms.find(r => r.number === booking.room); // Use locally cached rooms for type
+            if (room) {
+                roomTypeCounts[room.type] = (roomTypeCounts[room.type] || 0) + 1;
             }
         }
+    });
 
-        document.getElementById('totalAmountReport').textContent = totalAmount.toFixed(2);
-        document.getElementById('totalBalanceReport').textContent = totalBalance.toFixed(2);
-        document.getElementById('mostBookedRoomType').textContent = mostBookedRoomType;
-        document.getElementById('guestsCheckedIn').textContent = guestsCheckedIn;
-    } catch (error) {
-        console.error('Error generating report:', error);
-        showMessageBox('Error', `Error generating report: ${error.message}`);
+    let mostBookedRoomType = 'N/A';
+    let maxCount = 0;
+    for (const type in roomTypeCounts) {
+        if (roomTypeCounts[type] > maxCount) {
+            maxCount = roomTypeCounts[type];
+            mostBookedRoomType = type;
+        }
     }
+
+    document.getElementById('totalAmountReport').textContent = totalAmount.toFixed(2);
+    document.getElementById('totalBalanceReport').textContent = totalBalance.toFixed(2);
+    document.getElementById('mostBookedRoomType').textContent = mostBookedRoomType;
+    document.getElementById('guestsCheckedIn').textContent = guestsCheckedIn;
 }
 
 
 // --- Housekeeping Functions ---
 
-/**
- * Renders the room cards for housekeeping by fetching data from the backend.
- */
+// Renders the room cards for housekeeping by fetching from backend
 async function renderHousekeepingRooms() {
     housekeepingRoomGrid.innerHTML = ''; // Clear existing cards
 
+    let currentRooms = [];
     try {
         const response = await fetch(`${API_BASE_URL}/rooms`);
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to fetch rooms for housekeeping.');
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const fetchedRooms = await response.json();
-
-        // Group rooms by type for better organization
-        const roomTypes = {};
-        fetchedRooms.forEach(room => {
-            if (!roomTypes[room.type]) {
-                roomTypes[room.type] = [];
-            }
-            roomTypes[room.type].push(room);
-        });
-
-        for (const type in roomTypes) {
-            const typeHeader = document.createElement('h3');
-            typeHeader.textContent = `${type} Rooms`;
-            typeHeader.style.gridColumn = '1 / -1'; // Span full width
-            typeHeader.style.marginTop = '20px';
-            typeHeader.style.marginBottom = '10px';
-            typeHeader.style.color = '#2c3e50';
-            typeHeader.style.borderBottom = '1px solid #ccc';
-            typeHeader.style.paddingBottom = '5px';
-            housekeepingRoomGrid.appendChild(typeHeader);
-
-            roomTypes[type].sort((a, b) => parseInt(a.number) - parseInt(b.number)).forEach(room => {
-                const card = document.createElement('div');
-                card.classList.add('room-card');
-                card.innerHTML = `
-                    <h4>Room ${room.number}</h4>
-                    <p>Type: ${room.type}</p>
-                    <p class="status status-${room.status}">${room.status.replace('-', ' ').toUpperCase()}</p>
-                    <select onchange="updateRoomStatus('${room.id}', this.value)">
-                        <option value="clean" ${room.status === 'clean' ? 'selected' : ''}>Clean</option>
-                        <option value="dirty" ${room.status === 'dirty' ? 'selected' : ''}>Dirty</option>
-                        <option value="under-maintenance" ${room.status === 'under-maintenance' ? 'selected' : ''}>Under Maintenance</option>
-                        ${room.status === 'blocked' ? `<option value="blocked" selected disabled>Blocked (Reserved)</option>` : ''}
-                    </select>
-                `;
-                housekeepingRoomGrid.appendChild(card);
-
-                // Disable dropdown if room is blocked (its status is managed by bookings)
-                const selectElement = card.querySelector('select');
-                if (room.status === 'blocked') {
-                    selectElement.disabled = true;
-                } else {
-                    selectElement.disabled = false;
-                }
-            });
-        }
+        currentRooms = await response.json();
+        rooms = currentRooms; // Update local rooms array
     } catch (error) {
-        console.error('Error rendering housekeeping rooms:', error);
-        housekeepingRoomGrid.innerHTML = `<p style="text-align: center; color: ${getComputedStyle(document.documentElement).getPropertyValue('--danger-color')};">Error loading rooms: ${error.message}</p>`;
+        console.error('Error fetching rooms for housekeeping:', error);
+        showMessageBox('Error', 'Failed to load rooms for housekeeping. Please check backend connection.');
+        housekeepingRoomGrid.innerHTML = '<p style="text-align: center; padding: 20px; color: red;">Failed to load rooms.</p>';
+        return;
+    }
+
+    // Group rooms by type for better organization
+    const roomTypes = {};
+    currentRooms.forEach(room => {
+        if (!roomTypes[room.type]) {
+            roomTypes[room.type] = [];
+        }
+        roomTypes[room.type].push(room);
+    });
+
+    for (const type in roomTypes) {
+        const typeHeader = document.createElement('h3');
+        typeHeader.textContent = `${type} Rooms`;
+        typeHeader.style.gridColumn = '1 / -1'; // Span full width
+        typeHeader.style.marginTop = '20px';
+        typeHeader.style.marginBottom = '10px';
+        typeHeader.style.color = '#2c3e50';
+        typeHeader.style.borderBottom = '1px solid #ccc';
+        typeHeader.style.paddingBottom = '5px';
+        housekeepingRoomGrid.appendChild(typeHeader);
+
+        roomTypes[type].sort((a, b) => parseInt(a.number) - parseInt(b.number)).forEach(room => {
+            const card = document.createElement('div');
+            card.classList.add('room-card');
+            card.innerHTML = `
+                <h4>Room ${room.number}</h4>
+                <p>Type: ${room.type}</p>
+                <p class="status status-${room.status}">${room.status.replace('-', ' ').toUpperCase()}</p>
+                <select onchange="updateRoomStatus('${room.id}', this.value)">
+                    <option value="clean" ${room.status === 'clean' ? 'selected' : ''}>Clean</option>
+                    <option value="dirty" ${room.status === 'dirty' ? 'selected' : ''}>Dirty</option>
+                    <option value="under-maintenance" ${room.status === 'under-maintenance' ? 'selected' : ''}>Under Maintenance</option>
+                    ${room.status === 'blocked' ? `<option value="blocked" selected disabled>Blocked (Reserved)</option>` : ''}
+                </select>
+            `;
+            housekeepingRoomGrid.appendChild(card);
+
+            // Disable dropdown if room is blocked
+            const selectElement = card.querySelector('select');
+            if (room.status === 'blocked') {
+                selectElement.disabled = true;
+            } else {
+                selectElement.disabled = false;
+            }
+        });
     }
 }
 
-/**
- * Updates room status via an API call.
- * @param {string} roomId - The ID of the room to update.
- * @param {string} newStatus - The new status for the room.
- */
+// Updates room status
 async function updateRoomStatus(roomId, newStatus) {
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) {
+        showMessageBox('Error', 'Room not found.');
+        return;
+    }
+
     try {
         const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
             method: 'PUT',
@@ -896,26 +792,24 @@ async function updateRoomStatus(roomId, newStatus) {
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to update room status.');
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
-        showMessageBox('Success', `Room ${data.room.number} status updated to ${data.room.status.replace('-', ' ')}.`);
-        await renderHousekeepingRooms(); // Re-render to update UI
+        // Update the local rooms array with the new status
+        room.status = data.room.status;
+        showMessageBox('Success', `Room ${room.number} status updated to ${data.room.status.replace('-', ' ')}.`);
+        renderHousekeepingRooms(); // Re-render to update UI
     } catch (error) {
         console.error('Error updating room status:', error);
-        showMessageBox('Error', `Error updating room status: ${error.message}`);
+        showMessageBox('Error', `Failed to update room status: ${error.message}`);
+        renderHousekeepingRooms(); // Revert UI if update failed
     }
 }
 
-
 // --- Incidental Charges Management (Admin View - from Booking Management) ---
 
-/**
- * Opens the charges modal and loads existing charges for a specific booking.
- * @param {string} bookingId - The ID of the booking.
- * @param {string} bookingName - The name of the guest for the booking.
- */
+// Function to open the charges modal and load existing charges (Admin view)
 async function openChargesModal(bookingId, bookingName) {
     if (currentUserRole !== 'admin') {
         showMessageBox('Access Denied', 'Only Admin can manage incidental charges from this view.');
@@ -931,23 +825,19 @@ async function openChargesModal(bookingId, bookingName) {
     chargesModal.style.display = 'flex';
 }
 
-/**
- * Renders existing incidental charges for a specific booking by fetching from backend.
- * @param {string} bookingId - The ID of the booking.
- */
+// Function to render existing incidental charges for a specific booking (Admin view)
 async function renderCurrentCharges(bookingId) {
     currentChargesTableBody.innerHTML = ''; // Clear existing charges
 
     try {
-        const response = await fetch(`${API_BASE_URL}/incidental-charges/booking/${bookingId}`);
+        const response = await fetch(`${API_BASE_URL}/incidental-charges/${bookingId}`);
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to fetch incidental charges.');
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const chargesForBooking = await response.json();
+        const charges = await response.json();
 
-        if (chargesForBooking && chargesForBooking.length > 0) {
-            chargesForBooking.forEach(charge => {
+        if (charges && charges.length > 0) {
+            charges.forEach(charge => {
                 const row = currentChargesTableBody.insertRow();
                 row.innerHTML = `
                     <td>${charge.type}</td>
@@ -956,7 +846,7 @@ async function renderCurrentCharges(bookingId) {
                     <td>${new Date(charge.date).toLocaleDateString()}</td>
                     <td class="status-${charge.isPaid ? 'paid' : 'pending'}">${charge.isPaid ? 'PAID' : 'PENDING'}</td>
                     <td>
-                        ${!charge.isPaid ? `<button class="btn btn-danger btn-sm" onclick="deleteIncidentalCharge('${charge._id}', '${bookingId}')">Delete</button>` : 'N/A'}
+                        ${!charge.isPaid ? `<button class="btn btn-danger btn-sm" onclick="deleteIncidentalCharge('${charge.id}', '${bookingId}')">Delete</button>` : 'N/A'}
                     </td>
                 `;
             });
@@ -964,72 +854,63 @@ async function renderCurrentCharges(bookingId) {
             currentChargesTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 10px;">No incidental charges yet.</td></tr>';
         }
     } catch (error) {
-        console.error('Error rendering current charges:', error);
-        currentChargesTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 10px; color: ${getComputedStyle(document.documentElement).getPropertyValue('--danger-color')};">Error loading charges: ${error.message}</td></tr>`;
+        console.error('Error fetching incidental charges:', error);
+        currentChargesTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 10px; color: red;">Failed to load incidental charges.</td></tr>';
+        showMessageBox('Error', 'Failed to load existing incidental charges. Please try again.');
     }
 }
 
-/**
- * Deletes an individual incidental charge via an API call.
- * @param {string} chargeId - The ID of the charge to delete.
- * @param {string} bookingId - The ID of the associated booking (for re-rendering).
- */
+// Function to delete an individual incidental charge (Admin view)
 async function deleteIncidentalCharge(chargeId, bookingId) {
-    showConfirmationDialog('Confirm Delete', 'Are you sure you want to delete this incidental charge?', async (confirmed) => {
-        if (confirmed) {
-            try {
-                const response = await fetch(`${API_BASE_URL}/incidental-charges/${chargeId}`, {
-                    method: 'DELETE',
-                });
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Failed to delete incidental charge.');
-                }
-                showMessageBox('Success', 'Incidental charge deleted successfully!');
-                await renderCurrentCharges(bookingId); // Refresh the list
-                await updateIncidentalTotal(bookingId); // Recalculate total
-            } catch (error) {
-                console.error('Error deleting incidental charge:', error);
-                showMessageBox('Error', `Error deleting charge: ${error.message}`);
-            }
+    const confirmed = confirm('Are you sure you want to delete this incidental charge?');
+    if (!confirmed) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/incidental-charges/single/${chargeId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
-    });
+
+        showMessageBox('Success', 'Incidental charge deleted successfully!');
+        await renderCurrentCharges(bookingId); // Refresh the list
+        await updateIncidentalTotal(bookingId); // Recalculate total
+    } catch (error) {
+        console.error('Error deleting incidental charge:', error);
+        showMessageBox('Error', `Failed to delete incidental charge: ${error.message}`);
+    }
 }
 
-/**
- * Calculates and updates the total incidental amount due for a specific booking.
- * @param {string} bookingId - The ID of the booking.
- */
+// Function to calculate and update the total incidental amount due (Admin view)
 async function updateIncidentalTotal(bookingId) {
     try {
-        const response = await fetch(`${API_BASE_URL}/incidental-charges/booking/${bookingId}`);
-        if (!response.ok) throw new Error('Failed to fetch charges for total calculation.');
-        const chargesForBooking = await response.json();
-
-        const totalDue = chargesForBooking
-            .filter(charge => !charge.isPaid)
-            .reduce((sum, charge) => sum + charge.amount, 0);
-
-        incidentalTotalDueSpan.textContent = totalDue.toFixed(2);
+        const response = await fetch(`${API_BASE_URL}/incidental-charges/${bookingId}/total`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        incidentalTotalDueSpan.textContent = parseFloat(data.totalDue).toFixed(2);
 
         // Enable/disable pay button based on if there's an outstanding balance
-        if (totalDue > 0) {
+        if (data.totalDue > 0) {
             payIncidentalChargesBtn.disabled = false;
             payIncidentalChargesBtn.classList.remove('disabled');
         } else {
             payIncidentalChargesBtn.disabled = true;
             payIncidentalChargesBtn.classList.add('disabled');
         }
+
     } catch (error) {
-        console.error('Error updating incidental total:', error);
+        console.error('Error calculating incidental total:', error);
         incidentalTotalDueSpan.textContent = 'Error';
+        showMessageBox('Error', 'Failed to calculate total incidental charges.');
     }
 }
 
-/**
- * Handles adding a new charge via the admin modal.
- * @param {Event} event - The form submission event.
- */
+// Event listener for adding a new charge (Admin view via modal)
 chargesForm.addEventListener('submit', async function(event) {
     event.preventDefault();
 
@@ -1037,7 +918,7 @@ chargesForm.addEventListener('submit', async function(event) {
     const type = chargeTypeSelect.value;
     const description = chargeDescriptionInput.value;
     const amount = parseFloat(chargeAmountInput.value);
-    const guestName = chargesBookingNameSpan.textContent; // Used for convenience on frontend
+    const guestName = chargesBookingNameSpan.textContent;
 
     if (isNaN(amount) || amount <= 0) {
         showMessageBox('Validation Error', 'Please enter a valid amount for the charge.');
@@ -1048,69 +929,63 @@ chargesForm.addEventListener('submit', async function(event) {
         return;
     }
 
-    const newChargeData = { bookingId, guestName, type, description, amount };
-
     try {
         const response = await fetch(`${API_BASE_URL}/incidental-charges`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newChargeData)
+            body: JSON.stringify({ bookingId, guestName, type, description, amount })
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to add incidental charge.');
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
 
         showMessageBox('Success', 'Incidental charge added successfully!');
         await renderCurrentCharges(bookingId);
         await updateIncidentalTotal(bookingId);
         chargesForm.reset();
+
     } catch (error) {
         console.error('Error adding incidental charge:', error);
-        showMessageBox('Error', `Error adding charge: ${error.message}`);
+        showMessageBox('Error', `Failed to add incidental charge: ${error.message}`);
     }
 });
 
-/**
- * Marks all outstanding incidental charges for a booking as paid via an API call.
- */
+// Function to mark all outstanding incidental charges for a booking as paid (Admin view)
 async function payIncidentalCharges() {
     const bookingId = chargesBookingIdInput.value;
-    showConfirmationDialog('Confirm Payment', 'Are you sure you want to mark ALL outstanding incidental charges for this booking as PAID?', async (confirmed) => {
-        if (confirmed) {
-            try {
-                const response = await fetch(`${API_BASE_URL}/incidental-charges/pay-all/${bookingId}`, {
-                    method: 'PUT', // Or POST, depending on your API design
-                });
+    const confirmed = confirm('Are you sure you want to mark ALL outstanding incidental charges for this booking as PAID?');
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Failed to mark charges as paid.');
-                }
-
-                showMessageBox('Success', 'All outstanding incidental charges have been marked as paid!');
-                await renderCurrentCharges(bookingId);
-                await updateIncidentalTotal(bookingId);
-            } catch (error) {
-                console.error('Error paying incidental charges:', error);
-                showMessageBox('Error', `Error marking charges as paid: ${error.message}`);
-            }
-        }
-    });
-}
-
-// --- New Functions for "Post Charges" Section (Admin View only) ---
-
-/**
- * Searches for guests/bookings for charge posting by making an API call.
- */
-async function searchForGuestBookings() {
-    if (currentUserRole !== 'admin') {
-        showMessageBox('Access Denied', 'Only Admin can post charges.');
+    if (!confirmed) {
         return;
     }
 
+    try {
+        const response = await fetch(`${API_BASE_URL}/incidental-charges/${bookingId}/pay`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
+        showMessageBox('Success', 'All outstanding incidental charges have been marked as paid!');
+        await renderCurrentCharges(bookingId);
+        await updateIncidentalTotal(bookingId);
+
+    } catch (error) {
+        console.error('Error paying incidental charges:', error);
+        showMessageBox('Error', `Failed to process payment for incidental charges: ${error.message}`);
+    }
+}
+
+// --- New Functions for "Post Charges" Section (Service Staff/Housekeeper View) ---
+
+// Function to search for guests/bookings for charge posting
+async function searchForGuestBookings() {
     const searchTerm = guestSearchInput.value.trim();
     if (searchTerm.length < 2) {
         foundBookingsList.innerHTML = '<p style="color: gray;">Please enter at least 2 characters to search.</p>';
@@ -1124,17 +999,11 @@ async function searchForGuestBookings() {
     currentChargesForSelectedBooking.style.display = 'none';
 
     try {
-        // You would typically have a dedicated search endpoint like /api/bookings/search?q=...
-        // For now, we'll fetch all bookings and filter client-side.
-        const response = await fetch(`${API_BASE_URL}/bookings`);
-        if (!response.ok) throw new Error('Failed to fetch bookings for search.');
-        const allBookings = await response.json();
-
-        const results = allBookings.filter(booking =>
-            (booking.name && booking.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (booking.room && booking.room.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (booking.id && booking.id.toLowerCase().includes(searchTerm.toLowerCase()))
-        );
+        const response = await fetch(`${API_BASE_URL}/bookings/search?query=${encodeURIComponent(searchTerm)}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const results = await response.json();
 
         if (results.length === 0) {
             foundBookingsList.innerHTML = '<p style="text-align: center;">No active bookings found for this search term.</p>';
@@ -1144,70 +1013,61 @@ async function searchForGuestBookings() {
         let html = '<h3>Select a Booking:</h3><ul>';
         results.forEach(booking => {
             // Only show active bookings (not checked out)
-            const checkOutDate = new Date(booking.checkOut);
-            const today = new Date();
-            today.setHours(0,0,0,0); // Normalize to start of day
-            if (checkOutDate > today) { // Booking is still active
+            if (new Date(booking.checkOut) > new Date()) {
                  html += `
                     <li>
                         Guest: ${booking.name} | Room: ${booking.room} (Check-out: ${booking.checkOut})
-                        <button class="btn btn-secondary btn-sm" onclick="selectBookingForCharge('${booking._id}', '${booking.name}', '${booking.room}')">Select</button>
+                        <button class="btn btn-secondary btn-sm" onclick="selectBookingForCharge('${booking.id}', '${booking.name}', '${booking.room}')">Select</button>
                     </li>
                 `;
             }
         });
         html += '</ul>';
-
-        if (results.filter(booking => new Date(booking.checkOut) > new Date()).length === 0) {
-            foundBookingsList.innerHTML = '<p style="text-align: center;">No active bookings found for this search term.</p>';
-        } else {
-            foundBookingsList.innerHTML = html;
-        }
+        foundBookingsList.innerHTML = html;
 
     } catch (error) {
-        console.error('Error searching for bookings:', error);
-        foundBookingsList.innerHTML = `<p style="text-align: center; color: ${getComputedStyle(document.documentElement).getPropertyValue('--danger-color')};">Error searching: ${error.message}</p>`;
+        console.error('Error searching bookings:', error);
+        showMessageBox('Error', 'Failed to search for bookings. Please try again.');
+        foundBookingsList.innerHTML = '<p style="text-align: center; color: red;">Error searching bookings.</p>';
     }
 }
 
-/**
- * Sets the selected booking for charge posting and renders related charges.
- * @param {string} bookingObjectId - The MongoDB _id of the booking.
- * @param {string} guestName - The name of the guest.
- * @param {string} roomNumber - The room number.
- */
-async function selectBookingForCharge(bookingObjectId, guestName, roomNumber) {
-    selectedBookingIdInput.value = bookingObjectId; // Use MongoDB's _id
+// Function to set the selected booking for charge posting
+async function selectBookingForCharge(bookingId, guestName, roomNumber) {
+    selectedBookingIdInput.value = bookingId;
     selectedGuestNameSpan.textContent = guestName;
     selectedRoomNumberSpan.textContent = roomNumber;
     serviceChargeForm.reset();
     postChargeFormContainer.style.display = 'block';
     currentChargesForSelectedBooking.style.display = 'block';
 
-    serviceChargeTypeSelect.value = ''; // No default selection
+    // Optionally set default charge type based on current role (e.g., if it's a 'bar_staff' role)
+    if (currentUserRole === 'service_staff') { // Example: if service_staff, default to Restaurant/Bar
+        serviceChargeTypeSelect.value = 'Restaurant'; // Or 'Bar' based on typical role for this section
+        // serviceChargeTypeSelect.disabled = true; // Uncomment if they can only post one type
+    } else {
+        serviceChargeTypeSelect.value = ''; // Ensure no default if admin/housekeeper
+        // serviceChargeTypeSelect.disabled = false;
+    }
 
-    await renderServicePointCharges(bookingObjectId);
-    await updateServicePointIncidentalTotal(bookingObjectId);
+    await renderServicePointCharges(bookingId); // Load and display existing incidental charges for this guest
+    await updateServicePointIncidentalTotal(bookingId); // Update total for this guest
 }
 
 
-/**
- * Renders existing incidental charges in the service point view by fetching from backend.
- * @param {string} bookingObjectId - The MongoDB _id of the booking.
- */
-async function renderServicePointCharges(bookingObjectId) {
+// Function to render existing incidental charges in the service point view
+async function renderServicePointCharges(bookingId) {
     serviceChargesTableBody.innerHTML = ''; // Clear existing charges
 
     try {
-        const response = await fetch(`${API_BASE_URL}/incidental-charges/booking/${bookingObjectId}`);
+        const response = await fetch(`${API_BASE_URL}/incidental-charges/${bookingId}`);
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to fetch service point charges.');
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const chargesForBooking = await response.json();
+        const charges = await response.json();
 
-        if (chargesForBooking && chargesForBooking.length > 0) {
-            chargesForBooking.forEach(charge => {
+        if (charges && charges.length > 0) {
+            charges.forEach(charge => {
                 const row = serviceChargesTableBody.insertRow();
                 row.innerHTML = `
                     <td>${charge.type}</td>
@@ -1221,46 +1081,37 @@ async function renderServicePointCharges(bookingObjectId) {
             serviceChargesTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 10px;">No incidental charges yet for this guest.</td></tr>';
         }
     } catch (error) {
-        console.error('Error rendering service point charges:', error);
-        serviceChargesTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 10px; color: ${getComputedStyle(document.documentElement).getPropertyValue('--danger-color')};">Error loading charges: ${error.message}</td></tr>`;
+        console.error('Error fetching service point charges:', error);
+        serviceChargesTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 10px; color: red;">Failed to load charges.</td></tr>';
     }
 }
 
-/**
- * Calculates and updates the total incidental amount due for the service point view.
- * @param {string} bookingObjectId - The MongoDB _id of the booking.
- */
-async function updateServicePointIncidentalTotal(bookingObjectId) {
+// Function to calculate and update the total incidental amount due for the service point view
+async function updateServicePointIncidentalTotal(bookingId) {
     try {
-        const response = await fetch(`${API_BASE_URL}/incidental-charges/booking/${bookingObjectId}`);
-        if (!response.ok) throw new Error('Failed to fetch charges for total calculation.');
-        const chargesForBooking = await response.json();
-
-        const totalDue = chargesForBooking
-            .filter(charge => !charge.isPaid)
-            .reduce((sum, charge) => sum + charge.amount, 0);
-
-        serviceIncidentalTotalDueSpan.textContent = totalDue.toFixed(2);
+        const response = await fetch(`${API_BASE_URL}/incidental-charges/${bookingId}/total`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        serviceIncidentalTotalDueSpan.textContent = parseFloat(data.totalDue).toFixed(2);
     } catch (error) {
-        console.error('Error updating service point incidental total:', error);
+        console.error('Error calculating service point incidental total:', error);
         serviceIncidentalTotalDueSpan.textContent = 'Error';
     }
 }
 
-/**
- * Handles the new service charge form submission for the "Post Charges" section.
- * @param {Event} event - The form submission event.
- */
-async function handlePostCharge(event) {
+// Event listener for the new service charge form submission
+serviceChargeForm.addEventListener('submit', async function(event) {
     event.preventDefault();
 
-    const bookingObjectId = selectedBookingIdInput.value; // Use MongoDB's _id
+    const bookingId = selectedBookingIdInput.value;
     const guestName = selectedGuestNameSpan.textContent;
     const type = serviceChargeTypeSelect.value;
     const description = serviceChargeDescriptionInput.value;
     const amount = parseFloat(serviceChargeAmountInput.value);
 
-    if (!bookingObjectId) {
+    if (!bookingId) {
         showMessageBox('Error', 'Please select a guest/booking first.');
         return;
     }
@@ -1273,37 +1124,31 @@ async function handlePostCharge(event) {
         return;
     }
 
-    const newChargeData = { bookingId: bookingObjectId, guestName, type, description, amount };
-
     try {
         const response = await fetch(`${API_BASE_URL}/incidental-charges`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newChargeData)
+            body: JSON.stringify({ bookingId, guestName, type, description, amount })
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to post new charge.');
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
 
         showMessageBox('Success', 'Charge posted successfully!');
         serviceChargeForm.reset();
-        await renderServicePointCharges(bookingObjectId);
-        await updateServicePointIncidentalTotal(bookingObjectId);
+        await renderServicePointCharges(bookingId);
+        await updateServicePointIncidentalTotal(bookingId);
     } catch (error) {
-        console.error('Error posting new charge:', error);
-        showMessageBox('Error', `Error posting charge: ${error.message}`);
+        console.error('Error posting charge:', error);
+        showMessageBox('Error', `Failed to post charge: ${error.message}`);
     }
-}
+});
 
 
 // --- Receipt Generation ---
 
-/**
- * Generates and displays a client receipt for a booking, fetching data from backend.
- * @param {string} bookingId - The ID of the booking.
- */
 async function generateClientReceipt(bookingId) {
     if (currentUserRole !== 'admin') {
         showMessageBox('Access Denied', 'Only Admin can generate client receipts.');
@@ -1311,22 +1156,22 @@ async function generateClientReceipt(bookingId) {
     }
 
     try {
-        const bookingResponse = await fetch(`${API_BASE_URL}/bookings`);
-        if (!bookingResponse.ok) throw new Error('Failed to fetch bookings for receipt.');
-        const allBookings = await bookingResponse.json();
-        const booking = allBookings.find(b => b.id === bookingId); // Find by 'id' field, not '_id'
-
-        if (!booking) {
-            showMessageBox('Error', 'Booking not found for receipt generation.');
-            return;
+        // 1. Fetch Booking Details
+        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/${bookingId}`);
+        if (!bookingResponse.ok) {
+            throw new Error(`HTTP error! status: ${bookingResponse.status} for booking`);
         }
+        const booking = await bookingResponse.json();
 
-        const chargesResponse = await fetch(`${API_BASE_URL}/incidental-charges/booking/${booking._id}`); // Use MongoDB's _id here
-        if (!chargesResponse.ok) throw new Error('Failed to fetch incidental charges for receipt.');
-        const chargesForBooking = await chargesResponse.json();
+        // 2. Fetch Incidental Charges for this booking
+        const chargesResponse = await fetch(`${API_BASE_URL}/incidental-charges/${bookingId}`);
+        if (!chargesResponse.ok) {
+            throw new Error(`HTTP error! status: ${chargesResponse.status} for incidental charges`);
+        }
+        const incidentalCharges = await chargesResponse.json();
 
         // Populate Receipt Header
-        receiptBookingId.textContent = booking.id; // Display your custom booking ID if available
+        receiptBookingId.textContent = booking.id;
         receiptGuestName.textContent = booking.name;
         receiptRoomNumber.textContent = booking.room;
         receiptCheckIn.textContent = booking.checkIn;
@@ -1353,8 +1198,8 @@ async function generateClientReceipt(bookingId) {
         let paidIncidental = 0;
         let unpaidIncidental = 0;
 
-        if (chargesForBooking.length > 0) {
-            chargesForBooking.forEach(charge => {
+        if (incidentalCharges.length > 0) {
+            incidentalCharges.forEach(charge => {
                 const row = receiptIncidentalChargesBody.insertRow();
                 row.innerHTML = `
                     <td>${new Date(charge.date).toLocaleDateString()}</td>
@@ -1377,65 +1222,55 @@ async function generateClientReceipt(bookingId) {
         receiptIncidentalAmountPaid.textContent = paidIncidental.toFixed(2);
         receiptIncidentalBalance.textContent = unpaidIncidental.toFixed(2);
 
-        // Calculate Grand Total Due (Room Balance + Unpaid Incidental Balance)
+        // Calculate Grand Total Due
         const grandTotalDue = parseFloat(booking.balance) + unpaidIncidental;
         receiptGrandTotal.textContent = grandTotalDue.toFixed(2);
 
         receiptModal.style.display = 'flex';
+
     } catch (error) {
         console.error('Error generating receipt:', error);
-        showMessageBox('Error', `Error generating receipt: ${error.message}`);
+        showMessageBox('Error', `Failed to generate receipt: ${error.message}`);
     }
 }
 
 
-// --- DOM Content Loaded Event Listener ---
-// Ensures that all HTML elements are available before the script tries to access them.
+// --- Initial Load and Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Attach event listeners to named functions
-    loginForm.addEventListener('submit', handleLogin);
-    logoutBtn.addEventListener('click', handleLogout);
+    // Set default date for reports
+    reportDateInput.valueAsDate = new Date();
+
+    // Hide main content and show login on initial load
+    mainContent.style.display = 'none';
+    loginContainer.style.display = 'flex';
 
     // Add event listeners for navigation
     navLinks.forEach(link => {
         link.addEventListener('click', handleNavigation);
     });
 
-    // Event listeners for booking form calculations
-    checkInInput.addEventListener('change', calculateNights);
-    checkOutInput.addEventListener('change', calculateNights);
-    amtPerNightInput.addEventListener('input', calculateTotalDue);
-    amountPaidInput.addEventListener('input', calculateTotalDue);
+    // Initial renders will be triggered after successful login via handleNavigation
+});
 
-    // Event listener for booking search
-    bookingSearchInput.addEventListener('keyup', filterBookings);
-
-    // Event listener for Post Charges search button
-    const searchGuestBtn = document.querySelector('#charges .search-guest-container .btn-primary');
-    if (searchGuestBtn) searchGuestBtn.addEventListener('click', searchForGuestBookings);
-
-    // Event listener for Post Charges search input (on keyup)
-    if (guestSearchInput) {
-        guestSearchInput.addEventListener('keyup', (event) => {
-            if (event.key === 'Enter' || guestSearchInput.value.trim().length >= 2) {
-                searchForGuestBookings();
-            } else if (guestSearchInput.value.trim().length === 0) {
-                foundBookingsList.innerHTML = '<p style="text-align: center; margin-top: 20px;">Use the search bar to find a guest/booking to post charges against.</p>';
-                postChargeFormContainer.style.display = 'none';
-                currentChargesForSelectedBooking.style.display = 'none';
-            }
-        });
+// Add event listener for nights, total due, balance calculation on modal open
+bookingModal.addEventListener('input', (event) => {
+    if (event.target.id === 'checkIn' || event.target.id === 'checkOut') {
+        calculateNights();
+    } else if (event.target.id === 'amtPerNight' || event.target.id === 'amountPaid') {
+        calculateTotalDue();
     }
+});
 
-    // Event listener for Post Charges form submission
-    if (serviceChargeForm) serviceChargeForm.addEventListener('submit', handlePostCharge);
+// Add event listener for search input on Booking Management page
+bookingSearchInput.addEventListener('keyup', filterBookings);
 
-    // Event listener for Reports Generate button
-    const generateReportBtn = document.querySelector('#reports .report-controls .btn-primary');
-    if (generateReportBtn) generateReportBtn.addEventListener('click', generateReport);
-
-
-    // Initial state: show login, hide main content
-    loginContainer.style.display = 'flex';
-    mainContent.style.display = 'none';
+// Add event listener for the search input in the Post Charges section
+guestSearchInput.addEventListener('keyup', (event) => {
+    if (event.key === 'Enter' || guestSearchInput.value.trim().length >= 2) {
+        searchForGuestBookings();
+    } else if (guestSearchInput.value.trim().length === 0) {
+        foundBookingsList.innerHTML = '<p style="text-align: center; margin-top: 20px;">Use the search bar to find a guest/booking to post charges against.</p>';
+        postChargeFormContainer.style.display = 'none';
+        currentChargesForSelectedBooking.style.display = 'none';
+    }
 });
