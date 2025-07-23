@@ -40,6 +40,55 @@ const messageBoxTitle = document.getElementById('messageBoxTitle');
 const messageBoxContent = document.getElementById('messageBoxContent');
 const logoutBtn = document.getElementById('logoutBtn');
 
+// Incidental Charges Modal (Admin View)
+const chargesModal = document.getElementById('chargesModal');
+const chargesForm = document.getElementById('chargesForm');
+const chargesBookingIdInput = document.getElementById('chargesBookingId');
+const chargesBookingNameSpan = document.getElementById('chargesBookingName');
+const chargeTypeSelect = document.getElementById('chargeType');
+const chargeDescriptionInput = document.getElementById('chargeDescription');
+const chargeAmountInput = document.getElementById('chargeAmount');
+const currentChargesTableBody = document.querySelector('#currentChargesTable tbody');
+const incidentalTotalDueSpan = document.getElementById('incidentalTotalDue');
+const payIncidentalChargesBtn = document.getElementById('payIncidentalChargesBtn');
+
+// Post Charges Section (Service Staff View)
+const navChargesLink = document.getElementById('nav-charges');
+const chargesPostingSection = document.getElementById('charges-posting');
+const guestSearchInput = document.getElementById('guestSearchInput');
+const foundBookingsList = document.getElementById('foundBookingsList');
+const postChargeFormContainer = document.getElementById('postChargeFormContainer');
+const selectedBookingIdInput = document.getElementById('selectedBookingId');
+const selectedGuestNameSpan = document.getElementById('selectedGuestName');
+const selectedRoomNumberSpan = document.getElementById('selectedRoomNumber');
+const serviceChargeForm = document.getElementById('serviceChargeForm');
+const serviceChargeTypeSelect = document.getElementById('serviceChargeType');
+const serviceChargeDescriptionInput = document.getElementById('serviceChargeDescription');
+const serviceChargeAmountInput = document.getElementById('serviceChargeAmount');
+const currentChargesForSelectedBooking = document.getElementById('currentChargesForSelectedBooking');
+const serviceChargesTableBody = document.querySelector('#serviceChargesTable tbody');
+const serviceIncidentalTotalDueSpan = document.getElementById('serviceIncidentalTotalDue');
+
+// Receipt Modal
+const receiptModal = document.getElementById('receiptModal');
+const receiptContent = document.getElementById('receiptContent');
+const receiptBookingId = document.getElementById('receiptBookingId');
+const receiptGuestName = document.getElementById('receiptGuestName');
+const receiptRoomNumber = document.getElementById('receiptRoomNumber');
+const receiptCheckIn = document.getElementById('receiptCheckIn');
+const receiptCheckOut = document.getElementById('receiptCheckOut');
+const receiptDateGenerated = document.getElementById('receiptDateGenerated');
+const receiptRoomNights = document.getElementById('receiptRoomNights');
+const receiptAmtPerNight = document.getElementById('receiptAmtPerNight');
+const receiptRoomTotal = document.getElementById('receiptRoomTotal');
+const receiptRoomAmountPaid = document.getElementById('receiptRoomAmountPaid');
+const receiptRoomBalance = document.getElementById('receiptRoomBalance');
+const receiptIncidentalChargesBody = document.getElementById('receiptIncidentalChargesBody');
+const receiptIncidentalTotal = document.getElementById('receiptIncidentalTotal');
+const receiptIncidentalAmountPaid = document.getElementById('receiptIncidentalAmountPaid');
+const receiptIncidentalBalance = document.getElementById('receiptIncidentalBalance');
+const receiptGrandTotal = document.getElementById('receiptGrandTotal');
+
 
 // --- Utility Functions ---
 
@@ -82,7 +131,7 @@ function calculateNights() {
     calculateTotalDue();
 }
 
-// Calculates total due and balance
+// Calculates total due and balance for room booking
 function calculateTotalDue() {
     const nights = parseFloat(nightsInput.value) || 0;
     const amtPerNight = parseFloat(amtPerNightInput.value) || 0;
@@ -146,6 +195,32 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
     }
 }
 
+// Closes the Admin's incidental charges modal
+function closeChargesModal() {
+    chargesModal.style.display = 'none';
+    renderBookings(); // Re-render main bookings table just in case a payment status changed
+}
+
+// Closes the client receipt modal
+function closeReceiptModal() {
+    receiptModal.style.display = 'none';
+}
+
+// Prints the receipt
+function printReceipt() {
+    const modalActions = receiptModal.querySelector('.modal-actions');
+    if (modalActions) {
+        modalActions.style.display = 'none'; // Hide buttons before printing
+    }
+
+    window.print(); // Trigger browser's print dialog
+
+    if (modalActions) {
+        modalActions.style.display = 'block'; // Show buttons again
+    }
+}
+
+
 // --- Login and Role Management ---
 loginForm.addEventListener('submit', async function(event) {
     event.preventDefault();
@@ -175,9 +250,10 @@ loginForm.addEventListener('submit', async function(event) {
             // Automatically click the appropriate navigation link based on role
             if (currentUserRole === 'admin') {
                 document.getElementById('nav-booking').click();
-                 renderBookings();
             } else if (currentUserRole === 'housekeeper') {
                 document.getElementById('nav-housekeeping').click();
+            } else if (currentUserRole === 'service_staff') { // New role check
+                document.getElementById('nav-charges').click();
             }
         } else {
             showLoginMessageBox('Login Failed', data.message || 'Invalid username or password.');
@@ -206,10 +282,18 @@ function handleNavigation(event) {
     const targetId = event.target.id.replace('nav-', '');
 
     // Prevent navigation if the user's role doesn't permit it
-    if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping') {
-        showMessageBox('Access Denied', 'Housekeepers can only access the Housekeeping section.');
+    if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping' && targetId !== 'charges-posting') {
+        showMessageBox('Access Denied', 'Housekeepers can only access Housekeeping and Post Charges sections.');
         return;
     }
+    if (currentUserRole === 'service_staff' && targetId !== 'charges-posting') {
+        showMessageBox('Access Denied', 'Service Staff can only access the Post Charges section.');
+        return;
+    }
+    if (currentUserRole === 'admin' && (targetId === 'charges-posting' || targetId === 'housekeeping')) {
+        // Admins can access all, but we might want specific initial renders
+    }
+
 
     // Remove 'active' class from all nav links and sections
     navLinks.forEach(link => link.classList.remove('active'));
@@ -220,17 +304,20 @@ function handleNavigation(event) {
 
     // Add 'active' class to the corresponding section
     const targetSection = document.getElementById(targetId);
-    if (targetSection) { // Defensive check: ensure the section exists
+    if (targetSection) {
         targetSection.classList.add('active');
     } else {
         console.error(`Error: Section with ID "${targetId}" not found.`);
         // Fallback to a default accessible section if targetId is invalid
         if (currentUserRole === 'admin') {
-             document.getElementById('booking-management').classList.add('active');
-             document.getElementById('nav-booking').classList.add('active');
+            document.getElementById('booking-management').classList.add('active');
+            document.getElementById('nav-booking').classList.add('active');
         } else if (currentUserRole === 'housekeeper') {
-             document.getElementById('housekeeping').classList.add('active');
-             document.getElementById('nav-housekeeping').classList.add('active');
+            document.getElementById('housekeeping').classList.add('active');
+            document.getElementById('nav-housekeeping').classList.add('active');
+        } else if (currentUserRole === 'service_staff') {
+            document.getElementById('charges-posting').classList.add('active');
+            document.getElementById('nav-charges').classList.add('active');
         }
         return;
     }
@@ -243,6 +330,12 @@ function handleNavigation(event) {
     } else if (targetId === 'reports') {
         reportDateInput.valueAsDate = new Date();
         generateReport();
+    } else if (targetId === 'charges-posting') {
+        // Reset the charges posting section when navigating to it
+        guestSearchInput.value = '';
+        foundBookingsList.innerHTML = '<p style="text-align: center; margin-top: 20px;">Use the search bar to find a guest/booking to post charges against.</p>';
+        postChargeFormContainer.style.display = 'none';
+        currentChargesForSelectedBooking.style.display = 'none';
     }
 }
 
@@ -251,23 +344,37 @@ function applyRoleAccess(role) {
     // Control visibility of navigation links
     document.getElementById('nav-booking').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
     document.getElementById('nav-reports').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
-    document.getElementById('nav-housekeeping').parentElement.style.display = 'block'; // Always visible
+    document.getElementById('nav-housekeeping').parentElement.style.display = 'block'; // Always visible for housekeepers and admins
+    navChargesLink.parentElement.style.display = (role === 'admin' || role === 'service_staff' || role === 'housekeeper') ? 'block' : 'none'; // Allow service_staff or housekeepers to post charges
     document.getElementById('logoutBtn').parentElement.style.display = 'block'; // Always visible
 
     // Control visibility of sections (actual content areas)
     sections.forEach(section => {
         const sectionId = section.id;
+        // Initially hide all sections for all roles to be explicitly shown by handleNavigation or specific roles
+        section.style.display = 'none';
+
         if (role === 'admin') {
-            // Sections are now controlled solely by the 'active' class via CSS and handleNavigation
-            // No explicit display: none here for admin sections
+            // Admins can see all, handled by initial click or handleNavigation
         } else if (role === 'housekeeper') {
-            if (sectionId === 'housekeeping') {
-                section.style.display = 'block'; // Housekeeper only sees housekeeping
+            if (sectionId === 'housekeeping' || sectionId === 'charges-posting') {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        } else if (role === 'service_staff') { // New role
+            if (sectionId === 'charges-posting') {
+                section.style.display = 'block';
             } else {
                 section.style.display = 'none';
             }
         }
     });
+
+    // Clear search results and hide forms when role access changes
+    foundBookingsList.innerHTML = '';
+    postChargeFormContainer.style.display = 'none';
+    currentChargesForSelectedBooking.style.display = 'none';
 }
 
 
@@ -328,10 +435,12 @@ async function renderBookings(filteredBookings = null) {
             <td>${booking.nationalIdNo || ''}</td>
             <td>
                 <div class="action-buttons">
-                    <button class="btn btn-info" onclick="editBooking('${booking.id}')">Edit</button>
-                    <button class="btn btn-danger" onclick="deleteBooking('${booking.id}')">Delete</button>
+                    <button class="btn btn-info btn-sm" onclick="editBooking('${booking.id}')">Edit</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteBooking('${booking.id}')">Delete</button>
+                    <button class="btn btn-secondary btn-sm" onclick="openChargesModal('${booking.id}', '${booking.name}')">Charges</button>
+                    <button class="btn btn-primary btn-sm" onclick="generateClientReceipt('${booking.id}')">Receipt</button>
                     ${new Date(booking.checkOut) <= new Date() && rooms.find(r => r.number === booking.room)?.status !== 'dirty' ?
-                        `<button class="btn btn-success" onclick="checkoutBooking('${booking.id}')">Check-out</button>` :
+                        `<button class="btn btn-success btn-sm" onclick="checkoutBooking('${booking.id}')">Check-out</button>` :
                         ''
                     }
                 </div>
@@ -690,63 +799,12 @@ async function updateRoomStatus(roomId, newStatus) {
     }
 }
 
+// --- Incidental Charges Management (Admin View - from Booking Management) ---
 
-// --- Initial Load and Event Listeners ---
-document.addEventListener('DOMContentLoaded', () => {
-    // Set default date for reports
-    reportDateInput.valueAsDate = new Date();
-
-    // Hide main content and show login on initial load
-    mainContent.style.display = 'none';
-    loginContainer.style.display = 'flex';
-
-    // Add event listeners for navigation
-    navLinks.forEach(link => {
-        link.addEventListener('click', handleNavigation);
-    });
-
-    // Initial renders will be triggered after successful login via handleNavigation
-    // No direct renderBookings() or renderHousekeepingRooms() here on DOMContentLoaded
-});
-
-// Add event listener for nights, total due, balance calculation on modal open
-bookingModal.addEventListener('input', (event) => {
-    if (event.target.id === 'checkIn' || event.target.id === 'checkOut') {
-        calculateNights();
-    } else if (event.target.id === 'amtPerNight' || event.target.id === 'amountPaid') {
-        calculateTotalDue();
-    }
-});
-
-// Add event listener for search input
-bookingSearchInput.addEventListener('keyup', filterBookings);
-
-
-  // --- DOM Elements (Add these or ensure they exist) ---
-const chargesModal = document.getElementById('chargesModal');
-const chargesForm = document.getElementById('chargesForm');
-const chargesBookingIdInput = document.getElementById('chargesBookingId');
-const chargesBookingNameSpan = document.getElementById('chargesBookingName');
-const chargeTypeSelect = document.getElementById('chargeType');
-const chargeDescriptionInput = document.getElementById('chargeDescription');
-const chargeAmountInput = document.getElementById('chargeAmount');
-const currentChargesTableBody = document.querySelector('#currentChargesTable tbody');
-const incidentalTotalDueSpan = document.getElementById('incidentalTotalDue');
-const payIncidentalChargesBtn = document.getElementById('payIncidentalChargesBtn'); // New button reference
-
-// --- Utility Functions (Ensure closeChargesModal exists) ---
-function closeChargesModal() {
-    chargesModal.style.display = 'none';
-    // Re-render main bookings table just in case some status updates happened (e.g., if you later show a paid status on main table)
-    renderBookings();
-}
-
-// --- Booking Management Functions (Modify these) ---
-
-// Function to open the charges modal and load existing charges
+// Function to open the charges modal and load existing charges (Admin view)
 async function openChargesModal(bookingId, bookingName) {
     if (currentUserRole !== 'admin') {
-        showMessageBox('Access Denied', 'Only Admin can manage incidental charges.');
+        showMessageBox('Access Denied', 'Only Admin can manage incidental charges from this view.');
         return;
     }
 
@@ -759,12 +817,11 @@ async function openChargesModal(bookingId, bookingName) {
     chargesModal.style.display = 'flex';
 }
 
-// Function to render existing incidental charges for a specific booking
+// Function to render existing incidental charges for a specific booking (Admin view)
 async function renderCurrentCharges(bookingId) {
     currentChargesTableBody.innerHTML = ''; // Clear existing charges
 
     try {
-        // Fetch incidental charges from the NEW incidental-charges API
         const response = await fetch(`${API_BASE_URL}/incidental-charges/${bookingId}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -780,19 +837,46 @@ async function renderCurrentCharges(bookingId) {
                     <td>${parseFloat(charge.amount).toFixed(2)}</td>
                     <td>${new Date(charge.date).toLocaleDateString()}</td>
                     <td class="status-${charge.isPaid ? 'paid' : 'pending'}">${charge.isPaid ? 'PAID' : 'PENDING'}</td>
+                    <td>
+                        ${!charge.isPaid ? `<button class="btn btn-danger btn-sm" onclick="deleteIncidentalCharge('${charge.id}', '${bookingId}')">Delete</button>` : 'N/A'}
+                    </td>
                 `;
             });
         } else {
-            currentChargesTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 10px;">No incidental charges yet.</td></tr>';
+            currentChargesTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 10px;">No incidental charges yet.</td></tr>';
         }
     } catch (error) {
         console.error('Error fetching incidental charges:', error);
-        currentChargesTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 10px; color: red;">Failed to load incidental charges.</td></tr>';
+        currentChargesTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 10px; color: red;">Failed to load incidental charges.</td></tr>';
         showMessageBox('Error', 'Failed to load existing incidental charges. Please try again.');
     }
 }
 
-// Function to calculate and update the total incidental amount due
+// Function to delete an individual incidental charge (Admin view)
+async function deleteIncidentalCharge(chargeId, bookingId) {
+    const confirmed = confirm('Are you sure you want to delete this incidental charge?');
+    if (!confirmed) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/incidental-charges/single/${chargeId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
+        showMessageBox('Success', 'Incidental charge deleted successfully!');
+        await renderCurrentCharges(bookingId); // Refresh the list
+        await updateIncidentalTotal(bookingId); // Recalculate total
+    } catch (error) {
+        console.error('Error deleting incidental charge:', error);
+        showMessageBox('Error', `Failed to delete incidental charge: ${error.message}`);
+    }
+}
+
+// Function to calculate and update the total incidental amount due (Admin view)
 async function updateIncidentalTotal(bookingId) {
     try {
         const response = await fetch(`${API_BASE_URL}/incidental-charges/${bookingId}/total`);
@@ -805,7 +889,7 @@ async function updateIncidentalTotal(bookingId) {
         // Enable/disable pay button based on if there's an outstanding balance
         if (data.totalDue > 0) {
             payIncidentalChargesBtn.disabled = false;
-            payIncidentalChargesBtn.classList.remove('disabled'); // Add styling if you have it
+            payIncidentalChargesBtn.classList.remove('disabled');
         } else {
             payIncidentalChargesBtn.disabled = true;
             payIncidentalChargesBtn.classList.add('disabled');
@@ -818,7 +902,7 @@ async function updateIncidentalTotal(bookingId) {
     }
 }
 
-// Event listener for adding a new charge (updated to use new API and logic)
+// Event listener for adding a new charge (Admin view via modal)
 chargesForm.addEventListener('submit', async function(event) {
     event.preventDefault();
 
@@ -826,7 +910,7 @@ chargesForm.addEventListener('submit', async function(event) {
     const type = chargeTypeSelect.value;
     const description = chargeDescriptionInput.value;
     const amount = parseFloat(chargeAmountInput.value);
-    const guestName = chargesBookingNameSpan.textContent; // Pass guest name for the new model
+    const guestName = chargesBookingNameSpan.textContent;
 
     if (isNaN(amount) || amount <= 0) {
         showMessageBox('Validation Error', 'Please enter a valid amount for the charge.');
@@ -838,10 +922,10 @@ chargesForm.addEventListener('submit', async function(event) {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/incidental-charges`, { // New endpoint!
+        const response = await fetch(`${API_BASE_URL}/incidental-charges`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ bookingId, guestName, type, description, amount }) // Send required fields
+            body: JSON.stringify({ bookingId, guestName, type, description, amount })
         });
 
         if (!response.ok) {
@@ -850,11 +934,9 @@ chargesForm.addEventListener('submit', async function(event) {
         }
 
         showMessageBox('Success', 'Incidental charge added successfully!');
-
-        // Re-render the charges in the modal and update the total
         await renderCurrentCharges(bookingId);
         await updateIncidentalTotal(bookingId);
-        chargesForm.reset(); // Clear form after successful addition
+        chargesForm.reset();
 
     } catch (error) {
         console.error('Error adding incidental charge:', error);
@@ -862,11 +944,10 @@ chargesForm.addEventListener('submit', async function(event) {
     }
 });
 
-
-// Function to mark all outstanding incidental charges for a booking as paid
+// Function to mark all outstanding incidental charges for a booking as paid (Admin view)
 async function payIncidentalCharges() {
     const bookingId = chargesBookingIdInput.value;
-    const confirmed = confirm('Are you sure you want to mark all outstanding incidental charges for this booking as PAID?');
+    const confirmed = confirm('Are you sure you want to mark ALL outstanding incidental charges for this booking as PAID?');
 
     if (!confirmed) {
         return;
@@ -874,7 +955,7 @@ async function payIncidentalCharges() {
 
     try {
         const response = await fetch(`${API_BASE_URL}/incidental-charges/${bookingId}/pay`, {
-            method: 'POST', // Use POST for state-changing action
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
 
@@ -884,8 +965,8 @@ async function payIncidentalCharges() {
         }
 
         showMessageBox('Success', 'All outstanding incidental charges have been marked as paid!');
-        await renderCurrentCharges(bookingId); // Re-render to show updated status
-        await updateIncidentalTotal(bookingId); // Update total (should now be 0)
+        await renderCurrentCharges(bookingId);
+        await updateIncidentalTotal(bookingId);
 
     } catch (error) {
         console.error('Error paying incidental charges:', error);
@@ -893,109 +974,12 @@ async function payIncidentalCharges() {
     }
 }
 
-
-// --- Important Note for Booking Save (Add/Edit) ---
-// Your existing bookingForm.addEventListener('submit', ...) in script.js
-// will NOT be affected by these incidental charges, as the backend's booking
-// update/create logic should no longer be manipulating 'charges' array directly
-// within the Booking model. This is key to keeping them separate.
-
-  
-    // --- DOM Elements (Add these near other DOM element declarations) ---
-const navChargesLink = document.getElementById('nav-charges');
-const chargesPostingSection = document.getElementById('charges-posting');
-const guestSearchInput = document.getElementById('guestSearchInput');
-const foundBookingsList = document.getElementById('foundBookingsList');
-const postChargeFormContainer = document.getElementById('postChargeFormContainer');
-const selectedBookingIdInput = document.getElementById('selectedBookingId');
-const selectedGuestNameSpan = document.getElementById('selectedGuestName');
-const selectedRoomNumberSpan = document.getElementById('selectedRoomNumber');
-const serviceChargeForm = document.getElementById('serviceChargeForm');
-const serviceChargeTypeSelect = document.getElementById('serviceChargeType');
-const serviceChargeDescriptionInput = document.getElementById('serviceChargeDescription');
-const serviceChargeAmountInput = document.getElementById('serviceChargeAmount');
-const currentChargesForSelectedBooking = document.getElementById('currentChargesForSelectedBooking');
-const serviceChargesTableBody = document.querySelector('#serviceChargesTable tbody');
-const serviceIncidentalTotalDueSpan = document.getElementById('serviceIncidentalTotalDue');
-
-// --- Apply Role Access (Modify existing function) ---
-// Locate your `applyRoleAccess(role)` function and update it:
-function applyRoleAccess(role) {
-    // ... existing lines ...
-
-    // Control visibility of navigation links
-    document.getElementById('nav-booking').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
-    document.getElementById('nav-reports').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
-    document.getElementById('nav-housekeeping').parentElement.style.display = 'block'; // Always visible
-    document.getElementById('logoutBtn').parentElement.style.display = 'block'; // Always visible
-    navChargesLink.parentElement.style.display = (role === 'admin' || role === 'service_staff' || role === 'housekeeper') ? 'block' : 'none'; // Allow service_staff or housekeepers to post charges
-
-    // Control visibility of sections (actual content areas)
-    sections.forEach(section => {
-        const sectionId = section.id;
-        if (role === 'admin') {
-            section.style.display = 'none'; // Initially hide all, then activate via handleNavigation
-        } else if (role === 'housekeeper') { // Assuming 'housekeeper' can also be 'service_staff' for now
-            if (sectionId === 'housekeeping' || sectionId === 'charges-posting') {
-                section.style.display = 'block';
-            } else {
-                section.style.display = 'none';
-            }
-        }
-        // Add more role checks here if you introduce specific 'bar_staff', 'restaurant_staff' roles
-    });
-
-    // Clear search results and hide forms when role access changes
-    foundBookingsList.innerHTML = '';
-    postChargeFormContainer.style.display = 'none';
-    currentChargesForSelectedBooking.style.display = 'none';
-}
-
-// --- Navigation Handling (Modify handleNavigation function) ---
-// Add a case for the 'charges-posting' section:
-function handleNavigation(event) {
-    event.preventDefault();
-    const targetId = event.target.id.replace('nav-', '');
-
-    // Existing role check:
-    if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping' && targetId !== 'charges-posting') {
-        showMessageBox('Access Denied', 'Housekeepers can only access Housekeeping and Post Charges sections.');
-        return;
-    }
-    // Add similar checks for other new roles if created.
-    // Example for a specific 'bar_staff' role:
-    /*
-    if (currentUserRole === 'bar_staff' && targetId !== 'charges-posting') {
-        showMessageBox('Access Denied', 'Bar Staff can only access the Post Charges section.');
-        return;
-    }
-    */
-
-    // ... (rest of the handleNavigation function remains the same) ...
-
-    // Re-render sections when active
-    if (targetId === 'booking-management') {
-        renderBookings();
-    } else if (targetId === 'housekeeping') {
-        renderHousekeepingRooms();
-    } else if (targetId === 'reports') {
-        reportDateInput.valueAsDate = new Date();
-        generateReport();
-    } else if (targetId === 'charges-posting') {
-        // Reset the charges posting section when navigating to it
-        guestSearchInput.value = '';
-        foundBookingsList.innerHTML = '<p style="text-align: center; margin-top: 20px;">Use the search bar to find a guest/booking to post charges against.</p>';
-        postChargeFormContainer.style.display = 'none';
-        currentChargesForSelectedBooking.style.display = 'none';
-    }
-}
-
-// --- New Functions for "Post Charges" Section ---
+// --- New Functions for "Post Charges" Section (Service Staff/Housekeeper View) ---
 
 // Function to search for guests/bookings for charge posting
 async function searchForGuestBookings() {
     const searchTerm = guestSearchInput.value.trim();
-    if (searchTerm.length < 2) { // Require at least 2 characters for search
+    if (searchTerm.length < 2) {
         foundBookingsList.innerHTML = '<p style="color: gray;">Please enter at least 2 characters to search.</p>';
         postChargeFormContainer.style.display = 'none';
         currentChargesForSelectedBooking.style.display = 'none';
@@ -1006,15 +990,12 @@ async function searchForGuestBookings() {
     postChargeFormContainer.style.display = 'none';
     currentChargesForSelectedBooking.style.display = 'none';
 
-
     try {
-        // You'll need a backend endpoint for searching bookings by name or room
-        // Example: GET /api/bookings/search?query=searchTerm
         const response = await fetch(`${API_BASE_URL}/bookings/search?query=${encodeURIComponent(searchTerm)}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const results = await response.json(); // Backend should return a list of matching bookings
+        const results = await response.json();
 
         if (results.length === 0) {
             foundBookingsList.innerHTML = '<p style="text-align: center;">No active bookings found for this search term.</p>';
@@ -1048,15 +1029,18 @@ async function selectBookingForCharge(bookingId, guestName, roomNumber) {
     selectedBookingIdInput.value = bookingId;
     selectedGuestNameSpan.textContent = guestName;
     selectedRoomNumberSpan.textContent = roomNumber;
-    serviceChargeForm.reset(); // Clear previous form data
+    serviceChargeForm.reset();
     postChargeFormContainer.style.display = 'block';
     currentChargesForSelectedBooking.style.display = 'block';
 
     // Optionally set default charge type based on current role (e.g., if it's a 'bar_staff' role)
-    // if (currentUserRole === 'bar_staff') {
-    //     serviceChargeTypeSelect.value = 'Bar';
-    //     serviceChargeTypeSelect.disabled = true; // Prevent changing type
-    // }
+    if (currentUserRole === 'service_staff') { // Example: if service_staff, default to Restaurant/Bar
+        serviceChargeTypeSelect.value = 'Restaurant'; // Or 'Bar' based on typical role for this section
+        // serviceChargeTypeSelect.disabled = true; // Uncomment if they can only post one type
+    } else {
+        serviceChargeTypeSelect.value = ''; // Ensure no default if admin/housekeeper
+        // serviceChargeTypeSelect.disabled = false;
+    }
 
     await renderServicePointCharges(bookingId); // Load and display existing incidental charges for this guest
     await updateServicePointIncidentalTotal(bookingId); // Update total for this guest
@@ -1114,8 +1098,7 @@ serviceChargeForm.addEventListener('submit', async function(event) {
     event.preventDefault();
 
     const bookingId = selectedBookingIdInput.value;
-    const guestName = selectedGuestNameSpan.textContent; // Get from selected guest span
-    const roomNumber = selectedRoomNumberSpan.textContent; // Get from selected room span
+    const guestName = selectedGuestNameSpan.textContent;
     const type = serviceChargeTypeSelect.value;
     const description = serviceChargeDescriptionInput.value;
     const amount = parseFloat(serviceChargeAmountInput.value);
@@ -1146,9 +1129,9 @@ serviceChargeForm.addEventListener('submit', async function(event) {
         }
 
         showMessageBox('Success', 'Charge posted successfully!');
-        serviceChargeForm.reset(); // Clear the form
-        await renderServicePointCharges(bookingId); // Refresh the list of charges
-        await updateServicePointIncidentalTotal(bookingId); // Refresh the total
+        serviceChargeForm.reset();
+        await renderServicePointCharges(bookingId);
+        await updateServicePointIncidentalTotal(bookingId);
     } catch (error) {
         console.error('Error posting charge:', error);
         showMessageBox('Error', `Failed to post charge: ${error.message}`);
@@ -1156,71 +1139,7 @@ serviceChargeForm.addEventListener('submit', async function(event) {
 });
 
 
-// Add event listener for the search input in the new section
-guestSearchInput.addEventListener('keyup', (event) => {
-    // Debounce the search if needed, but for simplicity, immediate search on keyup
-    if (event.key === 'Enter' || guestSearchInput.value.trim().length >= 2) {
-        searchForGuestBookings();
-    } else if (guestSearchInput.value.trim().length === 0) {
-         foundBookingsList.innerHTML = '<p style="text-align: center; margin-top: 20px;">Use the search bar to find a guest/booking to post charges against.</p>';
-        postChargeFormContainer.style.display = 'none';
-        currentChargesForSelectedBooking.style.display = 'none';
-    }
-});
-
-// Important: The existing `openChargesModal` and `payIncidentalCharges`
-// functions (accessed from the Admin's Booking Management table)
-// should remain as they are, serving the Admin's full overview and payment function.
-  
-    // --- DOM Elements (Add these near other DOM element declarations) ---
-const receiptModal = document.getElementById('receiptModal');
-const receiptContent = document.getElementById('receiptContent');
-
-const receiptBookingId = document.getElementById('receiptBookingId');
-const receiptGuestName = document.getElementById('receiptGuestName');
-const receiptRoomNumber = document.getElementById('receiptRoomNumber');
-const receiptCheckIn = document.getElementById('receiptCheckIn');
-const receiptCheckOut = document.getElementById('receiptCheckOut');
-const receiptDateGenerated = document.getElementById('receiptDateGenerated');
-
-const receiptRoomNights = document.getElementById('receiptRoomNights');
-const receiptAmtPerNight = document.getElementById('receiptAmtPerNight');
-const receiptRoomTotal = document.getElementById('receiptRoomTotal');
-const receiptRoomAmountPaid = document.getElementById('receiptRoomAmountPaid');
-const receiptRoomBalance = document.getElementById('receiptRoomBalance');
-
-const receiptIncidentalChargesBody = document.getElementById('receiptIncidentalChargesBody');
-const receiptIncidentalTotal = document.getElementById('receiptIncidentalTotal');
-const receiptIncidentalAmountPaid = document.getElementById('receiptIncidentalAmountPaid'); // Assuming this will track total paid for incidentals
-const receiptIncidentalBalance = document.getElementById('receiptIncidentalBalance'); // Balance for incidentals
-
-const receiptGrandTotal = document.getElementById('receiptGrandTotal');
-
-
-// --- Utility Functions (Add these) ---
-
-function closeReceiptModal() {
-    receiptModal.style.display = 'none';
-}
-
-function printReceipt() {
-    // Hide modal buttons for print view
-    const modalActions = receiptModal.querySelector('.modal-actions');
-    if (modalActions) {
-        modalActions.style.display = 'none';
-    }
-
-    // Use browser's native print functionality
-    window.print();
-
-    // Show modal buttons again after print dialog is closed (might not work perfectly in all browsers)
-    if (modalActions) {
-        modalActions.style.display = 'block';
-    }
-}
-
-
-// --- Booking Management Functions (Add this new function) ---
+// --- Receipt Generation ---
 
 async function generateClientReceipt(bookingId) {
     if (currentUserRole !== 'admin') {
@@ -1247,8 +1166,8 @@ async function generateClientReceipt(bookingId) {
         receiptBookingId.textContent = booking.id;
         receiptGuestName.textContent = booking.name;
         receiptRoomNumber.textContent = booking.room;
-        receiptCheckIn.textContent = booking.checkIn; // Assuming YYYY-MM-DD
-        receiptCheckOut.textContent = booking.checkOut; // Assuming YYYY-MM-DD
+        receiptCheckIn.textContent = booking.checkIn;
+        receiptCheckOut.textContent = booking.checkOut;
         receiptDateGenerated.textContent = new Date().toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
@@ -1260,15 +1179,15 @@ async function generateClientReceipt(bookingId) {
         // Populate Room Charges Section
         receiptRoomNights.textContent = booking.nights;
         receiptAmtPerNight.textContent = parseFloat(booking.amtPerNight).toFixed(2);
-        const roomTotal = booking.nights * booking.amtPerNight; // Recalculate for clarity on receipt
+        const roomTotal = booking.nights * booking.amtPerNight;
         receiptRoomTotal.textContent = roomTotal.toFixed(2);
         receiptRoomAmountPaid.textContent = parseFloat(booking.amountPaid).toFixed(2);
-        receiptRoomBalance.textContent = parseFloat(booking.balance).toFixed(2); // This is specific to ROOM balance
+        receiptRoomBalance.textContent = parseFloat(booking.balance).toFixed(2);
 
         // Populate Incidental Charges Section
-        receiptIncidentalChargesBody.innerHTML = ''; // Clear previous charges
+        receiptIncidentalChargesBody.innerHTML = '';
         let totalIncidental = 0;
-        let paidIncidental = 0; // If you track paid status for individual incidentals
+        let paidIncidental = 0;
         let unpaidIncidental = 0;
 
         if (incidentalCharges.length > 0) {
@@ -1292,14 +1211,13 @@ async function generateClientReceipt(bookingId) {
         }
 
         receiptIncidentalTotal.textContent = totalIncidental.toFixed(2);
-        receiptIncidentalAmountPaid.textContent = paidIncidental.toFixed(2); // Placeholder, assuming all incidentals are paid together or separately tracked.
-        receiptIncidentalBalance.textContent = unpaidIncidental.toFixed(2); // The remaining balance for incidentals
+        receiptIncidentalAmountPaid.textContent = paidIncidental.toFixed(2);
+        receiptIncidentalBalance.textContent = unpaidIncidental.toFixed(2);
 
         // Calculate Grand Total Due
         const grandTotalDue = parseFloat(booking.balance) + unpaidIncidental;
         receiptGrandTotal.textContent = grandTotalDue.toFixed(2);
 
-        // Display the receipt modal
         receiptModal.style.display = 'flex';
 
     } catch (error) {
@@ -1309,41 +1227,42 @@ async function generateClientReceipt(bookingId) {
 }
 
 
-// --- Update renderBookings function ---
-// In your `renderBookings` function, locate where you create the action buttons:
-/*
-        row.innerHTML = `
-            ...
-            <td>
-                <div class="action-buttons">
-                    <button class="btn btn-info" onclick="editBooking('${booking.id}')">Edit</button>
-                    <button class="btn btn-danger" onclick="deleteBooking('${booking.id}')">Delete</button>
-                    <button class="btn btn-secondary" onclick="openChargesModal('${booking.id}', '${booking.name}')">Charges</button>
-                    ${new Date(booking.checkOut) <= new Date() && rooms.find(r => r.number === booking.room)?.status !== 'dirty' ?
-                        `<button class="btn btn-success" onclick="checkoutBooking('${booking.id}')">Check-out</button>` :
-                        ''
-                    }
-                </div>
-            </td>
-        `;
-*/
-// Modify it to include the "Receipt" button:
-// (You will add this line right after the 'Charges' button)
-/*
-        row.innerHTML = `
-            ...
-            <td>
-                <div class="action-buttons">
-                    <button class="btn btn-info" onclick="editBooking('${booking.id}')">Edit</button>
-                    <button class="btn btn-danger" onclick="deleteBooking('${booking.id}')">Delete</button>
-                    <button class="btn btn-secondary" onclick="openChargesModal('${booking.id}', '${booking.name}')">Charges</button>
-                    <button class="btn btn-success" onclick="generateClientReceipt('${booking.id}')">Receipt</button> // ADD THIS LINE
-                    ${new Date(booking.checkOut) <= new Date() && rooms.find(r => r.number === booking.room)?.status !== 'dirty' ?
-                        `<button class="btn btn-success" onclick="checkoutBooking('${booking.id}')">Check-out</button>` :
-                        ''
-                    }
-                </div>
-            </td>
-        `;
-*/
-  
+// --- Initial Load and Event Listeners ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Set default date for reports
+    reportDateInput.valueAsDate = new Date();
+
+    // Hide main content and show login on initial load
+    mainContent.style.display = 'none';
+    loginContainer.style.display = 'flex';
+
+    // Add event listeners for navigation
+    navLinks.forEach(link => {
+        link.addEventListener('click', handleNavigation);
+    });
+
+    // Initial renders will be triggered after successful login via handleNavigation
+});
+
+// Add event listener for nights, total due, balance calculation on modal open
+bookingModal.addEventListener('input', (event) => {
+    if (event.target.id === 'checkIn' || event.target.id === 'checkOut') {
+        calculateNights();
+    } else if (event.target.id === 'amtPerNight' || event.target.id === 'amountPaid') {
+        calculateTotalDue();
+    }
+});
+
+// Add event listener for search input on Booking Management page
+bookingSearchInput.addEventListener('keyup', filterBookings);
+
+// Add event listener for the search input in the Post Charges section
+guestSearchInput.addEventListener('keyup', (event) => {
+    if (event.key === 'Enter' || guestSearchInput.value.trim().length >= 2) {
+        searchForGuestBookings();
+    } else if (guestSearchInput.value.trim().length === 0) {
+        foundBookingsList.innerHTML = '<p style="text-align: center; margin-top: 20px;">Use the search bar to find a guest/booking to post charges against.</p>';
+        postChargeFormContainer.style.display = 'none';
+        currentChargesForSelectedBooking.style.display = 'none';
+    }
+});
