@@ -721,7 +721,7 @@ bookingModal.addEventListener('input', (event) => {
 // Add event listener for search input
 bookingSearchInput.addEventListener('keyup', filterBookings);
 
-<script>
+.
   // --- DOM Elements (Add these or ensure they exist) ---
 const chargesModal = document.getElementById('chargesModal');
 const chargesForm = document.getElementById('chargesForm');
@@ -899,8 +899,8 @@ async function payIncidentalCharges() {
 // will NOT be affected by these incidental charges, as the backend's booking
 // update/create logic should no longer be manipulating 'charges' array directly
 // within the Booking model. This is key to keeping them separate.
-</script>
-  <script>
+.
+  .
     // --- DOM Elements (Add these near other DOM element declarations) ---
 const navChargesLink = document.getElementById('nav-charges');
 const chargesPostingSection = document.getElementById('charges-posting');
@@ -1171,8 +1171,8 @@ guestSearchInput.addEventListener('keyup', (event) => {
 // Important: The existing `openChargesModal` and `payIncidentalCharges`
 // functions (accessed from the Admin's Booking Management table)
 // should remain as they are, serving the Admin's full overview and payment function.
-  </script>
-  <script>
+  .
+  .
     // --- DOM Elements (Add these near other DOM element declarations) ---
 const receiptModal = document.getElementById('receiptModal');
 const receiptContent = document.getElementById('receiptContent');
@@ -1347,4 +1347,4 @@ async function generateClientReceipt(bookingId) {
             </td>
         `;
 */
-  </script>
+  .
