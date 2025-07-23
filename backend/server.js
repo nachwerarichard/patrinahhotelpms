@@ -51,7 +51,16 @@ const bookingSchema = new mongoose.Schema({
     nationality: { type: String },
     address: { type: String },
     phoneNo: { type: String },
-    nationalIdNo: { type: String }
+    nationalIdNo: { type: String },
+
+     charges: [
+        {
+            type: { type: String, required: true }, // e.g., 'Room Service', 'Spa', 'Restaurant', 'Bar', 'Other'
+            description: { type: String },
+            amount: { type: Number, required: true },
+            date: { type: Date, default: Date.now }
+        }
+    ]
 });
 const Booking = mongoose.model('Booking', bookingSchema);
 
@@ -119,6 +128,43 @@ app.post('/api/rooms/init', async (req, res) => {
     }
 });
 
+// POST /api/bookings/:id/charges
+app.post('/:id/charges', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { type, description, amount } = req.body;
+
+        const booking = await Booking.findById(id);
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        const newCharge = { type, description, amount };
+        booking.charges.push(newCharge);
+
+        // Recalculate totalDue and balance (crucial!)
+        let newTotalDue = booking.nights * booking.amtPerNight;
+        booking.charges.forEach(charge => {
+            newTotalDue += charge.amount;
+        });
+        booking.totalDue = newTotalDue;
+        booking.balance = booking.totalDue - booking.amountPaid; // Assuming amountPaid does not include charges initially
+
+        // Update paymentStatus based on new balance
+        if (booking.balance <= 0) {
+            booking.paymentStatus = 'Paid';
+        } else if (booking.amountPaid > 0) {
+            booking.paymentStatus = 'Partially Paid';
+        } else {
+            booking.paymentStatus = 'Pending';
+        }
+
+        await booking.save();
+        res.status(200).json({ message: 'Charge added successfully', booking });
+    } catch (error) {
+        res.status(500).json({ message: 'Error adding charge', error: error.message });
+    }
+});
 
 // Get all rooms (accessible by admin and housekeeper)
 app.get('/api/rooms', async (req, res) => {
