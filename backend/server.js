@@ -51,16 +51,7 @@ const bookingSchema = new mongoose.Schema({
     nationality: { type: String },
     address: { type: String },
     phoneNo: { type: String },
-    nationalIdNo: { type: String },
-
-     charges: [
-        {
-            type: { type: String, required: true }, // e.g., 'Room Service', 'Spa', 'Restaurant', 'Bar', 'Other'
-            description: { type: String },
-            amount: { type: Number, required: true },
-            date: { type: Date, default: Date.now }
-        }
-    ]
+    nationalIdNo: { type: String }
 });
 const Booking = mongoose.model('Booking', bookingSchema);
 
@@ -128,43 +119,6 @@ app.post('/api/rooms/init', async (req, res) => {
     }
 });
 
-// POST /api/bookings/:id/charges
-app.post('/:id/charges', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { type, description, amount } = req.body;
-
-        const booking = await Booking.findById(id);
-        if (!booking) {
-            return res.status(404).json({ message: 'Booking not found' });
-        }
-
-        const newCharge = { type, description, amount };
-        booking.charges.push(newCharge);
-
-        // Recalculate totalDue and balance (crucial!)
-        let newTotalDue = booking.nights * booking.amtPerNight;
-        booking.charges.forEach(charge => {
-            newTotalDue += charge.amount;
-        });
-        booking.totalDue = newTotalDue;
-        booking.balance = booking.totalDue - booking.amountPaid; // Assuming amountPaid does not include charges initially
-
-        // Update paymentStatus based on new balance
-        if (booking.balance <= 0) {
-            booking.paymentStatus = 'Paid';
-        } else if (booking.amountPaid > 0) {
-            booking.paymentStatus = 'Partially Paid';
-        } else {
-            booking.paymentStatus = 'Pending';
-        }
-
-        await booking.save();
-        res.status(200).json({ message: 'Charge added successfully', booking });
-    } catch (error) {
-        res.status(500).json({ message: 'Error adding charge', error: error.message });
-    }
-});
 
 // Get all rooms (accessible by admin and housekeeper)
 app.get('/api/rooms', async (req, res) => {
@@ -346,6 +300,39 @@ app.post('/api/bookings/:id/checkout', async (req, res) => {
     }
 });
 
+// In a new file, e.g., models/IncidentalCharge.js
+
+const incidentalChargeSchema = new mongoose.Schema({
+    bookingId: {
+        type: mongoose.Schema.Types.ObjectId, // Link to your Booking model's _id
+        ref: 'Booking',
+        required: true
+    },
+    guestName: { // Storing guest name for easy lookup, though bookingId links to full details
+        type: String,
+        required: true
+    },
+    type: { // e.g., 'Room Service', 'Spa', 'Restaurant', 'Bar', 'Laundry', 'Other'
+        type: String,
+        required: true
+    },
+    description: {
+        type: String
+    },
+    amount: {
+        type: Number,
+        required: true
+    },
+    date: {
+        type: Date,
+        default: Date.now
+    },
+    isPaid: { // To track if this specific charge has been paid
+        type: Boolean,
+        default: false
+    }
+    // You could also add a 'paymentMethod' field if needed
+});
 
 // --- 8. Start the Server ---
 app.listen(port, () => {
