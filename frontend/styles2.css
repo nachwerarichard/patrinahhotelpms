@@ -1,157 +1,43 @@
-/* General Body and Layout */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #f4f7f6;
+    background-color: #f4f4f4;
     color: #333;
-    display: flex; /* For initial login layout */
+    display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    overflow-y: scroll; /* Allow scrolling for long content */
+    min-height: 100vh; /* Ensure it takes full viewport height */
 }
 
+/* --- Login Container --- */
 #login-container {
-    display: flex; /* Initially flex to center login box */
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    width: 100%;
-    background-color: #e0e6e4;
-}
-
-.login-box {
-    background-color: #ffffff;
-    padding: 40px;
-    border-radius: 10px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    width: 100%;
-    max-width: 400px;
-}
-
-.login-box h2 {
-    color: #2c3e50;
-    margin-bottom: 30px;
-    font-size: 1.8em;
-}
-
-/* Main Content Layout */
-#main-content {
-    display: flex; /* Flexbox for sidebar and main content */
-    width: 100%;
-    min-height: 100vh;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
-}
-
-aside {
-    width: 250px;
-    background-color: #2c3e50;
-    color: #ecf0f1;
-    padding: 20px 0;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-}
-
-aside .logo {
-    text-align: center;
-    font-size: 1.8em;
-    font-weight: bold;
-    margin-bottom: 40px;
-    color: #fff;
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-aside nav ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-aside nav ul li {
-    margin-bottom: 10px;
-}
-
-aside nav ul li a {
-    display: flex;
-    align-items: center;
-    padding: 15px 20px;
-    color: #ecf0f1;
-    text-decoration: none;
-    transition: background-color 0.3s ease, color 0.3s ease;
-    font-size: 1.1em;
-}
-
-aside nav ul li a:hover,
-aside nav ul li a.active {
-    background-color: #34495e;
-    color: #f39c12; /* Accent color for active/hover */
-    border-left: 5px solid #f39c12;
-}
-
-aside nav ul li a i {
-    margin-right: 10px;
-    font-size: 1.2em;
-}
-
-main {
-    flex-grow: 1;
-    padding: 30px;
-    background-color: #f8f9fa;
-}
-
-main header {
-    background-color: #ffffff;
-    padding: 20px 30px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    margin-bottom: 30px;
-    text-align: center;
-    border-left: 5px solid #f39c12;
-}
-
-main header h1 {
-    color: #2c3e50;
-    margin: 0;
-    font-size: 2em;
-}
-
-/* Section Styling */
-.section {
-    background-color: #ffffff;
+    background-color: #fff;
     padding: 30px;
     border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    margin-bottom: 30px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 350px;
+    text-align: center;
     display: none; /* Hidden by default, shown by JS */
 }
 
-.section.active {
-    display: block;
+#login-container.active {
+    display: block; /* Show on load */
 }
 
-.section h2 {
-    color: #2c3e50;
-    margin-top: 0;
+#login-container h2 {
+    color: #007bff;
     margin-bottom: 25px;
-    font-size: 1.7em;
-    border-bottom: 2px solid #eee;
-    padding-bottom: 10px;
 }
 
-/* Form and Input Group Styling */
 .input-group {
-    margin-bottom: 18px;
+    margin-bottom: 15px;
     text-align: left;
 }
 
 .input-group label {
     display: block;
-    margin-bottom: 8px;
-    color: #555;
+    margin-bottom: 5px;
     font-weight: bold;
 }
 
@@ -160,705 +46,273 @@ main header h1 {
 .input-group input[type="number"],
 .input-group input[type="date"],
 .input-group select {
-    width: calc(100% - 22px);
-    padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 1em;
-    box-sizing: border-box;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-    background-color: #fdfdfd;
-}
-
-.input-group input[type="text"]:focus,
-.input-group input[type="password"]:focus,
-.input-group input[type="number"]:focus,
-.input-group input[type="date"]:focus,
-.input-group select:focus {
-    border-color: #f39c12;
-    box-shadow: 0 0 0 3px rgba(243, 156, 18, 0.2);
-    outline: none;
-}
-
-/* Buttons */
-.btn {
-    padding: 12px 25px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1em;
-    font-weight: bold;
-    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
-    text-decoration: none;
-    display: inline-block;
-    text-align: center;
-}
-
-.btn-primary {
-    background-color: #f39c12;
-    color: white;
-    box-shadow: 0 4px 10px rgba(243, 156, 18, 0.2);
-}
-
-.btn-primary:hover {
-    background-color: #e68a00;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(243, 156, 18, 0.3);
-}
-
-.btn-secondary {
-    background-color: #6c757d;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background-color: #5a6268;
-    transform: translateY(-2px);
-}
-
-.btn-info {
-    background-color: #17a2b8;
-    color: white;
-}
-
-.btn-info:hover {
-    background-color: #138496;
-    transform: translateY(-2px);
-}
-
-.btn-danger {
-    background-color: #dc3545;
-    color: white;
-}
-
-.btn-danger:hover {
-    background-color: #c82333;
-    transform: translateY(-2px);
-}
-
-.btn-success {
-    background-color: #28a745;
-    color: white;
-}
-
-.btn-success:hover {
-    background-color: #218838;
-    transform: translateY(-2px);
-}
-
-.btn-sm {
-    padding: 8px 15px;
-    font-size: 0.9em;
-}
-
-button[type="submit"] {
-    width: auto;
-    margin-top: 15px;
-}
-
-.controls {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 25px;
-    align-items: center;
-    flex-wrap: wrap; /* Allow wrapping on smaller screens */
-}
-
-.controls input[type="text"],
-.controls input[type="date"] {
-    flex-grow: 1;
-    min-width: 200px;
+    width: calc(100% - 20px);
     padding: 10px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    box-sizing: border-box; /* Include padding in width calculation */
 }
 
-/* Table Styling */
-.table-container {
-    overflow-x: auto; /* Enable horizontal scrolling for tables */
-    margin-top: 20px;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+button {
+    background-color: #007bff;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 800px; /* Ensure table is wide enough for content */
+button:hover {
+    background-color: #0056b3;
 }
 
-table th, table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid #e0e0e0;
-    text-align: left;
-    white-space: nowrap; /* Prevent text wrapping in cells */
+.secondary-btn {
+    background-color: #6c757d;
+}
+.secondary-btn:hover {
+    background-color: #5a6268;
 }
 
-table th {
-    background-color: #f2f2f2;
-    color: #555;
-    font-weight: bold;
-    text-transform: uppercase;
+.error-message {
+    color: #dc3545;
+    margin-top: 10px;
     font-size: 0.9em;
 }
 
-table tr:hover {
-    background-color: #f5f5f5;
+/* --- Dashboard Container --- */
+#dashboard-container {
+    display: none; /* Hidden by default, shown by JS after login */
+    width: 100%;
+    max-width: 1200px;
+    height: 90vh; /* Adjust as needed */
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    display: flex; /* Using flexbox for layout */
+    flex-direction: column;
 }
 
-table tbody tr:last-child td {
-    border-bottom: none;
+#dashboard-container.active {
+    display: flex;
 }
 
-.action-buttons button {
-    margin-right: 5px;
-    margin-bottom: 5px; /* For stacking on smaller screens */
+/* Header */
+header {
+    background-color: #007bff;
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
 }
 
-/* Status Badges */
-.status-Pending, .status-Partially.Paid, .status-Paid,
-.status-clean, .status-dirty, .status-under-maintenance, .status-blocked {
-    padding: 5px 10px;
-    border-radius: 5px;
+header h1 {
+    margin: 0;
+    font-size: 1.8em;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.user-info span {
     font-weight: bold;
-    font-size: 0.85em;
-    display: inline-block;
-    text-transform: uppercase;
 }
 
-.status-Pending { background-color: #ffc107; color: #856404; } /* Yellow */
-.status-Partially.Paid { background-color: #fd7e14; color: #8f3800; } /* Orange */
-.status-Paid { background-color: #28a745; color: white; } /* Green */
-
-.status-clean { background-color: #28a745; color: white; } /* Green */
-.status-dirty { background-color: #ffc107; color: #856404; } /* Yellow */
-.status-under-maintenance { background-color: #6c757d; color: white; } /* Gray */
-.status-blocked { background-color: #dc3545; color: white; } /* Red */
-
-
-/* Modal Styling */
-.modal {
-    display: none; /* Hidden by default */
-    position: fixed; /* Stay in place */
-    z-index: 1000; /* Sit on top */
-    left: 0;
-    top: 0;
-    width: 100%; /* Full width */
-    height: 100%; /* Full height */
-    overflow: auto; /* Enable scroll if needed */
-    background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
-    justify-content: center; /* Center horizontally */
-    align-items: center; /* Center vertically */
+/* Main Content Area (Sidebar + Section Content) */
+main {
+    display: flex;
+    flex-grow: 1; /* Allows main to take up remaining height */
 }
 
-.modal-content {
-    background-color: #fefefe;
-    margin: auto;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    width: 90%;
-    max-width: 800px; /* Adjust max-width as needed */
-    position: relative;
-    box-sizing: border-box; /* Include padding in width */
+/* Sidebar Navigation */
+.sidebar {
+    width: 250px;
+    background-color: #343a40;
+    padding: 20px 0;
+    border-bottom-left-radius: 8px;
+    box-sizing: border-box;
 }
 
-.modal-content h2, .modal-content h3 {
-    color: #2c3e50;
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar li {
+    margin-bottom: 5px;
+}
+
+.sidebar a.nav-link {
+    display: block;
+    padding: 12px 20px;
+    color: #adb5bd;
+    text-decoration: none;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.sidebar a.nav-link:hover {
+    background-color: #495057;
+    color: #fff;
+}
+
+.sidebar a.nav-link.active {
+    background-color: #0056b3;
+    color: white;
+    font-weight: bold;
+}
+
+.sidebar a.nav-link i {
+    margin-right: 10px;
+}
+
+.sidebar li.hidden {
+    display: none; /* For role-based hiding */
+}
+
+/* Content Sections */
+.content {
+    flex-grow: 1;
+    padding: 20px;
+    overflow-y: auto; /* Enable scrolling for content if it overflows */
+    background-color: #f8f9fa;
+}
+
+.dashboard-section {
+    display: none; /* All sections hidden by default */
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-section.active {
+    display: block; /* Show active section */
+}
+
+.dashboard-section h2 {
+    color: #007bff;
     margin-top: 0;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+/* Specific section styling (placeholders for now) */
+#bookingsList, #housekeepingRoomsList, #reportOutput, #foundBookingsList, #chargesList {
+    margin-top: 20px;
+    border: 1px solid #eee;
+    padding: 15px;
+    min-height: 100px;
+    border-radius: 5px;
+    background-color: #fcfcfc;
+}
+
+/* Charges Posting Specific Styles */
+.charges-search-area {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.charges-search-area input {
+    flex-grow: 1;
+}
+
+#postChargeFormContainer h3 {
+    margin-top: 30px;
     border-bottom: 1px solid #eee;
     padding-bottom: 10px;
+}
+
+#chargesList li {
+    background-color: #e9ecef;
+    border: 1px solid #dee2e6;
+    margin-bottom: 8px;
+    padding: 10px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#chargesList li strong {
+    color: #0056b3;
+}
+
+/* Report Controls */
+.report-controls {
     margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.report-controls input {
+    flex-grow: 1;
 }
 
-.modal-content .close-button {
-    color: #aaa;
-    position: absolute;
-    top: 15px;
-    right: 25px;
-    font-size: 30px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: color 0.3s ease;
-}
 
-.modal-content .close-button:hover,
-.modal-content .close-button:focus {
-    color: #333;
-    text-decoration: none;
-}
-
-#bookingForm, #chargesForm, #serviceChargeForm {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px;
-}
-
-#bookingForm button, #chargesForm button, #serviceChargeForm button {
-    grid-column: 1 / -1; /* Span all columns */
-    width: fit-content;
-    margin: 20px auto 0 auto;
-}
-
-.form-section, .table-section {
-    margin-bottom: 25px;
-}
-
-.total-line {
-    text-align: right;
-    font-size: 1.1em;
-    font-weight: bold;
-    margin-top: 15px;
-    padding-top: 10px;
-    border-top: 1px solid #eee;
-}
-
-.total-line span {
-    color: #f39c12;
-}
-
-/* Message Box */
+/* --- Message Box --- */
 .message-box {
-    display: none;
+    display: none; /* Hidden by default */
     position: fixed;
-    z-index: 1001; /* Above other modals */
+    z-index: 1000;
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0,0,0,0.6);
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-.message-box .modal-content {
-    background-color: #fff;
-    padding: 30px;
-    border-radius: 8px;
-    text-align: center;
-    max-width: 450px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-}
-
-.message-box h3 {
-    color: #2c3e50;
-    margin-top: 0;
-    font-size: 1.5em;
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.message-box p {
-    margin: 20px 0;
-    font-size: 1.1em;
-    color: #555;
-}
-
-.message-box .btn {
-    margin-top: 15px;
-}
-
-/* Room Grid for Housekeeping */
-.room-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 25px;
-    padding: 10px;
-}
-
-.room-card {
-    background-color: #fdfdfd;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 20px;
-    text-align: center;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.room-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
-}
-
-.room-card h4 {
-    color: #2c3e50;
-    margin-top: 0;
-    margin-bottom: 10px;
-    font-size: 1.4em;
-}
-
-.room-card p {
-    margin: 8px 0;
-    color: #666;
-}
-
-.room-card .status {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-weight: bold;
-    font-size: 0.9em;
-    margin-bottom: 15px;
-    display: inline-block;
-}
-
-.room-card select {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    background-color: #fff;
-    cursor: pointer;
-    font-size: 0.95em;
-    margin-top: 10px;
-    transition: border-color 0.3s;
-}
-
-.room-card select:focus {
-    border-color: #f39c12;
-    outline: none;
-}
-
-.room-card select:disabled {
-    background-color: #eee;
-    cursor: not-allowed;
-    color: #888;
-}
-
-/* Reports Section */
-.report-summary {
-    background-color: #fdfdfd;
+.message-box-content {
+    background-color: #fefefe;
+    margin: auto;
     padding: 25px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 400px;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    margin-top: 30px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    text-align: center;
 }
 
-.report-summary p {
-    font-size: 1.15em;
-    margin-bottom: 12px;
-    color: #444;
+.message-box-content h3 {
+    color: #333;
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.5em;
 }
 
-.report-summary p span {
-    font-weight: bold;
-    color: #2c3e50;
+.message-box-content p {
+    margin-bottom: 20px;
+    font-size: 1.1em;
+    line-height: 1.5;
 }
 
-/* Charges Posting Section */
-.search-guest-container {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 25px;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.search-guest-container input {
-    flex-grow: 1;
-    min-width: 250px;
-    padding: 10px;
+#messageBoxCloseBtn {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 20px;
+    border: none;
     border-radius: 5px;
-    border: 1px solid #ccc;
+    cursor: pointer;
+    font-size: 1em;
 }
 
-.search-results-list ul {
-    list-style: none;
-    padding: 0;
-    max-height: 250px;
-    overflow-y: auto;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    background-color: #fcfcfc;
-}
-
-.search-results-list li {
-    padding: 12px 15px;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    font-size: 1.05em;
-    color: #555;
-}
-
-.search-results-list li:last-child {
-    border-bottom: none;
-}
-
-.search-results-list li button {
-    margin-left: auto; /* Push button to the right */
-}
-
-/* Receipt Modal Specifics */
-.receipt-content {
-    max-width: 650px; /* Wider for receipt */
-    font-family: 'Courier New', Courier, monospace; /* Monospace for receipt feel */
-    font-size: 0.95em;
-    padding: 40px;
-}
-
-.receipt-header {
-    text-align: center;
-    margin-bottom: 30px;
-    border-bottom: 2px dashed #ccc;
-    padding-bottom: 20px;
-}
-
-.receipt-header h3 {
-    font-size: 2em;
-    margin-bottom: 5px;
-    color: #2c3e50;
-}
-
-.receipt-header p {
-    font-size: 0.9em;
-    color: #666;
-}
-
-.receipt-section {
-    margin-bottom: 25px;
-    padding-bottom: 15px;
-    border-bottom: 1px dashed #eee;
-}
-
-.receipt-section:last-of-type {
-    border-bottom: none;
-    margin-bottom: 0;
-}
-
-.receipt-section h4 {
-    font-size: 1.2em;
-    color: #2c3e50;
-    margin-bottom: 10px;
-    text-transform: uppercase;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 5px;
-}
-
-.receipt-section p {
-    margin: 5px 0;
-    line-height: 1.4;
-}
-
-.receipt-section table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-    font-size: 0.9em;
-}
-
-.receipt-section table th,
-.receipt-section table td {
-    padding: 8px 0;
-    border: none; /* Remove default table borders */
-}
-
-.receipt-section table th {
-    font-weight: bold;
-    text-align: left;
-    background-color: transparent; /* Override */
-    color: #333; /* Override */
-}
-
-.receipt-section table td {
-    border-bottom: 1px dotted #ccc; /* Dotted line for receipt */
-}
-
-.receipt-section table tr:last-child td {
-    border-bottom: none;
-}
-
-.align-right {
-    text-align: right;
-}
-
-.total-row td, .balance-row td {
-    font-weight: bold;
-    padding-top: 10px;
-    border-top: 1px dashed #ccc !important;
-}
-
-.grand-total {
-    text-align: right;
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 2px solid #2c3e50; /* Solid line for grand total */
-}
-
-.grand-total-line {
-    font-size: 1.8em;
-    color: #dc3545; /* Highlight grand total */
-    margin: 0;
-}
-
-.receipt-content .modal-actions {
-    text-align: center;
-    margin-top: 30px;
-}
-
-/* Print Specific Styles */
-@media print {
-    body {
-        min-height: auto;
-        display: block;
-        background-color: #fff;
-        margin: 0;
-        padding: 0;
-    }
-
-    #login-container,
-    #main-content,
-    aside,
-    main header,
-    .section:not(#receiptModal .modal-content), /* Hide all sections except receipt content */
-    .modal .close-button,
-    .modal-actions.print-hide,
-    .btn,
-    .controls,
-    .search-guest-container,
-    .search-results-list,
-    #postChargeFormContainer,
-    #currentChargesForSelectedBooking,
-    #messageBox,
-    .modal .modal-content:not(.receipt-content) {
-        display: none !important;
-    }
-
-    .modal {
-        position: static !important;
-        background-color: transparent !important;
-        overflow: visible !important;
-        display: block !important;
-        width: auto !important;
-        height: auto !important;
-        z-index: auto !important;
-    }
-
-    .receipt-content {
-        display: block !important;
-        width: 100% !important;
-        max-width: none !important;
-        margin: 0 !important;
-        padding: 20mm !important; /* A4-like padding */
-        box-shadow: none !important;
-        border-radius: 0 !important;
-        background-color: #fff !important;
-        color: #000;
-        font-size: 12pt;
-    }
-
-    .receipt-header, .receipt-section {
-        border-bottom-color: #000 !important;
-    }
-
-    .receipt-section table td {
-        border-bottom-color: #000 !important;
-    }
-
-    .grand-total-line {
-        color: #000 !important;
-    }
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-    #main-content {
-        flex-direction: column;
-    }
-
-    aside {
-        width: 100%;
-        padding: 10px 0;
-    }
-
-    aside nav ul {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    aside nav ul li {
-        margin: 5px 10px;
-    }
-
-    aside nav ul li a {
-        padding: 10px 15px;
-        font-size: 0.95em;
-        border-left: none;
-        border-bottom: 3px solid transparent;
-    }
-
-    aside nav ul li a:hover,
-    aside nav ul li a.active {
-        border-left: none;
-        border-bottom: 3px solid #f39c12;
-        background-color: #34495e;
-    }
-
-    main {
-        padding: 20px;
-    }
-
-    .section {
-        padding: 20px;
-    }
-
-    .controls {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .controls input, .controls button {
-        width: 100%;
-        box-sizing: border-box;
-    }
-
-    #bookingForm, #chargesForm, #serviceChargeForm {
-        grid-template-columns: 1fr; /* Single column layout for forms */
-    }
-
-    .modal-content {
-        width: 95%;
-        padding: 20px;
-    }
-
-    .room-grid {
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 15px;
-    }
-}
-
-@media (max-width: 480px) {
-    .login-box {
-        padding: 25px;
-    }
-
-    .login-box h2 {
-        font-size: 1.5em;
-    }
-
-    main header h1 {
-        font-size: 1.5em;
-    }
-
-    .room-grid {
-        grid-template-columns: 1fr; /* Stack room cards */
-    }
-
-    .receipt-content {
-        padding: 15px;
-        font-size: 0.85em;
-    }
-
-    .receipt-header h3 {
-        font-size: 1.5em;
-    }
-
-    .grand-total-line {
-        font-size: 1.4em;
-    }
+#messageBoxCloseBtn:hover {
+    background-color: #0056b3;
 }
