@@ -286,10 +286,7 @@ function handleNavigation(event) {
         showMessageBox('Access Denied', 'Housekeepers can only access Housekeeping and Post Charges sections.');
         return;
     }
-    if (currentUserRole === 'service_staff' && targetId !== 'charges-posting') {
-        showMessageBox('Access Denied', 'Service Staff can only access the Post Charges section.');
-        return;
-    }
+    
     if (currentUserRole === 'admin' && (targetId === 'charges-posting' || targetId === 'housekeeping')) {
         // Admins can access all, but we might want specific initial renders
     }
