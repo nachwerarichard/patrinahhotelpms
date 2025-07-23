@@ -408,7 +408,12 @@ async function renderBookings(page = 1, filteredBookings = null) {
                 <td>${parseFloat(booking.amountPaid).toFixed(2)}</td>
                 <td>${parseFloat(booking.balance).toFixed(2)}</td>
                 <td>${booking.paymentStatus}</td>
-                
+                <td>${booking.people}</td>
+                <td>${booking.nationality || ''}</td>
+                <td>${booking.address || ''}</td>
+                <td>${booking.phoneNo || ''}</td>
+                <td>${booking.nationalIdNo || ''}</td>
+
                 <td>
                     <div class="action-buttons">
                         <button class="btn btn-info" onclick="editBooking('${booking.id}')">Edit</button>
