@@ -1346,4 +1346,4 @@ async function generateClientReceipt(bookingId) {
             </td>
         `;
 */
-  .
+  
