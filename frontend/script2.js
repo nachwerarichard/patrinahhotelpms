@@ -1171,8 +1171,7 @@ guestSearchInput.addEventListener('keyup', (event) => {
 // Important: The existing `openChargesModal` and `payIncidentalCharges`
 // functions (accessed from the Admin's Booking Management table)
 // should remain as they are, serving the Admin's full overview and payment function.
-  .
-  .
+  
     // --- DOM Elements (Add these near other DOM element declarations) ---
 const receiptModal = document.getElementById('receiptModal');
 const receiptContent = document.getElementById('receiptContent');
