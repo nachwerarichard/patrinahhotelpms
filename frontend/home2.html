@@ -5,82 +5,114 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hotel Management System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="styles2.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <div id="login-container" class="active">
-        <h2>Hotel PMS Login</h2>
-        <form id="loginForm">
-            <div class="input-group">
-                <label for="username">Username:</label>
-                <input type="text" id="username" required>
+    <!-- Login Container -->
+    <div id="login-container">
+        <div class="login-box">
+            <h2>Login</h2>
+            <form id="loginForm">
+                <div class="input-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="input-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Login</button>
+                <p class="login-info">Admin: user/password | Housekeeper: hk/hkpass</p>
+            </form>
+            <div id="loginMessageBox" class="message-box" style="display: none;">
+                <h3 id="loginMessageBoxTitle"></h3>
+                <p id="loginMessageBoxContent"></p>
+                <button onclick="closeLoginMessageBox()" class="btn btn-primary">OK</button>
             </div>
-            <div class="input-group">
-                <label for="password">Password:</label>
-                <input type="password" id="password" required>
-            </div>
-            <button type="submit">Login</button>
-            <p id="login-error" class="error-message"></p>
-        </form>
+        </div>
     </div>
 
-    <div id="dashboard-container">
-        <header>
-            <h1>Hotel Management Dashboard</h1>
-            <div class="user-info">
-                <span>Welcome, <span id="displayUsername"></span> (<span id="displayRole"></span>)</span>
-                <button id="logoutBtn" class="secondary-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
-            </div>
-        </header>
+    <!-- Main Content Container (Hidden until login) -->
+    <div id="main-content" style="display: none;">
+        <aside>
+            <nav>
+                <ul>
+                    <!-- Note: IDs like 'nav-booking' will map to section IDs like 'booking' -->
+                    <li id="nav-item-booking"><a href="#" id="nav-booking" class="active">Booking Management</a></li>
+                    <li id="nav-item-housekeeping"><a href="#" id="nav-housekeeping">Housekeeping</a></li>
+                    <li id="nav-item-charges"><a href="#" id="nav-charges">Post Charges</a></li>
+                    <li id="nav-item-reports"><a href="#" id="nav-reports">Reports</a></li>
+                    <li><a href="#" id="logoutBtn">Logout</a></li>
+                </ul>
+            </nav>
+        </aside>
 
         <main>
-            <aside class="sidebar">
-                <nav>
-                    <ul>
-                        <li id="nav-item-booking"><a href="#" id="nav-booking" class="nav-link active"><i class="fas fa-book"></i> Booking Management</a></li>
-                        <li id="nav-item-housekeeping"><a href="#" id="nav-housekeeping" class="nav-link"><i class="fas fa-broom"></i> Housekeeping</a></li>
-                        <li id="nav-item-charges"><a href="#" id="nav-charges" class="nav-link"><i class="fas fa-dollar-sign"></i> Post Charges</a></li>
-                        <li id="nav-item-reports"><a href="#" id="nav-reports" class="nav-link"><i class="fas fa-chart-line"></i> Reports</a></li>
-                    </ul>
-                </nav>
-            </aside>
+            <!-- Booking Management Section -->
+            <section id="booking" class="section active">
+                <h2>Booking Management</h2>
+                <div class="controls">
+                    <input type="text" id="bookingSearch" placeholder="Search bookings...">
+                    <button class="btn btn-primary" onclick="openBookingModal()">Add New Booking</button>
+                </div>
+                <div class="table-container">
+                    <table id="bookingsTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Room</th>
+                                <th>Check-in</th>
+                                <th>Check-out</th>
+                                <th>Nights</th>
+                                <th>Amt/Night</th>
+                                <th>Total Due</th>
+                                <th>Amount Paid</th>
+                                <th>Balance</th>
+                                <th>Payment Status</th>
+                                <th>People</th>
+                                <th>Nationality</th>
+                                <th>Address</th>
+                                <th>Phone No.</th>
+                                <th>National ID</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Bookings will be rendered here by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
 
-            <section class="content">
-                <div id="booking" class="dashboard-section active">
-                    <h2>Booking Management</h2>
-                    <p>This section will display all current and past bookings. Only Admins can manage these.</p>
-                    <div id="bookingsList">
-                        <p style="text-align: center;">Loading bookings...</p>
-                    </div>
+            <!-- Housekeeping Section -->
+            <section id="housekeeping" class="section">
+                <h2>Housekeeping</h2>
+                <div id="housekeepingRoomGrid" class="room-grid">
+                    <!-- Room cards will be rendered here by JS -->
+                </div>
+            </section>
+
+            <!-- Post Charges Section -->
+            <section id="charges" class="section">
+                <h2>Post Incidental Charges</h2>
+                <div class="search-guest-container">
+                    <label for="guestSearchInput">Find Guest by Name or Room:</label>
+                    <input type="text" id="guestSearchInput" placeholder="Guest Name or Room Number">
+                    <button class="btn btn-primary" onclick="searchForGuestBookings()">Search</button>
                 </div>
 
-                <div id="housekeeping" class="dashboard-section">
-                    <h2>Housekeeping Dashboard</h2>
-                    <p>This section allows housekeepers to view and update room statuses.</p>
-                    <div id="housekeepingRoomsList">
-                        <p style="text-align: center;">Loading room statuses...</p>
-                    </div>
+                <div id="foundBookingsList">
+                    <p style="text-align: center; margin-top: 20px;">Use the search bar to find a guest/booking to post charges against.</p>
                 </div>
 
-                <div id="charges" class="dashboard-section">
-                    <h2>Post Incidental Charges</h2>
-                    <p>Only Admins can post charges here.</p>
-                    <div class="charges-search-area">
-                        <label for="guestSearchInput">Search Guest/Booking:</label>
-                        <input type="text" id="guestSearchInput" placeholder="Enter guest name or booking ID">
-                        <button id="searchGuestBtn">Search</button>
-                    </div>
-                    <div id="foundBookingsList" class="search-results">
-                        <p style="text-align: center; margin-top: 20px;">Use the search bar to find a guest/booking to post charges against.</p>
-                    </div>
-
-                    <div id="postChargeFormContainer" style="display: none;">
-                        <h3>Post New Charge for <span id="selectedGuestName"></span> (Booking ID: <span id="selectedBookingId"></span>)</h3>
-                        <form id="postChargeForm">
+                <div id="postChargeFormContainer" style="display: none; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                    <h3>Add New Charge for <span id="selectedGuestName"></span> (Room <span id="selectedRoomNumber"></span>)</h3>
+                    <form id="serviceChargeForm">
+                        <input type="hidden" id="selectedBookingId">
+                        <div class="form-grid">
                             <div class="input-group">
-                                <label for="chargeType">Charge Type:</label>
-                                <select id="chargeType" required>
+                                <label for="serviceChargeType">Charge Type:</label>
+                                <select id="serviceChargeType" required>
                                     <option value="">Select Type</option>
                                     <option value="Room Service">Room Service</option>
                                     <option value="Spa">Spa</option>
@@ -91,48 +123,292 @@
                                 </select>
                             </div>
                             <div class="input-group">
-                                <label for="chargeDescription">Description:</label>
-                                <input type="text" id="chargeDescription" placeholder="e.g., Minibar items, Dry cleaning">
+                                <label for="serviceChargeDescription">Description (Optional):</label>
+                                <input type="text" id="serviceChargeDescription">
                             </div>
                             <div class="input-group">
-                                <label for="chargeAmount">Amount (UGX):</label>
-                                <input type="number" id="chargeAmount" min="0" step="any" required>
+                                <label for="serviceChargeAmount">Amount:</label>
+                                <input type="number" id="serviceChargeAmount" step="0.01" required>
                             </div>
-                            <button type="submit">Add Charge</button>
-                        </form>
-                    </div>
-
-                    <div id="currentChargesForSelectedBooking" style="display: none;">
-                        <h3>Current Charges for Selected Booking</h3>
-                        <ul id="chargesList">
-                            </ul>
-                    </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit Charge</button>
+                    </form>
                 </div>
 
-                <div id="reports" class="dashboard-section">
-                    <h2>Reports</h2>
-                    <p>Generate various operational reports.</p>
-                    <div class="report-controls">
-                        <label for="reportDateInput">Report Date:</label>
-                        <input type="date" id="reportDateInput">
-                        <button id="generateReportBtn">Generate Report</button>
+                <div id="currentChargesForSelectedBooking" style="display: none; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                    <h3>Outstanding Charges for this Guest:</h3>
+                    <div class="table-container">
+                        <table id="serviceChargesTable">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Description</th>
+                                    <th>Amount</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Service charges for selected booking will be rendered here by JS -->
+                            </tbody>
+                        </table>
                     </div>
-                    <div id="reportOutput">
-                        <p style="text-align: center;">Select a date and click 'Generate Report'.</p>
-                    </div>
+                    <p style="text-align: right; margin-top: 10px;"><strong>Total Unpaid: <span id="serviceIncidentalTotalDue">0.00</span></strong></p>
+                </div>
+            </section>
+
+            <!-- Reports Section -->
+            <section id="reports" class="section">
+                <h2>Reports</h2>
+                <div class="report-controls">
+                    <label for="reportDate">Select Date:</label>
+                    <input type="date" id="reportDate">
+                    <button class="btn btn-primary" onclick="generateReport()">Generate Report</button>
+                </div>
+                <div class="report-summary">
+                    <p>Total Amount for Date: <span id="totalAmountReport">0.00</span></p>
+                    <p>Total Balance Outstanding: <span id="totalBalanceReport">0.00</span></p>
+                    <p>Most Booked Room Type: <span id="mostBookedRoomType">N/A</span></p>
+                    <p>Guests Checked In: <span id="guestsCheckedIn">0</span></p>
                 </div>
             </section>
         </main>
     </div>
 
-    <div id="messageBox" class="message-box">
-        <div class="message-box-content">
-            <h3 id="messageBoxTitle"></h3>
-            <p id="messageBoxBody"></p>
-            <button id="messageBoxCloseBtn">OK</button>
+    <!-- Booking Modal -->
+    <div id="bookingModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeBookingModal()">&times;</span>
+            <h2 id="modalTitle">Add New Booking</h2>
+            <form id="bookingForm">
+                <input type="hidden" id="bookingId">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label for="name">Guest Name:</label>
+                        <input type="text" id="name" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="room">Room Number:</label>
+                        <select id="room" required>
+                            <option value="">Select a Room</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="checkIn">Check-in Date:</label>
+                        <input type="date" id="checkIn" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="checkOut">Check-out Date:</label>
+                        <input type="date" id="checkOut" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="nights">Nights:</label>
+                        <input type="number" id="nights" readonly>
+                    </div>
+                    <div class="input-group">
+                        <label for="amtPerNight">Amount Per Night:</label>
+                        <input type="number" id="amtPerNight" step="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="totalDue">Total Due:</label>
+                        <input type="number" id="totalDue" step="0.01" readonly>
+                    </div>
+                    <div class="input-group">
+                        <label for="amountPaid">Amount Paid:</label>
+                        <input type="number" id="amountPaid" step="0.01">
+                    </div>
+                    <div class="input-group">
+                        <label for="balance">Balance:</label>
+                        <input type="number" id="balance" step="0.01" readonly>
+                    </div>
+                    <div class="input-group">
+                        <label for="paymentStatus">Payment Status:</label>
+                        <select id="paymentStatus" required>
+                            <option value="Pending">Pending</option>
+                            <option value="Partially Paid">Partially Paid</option>
+                            <option value="Paid">Paid</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="people">Number of People:</label>
+                        <input type="number" id="people" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="nationality">Nationality:</label>
+                        <input type="text" id="nationality">
+                    </div>
+                    <div class="input-group">
+                        <label for="address">Address:</label>
+                        <input type="text" id="address">
+                    </div>
+                    <div class="input-group">
+                        <label for="phoneNo">Phone Number:</label>
+                        <input type="text" id="phoneNo">
+                    </div>
+                    <div class="input-group">
+                        <label for="nationalIdNo">National ID No.:</label>
+                        <input type="text" id="nationalIdNo">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Booking</button>
+            </form>
         </div>
     </div>
 
-    <script src="script2.js"></script>
+    <!-- Charges Modal (for Admin via Booking Management) -->
+    <div id="chargesModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeChargesModal()">&times;</span>
+            <h2 id="chargesModalTitle">Incidental Charges for Booking <span id="chargesBookingName"></span></h2>
+            <form id="chargesForm">
+                <input type="hidden" id="chargesBookingId">
+                <div class="input-group">
+                    <label for="chargeType">Charge Type:</label>
+                    <select id="chargeType" required>
+                        <option value="">Select Type</option>
+                        <option value="Room Service">Room Service</option>
+                        <option value="Spa">Spa</option>
+                        <option value="Restaurant">Restaurant</option>
+                        <option value="Bar">Bar</option>
+                        <option value="Laundry">Laundry</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="chargeDescription">Description (Optional):</label>
+                    <input type="text" id="chargeDescription">
+                </div>
+                <div class="input-group">
+                    <label for="chargeAmount">Amount:</label>
+                    <input type="number" id="chargeAmount" step="0.01" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Add New Charge</button>
+            </form>
+
+            <h3>Current Incidental Charges:</h3>
+            <div class="table-container">
+                <table id="currentChargesTable">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th> <!-- Added for delete button -->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Current charges will be rendered here by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="charges-summary">
+                <p><strong>Total Incidental Amount Due: <span id="incidentalTotalDue">0.00</span></strong></p>
+                <button class="btn btn-success" id="payIncidentalChargesBtn" onclick="payIncidentalCharges()">Mark All Unpaid as Paid</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div id="receiptModal" class="modal">
+        <div class="modal-content receipt-content">
+            <span class="close-button" onclick="closeReceiptModal()">&times;</span>
+            <div id="receiptContent">
+                <h2 style="text-align: center; margin-bottom: 20px;">Hotel Patrinah - Guest Folio</h2>
+                <div class="receipt-header">
+                    <p><strong>Booking ID:</strong> <span id="receiptBookingId"></span></p>
+                    <p><strong>Guest Name:</strong> <span id="receiptGuestName"></span></p>
+                    <p><strong>Room Number:</strong> <span id="receiptRoomNumber"></span></p>
+                    <p><strong>Check-in:</strong> <span id="receiptCheckIn"></span></p>
+                    <p><strong>Check-out:</strong> <span id="receiptCheckOut"></span></p>
+                    <p><strong>Date Generated:</strong> <span id="receiptDateGenerated"></span></p>
+                </div>
+
+                <hr>
+
+                <h3>Room Charges</h3>
+                <div class="table-container no-scroll">
+                    <table class="receipt-table">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Nights</th>
+                                <th>Amt/Night</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Room Charge</td>
+                                <td id="receiptRoomNights"></td>
+                                <td id="receiptAmtPerNight"></td>
+                                <td id="receiptRoomTotal"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p style="text-align: right; margin-top: 10px;"><strong>Room Amount Paid:</strong> <span id="receiptRoomAmountPaid"></span></p>
+                <p style="text-align: right;"><strong>Room Balance Due:</strong> <span id="receiptRoomBalance"></span></p>
+
+
+                <h3 style="margin-top: 20px;">Incidental Charges</h3>
+                <div class="table-container no-scroll">
+                    <table class="receipt-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="receiptIncidentalChargesBody">
+                            <!-- Incidental charges will be rendered here by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <p style="text-align: right; margin-top: 10px;"><strong>Total Incidental Charges:</strong> <span id="receiptIncidentalTotal"></span></p>
+                <p style="text-align: right;"><strong>Incidental Amount Paid:</strong> <span id="receiptIncidentalAmountPaid"></span></p>
+                <p style="text-align: right;"><strong>Incidental Balance Due:</strong> <span id="receiptIncidentalBalance"></span></p>
+
+
+                <hr style="margin-top: 30px;">
+
+                <h3 style="text-align: right; font-size: 1.5em;">Grand Total Due: <span id="receiptGrandTotal"></span></h3>
+
+                <div class="receipt-footer" style="text-align: center; margin-top: 40px; font-size: 0.9em;">
+                    <p>Thank you for staying with us!</p>
+                    <p>Patrinah Hotel Management</p>
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top: 20px; text-align: center;">
+                <button class="btn btn-primary" onclick="printReceipt()">Print Receipt</button>
+                <button class="btn btn-secondary" onclick="closeReceiptModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- General Message Box (Replaces alert/confirm) -->
+    <div id="messageBox" class="message-box" style="display: none;">
+        <h3 id="messageBoxTitle"></h3>
+        <p id="messageBoxContent"></p>
+        <button onclick="closeMessageBox()" class="btn btn-primary">OK</button>
+    </div>
+
+    <!-- Confirmation Dialog (for delete/pay actions) -->
+    <div id="confirmationDialog" class="message-box" style="display: none;">
+        <div class="message-box-content">
+            <h3 id="confirmationTitle"></h3>
+            <p id="confirmationContent"></p>
+            <button id="confirmYesBtn" class="btn btn-danger">Yes</button>
+            <button id="confirmNoBtn" class="btn btn-secondary">No</button>
+        </div>
+    </div>
+
+
+    <script src="script.js"></script>
+
 </body>
 </html>
