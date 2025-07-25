@@ -686,7 +686,6 @@ table tbody tr:last-child td {
 }
 
 .calendar-dates-header {
-    display: row;
     /* grid-template-columns will be set by JS dynamically */
     background-color: #3498db;
     color: white;
