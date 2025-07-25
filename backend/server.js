@@ -162,6 +162,21 @@ app.post('/api/login', authenticateUser, (req, res) => {
     res.json({ message: 'Login successful', role: req.user.role });
 });
 
+// New: General Audit Log Endpoint (for frontend to log actions like login/logout)
+app.post('/api/audit-log/action', async (req, res) => {
+    const { action, user, details } = req.body;
+    if (!action || !user) {
+        return res.status(400).json({ message: 'Action and user are required for audit logging.' });
+    }
+    try {
+        await addAuditLog(action, user, details);
+        res.status(201).json({ message: 'Audit log entry created.' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error creating audit log entry', error: error.message });
+    }
+});
+
+
 // --- Rooms API ---
 // Initialize rooms in DB if empty (run once manually or on first boot)
 app.post('/api/rooms/init', async (req, res) => {
@@ -740,6 +755,7 @@ app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
     console.log('Backend API Endpoints:');
     console.log(`- POST /api/login`);
+    console.log(`- POST /api/audit-log/action (New: for general actions like login/logout)`);
     console.log(`- POST /api/rooms/init (Run once to populate initial rooms)`);
     console.log(`- GET /api/rooms`);
     console.log(`- GET /api/rooms/available?checkIn={date}&checkOut={date}`);
