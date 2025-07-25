@@ -122,10 +122,17 @@ const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn
  * Displays a custom message box to the user.
  * @param {string} title - The title of the message box.
  * @param {string} message - The content message.
+ * @param {boolean} isError - True if it's an error message, false for success/info.
  */
-function showMessageBox(title, message) {
+function showMessageBox(title, message, isError = false) {
     messageBoxTitle.textContent = title;
     messageBoxContent.textContent = message;
+    messageBox.classList.remove('error-message', 'success-message'); // Clear previous states
+    if (isError) {
+        messageBox.classList.add('error-message');
+    } else {
+        messageBox.classList.add('success-message');
+    }
     messageBox.style.display = 'flex'; // Use flex for centering
 }
 
@@ -176,7 +183,7 @@ function closeDeletionReasonModal() {
 confirmDeletionBtn.addEventListener('click', () => {
     const reason = deletionReasonInput.value.trim();
     if (!reason) {
-        showMessageBox('Input Required', 'Please provide a reason for this action.');
+        showMessageBox('Input Required', 'Please provide a reason for this action.', true);
         return;
     }
     if (pendingDeletionAction) {
@@ -276,7 +283,7 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
         }
     } catch (error) {
         console.error('Error populating room dropdown:', error);
-        showMessageBox('Error', 'Failed to load rooms for dropdown. Please try again.');
+        showMessageBox('Error', 'Failed to load rooms for dropdown. Please try again.', true);
     }
 }
 
@@ -318,14 +325,53 @@ loginForm.addEventListener('submit', async function(event) {
                 body: JSON.stringify({ action: 'User Logged In', user: currentUsername, details: { role: currentUserRole } })
             });
 
+            // Determine the initial section to load based on role
+            let initialSectionId = '';
+            let initialNavLinkId = '';
 
-            // Automatically click the appropriate navigation link based on role
             if (currentUserRole === 'admin') {
-                document.getElementById('nav-booking').click();
-                renderBookings();
+                initialSectionId = 'booking-management';
+                initialNavLinkId = 'nav-booking';
             } else if (currentUserRole === 'housekeeper') {
-                document.getElementById('nav-housekeeping').click();
+                initialSectionId = 'housekeeping';
+                initialNavLinkId = 'nav-housekeeping';
             }
+
+            // Set the active navigation link and section
+            if (initialNavLinkId) {
+                document.getElementById(initialNavLinkId).classList.add('active');
+            }
+            if (initialSectionId) {
+                document.getElementById(initialSectionId).classList.add('active');
+                // Explicitly call the rendering function for the initial active section
+                if (initialSectionId === 'booking-management') {
+                    currentPage = 1;
+                    await renderBookings(currentPage);
+                } else if (initialSectionId === 'housekeeping') {
+                    await renderHousekeepingRooms();
+                } else if (initialSectionId === 'calendar-view') {
+                    await renderCalendar();
+                } else if (initialSectionId === 'reports') {
+                    reportDateInput.valueAsDate = new Date();
+                    await generateReport();
+                } else if (initialSectionId === 'service-reports') {
+                    const today = new Date();
+                    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                    serviceReportStartDate.value = firstDay.toISOString().split('T')[0];
+                    serviceReportEndDate.value = lastDay.toISOString().split('T')[0];
+                    await renderServiceReports();
+                } else if (initialSectionId === 'audit-logs') {
+                    const today = new Date();
+                    const thirtyDaysAgo = new Date(today);
+                    thirtyDaysAgo.setDate(today.getDate() - 30);
+                    auditLogStartDateFilter.value = thirtyDaysAgo.toISOString().split('T')[0];
+                    auditLogEndDateFilter.value = today.toISOString().split('T')[0];
+                    await renderAuditLogs();
+                }
+            }
+
+
         } else {
             showLoginMessageBox('Login Failed', data.message || 'Invalid username or password.');
             // Optionally log failed login attempts (be careful with sensitive data)
@@ -384,7 +430,7 @@ function handleNavigation(event) {
 
     // Prevent navigation if the user's role doesn't permit it
     if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping') {
-        showMessageBox('Access Denied', 'Housekeepers can only access the Housekeeping section.');
+        showMessageBox('Access Denied', 'Housekeepers can only access the Housekeeping section.', true);
         return;
     }
 
@@ -405,9 +451,11 @@ function handleNavigation(event) {
         if (currentUserRole === 'admin') {
             document.getElementById('booking-management').classList.add('active');
             document.getElementById('nav-booking').classList.add('active');
+            renderBookings(currentPage); // Ensure it renders if fallback
         } else if (currentUserRole === 'housekeeper') {
             document.getElementById('housekeeping').classList.add('active');
             document.getElementById('nav-housekeeping').classList.add('active');
+            renderHousekeepingRooms(); // Ensure it renders if fallback
         }
         return;
     }
@@ -515,7 +563,7 @@ async function renderBookings(page = 1, filteredBookings = null) {
             currentPage = data.currentPage; // Update current page from backend response
         } catch (error) {
             console.error('Error fetching bookings:', error);
-            showMessageBox('Error', 'Failed to load bookings. Please check backend connection.');
+            showMessageBox('Error', 'Failed to load bookings. Please check backend connection.', true);
             bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px; color: red;">Failed to load bookings.</td></tr>';
             prevPageBtn.disabled = true;
             nextPageBtn.disabled = true;
@@ -638,7 +686,7 @@ function filterBookings() {
         })
         .catch(error => {
             console.error('Error filtering bookings:', error);
-            showMessageBox('Error', 'Failed to filter bookings. Please try again.');
+            showMessageBox('Error', 'Failed to filter bookings. Please try again.', true);
         });
 
     // If search term is empty, revert to paginated view
@@ -733,7 +781,7 @@ bookingForm.addEventListener('submit', async function(event) {
         renderAuditLogs(); // Update audit logs
     } catch (error) {
         console.error('Error saving booking:', error);
-        showMessageBox('Error', `Failed to save booking: ${error.message}`);
+        showMessageBox('Error', `Failed to save booking: ${error.message}`, true);
     }
 });
 
@@ -750,7 +798,7 @@ async function editBooking(id) {
         const booking = allBookings.find(b => b.id === id);
 
         if (!booking) {
-            showMessageBox('Error', 'Booking not found for editing.');
+            showMessageBox('Error', 'Booking not found for editing.', true);
             return;
         }
 
@@ -775,7 +823,7 @@ async function editBooking(id) {
         bookingModal.style.display = 'flex';
     } catch (error) {
         console.error('Error fetching booking for edit:', error);
-        showMessageBox('Error', `Failed to load booking for editing: ${error.message}`);
+        showMessageBox('Error', `Failed to load booking for editing: ${error.message}`, true);
     }
 }
 
@@ -804,7 +852,7 @@ function confirmDeleteBooking(id) {
             renderAuditLogs(); // Update audit logs
         } catch (error) {
             console.error('Error deleting booking:', error);
-            showMessageBox('Error', `Failed to delete booking: ${error.message}`);
+            showMessageBox('Error', `Failed to delete booking: ${error.message}`, true);
         }
     });
 }
@@ -835,7 +883,7 @@ async function checkoutBooking(id) {
         renderAuditLogs(); // Update audit logs
     } catch (error) {
         console.error('Error during checkout:', error);
-        showMessageBox('Error', `Failed to process checkout: ${error.message}`);
+        showMessageBox('Error', `Failed to process checkout: ${error.message}`, true);
     }
 }
 
@@ -906,7 +954,7 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
     const amount = parseFloat(chargeAmountInput.value);
 
     if (isNaN(amount) || amount <= 0) {
-        showMessageBox('Error', 'Please enter a valid amount for the charge.');
+        showMessageBox('Error', 'Please enter a valid amount for the charge.', true);
         return;
     }
 
@@ -918,7 +966,7 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
         const booking = bookingData.find(b => b.id === bookingCustomId);
 
         if (!booking) {
-            showMessageBox('Error', 'Booking not found for adding charge.');
+            showMessageBox('Error', 'Booking not found for adding charge.', true);
             return;
         }
 
@@ -948,7 +996,7 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
         // No need to re-render bookings table as room total/balance doesn't change
     } catch (error) {
         console.error('Error adding incidental charge:', error);
-        showMessageBox('Error', `Failed to add charge: ${error.message}`);
+        showMessageBox('Error', `Failed to add charge: ${error.message}`, true);
     }
 });
 
@@ -968,7 +1016,7 @@ async function viewCharges(bookingCustomId) {
         const booking = bookingData.find(b => b.id === bookingCustomId);
 
         if (!booking) {
-            showMessageBox('Error', 'Booking not found for viewing charges.');
+            showMessageBox('Error', 'Booking not found for viewing charges.', true);
             closeViewChargesModal();
             return;
         }
@@ -1004,7 +1052,7 @@ async function viewCharges(bookingCustomId) {
         viewChargesModal.style.display = 'flex';
     } catch (error) {
         console.error('Error fetching incidental charges:', error);
-        showMessageBox('Error', `Failed to load charges: ${error.message}`);
+        showMessageBox('Error', `Failed to load charges: ${error.message}`, true);
         incidentalChargesTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Error loading charges.</td></tr>';
     }
 }
@@ -1040,7 +1088,7 @@ function confirmDeleteIncidentalCharge(chargeId, bookingCustomId) {
             renderAuditLogs(); // Update audit logs
         } catch (error) {
             console.error('Error deleting incidental charge:', error);
-            showMessageBox('Error', `Failed to delete charge: ${error.message}`);
+            showMessageBox('Error', `Failed to delete charge: ${error.message}`, true);
         }
     });
 }
@@ -1061,7 +1109,7 @@ async function markAllChargesPaid() {
         const booking = bookingData.find(b => b.id === bookingCustomId);
 
         if (!booking) {
-            showMessageBox('Error', 'Booking not found for marking charges paid.');
+            showMessageBox('Error', 'Booking not found for marking charges paid.', true);
             return;
         }
 
@@ -1082,7 +1130,7 @@ async function markAllChargesPaid() {
         renderAuditLogs(); // Update audit logs
     } catch (error) {
         console.error('Error marking charges as paid:', error);
-        showMessageBox('Error', `Failed to mark charges as paid: ${error.message}`);
+        showMessageBox('Error', `Failed to mark charges as paid: ${error.message}`, true);
     }
 }
 
@@ -1102,7 +1150,7 @@ async function printReceipt(bookingCustomId) {
         const booking = bookingData.find(b => b.id === bookingCustomId);
 
         if (!booking) {
-            showMessageBox('Error', 'Booking not found for receipt generation.');
+            showMessageBox('Error', 'Booking not found for receipt generation.', true);
             return;
         }
 
@@ -1158,7 +1206,7 @@ async function printReceipt(bookingCustomId) {
         receiptModal.style.display = 'flex';
     } catch (error) {
         console.error('Error generating receipt:', error);
-        showMessageBox('Error', `Failed to generate receipt: ${error.message}`);
+        showMessageBox('Error', `Failed to generate receipt: ${error.message}`, true);
     }
 }
 
@@ -1178,7 +1226,7 @@ function closeReceiptModal() {
 async function generateReport() {
     const selectedDateStr = reportDateInput.value;
     if (!selectedDateStr) {
-        showMessageBox('Error', 'Please select a date for the report.');
+        showMessageBox('Error', 'Please select a date for the report.', true);
         return;
     }
 
@@ -1191,7 +1239,7 @@ async function generateReport() {
         allBookings = await response.json();
     } catch (error) {
         console.error('Error fetching bookings for report:', error);
-        showMessageBox('Error', 'Failed to load bookings for report generation.');
+        showMessageBox('Error', 'Failed to load bookings for report generation.', true);
         return;
     }
 
@@ -1256,7 +1304,7 @@ async function renderHousekeepingRooms() {
         rooms = currentRooms; // Update local rooms array
     } catch (error) {
         console.error('Error fetching rooms for housekeeping:', error);
-        showMessageBox('Error', 'Failed to load rooms for housekeeping. Please check backend connection.');
+        showMessageBox('Error', 'Failed to load rooms for housekeeping. Please check backend connection.', true);
         housekeepingRoomGrid.innerHTML = '<p style="text-align: center; padding: 20px; color: red;">Failed to load rooms.</p>';
         return;
     }
@@ -1316,7 +1364,7 @@ async function renderHousekeepingRooms() {
 async function updateRoomStatus(roomId, newStatus) {
     const room = rooms.find(r => r.id === roomId);
     if (!room) {
-        showMessageBox('Error', 'Room not found.');
+        showMessageBox('Error', 'Room not found.', true);
         return;
     }
 
@@ -1354,7 +1402,7 @@ async function performRoomStatusUpdate(roomId, newStatus, reason = null) {
         renderAuditLogs(); // Update audit logs
     } catch (error) {
         console.error('Error updating room status:', error);
-        showMessageBox('Error', `Failed to update room status: ${error.message}`);
+        showMessageBox('Error', `Failed to update room status: ${error.message}`, true);
         renderHousekeepingRooms(); // Revert UI if update failed
     }
 }
@@ -1388,7 +1436,7 @@ async function renderCalendar() {
         bookings = allBookings; // Update global bookings array
     } catch (error) {
         console.error('Error fetching data for calendar:', error);
-        showMessageBox('Error', 'Failed to load calendar data. Please try again.');
+        showMessageBox('Error', 'Failed to load calendar data. Please try again.', true);
         return;
     }
 
@@ -1526,7 +1574,7 @@ async function renderServiceReports() {
         totalServiceRevenueSpan.textContent = grandTotalRevenue.toFixed(2);
     } catch (error) {
         console.error('Error fetching service reports:', error);
-        showMessageBox('Error', `Failed to load service reports: ${error.message}`);
+        showMessageBox('Error', `Failed to load service reports: ${error.message}`, true);
         serviceReportsTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red;">Error loading service reports.</td></tr>';
     }
 }
@@ -1576,7 +1624,7 @@ async function renderAuditLogs() {
         }
     } catch (error) {
         console.error('Error fetching audit logs:', error);
-        showMessageBox('Error', `Failed to load audit logs: ${error.message}`);
+        showMessageBox('Error', `Failed to load audit logs: ${error.message}`, true);
         auditLogTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red;">Error loading audit logs.</td></tr>';
     }
 }
@@ -1612,17 +1660,16 @@ async function simulateChannelManagerSync() {
         renderAuditLogs(); // Log will be added by backend
     } catch (error) {
         console.error('Channel manager sync error:', error);
-        showMessageBox('Sync Failed', `Failed to sync: ${error.message}`);
+        showMessageBox('Sync Failed', `Failed to sync: ${error.message}`, true);
     }
 }
 
 
 // --- Initial Load and Event Listeners ---
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => { // Made async to await rendering functions
     // Set default date for reports
     reportDateInput.valueAsDate = new Date();
 
-    // Check for existing login state in localStorage
     const storedUser = localStorage.getItem('loggedInUser');
     if (storedUser) {
         try {
@@ -1633,12 +1680,52 @@ document.addEventListener('DOMContentLoaded', () => {
             mainContent.style.display = 'flex';
             applyRoleAccess(currentUserRole);
 
-            // Automatically click the appropriate navigation link based on role
+            // Determine the initial section to load based on role
+            let initialSectionId = '';
+            let initialNavLinkId = '';
+
             if (currentUserRole === 'admin') {
-                document.getElementById('nav-booking').click();
+                initialSectionId = 'booking-management';
+                initialNavLinkId = 'nav-booking';
             } else if (currentUserRole === 'housekeeper') {
-                document.getElementById('nav-housekeeping').click();
+                initialSectionId = 'housekeeping';
+                initialNavLinkId = 'nav-housekeeping';
             }
+
+            // Set the active navigation link and section
+            if (initialNavLinkId) {
+                document.getElementById(initialNavLinkId).classList.add('active');
+            }
+            if (initialSectionId) {
+                document.getElementById(initialSectionId).classList.add('active');
+                // Explicitly call the rendering function for the initial active section
+                if (initialSectionId === 'booking-management') {
+                    currentPage = 1;
+                    await renderBookings(currentPage);
+                } else if (initialSectionId === 'housekeeping') {
+                    await renderHousekeepingRooms();
+                } else if (initialSectionId === 'calendar-view') {
+                    await renderCalendar();
+                } else if (initialSectionId === 'reports') {
+                    reportDateInput.valueAsDate = new Date();
+                    await generateReport();
+                } else if (initialSectionId === 'service-reports') {
+                    const today = new Date();
+                    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                    serviceReportStartDate.value = firstDay.toISOString().split('T')[0];
+                    serviceReportEndDate.value = lastDay.toISOString().split('T')[0];
+                    await renderServiceReports();
+                } else if (initialSectionId === 'audit-logs') {
+                    const today = new Date();
+                    const thirtyDaysAgo = new Date(today);
+                    thirtyDaysAgo.setDate(today.getDate() - 30);
+                    auditLogStartDateFilter.value = thirtyDaysAgo.toISOString().split('T')[0];
+                    auditLogEndDateFilter.value = today.toISOString().split('T')[0];
+                    await renderAuditLogs();
+                }
+            }
+
         } catch (e) {
             console.error("Error parsing stored user data from localStorage:", e);
             localStorage.removeItem('loggedInUser'); // Clear invalid data
@@ -1651,21 +1738,17 @@ document.addEventListener('DOMContentLoaded', () => {
         loginContainer.style.display = 'flex';
     }
 
-
-    // Add event listeners for navigation
+    // Add event listeners for navigation (these will handle subsequent clicks)
     navLinks.forEach(link => {
         link.addEventListener('click', handleNavigation);
     });
 
-    // Initial renders will be triggered after successful login via handleNavigation
-    // No direct renderBookings() or renderHousekeepingRooms() here on DOMContentLoaded
-});
-
-// Add event listener for nights, total due, balance calculation on modal open
-bookingModal.addEventListener('input', (event) => {
-    if (event.target.id === 'checkIn' || event.target.id === 'checkOut') {
-        calculateNights();
-    } else if (event.target.id === 'amtPerNight' || event.target.id === 'amountPaid') {
-        calculateRoomFinancials();
-    }
+    // Add event listener for nights, total due, balance calculation on modal open
+    bookingModal.addEventListener('input', (event) => {
+        if (event.target.id === 'checkIn' || event.target.id === 'checkOut') {
+            calculateNights();
+        } else if (event.target.id === 'amtPerNight' || event.target.id === 'amountPaid') {
+            calculateRoomFinancials();
+        }
+    });
 });
