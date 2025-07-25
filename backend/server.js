@@ -235,7 +235,7 @@ app.get('/api/rooms/available', async (req, res) => {
 // Update room status (accessible by admin and housekeeper)
 app.put('/api/rooms/:id', async (req, res) => {
     const { id } = req.params; // This `id` is the custom room `id` (e.g., R101)
-    const { status, reason } = req.body; // Added reason for audit log
+    const { status, reason, username } = req.body; // Added reason and username for audit log
     try {
         const room = await Room.findOne({ id: id }); // Find by custom `id`
         if (!room) {
@@ -264,7 +264,7 @@ app.put('/api/rooms/:id', async (req, res) => {
         await room.save();
 
         // Audit Log
-        await addAuditLog('Room Status Updated', req.user ? req.user.username : 'System', {
+        await addAuditLog('Room Status Updated', username || 'System', { // Use username from body
             roomId: room.id,
             roomNumber: room.number,
             oldStatus: oldStatus,
@@ -320,7 +320,7 @@ app.get('/api/bookings/all', async (req, res) => {
 
 // Add a new booking (admin only)
 app.post('/api/bookings', async (req, res) => {
-    const newBookingData = req.body;
+    const { username, ...newBookingData } = req.body; // Extract username
     try {
         // Generate a unique ID for the new booking if not provided by client
         newBookingData.id = newBookingData.id || `BKG${Math.floor(Math.random() * 90000) + 10000}`; // Example: BKG12345
@@ -352,7 +352,7 @@ app.post('/api/bookings', async (req, res) => {
         await newBooking.save();
 
         // Audit Log
-        await addAuditLog('Booking Added', req.user ? req.user.username : 'System', {
+        await addAuditLog('Booking Added', username || 'System', { // Use username from body
             bookingId: newBooking.id,
             guestName: newBooking.name,
             roomNumber: newBooking.room,
@@ -369,7 +369,7 @@ app.post('/api/bookings', async (req, res) => {
 // Update an existing booking (admin only)
 app.put('/api/bookings/:id', async (req, res) => {
     const { id } = req.params; // This `id` refers to your custom `id` field (e.g., BKG001)
-    const updatedBookingData = req.body;
+    const { username, ...updatedBookingData } = req.body; // Extract username
     try {
         const oldBooking = await Booking.findOne({ id: id });
         if (!oldBooking) {
@@ -419,7 +419,7 @@ app.put('/api/bookings/:id', async (req, res) => {
         const updatedBooking = await Booking.findOneAndUpdate({ id: id }, updatedBookingData, { new: true });
 
         // Audit Log
-        await addAuditLog('Booking Updated', req.user ? req.user.username : 'System', {
+        await addAuditLog('Booking Updated', username || 'System', { // Use username from body
             bookingId: updatedBooking.id,
             guestName: updatedBooking.name,
             roomNumber: updatedBooking.room,
@@ -438,7 +438,7 @@ app.put('/api/bookings/:id', async (req, res) => {
 // Delete a booking (admin only)
 app.delete('/api/bookings/:id', async (req, res) => {
     const { id } = req.params;
-    const { reason } = req.body; // Expect reason for deletion
+    const { reason, username } = req.body; // Expect reason and username for deletion
     if (!reason) {
         return res.status(400).json({ message: 'Deletion reason is required.' });
     }
@@ -473,7 +473,7 @@ app.delete('/api/bookings/:id', async (req, res) => {
         await Booking.deleteOne({ id: id });
 
         // Audit Log
-        await addAuditLog('Booking Deleted', req.user ? req.user.username : 'System', {
+        await addAuditLog('Booking Deleted', username || 'System', { // Use username from body
             bookingId: bookingToDelete.id,
             guestName: bookingToDelete.name,
             roomNumber: bookingToDelete.room,
@@ -489,6 +489,7 @@ app.delete('/api/bookings/:id', async (req, res) => {
 // Checkout a booking (admin only, marks room as dirty)
 app.post('/api/bookings/:id/checkout', async (req, res) => {
     const { id } = req.params;
+    const { username } = req.body; // Extract username
     try {
         const booking = await Booking.findOne({ id: id });
         if (!booking) {
@@ -502,7 +503,7 @@ app.post('/api/bookings/:id/checkout', async (req, res) => {
         }
 
         // Audit Log
-        await addAuditLog('Booking Checked Out', req.user ? req.user.username : 'System', {
+        await addAuditLog('Booking Checked Out', username || 'System', { // Use username from body
             bookingId: booking.id,
             guestName: booking.name,
             roomNumber: booking.room
@@ -518,7 +519,7 @@ app.post('/api/bookings/:id/checkout', async (req, res) => {
 
 // Add a new incidental charge (admin only)
 app.post('/api/incidental-charges', async (req, res) => {
-    const { bookingId, bookingCustomId, guestName, roomNumber, type, description, amount } = req.body;
+    const { bookingId, bookingCustomId, guestName, roomNumber, type, description, amount, username } = req.body; // Extract username
     try {
         // Validate that bookingId (MongoDB _id) is a valid ObjectId
         if (!mongoose.Types.ObjectId.isValid(bookingId)) {
@@ -543,7 +544,7 @@ app.post('/api/incidental-charges', async (req, res) => {
         await newCharge.save();
 
         // Audit Log
-        await addAuditLog('Incidental Charge Added', req.user ? req.user.username : 'System', {
+        await addAuditLog('Incidental Charge Added', username || 'System', { // Use username from body
             chargeId: newCharge._id,
             bookingId: newCharge.bookingCustomId,
             type: newCharge.type,
@@ -585,7 +586,7 @@ app.get('/api/incidental-charges/booking-custom-id/:bookingCustomId', async (req
 // Delete an incidental charge
 app.delete('/api/incidental-charges/:chargeId', async (req, res) => {
     const { chargeId } = req.params;
-    const { reason } = req.body; // Expect reason for deletion
+    const { reason, username } = req.body; // Expect reason and username for deletion
     if (!reason) {
         return res.status(400).json({ message: 'Deletion reason is required.' });
     }
@@ -600,7 +601,7 @@ app.delete('/api/incidental-charges/:chargeId', async (req, res) => {
         }
 
         // Audit Log
-        await addAuditLog('Incidental Charge Deleted', req.user ? req.user.username : 'System', {
+        await addAuditLog('Incidental Charge Deleted', username || 'System', { // Use username from body
             chargeId: deletedCharge._id,
             bookingId: deletedCharge.bookingCustomId,
             type: deletedCharge.type,
@@ -617,6 +618,7 @@ app.delete('/api/incidental-charges/:chargeId', async (req, res) => {
 // Mark all unpaid incidental charges for a booking as paid
 app.put('/api/incidental-charges/pay-all/:bookingObjectId', async (req, res) => {
     const { bookingObjectId } = req.params;
+    const { username } = req.body; // Extract username
     try {
         if (!mongoose.Types.ObjectId.isValid(bookingObjectId)) {
             return res.status(400).json({ message: 'Invalid booking ID format.' });
@@ -627,7 +629,7 @@ app.put('/api/incidental-charges/pay-all/:bookingObjectId', async (req, res) => 
         );
 
         // Audit Log
-        await addAuditLog('Incidental Charges Marked Paid', req.user ? req.user.username : 'System', {
+        await addAuditLog('Incidental Charges Marked Paid', username || 'System', { // Use username from body
             bookingObjectId: bookingObjectId,
             modifiedCount: result.modifiedCount
         });
@@ -692,10 +694,10 @@ app.get('/api/audit-logs', async (req, res) => {
     const filter = {};
 
     if (user) {
-        filter.user = user;
+        filter.user = { $regex: user, $options: 'i' }; // Case-insensitive search
     }
     if (action) {
-        filter.action = action;
+        filter.action = { $regex: action, $options: 'i' }; // Case-insensitive search
     }
     if (startDate || endDate) {
         filter.timestamp = {};
@@ -710,7 +712,7 @@ app.get('/api/audit-logs', async (req, res) => {
     }
 
     try {
-        const logs = await AuditLog.find(filter).sort({ timestamp: -1 }).limit(100); // Limit to last 100 for performance
+        const logs = await AuditLog.find(filter).sort({ timestamp: -1 }).limit(200); // Increased limit for more logs
         res.json(logs);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching audit logs', error: error.message });
@@ -719,16 +721,15 @@ app.get('/api/audit-logs', async (req, res) => {
 
 // --- Channel Manager Placeholder API ---
 app.post('/api/channel-manager/sync', async (req, res) => {
-    // In a real application, this would involve:
-    // 1. Authenticating with an external booking engine API.
-    // 2. Fetching new bookings/updates from the external system.
-    // 3. Updating local database (Rooms, Bookings) based on external data.
-    // 4. Pushing local availability/booking changes to the external system.
-    // 5. Handling conflicts and errors.
-
+    const { username } = req.body; // Extract username
     console.log('Simulating channel manager sync...');
     // For demonstration, we'll just return a success message after a delay
-    setTimeout(() => {
+    setTimeout(async () => {
+        // Audit Log
+        await addAuditLog('Channel Manager Sync', username || 'System', {
+            status: 'Simulated Success',
+            timestamp: new Date().toISOString()
+        });
         res.json({ message: 'Channel manager sync simulated successfully! (No actual external integration)' });
     }, 1500); // Simulate network delay
 });
@@ -747,12 +748,12 @@ app.listen(port, () => {
     console.log(`- GET /api/bookings/all (for calendar)`);
     console.log(`- POST /api/bookings`);
     console.log(`- PUT /api/bookings/:id`);
-    console.log(`- DELETE /api/bookings/:id (requires reason in body)`);
+    console.log(`- DELETE /api/bookings/:id (requires reason and username in body)`);
     console.log(`- POST /api/bookings/:id/checkout`);
     console.log(`- POST /api/incidental-charges`);
     console.log(`- GET /api/incidental-charges/booking/:bookingObjectId (by MongoDB _id)`);
     console.log(`- GET /api/incidental-charges/booking-custom-id/:bookingCustomId (by custom ID)`);
-    console.log(`- DELETE /api/incidental-charges/:chargeId (requires reason in body)`);
+    console.log(`- DELETE /api/incidental-charges/:chargeId (requires reason and username in body)`);
     console.log(`- PUT /api/incidental-charges/pay-all/:bookingObjectId`);
     console.log(`- GET /api/reports/services?startDate={date}&endDate={date}`);
     console.log(`- GET /api/audit-logs?user={username}&action={type}&startDate={date}&endDate={date}`);
