@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Linkage Interface</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome CDN for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta8PUbWsyM4QepqaCwFcwjMxLkMWSB/MUPg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- Google Font - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh; /* Ensure body takes full viewport height */
+        }
+        main {
+            flex-grow: 1; /* Allow main content to take available space */
+            display: flex;
+            align-items: center; /* Center vertically */
+            justify-content: center; /* Center horizontally */
+            padding: 1rem; /* Add some padding around the main content */
+        }
+        .card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-5px); /* Lift card on hover */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15); /* Stronger shadow on hover */
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Header Section -->
+    <header class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 shadow-lg rounded-b-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-bold">
+                <i class="fas fa-link mr-3"></i>System Hub
+            </h1>
+            <!-- You can add navigation or user info here if needed -->
+        </div>
+    </header>
+
+    <!-- Main Content Section - System Cards -->
+    <main>
+        <div class="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 p-4 max-w-5xl">
+
+            <!-- Card 1: Bar & Restaurant Accounting -->
+            <div id="accounting-card" class="card bg-white p-8 rounded-xl shadow-md flex flex-col items-center justify-center text-center cursor-pointer hover:bg-blue-50">
+                <i class="fas fa-chart-column text-6xl text-blue-600 mb-4"></i>
+                <span class="text-xl font-semibold text-gray-700">Accounting</span>
+            </div>
+
+            <!-- Card 2: Kitchen Management -->
+            <div id="kitchen-card" class="card bg-white p-8 rounded-xl shadow-md flex flex-col items-center justify-center text-center cursor-pointer hover:bg-blue-50">
+                <i class="fas fa-plate-wheat text-6xl text-green-600 mb-4"></i>
+                <span class="text-xl font-semibold text-gray-700">Kitchen</span>
+            </div>
+
+            <!-- Card 3: Booking Engine with PMS -->
+            <div id="booking-card" class="card bg-white p-8 rounded-xl shadow-md flex flex-col items-center justify-center text-center cursor-pointer hover:bg-blue-50">
+                <i class="fas fa-calendar-check text-6xl text-purple-600 mb-4"></i>
+                <span class="text-xl font-semibold text-gray-700">Booking & PMS</span>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer Section -->
+    <footer class="bg-gray-800 text-white p-6 mt-auto shadow-inner rounded-t-lg">
+        <div class="container mx-auto text-center text-sm">
+            &copy; <span id="current-year"></span> Your Systems. All rights reserved.
+        </div>
+    </footer>
+
+    <script>
+        // Set current year in the footer
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+
+        // Get card elements
+        const accountingCard = document.getElementById('accounting-card');
+        const kitchenCard = document.getElementById('kitchen-card');
+        const bookingCard = document.getElementById('booking-card');
+
+        // Add click event listeners to each card
+        accountingCard.addEventListener('click', () => {
+            // In a real application, you would redirect or load content here
+            console.log('Accounting Card Clicked!');
+            alert('Navigating to Bar & Restaurant Accounting System...');
+          window.location.href = 'https://stirring-pony-fe2347.netlify.app';
+            // Example: window.location.href = 'your_accounting_system_url';
+        });
+
+        kitchenCard.addEventListener('click', () => {
+            console.log('Kitchen Card Clicked!');
+            alert('Navigating to Kitchen Management System...');
+          window.location.href = 'your_booking_system_url';
+            // Example: window.location.href = 'https://fanciful-concha-1af413.netlify.app';
+        });
+
+        bookingCard.addEventListener('click', () => {
+            console.log('Booking Card Clicked!');
+            alert('Navigating to Booking Engine & PMS...');
+          window.location.href = 'https://elegant-pasca-cea136.netlify.app/frontend/home4.html';
+            // Example: window.location.href = 'your_booking_system_url';
+        });
+
+        // Simple alert function to replace window.alert
+        function alert(message) {
+            const alertBox = document.createElement('div');
+            alertBox.className = 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50';
+            alertBox.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+                    <p class="text-lg font-semibold mb-4">${message}</p>
+                    <button id="alert-ok-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                        OK
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(alertBox);
+
+            document.getElementById('alert-ok-button').addEventListener('click', () => {
+                document.body.removeChild(alertBox);
+            });
+        }
+    </script>
+</body>
+</html>
