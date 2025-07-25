@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Your Stay</title>
+    <style>
+        /* Basic styles for the widget to make it look decent on its own */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f8f8;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .booking-widget-container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 25px;
+            font-size: 2em;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            text-align: center;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        .input-group input[type="date"],
+        .input-group input[type="number"],
+        .input-group input[type="text"],
+        .input-group select {
+            width: calc(100% - 24px); /* Account for padding */
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1em;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .input-group input[type="date"]:focus,
+        .input-group input[type="number"]:focus,
+        .input-group input[type="text"]:focus,
+        .input-group select:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 8px rgba(52, 152, 219, 0.2);
+            outline: none;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .message-box {
+            background-color: #e0f7fa;
+            border: 1px solid #b2ebf2;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            color: #00796b;
+            font-weight: bold;
+            display: none; /* Hidden by default */
+        }
+
+        .error-message {
+            background-color: #ffebee;
+            border: 1px solid #ffcdd2;
+            color: #c62828;
+        }
+
+        .success-message {
+            background-color: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            color: #2e7d32;
+        }
+
+        .availability-results {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px dashed #ccc;
+        }
+
+        .availability-results h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .room-type-card {
+            background-color: #f0f8ff; /* Light blue background */
+            border: 1px solid #add8e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .room-type-card h4 {
+            margin-top: 0;
+            margin-bottom: 5px;
+            color: #3498db;
+            font-size: 1.2em;
+        }
+
+        .room-type-card p {
+            margin: 0;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .room-type-card .available-rooms-list {
+            font-weight: bold;
+            color: #28a745; /* Green for available rooms */
+        }
+
+        .room-type-card button {
+            margin-top: 10px;
+        }
+
+        .guest-details-form {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px dashed #ccc;
+            display: none; /* Hidden until a room type is selected */
+        }
+
+        .guest-details-form h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .guest-details-form .form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        @media (min-width: 480px) {
+            .guest-details-form .form-grid {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="booking-widget-container">
+        <h2>Book Your Stay</h2>
+
+        <div id="bookingFormSection">
+            <div class="input-group">
+                <label for="checkInDate">Check-in Date:</label>
+                <input type="date" id="checkInDate" required>
+            </div>
+            <div class="input-group">
+                <label for="checkOutDate">Check-out Date:</label>
+                <input type="date" id="checkOutDate" required>
+            </div>
+            <div class="input-group">
+                <label for="roomTypeSelect">Room Type:</label>
+                <select id="roomTypeSelect">
+                    <option value="Any">Any Type</option>
+                    <!-- Room types will be loaded here by JS -->
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="numberOfPeople">Number of Guests:</label>
+                <input type="number" id="numberOfPeople" min="1" value="1" required>
+            </div>
+            <button class="btn btn-primary" id="checkAvailabilityBtn">Check Availability</button>
+        </div>
+
+        <div id="availabilityResults" class="availability-results" style="display: none;">
+            <h3>Available Rooms</h3>
+            <div id="availableRoomTypesContainer">
+                <!-- Available room types will be displayed here -->
+            </div>
+            <div id="noAvailabilityMessage" class="message-box error-message" style="display: none;">
+                No rooms available for the selected criteria. Please adjust your dates or room type.
+            </div>
+        </div>
+
+        <div id="guestDetailsForm" class="guest-details-form">
+            <h3>Guest Details for <span id="selectedRoomTypeDisplay"></span> (Room <span id="selectedRoomNumberDisplay"></span>)</h3>
+            <form id="publicBookingForm">
+                <input type="hidden" id="bookingRoomNumber">
+                <input type="hidden" id="bookingCheckIn">
+                <input type="hidden" id="bookingCheckOut">
+                <input type="hidden" id="bookingNights">
+                <input type="hidden" id="bookingAmtPerNight">
+                <input type="hidden" id="bookingTotalDue">
+                <input type="hidden" id="bookingPeople">
+
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label for="guestName">Full Name:</label>
+                        <input type="text" id="guestName" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="guestNationality">Nationality:</label>
+                        <input type="text" id="guestNationality">
+                    </div>
+                    <div class="input-group">
+                        <label for="guestAddress">Address:</label>
+                        <input type="text" id="guestAddress">
+                    </div>
+                    <div class="input-group">
+                        <label for="guestPhoneNo">Phone Number:</label>
+                        <input type="text" id="guestPhoneNo" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="guestNationalIdNo">National ID No. (Optional):</label>
+                        <input type="text" id="guestNationalIdNo">
+                    </div>
+                </div>
+                <p>Total Due: <strong id="finalTotalDue">0.00</strong></p>
+                <button class="btn btn-primary" type="submit">Confirm Booking</button>
+                <button class="btn btn-secondary" type="button" id="cancelBookingBtn">Cancel</button>
+            </form>
+        </div>
+
+        <div id="publicMessageBox" class="message-box" style="display: none;">
+            <h3 id="publicMessageBoxTitle"></h3>
+            <p id="publicMessageBoxContent"></p>
+            <button onclick="closePublicMessageBox()" class="btn btn-primary">OK</button>
+        </div>
+    </div>
+
+    <script src="public_booking_widget.js"></script>
+</body>
+</html>
