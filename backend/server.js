@@ -750,6 +750,126 @@ app.post('/api/channel-manager/sync', async (req, res) => {
 });
 
 
+// --- NEW: Public Booking Widget API Endpoints ---
+
+// Get all unique room types
+app.get('/api/public/room-types', async (req, res) => {
+    try {
+        const roomTypes = await Room.distinct('type');
+        res.json(roomTypes);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching room types', error: error.message });
+    }
+});
+
+// Get available rooms by type for a specific date range
+app.get('/api/public/rooms/available', async (req, res) => {
+    const { checkIn, checkOut, roomType, people } = req.query;
+
+    if (!checkIn || !checkOut) {
+        return res.status(400).json({ message: 'Check-in and check-out dates are required.' });
+    }
+
+    try {
+        // Find all bookings that overlap with the requested period
+        const conflictingBookings = await Booking.find({
+            checkIn: { $lt: checkOut },
+            checkOut: { $gt: checkIn }
+        });
+
+        // Get the room numbers of the conflicting bookings
+        const bookedRoomNumbers = conflictingBookings.map(booking => booking.room);
+
+        let query = {
+            status: 'clean', // Only consider clean rooms initially
+            number: { $nin: bookedRoomNumbers } // Exclude already booked rooms
+        };
+
+        if (roomType && roomType !== 'Any') { // 'Any' type means no specific type filter
+            query.type = roomType;
+        }
+
+        // Note: For 'people' capacity, you'd typically have a 'capacity' field in your Room schema
+        // For now, we'll just return rooms that match type and availability.
+        // If 'people' was a hard requirement, you'd add:
+        // query.capacity = { $gte: parseInt(people) }; (assuming 'capacity' field in Room schema)
+
+        const availableRooms = await Room.find(query);
+
+        // Group by room type and return room numbers
+        const availableRoomsByType = {};
+        availableRooms.forEach(room => {
+            if (!availableRoomsByType[room.type]) {
+                availableRoomsByType[room.type] = [];
+            }
+            availableRoomsByType[room.type].push(room.number);
+        });
+
+        res.json(availableRoomsByType);
+    } catch (error) {
+        res.status(500).json({ message: 'Error checking public room availability', error: error.message });
+    }
+});
+
+// Public endpoint to add a new booking (from external website)
+app.post('/api/public/bookings', async (req, res) => {
+    const { name, room, checkIn, checkOut, nights, amtPerNight, totalDue, amountPaid, balance, paymentStatus, people, nationality, address, phoneNo, nationalIdNo } = req.body;
+
+    // Basic validation
+    if (!name || !room || !checkIn || !checkOut || !nights || !amtPerNight || !totalDue || !people) {
+        return res.status(400).json({ message: 'Missing required booking fields.' });
+    }
+
+    try {
+        // Generate a unique ID for the new booking
+        const newBookingId = `WEB${Math.floor(Math.random() * 90000) + 10000}`; // Example: WEB12345
+
+        const roomDoc = await Room.findOne({ number: room });
+        if (!roomDoc) {
+            return res.status(404).json({ message: 'Selected room not found.' });
+        }
+
+        // Re-check for conflicting bookings for the chosen room and dates
+        const conflictingBooking = await Booking.findOne({
+            room: room,
+            $or: [
+                { checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } }
+            ]
+        });
+
+        if (conflictingBooking) {
+            return res.status(400).json({ message: `Room ${room} is no longer available for the selected period.` });
+        }
+
+        // Update room status to 'blocked'
+        roomDoc.status = 'blocked';
+        await roomDoc.save();
+
+        const newBooking = new Booking({
+            id: newBookingId,
+            name, room, checkIn, checkOut, nights, amtPerNight,
+            totalDue, amountPaid, balance, paymentStatus, people, nationality,
+            address, phoneNo, nationalIdNo
+        });
+        await newBooking.save();
+
+        // Audit Log for public booking
+        await addAuditLog('Public Booking Created', 'Public User', {
+            bookingId: newBooking.id,
+            guestName: newBooking.name,
+            roomNumber: newBooking.room,
+            checkIn: newBooking.checkIn,
+            checkOut: newBooking.checkOut
+        });
+
+        res.status(201).json({ message: 'Booking confirmed successfully!', booking: newBooking });
+    } catch (error) {
+        console.error('Error adding public booking:', error);
+        res.status(500).json({ message: 'Error confirming booking', error: error.message });
+    }
+});
+
+
 // --- 8. Start the Server ---
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
@@ -774,4 +894,8 @@ app.listen(port, () => {
     console.log(`- GET /api/reports/services?startDate={date}&endDate={date}`);
     console.log(`- GET /api/audit-logs?user={username}&action={type}&startDate={date}&endDate={date}`);
     console.log(`- POST /api/channel-manager/sync (simulated)`);
+    console.log(`--- NEW PUBLIC BOOKING ENDPOINTS ---`);
+    console.log(`- GET /api/public/room-types`);
+    console.log(`- GET /api/public/rooms/available?checkIn={date}&checkOut={date}&roomType={type}&people={num}`);
+    console.log(`- POST /api/public/bookings`);
 });
