@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hotel Management System</title>
-    <link rel="stylesheet" href="styles3.css">
+    <link rel="stylesheet" href="styles2.css">
     <!-- Font Awesome for icons (e.g., print icon) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -103,8 +103,18 @@
                     <h3 id="calendarMonthYear"></h3>
                     <button id="nextMonthBtn" class="btn btn-secondary">Next Month</button>
                 </div>
-                <div id="calendarGrid" class="calendar-grid">
-                    <!-- Calendar will be generated here by JavaScript -->
+                <div class="calendar-main-container"> <!-- New wrapper for calendar grid -->
+                    <div id="calendarRoomsColumn" class="calendar-rooms-column">
+                        <!-- Room headers will be inserted here by JavaScript -->
+                    </div>
+                    <div class="calendar-scroll-container"> <!-- New scrollable container -->
+                        <div id="calendarDatesHeader" class="calendar-dates-header">
+                            <!-- Date headers will be inserted here by JavaScript -->
+                        </div>
+                        <div id="calendarBodyGrid" class="calendar-body-grid">
+                            <!-- Calendar cells and bookings will be inserted here by JavaScript -->
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -427,6 +437,6 @@
         <button onclick="closeMessageBox()" class="btn btn-primary">OK</button>
     </div>
 
-    <script src="script3.js"></script>
+    <script src="script2.js"></script>
 </body>
 </html>
