@@ -93,6 +93,15 @@ const incidentalChargeSchema = new mongoose.Schema({
 });
 const IncidentalCharge = mongoose.model('IncidentalCharge', incidentalChargeSchema);
 
+// Audit Log Schema
+const auditLogSchema = new mongoose.Schema({
+    timestamp: { type: Date, default: Date.now },
+    action: { type: String, required: true }, // e.g., 'Booking Added', 'Room Status Updated', 'Booking Deleted'
+    user: { type: String, required: true }, // Username of the user who performed the action
+    details: { type: mongoose.Schema.Types.Mixed } // Flexible field for storing relevant data (e.g., { bookingId: 'BKG001', oldStatus: 'clean', newStatus: 'dirty', reason: '...' })
+});
+const AuditLog = mongoose.model('AuditLog', auditLogSchema);
+
 
 // --- 6. Hardcoded Users for Authentication (Highly Insecure for Production!) ---
 const users = [
@@ -117,11 +126,33 @@ function authenticateUser(req, res, next) {
 // Middleware to authorize user based on role
 function authorizeRole(requiredRole) {
     return (req, res, next) => {
+        // For simplicity, assuming req.user is set by authenticateUser middleware
+        // In a real app, this would check a token/session
         if (!req.user || req.user.role !== requiredRole) {
             return res.status(403).json({ message: 'Access denied. Insufficient permissions.' });
         }
         next();
     };
+}
+
+/**
+ * Helper function to add an entry to the audit log.
+ * @param {string} action - The action performed (e.g., "Booking Created").
+ * @param {string} username - The username of the actor.
+ * @param {object} [details={}] - Additional details to store.
+ */
+async function addAuditLog(action, username, details = {}) {
+    try {
+        const log = new AuditLog({
+            action,
+            user: username,
+            details: details
+        });
+        await log.save();
+        console.log(`Audit Logged: ${action} by ${username}`);
+    } catch (error) {
+        console.error('Error adding audit log:', error);
+    }
 }
 
 // --- 7. API Routes ---
@@ -204,12 +235,14 @@ app.get('/api/rooms/available', async (req, res) => {
 // Update room status (accessible by admin and housekeeper)
 app.put('/api/rooms/:id', async (req, res) => {
     const { id } = req.params; // This `id` is the custom room `id` (e.g., R101)
-    const { status } = req.body;
+    const { status, reason } = req.body; // Added reason for audit log
     try {
         const room = await Room.findOne({ id: id }); // Find by custom `id`
         if (!room) {
             return res.status(404).json({ message: 'Room not found' });
         }
+
+        const oldStatus = room.status;
 
         // Prevent changing status if room is currently blocked by an *active* reservation
         // This check ensures that a room currently occupied cannot be manually set to 'clean' or 'under-maintenance'
@@ -229,6 +262,16 @@ app.put('/api/rooms/:id', async (req, res) => {
 
         room.status = status;
         await room.save();
+
+        // Audit Log
+        await addAuditLog('Room Status Updated', req.user ? req.user.username : 'System', {
+            roomId: room.id,
+            roomNumber: room.number,
+            oldStatus: oldStatus,
+            newStatus: status,
+            reason: reason || 'N/A' // Include reason if provided
+        });
+
         res.json({ message: 'Room status updated successfully', room });
     } catch (error) {
         res.status(500).json({ message: 'Error updating room status', error: error.message });
@@ -248,9 +291,9 @@ app.get('/api/bookings', async (req, res) => {
         const totalPages = Math.ceil(totalCount / limit);
 
         const bookings = await Booking.find({})
-                                      .skip(skip)
-                                      .limit(limit)
-                                      .sort({ checkIn: -1 }); // Sort by check-in date descending
+                                    .skip(skip)
+                                    .limit(limit)
+                                    .sort({ checkIn: -1 }); // Sort by check-in date descending
 
         res.json({
             bookings,
@@ -263,6 +306,17 @@ app.get('/api/bookings', async (req, res) => {
         res.status(500).json({ message: 'Error fetching bookings', error: error.message });
     }
 });
+
+// Get all bookings (for calendar view and reports, no pagination)
+app.get('/api/bookings/all', async (req, res) => {
+    try {
+        const bookings = await Booking.find({}).sort({ checkIn: 1 });
+        res.json(bookings);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching all bookings', error: error.message });
+    }
+});
+
 
 // Add a new booking (admin only)
 app.post('/api/bookings', async (req, res) => {
@@ -280,7 +334,7 @@ app.post('/api/bookings', async (req, res) => {
         const conflictingBooking = await Booking.findOne({
             room: newBookingData.room,
             $or: [
-                // New booking starts within an existing booking
+                // New booking starts within an existing booking OR existing booking starts within new booking
                 { checkIn: { $lt: newBookingData.checkOut }, checkOut: { $gt: newBookingData.checkIn } }
             ]
         });
@@ -296,6 +350,16 @@ app.post('/api/bookings', async (req, res) => {
 
         const newBooking = new Booking(newBookingData);
         await newBooking.save();
+
+        // Audit Log
+        await addAuditLog('Booking Added', req.user ? req.user.username : 'System', {
+            bookingId: newBooking.id,
+            guestName: newBooking.name,
+            roomNumber: newBooking.room,
+            checkIn: newBooking.checkIn,
+            checkOut: newBooking.checkOut
+        });
+
         res.status(201).json({ message: 'Booking added successfully!', booking: newBooking });
     } catch (error) {
         res.status(500).json({ message: 'Error adding booking', error: error.message });
@@ -353,6 +417,18 @@ app.put('/api/bookings/:id', async (req, res) => {
         }
 
         const updatedBooking = await Booking.findOneAndUpdate({ id: id }, updatedBookingData, { new: true });
+
+        // Audit Log
+        await addAuditLog('Booking Updated', req.user ? req.user.username : 'System', {
+            bookingId: updatedBooking.id,
+            guestName: updatedBooking.name,
+            roomNumber: updatedBooking.room,
+            changes: {
+                old: { room: oldBooking.room, checkIn: oldBooking.checkIn, checkOut: oldBooking.checkOut, paymentStatus: oldBooking.paymentStatus },
+                new: { room: updatedBooking.room, checkIn: updatedBooking.checkIn, checkOut: updatedBooking.checkOut, paymentStatus: updatedBooking.paymentStatus }
+            }
+        });
+
         res.json({ message: 'Booking updated successfully!', booking: updatedBooking });
     } catch (error) {
         res.status(500).json({ message: 'Error updating booking', error: error.message });
@@ -362,6 +438,11 @@ app.put('/api/bookings/:id', async (req, res) => {
 // Delete a booking (admin only)
 app.delete('/api/bookings/:id', async (req, res) => {
     const { id } = req.params;
+    const { reason } = req.body; // Expect reason for deletion
+    if (!reason) {
+        return res.status(400).json({ message: 'Deletion reason is required.' });
+    }
+
     try {
         const bookingToDelete = await Booking.findOne({ id: id });
         if (!bookingToDelete) {
@@ -390,7 +471,16 @@ app.delete('/api/bookings/:id', async (req, res) => {
         await IncidentalCharge.deleteMany({ bookingId: bookingToDelete._id });
 
         await Booking.deleteOne({ id: id });
-        res.json({ message: 'Booking deleted successfully!' });
+
+        // Audit Log
+        await addAuditLog('Booking Deleted', req.user ? req.user.username : 'System', {
+            bookingId: bookingToDelete.id,
+            guestName: bookingToDelete.name,
+            roomNumber: bookingToDelete.room,
+            reason: reason
+        });
+
+        res.json({ message: 'Booking and associated charges deleted successfully!' });
     } catch (error) {
         res.status(500).json({ message: 'Error deleting booking', error: error.message });
     }
@@ -411,9 +501,12 @@ app.post('/api/bookings/:id/checkout', async (req, res) => {
             await room.save();
         }
 
-        // Optionally, you might want to mark the booking as 'checked-out' or similar
-        // booking.status = 'Checked Out';
-        // await booking.save();
+        // Audit Log
+        await addAuditLog('Booking Checked Out', req.user ? req.user.username : 'System', {
+            bookingId: booking.id,
+            guestName: booking.name,
+            roomNumber: booking.room
+        });
 
         res.json({ message: `Room ${booking.room} marked as dirty upon checkout.` });
     } catch (error) {
@@ -448,6 +541,15 @@ app.post('/api/incidental-charges', async (req, res) => {
             amount
         });
         await newCharge.save();
+
+        // Audit Log
+        await addAuditLog('Incidental Charge Added', req.user ? req.user.username : 'System', {
+            chargeId: newCharge._id,
+            bookingId: newCharge.bookingCustomId,
+            type: newCharge.type,
+            amount: newCharge.amount
+        });
+
         res.status(201).json({ message: 'Incidental charge added successfully!', charge: newCharge });
     } catch (error) {
         res.status(500).json({ message: 'Error adding incidental charge', error: error.message });
@@ -483,6 +585,11 @@ app.get('/api/incidental-charges/booking-custom-id/:bookingCustomId', async (req
 // Delete an incidental charge
 app.delete('/api/incidental-charges/:chargeId', async (req, res) => {
     const { chargeId } = req.params;
+    const { reason } = req.body; // Expect reason for deletion
+    if (!reason) {
+        return res.status(400).json({ message: 'Deletion reason is required.' });
+    }
+
     try {
         if (!mongoose.Types.ObjectId.isValid(chargeId)) {
             return res.status(400).json({ message: 'Invalid charge ID format.' });
@@ -491,6 +598,16 @@ app.delete('/api/incidental-charges/:chargeId', async (req, res) => {
         if (!deletedCharge) {
             return res.status(404).json({ message: 'Incidental charge not found.' });
         }
+
+        // Audit Log
+        await addAuditLog('Incidental Charge Deleted', req.user ? req.user.username : 'System', {
+            chargeId: deletedCharge._id,
+            bookingId: deletedCharge.bookingCustomId,
+            type: deletedCharge.type,
+            amount: deletedCharge.amount,
+            reason: reason
+        });
+
         res.json({ message: 'Incidental charge deleted successfully!' });
     } catch (error) {
         res.status(500).json({ message: 'Error deleting incidental charge', error: error.message });
@@ -508,10 +625,112 @@ app.put('/api/incidental-charges/pay-all/:bookingObjectId', async (req, res) => 
             { bookingId: bookingObjectId, isPaid: false },
             { $set: { isPaid: true } }
         );
+
+        // Audit Log
+        await addAuditLog('Incidental Charges Marked Paid', req.user ? req.user.username : 'System', {
+            bookingObjectId: bookingObjectId,
+            modifiedCount: result.modifiedCount
+        });
+
         res.json({ message: `${result.modifiedCount} charges marked as paid.`, modifiedCount: result.modifiedCount });
     } catch (error) {
         res.status(500).json({ message: 'Error marking charges as paid', error: error.message });
     }
+});
+
+// --- Reports API ---
+// Get aggregated service reports by date range
+app.get('/api/reports/services', async (req, res) => {
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+        return res.status(400).json({ message: 'Start date and end date are required for service reports.' });
+    }
+
+    try {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999); // Include the entire end day
+
+        const serviceReports = await IncidentalCharge.aggregate([
+            {
+                $match: {
+                    date: { $gte: start, $lte: end }
+                }
+            },
+            {
+                $group: {
+                    _id: '$type', // Group by charge type
+                    totalAmount: { $sum: '$amount' },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $project: {
+                    _id: 0, // Exclude _id
+                    serviceType: '$_id',
+                    totalAmount: { $round: ['$totalAmount', 2] }, // Round to 2 decimal places
+                    count: 1
+                }
+            },
+            {
+                $sort: { serviceType: 1 } // Sort by service type
+            }
+        ]);
+
+        res.json(serviceReports);
+    } catch (error) {
+        res.status(500).json({ message: 'Error generating service report', error: error.message });
+    }
+});
+
+
+// --- Audit Logs API ---
+// Get all audit logs with optional filters (e.g., by user, action type, date range)
+app.get('/api/audit-logs', async (req, res) => {
+    const { user, action, startDate, endDate } = req.query;
+    const filter = {};
+
+    if (user) {
+        filter.user = user;
+    }
+    if (action) {
+        filter.action = action;
+    }
+    if (startDate || endDate) {
+        filter.timestamp = {};
+        if (startDate) {
+            filter.timestamp.$gte = new Date(startDate);
+        }
+        if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999); // Include the entire end day
+            filter.timestamp.$lte = end;
+        }
+    }
+
+    try {
+        const logs = await AuditLog.find(filter).sort({ timestamp: -1 }).limit(100); // Limit to last 100 for performance
+        res.json(logs);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching audit logs', error: error.message });
+    }
+});
+
+// --- Channel Manager Placeholder API ---
+app.post('/api/channel-manager/sync', async (req, res) => {
+    // In a real application, this would involve:
+    // 1. Authenticating with an external booking engine API.
+    // 2. Fetching new bookings/updates from the external system.
+    // 3. Updating local database (Rooms, Bookings) based on external data.
+    // 4. Pushing local availability/booking changes to the external system.
+    // 5. Handling conflicts and errors.
+
+    console.log('Simulating channel manager sync...');
+    // For demonstration, we'll just return a success message after a delay
+    setTimeout(() => {
+        res.json({ message: 'Channel manager sync simulated successfully! (No actual external integration)' });
+    }, 1500); // Simulate network delay
 });
 
 
@@ -525,13 +744,17 @@ app.listen(port, () => {
     console.log(`- GET /api/rooms/available?checkIn={date}&checkOut={date}`);
     console.log(`- PUT /api/rooms/:id`);
     console.log(`- GET /api/bookings?page={num}&limit={num}`);
+    console.log(`- GET /api/bookings/all (for calendar)`);
     console.log(`- POST /api/bookings`);
     console.log(`- PUT /api/bookings/:id`);
-    console.log(`- DELETE /api/bookings/:id`);
+    console.log(`- DELETE /api/bookings/:id (requires reason in body)`);
     console.log(`- POST /api/bookings/:id/checkout`);
     console.log(`- POST /api/incidental-charges`);
     console.log(`- GET /api/incidental-charges/booking/:bookingObjectId (by MongoDB _id)`);
     console.log(`- GET /api/incidental-charges/booking-custom-id/:bookingCustomId (by custom ID)`);
-    console.log(`- DELETE /api/incidental-charges/:chargeId`);
+    console.log(`- DELETE /api/incidental-charges/:chargeId (requires reason in body)`);
     console.log(`- PUT /api/incidental-charges/pay-all/:bookingObjectId`);
+    console.log(`- GET /api/reports/services?startDate={date}&endDate={date}`);
+    console.log(`- GET /api/audit-logs?user={username}&action={type}&startDate={date}&endDate={date}`);
+    console.log(`- POST /api/channel-manager/sync (simulated)`);
 });
