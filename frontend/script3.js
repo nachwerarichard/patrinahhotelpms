@@ -309,6 +309,14 @@ loginForm.addEventListener('submit', async function(event) {
             // Initialize rooms in backend if empty (run once)
             await fetch(`${API_BASE_URL}/rooms/init`, { method: 'POST' });
 
+            // Log successful login
+            await fetch(`${API_BASE_URL}/audit-log/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'User Logged In', user: currentUsername, details: { role: currentUserRole } })
+            });
+
+
             // Automatically click the appropriate navigation link based on role
             if (currentUserRole === 'admin') {
                 document.getElementById('nav-booking').click();
@@ -317,14 +325,39 @@ loginForm.addEventListener('submit', async function(event) {
             }
         } else {
             showLoginMessageBox('Login Failed', data.message || 'Invalid username or password.');
+            // Optionally log failed login attempts (be careful with sensitive data)
+            await fetch(`${API_BASE_URL}/audit-log/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'Login Failed', user: username, details: { message: data.message || 'Invalid credentials' } })
+            });
         }
     } catch (error) {
         console.error('Login error:', error);
         showLoginMessageBox('Login Error', 'Could not connect to the server. Please try again later.');
+        await fetch(`${API_BASE_URL}/audit-log/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'Login Error (Frontend)', user: username, details: { error: error.message } })
+        });
     }
 });
 
-logoutBtn.addEventListener('click', () => {
+logoutBtn.addEventListener('click', async () => {
+    // Log logout action before clearing user data
+    if (currentUsername) {
+        try {
+            await fetch(`${API_BASE_URL}/audit-log/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'User Logged Out', user: currentUsername })
+            });
+        } catch (error) {
+            console.error('Error logging out action:', error);
+            // Don't block logout if audit log fails
+        }
+    }
+
     currentUserRole = null;
     currentUsername = null; // Clear username on logout
     loginContainer.style.display = 'flex';
