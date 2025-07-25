@@ -1,5 +1,3 @@
-// script2.js - Frontend JavaScript for Hotel Management System
-
 const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api'; // Your Render backend URL
 
 // --- Data (will be fetched from backend) ---
@@ -97,7 +95,9 @@ let pendingDeletionAction = null; // Stores the function to call if deletion is 
 const calendarMonthYear = document.getElementById('calendarMonthYear');
 const prevMonthBtn = document.getElementById('prevMonthBtn');
 const nextMonthBtn = document.getElementById('nextMonthBtn');
-const calendarGrid = document.getElementById('calendarGrid'); // Now a single grid container
+const calendarRoomsColumn = document.getElementById('calendarRoomsColumn'); // New element
+const calendarDatesHeader = document.getElementById('calendarDatesHeader'); // New element
+const calendarBodyGrid = document.getElementById('calendarBodyGrid'); // New element
 
 
 // New: Service Reports elements
@@ -300,10 +300,6 @@ loginForm.addEventListener('submit', async function(event) {
         if (response.ok) {
             currentUserRole = data.role;
             currentUsername = username; // Store the logged-in username
-
-            // Store login state in localStorage
-            localStorage.setItem('loggedInUser', JSON.stringify({ username: currentUsername, role: currentUserRole }));
-
             loginContainer.style.display = 'none';
             mainContent.style.display = 'flex';
             applyRoleAccess(currentUserRole);
@@ -362,7 +358,6 @@ logoutBtn.addEventListener('click', async () => {
 
     currentUserRole = null;
     currentUsername = null; // Clear username on logout
-    localStorage.removeItem('loggedInUser'); // Clear login state from localStorage
     loginContainer.style.display = 'flex';
     mainContent.style.display = 'none';
     usernameInput.value = '';
@@ -1365,7 +1360,9 @@ async function performRoomStatusUpdate(roomId, newStatus, reason = null) {
  * Renders the calendar view for the current month.
  */
 async function renderCalendar() {
-    calendarGrid.innerHTML = ''; // Clear existing calendar grid
+    calendarRoomsColumn.innerHTML = '<div class="calendar-cell calendar-room-header">Room</div>'; // Clear and add header
+    calendarDatesHeader.innerHTML = ''; // Clear existing dates
+    calendarBodyGrid.innerHTML = ''; // Clear existing calendar body
 
     const year = currentCalendarDate.getFullYear();
     const month = currentCalendarDate.getMonth(); // 0-indexed
@@ -1396,46 +1393,39 @@ async function renderCalendar() {
 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    // Set up the main calendarGrid as a CSS Grid
-    // First column for room names, then one column for each day of the month
-    calendarGrid.style.gridTemplateColumns = `120px repeat(${daysInMonth}, 1fr)`;
-    // First row for date headers, then one row for each room
-    calendarGrid.style.gridTemplateRows = `60px repeat(${allRooms.length}, 1fr)`;
-
-    // 1. Add the empty top-left corner cell
-    const cornerCell = document.createElement('div');
-    cornerCell.classList.add('calendar-cell', 'calendar-corner-header');
-    calendarGrid.appendChild(cornerCell);
-
-    // 2. Add date headers (top row)
+    // Create date headers
     for (let i = 1; i <= daysInMonth; i++) {
         const date = new Date(year, month, i);
         const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
         const dateCell = document.createElement('div');
         dateCell.classList.add('calendar-cell', 'calendar-date-header');
         dateCell.innerHTML = `<span>${dayOfWeek}</span><span>${i}</span>`;
-        calendarGrid.appendChild(dateCell);
+        calendarDatesHeader.appendChild(dateCell);
     }
 
-    // 3. Add room rows and daily cells
+    // Set grid columns for the calendar body dynamically
+    calendarBodyGrid.style.gridTemplateColumns = `repeat(${daysInMonth}, 1fr)`;
+
+
+    // Create rows for each room in the main grid
     allRooms.forEach(room => {
-        // Add room name cell (first column of each room row)
         const roomNameCell = document.createElement('div');
         roomNameCell.classList.add('calendar-cell', 'calendar-room-name');
         roomNameCell.textContent = `Room ${room.number}`;
-        calendarGrid.appendChild(roomNameCell);
+        calendarRoomsColumn.appendChild(roomNameCell);
 
-        // Add daily cells for this room
+        // Create cells for each day of the month in the calendar body grid
         for (let i = 1; i <= daysInMonth; i++) {
             const dayCell = document.createElement('div');
             dayCell.classList.add('calendar-cell', 'calendar-day-cell');
             dayCell.dataset.date = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
             dayCell.dataset.room = room.number;
-            calendarGrid.appendChild(dayCell);
+            calendarBodyGrid.appendChild(dayCell);
         }
     });
 
-    // 4. Populate bookings onto the calendar
+
+    // Populate bookings onto the calendar
     allBookings.forEach(booking => {
         const bookingCheckIn = new Date(booking.checkIn);
         const bookingCheckOut = new Date(booking.checkOut);
@@ -1447,8 +1437,7 @@ async function renderCalendar() {
 
             // Check if the booking spans this specific day
             if (currentDay >= bookingCheckIn && currentDay < bookingCheckOut) {
-                // Find the correct cell using data attributes
-                const dayCell = calendarGrid.querySelector(`[data-date="${currentDay.toISOString().split('T')[0]}"][data-room="${booking.room}"]`);
+                const dayCell = calendarBodyGrid.querySelector(`[data-date="${currentDay.toISOString().split('T')[0]}"][data-room="${booking.room}"]`);
                 if (dayCell) {
                     const bookingBlock = document.createElement('div');
                     bookingBlock.classList.add('calendar-booking-block');
@@ -1621,35 +1610,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set default date for reports
     reportDateInput.valueAsDate = new Date();
 
-    // Check for existing login state in localStorage
-    const storedUser = localStorage.getItem('loggedInUser');
-    if (storedUser) {
-        try {
-            const user = JSON.parse(storedUser);
-            currentUsername = user.username;
-            currentUserRole = user.role;
-            loginContainer.style.display = 'none';
-            mainContent.style.display = 'flex';
-            applyRoleAccess(currentUserRole);
-
-            // Automatically click the appropriate navigation link based on role
-            if (currentUserRole === 'admin') {
-                document.getElementById('nav-booking').click();
-            } else if (currentUserRole === 'housekeeper') {
-                document.getElementById('nav-housekeeping').click();
-            }
-        } catch (e) {
-            console.error("Error parsing stored user data from localStorage:", e);
-            localStorage.removeItem('loggedInUser'); // Clear invalid data
-            mainContent.style.display = 'none';
-            loginContainer.style.display = 'flex';
-        }
-    } else {
-        // Hide main content and show login on initial load if no stored user
-        mainContent.style.display = 'none';
-        loginContainer.style.display = 'flex';
-    }
-
+    // Hide main content and show login on initial load
+    mainContent.style.display = 'none';
+    loginContainer.style.display = 'flex';
 
     // Add event listeners for navigation
     navLinks.forEach(link => {
