@@ -633,58 +633,112 @@ table tbody tr:last-child td {
     font-size: 1.8em;
 }
 
-.calendar-grid {
-    display: grid;
-    /* Dynamically set columns in JS based on days in month + 1 for room names */
-    /* grid-template-columns: 100px repeat(31, 1fr); */
+.calendar-main-container { /* New wrapper for the calendar grid components */
+    display: flex;
     border: 1px solid #ddd;
     border-radius: 8px;
-    overflow-x: auto; /* Enable horizontal scroll for calendar */
+    overflow: hidden; /* Contains children, especially for sticky positioning */
     background-color: #ffffff;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
-.calendar-header-row, .calendar-room-row {
-    display: contents; /* Allows children to be placed directly in the grid */
+.calendar-rooms-column {
+    flex-shrink: 0; /* Prevent shrinking */
+    width: 120px; /* Fixed width for room names column */
+    background-color: #f2f2f2;
+    border-right: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
 }
 
-.calendar-cell {
-    padding: 10px;
-    border: 1px solid #eee;
-    text-align: center;
-    min-width: 50px; /* Minimum width for date cells */
-    box-sizing: border-box;
+.calendar-rooms-column .calendar-room-header {
+    height: 60px; /* Match height of date headers */
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 0.9em;
-    position: relative; /* For positioning booking blocks */
-}
-
-.calendar-room-header, .calendar-room-name {
-    background-color: #f2f2f2;
     font-weight: bold;
     color: #2c3e50;
-    position: sticky; /* Sticky for room names */
-    left: 0;
-    z-index: 1; /* Ensure it stays on top of scrolled content */
-    min-width: 120px; /* Wider for room names */
+    border-bottom: 1px solid #ddd;
 }
 
-.calendar-date-header {
+.calendar-rooms-column .calendar-room-name {
+    height: 60px; /* Fixed height for each room row */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 500;
+    color: #555;
+    border-bottom: 1px solid #eee;
+    padding: 5px;
+    box-sizing: border-box;
+    text-align: center;
+}
+.calendar-rooms-column .calendar-room-name:last-child {
+    border-bottom: none;
+}
+
+
+.calendar-scroll-container {
+    flex-grow: 1; /* Take remaining space */
+    overflow-x: auto; /* Enable horizontal scrolling for dates and bookings */
+    display: flex; /* Flex container for header and body grids */
+    flex-direction: column;
+}
+
+.calendar-dates-header {
+    display: grid;
+    /* grid-template-columns will be set by JS dynamically */
     background-color: #3498db;
     color: white;
     font-weight: bold;
+    flex-shrink: 0; /* Prevent shrinking */
+    border-bottom: 1px solid #ddd;
 }
 
-.calendar-day-cell {
-    background-color: #fdfdfd;
-    min-height: 60px; /* Ensure cells have enough height for content */
-    flex-direction: column; /* Stack content vertically */
-    justify-content: flex-start; /* Align content to top */
-    align-items: flex-start; /* Align content to left */
-    padding: 5px; /* Smaller padding for content */
+.calendar-dates-header .calendar-cell {
+    padding: 10px 5px;
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+    text-align: center;
+    min-width: 60px; /* Adjust as needed */
+    height: 60px; /* Fixed height for date cells */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.9em;
 }
+.calendar-dates-header .calendar-cell:last-child {
+    border-right: none;
+}
+
+.calendar-body-grid {
+    display: grid;
+    /* grid-template-columns will be set by JS dynamically */
+    /* grid-auto-rows: 60px; /* Each row (room) will have fixed height */
+    overflow-y: auto; /* Enable vertical scrolling for rooms if many */
+}
+
+.calendar-body-grid .calendar-cell {
+    padding: 5px;
+    border-right: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+    min-width: 60px; /* Match date header width */
+    height: 60px; /* Match room row height */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column; /* Stack bookings vertically */
+    justify-content: flex-start;
+    align-items: flex-start;
+    font-size: 0.8em;
+    position: relative;
+}
+.calendar-body-grid .calendar-cell:last-child {
+    border-right: none;
+}
+/* This needs to be applied to the last cell in each row, not just the last overall cell */
+/* Potentially handle this in JS or with more complex CSS selectors */
+
 
 .calendar-day-cell.booked {
     background-color: #ffe0b2; /* Light orange for booked days */
@@ -720,6 +774,17 @@ table tbody tr:last-child td {
 
 .calendar-booking-block.status-pending {
     background-color: #e74c3c; /* Red for pending */
+}
+
+/* Pre tag for audit log details */
+#auditLogTable pre {
+    white-space: pre-wrap; /* Wrap long lines */
+    word-break: break-all; /* Break words if necessary */
+    background-color: #f5f5f5;
+    padding: 5px;
+    border-radius: 5px;
+    max-height: 100px; /* Limit height */
+    overflow-y: auto; /* Add scroll if content is too long */
 }
 
 
@@ -810,9 +875,28 @@ table tbody tr:last-child td {
         font-size: 1.5em;
     }
 
-    .calendar-grid {
-        /* Adjust column definition if needed, but overflow-x: auto handles it well */
-        min-width: 600px; /* Ensure it's wide enough to scroll */
+    .calendar-main-container {
+        flex-direction: column; /* Stack room column and scroll container vertically */
+        overflow-x: auto; /* Allow horizontal scroll for the whole calendar on mobile */
+    }
+
+    .calendar-rooms-column {
+        width: 100%; /* Full width for room column */
+        flex-direction: row; /* Display room names horizontally (optional, might look better stacked) */
+        overflow-x: auto; /* Allow scrolling if many rooms */
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+    }
+    .calendar-rooms-column .calendar-room-name {
+        min-width: 80px; /* Ensure room names have enough space */
+    }
+
+    .calendar-scroll-container {
+        width: 100%;
+    }
+
+    .calendar-dates-header, .calendar-body-grid {
+        grid-auto-columns: minmax(60px, 1fr); /* Ensure columns are not too narrow */
     }
 }
 
