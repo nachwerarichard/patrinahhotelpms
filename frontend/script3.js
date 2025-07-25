@@ -6,6 +6,7 @@ const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api'; // Your Render
 let rooms = [];
 let bookings = [];
 let currentUserRole = null; // To store the role of the logged-in user
+let currentUsername = null; // New: To store the username of the logged-in user for audit logs
 let currentPage = 1;
 const recordsPerPage = 5; // Maximum 5 booking records per page
 
@@ -74,7 +75,7 @@ const receiptCheckInSpan = document.getElementById('receiptCheckIn');
 const receiptCheckOutSpan = document.getElementById('receiptCheckOut');
 const receiptPrintDateSpan = document.getElementById('receiptPrintDate');
 const receiptNightsSpan = document.getElementById('receiptNights');
-const receiptAmtPerNightSpan = document.getElementById('receiptAmtPerNight');
+const receiptAmtPerNightSpan = document.getElementById('amtPerNight'); // Corrected ID
 const receiptRoomTotalDueSpan = document.getElementById('receiptRoomTotalDue');
 const receiptIncidentalChargesTableBody = document.querySelector('#receiptIncidentalChargesTable tbody');
 const receiptSubtotalRoomSpan = document.getElementById('receiptSubtotalRoom');
@@ -83,6 +84,7 @@ const receiptTotalBillSpan = document.getElementById('receiptTotalBill');
 const receiptAmountPaidSpan = document.getElementById('receiptAmountPaid');
 const receiptBalanceDueSpan = document.getElementById('receiptBalanceDue');
 const receiptPaymentStatusSpan = document.getElementById('receiptPaymentStatus');
+
 
 // New: Deletion Reason Modal elements
 const deletionReasonModal = document.getElementById('deletionReasonModal');
@@ -95,7 +97,10 @@ let pendingDeletionAction = null; // Stores the function to call if deletion is 
 const calendarMonthYear = document.getElementById('calendarMonthYear');
 const prevMonthBtn = document.getElementById('prevMonthBtn');
 const nextMonthBtn = document.getElementById('nextMonthBtn');
-const calendarGrid = document.getElementById('calendarGrid');
+const calendarRoomsColumn = document.getElementById('calendarRoomsColumn'); // New element
+const calendarDatesHeader = document.getElementById('calendarDatesHeader'); // New element
+const calendarBodyGrid = document.getElementById('calendarBodyGrid'); // New element
+
 
 // New: Service Reports elements
 const serviceReportStartDate = document.getElementById('serviceReportStartDate');
@@ -173,7 +178,7 @@ function closeDeletionReasonModal() {
 confirmDeletionBtn.addEventListener('click', () => {
     const reason = deletionReasonInput.value.trim();
     if (!reason) {
-        showMessageBox('Input Required', 'Please provide a reason for deletion.');
+        showMessageBox('Input Required', 'Please provide a reason for this action.');
         return;
     }
     if (pendingDeletionAction) {
@@ -296,6 +301,7 @@ loginForm.addEventListener('submit', async function(event) {
 
         if (response.ok) {
             currentUserRole = data.role;
+            currentUsername = username; // Store the logged-in username
             loginContainer.style.display = 'none';
             mainContent.style.display = 'flex';
             applyRoleAccess(currentUserRole);
@@ -320,6 +326,7 @@ loginForm.addEventListener('submit', async function(event) {
 
 logoutBtn.addEventListener('click', () => {
     currentUserRole = null;
+    currentUsername = null; // Clear username on logout
     loginContainer.style.display = 'flex';
     mainContent.style.display = 'none';
     usernameInput.value = '';
@@ -535,13 +542,12 @@ function filterBookings() {
     const searchTerm = bookingSearchInput.value.toLowerCase();
     // Fetch all bookings first to filter, as `bookings` only holds the current page
     // For a truly scalable solution, this search would hit a backend endpoint /api/bookings?search=...
-    fetch(`${API_BASE_URL}/bookings?page=1&limit=10000`) // Fetch a large number to simulate all for client-side search
+    fetch(`${API_BASE_URL}/bookings/all`) // Fetch all to simulate client-side search
         .then(response => {
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             return response.json();
         })
-        .then(data => {
-            const allBookings = data.bookings; // Get all bookings
+        .then(allBookings => {
             const filtered = allBookings.filter(booking =>
                 booking.name.toLowerCase().includes(searchTerm) ||
                 booking.room.toLowerCase().includes(searchTerm) ||
@@ -653,7 +659,8 @@ bookingForm.addEventListener('submit', async function(event) {
     const bookingData = {
         name, room: roomNumber, checkIn, checkOut, nights, amtPerNight,
         totalDue, amountPaid, balance, paymentStatus, people, nationality,
-        address, phoneNo, nationalIdNo
+        address, phoneNo, nationalIdNo,
+        username: currentUsername // Pass username for audit log
     };
 
     try {
@@ -686,6 +693,7 @@ bookingForm.addEventListener('submit', async function(event) {
         renderBookings(currentPage); // Re-render to show updated list
         renderHousekeepingRooms(); // Update housekeeping view as room status might change
         renderCalendar(); // Update calendar view
+        renderAuditLogs(); // Update audit logs
     } catch (error) {
         console.error('Error saving booking:', error);
         showMessageBox('Error', `Failed to save booking: ${error.message}`);
@@ -744,7 +752,7 @@ function confirmDeleteBooking(id) {
             const response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason }) // Send reason in body
+                body: JSON.stringify({ reason, username: currentUsername }) // Send reason and username in body
             });
 
             if (!response.ok) {
@@ -773,7 +781,8 @@ async function checkoutBooking(id) {
     try {
         const response = await fetch(`${API_BASE_URL}/bookings/${id}/checkout`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUsername }) // Send username for audit log
         });
 
         if (!response.ok) {
@@ -886,7 +895,8 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
                 roomNumber, // Pass room number to backend
                 type,
                 description,
-                amount
+                amount,
+                username: currentUsername // Pass username for audit log
             })
         });
 
@@ -980,7 +990,7 @@ function confirmDeleteIncidentalCharge(chargeId, bookingCustomId) {
             const response = await fetch(`${API_BASE_URL}/incidental-charges/${chargeId}`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason }) // Send reason in body
+                body: JSON.stringify({ reason, username: currentUsername }) // Send reason and username in body
             });
 
             if (!response.ok) {
@@ -1020,7 +1030,8 @@ async function markAllChargesPaid() {
 
         const response = await fetch(`${API_BASE_URL}/incidental-charges/pay-all/${booking._id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUsername }) // Send username for audit log
         });
 
         if (!response.ok) {
@@ -1288,7 +1299,7 @@ async function performRoomStatusUpdate(roomId, newStatus, reason = null) {
         const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus, reason: reason }) // Send reason to backend
+            body: JSON.stringify({ status: newStatus, reason: reason, username: currentUsername }) // Send reason and username to backend
         });
 
         if (!response.ok) {
@@ -1318,7 +1329,9 @@ async function performRoomStatusUpdate(roomId, newStatus, reason = null) {
  * Renders the calendar view for the current month.
  */
 async function renderCalendar() {
-    calendarGrid.innerHTML = ''; // Clear existing calendar
+    calendarRoomsColumn.innerHTML = '<div class="calendar-cell calendar-room-header">Room</div>'; // Clear and add header
+    calendarDatesHeader.innerHTML = ''; // Clear existing dates
+    calendarBodyGrid.innerHTML = ''; // Clear existing calendar body
 
     const year = currentCalendarDate.getFullYear();
     const month = currentCalendarDate.getMonth(); // 0-indexed
@@ -1347,40 +1360,39 @@ async function renderCalendar() {
     // Sort rooms by number
     allRooms.sort((a, b) => parseInt(a.number) - parseInt(b.number));
 
-    // Create header row for dates
-    const headerRow = document.createElement('div');
-    headerRow.classList.add('calendar-header-row');
-    headerRow.innerHTML = '<div class="calendar-cell calendar-room-header">Room</div>'; // Empty cell for room header
-
     const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    // Create date headers
     for (let i = 1; i <= daysInMonth; i++) {
+        const date = new Date(year, month, i);
+        const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
         const dateCell = document.createElement('div');
         dateCell.classList.add('calendar-cell', 'calendar-date-header');
-        dateCell.textContent = i;
-        headerRow.appendChild(dateCell);
+        dateCell.innerHTML = `<span>${dayOfWeek}</span><span>${i}</span>`;
+        calendarDatesHeader.appendChild(dateCell);
     }
-    calendarGrid.appendChild(headerRow);
 
-    // Create rows for each room
+    // Set grid columns for the calendar body dynamically
+    calendarBodyGrid.style.gridTemplateColumns = `repeat(${daysInMonth}, 1fr)`;
+
+
+    // Create rows for each room in the main grid
     allRooms.forEach(room => {
-        const roomRow = document.createElement('div');
-        roomRow.classList.add('calendar-room-row');
+        const roomNameCell = document.createElement('div');
+        roomNameCell.classList.add('calendar-cell', 'calendar-room-name');
+        roomNameCell.textContent = `Room ${room.number}`;
+        calendarRoomsColumn.appendChild(roomNameCell);
 
-        const roomCell = document.createElement('div');
-        roomCell.classList.add('calendar-cell', 'calendar-room-name');
-        roomCell.textContent = `Room ${room.number}`;
-        roomRow.appendChild(roomCell);
-
-        // Create cells for each day of the month
+        // Create cells for each day of the month in the calendar body grid
         for (let i = 1; i <= daysInMonth; i++) {
             const dayCell = document.createElement('div');
             dayCell.classList.add('calendar-cell', 'calendar-day-cell');
             dayCell.dataset.date = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
             dayCell.dataset.room = room.number;
-            roomRow.appendChild(dayCell);
+            calendarBodyGrid.appendChild(dayCell);
         }
-        calendarGrid.appendChild(roomRow);
     });
+
 
     // Populate bookings onto the calendar
     allBookings.forEach(booking => {
@@ -1394,12 +1406,8 @@ async function renderCalendar() {
 
             // Check if the booking spans this specific day
             if (currentDay >= bookingCheckIn && currentDay < bookingCheckOut) {
-                const dayCell = calendarGrid.querySelector(`[data-date="${currentDay.toISOString().split('T')[0]}"][data-room="${booking.room}"]`);
+                const dayCell = calendarBodyGrid.querySelector(`[data-date="${currentDay.toISOString().split('T')[0]}"][data-room="${booking.room}"]`);
                 if (dayCell) {
-                    // Calculate span for multi-day bookings
-                    const startDayOfMonth = Math.max(1, bookingCheckIn.getDate());
-                    const endDayOfMonth = Math.min(daysInMonth, bookingCheckOut.getDate());
-
                     const bookingBlock = document.createElement('div');
                     bookingBlock.classList.add('calendar-booking-block');
                     bookingBlock.textContent = booking.name;
@@ -1414,9 +1422,6 @@ async function renderCalendar() {
                         bookingBlock.classList.add('status-pending');
                     }
 
-                    // Position and span the block
-                    // This is a simplified approach. For complex spanning, you'd need a more robust grid layout or absolute positioning.
-                    // For now, we'll just mark the individual days.
                     dayCell.classList.add('booked');
                     dayCell.appendChild(bookingBlock); // Append to each day it spans
                 }
@@ -1522,7 +1527,7 @@ async function renderAuditLogs() {
                     <td>${new Date(log.timestamp).toLocaleString()}</td>
                     <td>${log.user}</td>
                     <td>${log.action}</td>
-                    <td>${JSON.stringify(log.details, null, 2)}</td>
+                    <td><pre>${JSON.stringify(log.details, null, 2)}</pre></td>
                 `;
             });
         }
@@ -1547,7 +1552,8 @@ async function simulateChannelManagerSync() {
     try {
         const response = await fetch(`${API_BASE_URL}/channel-manager/sync`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUsername }) // Send username for audit log
         });
 
         if (!response.ok) {
