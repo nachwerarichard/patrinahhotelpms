@@ -702,7 +702,7 @@ table tbody tr:last-child td {
     min-width: 60px; /* Adjust as needed */
     height: 60px; /* Fixed height for date cells */
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     justify-content: center;
     align-items: center;
     font-size: 0.9em;
