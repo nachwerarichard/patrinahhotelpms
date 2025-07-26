@@ -14,6 +14,52 @@ body {
     overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
+/* Style for the container to allow relative positioning for the dropdown */
+.action-buttons-container {
+    position: relative;
+    display: inline-block; /* Or block, depending on your layout needs */
+}
+
+/* Style for the "three dots" button */
+.more-actions-btn {
+    cursor: pointer;
+    /* You might want to style this to look like an ellipsis, e.g., font-size, padding */
+    padding: 5px 10px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+/* Container for the hidden buttons */
+.hidden-action-buttons {
+    display: none; /* Hidden by default */
+    position: absolute; /* Position relative to .action-buttons-container */
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1; /* Ensure it appears above other content */
+    top: 0; /* Align with the top of the container */
+    left: 100%; /* Position to the right of the "..." button */
+    padding: 8px;
+    border-radius: 4px;
+    white-space: nowrap; /* Prevent buttons from wrapping */
+}
+
+/* Display the hidden buttons when 'show-buttons' class is present */
+.hidden-action-buttons.show-buttons {
+    display: flex; /* Or block, or grid, depending on how you want the buttons arranged */
+    flex-direction: column; /* Stack buttons vertically */
+    gap: 5px; /* Space between buttons */
+}
+
+/* Optional: Style for the buttons inside the dropdown */
+.hidden-action-buttons button {
+    width: 100%; /* Make buttons fill the width of the dropdown */
+    text-align: left;
+}
+
+
 /* --- Login Container --- */
 #login-container {
     display: flex;
