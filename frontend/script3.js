@@ -597,7 +597,7 @@ async function renderBookings(page = 1, filteredBookings = null) {
                 <td>${booking.nationalIdNo || ''}</td>
                 <td>
                     <div class="action-buttons-container">
-                        <button class="btn btn-secondary btn-sm more-actions-btn" onclick="toggleActionButtons(this)">...</button>
+                        <button class="btn btn-secondary btn-sm more-actions-btn" onclick="toggleActionButtons(this)">&vellip;</button>
                         <div class="hidden-action-buttons">
                             <button class="btn btn-info" onclick="editBooking('${booking.id}')">Edit</button>
                             <button class="btn btn-danger" onclick="confirmDeleteBooking('${booking.id}')">Delete</button>
