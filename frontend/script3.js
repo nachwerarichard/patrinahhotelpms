@@ -584,17 +584,7 @@ async function renderBookings(page = 1, filteredBookings = null) {
                 <td>${booking.room}</td>
                 <td>${booking.checkIn}</td>
                 <td>${booking.checkOut}</td>
-                <td>${booking.nights}</td>
-                <td>${parseFloat(booking.amtPerNight).toFixed(2)}</td>
-                <td>${parseFloat(booking.totalDue).toFixed(2)}</td>
-                <td>${parseFloat(booking.amountPaid).toFixed(2)}</td>
-                <td>${parseFloat(booking.balance).toFixed(2)}</td>
                 <td>${booking.paymentStatus}</td>
-                <td>${booking.people}</td>
-                <td>${booking.nationality || ''}</td>
-                <td>${booking.address || ''}</td>
-                <td>${booking.phoneNo || ''}</td>
-                <td>${booking.nationalIdNo || ''}</td>
                 <td>
                     <div class="action-buttons-container">
                         <button class="btn btn-secondary btn-sm more-actions-btn" onclick="toggleActionButtons(this)">&vellip;</button>
@@ -668,17 +658,9 @@ function filterBookings() {
                         <td>${booking.room}</td>
                         <td>${booking.checkIn}</td>
                         <td>${booking.checkOut}</td>
-                        <td>${booking.nights}</td>
-                        <td>${parseFloat(booking.amtPerNight).toFixed(2)}</td>
-                        <td>${parseFloat(booking.totalDue).toFixed(2)}</td>
-                        <td>${parseFloat(booking.amountPaid).toFixed(2)}</td>
-                        <td>${parseFloat(booking.balance).toFixed(2)}</td>
+                        
                         <td>${booking.paymentStatus}</td>
-                        <td>${booking.people}</td>
-                        <td>${booking.nationality || ''}</td>
-                        <td>${booking.address || ''}</td>
-                        <td>${booking.phoneNo || ''}</td>
-                        <td>${booking.nationalIdNo || ''}</td>
+                        
                         <td>
                             <div class="action-buttons">
                                 <button class="btn btn-info" onclick="editBooking('${booking.id}')">Edit</button>
