@@ -595,18 +595,20 @@ async function renderBookings(page = 1, filteredBookings = null) {
                 <td>${booking.address || ''}</td>
                 <td>${booking.phoneNo || ''}</td>
                 <td>${booking.nationalIdNo || ''}</td>
-
                 <td>
-                    <div class="action-buttons">
-                        <button class="btn btn-info" onclick="editBooking('${booking.id}')">Edit</button>
-                        <button class="btn btn-danger" onclick="confirmDeleteBooking('${booking.id}')">Delete</button>
-                        ${new Date(booking.checkOut) <= new Date() && rooms.find(r => r.number === booking.room)?.status !== 'dirty' ?
-                            `<button class="btn btn-success" onclick="checkoutBooking('${booking.id}')">Check-out</button>` :
-                            ''
-                        }
-                        <button class="btn btn-primary" onclick="openIncidentalChargeModal('${booking.id}', '${booking.name}', '${booking.room}')">Add Charge</button>
-                        <button class="btn btn-secondary" onclick="viewCharges('${booking.id}')">View Charges</button>
-                        <button class="btn btn-info" onclick="printReceipt('${booking.id}')"><i class="fas fa-print"></i> Receipt</button>
+                    <div class="action-buttons-container">
+                        <button class="btn btn-secondary btn-sm more-actions-btn" onclick="toggleActionButtons(this)">...</button>
+                        <div class="hidden-action-buttons">
+                            <button class="btn btn-info" onclick="editBooking('${booking.id}')">Edit</button>
+                            <button class="btn btn-danger" onclick="confirmDeleteBooking('${booking.id}')">Delete</button>
+                            ${new Date(booking.checkOut) <= new Date() && rooms.find(r => r.number === booking.room)?.status !== 'dirty' ?
+                                `<button class="btn btn-success" onclick="checkoutBooking('${booking.id}')">Check-out</button>` :
+                                ''
+                            }
+                            <button class="btn btn-primary" onclick="openIncidentalChargeModal('${booking.id}', '${booking.name}', '${booking.room}')">Add Charge</button>
+                            <button class="btn btn-secondary" onclick="viewCharges('${booking.id}')">View Charges</button>
+                            <button class="btn btn-info" onclick="printReceipt('${booking.id}')"><i class="fas fa-print"></i> Receipt</button>
+                        </div>
                     </div>
                 </td>
             `;
@@ -619,10 +621,24 @@ async function renderBookings(page = 1, filteredBookings = null) {
     pageInfoSpan.textContent = `Page ${totalCount === 0 ? 0 : currentPage} of ${totalPages}`;
 }
 
-/**
- * Filters bookings based on search input (uses local 'bookings' array, then re-renders).
- * Note: For large datasets, this filtering should ideally be done on the backend.
- */
+function toggleActionButtons(button) {
+    const hiddenButtonsContainer = button.nextElementSibling; // Get the next sibling, which is the div containing the hidden buttons
+    hiddenButtonsContainer.classList.toggle('show-buttons'); // Toggle a class to show/hide
+}
+
+// Optional: Close open menus when clicking outside
+document.addEventListener('click', (event) => {
+    document.querySelectorAll('.hidden-action-buttons.show-buttons').forEach(container => {
+        const parentContainer = container.closest('.action-buttons-container');
+        if (parentContainer && !parentContainer.contains(event.target)) {
+            container.classList.remove('show-buttons');
+        }
+    });
+});
+
+
+
+
 function filterBookings() {
     const searchTerm = bookingSearchInput.value.toLowerCase();
     // Fetch all bookings first to filter, as `bookings` only holds the current page
