@@ -622,19 +622,49 @@ async function renderBookings(page = 1, filteredBookings = null) {
 }
 
 function toggleActionButtons(button) {
-    const hiddenButtonsContainer = button.nextElementSibling; // Get the next sibling, which is the div containing the hidden buttons
-    hiddenButtonsContainer.classList.toggle('show-buttons'); // Toggle a class to show/hide
+    const hiddenButtonsContainer = button.nextElementSibling; // This is your .hidden-action-buttons div
+
+    // Toggle visibility first so we can get its dimensions accurately
+    hiddenButtonsContainer.classList.toggle('show-buttons');
+
+    // Only proceed with positioning logic if the dropdown is now visible
+    if (hiddenButtonsContainer.classList.contains('show-buttons')) {
+        const dropdownRect = hiddenButtonsContainer.getBoundingClientRect(); // Get dimensions of the dropdown
+        const buttonRect = button.getBoundingClientRect(); // Get dimensions of the '...' button
+
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+
+        const spaceBelow = viewportHeight - buttonRect.bottom;
+        const spaceAbove = buttonRect.top;
+
+        // Condition to open upwards:
+        // Not enough space below AND there's more space above than below,
+        // OR simply not enough space below, and enough space above
+        if (spaceBelow < dropdownRect.height && spaceAbove > spaceBelow) {
+            hiddenButtonsContainer.classList.add('open-up');
+        } else {
+            // Ensure it opens downwards if there's enough space, or if space above isn't sufficient
+            hiddenButtonsContainer.classList.remove('open-up');
+        }
+    } else {
+        // If the dropdown is being hidden, ensure the 'open-up' class is removed
+        hiddenButtonsContainer.classList.remove('open-up');
+    }
 }
 
-// Optional: Close open menus when clicking outside
+// Keep your existing click-outside-to-close listener, but also remove 'open-up' class
 document.addEventListener('click', (event) => {
     document.querySelectorAll('.hidden-action-buttons.show-buttons').forEach(container => {
         const parentContainer = container.closest('.action-buttons-container');
         if (parentContainer && !parentContainer.contains(event.target)) {
             container.classList.remove('show-buttons');
+            container.classList.remove('open-up'); // Crucial: remove 'open-up' when closing
         }
     });
 });
+
+// Optional: Close open menus when clicking outside
+
 
 
 
