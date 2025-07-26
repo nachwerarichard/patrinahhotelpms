@@ -15,20 +15,24 @@ body {
 }
 
 /* Style for the container to allow relative positioning for the dropdown */
+/* Style for the container to allow relative positioning for the dropdown */
 .action-buttons-container {
     position: relative;
-    display: inline-block; /* Or block, depending on your layout needs */
+    display: inline-block; /* Keep this to properly size the cell content */
+    /* Add some padding or min-width to the table cell if needed for the '...' button */
+    padding-right: 20px; /* Adjust as needed to make space for the ellipsis */
 }
 
 /* Style for the "three dots" button */
 .more-actions-btn {
     cursor: pointer;
-    /* You might want to style this to look like an ellipsis, e.g., font-size, padding */
     padding: 5px 10px;
     border-radius: 3px;
     border: 1px solid #ccc;
     background-color: #f8f9fa;
     color: #333;
+    /* Ensure it doesn't take up too much space */
+    width: auto;
 }
 
 /* Container for the hidden buttons */
@@ -36,27 +40,40 @@ body {
     display: none; /* Hidden by default */
     position: absolute; /* Position relative to .action-buttons-container */
     background-color: #f9f9f9;
-    min-width: 160px;
+    min-width: 120px; /* Adjust based on your button text length */
     box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-    z-index: 1; /* Ensure it appears above other content */
-    top: 0; /* Align with the top of the container */
-    left: 100%; /* Position to the right of the "..." button */
+    z-index: 10; /* Higher z-index to ensure it's on top */
+
+    /* ----- Key changes for positioning inside the cell and vertical display ----- */
+    top: 0; /* Align with the top of the '...' button */
+    left: 0; /* Align with the left edge of the '...' button */
+    transform: translateX(-50%); /* Optional: Center horizontally below '...' */
     padding: 8px;
     border-radius: 4px;
-    white-space: nowrap; /* Prevent buttons from wrapping */
+    /* Remove white-space: nowrap; as we want them to stack */
+    
+    /* Make buttons vertical (flex column) */
+    flex-direction: column;
+    gap: 5px; /* Space between buttons */
 }
 
 /* Display the hidden buttons when 'show-buttons' class is present */
 .hidden-action-buttons.show-buttons {
-    display: flex; /* Or block, or grid, depending on how you want the buttons arranged */
-    flex-direction: column; /* Stack buttons vertically */
-    gap: 5px; /* Space between buttons */
+    display: flex; /* This will make them visible and apply flex properties */
 }
 
 /* Optional: Style for the buttons inside the dropdown */
 .hidden-action-buttons button {
     width: 100%; /* Make buttons fill the width of the dropdown */
-    text-align: left;
+    text-align: center; /* Center button text */
+    padding: 8px 12px; /* Adjust padding for better look */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+
+/* Optional: Style for the table cell containing the buttons to ensure enough space */
+td:last-child { /* Assuming the action buttons are in the last table column */
+    position: relative; /* If you want the dropdown to be contained within this cell */
+    overflow: visible; /* Important: Allows the dropdown to extend beyond the cell's boundaries if needed */
 }
 
 
