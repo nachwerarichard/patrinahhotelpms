@@ -920,7 +920,7 @@ async function editBooking(id) {
         document.getElementById('nationality').value = booking.nationality;
         document.getElementById('address').value = booking.address;
         document.getElementById('phoneNo').value = booking.phoneNo;
-        document.getElementById('email').value = booking.email;
+        document.getElementById('guestEmail').value = booking.email;
         document.getElementById('nationalIdNo').value = booking.nationalIdNo;
         bookingModal.style.display = 'flex';
     } catch (error) {
