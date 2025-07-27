@@ -628,7 +628,100 @@ document.addEventListener('click', (event) => {
 });
 
 
+/**
+ * Sends a booking confirmation email for a given booking ID.
+ * @param {string} bookingId - The ID of the booking to send the email for.
+ */
+async function sendConfirmationEmail(bookingId) {
+    if (currentUserRole !== 'admin') {
+        showMessageBox('Access Denied', 'Only Admin users can send confirmation emails.', true);
+        return;
+    }
 
+    // Find the booking by ID
+    const bookingToSend = bookings.find(b => b.id === bookingId);
+    if (!bookingToSend) {
+        showMessageBox('Error', 'Booking not found.', true);
+        return;
+    }
+
+    // Prompt for recipient email if not already stored or to allow override
+    const recipientEmail = prompt(`Enter recipient email for booking ${bookingToSend.name} (Room ${bookingToSend.room}):`, bookingToSend.guestEmail || '');
+
+    if (!recipientEmail) {
+        showMessageBox('Information', 'Email sending cancelled. No recipient email provided.', false);
+        return;
+    }
+
+    if (!/\S+@\S+\.\S+/.test(recipientEmail)) {
+        showMessageBox('Error', 'Invalid email format. Please enter a valid email address.', true);
+        return;
+    }
+
+    showMessageBox('Sending Email', 'Attempting to send confirmation email...', false); // Show pending message
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/send-email`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ recipientEmail })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showMessageBox('Email Sent', data.message || 'Confirmation email sent successfully!', false);
+            await fetch(`${API_BASE_URL}/audit-log/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'Sent Confirmation Email',
+                    user: currentUsername,
+                    details: {
+                        bookingId: bookingId,
+                        guestName: bookingToSend.name,
+                        roomNumber: bookingToSend.room,
+                        recipient: recipientEmail
+                    }
+                })
+            });
+        } else {
+            showMessageBox('Email Sending Failed', data.message || 'Failed to send confirmation email. Please try again.', true);
+            await fetch(`${API_BASE_URL}/audit-log/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'Failed to Send Confirmation Email',
+                    user: currentUsername,
+                    details: {
+                        bookingId: bookingId,
+                        guestName: bookingToSend.name,
+                        roomNumber: bookingToSend.room,
+                        recipient: recipientEmail,
+                        error: data.message || 'Unknown error'
+                    }
+                })
+            });
+        }
+    } catch (error) {
+        console.error('Error sending confirmation email:', error);
+        showMessageBox('Network Error', 'Could not connect to the server to send email. Please check your internet connection and try again.', true);
+        await fetch(`${API_BASE_URL}/audit-log/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'Network Error Sending Confirmation Email',
+                user: currentUsername,
+                details: {
+                    bookingId: bookingId,
+                    error: error.message
+                }
+            })
+        });
+    }
+}
 
 function filterBookings() {
     const searchTerm = bookingSearchInput.value.toLowerCase();
