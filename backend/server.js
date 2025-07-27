@@ -871,7 +871,7 @@ app.post('/api/public/bookings', async (req, res) => {
 });
 
 
-let transporter = nodemailer.createTransport({
+const transporter = nodemailer.createTransport({
     service: 'gmail', // e.g., 'gmail', 'SendGrid', 'Mailgun'
     auth: {
         user: 'nachwerarichard@gmail.com', // Your email address
@@ -915,6 +915,107 @@ app.post('/public/send-booking-confirmation', async (req, res) => {
 
     } catch (error) {
         console.error('Error sending email:', error);
+        res.status(500).json({ message: 'Failed to send confirmation email.', error: error.message });
+    }
+});
+
+app.post('/:id/send-email', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { recipientEmail } = req.body;
+
+        if (!recipientEmail || !/\S+@\S+\.\S+/.test(recipientEmail)) {
+            return res.status(400).json({ message: 'Valid recipient email is required.' });
+        }
+
+        const booking = await Booking.findById(id);
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found.' });
+        }
+
+        const roomDetails = await Room.findOne({ number: booking.room });
+        const incidentalCharges = await IncidentalCharge.find({ bookingId: booking._id });
+
+        let totalIncidentalAmount = incidentalCharges.reduce((sum, charge) => sum + charge.amount, 0);
+        let roomTotalDue = booking.nights * booking.amountPerNight;
+        let totalBill = roomTotalDue + totalIncidentalAmount;
+        let balanceDue = totalBill - booking.amountPaid;
+        let paymentStatus = balanceDue <= 0 ? 'Paid' : (booking.amountPaid > 0 ? 'Partially Paid' : 'Pending');
+
+
+        // Construct email content
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: recipientEmail,
+            subject: `Patrinah Hotel - Booking Confirmation for Room ${booking.room}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h2 style="color: #0056b3;">Booking Confirmation - Patrinah Hotel</h2>
+                    <p>Dear ${booking.name},</p>
+                    <p>Thank you for choosing Patrinah Hotel!</p>
+                    <p>Your booking details are as follows:</p>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Booking ID:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.customId}</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Guest Name:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.name}</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Room Number:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.room} (${roomDetails ? roomDetails.type : 'N/A'})</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Check-in Date:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.checkIn}</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Check-out Date:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.checkOut}</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Nights:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.nights}</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Amount Per Night:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">UGX ${booking.amountPerNight.toFixed(2)}</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Room Total Due:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">UGX ${roomTotalDue.toFixed(2)}</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Total Incidental Charges:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">UGX ${totalIncidentalAmount.toFixed(2)}</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Total Bill:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">UGX ${totalBill.toFixed(2)}</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Amount Paid:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">UGX ${booking.amountPaid.toFixed(2)}</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Balance Due:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">UGX ${balanceDue.toFixed(2)}</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Payment Status:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${paymentStatus}</td></tr>
+                    </table>
+
+                    ${incidentalCharges.length > 0 ? `
+                        <h3 style="color: #0056b3;">Incidental Charges:</h3>
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                            <thead>
+                                <tr>
+                                    <th style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: left;">Type</th>
+                                    <th style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: left;">Description</th>
+                                    <th style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: right;">Amount (UGX)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${incidentalCharges.map(charge => `
+                                    <tr>
+                                        <td style="padding: 8px; border: 1px solid #ddd;">${charge.chargeType}</td>
+                                        <td style="padding: 8px; border: 1px solid #ddd;">${charge.description}</td>
+                                        <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${charge.amount.toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    ` : '<p>No incidental charges recorded for this booking.</p>'}
+
+                    <p>We look forward to welcoming you.</p>
+                    <p>Sincerely,</p>
+                    <p>The Patrinah Hotel Team</p>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        await AuditLog.create({
+            action: 'Sent Confirmation Email (Backend)',
+            user: req.user ? req.user.username : 'System', // Assuming you have user context from auth
+            details: { bookingId: id, recipient: recipientEmail }
+        });
+
+        res.status(200).json({ message: 'Confirmation email sent successfully.' });
+
+    } catch (error) {
+        console.error('Error sending confirmation email on backend:', error);
+        await AuditLog.create({
+            action: 'Failed to Send Confirmation Email (Backend)',
+            user: req.user ? req.user.username : 'System',
+            details: { bookingId: req.params.id, recipient: req.body.recipientEmail, error: error.message }
+        });
         res.status(500).json({ message: 'Failed to send confirmation email.', error: error.message });
     }
 });
