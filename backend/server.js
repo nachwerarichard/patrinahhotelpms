@@ -921,7 +921,7 @@ app.post('/public/send-booking-confirmation', async (req, res) => {
     }
 });
 
-app.post('/:id/send-email', async (req, res) => {
+app.post('/bookings/:id/send-email', async (req, res) => {
     try {
         const { id } = req.params;
         const { recipientEmail } = req.body;
