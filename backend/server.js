@@ -890,7 +890,7 @@ app.post('/public/send-booking-confirmation', async (req, res) => {
 
     try {
         const mailOptions = {
-            from: 'your_hotel_email@example.com', // Sender address
+            from: 'nachwerarichard@gmail.comhf', // Sender address
             to: booking.email, // Recipient email (guest's email)
             subject: `Booking Confirmation for Room ${booking.room} at Patrinah Hotel`,
             html: `
