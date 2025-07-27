@@ -642,22 +642,19 @@ document.addEventListener('click', (event) => {
  * @param {string} bookingId - The ID of the booking to send the email for.
  */
 async function sendConfirmationEmail(bookingId) {
+    // 1. Role and Input Validation
     if (currentUserRole !== 'admin') {
         showMessageBox('Access Denied', 'Only Admin users can send confirmation emails.', true);
         return;
     }
 
-    // Find the booking by ID
     const bookingToSend = bookings.find(b => b.id === bookingId);
     if (!bookingToSend) {
         showMessageBox('Error', 'Booking not found.', true);
         return;
     }
 
-    // Get recipient email from the input field
-    // Ensure this input field is visible and populated when the email button is clicked
-    const recipientEmail = guestEmailInput.value.trim(); // Get value from the input field
-
+    const recipientEmail = guestEmailInput.value.trim();
     if (!recipientEmail) {
         showMessageBox('Input Required', 'Please enter a recipient email in the "Guest Email" field.', true);
         return;
@@ -668,8 +665,9 @@ async function sendConfirmationEmail(bookingId) {
         return;
     }
 
-    showMessageBox('Sending Email', 'Attempting to send confirmation email...', false); // Show pending message
+    showMessageBox('Sending Email', 'Attempting to send confirmation email...', false);
 
+    // 2. API Call and Robust Error Handling
     try {
         const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/send-email`, {
             method: 'POST',
@@ -679,10 +677,64 @@ async function sendConfirmationEmail(bookingId) {
             body: JSON.stringify({ recipientEmail })
         });
 
-        const data = await response.json();
+        // Check if the response is OK (status 2xx) AND if it's JSON
+        const contentType = response.headers.get("content-type");
+        if (!response.ok || !contentType || !contentType.includes("application/json")) {
+            let errorMessage = 'Failed to send confirmation email. Unexpected response from server.';
+            let auditDetailsError = 'Unknown error or non-JSON response'; // Default for audit log
+
+            // Attempt to read the response as text for more detailed debugging
+            try {
+                const textResponse = await response.text();
+                console.error("Server responded with non-JSON or error status:", textResponse);
+
+                if (response.status === 404) {
+                    errorMessage = 'Email service endpoint not found. Please verify the API URL.';
+                    auditDetailsError = `404 Not Found: ${textResponse.substring(0, 200)}`; // Log part of the HTML
+                } else if (response.status === 500) {
+                    errorMessage = 'Internal server error while sending email. Please check server logs.';
+                    auditDetailsError = `500 Internal Server Error: ${textResponse.substring(0, 200)}`;
+                } else if (response.status >= 400) {
+                    errorMessage = `Server error: ${response.status} ${response.statusText}.`;
+                    auditDetailsError = `HTTP ${response.status}: ${textResponse.substring(0, 200)}`;
+                } else {
+                    // Non-OK but not a typical error code, still non-JSON
+                    auditDetailsError = `Unexpected non-JSON response (Status: ${response.status}): ${textResponse.substring(0, 200)}`;
+                }
+            } catch (parseError) {
+                console.error("Could not read response as text:", parseError);
+                // If even reading as text fails, stick with generic error message
+                auditDetailsError = `Failed to parse response body: ${parseError.message}`;
+            }
+
+            showMessageBox('Email Sending Failed', errorMessage, true);
+
+            // Audit log for failed email sending due to unexpected response
+            await fetch(`${API_BASE_URL}/audit-log/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'Failed to Send Confirmation Email - Bad Server Response',
+                    user: currentUsername,
+                    details: {
+                        bookingId: bookingId,
+                        guestName: bookingToSend.name,
+                        roomNumber: bookingToSend.room,
+                        recipient: recipientEmail,
+                        status: response.status,
+                        statusText: response.statusText,
+                        errorDetails: auditDetailsError
+                    }
+                })
+            });
+            return; // Stop execution if response is not valid JSON or not OK
+        }
+
+        const data = await response.json(); // Safely parse JSON after checks
 
         if (response.ok) {
             showMessageBox('Email Sent', data.message || 'Confirmation email sent successfully!', false);
+            // Audit log for successful email sending
             await fetch(`${API_BASE_URL}/audit-log/action`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -698,7 +750,10 @@ async function sendConfirmationEmail(bookingId) {
                 })
             });
         } else {
+            // This block will now only be reached if response.ok is false but it *was* JSON
+            // (e.g., a server-side validation error that returns JSON with an error message)
             showMessageBox('Email Sending Failed', data.message || 'Failed to send confirmation email. Please try again.', true);
+            // Audit log for failed email sending (server-side logic error, but still JSON)
             await fetch(`${API_BASE_URL}/audit-log/action`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -710,14 +765,16 @@ async function sendConfirmationEmail(bookingId) {
                         guestName: bookingToSend.name,
                         roomNumber: bookingToSend.room,
                         recipient: recipientEmail,
-                        error: data.message || 'Unknown error'
+                        error: data.message || 'Unknown error from server JSON response'
                     }
                 })
             });
         }
     } catch (error) {
+        // 3. Network and Client-Side Errors
         console.error('Error sending confirmation email:', error);
         showMessageBox('Network Error', 'Could not connect to the server to send email. Please check your internet connection and try again.', true);
+        // Audit log for network errors
         await fetch(`${API_BASE_URL}/audit-log/action`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -726,13 +783,14 @@ async function sendConfirmationEmail(bookingId) {
                 user: currentUsername,
                 details: {
                     bookingId: bookingId,
-                    error: error.message
+                    recipient: recipientEmail, // Include recipient even if email wasn't found in initial booking search
+                    error: error.message || 'Unknown network error'
                 }
             })
         });
     }
 }
-
+    
 function filterBookings() {
     const searchTerm = bookingSearchInput.value.toLowerCase();
     // Fetch all bookings first to filter, as `bookings` only holds the current page
