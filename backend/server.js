@@ -874,8 +874,8 @@ app.post('/api/public/bookings', async (req, res) => {
 let transporter = nodemailer.createTransport({
     service: 'gmail', // e.g., 'gmail', 'SendGrid', 'Mailgun'
     auth: {
-        user: 'your_email@example.com', // Your email address
-        pass: 'your_email_password_or_app_specific_password' // Your email password or app-specific password
+        user: 'nachwerarichard@gmail.com', // Your email address
+        pass: 'zwdx qwwc yyux pkhq' // Your email password or app-specific password
     }
 });
 
