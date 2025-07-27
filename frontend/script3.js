@@ -841,12 +841,12 @@ bookingForm.addEventListener('submit', async function(event) {
     const nationality = document.getElementById('nationality').value;
     const address = document.getElementById('address').value;
     const phoneNo = document.getElementById('phoneNo').value;
-    const email = document.getElementById('email').value;
+    const email = document.getElementById('guestEmail').value;
     const nationalIdNo = document.getElementById('nationalIdNo').value;
     const bookingData = {
         name, room: roomNumber, checkIn, checkOut, nights, amtPerNight,
         totalDue, amountPaid, balance, paymentStatus, people, nationality,
-        address, phoneNo, nationalIdNo,
+        address, phoneNo, email, nationalIdNo,
         username: currentUsername // Pass username for audit log
     };
 
