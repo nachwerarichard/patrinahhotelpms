@@ -4,6 +4,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors'); // Required for Cross-Origin Resource Sharing
+const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
+
 
 // --- 2. Initialize Express App ---
 const app = express();
