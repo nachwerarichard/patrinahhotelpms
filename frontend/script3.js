@@ -737,8 +737,8 @@ bookingForm.addEventListener('submit', async function(event) {
     const nationality = document.getElementById('nationality').value;
     const address = document.getElementById('address').value;
     const phoneNo = document.getElementById('phoneNo').value;
+    const email = document.getElementById('email').value;
     const nationalIdNo = document.getElementById('nationalIdNo').value;
-
     const bookingData = {
         name, room: roomNumber, checkIn, checkOut, nights, amtPerNight,
         totalDue, amountPaid, balance, paymentStatus, people, nationality,
@@ -816,8 +816,8 @@ async function editBooking(id) {
         document.getElementById('nationality').value = booking.nationality;
         document.getElementById('address').value = booking.address;
         document.getElementById('phoneNo').value = booking.phoneNo;
+        document.getElementById('email').value = booking.email;
         document.getElementById('nationalIdNo').value = booking.nationalIdNo;
-
         bookingModal.style.display = 'flex';
     } catch (error) {
         console.error('Error fetching booking for edit:', error);
