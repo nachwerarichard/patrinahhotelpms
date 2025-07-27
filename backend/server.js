@@ -871,6 +871,53 @@ app.post('/api/public/bookings', async (req, res) => {
 });
 
 
+let transporter = nodemailer.createTransport({
+    service: 'gmail', // e.g., 'gmail', 'SendGrid', 'Mailgun'
+    auth: {
+        user: 'your_email@example.com', // Your email address
+        pass: 'your_email_password_or_app_specific_password' // Your email password or app-specific password
+    }
+});
+
+app.post('/public/send-booking-confirmation', async (req, res) => {
+    const booking = req.body; // This will contain all booking details from the frontend
+
+    if (!booking.email) {
+        return res.status(400).json({ message: 'Guest email is required to send confirmation.' });
+    }
+
+    try {
+        const mailOptions = {
+            from: 'your_hotel_email@example.com', // Sender address
+            to: booking.email, // Recipient email (guest's email)
+            subject: `Booking Confirmation for Room ${booking.room} at Patrinah Hotel`,
+            html: `
+                <p>Dear ${booking.name},</p>
+                <p>Thank you for booking with us at Patrinah Hotel!</p>
+                <p>Your booking details are as follows:</p>
+                <ul>
+                    <li><strong>Booking ID:</strong> ${booking.id}</li>
+                    <li><strong>Room Number:</strong> ${booking.room}</li>
+                    <li><strong>Check-in Date:</strong> ${booking.checkIn}</li>
+                    <li><strong>Check-out Date:</strong> ${booking.checkOut}</li>
+                    <li><strong>Number of Nights:</strong> ${booking.nights}</li>
+                    <li><strong>Number of Guests:</strong> ${booking.people}</li>
+                    <li><strong>Total Amount Due:</strong> $${booking.totalDue}</li>
+                </ul>
+                <p>We look forward to welcoming you!</p>
+                <p>Sincerely,<br>The Patrinah Hotel Team</p>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log('Confirmation email sent to:', booking.email);
+        res.status(200).json({ message: 'Confirmation email sent successfully.' });
+
+    } catch (error) {
+        console.error('Error sending email:', error);
+        res.status(500).json({ message: 'Failed to send confirmation email.', error: error.message });
+    }
+});
 // --- 8. Start the Server ---
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
