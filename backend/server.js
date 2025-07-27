@@ -51,6 +51,7 @@ const bookingSchema = new mongoose.Schema({
     nationality: { type: String },
     address: { type: String },
     phoneNo: { type: String },
+    email: { type: String },
     nationalIdNo: { type: String }
 });
 const Booking = mongoose.model('Booking', bookingSchema);
