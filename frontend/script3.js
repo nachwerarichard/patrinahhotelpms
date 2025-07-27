@@ -632,6 +632,10 @@ document.addEventListener('click', (event) => {
  * Sends a booking confirmation email for a given booking ID.
  * @param {string} bookingId - The ID of the booking to send the email for.
  */
+/**
+ * Sends a booking confirmation email for a given booking ID.
+ * @param {string} bookingId - The ID of the booking to send the email for.
+ */
 async function sendConfirmationEmail(bookingId) {
     if (currentUserRole !== 'admin') {
         showMessageBox('Access Denied', 'Only Admin users can send confirmation emails.', true);
@@ -645,16 +649,17 @@ async function sendConfirmationEmail(bookingId) {
         return;
     }
 
-    // Prompt for recipient email if not already stored or to allow override
-    const recipientEmail = prompt(`Enter recipient email for booking ${bookingToSend.name} (Room ${bookingToSend.room}):`, bookingToSend.guestEmail || '');
+    // Get recipient email from the input field with ID 'email'
+    // Ensure this input field is visible and populated when the email button is clicked
+    const recipientEmail = emailInput.value.trim(); // Get value from the input field with ID 'email'
 
     if (!recipientEmail) {
-        showMessageBox('Information', 'Email sending cancelled. No recipient email provided.', false);
+        showMessageBox('Input Required', 'Please enter a recipient email in the "Guest Email" field.', true);
         return;
     }
 
     if (!/\S+@\S+\.\S+/.test(recipientEmail)) {
-        showMessageBox('Error', 'Invalid email format. Please enter a valid email address.', true);
+        showMessageBox('Error', 'Invalid email format in the "Guest Email" field. Please enter a valid email address.', true);
         return;
     }
 
