@@ -954,14 +954,14 @@ const transporter = nodemailer.createTransport({
 app.post('/public/send-booking-confirmation', async (req, res) => {
     const booking = req.body; // This will contain all booking details from the frontend
 
-    if (!booking.email) {
+    if (!booking.guestEmail) {
         return res.status(400).json({ message: 'Guest email is required to send confirmation.' });
     }
 
     try {
         const mailOptions = {
             from: process.env.EMAIL_USER, // Sender address
-            to: booking.email, // Recipient email (guest's email)
+            to: booking.guestEmail, // Recipient email (guest's email)
             subject: `Booking Confirmation for Room ${booking.room} at Patrinah Hotel`,
             html: `
                 <p>Dear ${booking.name},</p>
@@ -982,7 +982,7 @@ app.post('/public/send-booking-confirmation', async (req, res) => {
         };
 
         await transporter.sendMail(mailOptions);
-        console.log('Confirmation email sent to:', booking.email);
+        console.log('Confirmation email sent to:', booking.guestEmail);
         res.status(200).json({ message: 'Confirmation email sent successfully.' });
 
     } catch (error) {
