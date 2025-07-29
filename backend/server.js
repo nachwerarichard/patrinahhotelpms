@@ -1,11 +1,8 @@
-// server.js - Node.js Backend for Hotel Management System
-
-// --- 1. Import Dependencies ---
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors'); // Required for Cross-Origin Resource Sharing
 const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
-
+require('dotenv').config(); // Load environment variables from .env file
 
 // --- 2. Initialize Express App ---
 const app = express();
@@ -53,7 +50,7 @@ const bookingSchema = new mongoose.Schema({
     nationality: { type: String },
     address: { type: String },
     phoneNo: { type: String },
-    guestEmail: { type: String },
+    guestEmail: { type: String }, // Renamed from 'email' to 'guestEmail' for clarity, consistent with frontend
     nationalIdNo: { type: String }
 });
 const Booking = mongoose.model('Booking', bookingSchema);
@@ -298,20 +295,50 @@ app.put('/api/rooms/:id', async (req, res) => {
 
 
 // --- Bookings API ---
-// Get all bookings with pagination (admin only)
+
+// NEW: Get single booking by custom ID
+app.get('/api/bookings/id/:customId', async (req, res) => {
+    const { customId } = req.params;
+    try {
+        const booking = await Booking.findOne({ id: customId });
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found.' });
+        }
+        res.json(booking);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching booking by custom ID', error: error.message });
+    }
+});
+
+
+// Get all bookings with pagination and search (admin only)
 app.get('/api/bookings', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 5; // Default to 5 records per page
+        const searchTerm = req.query.search || ''; // New: Get search term
         const skip = (page - 1) * limit;
 
-        const totalCount = await Booking.countDocuments();
+        let query = {};
+        if (searchTerm) {
+            const searchRegex = new RegExp(searchTerm, 'i'); // Case-insensitive regex
+            query = {
+                $or: [
+                    { name: searchRegex },
+                    { room: searchRegex },
+                    { nationalIdNo: searchRegex },
+                    { phoneNo: searchRegex }
+                ]
+            };
+        }
+
+        const totalCount = await Booking.countDocuments(query); // Apply search filter to total count
         const totalPages = Math.ceil(totalCount / limit);
 
-        const bookings = await Booking.find({})
-                                    .skip(skip)
-                                    .limit(limit)
-                                    .sort({ checkIn: -1 }); // Sort by check-in date descending
+        const bookings = await Booking.find(query) // Apply search filter to find
+                                        .skip(skip)
+                                        .limit(limit)
+                                        .sort({ checkIn: -1 }); // Sort by check-in date descending
 
         res.json({
             bookings,
@@ -319,8 +346,7 @@ app.get('/api/bookings', async (req, res) => {
             currentPage: page,
             totalCount
         });
-    } catch (error)
-    {
+    } catch (error) {
         res.status(500).json({ message: 'Error fetching bookings', error: error.message });
     }
 });
@@ -873,14 +899,20 @@ app.post('/api/public/bookings', async (req, res) => {
 });
 
 
+// Nodemailer Transporter Setup
+// IMPORTANT: Use environment variables for sensitive information like email and password.
+// Create a .env file in your backend directory with:
+// EMAIL_USER=your_email@gmail.com
+// EMAIL_PASS=your_app_password
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // e.g., 'gmail', 'SendGrid', 'Mailgun'
+    service: 'gmail',
     auth: {
-        user: 'nachwerarichard@gmail.com', // Your email address
-        pass: 'zwdx qwwc yyux pkhq' // Your email password or app-specific password
+        user: process.env.EMAIL_USER, // Use environment variable
+        pass: process.env.EMAIL_PASS // Use environment variable
     }
 });
 
+// Public endpoint to send booking confirmation (from external website)
 app.post('/public/send-booking-confirmation', async (req, res) => {
     const booking = req.body; // This will contain all booking details from the frontend
 
@@ -890,7 +922,7 @@ app.post('/public/send-booking-confirmation', async (req, res) => {
 
     try {
         const mailOptions = {
-            from: 'nachwerarichard@gmail.comhf', // Sender address
+            from: process.env.EMAIL_USER, // Sender address
             to: booking.email, // Recipient email (guest's email)
             subject: `Booking Confirmation for Room ${booking.room} at Patrinah Hotel`,
             html: `
@@ -921,25 +953,28 @@ app.post('/public/send-booking-confirmation', async (req, res) => {
     }
 });
 
-app.post('/bookings/:id/send-email', async (req, res) => {
+// NEW: Endpoint to send detailed booking confirmation/receipt email (used by internal PMS)
+app.post('/api/bookings/:customId/send-email', async (req, res) => {
     try {
-        const { id } = req.params;
+        const { customId } = req.params; // This is the custom booking ID (e.g., BKG001)
         const { recipientEmail } = req.body;
 
         if (!recipientEmail || !/\S+@\S+\.\S+/.test(recipientEmail)) {
             return res.status(400).json({ message: 'Valid recipient email is required.' });
         }
 
-        const booking = await Booking.findById(id);
+        // Find booking by custom ID
+        const booking = await Booking.findOne({ id: customId });
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
 
         const roomDetails = await Room.findOne({ number: booking.room });
-        const incidentalCharges = await IncidentalCharge.find({ bookingId: booking._id });
+        const incidentalCharges = await IncidentalCharge.find({ bookingId: booking._id }); // Use MongoDB _id for charges
 
         let totalIncidentalAmount = incidentalCharges.reduce((sum, charge) => sum + charge.amount, 0);
-        let roomTotalDue = booking.nights * booking.amountPerNight;
+        // Ensure 'amtPerNight' is used as per your schema, not 'amountPerNight'
+        let roomTotalDue = booking.nights * booking.amtPerNight;
         let totalBill = roomTotalDue + totalIncidentalAmount;
         let balanceDue = totalBill - booking.amountPaid;
         let paymentStatus = balanceDue <= 0 ? 'Paid' : (booking.amountPaid > 0 ? 'Partially Paid' : 'Pending');
@@ -957,13 +992,13 @@ app.post('/bookings/:id/send-email', async (req, res) => {
                     <p>Thank you for choosing Patrinah Hotel!</p>
                     <p>Your booking details are as follows:</p>
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Booking ID:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.customId}</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Booking ID:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.id}</td></tr>
                         <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Guest Name:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.name}</td></tr>
                         <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Room Number:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.room} (${roomDetails ? roomDetails.type : 'N/A'})</td></tr>
                         <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Check-in Date:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.checkIn}</td></tr>
                         <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Check-out Date:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.checkOut}</td></tr>
                         <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Nights:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.nights}</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Amount Per Night:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">UGX ${booking.amountPerNight.toFixed(2)}</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Amount Per Night:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">UGX ${booking.amtPerNight.toFixed(2)}</td></tr>
                         <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Room Total Due:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">UGX ${roomTotalDue.toFixed(2)}</td></tr>
                         <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Total Incidental Charges:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">UGX ${totalIncidentalAmount.toFixed(2)}</td></tr>
                         <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Total Bill:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">UGX ${totalBill.toFixed(2)}</td></tr>
@@ -980,14 +1015,16 @@ app.post('/bookings/:id/send-email', async (req, res) => {
                                     <th style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: left;">Type</th>
                                     <th style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: left;">Description</th>
                                     <th style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: right;">Amount (UGX)</th>
+                                    <th style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: left;">Date</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${incidentalCharges.map(charge => `
                                     <tr>
-                                        <td style="padding: 8px; border: 1px solid #ddd;">${charge.chargeType}</td>
+                                        <td style="padding: 8px; border: 1px solid #ddd;">${charge.type}</td>
                                         <td style="padding: 8px; border: 1px solid #ddd;">${charge.description}</td>
                                         <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${charge.amount.toFixed(2)}</td>
+                                        <td style="padding: 8px; border: 1px solid #ddd;">${new Date(charge.date).toLocaleDateString()}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -1006,7 +1043,7 @@ app.post('/bookings/:id/send-email', async (req, res) => {
         await AuditLog.create({
             action: 'Sent Confirmation Email (Backend)',
             user: req.user ? req.user.username : 'System', // Assuming you have user context from auth
-            details: { bookingId: id, recipient: recipientEmail }
+            details: { bookingCustomId: customId, recipient: recipientEmail }
         });
 
         res.status(200).json({ message: 'Confirmation email sent successfully.' });
@@ -1016,11 +1053,13 @@ app.post('/bookings/:id/send-email', async (req, res) => {
         await AuditLog.create({
             action: 'Failed to Send Confirmation Email (Backend)',
             user: req.user ? req.user.username : 'System',
-            details: { bookingId: req.params.id, recipient: req.body.recipientEmail, error: error.message }
+            details: { bookingCustomId: req.params.customId, recipient: req.body.recipientEmail, error: error.message }
         });
         res.status(500).json({ message: 'Failed to send confirmation email.', error: error.message });
     }
 });
+
+
 // --- 8. Start the Server ---
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
@@ -1031,7 +1070,8 @@ app.listen(port, () => {
     console.log(`- GET /api/rooms`);
     console.log(`- GET /api/rooms/available?checkIn={date}&checkOut={date}`);
     console.log(`- PUT /api/rooms/:id`);
-    console.log(`- GET /api/bookings?page={num}&limit={num}`);
+    console.log(`- GET /api/bookings/id/:customId (NEW: Get booking by custom ID)`);
+    console.log(`- GET /api/bookings?page={num}&limit={num}&search={term} (UPDATED: now supports search)`);
     console.log(`- GET /api/bookings/all (for calendar)`);
     console.log(`- POST /api/bookings`);
     console.log(`- PUT /api/bookings/:id`);
