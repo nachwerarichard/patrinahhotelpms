@@ -2,7 +2,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors'); // Required for Cross-Origin Resource Sharing
 const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
-require('dotenv').config(); // Load environment variables from .env file
 
 // --- 2. Initialize Express App ---
 const app = express();
