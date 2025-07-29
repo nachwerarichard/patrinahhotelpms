@@ -1,14 +1,13 @@
-// script2.js - Frontend JavaScript for Hotel Management System
-
 const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api'; // Your Render backend URL
 
 // --- Data (will be fetched from backend) ---
 let rooms = [];
-let bookings = [];
+let bookings = []; // This will now hold the currently displayed page's bookings or filtered bookings
 let currentUserRole = null; // To store the role of the logged-in user
 let currentUsername = null; // New: To store the username of the logged-in user for audit logs
 let currentPage = 1;
 const recordsPerPage = 5; // Maximum 5 booking records per page
+let currentSearchTerm = ''; // New: To keep track of the active search term for pagination
 
 // Calendar state
 let currentCalendarDate = new Date(); // Stores the month/year currently displayed in the calendar
@@ -347,7 +346,8 @@ loginForm.addEventListener('submit', async function(event) {
                 // Explicitly call the rendering function for the initial active section
                 if (initialSectionId === 'booking-management') {
                     currentPage = 1;
-                    await renderBookings(currentPage);
+                    currentSearchTerm = ''; // Reset search term
+                    await renderBookings(currentPage, currentSearchTerm);
                 } else if (initialSectionId === 'housekeeping') {
                     await renderHousekeepingRooms();
                 } else if (initialSectionId === 'calendar-view') {
@@ -452,7 +452,7 @@ function handleNavigation(event) {
         if (currentUserRole === 'admin') {
             document.getElementById('booking-management').classList.add('active');
             document.getElementById('nav-booking').classList.add('active');
-            renderBookings(currentPage); // Ensure it renders if fallback
+            renderBookings(currentPage, currentSearchTerm); // Ensure it renders if fallback
         } else if (currentUserRole === 'housekeeper') {
             document.getElementById('housekeeping').classList.add('active');
             document.getElementById('nav-housekeeping').classList.add('active');
@@ -464,7 +464,9 @@ function handleNavigation(event) {
     // Re-render sections when active
     if (targetId === 'booking-management') {
         currentPage = 1; // Reset to first page when navigating to bookings
-        renderBookings(currentPage);
+        currentSearchTerm = ''; // Clear search term when navigating via menu
+        bookingSearchInput.value = ''; // Clear search input field
+        renderBookings(currentPage, currentSearchTerm);
     } else if (targetId === 'housekeeping') {
         renderHousekeepingRooms();
     } else if (targetId === 'reports') {
@@ -527,11 +529,11 @@ function applyRoleAccess(role) {
 // --- Booking Management Functions ---
 
 /**
- * Renders the bookings table, fetching data from the backend with pagination.
+ * Renders the bookings table, fetching data from the backend with pagination and search.
  * @param {number} page - The current page number to fetch.
- * @param {Array<Object>} [filteredBookings=null] - Optional: A pre-filtered array of bookings to render.
+ * @param {string} [searchTerm=''] - Optional: A search term to filter bookings.
  */
-async function renderBookings(page = 1, filteredBookings = null) {
+async function renderBookings(page = 1, searchTerm = '') {
     bookingsTableBody.innerHTML = ''; // Clear existing rows
 
     if (currentUserRole !== 'admin') {
@@ -545,32 +547,33 @@ async function renderBookings(page = 1, filteredBookings = null) {
     let currentBookings = [];
     let totalPages = 1;
     let totalCount = 0;
+    currentPage = page; // Update global current page
+    currentSearchTerm = searchTerm; // Update global search term
 
-    if (filteredBookings) {
-        currentBookings = filteredBookings; // Use provided filtered data (no pagination applied here, assumes filter is client-side for now)
-        totalPages = 1; // If filtered client-side, assume one page
-        totalCount = filteredBookings.length;
-    } else {
-        try {
-            const response = await fetch(`${API_BASE_URL}/bookings?page=${page}&limit=${recordsPerPage}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            currentBookings = data.bookings;
-            bookings = data.bookings; // Update local bookings array with the current page's data
-            totalPages = data.totalPages;
-            totalCount = data.totalCount;
-            currentPage = data.currentPage; // Update current page from backend response
-        } catch (error) {
-            console.error('Error fetching bookings:', error);
-            showMessageBox('Error', 'Failed to load bookings. Please check backend connection.', true);
-            bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px; color: red;">Failed to load bookings.</td></tr>';
-            prevPageBtn.disabled = true;
-            nextPageBtn.disabled = true;
-            pageInfoSpan.textContent = 'Page 0 of 0';
-            return;
+    try {
+        let url = `${API_BASE_URL}/bookings?page=${currentPage}&limit=${recordsPerPage}`;
+        if (currentSearchTerm) {
+            url += `&search=${encodeURIComponent(currentSearchTerm)}`;
         }
+
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        currentBookings = data.bookings;
+        bookings = data.bookings; // Update local bookings array with the current page's data
+        totalPages = data.totalPages;
+        totalCount = data.totalCount;
+
+    } catch (error) {
+        console.error('Error fetching bookings:', error);
+        showMessageBox('Error', 'Failed to load bookings. Please check backend connection.', true);
+        bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px; color: red;">Failed to load bookings.</td></tr>';
+        prevPageBtn.disabled = true;
+        nextPageBtn.disabled = true;
+        pageInfoSpan.textContent = 'Page 0 of 0';
+        return;
     }
 
     if (currentBookings.length === 0) {
@@ -606,7 +609,6 @@ async function renderBookings(page = 1, filteredBookings = null) {
             `;
         });
     }
-
     // Update pagination controls
     prevPageBtn.disabled = currentPage <= 1;
     nextPageBtn.disabled = currentPage >= totalPages;
@@ -631,14 +633,7 @@ document.addEventListener('click', (event) => {
 
 /**
  * Sends a booking confirmation email for a given booking ID.
- * @param {string} bookingId - The ID of the booking to send the email for.
- */
-/**
- * Sends a booking confirmation email for a given booking ID.
- * @param {string} bookingId - The ID of the booking to send the email for.
- */
-/**
- * Sends a booking confirmation email for a given booking ID.
+ * This function is now more robust, fetching booking details if not provided.
  * @param {string} bookingId - The ID of the booking to send the email for.
  */
 async function sendConfirmationEmail(bookingId) {
@@ -648,20 +643,31 @@ async function sendConfirmationEmail(bookingId) {
         return;
     }
 
-    const bookingToSend = bookings.find(b => b.id === bookingId);
-    if (!bookingToSend) {
-        showMessageBox('Error', 'Booking not found.', true);
+    let bookingToSend;
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings/id/${bookingId}`); // Fetch specific booking by ID
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        bookingToSend = await response.json();
+        if (!bookingToSend) {
+            showMessageBox('Error', 'Booking not found for email sending.', true);
+            return;
+        }
+    } catch (error) {
+        console.error('Error fetching booking for email:', error);
+        showMessageBox('Error', `Failed to retrieve booking details for email: ${error.message}`, true);
         return;
     }
 
-    const recipientEmail = guestEmailInput.value.trim();
+    const recipientEmail = bookingToSend.email ? bookingToSend.email.trim() : ''; // Use email from fetched booking
     if (!recipientEmail) {
-        showMessageBox('Input Required', 'Please enter a recipient email in the "Guest Email" field.', true);
+        showMessageBox('Input Required', `No email address found for guest "${bookingToSend.name}". Please update the booking with a guest email.`, true);
         return;
     }
 
     if (!/\S+@\S+\.\S+/.test(recipientEmail)) {
-        showMessageBox('Error', 'Invalid email format in the "Guest Email" field. Please enter a valid email address.', true);
+        showMessageBox('Error', `Invalid email format for guest "${bookingToSend.name}". Please update the booking with a valid email address.`, true);
         return;
     }
 
@@ -790,69 +796,14 @@ async function sendConfirmationEmail(bookingId) {
         });
     }
 }
-    
-function filterBookings() {
-    const searchTerm = bookingSearchInput.value.toLowerCase();
-    // Fetch all bookings first to filter, as `bookings` only holds the current page
-    // For a truly scalable solution, this search would hit a backend endpoint /api/bookings?search=...
-    fetch(`${API_BASE_URL}/bookings/all`) // Fetch all to simulate client-side search
-        .then(response => {
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            return response.json();
-        })
-        .then(allBookings => {
-            const filtered = allBookings.filter(booking =>
-                booking.name.toLowerCase().includes(searchTerm) ||
-                booking.room.toLowerCase().includes(searchTerm) ||
-                (booking.nationalIdNo && booking.nationalIdNo.toLowerCase().includes(searchTerm)) ||
-                (booking.phoneNo && booking.phoneNo.toLowerCase().includes(searchTerm))
-            );
-            // Render filtered results, but without pagination controls for the filtered view
-            bookingsTableBody.innerHTML = ''; // Clear existing rows
-            if (filtered.length === 0) {
-                bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px;">No matching bookings found.</td></tr>';
-            } else {
-                filtered.forEach(booking => {
-                    const row = bookingsTableBody.insertRow();
-                    row.dataset.id = booking.id;
-                    row.innerHTML = `
-                        <td>${booking.name}</td>
-                        <td>${booking.room}</td>
-                        <td>${booking.checkIn}</td>
-                        <td>${booking.checkOut}</td>
-                        
-                        <td>${booking.paymentStatus}</td>
-                        
-                        <td>
-                            <div class="action-buttons">
-                                <button class="btn btn-info" onclick="editBooking('${booking.id}')">Edit</button>
-                                <button class="btn btn-danger" onclick="confirmDeleteBooking('${booking.id}')">Delete</button>
-                                ${new Date(booking.checkOut) <= new Date() && rooms.find(r => r.number === booking.room)?.status !== 'dirty' ?
-                                    `<button class="btn btn-success" onclick="checkoutBooking('${booking.id}')">Check-out</button>` :
-                                    ''
-                                }
-                                <button class="btn btn-primary" onclick="openIncidentalChargeModal('${booking.id}', '${booking.name}', '${booking.room}')">Add Charge</button>
-                                <button class="btn btn-secondary" onclick="viewCharges('${booking.id}')">View Charges</button>
-                                <button class="btn btn-info" onclick="printReceipt('${booking.id}')"><i class="fas fa-print"></i> Receipt</button>
-                            </div>
-                        </td>
-                    `;
-                });
-            }
-            // Disable pagination controls when search results are displayed
-            prevPageBtn.disabled = true;
-            nextPageBtn.disabled = true;
-            pageInfoSpan.textContent = `Showing ${filtered.length} results`;
-        })
-        .catch(error => {
-            console.error('Error filtering bookings:', error);
-            showMessageBox('Error', 'Failed to filter bookings. Please try again.', true);
-        });
 
-    // If search term is empty, revert to paginated view
-    if (searchTerm === '') {
-        renderBookings(currentPage);
-    }
+/**
+ * Handles the search input, triggering a re-render of bookings with the search term.
+ */
+function filterBookings() {
+    const searchTerm = bookingSearchInput.value.toLowerCase().trim();
+    // Reset to page 1 for a new search
+    renderBookings(1, searchTerm);
 }
 
 
@@ -935,7 +886,7 @@ bookingForm.addEventListener('submit', async function(event) {
         }
 
         showMessageBox('Success', message);
-        renderBookings(currentPage); // Re-render to show updated list
+        renderBookings(currentPage, currentSearchTerm); // Re-render to show updated list
         renderHousekeepingRooms(); // Update housekeeping view as room status might change
         renderCalendar(); // Update calendar view
         renderAuditLogs(); // Update audit logs
@@ -951,11 +902,10 @@ bookingForm.addEventListener('submit', async function(event) {
  */
 async function editBooking(id) {
     try {
-        // Fetch all bookings to find the one to edit (or ideally, fetch a single booking by ID if backend supports it)
-        const response = await fetch(`${API_BASE_URL}/bookings/all`); // Fetch all to find the booking
+        // Fetch the specific booking by ID
+        const response = await fetch(`${API_BASE_URL}/bookings/id/${id}`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const allBookings = await response.json();
-        const booking = allBookings.find(b => b.id === id);
+        const booking = await response.json();
 
         if (!booking) {
             showMessageBox('Error', 'Booking not found for editing.', true);
@@ -1006,7 +956,7 @@ function confirmDeleteBooking(id) {
             }
 
             showMessageBox('Success', 'Booking and associated charges deleted successfully!');
-            renderBookings(currentPage); // Re-render to show updated list
+            renderBookings(currentPage, currentSearchTerm); // Re-render to show updated list
             renderHousekeepingRooms(); // Update housekeeping view as room status might change
             renderCalendar(); // Update calendar view
             renderAuditLogs(); // Update audit logs
@@ -1019,7 +969,7 @@ function confirmDeleteBooking(id) {
 
 
 /**
- * Handles room checkout, marking the associated room as dirty.
+ * Handles room checkout, marking the associated room as dirty and sending an email.
  * @param {string} id - The custom ID of the booking to check out.
  */
 async function checkoutBooking(id) {
@@ -1037,10 +987,15 @@ async function checkoutBooking(id) {
 
         const data = await response.json();
         showMessageBox('Success', data.message);
-        renderBookings(currentPage); // Re-render to update checkout button visibility
+        renderBookings(currentPage, currentSearchTerm); // Re-render to update checkout button visibility
         renderHousekeepingRooms(); // Update housekeeping view
         renderCalendar(); // Update calendar view
         renderAuditLogs(); // Update audit logs
+
+        // --- NEW: Automatically send confirmation email after successful checkout ---
+        await sendConfirmationEmail(id); // Call the email function
+        // --- END NEW ---
+
     } catch (error) {
         console.error('Error during checkout:', error);
         showMessageBox('Error', `Failed to process checkout: ${error.message}`, true);
@@ -1060,7 +1015,7 @@ bookingSearchInput.addEventListener('keyup', filterBookings);
 prevPageBtn.addEventListener('click', () => {
     if (currentPage > 1) {
         currentPage--;
-        renderBookings(currentPage);
+        renderBookings(currentPage, currentSearchTerm);
     }
 });
 
@@ -1072,7 +1027,7 @@ nextPageBtn.addEventListener('click', () => {
         const totalPages = parseInt(match[2]);
         if (currentPage < totalPages) {
             currentPage++;
-            renderBookings(currentPage);
+            renderBookings(currentPage, currentSearchTerm);
         }
     }
 });
@@ -1120,10 +1075,9 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
 
     try {
         // First, get the MongoDB _id for the booking using the custom ID
-        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/all`); // Fetch all to find by custom ID
+        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}`); // Fetch specific booking by ID
         if (!bookingResponse.ok) throw new Error(`HTTP error! status: ${bookingResponse.status}`);
-        const bookingData = await bookingResponse.json();
-        const booking = bookingData.find(b => b.id === bookingCustomId);
+        const booking = await bookingResponse.json();
 
         if (!booking) {
             showMessageBox('Error', 'Booking not found for adding charge.', true);
@@ -1170,10 +1124,9 @@ async function viewCharges(bookingCustomId) {
 
     try {
         // First, get the MongoDB _id for the booking using the custom ID
-        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/all`); // Fetch all to find by custom ID
+        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}`); // Fetch specific booking by ID
         if (!bookingResponse.ok) throw new Error(`HTTP error! status: ${bookingResponse.status}`);
-        const bookingData = await bookingResponse.json();
-        const booking = bookingData.find(b => b.id === bookingCustomId);
+        const booking = await bookingResponse.json();
 
         if (!booking) {
             showMessageBox('Error', 'Booking not found for viewing charges.', true);
@@ -1258,15 +1211,22 @@ function confirmDeleteIncidentalCharge(chargeId, bookingCustomId) {
  * @param {string} bookingCustomId - The custom ID of the booking.
  */
 async function markAllChargesPaid() {
-    const bookingCustomId = viewChargesGuestNameSpan.parentElement.parentElement.querySelector('#receiptBookingId') ?
-                                viewChargesGuestNameSpan.parentElement.parentElement.querySelector('#receiptBookingId').textContent :
-                                viewChargesGuestNameSpan.textContent.split('(')[0].trim(); // Get from modal title if receipt not open
-    // Need to get the actual MongoDB _id from the custom ID first
+    // This function needs to correctly identify the bookingCustomId from the modal context.
+    // The previous logic was a bit convoluted. Let's ensure it gets the ID reliably.
+    // Assuming this is called from within the viewChargesModal or receiptModal context.
+    const currentBookingCustomId = viewChargesModal.style.display === 'flex' ?
+                                   chargeBookingCustomIdInput.value : // If incidental charge modal is open
+                                   receiptBookingIdSpan.textContent;   // If receipt modal is open
+
+    if (!currentBookingCustomId) {
+        showMessageBox('Error', 'Could not determine booking ID to mark charges paid.', true);
+        return;
+    }
+
     try {
-        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/all`);
+        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${currentBookingCustomId}`); // Fetch specific booking by ID
         if (!bookingResponse.ok) throw new Error(`HTTP error! status: ${bookingResponse.status}`);
-        const bookingData = await bookingResponse.json();
-        const booking = bookingData.find(b => b.id === bookingCustomId);
+        const booking = await bookingResponse.json();
 
         if (!booking) {
             showMessageBox('Error', 'Booking not found for marking charges paid.', true);
@@ -1286,7 +1246,7 @@ async function markAllChargesPaid() {
 
         const data = await response.json();
         showMessageBox('Success', data.message);
-        viewCharges(bookingCustomId); // Re-render charges to show updated status
+        viewCharges(currentBookingCustomId); // Re-render charges to show updated status
         renderAuditLogs(); // Update audit logs
     } catch (error) {
         console.error('Error marking charges as paid:', error);
@@ -1304,10 +1264,9 @@ async function markAllChargesPaid() {
 async function printReceipt(bookingCustomId) {
     try {
         // Fetch booking details
-        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/all`);
+        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}`);
         if (!bookingResponse.ok) throw new Error(`HTTP error! status: ${bookingResponse.status}`);
-        const bookingData = await bookingResponse.json();
-        const booking = bookingData.find(b => b.id === bookingCustomId);
+        const booking = await bookingResponse.json();
 
         if (!booking) {
             showMessageBox('Error', 'Booking not found for receipt generation.', true);
@@ -1557,7 +1516,7 @@ async function performRoomStatusUpdate(roomId, newStatus, reason = null) {
         room.status = data.room.status;
         showMessageBox('Success', `Room ${room.number} status updated to ${data.room.status.replace('-', ' ')}.`);
         renderHousekeepingRooms(); // Re-render to update UI
-        renderBookings(currentPage); // Re-render bookings to update checkout button visibility if needed
+        renderBookings(currentPage, currentSearchTerm); // Re-render bookings to update checkout button visibility if needed
         renderCalendar(); // Update calendar view
         renderAuditLogs(); // Update audit logs
     } catch (error) {
@@ -1814,7 +1773,7 @@ async function simulateChannelManagerSync() {
 
         const data = await response.json();
         showMessageBox('Sync Complete', data.message);
-        renderBookings(currentPage); // Re-render relevant data after sync
+        renderBookings(currentPage, currentSearchTerm); // Re-render relevant data after sync
         renderHousekeepingRooms();
         renderCalendar();
         renderAuditLogs(); // Log will be added by backend
@@ -1861,7 +1820,8 @@ document.addEventListener('DOMContentLoaded', async () => { // Made async to awa
                 // Explicitly call the rendering function for the initial active section
                 if (initialSectionId === 'booking-management') {
                     currentPage = 1;
-                    await renderBookings(currentPage);
+                    currentSearchTerm = ''; // Reset search term
+                    await renderBookings(currentPage, currentSearchTerm);
                 } else if (initialSectionId === 'housekeeping') {
                     await renderHousekeepingRooms();
                 } else if (initialSectionId === 'calendar-view') {
