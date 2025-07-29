@@ -31,7 +31,6 @@ const roomSelect = document.getElementById('room');
 const checkInInput = document.getElementById('checkIn');
 const checkOutInput = document.getElementById('checkOut');
 const nightsInput = document.getElementById('nights');
-const guestEmailInput = document.getElementById('guestEmail'); // Add this line
 const amtPerNightInput = document.getElementById('amtPerNight');
 const totalDueInput = document.getElementById('totalDue'); // Room Total Due
 const amountPaidInput = document.getElementById('amountPaid'); // Room Amount Paid
