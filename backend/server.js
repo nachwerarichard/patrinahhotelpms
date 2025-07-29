@@ -952,7 +952,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Public endpoint to send booking confirmation (from external website)
-app.post('/public/send-booking-confirmation', async (req, res) => {
+app.post('/api/public/send-booking-confirmation', async (req, res) => {
     const booking = req.body; // This will contain all booking details from the frontend
 
     if (!booking.guestEmail) {
