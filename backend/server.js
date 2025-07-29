@@ -3,13 +3,52 @@ const mongoose = require('mongoose');
 const cors = require('cors'); // Required for Cross-Origin Resource Sharing
 const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
 
+
+
+// ... (other imports like mongoose, dotenv if you use it, etc.)
+
+// Middleware setup
+// 2. Configure CORS middleware - IMPORTANT: place this BEFORE your routes
+const allowedOrigins = [
+    'https://rainbow-fox-3bad88.netlify.app/bookingcheck', // Your Netlify frontend URL
+    // 'http://localhost:3000', // Add your local development URL if you test locally
+    // 'http://127.0.0.1:5500' // Another common local server URL if applicable
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        // or if the origin is in our allowed list
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Specify the HTTP methods your frontend uses
+    credentials: true, // If you're sending cookies or authorization headers
+    optionsSuccessStatus: 204 // Some older browsers require 204 for preflight OPTIONS
+}));
+
+app.use(express.json()); // This should also be before your routes to parse JSON bodies
+
+// ... (Your other middleware, like URL-encoded parser if needed)
+
+// Your API routes go here
+// app.get('/api/public/room-types', ...);
+// app.post('/api/public/bookings', ...);
+// app.post('/public/send-booking-confirmation', ...);
+// etc.
+
+// ... (Your server listening code)
+
+
+
 // --- 2. Initialize Express App ---
 const app = express();
 const port = 3000; // Backend will run on port 3000
 
 // --- 3. Middleware Setup ---
-app.use(express.json()); // Enable parsing of JSON request bodies
-app.use(cors()); // Enable CORS for all origins (for development, restrict in production)
 
 // --- 4. MongoDB Connection ---
 // IMPORTANT: Replace '<YOUR_MONGODB_CONNECTION_STRING>' with your actual MongoDB Atlas
