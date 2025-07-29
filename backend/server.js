@@ -1204,14 +1204,14 @@ app.post('/api/bookings/:customId/emailconfirm', async (req, res) => {
 app.post('/public/send-booking-confirm', async (req, res) => {
     const booking = req.body; // This will contain all booking details from the frontend
 
-    if (!booking.email) {
+    if (!booking.gemail) {
         return res.status(400).json({ message: 'Guest email is required to send confirmation.' });
     }
 
     try {
         const mailOptions = {
             from: process.env.EMAIL_USER, // Sender address
-            to: booking.email, // Recipient email (guest's email)
+            to: booking.gemail, // Recipient email (guest's email)
             subject: `Booking Confirmation for Room ${booking.room} at Patrinah Hotel`,
             html: `
                 <p>Dear ${booking.name},</p>
@@ -1232,7 +1232,7 @@ app.post('/public/send-booking-confirm', async (req, res) => {
         };
 
         await transporter.sendMail(mailOptions);
-        console.log('Confirmation email sent to:', booking.email);
+        console.log('Confirmation email sent to:', booking.gemail);
         res.status(200).json({ message: 'Confirmation email sent successfully.' });
 
     } catch (error) {
