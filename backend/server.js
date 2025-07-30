@@ -1202,7 +1202,7 @@ app.post('/api/bookings/:customId/emailconfirm', async (req, res) => {
         res.status(500).json({ message: 'Failed to send confirmation email.', error: error.message });
     }
 });
-app.post('/public/send-booking-confirm', async (req, res) => {
+app.post('/api/public/send-booking-confirm', async (req, res) => {
     const booking = req.body; // This will contain all booking details from the frontend
 
     if (!booking.gemail) {
