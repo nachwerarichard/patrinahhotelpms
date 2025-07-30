@@ -952,7 +952,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Public endpoint to send booking confirmation (from external website)
-app.post('/api/public/send-booking-confirmation', async (req, res) => {
+app.post('/public/send-booking-confirmation', async (req, res) => {
     const booking = req.body; // This will contain all booking details from the frontend
 
     if (!booking.guestEmail) {
@@ -1199,6 +1199,45 @@ app.post('/api/bookings/:customId/emailconfirm', async (req, res) => {
             user: req.user ? req.user.username : 'System',
             details: { bookingCustomId: req.params.customId, recipient: req.body.recipientEmail, error: error.message }
         });
+        res.status(500).json({ message: 'Failed to send confirmation email.', error: error.message });
+    }
+});
+app.post('/public/send-booking-confirm', async (req, res) => {
+    const booking = req.body; // This will contain all booking details from the frontend
+
+    if (!booking.gemail) {
+        return res.status(400).json({ message: 'Guest email is required to send confirmation.' });
+    }
+
+    try {
+        const mailOptions = {
+            from: process.env.EMAIL_USER, // Sender address
+            to: booking.gemail, // Recipient email (guest's email)
+            subject: `Booking Confirmation for Room ${booking.room} at Patrinah Hotel`,
+            html: `
+                <p>Dear ${booking.name},</p>
+                <p>Thank you for booking with us at Patrinah Hotel!</p>
+                <p>Your booking details are as follows:</p>
+                <ul>
+                    <li><strong>Booking ID:</strong> ${booking.id}</li>
+                    <li><strong>Room Number:</strong> ${booking.room}</li>
+                    <li><strong>Check-in Date:</strong> ${booking.checkIn}</li>
+                    <li><strong>Check-out Date:</strong> ${booking.checkOut}</li>
+                    <li><strong>Number of Nights:</strong> ${booking.nights}</li>
+                    <li><strong>Number of Guests:</strong> ${booking.people}</li>
+                    <li><strong>Total Amount Due:</strong> $${booking.totalDue}</li>
+                </ul>
+                <p>We look forward to welcoming you!</p>
+                <p>Sincerely,<br>The Patrinah Hotel Team</p>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log('Confirmation email sent to:', booking.gemail);
+        res.status(200).json({ message: 'Confirmation email sent successfully.' });
+
+    } catch (error) {
+        console.error('Error sending email:', error);
         res.status(500).json({ message: 'Failed to send confirmation email.', error: error.message });
     }
 });
