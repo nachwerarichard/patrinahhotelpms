@@ -1212,7 +1212,7 @@ app.post('/public/send-booking-confirm', async (req, res) => {
     try {
         const mailOptions = {
             from: process.env.EMAIL_USER, // Sender address
-            to: booking.gemail, // Recipient email (guest's email)
+            to: booking.email, // Recipient email (guest's email)
             subject: `Booking Confirmation for Room ${booking.room} at Patrinah Hotel`,
             html: `
                 <p>Dear ${booking.name},</p>
