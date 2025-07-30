@@ -64,13 +64,11 @@ mongoose.connect(mongoURI)
 // --- 5. Define Mongoose Schemas and Models ---
 
 // Room Schema
-// Room Schema
 const roomSchema = new mongoose.Schema({
-    id: { type: String, required: true, unique: true },
+    id: { type: String, required: true, unique: true }, // Custom ID for the room (e.g., 'R101')
     type: { type: String, required: true },
-    number: { type: String, required: true, unique: true },
-    status: { type: String, required: true, enum: ['clean', 'dirty', 'under-maintenance', 'blocked'], default: 'clean' },
-    amtPerNight: { type: Number, required: true } // Add this field
+    number: { type: String, required: true, unique: true }, // Room number (e.g., '101')
+    status: { type: String, required: true, enum: ['clean', 'dirty', 'under-maintenance', 'blocked'], default: 'clean' }
 });
 const Room = mongoose.model('Room', roomSchema);
 
@@ -225,14 +223,14 @@ app.post('/api/rooms/init', async (req, res) => {
         const count = await Room.countDocuments();
         if (count === 0) {
             const initialRooms = [
-                { id: 'R101', type: 'Delux 1', number: '101', status: 'clean',amtPerNight: 150000 , },
-                { id: 'R102', type: 'Delux 1', number: '102', status: 'clean',amtPerNight: 150000  },
-                { id: 'R103', type: 'Delux 1', number: '103', status: 'clean',amtPerNight: 150000  },
-                { id: 'R104', type: 'Delux 2', number: '104', status: 'clean',amtPerNight: 150000  },
-                { id: 'R105', type: 'Delux 2', number: '105', status: 'clean',amtPerNight: 180000  },
-                { id: 'R106', type: 'Delux 2', number: '106', status: 'clean',amtPerNight: 180000  },
-                { id: 'R201', type: 'Standard', number: '201', status: 'clean',amtPerNight: 120000  },
-                { id: 'R202', type: 'Standard', number: '202', status: 'clean',amtPerNight: 120000  },
+                { id: 'R101', type: 'Delux 1', number: '101', status: 'clean' },
+                { id: 'R102', type: 'Delux 1', number: '102', status: 'clean' },
+                { id: 'R103', type: 'Delux 1', number: '103', status: 'clean' },
+                { id: 'R104', type: 'Delux 2', number: '104', status: 'clean' },
+                { id: 'R105', type: 'Delux 2', number: '105', status: 'clean' },
+                { id: 'R106', type: 'Delux 2', number: '106', status: 'clean' },
+                { id: 'R201', type: 'Standard', number: '201', status: 'clean' },
+                { id: 'R202', type: 'Standard', number: '202', status: 'clean' },
             ];
             await Room.insertMany(initialRooms);
             console.log('Initial rooms added to DB.');
@@ -833,70 +831,54 @@ app.get('/api/public/room-types', async (req, res) => {
 });
 
 // Get available rooms by type for a specific date range
-// Inside app.get('/api/public/rooms/available', ...)
 app.get('/api/public/rooms/available', async (req, res) => {
-    const { checkIn, checkOut, roomType, people } = req.query; // 'people' would require a 'capacity' field in Room schema
+    const { checkIn, checkOut, roomType, people } = req.query;
 
     if (!checkIn || !checkOut) {
         return res.status(400).json({ message: 'Check-in and check-out dates are required.' });
     }
 
     try {
+        // Find all bookings that overlap with the requested period
         const conflictingBookings = await Booking.find({
             checkIn: { $lt: checkOut },
             checkOut: { $gt: checkIn }
         });
 
+        // Get the room numbers of the conflicting bookings
         const bookedRoomNumbers = conflictingBookings.map(booking => booking.room);
 
         let query = {
-            status: 'clean',
-            number: { $nin: bookedRoomNumbers }
+            status: 'clean', // Only consider clean rooms initially
+            number: { $nin: bookedRoomNumbers } // Exclude already booked rooms
         };
 
-        if (roomType && roomType !== 'Any') {
+        if (roomType && roomType !== 'Any') { // 'Any' type means no specific type filter
             query.type = roomType;
         }
 
-        // --- MODIFICATION STARTS HERE ---
-        // Fetch available rooms, including their type and a hardcoded or retrieved 'amtPerNight'
-        const availableRooms = await Room.find(query).select('number type'); // Select relevant fields
+        // Note: For 'people' capacity, you'd typically have a 'capacity' field in your Room schema
+        // For now, we'll just return rooms that match type and availability.
+        // If 'people' was a hard requirement, you'd add:
+        // query.capacity = { $gte: parseInt(people) }; (assuming 'capacity' field in Room schema)
 
-        // Attach a price based on room type or a default.
-        // Ideally, Room schema should have an `amtPerNight` or similar.
-        // For now, let's hardcode example prices or fetch from a 'RoomType' model if you had one.
-        const roomsWithPrices = availableRooms.map(room => {
-            let amtPerNight = 100000; // Default price
-            if (room.type === 'Delux 1') {
-                amtPerNight = 150000;
-            } else if (room.type === 'Delux 2') {
-                amtPerNight = 180000;
-            } else if (room.type === 'Standard') {
-                amtPerNight = 120000;
-            }
-            return {
-                number: room.number,
-                type: room.type,
-                amtPerNight: amtPerNight // Include the price
-            };
-        });
+        const availableRooms = await Room.find(query);
 
-        // Group by room type (optional, but your frontend expects this for now)
+        // Group by room type and return room numbers
         const availableRoomsByType = {};
-        roomsWithPrices.forEach(room => {
+        availableRooms.forEach(room => {
             if (!availableRoomsByType[room.type]) {
                 availableRoomsByType[room.type] = [];
             }
-            availableRoomsByType[room.type].push(room); // Push the entire room object
+            availableRoomsByType[room.type].push(room.number);
         });
 
         res.json(availableRoomsByType);
-        // --- MODIFICATION ENDS HERE ---
-
     } catch (error) {
         res.status(500).json({ message: 'Error checking public room availability', error: error.message });
     }
 });
+
 // Public endpoint to add a new booking (from external website)
 app.post('/api/public/bookings', async (req, res) => {
     const { name, room, checkIn, checkOut, nights, amtPerNight, totalDue, amountPaid, balance, paymentStatus, people, nationality, address, phoneNo, nationalIdNo } = req.body;
