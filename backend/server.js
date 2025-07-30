@@ -11,8 +11,7 @@ const app = express();
 // Middleware setup
 // 2. Configure CORS middleware - IMPORTANT: place this BEFORE your routes
 const allowedOrigins = [
-    'https://rainbow-fox-3bad88.netlify.app',
-    'https://elegant-pasca-cea136.netlify.app'// Your Netlify frontend URL
+    'https://rainbow-fox-3bad88.netlify.app', // Your Netlify frontend URL
     // 'http://localhost:3000', // Add your local development URL if you test locally
     // 'http://127.0.0.1:5500' // Another common local server URL if applicable
 ];
@@ -955,14 +954,14 @@ const transporter = nodemailer.createTransport({
 app.post('/public/send-booking-confirmation', async (req, res) => {
     const booking = req.body; // This will contain all booking details from the frontend
 
-    if (!booking.guestEmail) {
+    if (!booking.email) {
         return res.status(400).json({ message: 'Guest email is required to send confirmation.' });
     }
 
     try {
         const mailOptions = {
             from: process.env.EMAIL_USER, // Sender address
-            to: booking.guestEmail, // Recipient email (guest's email)
+            to: booking.email, // Recipient email (guest's email)
             subject: `Booking Confirmation for Room ${booking.room} at Patrinah Hotel`,
             html: `
                 <p>Dear ${booking.name},</p>
@@ -983,7 +982,7 @@ app.post('/public/send-booking-confirmation', async (req, res) => {
         };
 
         await transporter.sendMail(mailOptions);
-        console.log('Confirmation email sent to:', booking.guestEmail);
+        console.log('Confirmation email sent to:', booking.email);
         res.status(200).json({ message: 'Confirmation email sent successfully.' });
 
     } catch (error) {
@@ -1202,17 +1201,17 @@ app.post('/api/bookings/:customId/emailconfirm', async (req, res) => {
         res.status(500).json({ message: 'Failed to send confirmation email.', error: error.message });
     }
 });
-app.post('/public/send-booking-confirm', async (req, res) => {
+app.post('/public/send-booking-confirmation', async (req, res) => {
     const booking = req.body; // This will contain all booking details from the frontend
 
-    if (!booking.gemail) {
+    if (!booking.email) {
         return res.status(400).json({ message: 'Guest email is required to send confirmation.' });
     }
 
     try {
         const mailOptions = {
             from: process.env.EMAIL_USER, // Sender address
-            to: booking.gemail, // Recipient email (guest's email)
+            to: booking.email, // Recipient email (guest's email)
             subject: `Booking Confirmation for Room ${booking.room} at Patrinah Hotel`,
             html: `
                 <p>Dear ${booking.name},</p>
@@ -1233,7 +1232,7 @@ app.post('/public/send-booking-confirm', async (req, res) => {
         };
 
         await transporter.sendMail(mailOptions);
-        console.log('Confirmation email sent to:', booking.gemail);
+        console.log('Confirmation email sent to:', booking.email);
         res.status(200).json({ message: 'Confirmation email sent successfully.' });
 
     } catch (error) {
