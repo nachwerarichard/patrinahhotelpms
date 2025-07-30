@@ -1205,7 +1205,7 @@ app.post('/api/bookings/:customId/emailconfirm', async (req, res) => {
 app.post('/api/public/send-booking-confirm', async (req, res) => {
     const booking = req.body; // This will contain all booking details from the frontend
 
-    if (!booking.gemail) {
+    if (!booking.email) {
         return res.status(400).json({ message: 'Guest email is required to send confirmation.' });
     }
 
