@@ -881,7 +881,7 @@ app.get('/api/public/rooms/available', async (req, res) => {
 
 // Public endpoint to add a new booking (from external website)
 app.post('/api/public/bookings', async (req, res) => {
-    const { name, room, checkIn, checkOut, nights, amtPerNight, totalDue, amountPaid, balance, paymentStatus, people, nationality, address, phoneNo, nationalIdNo } = req.body;
+    const { name, guestEmail, room, checkIn, checkOut, nights, amtPerNight, totalDue, amountPaid, balance, paymentStatus, people, nationality, address, phoneNo, nationalIdNo } = req.body;
 
     // Basic validation
     if (!name || !room || !checkIn || !checkOut || !nights || !amtPerNight || !totalDue || !people) {
@@ -915,7 +915,7 @@ app.post('/api/public/bookings', async (req, res) => {
 
         const newBooking = new Booking({
             id: newBookingId,
-            name, room, checkIn, checkOut, nights, amtPerNight,
+            name,guestEmail, room, checkIn, checkOut, nights, amtPerNight,
             totalDue, amountPaid, balance, paymentStatus, people, nationality,
             address, phoneNo, nationalIdNo
         });
