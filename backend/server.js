@@ -10,7 +10,8 @@ const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
 // Middleware setup
 // 2. Configure CORS middleware - IMPORTANT: place this BEFORE your routes
 const allowedOrigins = [
-    'https://rainbow-fox-3bad88.netlify.app', // Your Netlify frontend URL
+    'https://rainbow-fox-3bad88.netlify.app',
+    'https://elegant-pasca-cea136.netlify.app'// Your Netlify frontend URL
     // 'http://localhost:3000', // Add your local development URL if you test locally
     // 'http://127.0.0.1:5500' // Another common local server URL if applicable
 ];
