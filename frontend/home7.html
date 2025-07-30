@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patrinah Hotel - Book Your Stay</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.booking-widget-container {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 500px;
+    margin-top: 20px;
+}
+
+h2, h3, h4 {
+    color: #333;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+input[type="date"],
+input[type="number"],
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+select {
+    width: calc(100% - 20px);
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 16px;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+#availabilityResults, #bookingForm, #bookingConfirmation {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+#availableRoomsList {
+    list-style: none;
+    padding: 0;
+}
+
+#availableRoomsList li {
+    background-color: #e9f5ff;
+    border: 1px solid #cce7ff;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#availableRoomsList li button {
+    width: auto;
+    padding: 8px 15px;
+    font-size: 14px;
+}
+
+.error-message {
+    color: #dc3545;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 15px;
+    text-align: center;
+}
+</style>
+</head>
+<body>
+    <div class="booking-widget-container">
+        <h2>Book Your Stay at Patrinah Hotel</h2>
+
+        <form id="availabilityForm">
+            <div class="form-group">
+                <label for="checkInDate">Check-in Date:</label>
+                <input type="date" id="checkInDate" required>
+            </div>
+            <div class="form-group">
+                <label for="checkOutDate">Check-out Date:</label>
+                <input type="date" id="checkOutDate" required>
+            </div>
+            <div class="form-group">
+                <label for="roomType">Room Type:</label>
+                <select id="roomType">
+                    <option value="Any">Any Type</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="numPeople">Number of Guests:</label>
+                <input type="number" id="numPeople" min="1" value="1" required>
+            </div>
+            <button type="submit">Check Availability</button>
+        </form>
+
+        <div id="availabilityResults" style="display: none;">
+            <h3>Available Rooms:</h3>
+            <ul id="availableRoomsList">
+                </ul>
+        </div>
+
+        <form id="bookingForm" style="display: none;">
+            <h3>Guest Information:</h3>
+            <div class="form-group">
+                <label for="guestName">Full Name:</label>
+                <input type="text" id="guestName" required>
+            </div>
+            <div class="form-group">
+                <label for="guestEmail">Email:</label>
+                <input type="email" id="guestEmail" required>
+            </div>
+            <div class="form-group">
+                <label for="guestPhone">Phone Number:</label>
+                <input type="tel" id="guestPhone">
+            </div>
+            <div class="form-group">
+                <label for="guestNationality">Nationality:</label>
+                <input type="text" id="guestNationality">
+            </div>
+            <div class="form-group">
+                <label for="guestAddress">Address:</label>
+                <input type="text" id="guestAddress">
+            </div>
+            <div class="form-group">
+                <label for="guestNationalId">National ID No. (Optional):</label>
+                <input type="text" id="guestNationalId">
+            </div>
+
+            <h4>Selected Room: <span id="selectedRoomDisplay"></span></h4>
+            <h4>Total Due: UGX <span id="totalDueDisplay">0.00</span></h4>
+            <input type="hidden" id="selectedRoomNumber">
+            <input type="hidden" id="selectedRoomAmtPerNight">
+            <input type="hidden" id="calculatedNights">
+            <input type="hidden" id="calculatedTotalDue">
+
+            <button type="submit" id="bookNowButton">Book Now</button>
+        </form>
+
+        <div id="bookingConfirmation" style="display: none;">
+            <h3>Booking Confirmed!</h3>
+            <p id="confirmationMessage"></p>
+        </div>
+
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+    </div>
+
+    <script>
+      const API_BASE_URL = 'https://patrinahhotelpms.onrender.com'; // IMPORTANT: Change this to your Netlify backend URL in production!
+
+const availabilityForm = document.getElementById('availabilityForm');
+const checkInDateInput = document.getElementById('checkInDate');
+const checkOutDateInput = document.getElementById('checkOutDate');
+const roomTypeSelect = document.getElementById('roomType');
+const numPeopleInput = document.getElementById('numPeople');
+const availabilityResultsDiv = document.getElementById('availabilityResults');
+const availableRoomsList = document.getElementById('availableRoomsList');
+const bookingForm = document.getElementById('bookingForm');
+const guestNameInput = document.getElementById('guestName');
+const guestEmailInput = document.getElementById('guestEmail');
+const guestPhoneInput = document.getElementById('guestPhone');
+const guestNationalityInput = document.getElementById('guestNationality');
+const guestAddressInput = document.getElementById('guestAddress');
+const guestNationalIdInput = document.getElementById('guestNationalId');
+const selectedRoomDisplay = document.getElementById('selectedRoomDisplay');
+const totalDueDisplay = document.getElementById('totalDueDisplay');
+const selectedRoomNumberInput = document.getElementById('selectedRoomNumber');
+const selectedRoomAmtPerNightInput = document.getElementById('selectedRoomAmtPerNight');
+const calculatedNightsInput = document.getElementById('calculatedNights');
+const calculatedTotalDueInput = document.getElementById('calculatedTotalDue');
+const bookNowButton = document.getElementById('bookNowButton');
+const bookingConfirmationDiv = document.getElementById('bookingConfirmation');
+const confirmationMessageP = document.getElementById('confirmationMessage');
+const errorMessageDiv = document.getElementById('errorMessage');
+
+let selectedRoomForBooking = null; // Stores the room number chosen by the user
+let currentRoomPrices = {}; // To store prices by room number fetched from backend (you'll need to adapt your /api/rooms endpoint or create a new one to return prices)
+
+// Helper function to display errors
+function showMessage(element, message, type = 'error') {
+    element.textContent = message;
+    element.style.display = 'block';
+    element.className = type === 'error' ? 'error-message' : 'success-message';
+}
+
+function hideMessage(element) {
+    element.style.display = 'none';
+    element.textContent = '';
+}
+
+// Function to calculate nights
+function calculateNights(checkIn, checkOut) {
+    const start = new Date(checkIn);
+    const end = new Date(checkOut);
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+}
+
+// Load room types on page load
+async function loadRoomTypes() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/public/room-types`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const roomTypes = await response.json();
+
+        // Clear existing options except 'Any Type'
+        roomTypeSelect.innerHTML = '<option value="Any">Any Type</option>';
+
+        roomTypes.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+            roomTypeSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading room types:', error);
+        showMessage(errorMessageDiv, 'Failed to load room types. Please try again later.');
+    }
+}
+
+// Initial load of room types
+document.addEventListener('DOMContentLoaded', loadRoomTypes);
+
+// Event listener for Check Availability Form submission
+availabilityForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideMessage(errorMessageDiv);
+    hideMessage(bookingConfirmationDiv);
+    availableRoomsList.innerHTML = '';
+    availabilityResultsDiv.style.display = 'none';
+    bookingForm.style.display = 'none';
+    selectedRoomForBooking = null;
+
+    const checkIn = checkInDateInput.value;
+    const checkOut = checkOutDateInput.value;
+    const roomType = roomTypeSelect.value;
+    const numPeople = numPeopleInput.value;
+
+    if (new Date(checkIn) >= new Date(checkOut)) {
+        showMessage(errorMessageDiv, 'Check-out date must be after check-in date.');
+        return;
+    }
+
+    try {
+        // Fetch available rooms
+        const availabilityResponse = await fetch(`${API_BASE_URL}/public/rooms/available?checkIn=${checkIn}&checkOut=${checkOut}&roomType=${roomType}&people=${numPeople}`);
+        if (!availabilityResponse.ok) {
+            throw new Error(`HTTP error! status: ${availabilityResponse.status}`);
+        }
+        const availableRooms = await availabilityResponse.json();
+
+        // Adapt this part: your /public/rooms/available returns an object grouped by room type,
+        // but it doesn't return the 'amtPerNight' directly.
+        // You'll either need to modify that endpoint to include 'amtPerNight' for each room
+        // or fetch all rooms from /api/rooms once to get their prices.
+        // For this example, let's assume you've modified /api/public/rooms/available
+        // to return room objects including 'number', 'type', 'amtPerNight'.
+        // Or, a simpler approach for a public widget: hardcode common prices per room type
+        // if they are fixed, or fetch them from a separate public endpoint for pricing.
+
+        // For demonstration, let's create mock prices. In a real scenario, you'd fetch these.
+        // *** IMPORTANT: You need to implement an endpoint or adapt an existing one
+        // *** to get the price (amtPerNight) associated with each available room number.
+        // *** For now, I'll use a placeholder logic.
+        const allRoomsResponse = await fetch(`${API_BASE_URL}/rooms`); // Fetch all rooms to get their prices
+        if (!allRoomsResponse.ok) {
+            throw new Error(`Failed to fetch all room details for pricing.`);
+        }
+        const allRooms = await allRoomsResponse.json();
+        currentRoomPrices = allRooms.reduce((acc, room) => {
+            acc[room.number] = { type: room.type, amtPerNight: room.amtPerNight || 100000 }; // Add a default if not present
+            return acc;
+        }, {});
+        // End of price fetching placeholder
+
+
+        let roomsFound = false;
+        for (const type in availableRooms) {
+            availableRooms[type].forEach(roomNumber => {
+                roomsFound = true;
+                const listItem = document.createElement('li');
+                const roomPrice = currentRoomPrices[roomNumber] ? currentRoomPrices[roomNumber].amtPerNight : 'N/A';
+                listItem.innerHTML = `
+                    <span>Room ${roomNumber} (${type}) - UGX ${roomPrice.toFixed(2)}/night</span>
+                    <button class="select-room-btn" data-room-number="${roomNumber}" data-room-type="${type}" data-amount-per-night="${roomPrice}">Select</button>
+                `;
+                availableRoomsList.appendChild(listItem);
+            });
+        }
+
+        if (!roomsFound) {
+            availableRoomsList.innerHTML = '<li>No rooms available for the selected criteria.</li>';
+        }
+        availabilityResultsDiv.style.display = 'block';
+
+        // Add event listeners to "Select" buttons
+        document.querySelectorAll('.select-room-btn').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const roomNumber = event.target.dataset.roomNumber;
+                const amtPerNight = parseFloat(event.target.dataset.amountPerNight);
+                const roomType = event.target.dataset.roomType;
+
+                const nights = calculateNights(checkIn, checkOut);
+                const totalDue = nights * amtPerNight;
+
+                selectedRoomForBooking = {
+                    roomNumber,
+                    roomType,
+                    amtPerNight,
+                    nights,
+                    totalDue,
+                    checkIn,
+                    checkOut,
+                    people: parseInt(numPeople)
+                };
+
+                selectedRoomDisplay.textContent = `${roomNumber} (${roomType})`;
+                totalDueDisplay.textContent = totalDue.toFixed(2);
+
+                selectedRoomNumberInput.value = roomNumber;
+                selectedRoomAmtPerNightInput.value = amtPerNight;
+                calculatedNightsInput.value = nights;
+                calculatedTotalDueInput.value = totalDue;
+
+                availabilityResultsDiv.style.display = 'none';
+                bookingForm.style.display = 'block';
+            });
+        });
+
+    } catch (error) {
+        console.error('Error checking availability:', error);
+        showMessage(errorMessageDiv, `Error checking availability: ${error.message}`);
+    }
+});
+
+// Event listener for Book Now Form submission
+bookingForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideMessage(errorMessageDiv);
+    bookNowButton.disabled = true; // Disable button to prevent multiple submissions
+
+    if (!selectedRoomForBooking) {
+        showMessage(errorMessageDiv, 'Please select a room first.');
+        bookNowButton.disabled = false;
+        return;
+    }
+
+    const bookingData = {
+        name: guestNameInput.value,
+        room: selectedRoomForBooking.roomNumber,
+        checkIn: selectedRoomForBooking.checkIn,
+        checkOut: selectedRoomForBooking.checkOut,
+        nights: selectedRoomForBooking.nights,
+        amtPerNight: selectedRoomForBooking.amtPerNight,
+        totalDue: selectedRoomForBooking.totalDue,
+        amountPaid: 0, // Assuming no payment collected at this stage for public widget
+        balance: selectedRoomForBooking.totalDue,
+        paymentStatus: 'Pending', // Assuming pending until payment is made
+        people: selectedRoomForBooking.people,
+        nationality: guestNationalityInput.value,
+        address: guestAddressInput.value,
+        phoneNo: guestPhoneInput.value,
+        guestEmail: guestEmailInput.value, // Get email from form
+        nationalIdNo: guestNationalIdInput.value
+    };
+
+    try {
+        // Step 1: Create the booking
+        const bookingResponse = await fetch(`${API_BASE_URL}/public/bookings`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(bookingData),
+        });
+
+        if (!bookingResponse.ok) {
+            const errorData = await bookingResponse.json();
+            throw new Error(`Booking failed: ${errorData.message}`);
+        }
+
+        const newBooking = await bookingResponse.json();
+        console.log('Booking successful:', newBooking);
+
+        // Step 2: Send confirmation email immediately
+        // You can use either /public/send-booking-confirmation or /api/bookings/:customId/send-email
+        // The /public/send-booking-confirmation is simpler as it expects the booking object directly.
+        const emailConfirmationResponse = await fetch(`${API_BASE_URL}/public/send-booking-confirmation`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                ...bookingData, // Pass the original booking data
+                id: newBooking.booking.id // Use the ID generated by the backend
+            }),
+        });
+
+        if (!emailConfirmationResponse.ok) {
+            const errorData = await emailConfirmationResponse.json();
+            console.warn('Failed to send confirmation email:', errorData.message);
+            // Don't throw here, as booking is already created. Just log the issue.
+            // You might want to notify an admin if email sending fails consistently.
+        } else {
+            console.log('Confirmation email sent successfully.');
+        }
+
+        // Display confirmation
+        bookingForm.style.display = 'none';
+        confirmationMessageP.textContent = `Your booking for Room ${newBooking.booking.room} is confirmed! Your Booking ID is ${newBooking.booking.id}. A confirmation email has been sent to ${bookingData.guestEmail}.`;
+        bookingConfirmationDiv.style.display = 'block';
+        bookNowButton.disabled = false; // Re-enable button
+        availabilityForm.reset(); // Reset the form for a new booking
+        guestNameInput.value = ''; // Clear guest details
+        guestEmailInput.value = '';
+
+    } catch (error) {
+        console.error('Error during booking process:', error);
+        showMessage(errorMessageDiv, `Booking failed: ${error.message}`);
+        bookNowButton.disabled = false; // Re-enable button on error
+    }
+});
+
+// Function to set minimum date for check-in to today
+function setMinDates() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = (today.getMonth() + 1).toString().padStart(2, '0');
+    const day = today.getDate().toString().padStart(2, '0');
+    const todayString = `${year}-${month}-${day}`;
+
+    checkInDateInput.min = todayString;
+
+    // Set check-out min date to check-in date + 1 day, or today+1 if no check-in is selected yet
+    checkInDateInput.addEventListener('change', () => {
+        const checkInVal = checkInDateInput.value;
+        if (checkInVal) {
+            const checkInDateObj = new Date(checkInVal);
+            checkInDateObj.setDate(checkInDateObj.getDate() + 1);
+            const nextDayString = checkInDateObj.toISOString().split('T')[0];
+            checkOutDateInput.min = nextDayString;
+        } else {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            checkOutDateInput.min = tomorrow.toISOString().split('T')[0];
+        }
+    });
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    checkOutDateInput.min = tomorrow.toISOString().split('T')[0];
+}
+
+document.addEventListener('DOMContentLoaded', setMinDates);
+    </script>
+</body>
+</html>
