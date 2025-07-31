@@ -1339,37 +1339,49 @@ function closeReceiptModal() {
 /**
  * Generates and displays report data (room revenue only).
  */
+
+const reportDateInput = document.getElementById('reportDate');
+
+let reportData = []; // Store rows for export
+
 async function generateReport() {
-    const selectedDateStr = document.getElementById("reportDate").value;
+    const selectedDateStr = reportDateInput.value;
     if (!selectedDateStr) {
         showMessageBox('Error', 'Please select a date for the report.', true);
+        return;
+    }
+
+    let allBookings = [];
+    let rooms = [];
+
+    try {
+        const [bookingsResponse, roomsResponse] = await Promise.all([
+            fetch(`${API_BASE_URL}/bookings/all`),
+            fetch(`${API_BASE_URL}/rooms`)
+        ]);
+
+        if (!bookingsResponse.ok || !roomsResponse.ok)
+            throw new Error('Failed to fetch data');
+
+        allBookings = await bookingsResponse.json();
+        rooms = await roomsResponse.json();
+    } catch (error) {
+        console.error('Error fetching report data:', error);
+        showMessageBox('Error', 'Failed to load bookings or rooms.', true);
         return;
     }
 
     const selectedDate = new Date(selectedDateStr);
     selectedDate.setHours(0, 0, 0, 0);
 
-    let allBookings = [];
-    let rooms = [];
-    try {
-        const bookingsRes = await fetch(`${API_BASE_URL}/bookings/all`);
-        if (!bookingsRes.ok) throw new Error();
-        allBookings = await bookingsRes.json();
-
-        const roomsRes = await fetch(`${API_BASE_URL}/rooms`);
-        if (!roomsRes.ok) throw new Error();
-        rooms = await roomsRes.json();
-    } catch (err) {
-        console.error('Error loading data:', err);
-        showMessageBox('Error', 'Failed to fetch bookings or rooms.', true);
-        return;
-    }
-
     let totalRoomRevenue = 0;
     let totalRoomBalance = 0;
     let guestsCheckedIn = 0;
     const roomTypeCounts = {};
-    const roomRevenueDetails = [];
+    reportData = [];
+
+    const tbody = document.querySelector('#roomReportTable tbody');
+    tbody.innerHTML = ''; // Clear previous
 
     allBookings.forEach(booking => {
         const checkIn = new Date(booking.checkIn);
@@ -1378,27 +1390,40 @@ async function generateReport() {
         checkOut.setHours(0, 0, 0, 0);
 
         if (selectedDate >= checkIn && selectedDate < checkOut) {
-            totalRoomRevenue += booking.totalDue;
-            totalRoomBalance += booking.balance;
+            const room = rooms.find(r => r.number === booking.room);
+            const roomType = room ? room.type : 'Unknown';
+            const roomRevenue = booking.totalDue || 0;
+            const roomBalance = booking.balance || 0;
+
+            totalRoomRevenue += roomRevenue;
+            totalRoomBalance += roomBalance;
             guestsCheckedIn += booking.people;
 
-            const room = rooms.find(r => r.number === booking.room);
-            if (room) {
-                roomTypeCounts[room.type] = (roomTypeCounts[room.type] || 0) + 1;
-
-                roomRevenueDetails.push({
-                    roomNumber: room.number,
-                    roomType: room.type,
-                    revenue: booking.totalDue.toFixed(2)
-                });
+            if (roomType) {
+                roomTypeCounts[roomType] = (roomTypeCounts[roomType] || 0) + 1;
             }
+
+            const guestNames = booking.guestNames ? booking.guestNames.join(', ') : 'N/A';
+
+            // Append to table
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${booking.room}</td>
+                <td>${roomType}</td>
+                <td>${guestNames}</td>
+                <td>${roomRevenue.toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+
+            // Store for export
+            reportData.push({
+                'Room Number': booking.room,
+                'Room Type': roomType,
+                'Guest Names': guestNames,
+                'Revenue': roomRevenue
+            });
         }
     });
-
-    // Update summary
-    document.getElementById('totalAmountReport').textContent = totalRoomRevenue.toFixed(2);
-    document.getElementById('totalBalanceReport').textContent = totalRoomBalance.toFixed(2);
-    document.getElementById('guestsCheckedIn').textContent = guestsCheckedIn;
 
     let mostBookedRoomType = 'N/A';
     let maxCount = 0;
@@ -1408,47 +1433,26 @@ async function generateReport() {
             mostBookedRoomType = type;
         }
     }
+
+    document.getElementById('totalAmountReport').textContent = totalRoomRevenue.toFixed(2);
+    document.getElementById('totalBalanceReport').textContent = totalRoomBalance.toFixed(2);
     document.getElementById('mostBookedRoomType').textContent = mostBookedRoomType;
-
-    // Render room table
-    const tbody = document.querySelector('#roomRevenueTable tbody');
-    tbody.innerHTML = ''; // clear previous
-    roomRevenueDetails.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${row.roomNumber}</td><td>${row.roomType}</td><td>${row.revenue}</td>`;
-        tbody.appendChild(tr);
-    });
-
-    // Store for export
-    window.lastRoomReportExport = {
-        date: selectedDateStr,
-        data: roomRevenueDetails,
-        total: totalRoomRevenue.toFixed(2),
-        balance: totalRoomBalance.toFixed(2)
-    };
+    document.getElementById('guestsCheckedIn').textContent = guestsCheckedIn;
 }
 
 function exportReport() {
-    const report = window.lastRoomReportExport;
-    if (!report || !report.data || report.data.length === 0) {
-        showMessageBox('Error', 'No report data to export. Please generate the report first.', true);
+    if (reportData.length === 0) {
+        showMessageBox('Info', 'Please generate the report before exporting.', true);
         return;
     }
 
-    const worksheetData = [
-        ["Room Number", "Room Type", "Revenue"],
-        ...report.data.map(row => [row.roomNumber, row.roomType, parseFloat(row.revenue)]),
-        [],
-        ["Total Revenue", "", parseFloat(report.total)],
-        ["Total Balance", "", parseFloat(report.balance)],
-        ["Date", "", report.date]
-    ];
-
-    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    const worksheet = XLSX.utils.json_to_sheet(reportData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Daily Report");
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Daily Report');
 
-    const filename = `Daily_Room_Report_${report.date}.xlsx`;
+    const selectedDate = reportDateInput.value || 'report';
+    const filename = `Room_Report_${selectedDate}.xlsx`;
+
     XLSX.writeFile(workbook, filename);
 }
 
