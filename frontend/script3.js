@@ -1457,38 +1457,34 @@ function exportReport() {
         return;
     }
 
-    // Create worksheet with headers
-    const worksheet = XLSX.utils.json_to_sheet(reportData, { header: Object.keys(reportData[0]) });
+    const headers = Object.keys(reportData[0]);
+    const worksheet = XLSX.utils.json_to_sheet(reportData, { header: headers });
 
-    // Add a blank row after data
-    const dataRowCount = reportData.length + 1; // +1 for header
-    const summaryRowIndex = dataRowCount + 1; // skip 1 row after data
+    // Count of data rows (including header row)
+    const dataRowCount = reportData.length + 1;
 
-    // Total Revenue label
+    // Insert one empty row, then TOTAL REVENUE label and value
     const totalLabel = 'TOTAL REVENUE';
     const totalAmount = reportSummary['Total Room Revenue'] || 0;
 
-    // Get the column letter for "Room Revenue"
-    const headers = Object.keys(reportData[0]);
+    // Find column index for "Room Revenue"
     const revenueColIndex = headers.indexOf('Room Revenue');
-    const excelCol = String.fromCharCode(65 + revenueColIndex); // e.g., 'D'
+    const revenueColLetter = String.fromCharCode(65 + revenueColIndex); // e.g. D
 
-    // Add TOTAL REVENUE label and value
+    const summaryRowIndex = dataRowCount + 1 + 1; // one blank row + 1
+
+    // Add TOTAL REVENUE row
     XLSX.utils.sheet_add_aoa(worksheet, [[totalLabel]], { origin: `A${summaryRowIndex}` });
-    XLSX.utils.sheet_add_aoa(worksheet, [[totalAmount]], { origin: `${excelCol}${summaryRowIndex}` });
+    XLSX.utils.sheet_add_aoa(worksheet, [[totalAmount]], { origin: `${revenueColLetter}${summaryRowIndex}` });
 
-    // Apply bold formatting (if supported)
-    worksheet[`A${summaryRowIndex}`].s = { font: { bold: true } };
-    worksheet[`${excelCol}${summaryRowIndex}`].s = { font: { bold: true } };
-
-    // Create workbook and export
+    // Build workbook and download
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Room Report');
 
     const selectedDate = reportDateInput.value || 'report';
     const filename = `Room_Report_${selectedDate}.xlsx`;
 
-    XLSX.writeFile(workbook, filename, { cellStyles: true }); // For some builds only
+    XLSX.writeFile(workbook, filename); // No styling support in free version
 }
 
 // --- Housekeeping Functions ---
