@@ -1340,7 +1340,7 @@ function closeReceiptModal() {
  * Generates and displays report data (room revenue only).
  */
 
-const reportDateInput = document.getElementById('reportDate');
+//const reportDateInput = document.getElementById('reportDate');
 
 let reportData = []; // Store rows for export
 
