@@ -72,7 +72,7 @@ body {
 
 /* Optional: Style for the table cell containing the buttons to ensure enough space */
 td:last-child { /* Assuming the action buttons are in the last table column */
-    position: relative; /* If you want the dropdown to be contained within this cell */
+    position: absolute; /* If you want the dropdown to be contained within this cell */
     overflow: visible; /* Important: Allows the dropdown to extend beyond the cell's boundaries if needed */
 }
 
