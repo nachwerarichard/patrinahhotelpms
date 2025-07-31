@@ -601,7 +601,6 @@ async function renderBookings(page = 1, searchTerm = '') {
                             <button class="btn btn-primary" onclick="openIncidentalChargeModal('${booking.id}', '${booking.name}', '${booking.room}')">Add Charge</button>
                             <button class="btn btn-secondary" onclick="viewCharges('${booking.id}')">View Charges</button>
                             <button class="btn btn-info" onclick="printReceipt('${booking.id}')"><i class="fas fa-print"></i> Receipt</button>
-                            <button class="btn btn-primary" onclick="sendConfirmationEmail('${booking.id}')"><i class="fas fa-envelope"></i> Send Email</button>
                         </div>
                     </div>
                 </td>
