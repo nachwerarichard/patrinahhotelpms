@@ -113,6 +113,17 @@
                     <p>Most Booked Room Type: <span id="mostBookedRoomType">N/A</span></p>
                     <p>Guests Checked In (on selected date): <span id="guestsCheckedIn">0</span></p>
                 </div>
+                <table id="roomRevenueTable" class="report-table">
+                 <thead>
+                     <tr>
+                        <th>Room Number</th>
+                        <th>Room Type</th>
+                        <th>Revenue</th>
+                    </tr>
+                 </thead>
+                <tbody></tbody>
+             </table>
+
             </section>
 
             <section id="service-reports" class="section">
@@ -410,7 +421,7 @@
         <p id="messageBoxContent"></p>
         <button onclick="closeMessageBox()" class="btn btn-primary">OK</button>
     </div>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="script3.js"></script>
 </body>
 </html>
