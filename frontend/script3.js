@@ -1457,49 +1457,38 @@ function exportReport() {
         return;
     }
 
-    // Create worksheet with headings
+    // Create worksheet with headers
     const worksheet = XLSX.utils.json_to_sheet(reportData, { header: Object.keys(reportData[0]) });
 
-    // Calculate where the summary row should start
-    const dataRowCount = reportData.length;
-    const summaryRowIndex = dataRowCount + 2; // 1-based (plus 1 for blank row)
+    // Add a blank row after data
+    const dataRowCount = reportData.length + 1; // +1 for header
+    const summaryRowIndex = dataRowCount + 1; // skip 1 row after data
 
-    // Insert a blank row between data and summary
-    XLSX.utils.sheet_add_aoa(worksheet, [[]], { origin: -1 });
-
-    // Add the TOTAL summary row
-    const totalLabel = "TOTAL";
+    // Total Revenue label
+    const totalLabel = 'TOTAL REVENUE';
     const totalAmount = reportSummary['Total Room Revenue'] || 0;
 
-    // Add summary label and value to the correct cells
-    XLSX.utils.sheet_add_aoa(worksheet, [[totalLabel]], { origin: `A${summaryRowIndex}` });
-
-    // Find the Room Revenue column index
+    // Get the column letter for "Room Revenue"
     const headers = Object.keys(reportData[0]);
     const revenueColIndex = headers.indexOf('Room Revenue');
-    const excelCol = String.fromCharCode(65 + revenueColIndex); // Convert index to column letter
+    const excelCol = String.fromCharCode(65 + revenueColIndex); // e.g., 'D'
 
-    XLSX.utils.sheet_add_aoa(worksheet, [[totalAmount]], {
-        origin: `${excelCol}${summaryRowIndex}`
-    });
+    // Add TOTAL REVENUE label and value
+    XLSX.utils.sheet_add_aoa(worksheet, [[totalLabel]], { origin: `A${summaryRowIndex}` });
+    XLSX.utils.sheet_add_aoa(worksheet, [[totalAmount]], { origin: `${excelCol}${summaryRowIndex}` });
 
-    // Add bold styling to the "TOTAL" and amount cells
-    worksheet[`A${summaryRowIndex}`].s = {
-        font: { bold: true }
-    };
-    worksheet[`${excelCol}${summaryRowIndex}`].s = {
-        font: { bold: true }
-    };
+    // Apply bold formatting (if supported)
+    worksheet[`A${summaryRowIndex}`].s = { font: { bold: true } };
+    worksheet[`${excelCol}${summaryRowIndex}`].s = { font: { bold: true } };
 
-    // Create workbook and append the sheet
+    // Create workbook and export
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Daily Report');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Room Report');
 
     const selectedDate = reportDateInput.value || 'report';
     const filename = `Room_Report_${selectedDate}.xlsx`;
 
-    // Write with styles (requires XLSX-style-compatible writer)
-    XLSX.writeFile(workbook, filename, { cellStyles: true });
+    XLSX.writeFile(workbook, filename, { cellStyles: true }); // For some builds only
 }
 
 // --- Housekeeping Functions ---
