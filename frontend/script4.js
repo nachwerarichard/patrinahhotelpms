@@ -1339,6 +1339,8 @@ function closeReceiptModal() {
 /**
  * Generates and displays report data (room revenue only).
  */
+let reportData = []; // Store rows for export
+
 async function generateReport() {
     const selectedDateStr = reportDateInput.value;
     if (!selectedDateStr) {
@@ -1346,43 +1348,77 @@ async function generateReport() {
         return;
     }
 
-    // Fetch all bookings to generate report locally
     let allBookings = [];
+    let rooms = [];
+
     try {
-        // Fetch a large number of bookings to ensure all relevant data for the report is available
-        const response = await fetch(`${API_BASE_URL}/bookings/all`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        allBookings = await response.json();
+        const [bookingsResponse, roomsResponse] = await Promise.all([
+            fetch(`${API_BASE_URL}/bookings/all`),
+            fetch(`${API_BASE_URL}/rooms`)
+        ]);
+
+        if (!bookingsResponse.ok || !roomsResponse.ok)
+            throw new Error('Failed to fetch data');
+
+        allBookings = await bookingsResponse.json();
+        rooms = await roomsResponse.json();
     } catch (error) {
-        console.error('Error fetching bookings for report:', error);
-        showMessageBox('Error', 'Failed to load bookings for report generation.', true);
+        console.error('Error fetching report data:', error);
+        showMessageBox('Error', 'Failed to load bookings or rooms.', true);
         return;
     }
 
     const selectedDate = new Date(selectedDateStr);
-    selectedDate.setHours(0, 0, 0, 0); // Normalize to start of day
+    selectedDate.setHours(0, 0, 0, 0);
 
     let totalRoomRevenue = 0;
     let totalRoomBalance = 0;
     let guestsCheckedIn = 0;
-    const roomTypeCounts = {}; // To count most booked room type
+    const roomTypeCounts = {};
+    reportData = [];
+
+    const tbody = document.querySelector('#roomRevenueTable tbody');
+    tbody.innerHTML = ''; // Clear previous
 
     allBookings.forEach(booking => {
         const checkIn = new Date(booking.checkIn);
-        checkIn.setHours(0, 0, 0, 0);
         const checkOut = new Date(booking.checkOut);
+        checkIn.setHours(0, 0, 0, 0);
         checkOut.setHours(0, 0, 0, 0);
 
-        // Check if the booking spans the selected date
         if (selectedDate >= checkIn && selectedDate < checkOut) {
-            totalRoomRevenue += booking.totalDue; // totalDue here is room-only as per schema
-            totalRoomBalance += booking.balance; // balance here is room-only
+            const room = rooms.find(r => r.number === booking.room);
+            const roomType = room ? room.type : 'Unknown';
+            const roomRevenue = booking.totalDue || 0;
+            const roomBalance = booking.balance || 0;
+
+            totalRoomRevenue += roomRevenue;
+            totalRoomBalance += roomBalance;
             guestsCheckedIn += booking.people;
 
-            const room = rooms.find(r => r.number === booking.room); // Use locally cached rooms for type
-            if (room) {
-                roomTypeCounts[room.type] = (roomTypeCounts[room.type] || 0) + 1;
+            if (roomType) {
+                roomTypeCounts[roomType] = (roomTypeCounts[roomType] || 0) + 1;
             }
+
+            const guestNames = booking.name || 'N/A';
+
+            // Append to table
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${booking.room}</td>
+                <td>${roomType}</td>
+                <td>${guestNames}</td>
+                <td>${roomRevenue.toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+
+            // Store for export
+            reportData.push({
+                'Room Number': booking.room,
+                'Room Type': roomType,
+                'Guest Names': guestNames,
+                'Revenue': roomRevenue
+            });
         }
     });
 
@@ -1395,12 +1431,58 @@ async function generateReport() {
         }
     }
 
+    reportSummary = {
+    Date: selectedDateStr,
+    'Total Room Revenue': totalRoomRevenue.toFixed(2),
+    'Total Room Balance': totalRoomBalance.toFixed(2),
+    'Guests Checked In': guestsCheckedIn,
+    'Most Booked Room Type': mostBookedRoomType
+};
+
+
     document.getElementById('totalAmountReport').textContent = totalRoomRevenue.toFixed(2);
     document.getElementById('totalBalanceReport').textContent = totalRoomBalance.toFixed(2);
     document.getElementById('mostBookedRoomType').textContent = mostBookedRoomType;
     document.getElementById('guestsCheckedIn').textContent = guestsCheckedIn;
 }
 
+let reportSummary = {};  // Object holding summary info
+
+function exportReport() {
+    if (reportData.length === 0) {
+        showMessageBox('Info', 'Please generate the report before exporting.', true);
+        return;
+    }
+
+    const headers = Object.keys(reportData[0]);
+    const worksheet = XLSX.utils.json_to_sheet(reportData, { header: headers });
+
+    // Count of data rows (including header row)
+    const dataRowCount = reportData.length + 1;
+
+    // Insert one empty row, then TOTAL REVENUE label and value
+    const totalLabel = 'TOTAL REVENUE';
+    const totalAmount = reportSummary['Total Room Revenue'] || 0;
+
+    // Find column index for "Room Revenue"
+    const revenueColIndex = headers.indexOf('Room Revenue');
+    const revenueColLetter = String.fromCharCode(65 + revenueColIndex); // e.g. D
+
+    const summaryRowIndex = dataRowCount + 1 + 1; // one blank row + 1
+
+    // Add TOTAL REVENUE row
+    XLSX.utils.sheet_add_aoa(worksheet, [[totalLabel]], { origin: `A${summaryRowIndex}` });
+    XLSX.utils.sheet_add_aoa(worksheet, [[totalAmount]], { origin: `${revenueColLetter}${summaryRowIndex}` });
+
+    // Build workbook and download
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Room Report');
+
+    const selectedDate = reportDateInput.value || 'report';
+    const filename = `Room_Report_${selectedDate}.xlsx`;
+
+    XLSX.writeFile(workbook, filename); // No styling support in free version
+}
 
 // --- Housekeeping Functions ---
 
