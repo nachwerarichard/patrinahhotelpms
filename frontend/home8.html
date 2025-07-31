@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Management System</title>
+    <link rel="stylesheet" href="styles3.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div id="login-container">
+        <div class="login-box">
+            <h2><i class="fas fa-sign-in-alt"></i> Login</h2>
+            <form id="loginForm">
+                <div class="input-group">
+                    <label for="username"><i class="fas fa-user"></i> Username:</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="input-group">
+                    <label for="password"><i class="fas fa-lock"></i> Password:</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> Login</button>
+                <p class="login-info">Admin: user/password | Housekeeper: hk/hkpass</p>
+            </form>
+            <div id="loginMessageBox" class="message-box" style="display: none;">
+                <h3 id="loginMessageBoxTitle"></h3>
+                <p id="loginMessageBoxContent"></p>
+                <button onclick="closeLoginMessageBox()" class="btn btn-primary">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-content" style="display: none;">
+        <aside>
+            <nav>
+                <ul>
+                    <li><a href="#" id="nav-booking" class="active"><i class="fas fa-book"></i> Booking Management</a></li>
+                    <li><a href="#" id="nav-housekeeping"><i class="fas fa-broom"></i> Housekeeping</a></li>
+                    <li><a href="#" id="nav-calendar-view"><i class="fas fa-calendar-alt"></i> Calendar View</a></li>
+                    <li><a href="#" id="nav-reports"><i class="fas fa-chart-bar"></i> Daily Reports</a></li>
+                    <li><a href="#" id="nav-service-reports"><i class="fas fa-concierge-bell"></i> Service Reports</a></li>
+                    <li><a href="#" id="nav-audit-logs"><i class="fas fa-clipboard-list"></i> Audit Logs</a></li>
+                    <li><a href="#" id="nav-channel-manager"><i class="fas fa-exchange-alt"></i> Channel Manager</a></li>
+                    <li><a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main>
+            <section id="booking-management" class="section active">
+                <h2><i class="fas fa-book"></i> Booking Management</h2>
+                <div class="controls">
+                    <div class="input-group">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="bookingSearch" placeholder="Search bookings...">
+                    </div>
+                    <button class="btn btn-primary" onclick="openBookingModal()"><i class="fas fa-plus"></i> Add New Booking</button>
+                </div>
+                <div class="table-container">
+                    <table id="bookingsTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Room</th>
+                                <th>Check-in</th>
+                                <th>Check-out</th>
+                                
+                                <th>Payment Status</th>
+        
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+                <div class="pagination-controls">
+                    <button id="prevPageBtn" class="btn btn-secondary" disabled><i class="fas fa-arrow-left"></i> Previous</button>
+                    <span id="pageInfo">Page 1 of 1</span>
+                    <button id="nextPageBtn" class="btn btn-secondary" disabled>Next <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </section>
+
+            <section id="housekeeping" class="section">
+                <h2><i class="fas fa-broom"></i> Housekeeping</h2>
+                <div id="housekeepingRoomGrid" class="room-grid">
+                    </div>
+            </section>
+
+            <section id="calendar-view" class="section">
+                <h2><i class="fas fa-calendar-alt"></i> Calendar View</h2>
+                <div class="calendar-controls">
+                    <button id="prevMonthBtn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i> Previous Month</button>
+                    <h3 id="calendarMonthYear"></h3>
+                    <button id="nextMonthBtn" class="btn btn-secondary">Next Month <i class="fas fa-chevron-right"></i></button>
+                </div>
+                <div id="calendarGrid" class="calendar-grid">
+                    </div>
+            </section>
+
+            <section id="reports" class="section">
+                <h2><i class="fas fa-chart-bar"></i> Daily Reports (Room Revenue Only)</h2>
+                <div class="report-controls">
+                    <label for="reportDate"><i class="fas fa-calendar-day"></i> Select Date:</label>
+                    <input type="date" id="reportDate">
+                    <button class="btn btn-primary" onclick="generateReport()"><i class="fas fa-file-alt"></i> Generate Report</button>
+                </div>
+                <div class="report-summary">
+                    <p>Total Room Revenue for Date: <span id="totalAmountReport">0.00</span></p>
+                    <p>Total Room Balance Outstanding: <span id="totalBalanceReport">0.00</span></p>
+                    <p>Most Booked Room Type: <span id="mostBookedRoomType">N/A</span></p>
+                    <p>Guests Checked In (on selected date): <span id="guestsCheckedIn">0</span></p>
+                </div>
+            </section>
+
+            <section id="service-reports" class="section">
+                <h2><i class="fas fa-concierge-bell"></i> Service Reports (Incidental Charges)</h2>
+                <div class="report-controls">
+                    <label for="serviceReportStartDate"><i class="fas fa-calendar-day"></i> Start Date:</label>
+                    <input type="date" id="serviceReportStartDate">
+                    <label for="serviceReportEndDate"><i class="fas fa-calendar-day"></i> End Date:</label>
+                    <input type="date" id="serviceReportEndDate">
+                    <button class="btn btn-primary" id="generateServiceReportBtn"><i class="fas fa-file-invoice-dollar"></i> Generate Service Report</button>
+                </div>
+                <div class="table-container">
+                    <table id="serviceReportsTable">
+                        <thead>
+                            <tr>
+                                <th>Service Type</th>
+                                <th>Number of Charges</th>
+                                <th>Total Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2" style="text-align: right;"><strong>Grand Total:</strong></td>
+                                <td><strong id="totalServiceRevenue">0.00</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </section>
+
+            <section id="audit-logs" class="section">
+                <h2><i class="fas fa-clipboard-list"></i> Audit Logs</h2>
+                <div class="filter-controls">
+                    <label for="auditLogUserFilter"><i class="fas fa-user-tag"></i> User:</label>
+                    <input type="text" id="auditLogUserFilter" placeholder="Filter by username">
+                    <label for="auditLogActionFilter"><i class="fas fa-cogs"></i> Action:</label>
+                    <input type="text" id="auditLogActionFilter" placeholder="Filter by action">
+                    <label for="auditLogStartDateFilter"><i class="fas fa-calendar-day"></i> Start Date:</label>
+                    <input type="date" id="auditLogStartDateFilter">
+                    <label for="auditLogEndDateFilter"><i class="fas fa-calendar-day"></i> End Date:</label>
+                    <input type="date" id="auditLogEndDateFilter">
+                    <button class="btn btn-primary" id="applyAuditLogFiltersBtn"><i class="fas fa-filter"></i> Apply Filters</button>
+                </div>
+                <div class="table-container">
+                    <table id="auditLogTable">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>User</th>
+                                <th>Action</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="channel-manager" class="section">
+                <h2><i class="fas fa-exchange-alt"></i> Channel Manager</h2>
+                <p>This section would typically integrate with external booking engines (e.g., Booking.com, Expedia) to sync room availability and bookings.</p>
+                <p>For this demonstration, clicking the button below will simulate a sync operation.</p>
+                <button class="btn btn-primary" onclick="simulateChannelManagerSync()"><i class="fas fa-sync-alt"></i> Simulate Sync</button>
+            </section>
+
+        </main>
+    </div>
+
+    <div id="bookingModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeBookingModal()">&times;</span>
+            <h2 id="modalTitle"><i class="fas fa-hotel"></i> Add New Booking</h2>
+            <form id="bookingForm">
+                <input type="hidden" id="bookingId">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label for="name"><i class="fas fa-user"></i> Guest Name:</label>
+                        <input type="text" id="name" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="room"><i class="fas fa-door-open"></i> Room Number:</label>
+                        <select id="room" required>
+                            <option value="">Select a Room</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="checkIn"><i class="fas fa-calendar-check"></i> Check-in Date:</label>
+                        <input type="date" id="checkIn" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="checkOut"><i class="fas fa-calendar-times"></i> Check-out Date:</label>
+                        <input type="date" id="checkOut" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="nights"><i class="fas fa-moon"></i> Nights:</label>
+                        <input type="number" id="nights" readonly>
+                    </div>
+                    <div class="input-group">
+                        <label for="amtPerNight"><i class="fas fa-dollar-sign"></i> Amount Per Night:</label>
+                        <input type="number" id="amtPerNight" step="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="totalDue"><i class="fas fa-money-bill-wave"></i> Room Total Due:</label>
+                        <input type="number" id="totalDue" step="0.01" readonly>
+                    </div>
+                    <div class="input-group">
+                        <label for="amountPaid"><i class="fas fa-money-check-alt"></i> Room Amount Paid:</label>
+                        <input type="number" id="amountPaid" step="0.01">
+                    </div>
+                    <div class="input-group">
+                        <label for="balance"><i class="fas fa-wallet"></i> Room Balance:</label>
+                        <input type="number" id="balance" step="0.01" readonly>
+                    </div>
+                    <div class="input-group">
+                        <label for="paymentStatus"><i class="fas fa-hand-holding-usd"></i> Payment Status:</label>
+                        <select id="paymentStatus" required>
+                            <option value="Pending">Pending</option>
+                            <option value="Partially Paid">Partially Paid</option>
+                            <option value="Paid">Paid</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="people"><i class="fas fa-users"></i> Number of People:</label>
+                        <input type="number" id="people" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="nationality"><i class="fas fa-globe-americas"></i> Nationality:</label>
+                        <input type="text" id="nationality">
+                    </div>
+                     <div class="input-group">
+                        <label for="nationality"><i class="fas fa-globe-americas"></i> National  Id :</label>
+                        <input type="text" id="nationalIdNo">
+                    </div>
+                    <div class="input-group">
+                        <label for="address"><i class="fas fa-address-card"></i> Address:</label>
+                        <input type="text" id="address">
+                    </div>
+                    <div class="input-group">
+                        <label for="phoneNo"><i class="fas fa-phone"></i> Phone Number:</label>
+                        <input type="text" id="phoneNo">
+                    </div>
+                   <div class="input-group">
+                      <label for="guestEmail">Guest Email:</label>
+                      <input type="email" id="guestEmail" name="guestEmail" placeholder="guest@example.com">
+                   </div>
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Booking</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="incidentalChargeModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeIncidentalChargeModal()">&times;</span>
+            <h2><i class="fas fa-cash-register"></i> Add Incidental Charge</h2>
+            <form id="incidentalChargeForm">
+                <input type="hidden" id="chargeBookingCustomId">
+                <div class="input-group">
+                    <label for="chargeGuestName"><i class="fas fa-user"></i> Guest Name:</label>
+                    <input type="text" id="chargeGuestName" readonly>
+                </div>
+                <div class="input-group">
+                    <label for="chargeRoomNumber"><i class="fas fa-door-open"></i> Room Number:</label>
+                    <input type="text" id="chargeRoomNumber" readonly>
+                </div>
+                <div class="input-group">
+                    <label for="chargeType"><i class="fas fa-cogs"></i> Charge Type:</label>
+                    <select id="chargeType" required>
+                        <option value="">Select Type</option>
+                        <option value="Bar">Bar</option>
+                        <option value="Restaurant">Restaurant</option>
+                        <option value="Laundry">Laundry</option>
+                        <option value="Spa">Spa</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="chargeDescription"><i class="fas fa-info-circle"></i> Description (Optional):</label>
+                    <input type="text" id="chargeDescription">
+                </div>
+                <div class="input-group">
+                    <label for="chargeAmount"><i class="fas fa-dollar-sign"></i> Amount:</label>
+                    <input type="number" id="chargeAmount" step="0.01" required>
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-plus-circle"></i> Add Charge</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="viewChargesModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeViewChargesModal()">&times;</span>
+            <h2><i class="fas fa-file-invoice"></i> Incidental Charges for <span id="viewChargesGuestName"></span> (Room <span id="viewChargesRoomNumber"></span>)</h2>
+            <div class="table-container">
+                <table id="incidentalChargesTable">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+            </div>
+            <div class="charges-summary">
+                <p>Total Incidental Charges: <span id="totalIncidentalCharges">0.00</span></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="receiptModal" class="modal">
+        <div class="modal-content receipt-content">
+            <span class="close-button" onclick="closeReceiptModal()">&times;</span>
+            <div class="receipt-header">
+                <img src="https://placehold.co/150x50/3498db/ffffff?text=Hotel+Logo" alt="Hotel Logo" class="hotel-logo">
+                <h3><i class="fas fa-receipt"></i> Guest Bill / Receipt</h3>
+                <p><strong>Guest Name:</strong> <span id="receiptGuestName"></span></p>
+                <p><strong>Room Number:</strong> <span id="receiptRoomNumber"></span></p>
+                <p><strong>Booking ID:</strong> <span id="receiptBookingId"></span></p>
+                <p><strong>Check-in:</strong> <span id="receiptCheckIn"></span> <strong>Check-out:</strong> <span id="receiptCheckOut"></span></p>
+                <p><strong>Date Printed:</strong> <span id="receiptPrintDate"></span></p>
+            </div>
+            <hr>
+            <h4>Room Charges</h4>
+            <table class="receipt-table">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Nights</th>
+                        <th>Rate/Night</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Room Stay</td>
+                        <td id="receiptNights"></td>
+                        <td id="receiptAmtPerNight"></td>
+                        <td id="receiptRoomTotalDue"></td>
+                    </tr>
+                </tbody>
+            </table>
+            <h4 style="margin-top: 20px;">Incidental Charges</h4>
+            <table class="receipt-table" id="receiptIncidentalChargesTable">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+            <div class="receipt-summary">
+                <p><strong>Subtotal (Room):</strong> <span id="receiptSubtotalRoom">0.00</span></p>
+                <p><strong>Subtotal (Incidentals):</strong> <span id="receiptSubtotalIncidentals">0.00</span></p>
+                <p><strong>Total Bill:</strong> <span id="receiptTotalBill">0.00</span></p>
+                <p><strong>Amount Paid:</strong> <span id="receiptAmountPaid">0.00</span></p>
+                <p><strong>Balance Due:</strong> <span id="receiptBalanceDue">0.00</span></p>
+                <p><strong>Payment Status:</strong> <span id="receiptPaymentStatus"></span></p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="window.print()"><i class="fas fa-print"></i> Print Receipt</button>
+                <button class="btn btn-danger" onclick="closeReceiptModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="deletionReasonModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeDeletionReasonModal()">&times;</span>
+            <h2><i class="fas fa-exclamation-triangle"></i> Provide Reason for Action</h2>
+            <div class="input-group">
+                <label for="deletionReason">Reason:</label>
+                <textarea id="deletionReason" rows="4" required placeholder="Please explain why this action is being performed (e.g., 'Customer cancelled booking', 'Room status changed due to unexpected maintenance')."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-danger" id="confirmDeletionBtn"><i class="fas fa-check-circle"></i> Confirm Action</button>
+                <button class="btn btn-secondary" id="cancelDeletionBtn"><i class="fas fa-times-circle"></i> Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="messageBox" class="message-box" style="display: none;">
+        <h3 id="messageBoxTitle"></h3>
+        <p id="messageBoxContent"></p>
+        <button onclick="closeMessageBox()" class="btn btn-primary">OK</button>
+    </div>
+
+    <script src="script4.js"></script>
+</body>
+</html>
