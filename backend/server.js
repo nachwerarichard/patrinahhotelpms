@@ -726,40 +726,51 @@ app.put('/api/incidental-charges/pay-all/:bookingObjectId', async (req, res) => 
 // --- Reports API ---
 // Get aggregated service reports by date range
 app.get('/api/reports/services', async (req, res) => {
-    const { startDate, endDate } = req.query;
-
-    if (!startDate || !endDate) {
-        return res.status(400).json({ message: 'Start date and end date are required for service reports.' });
-    }
-
     try {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999); // Include the entire end day
+        const { startDate, endDate } = req.query;
+
+        const query = {};
+        if (startDate && endDate) {
+            query.date = {
+                $gte: new Date(startDate),
+                $lte: new Date(endDate)
+            };
+        }
 
         const serviceReports = await IncidentalCharge.aggregate([
-            {
-                $match: {
-                    date: { $gte: start, $lte: end }
-                }
-            },
+            { $match: query },
             {
                 $group: {
-                    _id: '$type', // Group by charge type
+                    _id: {
+                        serviceType: '$serviceType',
+                        bookedBy: '$bookedBy'
+                    },
                     totalAmount: { $sum: '$amount' },
                     count: { $sum: 1 }
                 }
             },
             {
-                $project: {
-                    _id: 0, // Exclude _id
-                    serviceType: '$_id',
-                    totalAmount: { $round: ['$totalAmount', 2] }, // Round to 2 decimal places
-                    count: 1
+                $group: {
+                    _id: '$_id.serviceType',
+                    totalAmount: { $sum: '$totalAmount' },
+                    count: { $sum: '$count' },
+                    bookings: {
+                        $push: {
+                            name: '$_id.bookedBy',
+                            amount: '$totalAmount',
+                            count: '$count'
+                        }
+                    }
                 }
             },
             {
-                $sort: { serviceType: 1 } // Sort by service type
+                $project: {
+                    _id: 0,
+                    serviceType: '$_id',
+                    totalAmount: { $round: ['$totalAmount', 2] },
+                    count: 1,
+                    bookings: 1
+                }
             }
         ]);
 
