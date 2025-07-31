@@ -86,7 +86,9 @@ td:last-child { /* Assuming the action buttons are in the last table column */
     height: 100vh;
     background-color: #e0f2f7; /* Light blue background for login */
 }
-
+#bookingsTable{
+    z-index:50;
+}
 .login-box {
     background-color: #ffffff;
     padding: 40px;
