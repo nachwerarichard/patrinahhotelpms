@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3498db',
+                        secondary: '#2c3e50',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-sans bg-gray-100 flex flex-col min-h-screen">
+
+    <div id="login-container" class="flex items-center justify-center min-h-screen">
+        <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+            <h2 class="text-2xl font-bold text-center mb-6 text-primary"><i class="fas fa-sign-in-alt mr-2"></i> Login</h2>
+            <form id="loginForm" class="space-y-4">
+                <div class="relative">
+                    <label for="username" class="sr-only">Username</label>
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-user text-gray-400"></i>
+                    </div>
+                    <input type="text" id="username" required placeholder="Username" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                </div>
+                <div class="relative">
+                    <label for="password" class="sr-only">Password</label>
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-lock text-gray-400"></i>
+                    </div>
+                    <input type="password" id="password" required placeholder="Password" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg hover:bg-blue-600 transition duration-300 flex items-center justify-center space-x-2">
+                    <i class="fas fa-sign-in-alt"></i> <span>Login</span>
+                </button>
+                <p class="text-sm text-center text-gray-500">Admin: user/password | Housekeeper: hk/hkpass</p>
+            </form>
+            <div id="loginMessageBox" class="mt-6 p-4 rounded-lg text-center" style="display: none;">
+                <h3 id="loginMessageBoxTitle" class="font-semibold text-lg mb-2"></h3>
+                <p id="loginMessageBoxContent" class="text-sm text-gray-700"></p>
+                <button onclick="closeLoginMessageBox()" class="mt-4 bg-primary text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-300">OK</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="main-content" class="flex flex-1" style="display: none;">
+        <aside class="w-64 bg-secondary text-white p-4 flex-shrink-0">
+            <nav>
+                <ul class="space-y-2">
+                    <li><a href="#" id="nav-booking" class="active block p-3 rounded-lg bg-blue-700 hover:bg-blue-600 transition duration-300"><i class="fas fa-book mr-3"></i> Booking Management</a></li>
+                    <li><a href="#" id="nav-housekeeping" class="block p-3 rounded-lg hover:bg-blue-600 transition duration-300"><i class="fas fa-broom mr-3"></i> Housekeeping</a></li>
+                    <li><a href="#" id="nav-calendar-view" class="block p-3 rounded-lg hover:bg-blue-600 transition duration-300"><i class="fas fa-calendar-alt mr-3"></i> Calendar View</a></li>
+                    <li><a href="#" id="nav-reports" class="block p-3 rounded-lg hover:bg-blue-600 transition duration-300"><i class="fas fa-chart-bar mr-3"></i> Daily Reports</a></li>
+                    <li><a href="#" id="nav-service-reports" class="block p-3 rounded-lg hover:bg-blue-600 transition duration-300"><i class="fas fa-concierge-bell mr-3"></i> Service Reports</a></li>
+                    <li><a href="#" id="nav-audit-logs" class="block p-3 rounded-lg hover:bg-blue-600 transition duration-300"><i class="fas fa-clipboard-list mr-3"></i> Audit Logs</a></li>
+                    <li><a href="#" id="nav-channel-manager" class="block p-3 rounded-lg hover:bg-blue-600 transition duration-300"><i class="fas fa-exchange-alt mr-3"></i> Channel Manager</a></li>
+                    <li><a href="#" id="logoutBtn" class="block p-3 rounded-lg hover:bg-blue-600 transition duration-300 mt-6"><i class="fas fa-sign-out-alt mr-3"></i> Logout</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="flex-1 p-8 overflow-y-auto">
+            
+            <section id="booking-management" class="section active bg-white p-6 rounded-lg shadow-md mb-8">
+                <h2 class="text-2xl font-bold mb-6 text-secondary"><i class="fas fa-book mr-2"></i> Booking Management</h2>
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
+                    <div class="relative w-full sm:w-1/2">
+                        <input type="text" id="bookingSearch" placeholder="Search bookings..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    <button class="bg-primary text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-300 w-full sm:w-auto" onclick="openBookingModal()">
+                        <i class="fas fa-plus mr-2"></i> Add New Booking
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="bookingsTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Name</th>
+                                <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Room</th>
+                                <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Check-in</th>
+                                <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Check-out</th>
+                                <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Payment Status</th>
+                                <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="flex justify-between items-center mt-6">
+                    <button id="prevPageBtn" class="bg-gray-300 text-gray-700 py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-400 transition duration-300">
+                        <i class="fas fa-arrow-left mr-2"></i> Previous
+                    </button>
+                    <span id="pageInfo" class="text-gray-600">Page 1 of 1</span>
+                    <button id="nextPageBtn" class="bg-gray-300 text-gray-700 py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-400 transition duration-300">
+                        Next <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </section>
+            
+            <section id="housekeeping" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+                <h2 class="text-2xl font-bold mb-6 text-secondary"><i class="fas fa-broom mr-2"></i> Housekeeping</h2>
+                <div id="housekeepingRoomGrid" class="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                </div>
+            </section>
+            
+            <section id="calendar-view" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+                <h2 class="text-2xl font-bold mb-6 text-secondary"><i class="fas fa-calendar-alt mr-2"></i> Calendar View</h2>
+                <div class="flex justify-between items-center mb-6">
+                    <button id="prevMonthBtn" class="bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-300">
+                        <i class="fas fa-chevron-left mr-2"></i> Previous Month
+                    </button>
+                    <h3 id="calendarMonthYear" class="text-xl font-semibold text-gray-800"></h3>
+                    <button id="nextMonthBtn" class="bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-300">
+                        Next Month <i class="fas fa-chevron-right ml-2"></i>
+                    </button>
+                </div>
+                <div id="calendarGrid" class="grid grid-cols-7 gap-1 text-center text-sm">
+                </div>
+            </section>
+
+            <section id="reports" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+                <h2 class="text-2xl font-bold mb-6 text-secondary"><i class="fas fa-chart-bar mr-2"></i> Daily Reports (Room Revenue Only)</h2>
+                <div class="flex flex-wrap items-center gap-4 mb-6">
+                    <label for="reportDate" class="flex items-center text-gray-700"><i class="fas fa-calendar-day mr-2"></i> Select Date:</label>
+                    <input type="date" id="reportDate" class="border border-gray-300 rounded-lg px-3 py-2">
+                    <button class="bg-primary text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-300" onclick="generateReport()">
+                        <i class="fas fa-file-alt mr-2"></i> Generate Report
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div class="p-4 bg-white rounded-lg shadow-sm">
+                        <p class="text-sm font-semibold text-gray-500">Total Room Revenue:</p>
+                        <span id="totalAmountReport" class="text-xl font-bold text-green-600">0.00</span>
+                    </div>
+                    <div class="p-4 bg-white rounded-lg shadow-sm">
+                        <p class="text-sm font-semibold text-gray-500">Total Room Balance Outstanding:</p>
+                        <span id="totalBalanceReport" class="text-xl font-bold text-red-600">0.00</span>
+                    </div>
+                    <div class="p-4 bg-white rounded-lg shadow-sm">
+                        <p class="text-sm font-semibold text-gray-500">Most Booked Room Type:</p>
+                        <span id="mostBookedRoomType" class="text-xl font-bold text-gray-800">N/A</span>
+                    </div>
+                    <div class="p-4 bg-white rounded-lg shadow-sm">
+                        <p class="text-sm font-semibold text-gray-500">Guests Checked In:</p>
+                        <span id="guestsCheckedIn" class="text-xl font-bold text-gray-800">0</span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="service-reports" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+                <h2 class="text-2xl font-bold mb-6 text-secondary"><i class="fas fa-concierge-bell mr-2"></i> Service Reports (Incidental Charges)</h2>
+                <div class="flex flex-wrap items-center gap-4 mb-6">
+                    <label for="serviceReportStartDate" class="flex items-center text-gray-700"><i class="fas fa-calendar-day mr-2"></i> Start Date:</label>
+                    <input type="date" id="serviceReportStartDate" class="border border-gray-300 rounded-lg px-3 py-2">
+                    <label for="serviceReportEndDate" class="flex items-center text-gray-700"><i class="fas fa-calendar-day mr-2"></i> End Date:</label>
+                    <input type="date" id="serviceReportEndDate" class="border border-gray-300 rounded-lg px-3 py-2">
+                    <button class="bg-primary text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-300" id="generateServiceReportBtn">
+                        <i class="fas fa-file-invoice-dollar mr-2"></i> Generate Service Report
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="serviceReportsTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Service Type</th>
+                                <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Number of Charges</th>
+                                <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Total Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                        <tfoot class="bg-gray-200">
+                            <tr>
+                                <td colspan="2" class="py-3 px-4 text-right font-bold text-gray-800">Grand Total:</td>
+                                <td class="py-3 px-4 text-left font-bold text-gray-800"><span id="totalServiceRevenue">0.00</span></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </section>
+
+            <section id="audit-logs" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+                <h2 class="text-2xl font-bold mb-6 text-secondary"><i class="fas fa-clipboard-list mr-2"></i> Audit Logs</h2>
+                <div class="flex flex-wrap items-center gap-4 mb-6">
+                    <label for="auditLogUserFilter" class="flex items-center text-gray-700"><i class="fas fa-user-tag mr-2"></i> User:</label>
+                    <input type="text" id="auditLogUserFilter" placeholder="Filter by username" class="border border-gray-300 rounded-lg px-3 py-2">
+                    <label for="auditLogActionFilter" class="flex items-center text-gray-700"><i class="fas fa-cogs mr-2"></i> Action:</label>
+                    <input type="text" id="auditLogActionFilter" placeholder="Filter by action" class="border border-gray-300 rounded-lg px-3 py-2">
+                    <label for="auditLogStartDateFilter" class="flex items-center text-gray-700"><i class="fas fa-calendar-day mr-2"></i> Start Date:</label>
+                    <input type="date" id="auditLogStartDateFilter" class="border border-gray-300 rounded-lg px-3 py-2">
+                    <label for="auditLogEndDateFilter" class="flex items-center text-gray-700"><i class="fas fa-calendar-day mr-2"></i> End Date:</label>
+                    <input type="date" id="auditLogEndDateFilter" class="border border-gray-300 rounded-lg px-3 py-2">
+                    <button class="bg-primary text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-300" id="applyAuditLogFiltersBtn">
+                        <i class="fas fa-filter mr-2"></i> Apply Filters
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="auditLogTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Timestamp</th>
+                                <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">User</th>
+                                <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Action</th>
+                                <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="channel-manager" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+                <h2 class="text-2xl font-bold mb-6 text-secondary"><i class="fas fa-exchange-alt mr-2"></i> Channel Manager</h2>
+                <p class="mb-4 text-gray-700">This section would typically integrate with external booking engines (e.g., Booking.com, Expedia) to sync room availability and bookings.</p>
+                <p class="mb-6 text-gray-700">For this demonstration, clicking the button below will simulate a sync operation.</p>
+                <button class="bg-primary text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-300" onclick="simulateChannelManagerSync()">
+                    <i class="fas fa-sync-alt mr-2"></i> Simulate Sync
+                </button>
+            </section>
+        </main>
+    </div>
+
+    <div id="bookingModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50" style="display: none;">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
+            <span class="absolute top-4 right-4 text-gray-500 text-2xl cursor-pointer" onclick="closeBookingModal()">&times;</span>
+            <h2 id="modalTitle" class="text-2xl font-bold mb-6 text-primary"><i class="fas fa-hotel mr-2"></i> Add New Booking</h2>
+            <form id="bookingForm" class="space-y-4">
+                <input type="hidden" id="bookingId">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="input-group">
+                        <label for="name" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-user mr-2"></i> Guest Name:</label>
+                        <input type="text" id="name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div class="input-group">
+                        <label for="room" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-door-open mr-2"></i> Room Number:</label>
+                        <select id="room" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                            <option value="">Select a Room</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="checkIn" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-calendar-check mr-2"></i> Check-in Date:</label>
+                        <input type="date" id="checkIn" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div class="input-group">
+                        <label for="checkOut" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-calendar-times mr-2"></i> Check-out Date:</label>
+                        <input type="date" id="checkOut" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div class="input-group">
+                        <label for="nights" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-moon mr-2"></i> Nights:</label>
+                        <input type="number" id="nights" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
+                    </div>
+                    <div class="input-group">
+                        <label for="amtPerNight" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-dollar-sign mr-2"></i> Amount Per Night:</label>
+                        <input type="number" id="amtPerNight" step="0.01" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div class="input-group">
+                        <label for="totalDue" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-money-bill-wave mr-2"></i> Room Total Due:</label>
+                        <input type="number" id="totalDue" step="0.01" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
+                    </div>
+                    <div class="input-group">
+                        <label for="amountPaid" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-money-check-alt mr-2"></i> Room Amount Paid:</label>
+                        <input type="number" id="amountPaid" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div class="input-group">
+                        <label for="balance" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-wallet mr-2"></i> Room Balance:</label>
+                        <input type="number" id="balance" step="0.01" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
+                    </div>
+                    <div class="input-group">
+                        <label for="paymentStatus" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-hand-holding-usd mr-2"></i> Payment Status:</label>
+                        <select id="paymentStatus" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                            <option value="Pending">Pending</option>
+                            <option value="Partially Paid">Partially Paid</option>
+                            <option value="Paid">Paid</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="people" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-users mr-2"></i> Number of People:</label>
+                        <input type="number" id="people" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div class="input-group">
+                        <label for="nationality" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-globe-americas mr-2"></i> Nationality:</label>
+                        <input type="text" id="nationality" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div class="input-group">
+                        <label for="nationalIdNo" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-globe-americas mr-2"></i> National Id:</label>
+                        <input type="text" id="nationalIdNo" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div class="input-group">
+                        <label for="address" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-address-card mr-2"></i> Address:</label>
+                        <input type="text" id="address" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div class="input-group">
+                        <label for="phoneNo" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-phone mr-2"></i> Phone Number:</label>
+                        <input type="text" id="phoneNo" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div class="input-group">
+                        <label for="guestEmail" class="block text-sm font-semibold text-gray-700 mb-1">Guest Email:</label>
+                        <input type="email" id="guestEmail" name="guestEmail" placeholder="guest@example.com" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                </div>
+                <button type="submit" class="mt-6 w-full bg-primary text-white py-2 rounded-lg hover:bg-blue-600 transition duration-300 flex items-center justify-center space-x-2">
+                    <i class="fas fa-save"></i> <span>Save Booking</span>
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <div id="incidentalChargeModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50" style="display: none;">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg relative">
+            <span class="absolute top-4 right-4 text-gray-500 text-2xl cursor-pointer" onclick="closeIncidentalChargeModal()">&times;</span>
+            <h2 class="text-2xl font-bold mb-6 text-primary"><i class="fas fa-cash-register mr-2"></i> Add Incidental Charge</h2>
+            <form id="incidentalChargeForm" class="space-y-4">
+                <input type="hidden" id="chargeBookingCustomId">
+                <div class="input-group">
+                    <label for="chargeGuestName" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-user mr-2"></i> Guest Name:</label>
+                    <input type="text" id="chargeGuestName" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100">
+                </div>
+                <div class="input-group">
+                    <label for="chargeRoomNumber" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-door-open mr-2"></i> Room Number:</label>
+                    <input type="text" id="chargeRoomNumber" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100">
+                </div>
+                <div class="input-group">
+                    <label for="chargeType" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-cogs mr-2"></i> Charge Type:</label>
+                    <select id="chargeType" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                        <option value="">Select Type</option>
+                        <option value="Bar">Bar</option>
+                        <option value="Restaurant">Restaurant</option>
+                        <option value="Laundry">Laundry</option>
+                        <option value="Spa">Spa</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="chargeDescription" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-info-circle mr-2"></i> Description (Optional):</label>
+                    <input type="text" id="chargeDescription" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                </div>
+                <div class="input-group">
+                    <label for="chargeAmount" class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-dollar-sign mr-2"></i> Amount:</label>
+                    <input type="number" id="chargeAmount" step="0.01" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg hover:bg-blue-600 transition duration-300 flex items-center justify-center space-x-2">
+                    <i class="fas fa-plus-circle"></i> <span>Add Charge</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="viewChargesModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50" style="display: none;">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-3xl relative max-h-[90vh] overflow-y-auto">
+            <span class="absolute top-4 right-4 text-gray-500 text-2xl cursor-pointer" onclick="closeViewChargesModal()">&times;</span>
+            <h2 class="text-2xl font-bold mb-6 text-primary"><i class="fas fa-file-invoice mr-2"></i> Incidental Charges for <span id="viewChargesGuestName"></span> (Room <span id="viewChargesRoomNumber"></span>)</h2>
+            <div class="overflow-x-auto mb-6">
+                <table id="incidentalChargesTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                    <thead class="bg-gray-200">
+                        <tr>
+                            <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Type</th>
+                            <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Description</th>
+                            <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Amount</th>
+                            <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Date</th>
+                            <th class="py-3 px-4 text-left font-semibold text-sm text-gray-600">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <div class="text-right font-semibold text-lg text-gray-800">
+                <p>Total Incidental Charges: <span id="totalIncidentalCharges" class="text-primary">0.00</span></p>
+            </div>
+        </div>
+    </div>
+    
+    <div id="receiptModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50" style="display: none;">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
+            <span class="absolute top-4 right-4 text-gray-500 text-2xl cursor-pointer" onclick="closeReceiptModal()">&times;</span>
+            <div class="receipt-content p-6">
+                <div class="flex items-center justify-between border-b pb-4 mb-4">
+                    <img src="https://placehold.co/150x50/3498db/ffffff?text=Hotel+Logo" alt="Hotel Logo" class="hotel-logo w-36">
+                    <div class="text-right">
+                        <h3 class="text-2xl font-bold text-primary mb-1"><i class="fas fa-receipt mr-2"></i> Guest Bill / Receipt</h3>
+                        <p class="text-sm text-gray-500"><strong>Date Printed:</strong> <span id="receiptPrintDate"></span></p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-y-2 mb-6 text-gray-700">
+                    <p><strong>Guest Name:</strong> <span id="receiptGuestName"></span></p>
+                    <p><strong>Room Number:</strong> <span id="receiptRoomNumber"></span></p>
+                    <p><strong>Booking ID:</strong> <span id="receiptBookingId"></span></p>
+                    <p><strong>Check-in:</strong> <span id="receiptCheckIn"></span></p>
+                    <p><strong>Check-out:</strong> <span id="receiptCheckOut"></span></p>
+                </div>
+                
+                <h4 class="text-xl font-bold border-b pb-2 mb-4 text-gray-800">Room Charges</h4>
+                <div class="overflow-x-auto mb-6">
+                    <table class="w-full table-auto">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="py-2 px-4 text-left font-semibold text-sm text-gray-600">Description</th>
+                                <th class="py-2 px-4 text-left font-semibold text-sm text-gray-600">Nights</th>
+                                <th class="py-2 px-4 text-left font-semibold text-sm text-gray-600">Rate/Night</th>
+                                <th class="py-2 px-4 text-left font-semibold text-sm text-gray-600">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="py-2 px-4">Room Stay</td>
+                                <td class="py-2 px-4" id="receiptNights"></td>
+                                <td class="py-2 px-4" id="receiptAmtPerNight"></td>
+                                <td class="py-2 px-4" id="receiptRoomTotalDue"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h4 class="text-xl font-bold border-b pb-2 mb-4 text-gray-800">Incidental Charges</h4>
+                <div class="overflow-x-auto mb-6">
+                    <table class="w-full table-auto" id="receiptIncidentalChargesTable">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="py-2 px-4 text-left font-semibold text-sm text-gray-600">Type</th>
+                                <th class="py-2 px-4 text-left font-semibold text-sm text-gray-600">Description</th>
+                                <th class="py-2 px-4 text-left font-semibold text-sm text-gray-600">Amount</th>
+                                <th class="py-2 px-4 text-left font-semibold text-sm text-gray-600">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="text-right space-y-2 mt-8 text-gray-800">
+                    <p class="text-sm"><strong>Subtotal (Room):</strong> <span id="receiptSubtotalRoom" class="font-bold">0.00</span></p>
+                    <p class="text-sm"><strong>Subtotal (Incidentals):</strong> <span id="receiptSubtotalIncidentals" class="font-bold">0.00</span></p>
+                    <p class="text-lg font-bold"><strong>Total Bill:</strong> <span id="receiptTotalBill" class="text-primary">0.00</span></p>
+                    <p class="text-lg"><strong>Amount Paid:</strong> <span id="receiptAmountPaid" class="font-bold text-green-600">0.00</span></p>
+                    <p class="text-xl font-bold"><strong>Balance Due:</strong> <span id="receiptBalanceDue" class="text-red-600">0.00</span></p>
+                    <p class="text-lg"><strong>Payment Status:</strong> <span id="receiptPaymentStatus" class="font-bold"></span></p>
+                </div>
+            </div>
+            <div class="modal-actions flex justify-end gap-4 mt-6 print:hidden">
+                <button class="bg-primary text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-300 flex items-center space-x-2" onclick="window.print()">
+                    <i class="fas fa-print"></i> <span>Print Receipt</span>
+                </button>
+                <button class="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition duration-300" onclick="closeReceiptModal()">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="deletionReasonModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50" style="display: none;">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md relative">
+            <span class="absolute top-4 right-4 text-gray-500 text-2xl cursor-pointer" onclick="closeDeletionReasonModal()">&times;</span>
+            <h2 class="text-2xl font-bold mb-6 text-red-600"><i class="fas fa-exclamation-triangle mr-2"></i> Provide Reason for Action</h2>
+            <div class="input-group mb-6">
+                <label for="deletionReason" class="block text-sm font-semibold text-gray-700 mb-1">Reason:</label>
+                <textarea id="deletionReason" rows="4" required placeholder="Please explain why this action is being performed (e.g., 'Customer cancelled booking', 'Room status changed due to unexpected maintenance')." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500"></textarea>
+            </div>
+            <div class="flex justify-end gap-4">
+                <button class="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition duration-300 flex items-center space-x-2" id="confirmDeletionBtn">
+                    <i class="fas fa-check-circle"></i> <span>Confirm Action</span>
+                </button>
+                <button class="bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-300 flex items-center space-x-2" id="cancelDeletionBtn">
+                    <i class="fas fa-times-circle"></i> <span>Cancel</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="messageBox" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50" style="display: none;">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm text-center">
+            <h3 id="messageBoxTitle" class="text-xl font-bold mb-2"></h3>
+            <p id="messageBoxContent" class="text-gray-700 mb-4"></p>
+            <button onclick="closeMessageBox()" class="bg-primary text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-300">OK</button>
+        </div>
+    </div>
+
+    <script src="script4.js"></script>
+</body>
+</html>
