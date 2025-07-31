@@ -1457,16 +1457,39 @@ function exportReport() {
         return;
     }
 
-    // Create a new worksheet from the room data
-    const worksheet = XLSX.utils.json_to_sheet(reportData);
+    // Create worksheet with headings
+    const worksheet = XLSX.utils.json_to_sheet(reportData, { header: Object.keys(reportData[0]) });
 
-    // Add a blank row + summary rows at the end
-    const summaryStartRow = reportData.length + 2;
+    // Calculate where the summary row should start
+    const dataRowCount = reportData.length;
+    const summaryRowIndex = dataRowCount + 2; // 1-based (plus 1 for blank row)
 
-    XLSX.utils.sheet_add_json(worksheet, [
-        {}, // Blank row
-        reportSummary
-    ], { skipHeader: false, origin: `A${summaryStartRow}` });
+    // Insert a blank row between data and summary
+    XLSX.utils.sheet_add_aoa(worksheet, [[]], { origin: -1 });
+
+    // Add the TOTAL summary row
+    const totalLabel = "TOTAL";
+    const totalAmount = reportSummary['Total Room Revenue'] || 0;
+
+    // Add summary label and value to the correct cells
+    XLSX.utils.sheet_add_aoa(worksheet, [[totalLabel]], { origin: `A${summaryRowIndex}` });
+
+    // Find the Room Revenue column index
+    const headers = Object.keys(reportData[0]);
+    const revenueColIndex = headers.indexOf('Room Revenue');
+    const excelCol = String.fromCharCode(65 + revenueColIndex); // Convert index to column letter
+
+    XLSX.utils.sheet_add_aoa(worksheet, [[totalAmount]], {
+        origin: `${excelCol}${summaryRowIndex}`
+    });
+
+    // Add bold styling to the "TOTAL" and amount cells
+    worksheet[`A${summaryRowIndex}`].s = {
+        font: { bold: true }
+    };
+    worksheet[`${excelCol}${summaryRowIndex}`].s = {
+        font: { bold: true }
+    };
 
     // Create workbook and append the sheet
     const workbook = XLSX.utils.book_new();
@@ -1475,10 +1498,9 @@ function exportReport() {
     const selectedDate = reportDateInput.value || 'report';
     const filename = `Room_Report_${selectedDate}.xlsx`;
 
-    // Save as file
-    XLSX.writeFile(workbook, filename);
+    // Write with styles (requires XLSX-style-compatible writer)
+    XLSX.writeFile(workbook, filename, { cellStyles: true });
 }
-
 
 // --- Housekeeping Functions ---
 
