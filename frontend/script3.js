@@ -1440,6 +1440,8 @@ async function generateReport() {
     document.getElementById('guestsCheckedIn').textContent = guestsCheckedIn;
 }
 
+let reportSummary = {};  // Object holding summary info
+
 function exportReport() {
     if (reportData.length === 0) {
         showMessageBox('Info', 'Please generate the report before exporting.', true);
