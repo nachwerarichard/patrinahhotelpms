@@ -1434,6 +1434,15 @@ async function generateReport() {
         }
     }
 
+    reportSummary = {
+    Date: selectedDateStr,
+    'Total Room Revenue': totalRoomRevenue.toFixed(2),
+    'Total Room Balance': totalRoomBalance.toFixed(2),
+    'Guests Checked In': guestsCheckedIn,
+    'Most Booked Room Type': mostBookedRoomType
+};
+
+
     document.getElementById('totalAmountReport').textContent = totalRoomRevenue.toFixed(2);
     document.getElementById('totalBalanceReport').textContent = totalRoomBalance.toFixed(2);
     document.getElementById('mostBookedRoomType').textContent = mostBookedRoomType;
