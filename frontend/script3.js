@@ -1380,7 +1380,7 @@ async function generateReport() {
     const roomTypeCounts = {};
     reportData = [];
 
-    const tbody = document.querySelector('#roomReportTable tbody');
+    const tbody = document.querySelector('#roomRevenueTable tbody');
     tbody.innerHTML = ''; // Clear previous
 
     allBookings.forEach(booking => {
