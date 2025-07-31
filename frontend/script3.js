@@ -1446,15 +1446,28 @@ function exportReport() {
         return;
     }
 
+    // Create a new worksheet from the room data
     const worksheet = XLSX.utils.json_to_sheet(reportData);
+
+    // Add a blank row + summary rows at the end
+    const summaryStartRow = reportData.length + 2;
+
+    XLSX.utils.sheet_add_json(worksheet, [
+        {}, // Blank row
+        reportSummary
+    ], { skipHeader: false, origin: `A${summaryStartRow}` });
+
+    // Create workbook and append the sheet
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Daily Report');
 
     const selectedDate = reportDateInput.value || 'report';
     const filename = `Room_Report_${selectedDate}.xlsx`;
 
+    // Save as file
     XLSX.writeFile(workbook, filename);
 }
+
 
 // --- Housekeeping Functions ---
 
