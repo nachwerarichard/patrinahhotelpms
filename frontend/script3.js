@@ -1403,7 +1403,7 @@ async function generateReport() {
                 roomTypeCounts[roomType] = (roomTypeCounts[roomType] || 0) + 1;
             }
 
-            const guestNames = booking.name ? booking.name.join(', ') : 'N/A';
+            const guestNames = booking.name || 'N/A';
 
             // Append to table
             const tr = document.createElement('tr');
