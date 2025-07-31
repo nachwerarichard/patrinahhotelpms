@@ -42,7 +42,7 @@ body {
     background-color: #f9f9f9;
     min-width: 120px; /* Adjust based on your button text length */
     box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-
+    z-index: 50;
     /* ----- Key changes for positioning inside the cell and vertical display ----- */
     top: 0; /* Align with the top of the '...' button */
     left: 0; /* Align with the left edge of the '...' button */
