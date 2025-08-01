@@ -1858,7 +1858,7 @@ function exportToExcel() {
 
 // Event listeners
 generateServiceReportBtn.addEventListener('click', renderServiceReports);
-exportServiceReportBtn.addEventListener('click', exportToExcel);-- New: Audit Logs Functions ---
+exportServiceReportBtn.addEventListener('click', exportToExcel);
 
 /**
  * Renders the audit logs table based on filters.
