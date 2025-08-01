@@ -128,34 +128,55 @@
             </section>
 
             <section id="service-reports" class="section">
-                <h2><i class="fas fa-concierge-bell"></i> Service Reports (Incidental Charges)</h2>
-                <div class="report-controls">
-                    <label for="serviceReportStartDate"><i class="fas fa-calendar-day"></i> Start Date:</label>
-                    <input type="date" id="serviceReportStartDate">
-                    <label for="serviceReportEndDate"><i class="fas fa-calendar-day"></i> End Date:</label>
-                    <input type="date" id="serviceReportEndDate">
-                    <button class="btn btn-primary" id="generateServiceReportBtn"><i class="fas fa-file-invoice-dollar"></i> Generate Service Report</button>
-                </div>
-                <div class="table-container">
-                    <table id="serviceReportsTable">
-                        <thead>
-                            <tr>
-                                <th>Service Type</th>
-                                <th>Number of Charges</th>
-                                <th>Total Revenue</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="2" style="text-align: right;"><strong>Grand Total:</strong></td>
-                                <td><strong id="totalServiceRevenue">0.00</strong></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </section>
+    <h2><i class="fas fa-concierge-bell"></i> Service Reports (Incidental Charges)</h2>
+    <div class="report-controls">
+        <label for="serviceReportStartDate"><i class="fas fa-calendar-day"></i> Start Date:</label>
+        <input type="date" id="serviceReportStartDate">
+        <label for="serviceReportEndDate"><i class="fas fa-calendar-day"></i> End Date:</label>
+        <input type="date" id="serviceReportEndDate">
+        <button class="btn btn-primary" id="generateServiceReportBtn"><i class="fas fa-file-invoice-dollar"></i> Generate Service Report</button>
+        <button class="btn btn-success" id="exportServiceReportBtn" style="display: none;"><i class="fas fa-file-excel"></i> Export to Excel</button>
+    </div>
+
+    <div class="table-container">
+        <table id="serviceReportsTable">
+            <thead>
+                <tr>
+                    <th>Service Type</th>
+                    <th>Number of Charges</th>
+                    <th>Total Revenue</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2" style="text-align: right;"><strong>Grand Total:</strong></td>
+                    <td><strong id="totalServiceRevenue">0.00</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <h3 id="detailed-report-title" style="display: none; margin-top: 20px;">Detailed Service Charges</h3>
+        <table id="serviceReportsDetailsTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Guest Name</th>
+                    <th>Service Type</th>
+                    <th>Total Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2" style="text-align: right;"><strong>Grand Total:</strong></td>
+                    <td><strong id="totalDetailedServiceRevenue">0.00</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</section>
 
             <section id="audit-logs" class="section">
                 <h2><i class="fas fa-clipboard-list"></i> Audit Logs</h2>
