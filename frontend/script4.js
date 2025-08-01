@@ -1736,15 +1736,31 @@ nextMonthBtn.addEventListener('click', () => {
 /**
  * Renders the service reports table based on incidental charges.
  */
+
+// -// Get references to the new elements
+const serviceReportsDetailsTable = document.getElementById('serviceReportsDetailsTable');
+const serviceReportsDetailsTableBody = serviceReportsDetailsTable.querySelector('tbody');
+const totalDetailedServiceRevenueSpan = document.getElementById('totalDetailedServiceRevenue');
+const exportServiceReportBtn = document.getElementById('exportServiceReportBtn');
+const detailedReportTitle = document.getElementById('detailed-report-title');
+
 async function renderServiceReports() {
-    serviceReportsTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Loading service reports...</td></tr>';
+    serviceReportsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Loading service reports...</td></tr>';
+    serviceReportsDetailsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Loading details...</td></tr>';
     totalServiceRevenueSpan.textContent = '0.00';
+    totalDetailedServiceRevenueSpan.textContent = '0.00';
+
+    // Hide the new elements initially
+    serviceReportsDetailsTable.style.display = 'none';
+    exportServiceReportBtn.style.display = 'none';
+    detailedReportTitle.style.display = 'none';
 
     const startDate = serviceReportStartDate.value;
     const endDate = serviceReportEndDate.value;
 
     if (!startDate || !endDate) {
-        serviceReportsTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red;">Please select both start and end dates.</td></tr>';
+        serviceReportsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: red;">Please select both start and end dates.</td></tr>';
+        serviceReportsDetailsTableBody.innerHTML = '';
         return;
     }
 
@@ -1753,12 +1769,17 @@ async function renderServiceReports() {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const reports = await response.json();
 
-        serviceReportsTableBody.innerHTML = ''; // Clear loading message
+        serviceReportsTableBody.innerHTML = ''; // Clear loading message for summary
+        serviceReportsDetailsTableBody.innerHTML = ''; // Clear loading message for details
 
         let grandTotalRevenue = 0;
+        let detailedGrandTotalRevenue = 0;
+        
         if (reports.length === 0) {
-            serviceReportsTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No service charges found for the selected date range.</td></tr>';
+            serviceReportsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">No service charges found for the selected date range.</td></tr>';
+            serviceReportsDetailsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">No service charges found for the selected date range.</td></tr>';
         } else {
+            // Render the summary table
             reports.forEach(report => {
                 const row = serviceReportsTableBody.insertRow();
                 row.innerHTML = `
@@ -1768,20 +1789,76 @@ async function renderServiceReports() {
                 `;
                 grandTotalRevenue += report.totalAmount;
             });
+
+            // Render the detailed table
+            reports.forEach(report => {
+                report.bookings.forEach(booking => {
+                    const row = serviceReportsDetailsTableBody.insertRow();
+                    row.innerHTML = `
+                        <td>${booking.name}</td>
+                        <td>${report.serviceType}</td>
+                        <td>${booking.amount.toFixed(2)}</td>
+                    `;
+                    detailedGrandTotalRevenue += booking.amount;
+                });
+            });
+
+            // Show the new table and button
+            serviceReportsDetailsTable.style.display = 'table';
+            exportServiceReportBtn.style.display = 'inline-block';
+            detailedReportTitle.style.display = 'block';
         }
+        
         totalServiceRevenueSpan.textContent = grandTotalRevenue.toFixed(2);
+        totalDetailedServiceRevenueSpan.textContent = detailedGrandTotalRevenue.toFixed(2);
+
     } catch (error) {
         console.error('Error fetching service reports:', error);
         showMessageBox('Error', `Failed to load service reports: ${error.message}`, true);
-        serviceReportsTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red;">Error loading service reports.</td></tr>';
+        serviceReportsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: red;">Error loading service reports.</td></tr>';
+        serviceReportsDetailsTableBody.innerHTML = '';
     }
 }
 
-// Event listener for generating service reports
+function exportToExcel() {
+    // Collect data from both tables
+    const summaryData = [['Service Type', 'Number of Charges', 'Total Revenue']];
+    const detailData = [['Guest Name', 'Service Type', 'Total Amount']];
+    
+    // Get data from summary table
+    document.querySelectorAll('#serviceReportsTable tbody tr').forEach(row => {
+        const rowData = [];
+        row.querySelectorAll('td').forEach(cell => rowData.push(cell.textContent));
+        summaryData.push(rowData);
+    });
+    // Add summary grand total
+    summaryData.push(['Grand Total:', '', totalServiceRevenueSpan.textContent]);
+
+    // Get data from detailed table
+    document.querySelectorAll('#serviceReportsDetailsTable tbody tr').forEach(row => {
+        const rowData = [];
+        row.querySelectorAll('td').forEach(cell => rowData.push(cell.textContent));
+        detailData.push(rowData);
+    });
+    // Add detailed grand total
+    detailData.push(['Grand Total:', '', totalDetailedServiceRevenueSpan.textContent]);
+
+    // Create a new workbook and sheets
+    const workbook = XLSX.utils.book_new();
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+    const detailSheet = XLSX.utils.aoa_to_sheet(detailData);
+
+    // Append sheets to the workbook
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary Report');
+    XLSX.utils.book_append_sheet(workbook, detailSheet, 'Detailed Report');
+    
+    // Generate and download the Excel file
+    XLSX.writeFile(workbook, 'ServiceReports.xlsx');
+}
+
+// Event listeners
 generateServiceReportBtn.addEventListener('click', renderServiceReports);
-
-
-// --- New: Audit Logs Functions ---
+exportServiceReportBtn.addEventListener('click', exportToExcel);-- New: Audit Logs Functions ---
 
 /**
  * Renders the audit logs table based on filters.
