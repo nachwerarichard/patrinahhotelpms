@@ -67,6 +67,11 @@
                 <i class="fas fa-calendar-check text-6xl text-purple-600 mb-4"></i>
                 <span class="text-xl font-semibold text-gray-700">Housekeeping</span>
             </div>
+            <!-- Card 3: Booking Engine with PMS -->
+            <div id="housekeep" class="card bg-white p-8 rounded-xl shadow-md flex flex-col items-center justify-center text-center cursor-pointer hover:bg-blue-50">
+                <i class="fas fa-broom-check text-6xl text-purple-600 mb-4"></i>
+                <span class="text-xl font-semibold text-gray-700">Housekeeping</span>
+            </div>
 
         </div>
     </main>
@@ -86,6 +91,8 @@
         const accountingCard = document.getElementById('accounting-card');
         const kitchenCard = document.getElementById('kitchen-card');
         const bookingCard = document.getElementById('booking-card');
+        
+        const housekeepCard = document.getElementById('housekeep');
 
         // Add click event listeners to each card
         accountingCard.addEventListener('click', () => {
@@ -102,8 +109,14 @@
           window.location.href = 'https://fanciful-concha-1af413.netlify.app/';
             // Example: window.location.href = 'https://fanciful-concha-1af413.netlify.app/home7.html';
         });
-
         bookingCard.addEventListener('click', () => {
+            console.log('Booking Card Clicked!');
+            alert('Navigating to Booking Engine & PMS...');
+          window.location.href = 'https://live.ipms247.com/login/index.php';
+            // Example: window.location.href = 'your_booking_system_url';
+        });
+        
+        housekeepCard.addEventListener('click', () => {
             console.log('Booking Card Clicked!');
             alert('Navigating to Booking Engine & PMS...');
           window.location.href = 'https://harmonious-crumble-2ca9ba.netlify.app/home7.html';
