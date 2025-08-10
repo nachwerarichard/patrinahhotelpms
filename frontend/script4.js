@@ -331,7 +331,11 @@ loginForm.addEventListener('submit', async function(event) {
             if (currentUserRole === 'admin') {
                 initialSectionId = 'booking-management';
                 initialNavLinkId = 'nav-booking';
-            } else if (currentUserRole === 'housekeeper') {
+            } else if (currentUserRole === 'bar') {
+                initialSectionId = 'booking-management';
+                initialNavLinkId = 'nav-booking';
+            }
+            else if (currentUserRole === 'housekeeper') {
                 initialSectionId = 'housekeeping';
                 initialNavLinkId = 'nav-housekeeping';
             }
@@ -496,35 +500,48 @@ function handleNavigation(event) {
  * Applies access restrictions to navigation and sections based on user role.
  * @param {string} role - The role of the logged-in user ('admin' or 'housekeeper').
  */
+
+// A new function to update the UI based on the user's role
 function applyRoleAccess(role) {
-    // Control visibility of navigation links
-    document.getElementById('nav-booking').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
-    document.getElementById('nav-reports').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
-    document.getElementById('nav-calendar-view').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
-    document.getElementById('nav-service-reports').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
-    document.getElementById('nav-audit-logs').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
-    document.getElementById('nav-channel-manager').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
+    // Get all navigation links
+    const navLinks = document.querySelectorAll('.nav-link');
 
-    document.getElementById('nav-housekeeping').parentElement.style.display = 'block'; // Always visible
-    document.getElementById('logoutBtn').parentElement.style.display = 'block'; // Always visible
+    // Hide all links by default
+    navLinks.forEach(link => link.style.display = 'none');
 
-    // Control visibility of sections (actual content areas)
-    sections.forEach(section => {
-        const sectionId = section.id;
-        if (role === 'admin') {
-            // Sections are now controlled solely by the 'active' class via CSS and handleNavigation
-            // No explicit display: none here for admin sections
-        } else if (role === 'housekeeper') {
-            if (sectionId === 'housekeeping') {
-                section.style.display = 'block'; // Housekeeper only sees housekeeping
-            } else {
-                section.style.display = 'none';
-            }
+    // Show links based on role
+    if (role === 'admin') {
+        document.getElementById('nav-booking').style.display = 'block';
+        document.getElementById('nav-housekeeping').style.display = 'block';
+        document.getElementById('nav-calendar').style.display = 'block';
+        document.getElementById('nav-reports').style.display = 'block';
+        document.getElementById('nav-service-reports').style.display = 'block';
+        document.getElementById('nav-audit-logs').style.display = 'block';
+        document.getElementById('nav-channel-manager').style.display = 'block';
+    } else if (role === 'housekeeper') {
+        document.getElementById('nav-housekeeping').style.display = 'block';
+        document.getElementById('nav-calendar').style.display = 'block';
+    } else if (role === 'bar') {
+        // Bar staff only need access to the booking management and calendar
+        document.getElementById('nav-booking').style.display = 'block';
+        document.getElementById('nav-calendar').style.display = 'block';
+    }
+
+    // Hide/show buttons within the booking management table based on role
+    const bookingManagementSection = document.getElementById('booking-management');
+    if (bookingManagementSection) {
+        if (role === 'bar') {
+            // Bar staff can only add charges, so hide all other buttons
+            bookingManagementSection.classList.add('bar-access');
+            // This is a placeholder, you'll need to add a CSS class or direct manipulation
+            // to hide buttons like 'Edit', 'Delete', 'Checkout', 'Print Receipt', etc.
+            // You will implement this in the renderBookings function.
+        } else {
+            // For other roles, ensure these buttons are visible
+            bookingManagementSection.classList.remove('bar-access');
         }
-    });
+    }
 }
-
-
 // --- Booking Management Functions ---
 
 /**
@@ -535,8 +552,10 @@ function applyRoleAccess(role) {
 async function renderBookings(page = 1, searchTerm = '') {
     bookingsTableBody.innerHTML = ''; // Clear existing rows
 
-    if (currentUserRole !== 'admin') {
-        bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px;">Access Denied. Only Admin can view bookings.</td></tr>';
+    // Allow 'admin' and 'bar' roles to view bookings.
+    // Restrict all other roles.
+    if (currentUserRole !== 'admin' && currentUserRole !== 'bar') {
+        bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px;">Access Denied. You do not have permission to view bookings.</td></tr>';
         prevPageBtn.disabled = true;
         nextPageBtn.disabled = true;
         pageInfoSpan.textContent = 'Page 0 of 0';
@@ -581,6 +600,29 @@ async function renderBookings(page = 1, searchTerm = '') {
         currentBookings.forEach(booking => {
             const row = bookingsTableBody.insertRow();
             row.dataset.id = booking.id; // Store booking ID for easy access
+            
+            let actionButtonsHtml = '';
+            
+            // Check if the guest has checked out to disable the Checkout button
+            const isCheckedOut = new Date(booking.checkOut) <= new Date() && rooms.find(r => r.number === booking.room)?.status === 'dirty';
+
+            // Conditionally render buttons based on the user's role
+            if (currentUserRole === 'admin') {
+                actionButtonsHtml = `
+                    <button class="btn btn-primary btn-sm" onclick="editBooking('${booking.id}')">Edit</button>
+                    <button class="btn btn-danger btn-sm" onclick="confirmDeleteBooking('${booking.id}')">Delete</button>
+                    <button class="btn btn-success btn-sm" onclick="checkoutBooking('${booking.id}')" ${isCheckedOut ? 'disabled' : ''}>Check-out</button>
+                    <button class="btn btn-primary btn-sm" onclick="openIncidentalChargeModal('${booking.id}', '${booking.name}', '${booking.room}')">Add Charge</button>
+                    <button class="btn btn-secondary btn-sm" onclick="viewCharges('${booking.id}')">View Charges</button>
+                    <button class="btn btn-info btn-sm" onclick="printReceipt('${booking.id}')"><i class="fas fa-print"></i> Receipt</button>
+                `;
+            } else if (currentUserRole === 'bar') {
+                actionButtonsHtml = `
+                    <button class="btn btn-primary btn-sm" onclick="openIncidentalChargeModal('${booking.id}', '${booking.name}', '${booking.room}')">Add Charge</button>
+                    <button class="btn btn-secondary btn-sm" onclick="viewCharges('${booking.id}')">View Charges</button>
+                    <button class="btn btn-info btn-sm" onclick="printReceipt('${booking.id}')"><i class="fas fa-print"></i> Receipt</button>
+                `;
+            }
 
             row.innerHTML = `
                 <td>${booking.name}</td>
@@ -592,21 +634,14 @@ async function renderBookings(page = 1, searchTerm = '') {
                     <div class="action-buttons-container">
                         <button class="btn btn-secondary btn-sm more-actions-btn" onclick="toggleActionButtons(this)">&vellip;</button>
                         <div class="hidden-action-buttons">
-                            <button class="btn btn-info" onclick="editBooking('${booking.id}')">Edit</button>
-                            <button class="btn btn-danger" onclick="confirmDeleteBooking('${booking.id}')">Delete</button>
-                            ${new Date(booking.checkOut) <= new Date() && rooms.find(r => r.number === booking.room)?.status !== 'dirty' ?
-                                `<button class="btn btn-success" onclick="checkoutBooking('${booking.id}')">Check-out</button>` :
-                                ''
-                            }
-                            <button class="btn btn-primary" onclick="openIncidentalChargeModal('${booking.id}', '${booking.name}', '${booking.room}')">Add Charge</button>
-                            <button class="btn btn-secondary" onclick="viewCharges('${booking.id}')">View Charges</button>
-                            <button class="btn btn-info" onclick="printReceipt('${booking.id}')"><i class="fas fa-print"></i> Receipt</button>
+                           ${actionButtonsHtml}
                         </div>
                     </div>
                 </td>
             `;
         });
     }
+
     // Update pagination controls
     prevPageBtn.disabled = currentPage <= 1;
     nextPageBtn.disabled = currentPage >= totalPages;
@@ -1962,7 +1997,11 @@ document.addEventListener('DOMContentLoaded', async () => { // Made async to awa
             if (currentUserRole === 'admin') {
                 initialSectionId = 'booking-management';
                 initialNavLinkId = 'nav-booking';
-            } else if (currentUserRole === 'housekeeper') {
+            }else if (currentUserRole === 'bar') {
+                initialSectionId = 'booking-management';
+                initialNavLinkId = 'nav-booking';
+            }
+            else if (currentUserRole === 'housekeeper') {
                 initialSectionId = 'housekeeping';
                 initialNavLinkId = 'nav-housekeeping';
             }
