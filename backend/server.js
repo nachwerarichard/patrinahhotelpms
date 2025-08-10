@@ -145,6 +145,7 @@ const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 // --- 6. Hardcoded Users for Authentication (Highly Insecure for Production!) ---
 const users = [
     { username: 'user', password: 'password', role: 'admin' },
+    { username: 'bar', password: '789', role: 'bar' },
     { username: 'hk', password: 'hkpass', role: 'housekeeper' }
 ];
 
