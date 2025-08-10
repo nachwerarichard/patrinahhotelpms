@@ -495,44 +495,38 @@ async function handleNavigation(event) {
 
 // A new function to update the UI based on the user's role
 function applyRoleAccess(role) {
-    // Get all navigation links
-    const navLinks = document.querySelectorAll('.nav-link');
+    // Control visibility of navigation links
+    document.getElementById('nav-booking').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
+    document.getElementById('nav-reports').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
+    document.getElementById('nav-calendar-view').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
+    document.getElementById('nav-service-reports').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
+    document.getElementById('nav-audit-logs').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
+    document.getElementById('nav-channel-manager').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
 
-    // Hide all links by default
-    navLinks.forEach(link => link.style.display = 'none');
+    document.getElementById('nav-housekeeping').parentElement.style.display = 'block'; // Always visible
+    document.getElementById('logoutBtn').parentElement.style.display = 'block'; // Always visible
 
-    // Show links based on role
-    if (role === 'admin') {
-        document.getElementById('nav-booking').style.display = 'block';
-        document.getElementById('nav-housekeeping').style.display = 'block';
-        document.getElementById('nav-calendar').style.display = 'block';
-        document.getElementById('nav-reports').style.display = 'block';
-        document.getElementById('nav-service-reports').style.display = 'block';
-        document.getElementById('nav-audit-logs').style.display = 'block';
-        document.getElementById('nav-channel-manager').style.display = 'block';
-    } else if (role === 'housekeeper') {
-        document.getElementById('nav-housekeeping').style.display = 'block';
-        document.getElementById('nav-calendar').style.display = 'block';
-    } else if (role === 'bar') {
-        // Bar staff only need access to the booking management and calendar
-        document.getElementById('nav-booking').style.display = 'block';
-        document.getElementById('nav-calendar').style.display = 'block';
-    }
-
-    // Hide/show buttons within the booking management table based on role
-    const bookingManagementSection = document.getElementById('booking-management');
-    if (bookingManagementSection) {
-        if (role === 'bar') {
-            // Bar staff can only add charges, so hide all other buttons
-            bookingManagementSection.classList.add('bar-access');
-            // This is a placeholder, you'll need to add a CSS class or direct manipulation
-            // to hide buttons like 'Edit', 'Delete', 'Checkout', 'Print Receipt', etc.
-            // You will implement this in the renderBookings function.
-        } else {
-            // For other roles, ensure these buttons are visible
-            bookingManagementSection.classList.remove('bar-access');
+    // Control visibility of sections (actual content areas)
+    sections.forEach(section => {
+        const sectionId = section.id;
+        if (role === 'admin') {
+            // Sections are now controlled solely by the 'active' class via CSS and handleNavigation
+            // No explicit display: none here for admin sections
+        } else if (role === 'housekeeper') {
+            if (sectionId === 'housekeeping') {
+                section.style.display = 'block'; // Housekeeper only sees housekeeping
+            } else {
+                section.style.display = 'none';
+            }
         }
-    }
+        else if (role === 'bar') {
+            if (sectionId === 'booking-management') {
+                section.style.display = 'block'; // Housekeeper only sees housekeeping
+            } else {
+                section.style.display = 'none';
+            }
+        }
+    });
 }
 // --- Booking Management Functions ---
 
