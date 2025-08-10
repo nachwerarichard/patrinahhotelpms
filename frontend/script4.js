@@ -525,42 +525,45 @@ function handleNavigation(event) {
  */
 
 // A new function to update the UI based on the user's role
+/**
+ * Adjusts UI elements based on the user's role.
+ * @param {string} role - The role of the currently logged-in user ('admin', 'housekeeper', 'bar').
+ */
 function applyRoleAccess(role) {
-    // Control visibility of navigation links
-    document.getElementById('nav-booking').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
-    document.getElementById('nav-reports').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
-    document.getElementById('nav-calendar-view').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
-    document.getElementById('nav-service-reports').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
-    document.getElementById('nav-audit-logs').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
-    document.getElementById('nav-channel-manager').parentElement.style.display = (role === 'admin') ? 'block' : 'none';
+    // Hide all navigation links by default
+    document.getElementById('nav-booking').style.display = 'none';
+    document.getElementById('nav-housekeeping').style.display = 'none';
+    document.getElementById('nav-reports').style.display = 'none';
+    document.getElementById('nav-service-reports').style.display = 'none';
+    document.getElementById('nav-calendar').style.display = 'none';
+    document.getElementById('nav-audit-logs').style.display = 'none';
+    document.getElementById('nav-channel-manager').style.display = 'none';
 
-    document.getElementById('nav-housekeeping').parentElement.style.display = 'block'; // Always visible
-    document.getElementById('logoutBtn').parentElement.style.display = 'block'; // Always visible
-
-    // Control visibility of sections (actual content areas)
-    sections.forEach(section => {
-        const sectionId = section.id;
-        if (role === 'admin') {
-            // Sections are now controlled solely by the 'active' class via CSS and handleNavigation
-            // No explicit display: none here for admin sections
-        } else if (role === 'housekeeper') {
-            if (sectionId === 'housekeeping') {
-                section.style.display = 'block'; // Housekeeper only sees housekeeping
-            } else {
-                section.style.display = 'none';
-            }
-        }
-        else if (role === 'bar') {
-            if (sectionId === 'booking-management') {
-                section.style.display = 'block'; // Housekeeper only sees housekeeping
-            } else {
-                section.style.display = 'none';
-            }
-        }
-    });
+    // Show navigation links based on role
+    switch (role) {
+        case 'admin':
+            // Admins see everything
+            document.getElementById('nav-booking').style.display = 'list-item';
+            document.getElementById('nav-housekeeping').style.display = 'list-item';
+            document.getElementById('nav-reports').style.display = 'list-item';
+            document.getElementById('nav-service-reports').style.display = 'list-item';
+            document.getElementById('nav-calendar').style.display = 'list-item';
+            document.getElementById('nav-audit-logs').style.display = 'list-item';
+            document.getElementById('nav-channel-manager').style.display = 'list-item';
+            break;
+        case 'housekeeper':
+            // Housekeepers only see housekeeping and logout
+            document.getElementById('nav-housekeeping').style.display = 'list-item';
+            break;
+        case 'bar':
+            // Bar staff only see booking management and logout
+            document.getElementById('nav-booking').style.display = 'list-item';
+            break;
+        default:
+            // For any other undefined role, hide everything
+            break;
+    }
 }
-// --- Booking Management Functions ---
-
 /**
  * Renders the bookings table, fetching data from the backend with pagination and search.
  * @param {number} page - The current page number to fetch.
