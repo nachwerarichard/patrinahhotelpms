@@ -451,7 +451,6 @@ function handleNavigation(event) {
     const barRestrictedSections = ['housekeeping', 'reports', 'service-reports', 'audit-logs'];
     if (currentUserRole === 'bar' && barRestrictedSections.includes(targetId)) {
         showMessageBox('Access Denied', 'You do not have permission to access this section.', true);
-        barRestrictedSections.style.display="none";
         return;
     }
 
@@ -481,6 +480,9 @@ function handleNavigation(event) {
         } else if (currentUserRole === 'bar') {
             document.getElementById('booking-management').classList.add('active');
             document.getElementById('nav-booking').classList.add('active');
+           document.getElementById('housekeeping').style.display="none";
+            document.getElementById('booking-management').style.display="block";
+
             renderBookings(currentPage, currentSearchTerm); // Ensure it renders if fallback
         }
         return;
