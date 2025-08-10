@@ -427,75 +427,67 @@ logoutBtn.addEventListener('click', async () => {
  * Handles navigation clicks, showing/hiding sections and re-rendering content.
  * @param {Event} event - The click event.
  */
-function handleNavigation(event) {
+/**
+ * Handles navigation clicks, showing the correct section and triggering data renders.
+ * @param {Event} event - The click event object.
+ */
+async function handleNavigation(event) {
     event.preventDefault();
-    // Correctly map 'nav-booking' to 'booking-management'
-    const targetId = event.target.id === 'nav-booking' ? 'booking-management' : event.target.id.replace('nav-', '');
-
-    // Prevent navigation if the user's role doesn't permit it
-    if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping') {
-        showMessageBox('Access Denied', 'Housekeepers can only access the Housekeeping section.', true);
-        return;
-    }
 
     // Remove 'active' class from all nav links and sections
     navLinks.forEach(link => link.classList.remove('active'));
     sections.forEach(section => section.classList.remove('active'));
 
-    // Add 'active' class to the clicked nav link
-    event.target.classList.add('active');
+    const clickedLink = event.currentTarget;
+    const targetSectionId = clickedLink.dataset.target;
+    
+    // Add 'active' class to the clicked nav link and its corresponding section
+    clickedLink.classList.add('active');
+    document.getElementById(targetSectionId).classList.add('active');
 
-    // Add 'active' class to the corresponding section
-    const targetSection = document.getElementById(targetId);
-    if (targetSection) {
-        targetSection.classList.add('active');
-    } else {
-        console.error(`Error: Section with ID "${targetId}" not found.`);
-        // Fallback to a default accessible section if targetId is invalid
-        if (currentUserRole === 'admin') {
-            document.getElementById('booking-management').classList.add('active');
-            document.getElementById('nav-booking').classList.add('active');
-            renderBookings(currentPage, currentSearchTerm); // Ensure it renders if fallback
-        } else if (currentUserRole === 'housekeeper') {
-            document.getElementById('housekeeping').classList.add('active');
-            document.getElementById('nav-housekeeping').classList.add('active');
-            renderHousekeepingRooms(); // Ensure it renders if fallback
-        }
-        return;
-    }
-
-    // Re-render sections when active
-    if (targetId === 'booking-management') {
-        currentPage = 1; // Reset to first page when navigating to bookings
-        currentSearchTerm = ''; // Clear search term when navigating via menu
-        bookingSearchInput.value = ''; // Clear search input field
-        renderBookings(currentPage, currentSearchTerm);
-    } else if (targetId === 'housekeeping') {
-        renderHousekeepingRooms();
-    } else if (targetId === 'reports') {
-        reportDateInput.valueAsDate = new Date();
-        generateReport();
-    } else if (targetId === 'calendar-view') {
-        renderCalendar();
-    } else if (targetId === 'service-reports') {
-        // Set default dates for service reports to current month
-        const today = new Date();
-        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        serviceReportStartDate.value = firstDay.toISOString().split('T')[0];
-        serviceReportEndDate.value = lastDay.toISOString().split('T')[0];
-        renderServiceReports();
-    } else if (targetId === 'audit-logs') {
-        // Set default dates for audit logs to last 30 days
-        const today = new Date();
-        const thirtyDaysAgo = new Date(today);
-        thirtyDaysAgo.setDate(today.getDate() - 30);
-        auditLogStartDateFilter.value = thirtyDaysAgo.toISOString().split('T')[0];
-        auditLogEndDateFilter.value = today.toISOString().split('T')[0];
-        renderAuditLogs();
+    // Call the appropriate rendering function based on the target section
+    switch (targetSectionId) {
+        case 'booking-management':
+            // Reset pagination and search for booking management
+            currentPage = 1;
+            currentSearchTerm = '';
+            await renderBookings(currentPage, currentSearchTerm);
+            break;
+        case 'housekeeping':
+            // Only admins and housekeepers can view this section
+            if (currentUserRole === 'admin' || currentUserRole === 'housekeeper') {
+                await renderHousekeepingRooms();
+            } else {
+                // Handle unauthorized access
+                document.getElementById(targetSectionId).innerHTML = '<p style="text-align: center; padding: 20px; color: red;">Access Denied. You do not have permission to view this section.</p>';
+            }
+            break;
+        case 'calendar-view':
+            await renderCalendar();
+            break;
+        case 'reports':
+            reportDateInput.valueAsDate = new Date();
+            await generateReport();
+            break;
+        case 'service-reports':
+            // Set default date range for service reports (e.g., current month)
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            serviceReportStartDate.value = firstDay.toISOString().split('T')[0];
+            serviceReportEndDate.value = lastDay.toISOString().split('T')[0];
+            await renderServiceReports();
+            break;
+        case 'audit-logs':
+            const logsToday = new Date();
+            const thirtyDaysAgo = new Date(logsToday);
+            thirtyDaysAgo.setDate(logsToday.getDate() - 30);
+            auditLogStartDateFilter.value = thirtyDaysAgo.toISOString().split('T')[0];
+            auditLogEndDateFilter.value = logsToday.toISOString().split('T')[0];
+            await renderAuditLogs();
+            break;
     }
 }
-
 /**
  * Applies access restrictions to navigation and sections based on user role.
  * @param {string} role - The role of the logged-in user ('admin' or 'housekeeper').
