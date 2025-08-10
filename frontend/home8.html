@@ -32,20 +32,52 @@
     </div>
 
     <div id="main-content" style="display: none;">
-        <aside>
-            <nav>
-                <ul>
-                    <li><a href="#" id="nav-booking" class="active"><i class="fas fa-book"></i> Booking Management</a></li>
-                    <li><a href="#" id="nav-housekeeping"><i class="fas fa-broom"></i> Housekeeping</a></li>
-                    <li><a href="#" id="nav-calendar-view"><i class="fas fa-calendar-alt"></i> Calendar View</a></li>
-                    <li><a href="#" id="nav-reports"><i class="fas fa-chart-bar"></i> Daily Reports</a></li>
-                    <li><a href="#" id="nav-service-reports"><i class="fas fa-concierge-bell"></i> Service Reports</a></li>
-                    <li><a href="#" id="nav-audit-logs"><i class="fas fa-clipboard-list"></i> Audit Logs</a></li>
-                    <li><a href="#" id="nav-channel-manager"><i class="fas fa-exchange-alt"></i> Channel Manager</a></li>
-                    <li><a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-                </ul>
-            </nav>
-        </aside>
+        <aside class="sidebar">
+  <nav>
+    <ul>
+      <li id="nav-booking">
+        <a href="#" onclick="showSection('booking-management')">
+          <i class="fas fa-book"></i> Booking Management
+        </a>
+      </li>
+      <li id="nav-housekeeping">
+        <a href="#" onclick="showSection('housekeeping')">
+          <i class="fas fa-broom"></i> Housekeeping
+        </a>
+      </li>
+      <li id="nav-reports">
+        <a href="#" onclick="showSection('reports')">
+          <i class="fas fa-chart-line"></i> Daily Reports
+        </a>
+      </li>
+      <li id="nav-service-reports">
+        <a href="#" onclick="showSection('service-reports')">
+          <i class="fas fa-concierge-bell"></i> Service Reports
+        </a>
+      </li>
+      <li id="nav-calendar">
+        <a href="#" onclick="showSection('calendar-view')">
+          <i class="fas fa-calendar-alt"></i> Calendar
+        </a>
+      </li>
+      <li id="nav-audit-logs">
+        <a href="#" onclick="showSection('audit-logs')">
+          <i class="fas fa-clipboard-list"></i> Audit Logs
+        </a>
+      </li>
+      <li id="nav-channel-manager">
+        <a href="#" onclick="showSection('channel-manager')">
+          <i class="fas fa-sync-alt"></i> Channel Manager
+        </a>
+      </li>
+      <li id="nav-logout">
+        <a href="#" onclick="logout()">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+      </li>
+    </ul>
+  </nav>
+</aside>
 
         <main>
             <section id="booking-management" class="section active">
