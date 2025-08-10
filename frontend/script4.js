@@ -535,7 +535,7 @@ function applyRoleAccess(role) {
     document.getElementById('nav-housekeeping').style.display = 'none';
     document.getElementById('nav-reports').style.display = 'none';
     document.getElementById('nav-service-reports').style.display = 'none';
-    document.getElementById('nav-calendar-view').style.display = 'none';
+    document.getElementById('nav-calendar').style.display = 'none';
     document.getElementById('nav-audit-logs').style.display = 'none';
     document.getElementById('nav-channel-manager').style.display = 'none';
 
@@ -547,7 +547,7 @@ function applyRoleAccess(role) {
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             document.getElementById('nav-reports').style.display = 'list-item';
             document.getElementById('nav-service-reports').style.display = 'list-item';
-            document.getElementById('nav-calendar-view').style.display = 'list-item';
+            document.getElementById('nav-calendar').style.display = 'list-item';
             document.getElementById('nav-audit-logs').style.display = 'list-item';
             document.getElementById('nav-channel-manager').style.display = 'list-item';
             break;
