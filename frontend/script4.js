@@ -451,6 +451,7 @@ function handleNavigation(event) {
     const barRestrictedSections = ['housekeeping', 'reports', 'service-reports', 'audit-logs'];
     if (currentUserRole === 'bar' && barRestrictedSections.includes(targetId)) {
         showMessageBox('Access Denied', 'You do not have permission to access this section.', true);
+        barRestrictedSections.style.display="none";
         return;
     }
 
