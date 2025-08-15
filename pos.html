@@ -213,7 +213,7 @@
             const findActiveBooking = async (roomNumber) => {
                 displayMessage('Finding guest...', 'info');
                 try {
-                    const response = await fetch(`${BASE_URL}/api/pos/room/${roomNumber}/active-booking`);
+                    const response = await fetch(`${BASE_URL}/api/pos/room/${roomNumber}/latest-booking`);
                     const data = await response.json();
 
                     if (!response.ok) {
