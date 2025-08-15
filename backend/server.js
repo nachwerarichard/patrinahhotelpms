@@ -318,6 +318,38 @@ app.post('/api/pos/charge/walkin', async (req, res) => {
     }
 });
 
+// NEW: Get a guest's full bill (room charges + incidentals)
+app.get('/api/bookings/:bookingCustomId/bill', async (req, res) => {
+    const { bookingCustomId } = req.params;
+    try {
+        // 1. Find the main booking record
+        const booking = await Booking.findOne({ id: bookingCustomId });
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found.' });
+        }
+
+        // 2. Find all incidental charges linked to this booking
+        const incidentalCharges = await IncidentalCharge.find({ bookingCustomId: bookingCustomId });
+
+        // 3. Calculate the total for all incidental charges
+        const totalIncidentalCharges = incidentalCharges.reduce((sum, charge) => sum + charge.amount, 0);
+
+        // 4. Calculate the grand total
+        const grandTotalDue = booking.totalDue + totalIncidentalCharges;
+
+        // 5. Send back a comprehensive bill object
+        res.json({
+            booking: booking,
+            incidentalCharges: incidentalCharges,
+            totalIncidentalCharges: totalIncidentalCharges,
+            grandTotalDue: grandTotalDue
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching guest bill', error: error.message });
+    }
+});
+
+
 // NEW: Get a walk-in charge and mark it as paid
 app.post('/api/pos/walkin/:receiptId/pay', async (req, res) => {
     const { receiptId } = req.params;
@@ -667,6 +699,8 @@ app.put('/api/bookings/:id', async (req, res) => {
         res.status(500).json({ message: 'Error updating booking', error: error.message });
     }
 });
+
+
 
 // Delete a booking (admin only)
 app.delete('/api/bookings/:id', async (req, res) => {
