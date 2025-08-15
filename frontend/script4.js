@@ -1097,8 +1097,8 @@ nextPageBtn.addEventListener('click', () => {
     chargeBookingCustomIdInput.value = bookingCustomId;
     chargeGuestNameInput.value = guestName;
     chargeRoomNumberInput.value = roomNumber;
-    incidentalChargeModal.style.display = 'flex';*/
-}
+    incidentalChargeModal.style.display = 'flex';
+}*/
 
 /**
  * Closes the incidental charge modal.
