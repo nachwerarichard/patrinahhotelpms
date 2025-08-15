@@ -305,8 +305,57 @@
     });
 
     issueReceiptBtn.addEventListener('click', () => {
-        settleAccount('receipt');
-    });
+    settleAccount('receipt');
+});
+
+const settleAccount = async (method) => {
+    if (!activeAccountId) {
+        displayMessage('No active account to settle.', 'error');
+        return;
+    }
+    displayMessage('Settling account...', 'info');
+
+    let payload = {};
+    if (method === 'room') {
+        payload = { roomPost: true };
+    } else if (method === 'receipt') {
+        payload = { paymentMethod: 'Cash' };
+    }
+
+    try {
+        const response = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/settle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || 'Failed to settle account.');
+        }
+
+        // --- NEW: Printing logic for receipt method ---
+        if (method === 'receipt') {
+            const receiptHtml = generateReceiptHtml(activeAccountData);
+            const printWindow = window.open('', '', 'height=600,width=400');
+            printWindow.document.write(receiptHtml);
+            printWindow.document.close();
+            
+            // Wait for the content to be loaded before printing
+            printWindow.onload = function() {
+                printWindow.focus(); // Focus the new window
+                printWindow.print(); // Trigger the print dialog
+                printWindow.close(); // Close the window after printing
+            };
+        }
+        
+        displayMessage(`Account settled successfully! Total: $${activeAccountData.totalCharges.toFixed(2)}`, 'success');
+        setTimeout(resetUI, 3000);
+
+    } catch (error) {
+        displayMessage(`Error: ${error.message}`, 'error');
+    }
+};
 
     // NEW: Search form event listener
     searchAccountForm.addEventListener('submit', async (e) => {
@@ -324,6 +373,76 @@
     // Initial state
     resetUI();
 });
+
+        const generateReceiptHtml = (account) => {
+    const today = new Date();
+    const date = today.toLocaleDateString();
+    const time = today.toLocaleTimeString();
+
+    const chargesList = account.charges.map(charge => `
+        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dotted #ccc;">
+            <span>${charge.description}</span>
+            <span>$${charge.amount.toFixed(2)}</span>
+        </div>
+    `).join('');
+
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Receipt</title>
+            <style>
+                body { font-family: 'Inter', sans-serif; margin: 0; padding: 20px; font-size: 14px; }
+                .receipt { width: 300px; margin: 0 auto; padding: 20px; border: 1px solid #000; }
+                .header, .footer { text-align: center; }
+                .divider { border-top: 1px dashed #000; margin: 10px 0; }
+                .item-list { margin: 10px 0; }
+                .total { font-size: 1.2em; font-weight: bold; }
+                h2 { margin: 0; }
+            </style>
+        </head>
+        <body>
+            <div class="receipt">
+                <div class="header">
+                    <h2>Patrinah Hotel</h2>
+                    <p>123 Hotel Street, City, Country</p>
+                    <p>Tel: +123 456 7890</p>
+                    <div class="divider"></div>
+                    <p><strong>Receipt</strong></p>
+                </div>
+                
+                <div class="info">
+                    <p><strong>Guest:</strong> ${account.guestName}</p>
+                    <p><strong>Room:</strong> ${account.roomNumber || 'N/A'}</p>
+                    <p><strong>Date:</strong> ${date}</p>
+                    <p><strong>Time:</strong> ${time}</p>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="item-list">
+                    ${chargesList}
+                </div>
+
+                <div class="divider"></div>
+
+                <div style="display: flex; justify-content: space-between;" class="total">
+                    <span>TOTAL:</span>
+                    <span>$${account.totalCharges.toFixed(2)}</span>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="footer">
+                    <p>Thank you for your business!</p>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+};
+
+        
     </script>
 </body>
 </html>
