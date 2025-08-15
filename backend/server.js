@@ -158,6 +158,97 @@ const incidentalChargeSchema = new mongoose.Schema({
 });
 const IncidentalCharge = mongoose.model('IncidentalCharge', incidentalChargeSchema);
 
+// --- Define Mongoose Schemas and Models (cont.) ---
+const clientAccountSchema = new mongoose.Schema({
+    guestName: { type: String, required: true },
+    roomNumber: { type: String }, // Optional, as some accounts may not be tied to a room
+    charges: [{
+        description: { type: String, required: true },
+        amount: { type: Number, required: true },
+        date: { type: Date, default: Date.now }
+    }],
+    totalCharges: { type: Number, default: 0 },
+    isClosed: { type: Boolean, default: false }
+});
+
+const ClientAccount = mongoose.model('ClientAccount', clientAccountSchema);
+
+// POST /api/pos/client/account
+app.post('/api/pos/client/account', async (req, res) => {
+    const { guestName, roomNumber } = req.body;
+    try {
+        const newAccount = new ClientAccount({ guestName, roomNumber }); 
+        await newAccount.save();
+        res.status(201).json(newAccount);
+    } catch (error) {
+        res.status(500).json({ message: 'Error creating client account.', error: error.message });
+    }
+});
+
+// POST /api/pos/client/account/:accountId/charge
+app.post('/api/pos/client/account/:accountId/charge', async (req, res) => {
+    const { accountId } = req.params;
+    const { description, amount } = req.body;
+    try {
+        const account = await ClientAccount.findById(accountId);
+        if (!account) {
+            return res.status(404).json({ message: 'Client account not found.' });
+        }
+
+        // Add the new charge to the array
+        account.charges.push({ description, amount });
+
+        // Update the total charges
+        account.totalCharges += amount;
+
+        await account.save();
+        res.status(200).json(account);
+    } catch (error) {
+        res.status(500).json({ message: 'Error adding charge.', error: error.message });
+    }
+});
+
+// POST /api/pos/client/account/:accountId/settle
+app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
+    const { accountId } = req.params;
+    const { paymentMethod, roomPost } = req.body; // paymentMethod (e.g., 'Cash', 'Card') or roomPost (boolean)
+    try {
+        const account = await ClientAccount.findById(accountId);
+        if (!account) {
+            return res.status(404).json({ message: 'Client account not found.' });
+        }
+
+        if (roomPost && account.roomNumber) {
+            // Logic to post charges to the guest's room account
+            // You would have a separate RoomCharges model to handle this
+            // For now, we'll just log it and close the account.
+            console.log(`Posting total of ${account.totalCharges} to room ${account.roomNumber}.`);
+        } else if (paymentMethod) {
+            // Logic to generate a final receipt and process payment
+            const receipt = {
+                guestName: account.guestName,
+                total: account.totalCharges,
+                items: account.charges,
+                paymentMethod: paymentMethod,
+                date: new Date()
+            };
+            // You would send this 'receipt' object to the frontend to be printed
+            console.log('Generating receipt:', receipt);
+        } else {
+            return res.status(400).json({ message: 'Invalid settlement method.' });
+        }
+
+        // Mark the account as closed and save
+        account.isClosed = true;
+        await account.save();
+
+        res.status(200).json({ message: 'Account settled successfully.', receipt });
+    } catch (error) {
+        res.status(500).json({ message: 'Error settling account.', error: error.message });
+    }
+});
+
+
 // Audit Log Schema
 const auditLogSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now },
