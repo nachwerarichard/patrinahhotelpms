@@ -1094,9 +1094,9 @@ nextPageBtn.addEventListener('click', () => {
  */
 function openIncidentalChargeModal(bookingCustomId, guestName, roomNumber) {
     incidentalChargeForm.reset();
-    /**chargeBookingCustomIdInput.value = bookingCustomId;
+    chargeBookingCustomIdInput.value = bookingCustomId;
     chargeGuestNameInput.value = guestName;
-    chargeRoomNumberInput.value = roomNumber;*/
+    chargeRoomNumberInput.value = roomNumber;
     incidentalChargeModal.style.display = 'flex';
 }
 
