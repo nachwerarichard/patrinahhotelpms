@@ -228,28 +228,23 @@ async function addAuditLog(action, username, details = {}) {
 
 // NEW: Find the active booking for a specific room number
 // This is the first step for a POS user to charge a room guest.
-app.get('/api/pos/room/:roomNumber/active-booking', async (req, res) => {
+
+app.get('/api/pos/room/:roomNumber/latest-booking', async (req, res) => {
     const { roomNumber } = req.params;
     try {
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
+        const latestBooking = await Booking.findOne({
+            room: roomNumber
+        }).sort({ checkIn: -1 }); // Sort by check-in date in descending order
 
-        const activeBooking = await Booking.findOne({
-            room: roomNumber,
-            checkIn: { $lte: now.toISOString().split('T')[0] },
-            checkOut: { $gt: now.toISOString().split('T')[0] }
-        });
-
-        if (!activeBooking) {
-            return res.status(404).json({ message: 'No active booking found for this room.' });
+        if (!latestBooking) {
+            return res.status(404).json({ message: 'No bookings found for this room.' });
         }
 
-        res.json(activeBooking);
+        res.json(latestBooking);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching active booking', error: error.message });
+        res.status(500).json({ message: 'Error fetching latest booking', error: error.message });
     }
 });
-
 // NEW: Post a charge to a specific room guest's bill
 // This endpoint uses the existing IncidentalCharge model.
 app.post('/api/pos/charge/room', async (req, res) => {
