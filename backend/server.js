@@ -63,6 +63,32 @@ mongoose.connect(mongoURI)
 
 // --- 5. Define Mongoose Schemas and Models ---
 
+// Add this new schema and model definition with your other schemas
+const walkInChargeSchema = new mongoose.Schema({
+    receiptId: { type: String, required: true, unique: true }, // Unique ID for the receipt
+    guestName: { type: String, required: true },
+    type: { // e.g., 'Bar', 'Restaurant', 'Spa', 'Other'
+        type: String,
+        required: true
+    },
+    description: {
+        type: String
+    },
+    amount: {
+        type: Number,
+        required: true
+    },
+    date: {
+        type: Date,
+        default: Date.now
+    },
+    isPaid: {
+        type: Boolean,
+        default: false
+    }
+});
+const WalkInCharge = mongoose.model('WalkInCharge', walkInChargeSchema);
+
 // Room Schema
 const roomSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true }, // Custom ID for the room (e.g., 'R101')
@@ -196,7 +222,130 @@ async function addAuditLog(action, username, details = {}) {
 }
 
 // --- 7. API Routes ---
+// Add these routes after your existing API routes
 
+// --- Point of Sale (POS) API ---
+
+// NEW: Find the active booking for a specific room number
+// This is the first step for a POS user to charge a room guest.
+app.get('/api/pos/room/:roomNumber/active-booking', async (req, res) => {
+    const { roomNumber } = req.params;
+    try {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        const activeBooking = await Booking.findOne({
+            room: roomNumber,
+            checkIn: { $lte: now.toISOString().split('T')[0] },
+            checkOut: { $gt: now.toISOString().split('T')[0] }
+        });
+
+        if (!activeBooking) {
+            return res.status(404).json({ message: 'No active booking found for this room.' });
+        }
+
+        res.json(activeBooking);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching active booking', error: error.message });
+    }
+});
+
+// NEW: Post a charge to a specific room guest's bill
+// This endpoint uses the existing IncidentalCharge model.
+app.post('/api/pos/charge/room', async (req, res) => {
+    const { bookingObjectId, type, description, amount, username } = req.body;
+    try {
+        if (!mongoose.Types.ObjectId.isValid(bookingObjectId)) {
+            return res.status(400).json({ message: 'Invalid booking ID provided.' });
+        }
+
+        const booking = await Booking.findById(bookingObjectId);
+        if (!booking) {
+            return res.status(404).json({ message: 'Associated booking not found.' });
+        }
+
+        const newCharge = new IncidentalCharge({
+            bookingId: bookingObjectId,
+            bookingCustomId: booking.id,
+            guestName: booking.name,
+            roomNumber: booking.room,
+            type,
+            description,
+            amount
+        });
+        await newCharge.save();
+
+        await addAuditLog('POS Charge Added (Room)', username || 'POS User', {
+            chargeId: newCharge._id,
+            bookingId: newCharge.bookingCustomId,
+            type: newCharge.type,
+            amount: newCharge.amount
+        });
+
+        res.status(201).json({ message: 'Charge posted to room successfully!', charge: newCharge });
+    } catch (error) {
+        res.status(500).json({ message: 'Error posting charge to room', error: error.message });
+    }
+});
+
+// NEW: Post a charge for a walk-in guest
+// This endpoint uses the new WalkInCharge model.
+app.post('/api/pos/charge/walkin', async (req, res) => {
+    const { guestName, type, description, amount, username } = req.body;
+    try {
+        // Generate a unique receipt ID
+        const receiptId = `REC${Math.floor(Math.random() * 90000) + 10000}`;
+
+        const newWalkInCharge = new WalkInCharge({
+            receiptId,
+            guestName,
+            type,
+            description,
+            amount
+        });
+        await newWalkInCharge.save();
+
+        await addAuditLog('POS Charge Added (Walk-In)', username || 'POS User', {
+            receiptId: newWalkInCharge.receiptId,
+            guestName: newWalkInCharge.guestName,
+            type: newWalkInCharge.type,
+            amount: newWalkInCharge.amount
+        });
+
+        res.status(201).json({ message: 'Walk-in charge created successfully!', charge: newWalkInCharge });
+    } catch (error) {
+        res.status(500).json({ message: 'Error creating walk-in charge', error: error.message });
+    }
+});
+
+// NEW: Get a walk-in charge and mark it as paid
+app.post('/api/pos/walkin/:receiptId/pay', async (req, res) => {
+    const { receiptId } = req.params;
+    const { username } = req.body;
+    try {
+        const charge = await WalkInCharge.findOne({ receiptId });
+        if (!charge) {
+            return res.status(404).json({ message: 'Receipt not found.' });
+        }
+
+        if (charge.isPaid) {
+            return res.status(400).json({ message: 'This bill has already been paid.' });
+        }
+
+        charge.isPaid = true;
+        await charge.save();
+
+        await addAuditLog('Walk-In Charge Paid', username || 'POS User', {
+            receiptId: charge.receiptId,
+            guestName: charge.guestName,
+            amount: charge.amount
+        });
+
+        res.json({ message: 'Walk-in charge paid successfully!', charge });
+    } catch (error) {
+        res.status(500).json({ message: 'Error processing payment', error: error.message });
+    }
+});
 // Authentication Route
 app.post('/api/login', authenticateUser, (req, res) => {
     res.json({ message: 'Login successful', role: req.user.role });
