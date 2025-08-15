@@ -1092,12 +1092,12 @@ nextPageBtn.addEventListener('click', () => {
  * @param {string} guestName - The name of the guest.
  * @param {string} roomNumber - The room number.
  */
-function openIncidentalChargeModal(bookingCustomId, guestName, roomNumber) {
+/**function openIncidentalChargeModal(bookingCustomId, guestName, roomNumber) {
     incidentalChargeForm.reset();
     chargeBookingCustomIdInput.value = bookingCustomId;
     chargeGuestNameInput.value = guestName;
     chargeRoomNumberInput.value = roomNumber;
-    incidentalChargeModal.style.display = 'flex';
+    incidentalChargeModal.style.display = 'flex';*/
 }
 
 /**
