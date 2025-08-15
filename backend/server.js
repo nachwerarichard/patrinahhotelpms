@@ -225,17 +225,11 @@ app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
         }
 
         if (roomPost && account.roomNumber) {
-            // New logic to find the active booking for the room and verify the guest name
-            const now = new Date();
-            now.setHours(0, 0, 0, 0); // Normalize to the beginning of the day for comparison
-
-            // Find an active booking for the given room number where the check-in date is today or earlier
-            // and the check-out date is later than today.
+            // New logic to find the latest booking for the room and verify the guest name
+            // Sorts by check-in date descending to find the most recent booking
             const booking = await Booking.findOne({
-                room: account.roomNumber,
-                checkIn: { $lte: now.toISOString().split('T')[0] },
-                checkOut: { $gt: now.toISOString().split('T')[0] }
-            });
+                room: account.roomNumber
+            }).sort({ checkIn: -1 });
 
             if (!booking) {
                 return res.status(404).json({ message: 'No active booking found for this room number.' });
