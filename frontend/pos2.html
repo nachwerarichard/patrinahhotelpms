@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel POS System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden p-6 md:p-8 transform transition-all duration-300">
+
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-6">Hotel Point of Sale</h1>
+        
+        <div id="messageBox" class="min-h-[2rem] text-center font-medium my-4"></div>
+
+        <div id="createAccountSection">
+            <h2 class="text-2xl font-semibold text-center text-gray-700 mb-4">Start New Transaction</h2>
+            <form id="createAccountForm" class="space-y-4">
+                <div>
+                    <label for="guestName" class="block text-sm font-medium text-gray-700">Guest Name</label>
+                    <input type="text" id="guestName" name="guestName" required placeholder="e.g., John Doe" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                </div>
+                <div>
+                    <label for="roomNumber" class="block text-sm font-medium text-gray-700">Room Number (Optional)</label>
+                    <input type="text" id="roomNumber" name="roomNumber" placeholder="e.g., 101" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                </div>
+                <button type="submit" class="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow-lg hover:bg-blue-700 transition-colors duration-200">Create Account</button>
+            </form>
+        </div>
+
+        <hr class="my-8">
+
+        <div id="activeAccountSection" class="hidden">
+            <h2 class="text-2xl font-semibold text-center text-gray-700 mb-4">Active Transaction</h2>
+            <div class="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl shadow-inner mb-6">
+                <p class="font-medium text-lg">Guest: <span id="currentGuestName" class="font-bold"></span></p>
+                <p class="text-sm">Room: <span id="currentRoomNumber"></span></p>
+                <div class="flex justify-between items-center mt-2 pt-2 border-t border-blue-200">
+                    <span class="font-bold text-xl">Total Due:</span>
+                    <span class="font-bold text-xl text-blue-600">$<span id="totalCharges">0.00</span></span>
+                </div>
+            </div>
+
+            <form id="addChargeForm" class="space-y-4 mb-6">
+                <h3 class="text-xl font-medium text-gray-700">Add a New Charge</h3>
+                <div>
+                    <label for="chargeDescription" class="block text-sm font-medium text-gray-700">Description</label>
+                    <input type="text" id="chargeDescription" name="description" required placeholder="e.g., 2 Beers" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                </div>
+                <div>
+                    <label for="chargeAmount" class="block text-sm font-medium text-gray-700">Amount</label>
+                    <input type="number" id="chargeAmount" name="amount" required step="0.01" min="0" placeholder="e.g., 15.50" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                </div>
+                <button type="submit" class="w-full px-6 py-3 bg-green-500 text-white font-semibold rounded-xl shadow-lg hover:bg-green-600 transition-colors duration-200">Add Charge</button>
+            </form>
+
+            <hr class="my-8">
+
+            <div id="settleAccountSection">
+                <h3 class="text-xl font-semibold text-center text-gray-700 mb-4">Settle Account</h3>
+                <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+                    <button id="postToRoomBtn" class="flex-1 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:bg-indigo-700 transition-colors duration-200">Post to Room</button>
+                    <button id="issueReceiptBtn" class="flex-1 px-6 py-3 bg-red-500 text-white font-semibold rounded-xl shadow-lg hover:bg-red-600 transition-colors duration-200">Issue Receipt</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Your API base URL
+            const BASE_URL = 'https://patrinahhotelpms.onrender.com';
+
+            // DOM elements
+            const messageBox = document.getElementById('messageBox');
+            const createAccountForm = document.getElementById('createAccountForm');
+            const activeAccountSection = document.getElementById('activeAccountSection');
+            const addChargeForm = document.getElementById('addChargeForm');
+            const postToRoomBtn = document.getElementById('postToRoomBtn');
+            const issueReceiptBtn = document.getElementById('issueReceiptBtn');
+
+            // Global state to store the active account ID
+            let activeAccountId = null;
+            let activeAccountData = null;
+
+            // --- UI Helper Functions ---
+            const displayMessage = (message, type) => {
+                messageBox.textContent = message;
+                messageBox.className = 'min-h-[2rem] text-center font-medium my-4';
+                switch (type) {
+                    case 'success':
+                        messageBox.classList.add('text-green-600');
+                        break;
+                    case 'error':
+                        messageBox.classList.add('text-red-600');
+                        break;
+                    case 'info':
+                        messageBox.classList.add('text-blue-600');
+                        break;
+                }
+            };
+
+            const updateActiveAccountUI = (account) => {
+                document.getElementById('currentGuestName').textContent = account.guestName;
+                document.getElementById('currentRoomNumber').textContent = account.roomNumber || 'Walk-In Guest';
+                document.getElementById('totalCharges').textContent = account.totalCharges ? account.totalCharges.toFixed(2) : '0.00';
+                // Hide the "Post to Room" button if there's no room number
+                if (!account.roomNumber) {
+                    postToRoomBtn.classList.add('hidden');
+                } else {
+                    postToRoomBtn.classList.remove('hidden');
+                }
+                document.getElementById('createAccountSection').classList.add('hidden');
+                activeAccountSection.classList.remove('hidden');
+            };
+
+            const resetUI = () => {
+                createAccountForm.reset();
+                addChargeForm.reset();
+                activeAccountSection.classList.add('hidden');
+                document.getElementById('createAccountSection').classList.remove('hidden');
+                displayMessage('Ready for new transaction.', 'info');
+                activeAccountId = null;
+                activeAccountData = null;
+            };
+
+            // --- API Calls ---
+            const createAccount = async (guestName, roomNumber) => {
+                displayMessage('Creating account...', 'info');
+                try {
+                    const response = await fetch(`${BASE_URL}/api/pos/client/account`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ guestName, roomNumber })
+                    });
+                    const account = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(account.message || 'Failed to create account.');
+                    }
+
+                    activeAccountId = account._id;
+                    activeAccountData = account;
+                    updateActiveAccountUI(account);
+                    displayMessage(`Account created for ${account.guestName}!`, 'success');
+
+                } catch (error) {
+                    displayMessage(`Error: ${error.message}`, 'error');
+                }
+            };
+
+            const addCharge = async (description, amount) => {
+                if (!activeAccountId) {
+                    displayMessage('Please create an account first.', 'error');
+                    return;
+                }
+                displayMessage('Adding charge...', 'info');
+                try {
+                    const response = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ description, amount: parseFloat(amount) })
+                    });
+                    const updatedAccount = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(updatedAccount.message || 'Failed to add charge.');
+                    }
+
+                    activeAccountData = updatedAccount;
+                    updateActiveAccountUI(updatedAccount);
+                    addChargeForm.reset(); // Clear the charge form
+                    displayMessage('Charge added successfully!', 'success');
+
+                } catch (error) {
+                    displayMessage(`Error: ${error.message}`, 'error');
+                }
+            };
+
+            const settleAccount = async (method) => {
+                if (!activeAccountId) {
+                    displayMessage('No active account to settle.', 'error');
+                    return;
+                }
+                displayMessage('Settling account...', 'info');
+
+                let payload = {};
+                if (method === 'room') {
+                    payload = { roomPost: true };
+                } else if (method === 'receipt') {
+                    // For now, we'll assume 'Cash' as a payment method
+                    // In a real app, you'd prompt the user for this
+                    payload = { paymentMethod: 'Cash' };
+                }
+
+                try {
+                    const response = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/settle`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.message || 'Failed to settle account.');
+                    }
+                    
+                    displayMessage(`Account settled successfully! Total: $${activeAccountData.totalCharges.toFixed(2)}`, 'success');
+                    
+                    // Reset the UI for the next transaction
+                    setTimeout(resetUI, 3000); 
+
+                } catch (error) {
+                    displayMessage(`Error: ${error.message}`, 'error');
+                }
+            };
+
+            // --- Event Listeners ---
+            createAccountForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(createAccountForm);
+                const guestName = formData.get('guestName');
+                const roomNumber = formData.get('roomNumber') || null;
+                createAccount(guestName, roomNumber);
+            });
+
+            addChargeForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(addChargeForm);
+                const description = formData.get('description');
+                const amount = formData.get('amount');
+                addCharge(description, amount);
+            });
+
+            postToRoomBtn.addEventListener('click', () => {
+                settleAccount('room');
+            });
+
+            issueReceiptBtn.addEventListener('click', () => {
+                settleAccount('receipt');
+            });
+
+            // Initial state
+            resetUI();
+        });
+    </script>
+</body>
+</html>
