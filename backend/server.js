@@ -578,6 +578,25 @@ app.get('/api/bookings/all', async (req, res) => {
 });
 
 
+// NEW: Get the latest walk-in charge by guest name
+app.get('/api/pos/walkin/latest-by-name/:guestName', async (req, res) => {
+    const { guestName } = req.params;
+    try {
+        const latestCharge = await WalkInCharge.findOne({
+            guestName: { $regex: new RegExp(guestName, 'i') } // Case-insensitive search
+        }).sort({ date: -1 }); // Sort by date in descending order
+
+        if (!latestCharge) {
+            return res.status(404).json({ message: 'No walk-in charges found for this name.' });
+        }
+
+        res.json(latestCharge);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching latest walk-in charge', error: error.message });
+    }
+});
+
+
 // Add a new booking (admin only)
 app.post('/api/bookings', async (req, res) => {
     const { username, ...newBookingData } = req.body; // Extract username
