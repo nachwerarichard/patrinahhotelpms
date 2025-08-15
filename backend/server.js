@@ -218,15 +218,58 @@ app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
         if (!account) {
             return res.status(404).json({ message: 'Client account not found.' });
         }
-
-        // Mark the account as closed before sending any response
-        account.isClosed = true;
-        await account.save();
+        
+        // This is a crucial check to prevent a client account from being settled twice
+        if (account.isClosed) {
+            return res.status(400).json({ message: 'This client account has already been settled.' });
+        }
 
         if (roomPost && account.roomNumber) {
+            // New logic to find the active booking for the room and verify the guest name
+            const now = new Date();
+            now.setHours(0, 0, 0, 0); // Normalize to the beginning of the day for comparison
+
+            // Find an active booking for the given room number where the check-in date is today or earlier
+            // and the check-out date is later than today.
+            const booking = await Booking.findOne({
+                room: account.roomNumber,
+                checkIn: { $lte: now.toISOString().split('T')[0] },
+                checkOut: { $gt: now.toISOString().split('T')[0] }
+            });
+
+            if (!booking) {
+                return res.status(404).json({ message: 'No active booking found for this room number.' });
+            }
+
+            // Confirm that the guest name on the client account matches the booking name
+            if (account.guestName !== booking.name) {
+                return res.status(400).json({ message: 'Guest name on account does not match the active booking for this room.' });
+            }
+
             // Logic to post charges to the guest's room account
-            console.log(`Posting total of ${account.totalCharges} to room ${account.roomNumber}.`);
-            // Send success response for room posting
+            console.log(`Posting charges from client account ${accountId} to room ${account.roomNumber}.`);
+
+            // Loop through each charge in the client account and create a new IncidentalCharge
+            const newCharges = account.charges.map(charge => ({
+                bookingId: booking._id,
+                bookingCustomId: booking.id,
+                guestName: booking.name,
+                roomNumber: booking.room,
+                type: 'POS', // Assuming 'POS' is a valid type for incidental charges
+                description: charge.description,
+                amount: charge.amount
+            }));
+
+            // Save all new incidental charges at once
+            if (newCharges.length > 0) {
+                await IncidentalCharge.insertMany(newCharges);
+            }
+
+            // Mark the account as closed and save
+            account.isClosed = true;
+            await account.save();
+
+            // Send a success response for room posting
             return res.status(200).json({ message: 'Charges successfully posted to room account.' });
         } else if (paymentMethod) {
             // Logic to generate a final receipt and process payment
@@ -237,6 +280,10 @@ app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
                 paymentMethod: paymentMethod,
                 date: new Date()
             };
+            // Mark the account as closed and save
+            account.isClosed = true;
+            await account.save();
+            
             // Send success response with receipt
             console.log('Generating receipt:', receipt);
             return res.status(200).json({ message: 'Account settled successfully.', receipt });
@@ -250,6 +297,7 @@ app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
         res.status(500).json({ message: 'Error settling account.', error: error.message });
     }
 });
+
 
 // Audit Log Schema
 const auditLogSchema = new mongoose.Schema({
