@@ -1,408 +1,489 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hotel POS System</title>
-    <!-- Tailwind CSS CDN for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inter Font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel POS System</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
 
-    <!-- Main Container -->
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden p-6 md:p-8 transform transition-all duration-300">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden p-6 md:p-8 transform transition-all duration-300">
 
-        <!-- Header -->
-        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-6">Hotel Point of Sale</h1>
+                <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-6">Hotel Point of Sale</h1>
 
-        <!-- Mode Switcher -->
-        <div class="flex justify-center mb-6 space-x-4">
-            <button id="roomGuestBtn" class="px-6 py-2 rounded-full font-medium text-lg transition-all duration-200 border-2 border-transparent bg-blue-600 text-white shadow-md hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300">
-                Room Guest
-            </button>
-            <button id="walkInBtn" class="px-6 py-2 rounded-full font-medium text-lg transition-all duration-200 border-2 border-transparent bg-gray-200 text-gray-700 hover:bg-gray-300 focus:outline-none focus:ring-4 focus:ring-gray-300">
-                Walk-In
-            </button>
-        </div>
+                <div class="flex justify-center mb-6 space-x-4">
+            <button id="roomGuestBtn" class="px-6 py-2 rounded-full font-medium text-lg transition-all duration-200 border-2 border-transparent bg-blue-600 text-white shadow-md hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                Room Guest
+            </button>
+            <button id="walkInBtn" class="px-6 py-2 rounded-full font-medium text-lg transition-all duration-200 border-2 border-transparent bg-gray-200 text-gray-700 hover:bg-gray-300 focus:outline-none focus:ring-4 focus:ring-gray-300">
+                Walk-In
+            </button>
+        </div>
 
-        <!-- Message Box -->
-        <div id="messageBox" class="min-h-[2rem] text-center font-medium my-4"></div>
+                <div id="messageBox" class="min-h-[2rem] text-center font-medium my-4"></div>
 
-        <!-- Room Guest Section -->
-        <div id="roomGuestSection" class="active-section">
-            <h2 class="text-2xl font-semibold text-center text-gray-700 mb-4">Charge to Room</h2>
-            <div class="space-y-4">
-                <form id="findRoomForm" class="flex flex-col md:flex-row items-end space-y-4 md:space-y-0 md:space-x-4 mb-6">
-                    <div class="flex-1 w-full">
-                        <label for="roomNumber" class="block text-sm font-medium text-gray-700">Room Number</label>
-                        <input type="text" id="roomNumber" name="roomNumber" required placeholder="e.g., 101" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                    </div>
-                    <button type="submit" class="w-full md:w-auto px-6 py-2 bg-green-500 text-white font-medium rounded-xl shadow-md hover:bg-green-600 transition-colors duration-200">Find Guest</button>
-                </form>
-                
-                <div id="guestInfo" class="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl shadow-inner hidden">
-                    <p class="font-medium text-lg">Guest: <span id="guestNameDisplay" class="font-bold"></span></p>
-                    <p class="text-sm">Booking ID: <span id="bookingIdDisplay"></span></p>
-                    <input type="hidden" id="bookingObjectId">
-                    <button id="viewBillBtn" class="mt-2 px-4 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200">View Full Bill</button>
+                <div id="roomGuestSection" class="active-section">
+            <h2 class="text-2xl font-semibold text-center text-gray-700 mb-4">Charge to Room</h2>
+            <div class="space-y-4">
+                <form id="findRoomForm" class="flex flex-col md:flex-row items-end space-y-4 md:space-y-0 md:space-x-4 mb-6">
+                    <div class="flex-1 w-full">
+                        <label for="roomNumber" class="block text-sm font-medium text-gray-700">Room Number</label>
+                        <input type="text" id="roomNumber" name="roomNumber" required placeholder="e.g., 101" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                    </div>
+                    <button type="submit" class="w-full md:w-auto px-6 py-2 bg-green-500 text-white font-medium rounded-xl shadow-md hover:bg-green-600 transition-colors duration-200">Find Guest</button>
+                </form>
+                
+                <div id="guestInfo" class="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl shadow-inner hidden">
+                    <p class="font-medium text-lg">Guest: <span id="guestNameDisplay" class="font-bold"></span></p>
+                    <p class="text-sm">Booking ID: <span id="bookingIdDisplay"></span></p>
+                    <input type="hidden" id="bookingObjectId">
+                    <button id="viewBillBtn" class="mt-2 px-4 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200">View Full Bill</button>
+                </div>
+
+                <form id="roomChargeForm" class="hidden space-y-4 mt-6">
+                    <div>
+                        <label for="roomChargeType" class="block text-sm font-medium text-gray-700">Charge Type</label>
+                        <select id="roomChargeType" name="type" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                            <option value="">Select a type</option>
+                            <option value="Bar">Bar</option>
+                            <option value="Restaurant">Restaurant</option>
+                            <option value="Laundry">Laundry</option>
+                            <option value="Spa">Spa</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="roomChargeDescription" class="block text-sm font-medium text-gray-700">Description</label>
+                        <input type="text" id="roomChargeDescription" name="description" placeholder="e.g., 2 Beers" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                    </div>
+                    <div>
+                        <label for="roomChargeAmount" class="block text-sm font-medium text-gray-700">Amount</label>
+                        <input type="number" id="roomChargeAmount" name="amount" required step="0.01" min="0" placeholder="e.g., 15.50" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                    </div>
+                    <button type="submit" class="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow-lg hover:bg-blue-700 transition-colors duration-200">Post Charge</button>
+                </form>
+            </div>
+        </div>
+
+                <div id="walkInSection" class="hidden">
+            <h2 class="text-2xl font-semibold text-center text-gray-700 mb-4">Walk-In Charge</h2>
+            <form id="findReceiptForm" class="flex flex-col md:flex-row items-end space-y-4 md:space-y-0 md:space-x-4 mb-6">
+                <div class="flex-1 w-full">
+                    <label for="searchName" class="block text-sm font-medium text-gray-700">Guest Name</label>
+                    <input type="text" id="searchName" name="searchName" required placeholder="e.g., Jane Doe" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-red-500 focus:border-red-500 transition-colors duration-200">
                 </div>
-
-                <form id="roomChargeForm" class="hidden space-y-4 mt-6">
-                    <div>
-                        <label for="roomChargeType" class="block text-sm font-medium text-gray-700">Charge Type</label>
-                        <select id="roomChargeType" name="type" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                            <option value="">Select a type</option>
-                            <option value="Bar">Bar</option>
-                            <option value="Restaurant">Restaurant</option>
-                            <option value="Laundry">Laundry</option>
-                            <option value="Spa">Spa</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="roomChargeDescription" class="block text-sm font-medium text-gray-700">Description</label>
-                        <input type="text" id="roomChargeDescription" name="description" placeholder="e.g., 2 Beers" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                    </div>
-                    <div>
-                        <label for="roomChargeAmount" class="block text-sm font-medium text-gray-700">Amount</label>
-                        <input type="number" id="roomChargeAmount" name="amount" required step="0.01" min="0" placeholder="e.g., 15.50" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                    </div>
-                    <button type="submit" class="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow-lg hover:bg-blue-700 transition-colors duration-200">Post Charge</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Walk-In Section -->
-        <div id="walkInSection" class="hidden">
-            <h2 class="text-2xl font-semibold text-center text-gray-700 mb-4">Walk-In Charge</h2>
-            <form id="walkInChargeForm" class="space-y-4">
-                <div>
-                    <label for="walkInGuestName" class="block text-sm font-medium text-gray-700">Guest Name</label>
-                    <input type="text" id="walkInGuestName" name="guestName" required placeholder="e.g., Jane Doe" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                </div>
-                <div>
-                    <label for="walkInChargeType" class="block text-sm font-medium text-gray-700">Charge Type</label>
-                    <select id="walkInChargeType" name="type" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                        <option value="">Select a type</option>
-                        <option value="Bar">Bar</option>
-                        <option value="Restaurant">Restaurant</option>
-                        <option value="Laundry">Laundry</option>
-                        <option value="Spa">Spa</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="walkInChargeDescription" class="block text-sm font-medium text-gray-700">Description</label>
-                    <input type="text" id="walkInChargeDescription" name="description" placeholder="e.g., Pasta and wine" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                </div>
-                <div>
-                    <label for="walkInChargeAmount" class="block text-sm font-medium text-gray-700">Amount</label>
-                    <input type="number" id="walkInChargeAmount" name="amount" required step="0.01" min="0" placeholder="e.g., 50.00" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                </div>
-                <button type="submit" class="w-full px-6 py-3 bg-red-500 text-white font-semibold rounded-xl shadow-lg hover:bg-red-600 transition-colors duration-200">Create Receipt</button>
+                <button type="submit" class="w-full md:w-auto px-6 py-2 bg-red-500 text-white font-medium rounded-xl shadow-md hover:bg-red-600 transition-colors duration-200">Find Receipt</button>
             </form>
-        </div>
+            
+            <form id="walkInChargeForm" class="space-y-4">
+                <div>
+                    <label for="walkInGuestName" class="block text-sm font-medium text-gray-700">Guest Name</label>
+                    <input type="text" id="walkInGuestName" name="guestName" required placeholder="e.g., Jane Doe" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                </div>
+                <div>
+                    <label for="walkInChargeType" class="block text-sm font-medium text-gray-700">Charge Type</label>
+                    <select id="walkInChargeType" name="type" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                        <option value="">Select a type</option>
+                        <option value="Bar">Bar</option>
+                        <option value="Restaurant">Restaurant</option>
+                        <option value="Laundry">Laundry</option>
+                        <option value="Spa">Spa</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="walkInChargeDescription" class="block text-sm font-medium text-gray-700">Description</label>
+                    <input type="text" id="walkInChargeDescription" name="description" placeholder="e.g., Pasta and wine" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                </div>
+                <div>
+                    <label for="walkInChargeAmount" class="block text-sm font-medium text-gray-700">Amount</label>
+                    <input type="number" id="walkInChargeAmount" name="amount" required step="0.01" min="0" placeholder="e.g., 50.00" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                </div>
+                <button type="submit" class="w-full px-6 py-3 bg-red-500 text-white font-semibold rounded-xl shadow-lg hover:bg-red-600 transition-colors duration-200">Create Receipt</button>
+            </form>
+        </div>
 
-        <!-- Full Bill and Receipt Modal -->
-        <div id="billModal" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 hidden p-4">
-            <div class="relative bg-white rounded-xl shadow-lg p-6 w-full max-w-xl mx-auto my-12">
-                <button id="closeModalBtn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-3xl font-bold">&times;</button>
-                <h3 class="text-2xl font-bold text-gray-800 mb-4 text-center">Guest Bill</h3>
-                <div id="billContent" class="space-y-4">
-                    <!-- Bill content will be dynamically inserted here -->
+                <div id="billModal" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 hidden p-4">
+            <div class="relative bg-white rounded-xl shadow-lg p-6 w-full max-w-xl mx-auto my-12">
+                <button id="closeModalBtn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-3xl font-bold">&times;</button>
+                <h3 id="modalTitle" class="text-2xl font-bold text-gray-800 mb-4 text-center"></h3>
+                <div id="billContent" class="space-y-4">
+                    <div id="walkInReceiptContent" class="hidden"></div>
+                    <div id="guestBillContent"></div>
+                </div>
+                <div class="flex justify-end mt-4 pt-4 border-t border-gray-300">
+                    <button id="printReceiptBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors duration-200 hidden">Print Receipt</button>
                 </div>
-            </div>
-        </div>
+            </div>
+        </div>
 
-    </div>
+    </div>
 
-    <!-- JavaScript for functionality -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const BASE_URL = 'https://patrinahhotelpms.onrender.com'; // Change this to your backend URL
+        <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const BASE_URL = 'https://patrinahhotelpms.onrender.com'; // Change this to your backend URL
 
-            // DOM elements
-            const roomGuestBtn = document.getElementById('roomGuestBtn');
-            const walkInBtn = document.getElementById('walkInBtn');
-            const roomGuestSection = document.getElementById('roomGuestSection');
-            const walkInSection = document.getElementById('walkInSection');
-            const messageBox = document.getElementById('messageBox');
-            const findRoomForm = document.getElementById('findRoomForm');
-            const guestInfo = document.getElementById('guestInfo');
-            const roomChargeForm = document.getElementById('roomChargeForm');
-            const walkInChargeForm = document.getElementById('walkInChargeForm');
-            const viewBillBtn = document.getElementById('viewBillBtn');
-            const billModal = document.getElementById('billModal');
-            const closeModalBtn = document.getElementById('closeModalBtn');
-            const billContent = document.getElementById('billContent');
+            // DOM elements
+            const roomGuestBtn = document.getElementById('roomGuestBtn');
+            const walkInBtn = document.getElementById('walkInBtn');
+            const roomGuestSection = document.getElementById('roomGuestSection');
+            const walkInSection = document.getElementById('walkInSection');
+            const messageBox = document.getElementById('messageBox');
+            const findRoomForm = document.getElementById('findRoomForm');
+            const guestInfo = document.getElementById('guestInfo');
+            const roomChargeForm = document.getElementById('roomChargeForm');
+            const walkInChargeForm = document.getElementById('walkInChargeForm');
+            const viewBillBtn = document.getElementById('viewBillBtn');
+            const billModal = document.getElementById('billModal');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            const billContent = document.getElementById('billContent');
+            const findReceiptForm = document.getElementById('findReceiptForm');
+            const walkInReceiptContent = document.getElementById('walkInReceiptContent');
+            const guestBillContent = document.getElementById('guestBillContent');
+            const modalTitle = document.getElementById('modalTitle');
+            const printReceiptBtn = document.getElementById('printReceiptBtn');
 
-            // --- UI/State Management ---
-            let currentBookingId = null; // Store the MongoDB ObjectId of the current booking
+
+            // --- UI/State Management ---
+            let currentBookingId = null; // Store the MongoDB ObjectId of the current booking
+
+            /**
+             * Switches the active form section based on user selection.
+             * @param {string} sectionId - The ID of the section to show ('roomGuestSection' or 'walkInSection').
+             */
+            const showSection = (sectionId) => {
+                roomGuestSection.classList.add('hidden');
+                walkInSection.classList.add('hidden');
+                roomGuestBtn.classList.remove('bg-blue-600', 'text-white');
+                walkInBtn.classList.remove('bg-red-500', 'text-white');
+                roomGuestBtn.classList.add('bg-gray-200', 'text-gray-700');
+                walkInBtn.classList.add('bg-gray-200', 'text-gray-700');
+
+                if (sectionId === 'roomGuestSection') {
+                    roomGuestSection.classList.remove('hidden');
+                    roomGuestBtn.classList.add('bg-blue-600', 'text-white');
+                } else {
+                    walkInSection.classList.remove('hidden');
+                    walkInBtn.classList.add('bg-red-500', 'text-white');
+                }
+                clearFormsAndMessages();
+            };
+
+            /**
+             * Displays a message in the message box.
+             * @param {string} message - The message to display.
+             * @param {string} type - The type of message ('success', 'error', 'info').
+             */
+            const displayMessage = (message, type) => {
+                messageBox.textContent = message;
+                messageBox.className = 'min-h-[2rem] text-center font-medium my-4';
+                switch (type) {
+                    case 'success':
+                        messageBox.classList.add('text-green-600');
+                        break;
+                    case 'error':
+                        messageBox.classList.add('text-red-600');
+                        break;
+                    case 'info':
+                        messageBox.classList.add('text-blue-600');
+                        break;
+                }
+            };
+
+            /**
+             * Clears all forms and messages.
+             */
+            const clearFormsAndMessages = () => {
+                findRoomForm.reset();
+                roomChargeForm.reset();
+                walkInChargeForm.reset();
+                findReceiptForm.reset();
+                guestInfo.classList.add('hidden');
+                roomChargeForm.classList.add('hidden');
+                messageBox.textContent = '';
+                currentBookingId = null;
+            };
+
+            // --- API Calls ---
+
+            /**
+             * Fetches the active booking for a given room number.
+             * @param {string} roomNumber - The room number to search for.
+             */
+            const findActiveBooking = async (roomNumber) => {
+                displayMessage('Finding guest...', 'info');
+                try {
+                    const response = await fetch(`${BASE_URL}/api/pos/room/${roomNumber}/latest-booking`);
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Failed to find active booking.');
+                    }
+
+                    // Populate guest info and show charge form
+                    document.getElementById('guestNameDisplay').textContent = data.name;
+                    document.getElementById('bookingIdDisplay').textContent = data.id;
+                    document.getElementById('bookingObjectId').value = data._id; // Store MongoDB _id for later use
+                    guestInfo.classList.remove('hidden');
+                    roomChargeForm.classList.remove('hidden');
+                    displayMessage(`Found active guest: ${data.name}`, 'success');
+
+                } catch (error) {
+                    guestInfo.classList.add('hidden');
+                    roomChargeForm.classList.add('hidden');
+                    displayMessage(`Error: ${error.message}`, 'error');
+                }
+            };
+
+            /**
+             * Posts a charge to a room guest's bill.
+             * @param {object} chargeData - The charge details.
+             */
+            const postRoomCharge = async (chargeData) => {
+                try {
+                    const bookingObjectId = document.getElementById('bookingObjectId').value;
+                    const payload = {
+                        bookingObjectId,
+                        ...chargeData,
+                        username: 'posUser' // You might get this from a login session
+                    };
+
+                    const response = await fetch(`${BASE_URL}/api/pos/charge/room`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Failed to post charge.');
+                    }
+
+                    displayMessage('Charge posted to room successfully!', 'success');
+                    roomChargeForm.reset(); // Clear the charge form
+                } catch (error) {
+                    displayMessage(`Error: ${error.message}`, 'error');
+                }
+            };
 
             /**
-             * Switches the active form section based on user selection.
-             * @param {string} sectionId - The ID of the section to show ('roomGuestSection' or 'walkInSection').
+             * Renders and displays the walk-in receipt modal.
+             * @param {object} charge - The walk-in charge object.
              */
-            const showSection = (sectionId) => {
-                roomGuestSection.classList.add('hidden');
-                walkInSection.classList.add('hidden');
-                roomGuestBtn.classList.remove('bg-blue-600', 'text-white');
-                walkInBtn.classList.remove('bg-red-500', 'text-white');
-                roomGuestBtn.classList.add('bg-gray-200', 'text-gray-700');
-                walkInBtn.classList.add('bg-gray-200', 'text-gray-700');
+            const renderWalkInReceiptModal = (charge) => {
+                modalTitle.textContent = `Receipt for ${charge.guestName}`;
+                guestBillContent.classList.add('hidden');
+                walkInReceiptContent.classList.remove('hidden');
 
-                if (sectionId === 'roomGuestSection') {
-                    roomGuestSection.classList.remove('hidden');
-                    roomGuestBtn.classList.add('bg-blue-600', 'text-white');
-                } else {
-                    walkInSection.classList.remove('hidden');
-                    walkInBtn.classList.add('bg-red-500', 'text-white');
-                }
-                clearFormsAndMessages();
+                walkInReceiptContent.innerHTML = `
+                    <div class="space-y-2">
+                        <p class="text-gray-600 text-sm">Receipt ID: <span class="font-medium text-gray-800">${charge.receiptId}</span></p>
+                        <p class="text-gray-600 text-sm">Date: <span class="font-medium text-gray-800">${new Date(charge.date).toLocaleDateString()}</span></p>
+                        <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
+                            <span class="font-medium text-lg text-gray-800">${charge.type}</span>
+                            <span class="font-bold text-xl text-red-600">$${charge.amount.toFixed(2)}</span>
+                        </div>
+                        <p class="text-gray-600 text-sm">Description: ${charge.description || 'N/A'}</p>
+                        <p class="text-gray-600 text-sm">Status: <span class="font-bold text-green-600">${charge.isPaid ? 'Paid' : 'Pending'}</span></p>
+                    </div>
+                `;
+                
+                billModal.classList.remove('hidden');
+                printReceiptBtn.classList.remove('hidden');
             };
 
             /**
-             * Displays a message in the message box.
-             * @param {string} message - The message to display.
-             * @param {string} type - The type of message ('success', 'error', 'info').
+             * Fetches and displays a walk-in receipt by name.
+             * @param {string} guestName - The name of the guest to search for.
              */
-            const displayMessage = (message, type) => {
-                messageBox.textContent = message;
-                messageBox.className = 'min-h-[2rem] text-center font-medium my-4';
-                switch (type) {
-                    case 'success':
-                        messageBox.classList.add('text-green-600');
-                        break;
-                    case 'error':
-                        messageBox.classList.add('text-red-600');
-                        break;
-                    case 'info':
-                        messageBox.classList.add('text-blue-600');
-                        break;
-                }
-            };
-
-            /**
-             * Clears all forms and messages.
-             */
-            const clearFormsAndMessages = () => {
-                findRoomForm.reset();
-                roomChargeForm.reset();
-                walkInChargeForm.reset();
-                guestInfo.classList.add('hidden');
-                roomChargeForm.classList.add('hidden');
-                messageBox.textContent = '';
-                currentBookingId = null;
-            };
-
-            // --- API Calls ---
-
-            /**
-             * Fetches the active booking for a given room number.
-             * @param {string} roomNumber - The room number to search for.
-             */
-            const findActiveBooking = async (roomNumber) => {
-                displayMessage('Finding guest...', 'info');
+            const getWalkInReceiptByName = async (guestName) => {
+                displayMessage('Finding receipt by name...', 'info');
                 try {
-                    const response = await fetch(`${BASE_URL}/api/pos/room/${roomNumber}/latest-booking`);
+                    const response = await fetch(`${BASE_URL}/api/pos/walkin/latest-by-name/${guestName}`);
                     const data = await response.json();
 
                     if (!response.ok) {
-                        throw new Error(data.message || 'Failed to find active booking.');
+                        throw new Error(data.message || 'Failed to find receipt.');
                     }
 
-                    // Populate guest info and show charge form
-                    document.getElementById('guestNameDisplay').textContent = data.name;
-                    document.getElementById('bookingIdDisplay').textContent = data.id;
-                    document.getElementById('bookingObjectId').value = data._id; // Store MongoDB _id for later use
-                    guestInfo.classList.remove('hidden');
-                    roomChargeForm.classList.remove('hidden');
-                    displayMessage(`Found active guest: ${data.name}`, 'success');
-
-                } catch (error) {
-                    guestInfo.classList.add('hidden');
-                    roomChargeForm.classList.add('hidden');
-                    displayMessage(`Error: ${error.message}`, 'error');
-                }
-            };
-
-            /**
-             * Posts a charge to a room guest's bill.
-             * @param {object} chargeData - The charge details.
-             */
-            const postRoomCharge = async (chargeData) => {
-                try {
-                    const bookingObjectId = document.getElementById('bookingObjectId').value;
-                    const payload = {
-                        bookingObjectId,
-                        ...chargeData,
-                        username: 'posUser' // You might get this from a login session
-                    };
-
-                    const response = await fetch(`${BASE_URL}/api/pos/charge/room`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(data.message || 'Failed to post charge.');
-                    }
-
-                    displayMessage('Charge posted to room successfully!', 'success');
-                    roomChargeForm.reset(); // Clear the charge form
-                } catch (error) {
-                    displayMessage(`Error: ${error.message}`, 'error');
-                }
-            };
-
-            /**
-             * Posts a charge for a walk-in guest.
-             * @param {object} chargeData - The charge details.
-             */
-            const postWalkInCharge = async (chargeData) => {
-                try {
-                    const payload = {
-                        ...chargeData,
-                        username: 'posUser' // You might get this from a login session
-                    };
-
-                    const response = await fetch(`${BASE_URL}/api/pos/charge/walkin`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(data.message || 'Failed to create walk-in charge.');
-                    }
-
-                    displayMessage(`Receipt created! Receipt ID: ${data.charge.receiptId}. Total: $${data.charge.amount}`, 'success');
-                    walkInChargeForm.reset(); // Clear the form
-                } catch (error) {
-                    displayMessage(`Error: ${error.message}`, 'error');
-                }
-            };
-
-            /**
-             * Fetches and displays the full bill for a guest.
-             * @param {string} bookingCustomId - The custom booking ID.
-             */
-            const getGuestBill = async (bookingCustomId) => {
-                try {
-                    const response = await fetch(`${BASE_URL}/api/bookings/${bookingCustomId}/bill`);
-                    const data = await response.json();
-                    
-                    if (!response.ok) {
-                        throw new Error(data.message || 'Failed to fetch bill.');
-                    }
-
-                    // Format the bill content
-                    const incidentalList = data.incidentalCharges.map(charge => `
-                        <div class="flex justify-between items-center text-sm">
-                            <span class="text-gray-600">${charge.type} - ${charge.description || 'No description'}</span>
-                            <span class="font-medium">$${charge.amount.toFixed(2)}</span>
-                        </div>
-                    `).join('');
-
-                    billContent.innerHTML = `
-                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                            <p class="font-bold text-lg mb-2">Room & Rate Details</p>
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-600">Room Fee (${data.booking.nights} nights)</span>
-                                <span class="font-medium">$${data.booking.totalDue.toFixed(2)}</span>
-                            </div>
-                        </div>
-
-                        ${data.incidentalCharges.length > 0 ? `
-                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                            <p class="font-bold text-lg mb-2">Incidental Charges</p>
-                            ${incidentalList}
-                            <div class="flex justify-between font-bold text-gray-800 mt-2 pt-2 border-t border-gray-300">
-                                <span>Total Incidentals:</span>
-                                <span>$${data.totalIncidentalCharges.toFixed(2)}</span>
-                            </div>
-                        </div>
-                        ` : ''}
-
-                        <div class="flex justify-between items-center font-bold text-xl mt-4 pt-4 border-t-2 border-dashed border-gray-400">
-                            <span>Grand Total Due:</span>
-                            <span>$${data.grandTotalDue.toFixed(2)}</span>
-                        </div>
-                    `;
-                    billModal.classList.remove('hidden');
+                    renderWalkInReceiptModal(data);
+                    displayMessage(`Found latest receipt for ${data.guestName}!`, 'success');
 
                 } catch (error) {
                     displayMessage(`Error: ${error.message}`, 'error');
                 }
             };
 
-            // --- Event Listeners ---
+            /**
+             * Posts a charge for a walk-in guest.
+             * @param {object} chargeData - The charge details.
+             */
+            const postWalkInCharge = async (chargeData) => {
+                try {
+                    const payload = {
+                        ...chargeData,
+                        username: 'posUser' // You might get this from a login session
+                    };
 
-            // Mode switching
-            roomGuestBtn.addEventListener('click', () => showSection('roomGuestSection'));
-            walkInBtn.addEventListener('click', () => showSection('walkInSection'));
+                    const response = await fetch(`${BASE_URL}/api/pos/charge/walkin`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await response.json();
 
-            // Room Guest Form Submission (Find Guest)
-            findRoomForm.addEventListener('submit', (e) => {
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Failed to create walk-in charge.');
+                    }
+
+                    displayMessage(`Receipt created! Receipt ID: ${data.charge.receiptId}. Total: $${data.charge.amount}`, 'success');
+                    walkInChargeForm.reset(); // Clear the form
+                    renderWalkInReceiptModal(data.charge); // Auto-open the modal with the new receipt
+                } catch (error) {
+                    displayMessage(`Error: ${error.message}`, 'error');
+                }
+            };
+
+            /**
+             * Fetches and displays the full bill for a guest.
+             * @param {string} bookingCustomId - The custom booking ID.
+             */
+            const getGuestBill = async (bookingCustomId) => {
+                try {
+                    const response = await fetch(`${BASE_URL}/api/bookings/${bookingCustomId}/bill`);
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Failed to fetch bill.');
+                    }
+
+                    // Before populating the content, clear/hide the other section
+                    walkInReceiptContent.classList.add('hidden');
+                    guestBillContent.classList.remove('hidden');
+                    modalTitle.textContent = 'Guest Bill';
+                    printReceiptBtn.classList.add('hidden'); // Hide print button for this view
+
+                    // Format the bill content
+                    const incidentalList = data.incidentalCharges.map(charge => `
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-600">${charge.type} - ${charge.description || 'No description'}</span>
+                            <span class="font-medium">$${charge.amount.toFixed(2)}</span>
+                        </div>
+                    `).join('');
+
+                    guestBillContent.innerHTML = `
+                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                            <p class="font-bold text-lg mb-2">Room & Rate Details</p>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Room Fee (${data.booking.nights} nights)</span>
+                                <span class="font-medium">$${data.booking.totalDue.toFixed(2)}</span>
+                            </div>
+                        </div>
+
+                        ${data.incidentalCharges.length > 0 ? `
+                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                            <p class="font-bold text-lg mb-2">Incidental Charges</p>
+                            ${incidentalList}
+                            <div class="flex justify-between font-bold text-gray-800 mt-2 pt-2 border-t border-gray-300">
+                                <span>Total Incidentals:</span>
+                                <span>$${data.totalIncidentalCharges.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <div class="flex justify-between items-center font-bold text-xl mt-4 pt-4 border-t-2 border-dashed border-gray-400">
+                            <span>Grand Total Due:</span>
+                            <span>$${data.grandTotalDue.toFixed(2)}</span>
+                        </div>
+                    `;
+                    billModal.classList.remove('hidden');
+
+                } catch (error) {
+                    displayMessage(`Error: ${error.message}`, 'error');
+                }
+            };
+
+            // --- Event Listeners ---
+
+            // Mode switching
+            roomGuestBtn.addEventListener('click', () => showSection('roomGuestSection'));
+            walkInBtn.addEventListener('click', () => showSection('walkInSection'));
+
+            // Room Guest Form Submission (Find Guest)
+            findRoomForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const roomNumber = document.getElementById('roomNumber').value;
+                findActiveBooking(roomNumber);
+            });
+
+            // Find Receipt Form Submission (now searches by name)
+            findReceiptForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                const roomNumber = document.getElementById('roomNumber').value;
-                findActiveBooking(roomNumber);
+                const guestName = document.getElementById('searchName').value;
+                getWalkInReceiptByName(guestName);
             });
 
-            // Room Charge Form Submission (Post Charge)
-            roomChargeForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const formData = new FormData(roomChargeForm);
-                const chargeData = Object.fromEntries(formData.entries());
-                postRoomCharge(chargeData);
+            // Room Charge Form Submission (Post Charge)
+            roomChargeForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(roomChargeForm);
+                const chargeData = Object.fromEntries(formData.entries());
+                postRoomCharge(chargeData);
+            });
+
+            // Walk-In Charge Form Submission
+            walkInChargeForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(walkInChargeForm);
+                const chargeData = Object.fromEntries(formData.entries());
+                postWalkInCharge(chargeData);
+            });
+
+            // View Bill Button
+            viewBillBtn.addEventListener('click', () => {
+                const bookingCustomId = document.getElementById('bookingIdDisplay').textContent;
+                getGuestBill(bookingCustomId);
+            });
+            
+            // Print Receipt Button
+            printReceiptBtn.addEventListener('click', () => {
+                const printContent = document.getElementById('billContent').innerHTML;
+                const originalBody = document.body.innerHTML;
+                document.body.innerHTML = printContent;
+                window.print();
+                document.body.innerHTML = originalBody;
+                window.location.reload(); // Reload to restore the page state
             });
 
-            // Walk-In Charge Form Submission
-            walkInChargeForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const formData = new FormData(walkInChargeForm);
-                const chargeData = Object.fromEntries(formData.entries());
-                postWalkInCharge(chargeData);
-            });
+            // Modal close button
+            closeModalBtn.addEventListener('click', () => {
+                billModal.classList.add('hidden');
+            });
 
-            // View Bill Button
-            viewBillBtn.addEventListener('click', () => {
-                const bookingCustomId = document.getElementById('bookingIdDisplay').textContent;
-                getGuestBill(bookingCustomId);
-            });
+            // Close modal by clicking outside
+            billModal.addEventListener('click', (e) => {
+                if (e.target === billModal) {
+                    billModal.classList.add('hidden');
+                }
+            });
 
-            // Modal close button
-            closeModalBtn.addEventListener('click', () => {
-                billModal.classList.add('hidden');
-            });
-
-            // Close modal by clicking outside
-            billModal.addEventListener('click', (e) => {
-                if (e.target === billModal) {
-                    billModal.classList.add('hidden');
-                }
-            });
-
-            // Initialize the default section
-            showSection('roomGuestSection');
-        });
-    </script>
+            // Initialize the default section
+            showSection('roomGuestSection');
+        });
+    </script>
 
 </body>
 </html>
