@@ -448,6 +448,38 @@ app.post('/api/pos/charge/walkin', async (req, res) => {
     }
 });
 
+// GET /api/pos/client/search
+// This endpoint will find an active (not closed) client account by guest name or room number.
+app.get('/api/pos/client/search', async (req, res) => {
+    const { query } = req.query; // The search term
+    
+    // Validate the query
+    if (!query) {
+        return res.status(400).json({ message: 'Search query parameter is required.' });
+    }
+
+    try {
+        const searchCriteria = {
+            isClosed: false,
+            $or: [
+                { guestName: { $regex: query, $options: 'i' } }, // Case-insensitive search on guestName
+                { roomNumber: { $regex: query, $options: 'i' } } // Case-insensitive search on roomNumber
+            ]
+        };
+
+        const foundAccounts = await ClientAccount.find(searchCriteria);
+        
+        if (foundAccounts.length === 0) {
+            return res.status(404).json({ message: 'No active accounts found matching your search.' });
+        }
+
+        res.status(200).json(foundAccounts);
+    } catch (error) {
+        console.error('Error searching for client accounts:', error);
+        res.status(500).json({ message: 'Error searching for client accounts.', error: error.message });
+    }
+});
+
 // NEW: Get a guest's full bill (room charges + incidentals)
 app.get('/api/bookings/:bookingCustomId/bill', async (req, res) => {
     const { bookingCustomId } = req.params;
