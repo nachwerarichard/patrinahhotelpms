@@ -209,6 +209,7 @@ app.post('/api/pos/client/account/:accountId/charge', async (req, res) => {
 });
 
 // POST /api/pos/client/account/:accountId/settle
+
 app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
     const { accountId } = req.params;
     const { paymentMethod, roomPost } = req.body; // paymentMethod (e.g., 'Cash', 'Card') or roomPost (boolean)
@@ -218,11 +219,15 @@ app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
             return res.status(404).json({ message: 'Client account not found.' });
         }
 
+        // Mark the account as closed before sending any response
+        account.isClosed = true;
+        await account.save();
+
         if (roomPost && account.roomNumber) {
             // Logic to post charges to the guest's room account
-            // You would have a separate RoomCharges model to handle this
-            // For now, we'll just log it and close the account.
             console.log(`Posting total of ${account.totalCharges} to room ${account.roomNumber}.`);
+            // Send success response for room posting
+            return res.status(200).json({ message: 'Charges successfully posted to room account.' });
         } else if (paymentMethod) {
             // Logic to generate a final receipt and process payment
             const receipt = {
@@ -232,22 +237,19 @@ app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
                 paymentMethod: paymentMethod,
                 date: new Date()
             };
-            // You would send this 'receipt' object to the frontend to be printed
+            // Send success response with receipt
             console.log('Generating receipt:', receipt);
+            return res.status(200).json({ message: 'Account settled successfully.', receipt });
         } else {
             return res.status(400).json({ message: 'Invalid settlement method.' });
         }
 
-        // Mark the account as closed and save
-        account.isClosed = true;
-        await account.save();
-
-        res.status(200).json({ message: 'Account settled successfully.', receipt });
     } catch (error) {
+        // The catch block will now only be for unexpected errors, not logic flow
+        console.error('Error settling account:', error);
         res.status(500).json({ message: 'Error settling account.', error: error.message });
     }
 });
-
 
 // Audit Log Schema
 const auditLogSchema = new mongoose.Schema({
