@@ -1092,13 +1092,13 @@ nextPageBtn.addEventListener('click', () => {
  * @param {string} guestName - The name of the guest.
  * @param {string} roomNumber - The room number.
  */
-/**function openIncidentalChargeModal(bookingCustomId, guestName, roomNumber) {
+function openIncidentalChargeModal(bookingCustomId, guestName, roomNumber) {
     incidentalChargeForm.reset();
-    chargeBookingCustomIdInput.value = bookingCustomId;
+    /**chargeBookingCustomIdInput.value = bookingCustomId;
     chargeGuestNameInput.value = guestName;
-    chargeRoomNumberInput.value = roomNumber;
+    chargeRoomNumberInput.value = roomNumber;*/
     incidentalChargeModal.style.display = 'flex';
-}*/
+}
 
 /**
  * Closes the incidental charge modal.
