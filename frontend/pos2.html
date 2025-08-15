@@ -76,183 +76,254 @@
 
     </div>
 
+    <div id="searchAccountSection">
+    <h2 class="text-2xl font-semibold text-center text-gray-700 mb-4">Find Existing Transaction</h2>
+    <form id="searchAccountForm" class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 mb-4">
+        <input type="text" id="searchQuery" name="searchQuery" required placeholder="Guest name or Room number" class="flex-1 px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200">
+        <button type="submit" class="px-6 py-3 bg-purple-600 text-white font-semibold rounded-xl shadow-lg hover:bg-purple-700 transition-colors duration-200">Search</button>
+    </form>
+    <div id="searchResults" class="space-y-2">
+        </div>
+</div>
+
     <script>
+        
         document.addEventListener('DOMContentLoaded', () => {
-            // Your API base URL
-            const BASE_URL = 'https://patrinahhotelpms.onrender.com';
+    // Your API base URL
+    const BASE_URL = 'https://patrinahhotelpms.onrender.com';
 
-            // DOM elements
-            const messageBox = document.getElementById('messageBox');
-            const createAccountForm = document.getElementById('createAccountForm');
-            const activeAccountSection = document.getElementById('activeAccountSection');
-            const addChargeForm = document.getElementById('addChargeForm');
-            const postToRoomBtn = document.getElementById('postToRoomBtn');
-            const issueReceiptBtn = document.getElementById('issueReceiptBtn');
+    // --- DOM Elements ---
+    const messageBox = document.getElementById('messageBox');
+    const createAccountSection = document.getElementById('createAccountSection');
+    const createAccountForm = document.getElementById('createAccountForm');
+    const searchAccountSection = document.getElementById('searchAccountSection'); // NEW
+    const searchAccountForm = document.getElementById('searchAccountForm');     // NEW
+    const searchResults = document.getElementById('searchResults');             // NEW
+    const activeAccountSection = document.getElementById('activeAccountSection');
+    const addChargeForm = document.getElementById('addChargeForm');
+    const postToRoomBtn = document.getElementById('postToRoomBtn');
+    const issueReceiptBtn = document.getElementById('issueReceiptBtn');
 
-            // Global state to store the active account ID
-            let activeAccountId = null;
-            let activeAccountData = null;
+    // --- Global State ---
+    let activeAccountId = null;
+    let activeAccountData = null;
 
-            // --- UI Helper Functions ---
-            const displayMessage = (message, type) => {
-                messageBox.textContent = message;
-                messageBox.className = 'min-h-[2rem] text-center font-medium my-4';
-                switch (type) {
-                    case 'success':
-                        messageBox.classList.add('text-green-600');
-                        break;
-                    case 'error':
-                        messageBox.classList.add('text-red-600');
-                        break;
-                    case 'info':
-                        messageBox.classList.add('text-blue-600');
-                        break;
-                }
-            };
+    // --- UI Helper Functions ---
+    const displayMessage = (message, type) => {
+        messageBox.textContent = message;
+        messageBox.className = 'min-h-[2rem] text-center font-medium my-4';
+        switch (type) {
+            case 'success':
+                messageBox.classList.add('text-green-600');
+                break;
+            case 'error':
+                messageBox.classList.add('text-red-600');
+                break;
+            case 'info':
+                messageBox.classList.add('text-blue-600');
+                break;
+        }
+    };
 
-            const updateActiveAccountUI = (account) => {
-                document.getElementById('currentGuestName').textContent = account.guestName;
-                document.getElementById('currentRoomNumber').textContent = account.roomNumber || 'Walk-In Guest';
-                document.getElementById('totalCharges').textContent = account.totalCharges ? account.totalCharges.toFixed(2) : '0.00';
-                // Hide the "Post to Room" button if there's no room number
-                if (!account.roomNumber) {
-                    postToRoomBtn.classList.add('hidden');
-                } else {
-                    postToRoomBtn.classList.remove('hidden');
-                }
-                document.getElementById('createAccountSection').classList.add('hidden');
-                activeAccountSection.classList.remove('hidden');
-            };
+    const updateActiveAccountUI = (account) => {
+        document.getElementById('currentGuestName').textContent = account.guestName;
+        document.getElementById('currentRoomNumber').textContent = account.roomNumber || 'Walk-In Guest';
+        document.getElementById('totalCharges').textContent = account.totalCharges ? account.totalCharges.toFixed(2) : '0.00';
+        if (!account.roomNumber) {
+            postToRoomBtn.classList.add('hidden');
+        } else {
+            postToRoomBtn.classList.remove('hidden');
+        }
+        createAccountSection.classList.add('hidden');
+        searchAccountSection.classList.add('hidden'); // NEW: Hide search section
+        activeAccountSection.classList.remove('hidden');
+    };
 
-            const resetUI = () => {
-                createAccountForm.reset();
-                addChargeForm.reset();
-                activeAccountSection.classList.add('hidden');
-                document.getElementById('createAccountSection').classList.remove('hidden');
-                displayMessage('Ready for new transaction.', 'info');
-                activeAccountId = null;
-                activeAccountData = null;
-            };
+    const resetUI = () => {
+        createAccountForm.reset();
+        addChargeForm.reset();
+        searchAccountForm.reset(); // NEW: Reset search form
+        searchResults.innerHTML = ''; // NEW: Clear search results
+        activeAccountSection.classList.add('hidden');
+        createAccountSection.classList.remove('hidden');
+        searchAccountSection.classList.remove('hidden'); // NEW: Show search section
+        displayMessage('Ready for new transaction.', 'info');
+        activeAccountId = null;
+        activeAccountData = null;
+    };
 
-            // --- API Calls ---
-            const createAccount = async (guestName, roomNumber) => {
-                displayMessage('Creating account...', 'info');
-                try {
-                    const response = await fetch(`${BASE_URL}/api/pos/client/account`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ guestName, roomNumber })
-                    });
-                    const account = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(account.message || 'Failed to create account.');
-                    }
-
-                    activeAccountId = account._id;
-                    activeAccountData = account;
-                    updateActiveAccountUI(account);
-                    displayMessage(`Account created for ${account.guestName}!`, 'success');
-
-                } catch (error) {
-                    displayMessage(`Error: ${error.message}`, 'error');
-                }
-            };
-
-            const addCharge = async (description, amount) => {
-                if (!activeAccountId) {
-                    displayMessage('Please create an account first.', 'error');
-                    return;
-                }
-                displayMessage('Adding charge...', 'info');
-                try {
-                    const response = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ description, amount: parseFloat(amount) })
-                    });
-                    const updatedAccount = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(updatedAccount.message || 'Failed to add charge.');
-                    }
-
-                    activeAccountData = updatedAccount;
-                    updateActiveAccountUI(updatedAccount);
-                    addChargeForm.reset(); // Clear the charge form
-                    displayMessage('Charge added successfully!', 'success');
-
-                } catch (error) {
-                    displayMessage(`Error: ${error.message}`, 'error');
-                }
-            };
-
-            const settleAccount = async (method) => {
-                if (!activeAccountId) {
-                    displayMessage('No active account to settle.', 'error');
-                    return;
-                }
-                displayMessage('Settling account...', 'info');
-
-                let payload = {};
-                if (method === 'room') {
-                    payload = { roomPost: true };
-                } else if (method === 'receipt') {
-                    // For now, we'll assume 'Cash' as a payment method
-                    // In a real app, you'd prompt the user for this
-                    payload = { paymentMethod: 'Cash' };
-                }
-
-                try {
-                    const response = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/settle`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    const result = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(result.message || 'Failed to settle account.');
-                    }
-                    
-                    displayMessage(`Account settled successfully! Total: $${activeAccountData.totalCharges.toFixed(2)}`, 'success');
-                    
-                    // Reset the UI for the next transaction
-                    setTimeout(resetUI, 3000); 
-
-                } catch (error) {
-                    displayMessage(`Error: ${error.message}`, 'error');
-                }
-            };
-
-            // --- Event Listeners ---
-            createAccountForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const formData = new FormData(createAccountForm);
-                const guestName = formData.get('guestName');
-                const roomNumber = formData.get('roomNumber') || null;
-                createAccount(guestName, roomNumber);
+    // --- API Calls ---
+    const createAccount = async (guestName, roomNumber) => {
+        displayMessage('Creating account...', 'info');
+        try {
+            const response = await fetch(`${BASE_URL}/api/pos/client/account`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ guestName, roomNumber })
             });
+            const account = await response.json();
 
-            addChargeForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const formData = new FormData(addChargeForm);
-                const description = formData.get('description');
-                const amount = formData.get('amount');
-                addCharge(description, amount);
+            if (!response.ok) {
+                throw new Error(account.message || 'Failed to create account.');
+            }
+
+            activeAccountId = account._id;
+            activeAccountData = account;
+            updateActiveAccountUI(account);
+            displayMessage(`Account created for ${account.guestName}!`, 'success');
+
+        } catch (error) {
+            displayMessage(`Error: ${error.message}`, 'error');
+        }
+    };
+
+    const addCharge = async (description, amount) => {
+        if (!activeAccountId) {
+            displayMessage('Please create or select an account first.', 'error');
+            return;
+        }
+        displayMessage('Adding charge...', 'info');
+        try {
+            const response = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ description, amount: parseFloat(amount) })
             });
+            const updatedAccount = await response.json();
 
-            postToRoomBtn.addEventListener('click', () => {
-                settleAccount('room');
+            if (!response.ok) {
+                throw new Error(updatedAccount.message || 'Failed to add charge.');
+            }
+
+            activeAccountData = updatedAccount;
+            updateActiveAccountUI(updatedAccount);
+            addChargeForm.reset();
+            displayMessage('Charge added successfully!', 'success');
+
+        } catch (error) {
+            displayMessage(`Error: ${error.message}`, 'error');
+        }
+    };
+
+    const settleAccount = async (method) => {
+        if (!activeAccountId) {
+            displayMessage('No active account to settle.', 'error');
+            return;
+        }
+        displayMessage('Settling account...', 'info');
+
+        let payload = {};
+        if (method === 'room') {
+            payload = { roomPost: true };
+        } else if (method === 'receipt') {
+            payload = { paymentMethod: 'Cash' };
+        }
+
+        try {
+            const response = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/settle`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
+            const result = await response.json();
 
-            issueReceiptBtn.addEventListener('click', () => {
-                settleAccount('receipt');
+            if (!response.ok) {
+                throw new Error(result.message || 'Failed to settle account.');
+            }
+            
+            displayMessage(`Account settled successfully! Total: $${activeAccountData.totalCharges.toFixed(2)}`, 'success');
+            setTimeout(resetUI, 3000);
+
+        } catch (error) {
+            displayMessage(`Error: ${error.message}`, 'error');
+        }
+    };
+
+    // --- NEW API Call: Search Accounts ---
+    const searchAccounts = async (query) => {
+        displayMessage('Searching for accounts...', 'info');
+        try {
+            const response = await fetch(`${BASE_URL}/api/pos/client/search?query=${encodeURIComponent(query)}`);
+            const accounts = await response.json();
+
+            if (!response.ok) {
+                throw new Error(accounts.message || 'Failed to search for accounts.');
+            }
+
+            return accounts;
+        } catch (error) {
+            displayMessage(`Error: ${error.message}`, 'error');
+            return [];
+        }
+    };
+
+    // --- NEW UI Function: Display Search Results ---
+    const displaySearchResults = (accounts) => {
+        searchResults.innerHTML = ''; // Clear previous results
+        if (accounts.length === 0) {
+            searchResults.innerHTML = `<p class="text-gray-500 text-center">No active accounts found.</p>`;
+            return;
+        }
+
+        accounts.forEach(account => {
+            const resultItem = document.createElement('div');
+            resultItem.className = 'p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors duration-200';
+            resultItem.innerHTML = `
+                <p class="font-semibold text-gray-800">${account.guestName}</p>
+                <p class="text-sm text-gray-600">Room: ${account.roomNumber || 'Walk-In Guest'}</p>
+                <p class="text-sm text-gray-600">Charges: $${account.totalCharges.toFixed(2)}</p>
+            `;
+            resultItem.addEventListener('click', () => {
+                activeAccountId = account._id;
+                activeAccountData = account;
+                updateActiveAccountUI(account);
+                displayMessage(`Account for ${account.guestName} is now active.`, 'success');
             });
-
-            // Initial state
-            resetUI();
+            searchResults.appendChild(resultItem);
         });
+    };
+
+    // --- Event Listeners ---
+    createAccountForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const formData = new FormData(createAccountForm);
+        const guestName = formData.get('guestName');
+        const roomNumber = formData.get('roomNumber') || null;
+        createAccount(guestName, roomNumber);
+    });
+
+    addChargeForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const formData = new FormData(addChargeForm);
+        const description = formData.get('description');
+        const amount = formData.get('amount');
+        addCharge(description, amount);
+    });
+
+    postToRoomBtn.addEventListener('click', () => {
+        settleAccount('room');
+    });
+
+    issueReceiptBtn.addEventListener('click', () => {
+        settleAccount('receipt');
+    });
+
+    // NEW: Search form event listener
+    searchAccountForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const searchQuery = document.getElementById('searchQuery').value.trim();
+        if (searchQuery) {
+            const accounts = await searchAccounts(searchQuery);
+            displaySearchResults(accounts);
+        } else {
+            displayMessage('Please enter a name or room number to search.', 'info');
+            searchResults.innerHTML = '';
+        }
+    });
+
+    // Initial state
+    resetUI();
+});
     </script>
 </body>
 </html>
