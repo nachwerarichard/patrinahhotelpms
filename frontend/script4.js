@@ -436,11 +436,21 @@ logoutBtn.addEventListener('click', async () => {
  * @param {Event} event - The click event object.
  */
 function handleNavigation(event) {
-    event.preventDefault();
     
-    // Correctly map 'nav-booking' to 'booking-management'
-    const targetId = event.target.id === 'nav-booking' ? 'booking-management' : event.target.id.replace('nav-', '');
+event.preventDefault();
 
+    // Find the closest parent <li> element to get its ID
+    const clickedElement = event.target.closest('li');
+    if (!clickedElement) {
+        // This prevents errors if a click somehow happens outside a list item
+        return; 
+    }
+    
+    // Get the ID from the <li> element
+    const targetId = clickedElement.id === 'nav-booking' ? 'booking-management' : clickedElement.id.replace('nav-', '');
+
+
+    
     // Prevent navigation if the user's role doesn't permit it
     if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping') {
         showMessageBox('Access Denied', 'Housekeepers can only access the Housekeeping section.', true);
