@@ -36,37 +36,37 @@
   <nav>
     <ul>
       <li id="nav-booking">
-        <a href="#" >
+        <a href="#" onclick="showSection('booking-management')">
           <i class="fas fa-book"></i> Booking Management
         </a>
       </li>
       <li id="nav-housekeeping">
-        <a href="#" >
+        <a href="#" onclick="showSection('housekeeping')">
           <i class="fas fa-broom"></i> Housekeeping
         </a>
       </li>
       <li id="nav-reports">
-        <a href="#" >
+        <a href="#" onclick="showSection('reports')">
           <i class="fas fa-chart-line"></i> Daily Reports
         </a>
       </li>
       <li id="nav-service-reports">
-        <a href="#" >
+        <a href="#" onclick="showSection('service-reports')">
           <i class="fas fa-concierge-bell"></i> Service Reports
         </a>
       </li>
       <li id="nav-calendar">
-        <a href="#" >
+        <a href="#" onclick="showSection('calendar-view')">
           <i class="fas fa-calendar-alt"></i> Calendar
         </a>
       </li>
       <li id="nav-audit-logs">
-        <a href="#" >
+        <a href="#" onclick="showSection('audit-logs')">
           <i class="fas fa-clipboard-list"></i> Audit Logs
         </a>
       </li>
       <li id="nav-channel-manager">
-        <a href="#" >
+        <a href="#" onclick="showSection('channel-manager')">
           <i class="fas fa-sync-alt"></i> Channel Manager
         </a>
       </li>
@@ -78,6 +78,7 @@
     </ul>
   </nav>
 </aside>
+
         <main>
             <section id="booking-management" class="section active">
                 <h2><i class="fas fa-book"></i> Booking Management</h2>
@@ -112,11 +113,13 @@
                     <button id="nextPageBtn" class="btn btn-secondary" disabled>Next <i class="fas fa-arrow-right"></i></button>
                 </div>
             </section>
+
             <section id="housekeeping" class="section">
                 <h2><i class="fas fa-broom"></i> Housekeeping</h2>
                 <div id="housekeepingRoomGrid" class="room-grid">
                     </div>
             </section>
+
             <section id="calendar-view" class="section">
                 <h2><i class="fas fa-calendar-alt"></i> Calendar View</h2>
                 <div class="calendar-controls">
@@ -127,6 +130,7 @@
                 <div id="calendarGrid" class="calendar-grid">
                     </div>
             </section>
+
             <section id="reports" class="section">
                 <h2><i class="fas fa-chart-bar"></i> Daily Reports (Room Revenue Only)</h2>
                 <div class="report-controls">
@@ -152,7 +156,9 @@
                  </thead>
                 <tbody></tbody>
              </table>
+
             </section>
+
             <section id="service-reports" class="section">
     <h2><i class="fas fa-concierge-bell"></i> Service Reports (Incidental Charges)</h2>
     <div class="report-controls">
@@ -163,6 +169,7 @@
         <button class="btn btn-primary" id="generateServiceReportBtn"><i class="fas fa-file-invoice-dollar"></i> Generate Service Report</button>
         <button class="btn btn-success" id="exportServiceReportBtn" style="display: none;"><i class="fas fa-file-excel"></i> Export to Excel</button>
     </div>
+
     <div class="table-container">
         <table id="serviceReportsTable">
             <thead>
@@ -181,6 +188,7 @@
                 </tr>
             </tfoot>
         </table>
+
         <h3 id="detailed-report-title" style="display: none; margin-top: 20px;">Detailed Service Charges</h3>
         <table id="serviceReportsDetailsTable" style="display: none;">
             <thead>
@@ -201,6 +209,7 @@
         </table>
     </div>
 </section>
+
             <section id="audit-logs" class="section">
                 <h2><i class="fas fa-clipboard-list"></i> Audit Logs</h2>
                 <div class="filter-controls">
@@ -229,14 +238,17 @@
                     </table>
                 </div>
             </section>
+
             <section id="channel-manager" class="section">
                 <h2><i class="fas fa-exchange-alt"></i> Channel Manager</h2>
                 <p>This section would typically integrate with external booking engines (e.g., Booking.com, Expedia) to sync room availability and bookings.</p>
                 <p>For this demonstration, clicking the button below will simulate a sync operation.</p>
                 <button class="btn btn-primary" onclick="simulateChannelManagerSync()"><i class="fas fa-sync-alt"></i> Simulate Sync</button>
             </section>
+
         </main>
     </div>
+
     <div id="bookingModal" class="modal">
         <div class="modal-content">
             <span class="close-button" onclick="closeBookingModal()">&times;</span>
@@ -319,6 +331,7 @@
             </form>
         </div>
     </div>
+
     <div id="incidentalChargeModal" class="modal">
         <div class="modal-content">
             <span class="close-button" onclick="closeIncidentalChargeModal()">&times;</span>
@@ -356,6 +369,7 @@
             </form>
         </div>
     </div>
+
     <div id="viewChargesModal" class="modal">
         <div class="modal-content">
             <span class="close-button" onclick="closeViewChargesModal()">&times;</span>
@@ -380,6 +394,7 @@
             </div>
         </div>
     </div>
+
     <div id="receiptModal" class="modal">
         <div class="modal-content receipt-content">
             <span class="close-button" onclick="closeReceiptModal()">&times;</span>
@@ -439,6 +454,7 @@
             </div>
         </div>
     </div>
+
     <div id="deletionReasonModal" class="modal">
         <div class="modal-content">
             <span class="close-button" onclick="closeDeletionReasonModal()">&times;</span>
@@ -453,6 +469,7 @@
             </div>
         </div>
     </div>
+
     <div id="messageBox" class="message-box" style="display: none;">
         <h3 id="messageBoxTitle"></h3>
         <p id="messageBoxContent"></p>
@@ -461,11 +478,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="script4.js"></script>
-    <script>
-        const navLinks = document.querySelectorAll('.sidebar nav ul li a');
-navLinks.forEach(link => {
-  link.addEventListener('click', handleNavigation);
-});
-    </script>
 </body>
 </html>
