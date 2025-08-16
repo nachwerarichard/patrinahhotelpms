@@ -36,37 +36,37 @@
   <nav>
     <ul>
       <li id="nav-booking">
-        <a href="#" onclick="showSection('booking-management')">
+        <a href="#" >
           <i class="fas fa-book"></i> Booking Management
         </a>
       </li>
       <li id="nav-housekeeping">
-        <a href="#" onclick="showSection('housekeeping')">
+        <a href="#" >
           <i class="fas fa-broom"></i> Housekeeping
         </a>
       </li>
       <li id="nav-reports">
-        <a href="#" onclick="showSection('reports')">
+        <a href="#" >
           <i class="fas fa-chart-line"></i> Daily Reports
         </a>
       </li>
       <li id="nav-service-reports">
-        <a href="#" onclick="showSection('service-reports')">
+        <a href="#" >
           <i class="fas fa-concierge-bell"></i> Service Reports
         </a>
       </li>
       <li id="nav-calendar">
-        <a href="#" onclick="showSection('calendar-view')">
+        <a href="#" >
           <i class="fas fa-calendar-alt"></i> Calendar
         </a>
       </li>
       <li id="nav-audit-logs">
-        <a href="#" onclick="showSection('audit-logs')">
+        <a href="#">
           <i class="fas fa-clipboard-list"></i> Audit Logs
         </a>
       </li>
       <li id="nav-channel-manager">
-        <a href="#" onclick="showSection('channel-manager')">
+        <a href="#" >
           <i class="fas fa-sync-alt"></i> Channel Manager
         </a>
       </li>
@@ -478,5 +478,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="script4.js"></script>
+    <script>
+        // Add this new code to your script
+document.addEventListener('DOMContentLoaded', () => {
+    const navItems = document.querySelectorAll('aside nav ul li');
+    navItems.forEach(item => {
+        // Exclude the logout button from this general navigation handler
+        if (item.id !== 'nav-logout') {
+            item.addEventListener('click', handleNavigation);
+        }
+    });
+});
+    </script>
 </body>
 </html>
