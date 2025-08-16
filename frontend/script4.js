@@ -509,7 +509,7 @@ event.preventDefault();
     } else if (targetId === 'reports') {
         reportDateInput.valueAsDate = new Date();
         generateReport();
-    } else if (targetId === 'calendar-view') {
+    } else if (targetId === 'calendar') {
         renderCalendar();
     } else if (targetId === 'service-reports') {
         // Set default dates for service reports to current month
@@ -2049,7 +2049,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Made async to awa
                     await renderBookings(currentPage, currentSearchTerm);
                 } else if (initialSectionId === 'housekeeping') {
                     await renderHousekeepingRooms();
-                } else if (initialSectionId === 'calendar-view') {
+                } else if (initialSectionId === 'calendar') {
                     await renderCalendar();
                 } else if (initialSectionId === 'reports') {
                     reportDateInput.valueAsDate = new Date();
