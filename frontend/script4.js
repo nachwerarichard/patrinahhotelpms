@@ -405,32 +405,6 @@ loginForm.addEventListener('submit', async function(event) {
     }
 });
 
-//logoutBtn.addEventListener('click', async () => {
-    // Log logout action before clearing user data
-    //if (currentUsername) {
-       // try {
-          //  await fetch(`${API_BASE_URL}/audit-log/action`, {
-             //   method: 'POST',
-               // headers: { 'Content-Type': 'application/json' },
-               // body: JSON.stringify({ action: 'User Logged Out', user: currentUsername })
-           // });//
-      //  } catch (error) {
-           //console.error('Error logging out action:', error);
-            // Don't block logout if audit log fails
-       // }//
-   // }//
-
-    currentUserRole = null;
-    currentUsername = null; // Clear username on logout
-    localStorage.removeItem('loggedInUser'); // Clear login state from localStorage
-    loginContainer.style.display = 'flex';
-    mainContent.style.display = 'none';
-    usernameInput.value = '';
-    passwordInput.value = '';
-    // Reset active state for navigation links and sections
-    navLinks.forEach(link => link.classList.remove('active'));
-    sections.forEach(section => section.classList.remove('active'));
-});
 
 /**
  * Handles navigation clicks, showing/hiding sections and re-rendering content.
