@@ -115,10 +115,21 @@
             </section>
 
             <section id="housekeeping" class="section">
-                <h2><i class="fas fa-broom"></i> Housekeeping</h2>
-                <div id="housekeepingRoomGrid" class="room-grid">
-                    </div>
-            </section>
+    <h2><i class="fas fa-broom"></i> Housekeeping</h2>
+    <div class="report-buttons">
+        <button onclick="generateReport('dirty')">Dirty Rooms Report</button>
+        <button onclick="generateReport('clean')">Clean Rooms Report</button>
+    </div>
+    <div id="housekeepingRoomGrid" class="room-grid">
+    </div>
+</section>
+<div id="reportModal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h3 id="reportTitle"></h3>
+        <ul id="reportList"></ul>
+    </div>
+</div>
 
             <section id="calendar" class="section">
                 <h2><i class="fas fa-calendar-alt"></i> Calendar View</h2>
