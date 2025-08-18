@@ -490,6 +490,54 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="script4.js"></script>
     <script>
+                            async function generateReport(status) {
+    const reportModal = document.getElementById('reportModal');
+    const reportTitle = document.getElementById('reportTitle');
+    const reportList = document.getElementById('reportList');
+    
+    // Clear previous report content
+    reportList.innerHTML = '';
+    reportTitle.textContent = `Generating ${status.toUpperCase()} Rooms Report...`;
+    reportModal.style.display = 'block';
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/rooms/report?status=${status}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const rooms = await response.json();
+        
+        reportTitle.textContent = `${status.toUpperCase()} Rooms Report`;
+        
+        if (rooms.length === 0) {
+            reportList.innerHTML = `<li>No ${status} rooms found.</li>`;
+            return;
+        }
+
+        rooms.forEach(room => {
+            const listItem = document.createElement('li');
+            listItem.textContent = `Room ${room.number} (${room.type})`;
+            reportList.appendChild(listItem);
+        });
+
+    } catch (error) {
+        console.error('Error generating report:', error);
+        reportTitle.textContent = 'Error';
+        reportList.innerHTML = '<li>Failed to generate report. Please try again later.</li>';
+    }
+}
+
+// Close modal functionality
+document.querySelector('.close-button').onclick = function() {
+    document.getElementById('reportModal').style.display = 'none';
+}
+
+window.onclick = function(event) {
+    const reportModal = document.getElementById('reportModal');
+    if (event.target === reportModal) {
+        reportModal.style.display = 'none';
+    }
+}
     </script>
 </body>
 </html>
