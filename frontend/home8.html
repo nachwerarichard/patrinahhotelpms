@@ -479,16 +479,6 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="script4.js"></script>
     <script>
-        // Add this new code to your script
-document.addEventListener('DOMContentLoaded', () => {
-    const navItems = document.querySelectorAll('aside nav ul li');
-    navItems.forEach(item => {
-        // Exclude the logout button from this general navigation handler
-        if (item.id !== 'nav-logout') {
-            item.addEventListener('click', handleNavigation);
-        }
-    });
-});
     </script>
 </body>
 </html>
