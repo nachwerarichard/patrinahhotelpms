@@ -103,7 +103,7 @@ const calendarGrid = document.getElementById('calendarGrid'); // Now a single gr
 const serviceReportStartDate = document.getElementById('serviceReportStartDate');
 const serviceReportEndDate = document.getElementById('serviceReportEndDate');
 const generateServiceReportBtn = document.getElementById('generateServiceReportBtn');
-const serviceReportsTableBody = document.querySelector('#serviceReportsTable tbody');
+
 const totalServiceRevenueSpan = document.getElementById('totalServiceRevenue');
 
 // New: Audit Logs elements
