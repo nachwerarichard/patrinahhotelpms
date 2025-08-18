@@ -115,7 +115,7 @@
 
     </div>
     
-    <script>
+   <script>
     document.addEventListener('DOMContentLoaded', () => {
         const BASE_URL = 'https://patrinahhotelpms.onrender.com';
         
@@ -129,6 +129,15 @@
         const addChargeForm = document.getElementById('addChargeForm');
         const postToRoomBtn = document.getElementById('postToRoomBtn');
         const issueReceiptBtn = document.getElementById('issueReceiptBtn');
+
+        // NEW CONSTANTS
+        const dailyReportForm = document.getElementById('dailyReportForm');
+        const reportDateInput = document.getElementById('reportDate');
+        const reportResults = document.getElementById('reportResults');
+        const reportDateDisplay = document.getElementById('reportDateDisplay');
+        const reportTotalRevenue = document.getElementById('reportTotalRevenue');
+        const reportTableBody = document.getElementById('reportTableBody');
+        const exportReportBtn = document.getElementById('exportReportBtn');
 
         let activeAccountId = null;
         let activeAccountData = null;
@@ -199,7 +208,7 @@
             displayMessage('Creating account...', 'info');
             try {
                 const res = await fetch(`${BASE_URL}/api/pos/client/account`, {
-                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ guestName, roomNumber })
                 });
                 const data = await res.json();
@@ -218,7 +227,7 @@
             displayMessage('Adding charge...', 'info');
             try {
                 const res = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
-                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ description, amount: parseFloat(amount) })
                 });
                 const data = await res.json();
@@ -238,7 +247,7 @@
             let payload = method === 'room' ? { roomPost: true } : { paymentMethod: 'Cash' };
             try {
                 const res = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/settle`, {
-                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 const result = await res.json();
@@ -291,11 +300,77 @@
             });
         };
 
+        // NEW FUNCTIONS FOR REPORTING
+        const generateDailyReport = async (date) => {
+            displayMessage('Generating report...', 'info');
+            reportResults.classList.add('hidden');
+            try {
+                const res = await fetch(`${BASE_URL}/api/pos/reports/daily?date=${date}`);
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || 'Error generating report.');
+
+                displayMessage(`Report for ${data.date} loaded.`, 'success');
+                reportDateDisplay.textContent = data.date;
+                reportTotalRevenue.textContent = data.totalRevenue.toFixed(2);
+                
+                // Clear existing table rows
+                reportTableBody.innerHTML = '';
+
+                if (data.transactions.length === 0) {
+                    reportTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No transactions found for this date.</td></tr>';
+                    exportReportBtn.disabled = true;
+                } else {
+                    data.transactions.forEach(t => {
+                        const row = document.createElement('tr');
+                        row.className = 'border-b border-gray-200 hover:bg-gray-100';
+                        row.innerHTML = `
+                            <td class="py-3 px-6 text-left whitespace-nowrap">${t.guestName} <span class="text-xs text-gray-500">(${t.roomNumber})</span></td>
+                            <td class="py-3 px-6 text-left">${t.description}</td>
+                            <td class="py-3 px-6 text-center">${t.source}</td>
+                            <td class="py-3 px-6 text-right">$${t.amount.toFixed(2)}</td>
+                        `;
+                        reportTableBody.appendChild(row);
+                    });
+                    exportReportBtn.disabled = false;
+                }
+                
+                reportResults.classList.remove('hidden');
+            } catch (err) {
+                displayMessage(err.message, 'error');
+                reportResults.classList.add('hidden');
+                reportTableBody.innerHTML = '';
+            }
+        };
+
+        const exportToExcel = (tableId, filename) => {
+            const table = document.getElementById(tableId);
+            const rows = table.querySelectorAll('tr');
+            let csv = [];
+            
+            for (let i = 0; i < rows.length; i++) {
+                const row = [], cols = rows[i].querySelectorAll('td, th');
+                
+                for (let j = 0; j < cols.length; j++) {
+                    let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, '').replace(/(\s\s)/gm, ' ');
+                    data = data.replace(/"/g, '""'); 
+                    row.push(`"${data}"`);
+                }
+                csv.push(row.join(','));
+            }
+
+            const csvString = csv.join('\n');
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        };
+
         // Event Listeners
         createAccountForm.onsubmit = e => {
             e.preventDefault();
             createAccount(new FormData(createAccountForm).get('guestName'),
-                          new FormData(createAccountForm).get('roomNumber') || null);
+                            new FormData(createAccountForm).get('roomNumber') || null);
         };
         addChargeForm.onsubmit = e => {
             e.preventDefault();
@@ -310,105 +385,24 @@
             if (q) displaySearchResults(await searchAccounts(q));
         };
 
+        // NEW EVENT LISTENERS
+        dailyReportForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const selectedDate = reportDateInput.value;
+            if (selectedDate) {
+                await generateDailyReport(selectedDate);
+            } else {
+                displayMessage('Please select a date.', 'error');
+            }
+        };
+
+        exportReportBtn.onclick = () => {
+            const date = reportDateDisplay.textContent;
+            exportToExcel('reportTableBody', `POS_Daily_Report_${date}.csv`);
+        };
+
         resetUI();
     });
-
-
-        // Add these new constants at the top of your script
-const dailyReportForm = document.getElementById('dailyReportForm');
-const reportDateInput = document.getElementById('reportDate');
-const reportResults = document.getElementById('reportResults');
-const reportDateDisplay = document.getElementById('reportDateDisplay');
-const reportTotalRevenue = document.getElementById('reportTotalRevenue');
-const reportTableBody = document.getElementById('reportTableBody');
-const exportReportBtn = document.getElementById('exportReportBtn');
-
-// Function to generate and display the daily report
-const generateDailyReport = async (date) => {
-    displayMessage('Generating report...', 'info');
-    reportResults.classList.add('hidden');
-    try {
-        const res = await fetch(`${BASE_URL}/api/pos/reports/daily?date=${date}`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || 'Error generating report.');
-
-        displayMessage(`Report for ${data.date} loaded.`, 'success');
-        reportDateDisplay.textContent = data.date;
-        reportTotalRevenue.textContent = data.totalRevenue.toFixed(2);
-        
-        // Clear existing table rows
-        reportTableBody.innerHTML = '';
-
-        if (data.transactions.length === 0) {
-            reportTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No transactions found for this date.</td></tr>';
-            exportReportBtn.disabled = true;
-        } else {
-            data.transactions.forEach(t => {
-                const row = document.createElement('tr');
-                row.className = 'border-b border-gray-200 hover:bg-gray-100';
-                row.innerHTML = `
-                    <td class="py-3 px-6 text-left whitespace-nowrap">${t.guestName} <span class="text-xs text-gray-500">(${t.roomNumber})</span></td>
-                    <td class="py-3 px-6 text-left">${t.description}</td>
-                    <td class="py-3 px-6 text-center">${t.source}</td>
-                    <td class="py-3 px-6 text-right">$${t.amount.toFixed(2)}</td>
-                `;
-                reportTableBody.appendChild(row);
-            });
-            exportReportBtn.disabled = false;
-        }
-        
-        reportResults.classList.remove('hidden');
-    } catch (err) {
-        displayMessage(err.message, 'error');
-        reportResults.classList.add('hidden');
-        reportTableBody.innerHTML = '';
-    }
-};
-
-// Function to export table data to a CSV file (which Excel can open)
-const exportToExcel = (tableId, filename) => {
-    const table = document.getElementById(tableId);
-    const rows = table.querySelectorAll('tr');
-    let csv = [];
-    
-    for (let i = 0; i < rows.length; i++) {
-        const row = [], cols = rows[i].querySelectorAll('td, th');
-        
-        for (let j = 0; j < cols.length; j++) {
-            // Clean up text for CSV export
-            let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, '').replace(/(\s\s)/gm, ' ');
-            data = data.replace(/"/g, '""'); // Escape double quotes
-            row.push(`"${data}"`);
-        }
-        csv.push(row.join(','));
-    }
-
-    const csvString = csv.join('\n');
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    link.click();
-};
-
-// Add new event listeners
-dailyReportForm.onsubmit = async (e) => {
-    e.preventDefault();
-    const selectedDate = reportDateInput.value;
-    if (selectedDate) {
-        await generateDailyReport(selectedDate);
-    } else {
-        displayMessage('Please select a date.', 'error');
-    }
-};
-
-exportReportBtn.onclick = () => {
-    const date = reportDateDisplay.textContent;
-    exportToExcel('reportTableBody', `POS_Daily_Report_${date}.csv`);
-};
-        
-
-        
-    </script>
+</script>
 </body>
 </html>
