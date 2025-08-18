@@ -413,7 +413,7 @@ loginForm.addEventListener('submit', async function(event) {
              //   method: 'POST',
                // headers: { 'Content-Type': 'application/json' },
                // body: JSON.stringify({ action: 'User Logged Out', user: currentUsername })
-            });//
+           // });//
       //  } catch (error) {
            / console.error('Error logging out action:', error);
             // Don't block logout if audit log fails
