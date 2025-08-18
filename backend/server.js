@@ -490,6 +490,56 @@ app.post('/api/pos/charge/room', async (req, res) => {
     }
 });
 
+app.get('/api/reports/services', async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        if (!startDate || !endDate) {
+            return res.status(400).json({ message: 'Start and end dates are required.' });
+        }
+
+        const reports = await IncidentalCharge.aggregate([
+            {
+                $match: {
+                    createdAt: {
+                        $gte: new Date(startDate),
+                        $lte: new Date(endDate)
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: "$type",
+                    count: { $sum: 1 },
+                    totalAmount: { $sum: "$amount" },
+                    bookings: {
+                        $push: {
+                            name: "$guestName",
+                            amount: "$amount",
+                            room: "$roomNumber"
+                        }
+                    }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    serviceType: "$_id",
+                    count: 1,
+                    totalAmount: 1,
+                    bookings: 1
+                }
+            }
+        ]);
+
+        res.json(reports);
+    } catch (error) {
+        console.error('Error fetching service reports:', error);
+        res.status(500).json({ message: 'Error fetching service reports', error: error.message });
+    }
+});
+
+    
 // NEW: Post a charge for a walk-in guest
 // This endpoint uses the new WalkInCharge model.
 app.post('/api/pos/charge/walkin', async (req, res) => {
