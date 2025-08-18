@@ -396,20 +396,20 @@ loginForm.addEventListener('submit', async function(event) {
     }
 });
 
-logoutBtn.addEventListener('click', async () => {
+//logoutBtn.addEventListener('click', async () => {
     // Log logout action before clearing user data
-    if (currentUsername) {
-        try {
-            await fetch(`${API_BASE_URL}/audit-log/action`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'User Logged Out', user: currentUsername })
-            });
-        } catch (error) {
-            console.error('Error logging out action:', error);
+    //if (currentUsername) {
+       // try {
+          //  await fetch(`${API_BASE_URL}/audit-log/action`, {
+             //   method: 'POST',
+               // headers: { 'Content-Type': 'application/json' },
+               // body: JSON.stringify({ action: 'User Logged Out', user: currentUsername })
+            });//
+      //  } catch (error) {
+           / console.error('Error logging out action:', error);
             // Don't block logout if audit log fails
         }
-    }
+    }//
 
     currentUserRole = null;
     currentUsername = null; // Clear username on logout
