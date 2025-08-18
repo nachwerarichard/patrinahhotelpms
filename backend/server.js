@@ -756,6 +756,26 @@ app.get('/api/rooms/available', async (req, res) => {
 });
 
 
+// New API endpoint to generate a report of rooms by status
+app.get('/api/rooms/report', async (req, res) => {
+    try {
+        const { status } = req.query; // Expects a status like 'clean' or 'dirty'
+        
+        if (!status) {
+            return res.status(400).json({ message: 'Room status is required for the report.' });
+        }
+
+        // Find rooms based on the provided status
+        // Case-insensitive search for robustness
+        const rooms = await Room.find({ status: { $regex: new RegExp(status, 'i') } });
+
+        res.json(rooms);
+    } catch (error) {
+        res.status(500).json({ message: 'Error generating room report', error: error.message });
+    }
+});
+
+
 // Update room status (accessible by admin and housekeeper)
 app.put('/api/rooms/:id', async (req, res) => {
     const { id } = req.params; // This `id` is the custom room `id` (e.g., R101)
