@@ -173,6 +173,78 @@ const clientAccountSchema = new mongoose.Schema({
 
 const ClientAccount = mongoose.model('ClientAccount', clientAccountSchema);
 
+
+// Function to format date to YYYY-MM-DD
+const formatDate = (date) => {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+// NEW: Get daily report
+app.get('/api/pos/reports/daily', async (req, res) => {
+    const { date } = req.query;
+    try {
+        const startOfDay = new Date(date);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // Fetch incidental charges for the day
+        const roomCharges = await IncidentalCharge.find({
+            createdAt: {
+                $gte: startOfDay,
+                $lte: endOfDay
+            }
+        }).select('guestName roomNumber type description amount createdAt');
+
+        // Fetch walk-in charges for the day
+        const walkinCharges = await WalkInCharge.find({
+            date: {
+                $gte: startOfDay,
+                $lte: endOfDay
+            }
+        }).select('guestName receiptId type description amount date');
+
+        // Format data for the report
+        const allTransactions = [
+            ...roomCharges.map(charge => ({
+                transactionId: charge._id,
+                guestName: charge.guestName,
+                roomNumber: charge.roomNumber,
+                type: charge.type,
+                description: charge.description,
+                amount: charge.amount,
+                date: formatDate(charge.createdAt),
+                source: 'Room Charge'
+            })),
+            ...walkinCharges.map(charge => ({
+                transactionId: charge._id,
+                guestName: charge.guestName,
+                roomNumber: 'Walk-In',
+                type: charge.type,
+                description: charge.description,
+                amount: charge.amount,
+                date: formatDate(charge.date),
+                source: 'Walk-In'
+            }))
+        ];
+
+        const totalRevenue = allTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+        res.status(200).json({
+            date: formatDate(startOfDay),
+            totalRevenue,
+            transactions: allTransactions
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error generating daily report', error: error.message });
+    }
+});
+
 // POST /api/pos/client/account
 app.post('/api/pos/client/account', async (req, res) => {
     const { guestName, roomNumber } = req.body;
