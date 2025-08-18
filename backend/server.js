@@ -1212,60 +1212,6 @@ app.put('/api/incidental-charges/pay-all/:bookingObjectId', async (req, res) => 
 
 // --- Reports API ---
 // Get aggregated service reports by date range
-app.get('/api/reports/services', async (req, res) => {
-    try {
-        const { startDate, endDate } = req.query;
-
-        const query = {};
-        if (startDate && endDate) {
-            query.date = {
-                $gte: new Date(startDate),
-                $lte: new Date(endDate)
-            };
-        }
-
-        const serviceReports = await IncidentalCharge.aggregate([
-            { $match: query },
-            {
-                $group: {
-                    _id: {
-                        serviceType: '$serviceType',
-                        bookedBy: '$bookedBy'
-                    },
-                    totalAmount: { $sum: '$amount' },
-                    count: { $sum: 1 }
-                }
-            },
-            {
-                $group: {
-                    _id: '$_id.serviceType',
-                    totalAmount: { $sum: '$totalAmount' },
-                    count: { $sum: '$count' },
-                    bookings: {
-                        $push: {
-                            name: '$_id.bookedBy',
-                            amount: '$totalAmount',
-                            count: '$count'
-                        }
-                    }
-                }
-            },
-            {
-                $project: {
-                    _id: 0,
-                    serviceType: '$_id',
-                    totalAmount: { $round: ['$totalAmount', 2] },
-                    count: 1,
-                    bookings: 1
-                }
-            }
-        ]);
-
-        res.json(serviceReports);
-    } catch (error) {
-        res.status(500).json({ message: 'Error generating service report', error: error.message });
-    }
-});
 
 
 // --- Audit Logs API ---
