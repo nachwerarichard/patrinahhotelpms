@@ -489,34 +489,40 @@ app.post('/api/pos/charge/room', async (req, res) => {
         res.status(500).json({ message: 'Error posting charge to room', error: error.message });
     }
 });
-
 app.get('/api/reports/services', async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
 
-        if (!startDate || !endDate) {
-            return res.status(400).json({ message: 'Start and end dates are required.' });
+        const query = {};
+        if (startDate && endDate) {
+            query.date = {
+                $gte: new Date(startDate),
+                $lte: new Date(endDate)
+            };
         }
 
-        const reports = await IncidentalCharge.aggregate([
+        const serviceReports = await IncidentalCharge.aggregate([
+            { $match: query },
             {
-                $match: {
-                    createdAt: {
-                        $gte: new Date(startDate),
-                        $lte: new Date(endDate)
-                    }
+                $group: {
+                    _id: {
+                        serviceType: '$type', // Renamed from '$serviceType'
+                        bookedBy: '$username'  // Renamed from '$bookedBy'
+                    },
+                    totalAmount: { $sum: '$amount' },
+                    count: { $sum: 1 }
                 }
             },
             {
                 $group: {
-                    _id: "$type",
-                    count: { $sum: 1 },
-                    totalAmount: { $sum: "$amount" },
+                    _id: '$_id.serviceType',
+                    totalAmount: { $sum: '$totalAmount' },
+                    count: { $sum: '$count' },
                     bookings: {
                         $push: {
-                            name: "$guestName",
-                            amount: "$amount",
-                            room: "$roomNumber"
+                            name: '$_id.bookedBy',
+                            amount: '$totalAmount',
+                            count: '$count'
                         }
                     }
                 }
@@ -524,22 +530,20 @@ app.get('/api/reports/services', async (req, res) => {
             {
                 $project: {
                     _id: 0,
-                    serviceType: "$_id",
+                    serviceType: '$_id',
+                    totalAmount: { $round: ['$totalAmount', 2] },
                     count: 1,
-                    totalAmount: 1,
                     bookings: 1
                 }
             }
         ]);
 
-        res.json(reports);
+        res.json(serviceReports);
     } catch (error) {
-        console.error('Error fetching service reports:', error);
-        res.status(500).json({ message: 'Error fetching service reports', error: error.message });
+        res.status(500).json({ message: 'Error generating service report', error: error.message });
     }
 });
 
-    
 // NEW: Post a charge for a walk-in guest
 // This endpoint uses the new WalkInCharge model.
 app.post('/api/pos/charge/walkin', async (req, res) => {
