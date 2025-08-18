@@ -86,6 +86,33 @@
             </div>
         </div>
     </div>
+    <div id="reportsSection" class="mt-8">
+            <h2 class="text-2xl font-semibold text-center text-gray-700 mb-4">Daily Reports</h2>
+            <form id="dailyReportForm" class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 mb-4">
+                <input type="date" id="reportDate" required class="flex-1 px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200">
+                <button type="submit" class="px-6 py-3 bg-purple-600 text-white font-semibold rounded-xl shadow-lg hover:bg-purple-700 transition-colors duration-200">View Report</button>
+            </form>
+            <div id="reportResults" class="hidden">
+                <div class="bg-purple-50 border border-purple-200 text-purple-800 p-4 rounded-xl shadow-inner mb-4">
+                    <p class="font-medium text-lg">Total Revenue for <span id="reportDateDisplay" class="font-bold"></span>:</p>
+                    <p class="font-bold text-xl text-purple-600">$<span id="reportTotalRevenue">0.00</span></p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white border border-gray-200 rounded-xl shadow-sm">
+                        <thead>
+                            <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                                <th class="py-3 px-6 text-left">Guest / Room</th>
+                                <th class="py-3 px-6 text-left">Description</th>
+                                <th class="py-3 px-6 text-center">Source</th>
+                                <th class="py-3 px-6 text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportTableBody" class="text-gray-600 text-sm font-light"></tbody>
+                    </table>
+                </div>
+                <button id="exportReportBtn" class="w-full mt-4 px-6 py-3 bg-green-600 text-white font-semibold rounded-xl shadow-lg hover:bg-green-700 transition-colors duration-200">Export to Excel</button>
+            </div>
+        </div>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -284,6 +311,103 @@
 
         resetUI();
     });
+
+
+        // Add these new constants at the top of your script
+const dailyReportForm = document.getElementById('dailyReportForm');
+const reportDateInput = document.getElementById('reportDate');
+const reportResults = document.getElementById('reportResults');
+const reportDateDisplay = document.getElementById('reportDateDisplay');
+const reportTotalRevenue = document.getElementById('reportTotalRevenue');
+const reportTableBody = document.getElementById('reportTableBody');
+const exportReportBtn = document.getElementById('exportReportBtn');
+
+// Function to generate and display the daily report
+const generateDailyReport = async (date) => {
+    displayMessage('Generating report...', 'info');
+    reportResults.classList.add('hidden');
+    try {
+        const res = await fetch(`${BASE_URL}/api/pos/reports/daily?date=${date}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Error generating report.');
+
+        displayMessage(`Report for ${data.date} loaded.`, 'success');
+        reportDateDisplay.textContent = data.date;
+        reportTotalRevenue.textContent = data.totalRevenue.toFixed(2);
+        
+        // Clear existing table rows
+        reportTableBody.innerHTML = '';
+
+        if (data.transactions.length === 0) {
+            reportTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No transactions found for this date.</td></tr>';
+            exportReportBtn.disabled = true;
+        } else {
+            data.transactions.forEach(t => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-200 hover:bg-gray-100';
+                row.innerHTML = `
+                    <td class="py-3 px-6 text-left whitespace-nowrap">${t.guestName} <span class="text-xs text-gray-500">(${t.roomNumber})</span></td>
+                    <td class="py-3 px-6 text-left">${t.description}</td>
+                    <td class="py-3 px-6 text-center">${t.source}</td>
+                    <td class="py-3 px-6 text-right">$${t.amount.toFixed(2)}</td>
+                `;
+                reportTableBody.appendChild(row);
+            });
+            exportReportBtn.disabled = false;
+        }
+        
+        reportResults.classList.remove('hidden');
+    } catch (err) {
+        displayMessage(err.message, 'error');
+        reportResults.classList.add('hidden');
+        reportTableBody.innerHTML = '';
+    }
+};
+
+// Function to export table data to a CSV file (which Excel can open)
+const exportToExcel = (tableId, filename) => {
+    const table = document.getElementById(tableId);
+    const rows = table.querySelectorAll('tr');
+    let csv = [];
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = [], cols = rows[i].querySelectorAll('td, th');
+        
+        for (let j = 0; j < cols.length; j++) {
+            // Clean up text for CSV export
+            let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, '').replace(/(\s\s)/gm, ' ');
+            data = data.replace(/"/g, '""'); // Escape double quotes
+            row.push(`"${data}"`);
+        }
+        csv.push(row.join(','));
+    }
+
+    const csvString = csv.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+};
+
+// Add new event listeners
+dailyReportForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const selectedDate = reportDateInput.value;
+    if (selectedDate) {
+        await generateDailyReport(selectedDate);
+    } else {
+        displayMessage('Please select a date.', 'error');
+    }
+};
+
+exportReportBtn.onclick = () => {
+    const date = reportDateDisplay.textContent;
+    exportToExcel('reportTableBody', `POS_Daily_Report_${date}.csv`);
+};
+        
+
+        
     </script>
 </body>
 </html>
