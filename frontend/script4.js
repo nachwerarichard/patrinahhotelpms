@@ -117,6 +117,15 @@ const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn
 
 // --- Utility Functions ---
 
+document.addEventListener('DOMContentLoaded', () => {
+    const navItems = document.querySelectorAll('aside nav ul li');
+    navItems.forEach(item => {
+        // Exclude the logout button from this general navigation handler
+        if (item.id !== 'nav-logout') {
+            item.addEventListener('click', handleNavigation);
+        }
+    });
+});
 /**
  * Displays a custom message box to the user.
  * @param {string} title - The title of the message box.
