@@ -1808,6 +1808,7 @@ const serviceReportsDetailsTableBody = serviceReportsDetailsTable.querySelector(
 const totalDetailedServiceRevenueSpan = document.getElementById('totalDetailedServiceRevenue');
 const exportServiceReportBtn = document.getElementById('exportServiceReportBtn');
 const detailedReportTitle = document.getElementById('detailed-report-title');
+const serviceReportsTableBody = document.getElementById('serviceReportsTable').querySelector('tbody'); 
 
 async function renderServiceReports() {
     serviceReportsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Loading service reports...</td></tr>';
