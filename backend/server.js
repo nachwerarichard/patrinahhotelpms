@@ -242,44 +242,21 @@ const formatDate = (date) => {
 };
 
 // New API endpoint to generate a combined report for a specific date
+
+
+// NEW: API endpoint to generate a combined report for a specific date
 app.get('/api/rooms/report-daily', async (req, res) => {
     try {
-        const { date } = req.query;
-
-        if (!date) {
-            return res.status(400).json({ message: 'Date is required for the daily report.' });
-        }
-
-        const reportDate = new Date(date);
-        const nextDay = new Date(reportDate);
-        nextDay.setDate(reportDate.getDate() + 1);
-
-        // This assumes a 'RoomHistory' model with 'timestamp', 'roomNumber', and 'status' fields.
-        // It finds the last status update for each room on or before the given date.
-        const roomStatuses = await RoomHistory.aggregate([
-            {
-                $match: {
-                    timestamp: { $lt: nextDay },
-                }
-            },
-            {
-                $sort: { timestamp: -1 }
-            },
-            {
-                $group: {
-                    _id: '$roomNumber',
-                    status: { $first: '$status' },
-                    lastUpdated: { $first: '$timestamp' }
-                }
-            }
-        ]);
+        // Query the Room model directly to get the current status of all rooms
+        const allRooms = await Room.find({});
 
         // Filter the results to get clean and dirty rooms
-        const cleanRooms = roomStatuses.filter(room => room.status === 'clean');
-        const dirtyRooms = roomStatuses.filter(room => room.status === 'dirty');
+        const cleanRooms = allRooms.filter(room => room.status === 'clean');
+        const dirtyRooms = allRooms.filter(room => room.status === 'dirty');
 
         res.json({ cleanRooms, dirtyRooms });
     } catch (error) {
+        console.error('Error generating daily room report:', error);
         res.status(500).json({ message: 'Error generating daily room report', error: error.message });
     }
 });
