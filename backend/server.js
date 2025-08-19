@@ -120,6 +120,64 @@ const bookingSchema = new mongoose.Schema({
 });
 const Booking = mongoose.model('Booking', bookingSchema);
 
+// Room History Schema
+const roomHistorySchema = new mongoose.Schema({
+    roomNumber: { type: String, required: true },
+    status: { type: String, required: true, enum: ['clean', 'dirty', 'under-maintenance', 'blocked'] },
+    timestamp: { type: Date, default: Date.now }
+});
+const RoomHistory = mongoose.model('RoomHistory', roomHistorySchema);
+
+// Make sure to add this model export at the top of your file
+// `const RoomHistory = require('./models/RoomHistory');`
+// if you were using a separate file for the model.
+// Since you're defining it in server.js, just keep it here.
+
+// NEW: Endpoint to update room status and log history
+app.put('/api/rooms/status/:roomNumber', async (req, res) => {
+    const { roomNumber } = req.params;
+    const { status, username } = req.body;
+
+    // Optional: Add a check for valid status
+    const validStatuses = ['clean', 'dirty', 'under-maintenance', 'blocked'];
+    if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: 'Invalid room status provided.' });
+    }
+
+    try {
+        // 1. Update the room's status in the Room model
+        const updatedRoom = await Room.findOneAndUpdate(
+            { number: roomNumber },
+            { status: status },
+            { new: true } // `new: true` returns the updated document
+        );
+
+        if (!updatedRoom) {
+            return res.status(404).json({ message: 'Room not found.' });
+        }
+
+        // 2. Create a new entry in the RoomHistory model
+        const newHistoryEntry = new RoomHistory({
+            roomNumber: updatedRoom.number,
+            status: updatedRoom.status
+        });
+        await newHistoryEntry.save();
+
+        // 3. Add an entry to the audit log
+        await addAuditLog('Room Status Updated', username || 'System', {
+            roomNumber: updatedRoom.number,
+            newStatus: updatedRoom.status
+        });
+
+        res.status(200).json({ message: 'Room status updated successfully!', room: updatedRoom });
+
+    } catch (error) {
+        console.error('Error updating room status:', error);
+        res.status(500).json({ message: 'Error updating room status', error: error.message });
+    }
+});
+
+
 // Incidental Charge Schema
 const incidentalChargeSchema = new mongoose.Schema({
     bookingId: { // This will store the MongoDB _id of the Booking document
