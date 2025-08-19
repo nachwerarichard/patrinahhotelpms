@@ -364,7 +364,7 @@ app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
                 bookingCustomId: booking.id,
                 guestName: booking.name,
                 roomNumber: booking.room,
-                type: 'POS', // Assuming 'POS' is a valid type for incidental charges
+                type: charge.type, // Assuming 'POS' is a valid type for incidental charges
                 description: charge.description,
                 amount: charge.amount
             }));
