@@ -117,10 +117,6 @@
             <section id="housekeeping" class="section">
     <h2><i class="fas fa-broom"></i> Housekeeping</h2>
     <div class="report-controls">
-        <label for="reportDate">Select Date:</label>
-        <input type="date" id="reportDate">
-        <button onclick="generateCombinedReport()">Generate Report</button>
-        <button id="exportExcelBtn" style="display: none;">Export to Excel</button>
        <button onclick="window.open('https://harmonious-crumble-2ca9ba.netlify.app/home8.html');">Reports</button>
     </div>
     <div id="housekeepingRoomGrid" class="room-grid"></div>
@@ -473,7 +469,6 @@
             </div>
         </div>
     </div>
-
     <div id="deletionReasonModal" class="modal">
         <div class="modal-content">
             <span class="close-button" onclick="closeDeletionReasonModal()">&times;</span>
@@ -488,7 +483,6 @@
             </div>
         </div>
     </div>
-
     <div id="messageBox" class="message-box" style="display: none;">
         <h3 id="messageBoxTitle"></h3>
         <p id="messageBoxContent"></p>
@@ -497,105 +491,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="script4.js"></script>
-    <script>
-async function generateCombinedReport() {
-    const reportDateInput = document.getElementById('reportDate');
-    const selectedDate = reportDateInput.value;
-
-    if (!selectedDate) {
-        showMessageBox('Error', 'Please select a date for the report.', true);
-        return;
-    }
-
-    const reportModal = document.getElementById('reportModal');
-    const reportTitle = document.getElementById('reportTitle');
-    const cleanRoomList = document.getElementById('cleanRoomList');
-    const dirtyRoomList = document.getElementById('dirtyRoomList');
-    const exportBtn = document.getElementById('exportExcelBtn');
-
-    reportTitle.textContent = `Generating Report for ${selectedDate}...`;
-    cleanRoomList.innerHTML = '';
-    dirtyRoomList.innerHTML = '';
-    exportBtn.style.display = 'none';
-    reportModal.style.display = 'block';
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/rooms/report-daily?date=${selectedDate}`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        reportData = await response.json();
-
-        reportTitle.textContent = `Room Status Report for ${selectedDate}`;
-
-        if (reportData.cleanRooms.length > 0) {
-            reportData.cleanRooms.forEach(room => {
-                const listItem = document.createElement('li');
-                listItem.textContent = `Room ${room._id}`;
-                cleanRoomList.appendChild(listItem);
-            });
-        } else {
-            cleanRoomList.innerHTML = '<li>No clean rooms found.</li>';
-        }
-
-        if (reportData.dirtyRooms.length > 0) {
-            reportData.dirtyRooms.forEach(room => {
-                const listItem = document.createElement('li');
-                listItem.textContent = `Room ${room._id}`;
-                dirtyRoomList.appendChild(listItem);
-            });
-        } else {
-            dirtyRoomList.innerHTML = '<li>No dirty rooms found.</li>';
-        }
-
-        exportBtn.style.display = 'inline-block';
-
-    } catch (error) {
-        console.error('Error generating report:', error);
-        reportTitle.textContent = 'Error';
-        cleanRoomList.innerHTML = '<li>Failed to generate report.</li>';
-        dirtyRoomList.innerHTML = '';
-        exportBtn.style.display = 'none';
-    }
-}
-
-// Function to export the report to an Excel file
-function exportToExcel() {
-    if (Object.keys(reportData).length === 0) {
-        showMessageBox('Error', 'No data to export.', true);
-        return;
-    }
-
-    const cleanData = reportData.cleanRooms.map(room => ({
-        'Room Number': room._id,
-        'Status': 'Clean'
-    }));
-
-    const dirtyData = reportData.dirtyRooms.map(room => ({
-        'Room Number': room._id,
-        'Status': 'Dirty'
-    }));
-
-    const allData = cleanData.concat(dirtyData);
-
-    const ws = XLSX.utils.json_to_sheet(allData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Room Report");
-    XLSX.writeFile(wb, "room_report.xlsx");
-}
-
-document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
-
-// Modal close functionality
-document.querySelector('.close-button').onclick = function() {
-    document.getElementById('reportModal').style.display = 'none';
-};
-window.onclick = function(event) {
-    const reportModal = document.getElementById('reportModal');
-    if (event.target === reportModal) {
-        reportModal.style.display = 'none';
-    }
-};
-    </script>
 </body>
 </html>
