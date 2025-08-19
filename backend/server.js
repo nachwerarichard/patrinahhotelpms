@@ -532,59 +532,64 @@ app.post('/api/pos/charge/room', async (req, res) => {
         res.status(500).json({ message: 'Error posting charge to room', error: error.message });
     }
 });
+
 app.get('/api/reports/services', async (req, res) => {
-    try {
-        const { startDate, endDate } = req.query;
+    try {
+        const { startDate, endDate } = req.query;
 
-        const query = {};
-        if (startDate && endDate) {
-            query.date = {
-                $gte: new Date(startDate),
-                $lte: new Date(endDate)
-            };
-        }
+        const query = {};
+        if (startDate && endDate) {
+            query.date = {
+                $gte: new Date(startDate),
+                $lte: new Date(endDate)
+            };
+        }
 
-        const serviceReports = await IncidentalCharge.aggregate([
-            { $match: query },
-            {
-                $group: {
-                    _id: {
-                        serviceType: '$type', // Renamed from '$serviceType'
-                        bookedBy: '$username'  // Renamed from '$bookedBy'
-                    },
-                    totalAmount: { $sum: '$amount' },
-                    count: { $sum: 1 }
-                }
-            },
-            {
-                $group: {
-                    _id: '$_id.serviceType',
-                    totalAmount: { $sum: '$totalAmount' },
-                    count: { $sum: '$count' },
-                    bookings: {
-                        $push: {
-                            name: '$_id.bookedBy',
-                            amount: '$totalAmount',
-                            count: '$count'
-                        }
-                    }
-                }
-            },
-            {
-                $project: {
-                    _id: 0,
-                    serviceType: '$_id',
-                    totalAmount: { $round: ['$totalAmount', 2] },
-                    count: 1,
-                    bookings: 1
-                }
-            }
-        ]);
+        const serviceReports = await IncidentalCharge.aggregate([
+            { $match: query },
+            {
+                $group: {
+                    // First grouping: Group by both service type and guest name
+                    _id: {
+                        serviceType: '$type', 
+                        guestName: '$guestName' 
+                    },
+                    totalAmount: { $sum: '$amount' },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $group: {
+                    // Second grouping: Group by service type only to get the total for that service
+                    _id: '$_id.serviceType',
+                    totalAmount: { $sum: '$totalAmount' },
+                    count: { $sum: '$count' },
+                    // Pushing the individual guest charges into a `bookings` array
+                    bookings: {
+                        $push: {
+                            // This now correctly uses the guestName from the first group
+                            name: '$_id.guestName', 
+                            amount: '$totalAmount',
+                            count: '$count'
+                        }
+                    }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    serviceType: '$_id',
+                    totalAmount: { $round: ['$totalAmount', 2] },
+                    count: 1,
+                    bookings: 1
+                }
+            }
+        ]);
 
-        res.json(serviceReports);
-    } catch (error) {
-        res.status(500).json({ message: 'Error generating service report', error: error.message });
-    }
+        res.json(serviceReports);
+    } catch (error) {
+        res.status(500).json({ message: 'Error generating service report', error: error.message });
+    }
 });
 
 // NEW: Post a charge for a walk-in guest
