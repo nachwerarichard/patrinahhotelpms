@@ -247,14 +247,61 @@ const formatDate = (date) => {
 // NEW: API endpoint to generate a combined report for a specific date
 app.get('/api/rooms/report-daily', async (req, res) => {
     try {
-        // Query the Room model directly to get the current status of all rooms
-        const allRooms = await Room.find({});
+        const { date } = req.query;
+
+        if (!date) {
+            return res.status(400).json({ message: 'Date is required for the daily report.' });
+        }
+
+        // Parse the date and create a timestamp for the end of that day.
+        // This ensures the query includes all history up to the end of the selected day.
+        const endOfSelectedDay = new Date(date);
+        endOfSelectedDay.setHours(23, 59, 59, 999);
+
+        // Find the most recent status for each room on or before the given date.
+        const roomStatuses = await RoomHistory.aggregate([
+            {
+                $match: {
+                    timestamp: { $lte: endOfSelectedDay }
+                }
+            },
+            {
+                $sort: { roomNumber: 1, timestamp: -1 }
+            },
+            {
+                $group: {
+                    _id: '$roomNumber',
+                    status: { $first: '$status' }
+                }
+            }
+        ]);
+
+        // If there's no history for a room, its status won't appear in the `roomStatuses` array.
+        // To handle this, we should get all rooms from the Room model and then
+        // find their historical status from the aggregation result.
+        const allRooms = await Room.find({}).select('number');
+
+        const reportRooms = allRooms.map(room => {
+            const historicalStatus = roomStatuses.find(status => status._id === room.number);
+            return {
+                number: room.number,
+                // Use the historical status if it exists, otherwise, default to the current status from the Room model.
+                // This ensures every room is accounted for in the report.
+                status: historicalStatus ? historicalStatus.status : room.status
+            };
+        });
+
 
         // Filter the results to get clean and dirty rooms
-        const cleanRooms = allRooms.filter(room => room.status === 'clean');
-        const dirtyRooms = allRooms.filter(room => room.status === 'dirty');
+        const cleanRooms = reportRooms.filter(room => room.status === 'clean');
+        const dirtyRooms = reportRooms.filter(room => room.status === 'dirty');
 
-        res.json({ cleanRooms, dirtyRooms });
+        res.json({
+            date,
+            cleanRooms: cleanRooms.map(r => r.number), // Return just the room numbers for clarity
+            dirtyRooms: dirtyRooms.map(r => r.number)  // Return just the room numbers for clarity
+        });
+
     } catch (error) {
         console.error('Error generating daily room report:', error);
         res.status(500).json({ message: 'Error generating daily room report', error: error.message });
