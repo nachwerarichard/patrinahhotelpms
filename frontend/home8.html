@@ -516,5 +516,93 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="script4.js"></script>
+    <script>
+        // A function to show a specific section and hide all others
+function showSection(sectionId) {
+    // Hide all sections first
+    const sections = document.querySelectorAll('main > section');
+    sections.forEach(section => {
+        section.classList.add('hidden');
+    });
+
+    // Then show the target section
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) {
+        targetSection.classList.remove('hidden');
+    }
+
+    // You can also manage the active state of your navigation links here
+    const navItems = document.querySelectorAll('aside nav li a');
+    navItems.forEach(item => {
+        item.classList.remove('bg-gray-700', 'text-white');
+    });
+
+    // Add active class to the clicked link's parent <li>
+    const clickedNavItem = document.getElementById(`nav-${sectionId}`);
+    if (clickedNavItem) {
+        clickedNavItem.querySelector('a').classList.add('bg-gray-700', 'text-white');
+    }
+}
+
+// Add event listeners to the navigation links
+document.addEventListener('DOMContentLoaded', () => {
+    const navBooking = document.getElementById('nav-booking');
+    const navHousekeeping = document.getElementById('nav-housekeeping');
+    const navReports = document.getElementById('nav-reports');
+    const navServiceReports = document.getElementById('nav-service-reports');
+    const navCalendar = document.getElementById('nav-calendar');
+    const navAuditLogs = document.getElementById('nav-audit-logs');
+    const navChannelManager = document.getElementById('nav-channel-manager');
+
+    if (navBooking) {
+        navBooking.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('booking-management');
+        });
+    }
+
+    if (navHousekeeping) {
+        navHousekeeping.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection('housekeeping');
+        });
+    }
+
+    if (navReports) {
+        navReports.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection('reports');
+        });
+    }
+
+    if (navServiceReports) {
+        navServiceReports.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection('service-reports');
+        });
+    }
+
+    if (navCalendar) {
+        navCalendar.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection('calendar');
+        });
+    }
+
+    if (navAuditLogs) {
+        navAuditLogs.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection('audit-logs');
+        });
+    }
+
+    if (navChannelManager) {
+        navChannelManager.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection('channel-manager');
+        });
+    }
+});
+    </script>
 </body>
 </html>
