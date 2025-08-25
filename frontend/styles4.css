@@ -10,13 +10,9 @@ table tbody tr:hover {
 
 table td {
     padding: 12px 15px;
-    border-bottom: 1px solid #eee;
-    white-space: nowrap; /* Prevent wrapping in table cells */
 }
 
-table tbody tr:last-child td {
-    border-bottom: none;
-}
+
 
 .action-buttons {
     display: flex;
