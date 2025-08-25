@@ -570,6 +570,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+
+     if (navHousekeeping) {
+        navHousekeeping.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection('housekeeping');
+        });
+    }
+
+    
     if (navServiceReports) {
         navServiceReports.addEventListener('click', (e) => {
             e.preventDefault();
