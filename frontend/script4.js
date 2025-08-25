@@ -117,7 +117,7 @@ const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn
 
 // --- Utility Functions ---
 
-document.addEventListener('DOMContentLoaded', () => {
+/*document.addEventListener('DOMContentLoaded', () => {
     const navItems = document.querySelectorAll('aside nav ul li');
     navItems.forEach(item => {
         // Exclude the logout button from this general navigation handler
@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
             item.addEventListener('click', handleNavigation);
         }
     });
-});
+});*/
 /**
  * Displays a custom message box to the user.
  * @param {string} title - The title of the message box.
@@ -361,6 +361,7 @@ loginForm.addEventListener('submit', async function(event) {
                     currentSearchTerm = ''; // Reset search term
                     await renderBookings(currentPage, currentSearchTerm);
                 } else if (initialSectionId === 'housekeeping') {
+                    await renderHousekeepingRooms();
                 } else if (initialSectionId === 'calendar') {
                     await renderCalendar();
                 } else if (initialSectionId === 'reports') {
