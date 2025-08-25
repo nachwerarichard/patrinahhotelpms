@@ -3,7 +3,9 @@
 /* Style for the container to allow relative positioning for the dropdown */
 .action-buttons-container {
     position: relative;
-    display: inline-block; /* Keep this to properly size the cell content */
+    display: inline-block;
+    padding-bottom:20px;
+    /* Keep this to properly size the cell content */
     /* Add some padding or min-width to the table cell if needed for the '...' button */
     padding-right: 20px; /* Adjust as needed to make space for the ellipsis */
 }
