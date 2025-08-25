@@ -361,7 +361,6 @@ loginForm.addEventListener('submit', async function(event) {
                     currentSearchTerm = ''; // Reset search term
                     await renderBookings(currentPage, currentSearchTerm);
                 } else if (initialSectionId === 'housekeeping') {
-                    await renderHousekeepingRooms();
                 } else if (initialSectionId === 'calendar') {
                     await renderCalendar();
                 } else if (initialSectionId === 'reports') {
