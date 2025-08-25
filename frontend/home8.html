@@ -141,15 +141,39 @@
                 </div>
             </div>
 
+          
             <section id="calendar" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-                <h2 class="text-2xl font-bold mb-4 text-blue-600"><i class="fas fa-calendar-alt"></i> Calendar View</h2>
-                <div class="flex items-center justify-between mb-6">
-                    <button id="prevMonthBtn" class="bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-300"><i class="fas fa-chevron-left"></i> Previous Month</button>
-                    <h3 id="calendarMonthYear" class="text-lg font-bold"></h3>
-                    <button id="nextMonthBtn" class="bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-300">Next Month <i class="fas fa-chevron-right"></i></button>
+    <h2 class="text-2xl font-bold mb-4 text-blue-600">
+        <i class="fas fa-calendar-alt"></i> Calendar View
+    </h2>
+    <div class="flex items-center justify-between mb-6">
+        <button id="prevMonthBtn" class="bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-300">
+            <i class="fas fa-chevron-left"></i> Previous Month
+        </button>
+        <h3 id="calendarMonthYear" class="text-lg font-bold"></h3>
+        <button id="nextMonthBtn" class="bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-300">
+            Next Month <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+    <div id="calendarGrid" class="grid grid-cols-7 gap-1 text-center">
+        <div class="font-bold text-gray-600 p-2">Sun</div>
+        <div class="font-bold text-gray-600 p-2">Mon</div>
+        <div class="font-bold text-gray-600 p-2">Tue</div>
+        <div class="font-bold text-gray-600 p-2">Wed</div>
+        <div class="font-bold text-gray-600 p-2">Thu</div>
+        <div class="font-bold text-gray-600 p-2">Fri</div>
+        <div class="font-bold text-gray-600 p-2">Sat</div>
+        
+        <div class="p-2 border border-gray-200 rounded-lg h-24 flex flex-col justify-between text-sm hover:bg-gray-100 transition duration-150 relative">
+            <span class="text-xs text-gray-400">Day 1</span>
+            <div class="flex-1 overflow-y-auto">
+                <div class="bg-blue-200 text-blue-800 rounded-md p-1 truncate text-xs cursor-pointer" title="Booking Name">
+                    Booking
                 </div>
-                <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
-            </section>
+            </div>
+        </div>
+        </div>
+</section>
 
             <section id="reports" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
                 <h2 class="text-2xl font-bold mb-4 text-blue-600"><i class="fas fa-chart-bar"></i> Daily Reports (Room Revenue Only)</h2>
