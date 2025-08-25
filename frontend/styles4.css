@@ -1,4 +1,53 @@
+/* --- Table Styling --- */
+.table-container {
+    overflow-x: auto; /* Enable horizontal scroll for tables on small screens */
+    margin-bottom: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    z-index:10;
+}
 
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #ffffff;
+    border-radius: 10px;
+    overflow: hidden; /* Ensures rounded corners apply to table content */
+}
+
+table thead th {
+    background-color: #3498db;
+    color: white;
+    padding: 15px;
+    text-align: left;
+    font-weight: bold;
+    white-space: nowrap; /* Prevent wrapping in headers */
+}
+
+table tbody tr:nth-child(even) {
+    background-color: #f8f8f8;
+}
+
+table tbody tr:hover {
+    background-color: #eaf6ff;
+    transition: background-color 0.2s ease;
+}
+
+table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    white-space: nowrap; /* Prevent wrapping in table cells */
+}
+
+table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
 /* Style for the container to allow relative positioning for the dropdown */
 /* Style for the container to allow relative positioning for the dropdown */
 .action-buttons-container {
