@@ -1,0 +1,323 @@
+
+/* Style for the container to allow relative positioning for the dropdown */
+/* Style for the container to allow relative positioning for the dropdown */
+.action-buttons-container {
+    position: relative;
+    display: inline-block; /* Keep this to properly size the cell content */
+    /* Add some padding or min-width to the table cell if needed for the '...' button */
+    padding-right: 20px; /* Adjust as needed to make space for the ellipsis */
+}
+
+/* Style for the "three dots" button */
+.more-actions-btn {
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+    background-color: #f8f9fa;
+    color: #333;
+    /* Ensure it doesn't take up too much space */
+    width: auto;
+}
+
+/* Container for the hidden buttons */
+.hidden-action-buttons {
+    display: none; /* Hidden by default */
+    position: absolute; /* Position relative to .action-buttons-container */
+    background-color: #f9f9f9;
+    min-width: 120px; /* Adjust based on your button text length */
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 50;
+    /* ----- Key changes for positioning inside the cell and vertical display ----- */
+    top: 0; /* Align with the top of the '...' button */
+    left: 0; /* Align with the left edge of the '...' button */
+    transform: translateX(-50%); /* Optional: Center horizontally below '...' */
+    padding: 8px;
+    border-radius: 4px;
+    /* Remove white-space: nowrap; as we want them to stack */
+    
+    /* Make buttons vertical (flex column) */
+    flex-direction: column;
+    gap: 5px; /* Space between buttons */
+}
+
+/* Display the hidden buttons when 'show-buttons' class is present */
+.hidden-action-buttons.show-buttons {
+    display: flex; /* This will make them visible and apply flex properties */
+}
+
+/* Optional: Style for the buttons inside the dropdown */
+.hidden-action-buttons button {
+    width: 100%; /* Make buttons fill the width of the dropdown */
+    text-align: center; /* Center button text */
+    padding: 8px 12px; /* Adjust padding for better look */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+
+/* Optional: Style for the table cell containing the buttons to ensure enough space */
+td:last-child { /* Assuming the action buttons are in the last table column */
+    position: absolute; /* If you want the dropdown to be contained within this cell */
+    overflow: visible; /* Important: Allows the dropdown to extend beyond the cell's boundaries if needed */
+}
+
+
+
+
+
+
+
+/* --- Pagination Controls --- */
+.
+
+
+
+
+/* --- Calendar View Specific Styles --- */
+.calendar-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #ecf0f1;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.calendar-controls h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.8em;
+}
+
+.calendar-grid {
+    display: grid;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: auto; /* Enable scrolling for the entire grid */
+    background-color: #ffffff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    min-height: 400px; /* Ensure some height even if no rooms/bookings */
+    max-height: 80vh; /* Limit height for scrollability */
+}
+
+.calendar-cell {
+    border: 1px solid #eee; /* Light borders for cells */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+    box-sizing: border-box;
+    min-width: 60px; /* Minimum width for date/day cells */
+    height: 60px; /* Fixed height for all cells */
+    overflow: hidden; /* Hide overflowing content */
+    position: relative; /* For positioning booking blocks */
+}
+
+.calendar-corner-header {
+    background-color: #f2f2f2;
+    border-right: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 2; /* Ensure it stays on top when scrolling */
+}
+
+.calendar-date-header {
+    background-color: #3498db;
+    color: white;
+    font-weight: bold;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 0.9em;
+    position: sticky;
+    top: 0;
+    z-index: 1; /* Ensure it stays on top when scrolling horizontally */
+}
+.calendar-date-header span:first-child { /* Day of week */
+    font-size: 0.7em;
+    opacity: 0.8;
+}
+.calendar-date-header span:last-child { /* Date number */
+    font-size: 1.2em;
+}
+
+
+.calendar-room-name {
+    background-color: #f2f2f2;
+    font-weight: 500;
+    color: #555;
+    border-right: 1px solid #ddd;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+    padding: 5px;
+    position: sticky;
+    left: 0;
+    z-index: 1; /* Ensure it stays on top when scrolling vertically */
+}
+
+.calendar-day-cell {
+    background-color: #ffffff;
+    border-right: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    justify-content: flex-start; /* Align bookings to top-left */
+    align-items: flex-start;
+}
+
+.calendar-day-cell.booked {
+    background-color: #ffe0b2; /* Light orange for booked days */
+}
+
+.calendar-booking-block {
+    background-color: #f39c12; /* Orange for bookings */
+    color: white;
+    padding: 2px 5px; /* Reduced padding */
+    border-radius: 4px; /* Slightly smaller border radius */
+    font-size: 0.75em; /* Smaller font size */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 1px; /* Reduced margin */
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    line-height: 1.2; /* Adjust line height for better fit */
+}
+
+.calendar-booking-block:hover {
+    background-color: #e67e22;
+}
+
+.calendar-booking-block.status-paid {
+    background-color: #2ecc71; /* Green for paid */
+}
+
+.calendar-booking-block.status-partially-paid {
+    background-color: #f1c40f; /* Yellow for partially paid */
+}
+
+.calendar-booking-block.status-pending {
+    background-color: #e74c3c; /* Red for pending */
+}
+
+/* Pre tag for audit log details */
+#auditLogTable pre {
+    white-space: pre-wrap; /* Wrap long lines */
+    word-break: break-all; /* Break words if necessary */
+    background-color: #f5f5f5;
+    padding: 5px;
+    border-radius: 5px;
+    max-height: 100px; /* Limit height */
+    overflow-y: auto; /* Add scroll if content is too long */
+}
+
+
+/* --- Responsive Design --- */
+@media (max-width: 768px) {
+    #main-content {
+        flex-direction: column;
+        border-radius: 0; /* No rounded corners on small screens */
+    }
+
+    aside {
+        width: 100%;
+        padding: 10px 0;
+        border-radius: 0;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    aside nav ul {
+        display: flex;
+        flex-wrap: wrap; /* Allow nav items to wrap */
+        justify-content: center;
+    }
+
+    aside nav ul li {
+        margin: 5px;
+    }
+
+    aside nav ul li a {
+        padding: 10px 15px;
+        font-size: 0.9em;
+        margin: 0;
+    }
+
+    main {
+        padding: 20px;
+        border-radius: 0;
+    }
+
+    main h2 {
+        font-size: 1.8em;
+    }
+
+    .controls, .report-controls, .filter-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .controls input[type="text"],
+    .controls input[type="date"],
+    .filter-controls input[type="text"],
+    .filter-controls input[type="date"],
+    .btn {
+        width: 100%;
+        max-width: none; /* Remove max-width for full width */
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr; /* Single column for forms on small screens */
+    }
+
+    .modal-content {
+        width: 95%;
+        padding: 20px;
+    }
+
+    .receipt-content {
+        padding: 15px;
+    }
+
+    .receipt-header .hotel-logo {
+        max-width: 100px;
+    }
+
+    .receipt-header h3 {
+        font-size: 1.5em;
+    }
+
+    .receipt-table th, .receipt-table td {
+        font-size: 0.9em;
+    }
+
+    .message-box {
+        width: 90%;
+        padding: 20px;
+    }
+
+    .message-box h3 {
+        font-size: 1.5em;
+    }
+
+    /* Calendar adjustments for smaller screens */
+    .calendar-grid {
+        /* On smaller screens, allow more flexible column width for dates */
+        grid-auto-columns: minmax(50px, 1fr);
+        min-width: unset; /* Remove fixed min-width for the grid */
+    }
+
+    .calendar-cell {
+        min-width: 50px; /* Smaller min-width for cells */
+        height: 50px; /* Smaller height for cells */
+        font-size: 0.7em; /* Smaller font for cell content */
+    }
+
+    .calendar-room-name {
+        min-width: 80px; /* Ensure room names have enough space */
+    }
+}
+
+/* Print Styles for Receipt */
