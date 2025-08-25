@@ -4,7 +4,7 @@
 .action-buttons-container {
     position: relative;
     display: inline-block;
-    padding-bottom:20px;
+    padding-bottom:40px;
     /* Keep this to properly size the cell content */
     /* Add some padding or min-width to the table cell if needed for the '...' button */
     padding-right: 20px; /* Adjust as needed to make space for the ellipsis */
