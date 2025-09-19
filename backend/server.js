@@ -816,25 +816,7 @@ app.post('/api/audit-log/action', async (req, res) => {
 });
 
 // Temporarily modify your init route
-app.post('/api/rooms/init', async (req, res) => {
-    try {
-        // Step 1: Delete all existing rooms
-        await Room.deleteMany({});
-        console.log('Existing rooms cleared before initialization.');
 
-        // Step 2: Add the new rooms
-        const initialRooms = [
-            // ... your new list of 20 rooms here ...
-        ];
-
-        await Room.insertMany(initialRooms);
-        console.log('Initial rooms added to DB.');
-        res.status(201).json({ message: 'Rooms re-initialized successfully!' });
-
-    } catch (error) {
-        res.status(500).json({ message: 'Error re-initializing rooms', error: error.message });
-    }
-});
 // --- Rooms API ---
 // Initialize rooms in DB if empty (run once manually or on first boot)
 
@@ -854,11 +836,11 @@ app.post('/api/rooms/init', async (req, res) => {
   { id: 'R104', type: 'Delux 2', number: '104', status: 'clean' },
   { id: 'R105', type: 'Delux 2', number: '105', status: 'clean' },
   { id: 'R106', type: 'Delux 2', number: '106', status: 'clean' },
-  { id: 'R107', type: 'Delux 1', number: '107', status: 'clean' },
+  { id: 'R107', type: 'Delux 2', number: '107', status: 'clean' },
   { id: 'R108', type: 'Delux 1', number: '108', status: 'clean' },
   { id: 'R109', type: 'Delux 1', number: '109', status: 'clean' },
   { id: 'R110', type: 'Delux 2', number: '110', status: 'clean' },
-  { id: 'R111', type: 'Delux 2', number: '111', status: 'clean' },
+  { id: 'R111', type: 'Suite', number: '111', status: 'clean' },
   { id: 'R112', type: 'Delux 2', number: '112', status: 'clean' },
   { id: 'R113', type: 'Delux 3', number: '113', status: 'clean' },
   { id: 'R114', type: 'Delux 3', number: '114', status: 'clean' },
