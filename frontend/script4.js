@@ -1930,8 +1930,20 @@ try {
         logs.forEach(log => {
             const row = auditLogTableBody.insertRow();
             
-            // Format the details object into a single line, separated by commas
-            const detailsHTML = Object.entries(log.details).map(([key, value]) => {
+            // Create a new object for details without 'role' or 'error'
+            const filteredDetails = {};
+            for (const key in log.details) {
+                if (log.details.hasOwnProperty(key) && key !== 'role' && key !== 'error') {
+                    // Only add 'reason' if it exists
+                    if (key === 'reason' && !log.details[key]) {
+                        continue; 
+                    }
+                    filteredDetails[key] = log.details[key];
+                }
+            }
+
+            // Format the filtered details into a single line, separated by commas
+            const detailsHTML = Object.entries(filteredDetails).map(([key, value]) => {
                 const displayValue = typeof value === 'object' && value !== null 
                                      ? JSON.stringify(value) 
                                      : value;
