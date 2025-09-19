@@ -823,15 +823,29 @@ app.post('/api/rooms/init', async (req, res) => {
         const count = await Room.countDocuments();
         if (count === 0) {
             const initialRooms = [
-                { id: 'R101', type: 'Delux 1', number: '101', status: 'clean' },
-                { id: 'R102', type: 'Delux 1', number: '102', status: 'clean' },
-                { id: 'R103', type: 'Delux 1', number: '103', status: 'clean' },
-                { id: 'R104', type: 'Delux 2', number: '104', status: 'clean' },
-                { id: 'R105', type: 'Delux 2', number: '105', status: 'clean' },
-                { id: 'R106', type: 'Delux 2', number: '106', status: 'clean' },
-                { id: 'R201', type: 'Standard', number: '201', status: 'clean' },
-                { id: 'R202', type: 'Standard', number: '202', status: 'clean' },
-            ];
+                
+  { id: 'R101', type: 'Delux 1', number: '101', status: 'clean' },
+  { id: 'R102', type: 'Delux 1', number: '102', status: 'clean' },
+  { id: 'R103', type: 'Delux 1', number: '103', status: 'clean' },
+  { id: 'R104', type: 'Delux 2', number: '104', status: 'clean' },
+  { id: 'R105', type: 'Delux 2', number: '105', status: 'clean' },
+  { id: 'R106', type: 'Delux 2', number: '106', status: 'clean' },
+  { id: 'R107', type: 'Delux 1', number: '107', status: 'clean' },
+  { id: 'R108', type: 'Delux 1', number: '108', status: 'clean' },
+  { id: 'R109', type: 'Delux 1', number: '109', status: 'clean' },
+  { id: 'R110', type: 'Delux 2', number: '110', status: 'clean' },
+  { id: 'R111', type: 'Delux 2', number: '111', status: 'clean' },
+  { id: 'R112', type: 'Delux 2', number: '112', status: 'clean' },
+  { id: 'R113', type: 'Delux 3', number: '113', status: 'clean' },
+  { id: 'R114', type: 'Delux 3', number: '114', status: 'clean' },
+  { id: 'R115', type: 'Delux 3', number: '115', status: 'clean' },
+  { id: 'R116', type: 'Suite', number: '116', status: 'clean' },
+  { id: 'R117', type: 'Suite', number: '117', status: 'clean' },
+  { id: 'R118', type: 'Suite', number: '118', status: 'clean' },
+  { id: 'R119', type: 'Suite', number: '119', status: 'clean' },
+  { id: 'R120', type: 'Suite', number: '120', status: 'clean' }
+];
+
             await Room.insertMany(initialRooms);
             console.log('Initial rooms added to DB.');
             res.status(201).json({ message: 'Initial rooms added successfully!' });
