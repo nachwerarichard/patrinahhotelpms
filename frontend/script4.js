@@ -1930,14 +1930,13 @@ try {
         logs.forEach(log => {
             const row = auditLogTableBody.insertRow();
             
-            // Format the details object into a readable HTML string
+            // Format the details object into a single line, separated by commas
             const detailsHTML = Object.entries(log.details).map(([key, value]) => {
-                // Handle nested objects gracefully, otherwise just display the value
                 const displayValue = typeof value === 'object' && value !== null 
-                                     ? JSON.stringify(value, null, 2) 
+                                     ? JSON.stringify(value) 
                                      : value;
-                return `<strong>${key}:</strong> ${displayValue}`;
-            }).join('<br>');
+                return `${key}: ${displayValue}`;
+            }).join(', ');
 
             row.innerHTML = `
                 <td>${new Date(log.timestamp).toLocaleString()}</td>
