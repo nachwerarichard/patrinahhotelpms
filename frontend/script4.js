@@ -1930,31 +1930,14 @@ try {
         logs.forEach(log => {
             const row = auditLogTableBody.insertRow();
             
-            // Create a new object for details without 'role' or 'error'
-            const filteredDetails = {};
-            for (const key in log.details) {
-                if (log.details.hasOwnProperty(key) && key !== 'role' && key !== 'error') {
-                    // Only add 'reason' if it exists
-                    if (key === 'reason' && !log.details[key]) {
-                        continue; 
-                    }
-                    filteredDetails[key] = log.details[key];
-                }
-            }
-
-            // Format the filtered details into a single line, separated by commas
-            const detailsHTML = Object.entries(filteredDetails).map(([key, value]) => {
-                const displayValue = typeof value === 'object' && value !== null 
-                                     ? JSON.stringify(value) 
-                                     : value;
-                return `${key}: ${displayValue}`;
-            }).join(', ');
+            // Only get the 'reason' property from the details object
+            const reason = log.details && log.details.reason ? log.details.reason : '';
 
             row.innerHTML = `
                 <td>${new Date(log.timestamp).toLocaleString()}</td>
                 <td>${log.user}</td>
                 <td>${log.action}</td>
-                <td>${detailsHTML}</td>
+                <td>${reason}</td>
             `;
         });
     }
