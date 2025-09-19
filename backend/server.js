@@ -815,16 +815,40 @@ app.post('/api/audit-log/action', async (req, res) => {
     }
 });
 
-
-// --- Rooms API ---
-// Initialize rooms in DB if empty (run once manually or on first boot)
+// Temporarily modify your init route
 app.post('/api/rooms/init', async (req, res) => {
     try {
-        const count = await Room.countDocuments();
-        if (count === 0) {
-            const initialRooms = [
-                
-  { id: 'R101', type: 'Delux 1', number: '101', status: 'clean' },
+        // Step 1: Delete all existing rooms
+        await Room.deleteMany({});
+        console.log('Existing rooms cleared before initialization.');
+
+        // Step 2: Add the new rooms
+        const initialRooms = [
+            // ... your new list of 20 rooms here ...
+        ];
+
+        await Room.insertMany(initialRooms);
+        console.log('Initial rooms added to DB.');
+        res.status(201).json({ message: 'Rooms re-initialized successfully!' });
+
+    } catch (error) {
+        res.status(500).json({ message: 'Error re-initializing rooms', error: error.message });
+    }
+});
+// --- Rooms API ---
+// Initialize rooms in DB if empty (run once manually or on first boot)
+
+// Temporarily modify your init route
+app.post('/api/rooms/init', async (req, res) => {
+    try {
+        // Step 1: Delete all existing rooms
+        await Room.deleteMany({});
+        console.log('Existing rooms cleared before initialization.');
+
+        // Step 2: Add the new rooms
+        const initialRooms = [
+            // ... your new list of 20 rooms here ...
+            { id: 'R101', type: 'Delux 1', number: '101', status: 'clean' },
   { id: 'R102', type: 'Delux 1', number: '102', status: 'clean' },
   { id: 'R103', type: 'Delux 1', number: '103', status: 'clean' },
   { id: 'R104', type: 'Delux 2', number: '104', status: 'clean' },
@@ -844,18 +868,18 @@ app.post('/api/rooms/init', async (req, res) => {
   { id: 'R118', type: 'Suite', number: '118', status: 'clean' },
   { id: 'R119', type: 'Suite', number: '119', status: 'clean' },
   { id: 'R120', type: 'Suite', number: '120', status: 'clean' }
-];
+        ];
 
-            await Room.insertMany(initialRooms);
-            console.log('Initial rooms added to DB.');
-            res.status(201).json({ message: 'Initial rooms added successfully!' });
-        } else {
-            res.status(200).json({ message: 'Rooms already exist in DB.' });
-        }
+        await Room.insertMany(initialRooms);
+        console.log('Initial rooms added to DB.');
+        res.status(201).json({ message: 'Rooms re-initialized successfully!' });
+
     } catch (error) {
-        res.status(500).json({ message: 'Error initializing rooms', error: error.message });
+        res.status(500).json({ message: 'Error re-initializing rooms', error: error.message });
     }
 });
+
+
 
 
 // Get all rooms (accessible by admin and housekeeper)
