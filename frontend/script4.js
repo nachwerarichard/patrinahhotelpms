@@ -1938,7 +1938,6 @@ async function renderAuditLogs() {
                     <td>${new Date(log.timestamp).toLocaleString()}</td>
                     <td>${log.user}</td>
                     <td>${log.action}</td>
-                    <td><pre>${JSON.stringify(log.details, null, 2)}</pre></td>
                 `;
             });
         }
