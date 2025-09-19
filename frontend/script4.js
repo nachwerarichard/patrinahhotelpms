@@ -1917,26 +1917,37 @@ async function renderAuditLogs() {
     if (startDate) queryParams.append('startDate', startDate);
     if (endDate) queryParams.append('endDate', endDate);
 
-    try {
-        const response = await fetch(`${API_BASE_URL}/audit-logs?${queryParams.toString()}`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const logs = await response.json();
+try {
+    const response = await fetch(`${API_BASE_URL}/audit-logs?${queryParams.toString()}`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const logs = await response.json();
 
-        auditLogTableBody.innerHTML = ''; // Clear loading message
+    auditLogTableBody.innerHTML = ''; // Clear loading message
 
-        if (logs.length === 0) {
-            auditLogTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No audit logs found for the selected filters.</td></tr>';
-        } else {
-            logs.forEach(log => {
-                const row = auditLogTableBody.insertRow();
-                row.innerHTML = `
-                    <td>${new Date(log.timestamp).toLocaleString()}</td>
-                    <td>${log.user}</td>
-                    <td>${log.action}</td>
-                `;
-            });
-        }
-    } catch (error) {
+    if (logs.length === 0) {
+        auditLogTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No audit logs found for the selected filters.</td></tr>';
+    } else {
+        logs.forEach(log => {
+            const row = auditLogTableBody.insertRow();
+            
+            // Format the details object into a readable HTML string
+            const detailsHTML = Object.entries(log.details).map(([key, value]) => {
+                // Handle nested objects gracefully, otherwise just display the value
+                const displayValue = typeof value === 'object' && value !== null 
+                                     ? JSON.stringify(value, null, 2) 
+                                     : value;
+                return `<strong>${key}:</strong> ${displayValue}`;
+            }).join('<br>');
+
+            row.innerHTML = `
+                <td>${new Date(log.timestamp).toLocaleString()}</td>
+                <td>${log.user}</td>
+                <td>${log.action}</td>
+                <td>${detailsHTML}</td>
+            `;
+        });
+    }
+}catch (error) {
         console.error('Error fetching audit logs:', error);
         showMessageBox('Error', `Failed to load audit logs: ${error.message}`, true);
         auditLogTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red;">Error loading audit logs.</td></tr>';
