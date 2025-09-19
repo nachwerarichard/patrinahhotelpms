@@ -1930,8 +1930,8 @@ try {
         logs.forEach(log => {
             const row = auditLogTableBody.insertRow();
             
-            // Only get the 'reason' property from the details object
-            const reason = log.details && log.details.reason ? log.details.reason : '';
+            // Check for the 'reason' property and explicitly remove the 'N/A' string
+            const reason = (log.details && log.details.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
 
             row.innerHTML = `
                 <td>${new Date(log.timestamp).toLocaleString()}</td>
