@@ -370,6 +370,17 @@ app.get('/api/pos/reports/daily', async (req, res) => {
     }
 });
 
+// TEMPORARY: Add this new route to delete all rooms
+app.post('/api/rooms/clear-all', async (req, res) => {
+  try {
+    await Room.deleteMany({}); // Deletes all documents in the 'rooms' collection
+    console.log('All rooms deleted successfully.');
+    res.status(200).json({ message: 'All room data has been cleared.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error clearing rooms', error: error.message });
+  }
+});
+
 // POST /api/pos/client/account
 app.post('/api/pos/client/account', async (req, res) => {
     const { guestName, roomNumber } = req.body;
