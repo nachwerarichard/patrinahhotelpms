@@ -623,14 +623,9 @@ async function renderBookings(page = 1, searchTerm = '') {
                     <button class="btn btn-primary btn-sm" onclick="editBooking('${booking.id}')">Edit</button>
                     <button class="btn btn-danger btn-sm" onclick="confirmDeleteBooking('${booking.id}')">Delete</button>
                     <button class="btn btn-success btn-sm" onclick="checkoutBooking('${booking.id}')" ${isCheckedOut ? 'disabled' : ''}>Check-out</button>
-                    <button class="btn btn-secondary btn-sm" onclick="viewCharges('${booking.id}')">View Charges</button>
-                    <button class="btn btn-info btn-sm" onclick="printReceipt('${booking.id}')"><i class="fas fa-print"></i> Receipt</button>
                 `;
             } else if (currentUserRole === 'bar') {
-                actionButtonsHtml = `
-                    <button class="btn btn-secondary btn-sm" onclick="viewCharges('${booking.id}')">View Charges</button>
-                    <button class="btn btn-info btn-sm" onclick="printReceipt('${booking.id}')"><i class="fas fa-print"></i> Receipt</button>
-                `;
+                
             }
 
             row.innerHTML = `
