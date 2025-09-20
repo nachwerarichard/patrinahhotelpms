@@ -58,9 +58,13 @@ const port = 3000; // Backend will run on port 3000
 const mongoURI = 'mongodb+srv://nachwerarichard:hotelpms@cluster0.g4cjpwg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'; // Your MongoDB Atlas connection string
 
 mongoose.connect(mongoURI)
-    .then(() => console.log('MongoDB connected successfully!'))
-    .catch(err => console.error('MongoDB connection error:', err));
-
+    .then(() => {
+        console.log('MongoDB connected successfully!');
+        reinitializeRooms(); // Call the function here
+    })
+    .catch(err => {
+        console.error('MongoDB connection error:', err);
+    });
 // --- 5. Define Mongoose Schemas and Models ---
 
 // Add this new schema and model definition with your other schemas
@@ -826,24 +830,12 @@ app.post('/api/audit-log/action', async (req, res) => {
     }
 });
 
-// Temporarily modify your init route
 
-// --- Rooms API ---
-// Initialize rooms in DB if empty (run once manually or on first boot)
-
-// Temporarily modify your init route
-app.post('/api/rooms/init', async (req, res) => {
-    try {
-        // Step 1: Delete all existing rooms
-        await Room.deleteMany({});
-        console.log('Existing rooms cleared before initialization.');
-
-        // Step 2: Add the new rooms
-        const initialRooms = [
-            // ... your new list of 20 rooms here ...
-            { id: 'R101', type: 'Delux 1', number: '101', status: 'clean' },
-  { id: 'R102', type: 'Delux 1', number: '102', status: 'clean' },
-  { id: 'R103', type: 'Delux 1', number: '103', status: 'clean' },
+async function reinitializeRooms() {
+    const initialRooms = [
+        { id: 'R101', type: 'Delux 1', number: '101', status: 'clean' },
+        { id: 'R102', type: 'Delux 1', number: '102', status: 'clean' },
+        { id: 'R103', type: 'Delux 1', number: '103', status: 'clean' },
   { id: 'R104', type: 'Delux 2', number: '104', status: 'clean' },
   { id: 'R105', type: 'Delux 2', number: '105', status: 'clean' },
   { id: 'R106', type: 'Delux 2', number: '106', status: 'clean' },
@@ -860,15 +852,28 @@ app.post('/api/rooms/init', async (req, res) => {
   { id: 'R117', type: 'Suite', number: '117', status: 'clean' },
   { id: 'R118', type: 'Suite', number: '118', status: 'clean' },
   { id: 'R119', type: 'Suite', number: '119', status: 'clean' },
-  { id: 'R120', type: 'Suite', number: '120', status: 'clean' }
-        ];
+        { id: 'R120', type: 'Suite', number: '120', status: 'clean' }
+    ];
 
+    try {
+        await Room.deleteMany({});
+        console.log('Existing rooms cleared before initialization.');
         await Room.insertMany(initialRooms);
         console.log('Initial rooms added to DB.');
-        res.status(201).json({ message: 'Rooms re-initialized successfully!' });
-
+        return { success: true, message: 'Rooms re-initialized successfully!' };
     } catch (error) {
-        res.status(500).json({ message: 'Error re-initializing rooms', error: error.message });
+        console.error('Error re-initializing rooms:', error.message);
+        return { success: false, message: 'Error re-initializing rooms', error: error.message };
+    }
+}
+
+
+app.post('/api/rooms/init', async (req, res) => {
+    const result = await reinitializeRooms();
+    if (result.success) {
+        res.status(201).json({ message: result.message });
+    } else {
+        res.status(500).json({ message: result.message, error: result.error });
     }
 });
 
