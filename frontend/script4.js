@@ -550,6 +550,7 @@ function applyRoleAccess(role) {
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             break;
         case 'bar':
+             document.getElementById('nav-booking').style.display = 'none';
             // Bar staff only see booking management and logout
             document.getElementById('nav-booking').style.display = 'list-item';
             break;
