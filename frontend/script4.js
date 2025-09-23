@@ -546,6 +546,7 @@ function applyRoleAccess(role) {
             document.getElementById('nav-channel-manager').style.display = 'list-item';
             break;
         case 'housekeeper':
+            document.getElementById('booking-management').style.display = 'none';
             // Housekeepers only see housekeeping and logout
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             break;
