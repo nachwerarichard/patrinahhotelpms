@@ -346,6 +346,8 @@ loginForm.addEventListener('submit', async function(event) {
             }
             else if (currentUserRole === 'housekeeper') {
                 initialSectionId = 'housekeeping';
+                            document.getElementById('booking-management').style.display='none';
+
                 initialNavLinkId = 'nav-housekeeping';
             }
 
