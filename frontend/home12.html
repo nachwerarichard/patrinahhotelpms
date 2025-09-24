@@ -281,111 +281,112 @@
             <span class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800" onclick="closeBookingModal()">&times;</span>
             <h2 id="modalTitle" class="text-2xl font-bold mb-6 text-blue-600"><i class="fas fa-hotel"></i> Add New Booking</h2>
             <form id="bookingForm">
-                <input type="hidden" id="bookingId">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div class="flex flex-col">
-                        <label for="name" class="text-gray-700 font-semibold mb-1"><i class="fas fa-user"></i> Guest Name:</label>
-                        <input type="text" id="name" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="name" class="text-gray-700 font-semibold mb-1"><i class="fas fa-user"></i> Occupation:</label>
-                        <input type="text" id="occupation" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="room" class="text-gray-700 font-semibold mb-1"><i class="fas fa-door-open"></i> Room Number:</label>
-                        <select id="room" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">Select a Room</option>
-                        </select>
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="checkIn" class="text-gray-700 font-semibold mb-1"><i class="fas fa-calendar-check"></i> Check-in Date:</label>
-                        <input type="date" id="checkIn" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="checkOut" class="text-gray-700 font-semibold mb-1"><i class="fas fa-calendar-times"></i> Check-out Time:</label>
-                        <input type="time" id="checkIntime" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="checkOut" class="text-gray-700 font-semibold mb-1"><i class="fas fa-calendar-times"></i> Check-out Date:</label>
-                        <input type="date" id="checkOut" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="checkOut" class="text-gray-700 font-semibold mb-1"><i class="fas fa-calendar-times"></i> Check-out Time:</label>
-                        <input type="time" id="checkOuttime" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="nights" class="text-gray-700 font-semibold mb-1"><i class="fas fa-moon"></i> Nights:</label>
-                        <input type="number" id="nights" readonly class="px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="amtPerNight" class="text-gray-700 font-semibold mb-1"><i class="fas fa-dollar-sign"></i> Amount Per Night:</label>
-                        <input type="number" id="amtPerNight" step="0.01" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="totalDue" class="text-gray-700 font-semibold mb-1"><i class="fas fa-money-bill-wave"></i> Room Total Due:</label>
-                        <input type="number" id="totalDue" step="0.01" readonly class="px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="amountPaid" class="text-gray-700 font-semibold mb-1"><i class="fas fa-money-check-alt"></i> Room Amount Paid:</label>
-                        <input type="number" id="amountPaid" step="0.01" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="balance" class="text-gray-700 font-semibold mb-1"><i class="fas fa-wallet"></i> Room Balance:</label>
-                        <input type="number" id="balance" step="0.01" readonly class="px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="paymentStatus" class="text-gray-700 font-semibold mb-1"><i class="fas fa-hand-holding-usd"></i> Payment Status:</label>
-                        <select id="paymentStatus" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="Pending">Pending</option>
-                            <option value="Partially Paid">Partially Paid</option>
-                            <option value="Paid">Paid</option>
-                        </select>
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="people" class="text-gray-700 font-semibold mb-1"><i class="fas fa-users"></i> Number of People:</label>
-                        <input type="number" id="people" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="nationality" class="text-gray-700 font-semibold mb-1"><i class="fas fa-globe-americas"></i> Nationality:</label>
-                        <input type="text" id="nationality" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="nationalIdNo" class="text-gray-700 font-semibold mb-1"><i class="fas fa-globe-americas"></i> Passport/ID No:</label>
-                        <input type="text" id="nationalIdNo" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="address" class="text-gray-700 font-semibold mb-1"><i class="fas fa-address-card"></i> Address:</label>
-                        <input type="text" id="address" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="phoneNo" class="text-gray-700 font-semibold mb-1"><i class="fas fa-phone"></i> Phone Number:</label>
-                        <input type="text" id="phoneNo" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="name" class="text-gray-700 font-semibold mb-1"><i class="fas fa-user"></i> Next of Kin:</label>
-                        <input type="text" id="kin" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="name" class="text-gray-700 font-semibold mb-1"><i class="fas fa-user"></i> Next of kin tel contact</label>
-                        <input type="text" id="kintel" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="name" class="text-gray-700 font-semibold mb-1"><i class="fas fa-user"></i> Address:</label>
-                        <input type="text" id="address" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="name" class="text-gray-700 font-semibold mb-1"><i class="fas fa-user"></i> Purpose of visit:</label>
-                        <input type="text" id="name" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="guestEmail" class="text-gray-700 font-semibold mb-1">Guest Email:</label>
-                        <input type="email" id="guestEmail" name="guestEmail" placeholder="guest@example.com" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                </div>
-                <div class="mt-6 text-center">
-                    <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300"><i class="fas fa-save"></i> Save Booking</button>
-                </div>
-            </form>
+    <input type="hidden" id="bookingId">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="flex flex-col">
+            <label for="name" class="text-gray-700 font-semibold mb-1"> Guest Name:</label>
+            <input type="text" id="name" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="name" class="text-gray-700 font-semibold mb-1"> Occupation:</label>
+            <input type="text" id="occupation" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="room" class="text-gray-700 font-semibold mb-1"> Room Number:</label>
+            <select id="room" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Select a Room</option>
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="checkIn" class="text-gray-700 font-semibold mb-1"> Check-in Date:</label>
+            <input type="date" id="checkIn" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="checkOut" class="text-gray-700 font-semibold mb-1"> Check-out Time:</label>
+            <input type="time" id="checkIntime" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="checkOut" class="text-gray-700 font-semibold mb-1"> Check-out Date:</label>
+            <input type="date" id="checkOut" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="checkOut" class="text-gray-700 font-semibold mb-1"> Check-out Time:</label>
+            <input type="time" id="checkOuttime" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="nights" class="text-gray-700 font-semibold mb-1"> Nights:</label>
+            <input type="number" id="nights" readonly class="px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
+        </div>
+        <div class="flex flex-col">
+            <label for="amtPerNight" class="text-gray-700 font-semibold mb-1"> Amount Per Night:</label>
+            <input type="number" id="amtPerNight" step="0.01" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="totalDue" class="text-gray-700 font-semibold mb-1"> Room Total Due:</label>
+            <input type="number" id="totalDue" step="0.01" readonly class="px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
+        </div>
+        <div class="flex flex-col">
+            <label for="amountPaid" class="text-gray-700 font-semibold mb-1"> Room Amount Paid:</label>
+            <input type="number" id="amountPaid" step="0.01" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="balance" class="text-gray-700 font-semibold mb-1"> Room Balance:</label>
+            <input type="number" id="balance" step="0.01" readonly class="px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
+        </div>
+        <div class="flex flex-col">
+            <label for="paymentStatus" class="text-gray-700 font-semibold mb-1"> Payment Status:</label>
+            <select id="paymentStatus" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="Pending">Pending</option>
+                <option value="Partially Paid">Partially Paid</option>
+                <option value="Paid">Paid</option>
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="people" class="text-gray-700 font-semibold mb-1"> Number of People:</label>
+            <input type="number" id="people" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="nationality" class="text-gray-700 font-semibold mb-1"> Nationality:</label>
+            <input type="text" id="nationality" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="nationalIdNo" class="text-gray-700 font-semibold mb-1"> Passport/ID No:</label>
+            <input type="text" id="nationalIdNo" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="address" class="text-gray-700 font-semibold mb-1"> Address:</label>
+            <input type="text" id="address" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="phoneNo" class="text-gray-700 font-semibold mb-1"> Phone Number:</label>
+            <input type="text" id="phoneNo" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="name" class="text-gray-700 font-semibold mb-1"> Next of Kin:</label>
+            <input type="text" id="kin" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="name" class="text-gray-700 font-semibold mb-1"> Next of kin tel contact</label>
+            <input type="text" id="kintel" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="name" class="text-gray-700 font-semibold mb-1"> Address:</label>
+            <input type="text" id="address" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="name" class="text-gray-700 font-semibold mb-1"> Purpose of visit:</label>
+            <input type="text" id="name" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex flex-col">
+            <label for="guestEmail" class="text-gray-700 font-semibold mb-1">Guest Email:</label>
+            <input type="email" id="guestEmail" name="guestEmail" placeholder="guest@example.com" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+    </div>
+    <div class="mt-6 text-center">
+        <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">Save Booking</button>
+    </div>
+</form>
+
         </div>
     </div>
 
