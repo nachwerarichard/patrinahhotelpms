@@ -984,6 +984,21 @@ async function editBooking(id) {
         document.getElementById('phoneNo').value = booking.phoneNo;
         document.getElementById('guestEmail').value = booking.guestEmail;
         document.getElementById('nationalIdNo').value = booking.nationalIdNo;
+        // Booking Details
+document.getElementById('occupation').value = booking.occupation || '';
+document.getElementById('vehno').value = booking.vehno || '';
+document.getElementById('destination').value = booking.destination || '';
+document.getElementById('checkIntime').value = booking.checkIntime || '';
+document.getElementById('checkOuttime').value = booking.checkOuttime || '';
+
+// Guest Contact/Identity Details
+document.getElementById('kin').value = booking.kin || ''; // Next of kin
+document.getElementById('kintel').value = booking.kintel || ''; // Next of kin phone
+
+// Purpose/Declarations
+document.getElementById('purpose').value = booking.purpose || '';
+document.getElementById('declarations').value = booking.declarations || '';
+
         bookingModal.style.display = 'flex';
     } catch (error) {
         console.error('Error fetching booking for edit:', error);
