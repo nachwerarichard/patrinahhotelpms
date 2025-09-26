@@ -895,9 +895,20 @@ bookingForm.addEventListener('submit', async function(event) {
     const phoneNo = document.getElementById('phoneNo').value;
     const guestEmail = document.getElementById('guestEmail').value;
     const nationalIdNo = document.getElementById('nationalIdNo').value;
+
+        const occupation = document.getElementById('occupation').value;
+    const vehno = document.getElementById('vehno').value;
+    const destination = document.getElementById('destination').value;
+    const checkIntime = document.getElementById('checkIntime').value;
+    const checkOuttime = document.getElementById('checkOuttime').value;
+    const kin = document.getElementById('kin').value; // Next of kin name/info
+    const kintel = document.getElementById('kintel').value; // Next of kin phone
+    const purpose = document.getElementById('purpose').value;
+    const declarations = document.getElementById('declarations').value;
+    
     const bookingData = {
-        name, room: roomNumber, checkIn, checkOut, nights, amtPerNight,
-        totalDue, amountPaid, balance, paymentStatus, people, nationality,
+        name, room: roomNumber, checkIn, checkOut, nights, amtPerNight,occupation,vehno,destination,checkIntime,checkOuttime,kin,kintel,
+        totalDue, amountPaid, balance, paymentStatus, people, nationality,purpose,declarations,
         address, phoneNo, guestEmail, nationalIdNo,
         username: currentUsername // Pass username for audit log
     };
