@@ -106,8 +106,13 @@ const bookingSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true }, // Your custom booking ID (e.g., 'BKG001')
     name: { type: String, required: true },
     room: { type: String, required: true }, // Room number, references Room model
+    occupation: { type: String }, // Room number, references Room model
     checkIn: { type: String, required: true }, // Stored as YYYY-MM-DD string
+    vehno: { type: String }, // Room number, references Room model
+    destination: { type: String },
+    checkIntime: { type: String}, // Stored as YYYY-MM-DD string
     checkOut: { type: String, required: true }, // Stored as YYYY-MM-DD string
+    checkOuttime: { type: String }, // Stored as YYYY-MM-DD string
     nights: { type: Number, required: true },
     amtPerNight: { type: Number, required: true },
     totalDue: { type: Number, required: true }, // This is ROOM total due
@@ -117,6 +122,10 @@ const bookingSchema = new mongoose.Schema({
     people: { type: Number, required: true },
     nationality: { type: String },
     address: { type: String },
+    kin: { type: String },
+    kintel: { type: String },
+    purpose: { type: String },
+    declarations: { type: String },
     phoneNo: { type: String },
     guestEmail: { type: String }, // Renamed from 'email' to 'guestEmail' for clarity, consistent with frontend
     nationalIdNo: { type: String }
