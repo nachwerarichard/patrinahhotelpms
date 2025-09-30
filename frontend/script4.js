@@ -1521,6 +1521,7 @@ async function generateReport() {
 let reportSummary = {};  // Object holding summary info
 
 function exportReport() {
+    // Check 1: Ensure data exists
     if (reportData.length === 0) {
         showMessageBox('Info', 'Please generate the report before exporting.', true);
         return;
@@ -1532,28 +1533,47 @@ function exportReport() {
     // Count of data rows (including header row)
     const dataRowCount = reportData.length + 1;
 
-    // Insert one empty row, then TOTAL REVENUE label and value
-    const totalLabel = 'TOTAL REVENUE';
-    const totalAmount = reportSummary['Total Room Revenue'] || 0;
-
-    // Find column index for "Room Revenue"
+    // --- FIX APPLIED HERE ---
+    // 1. Find column index for "Room Revenue"
     const revenueColIndex = headers.indexOf('Room Revenue');
-    const revenueColLetter = String.fromCharCode(65 + revenueColIndex); // e.g. D
 
-    const summaryRowIndex = dataRowCount + 1 + 1; // one blank row + 1
+    // 2. CRITICAL VALIDATION: Check if the column was actually found (index must be 0 or greater)
+    if (revenueColIndex === -1) {
+        console.error("Export Error: The required column 'Room Revenue' was not found in the data headers.");
+        // Optionally, you could use showMessageBox here to alert the user:
+        // showMessageBox('Error', 'Cannot export total revenue. Required column "Room Revenue" is missing.', true);
+        
+        // We will proceed with the export of the raw data, but skip the summary line.
+    } else {
+        // If the column IS found, proceed with adding the summary
+        const totalLabel = 'TOTAL REVENUE';
+        // Assuming reportSummary is available globally/in scope
+        const totalAmount = reportSummary['Total Room Revenue'] || 0; 
+        
+        // Convert 0-based index to its corresponding letter (A=0, B=1, etc.)
+        const revenueColLetter = String.fromCharCode(65 + revenueColIndex); 
+        
+        // Determine the row index for the summary (dataRowCount + 1 blank row + 1 summary row)
+        const summaryRowIndex = dataRowCount + 2; 
 
-    // Add TOTAL REVENUE row
-    XLSX.utils.sheet_add_aoa(worksheet, [[totalLabel]], { origin: `A${summaryRowIndex}` });
-    XLSX.utils.sheet_add_aoa(worksheet, [[totalAmount]], { origin: `${revenueColLetter}${summaryRowIndex}` });
+        // Add TOTAL REVENUE label to column A
+        XLSX.utils.sheet_add_aoa(worksheet, [[totalLabel]], { origin: `A${summaryRowIndex}` });
+        
+        // Add TOTAL REVENUE amount to the correct column
+        XLSX.utils.sheet_add_aoa(worksheet, [[totalAmount]], { origin: `${revenueColLetter}${summaryRowIndex}` });
+    }
+    // --- END FIX ---
+
 
     // Build workbook and download
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Room Report');
 
-    const selectedDate = reportDateInput.value || 'report';
+    // Assuming reportDateInput is defined elsewhere and has a .value property
+    const selectedDate = typeof reportDateInput !== 'undefined' ? (reportDateInput.value || 'report') : 'report';
     const filename = `Room_Report_${selectedDate}.xlsx`;
 
-    XLSX.writeFile(workbook, filename); // No styling support in free version
+    XLSX.writeFile(workbook, filename);
 }
 
 // --- Housekeeping Functions ---
