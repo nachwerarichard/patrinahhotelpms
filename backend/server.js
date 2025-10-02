@@ -844,7 +844,6 @@ app.post('/api/audit-log/action', async (req, res) => {
 async function reinitializeRooms() {
     const initialRooms = [
         { id: 'R101', type: 'Delux 1', number: '101', status: 'clean' },
-        { id: 'R102', type: 'Junior Suit', number: '102', status: 'clean' },
         { id: 'R103', type: 'Delux 1', number: '103', status: 'clean' },
   { id: 'R104', type: 'Delux 1', number: '104', status: 'clean' },
   { id: 'R105', type: 'Delux 1', number: '105', status: 'clean' },
@@ -863,6 +862,7 @@ async function reinitializeRooms() {
   { id: 'R118', type: 'Delux 1', number: '118', status: 'clean' },
   { id: 'R119', type: 'Delux 1', number: '119', status: 'clean' },
   { id: 'R120', type: 'Delux 1', number: '120', status: 'clean' },
+  { id: 'R102', type: 'Junior Suit', number: '102', status: 'clean' },
   { id: 'R121', type: 'Junior suit', number: '121', status: 'clean' },
   { id: 'R122', type: ' Junior suit', number: '122', status: 'clean' }
     ];
