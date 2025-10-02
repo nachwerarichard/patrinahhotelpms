@@ -862,9 +862,9 @@ async function reinitializeRooms() {
   { id: 'R118', type: 'Delux 1', number: '118', status: 'clean' },
   { id: 'R119', type: 'Delux 1', number: '119', status: 'clean' },
   { id: 'R120', type: 'Delux 1', number: '120', status: 'clean' },
-  { id: 'R102', type: 'Junior Suit', number: '102', status: 'clean' },
+  { id: 'R102', type: 'Junior suit', number: '102', status: 'clean' },
   { id: 'R121', type: 'Junior suit', number: '121', status: 'clean' },
-  { id: 'R122', type: ' Junior suit', number: '122', status: 'clean' }
+  { id: 'R122', type: 'Junior suit', number: '122', status: 'clean' }
     ];
 
     try {
