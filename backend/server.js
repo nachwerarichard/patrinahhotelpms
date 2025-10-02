@@ -842,25 +842,27 @@ app.post('/api/audit-log/action', async (req, res) => {
 async function reinitializeRooms() {
     const initialRooms = [
         { id: 'R101', type: 'Delux 1', number: '101', status: 'clean' },
-        { id: 'R102', type: 'Delux 1', number: '102', status: 'clean' },
+        { id: 'R102', type: 'Junior Suit', number: '102', status: 'clean' },
         { id: 'R103', type: 'Delux 1', number: '103', status: 'clean' },
-  { id: 'R104', type: 'Delux 2', number: '104', status: 'clean' },
-  { id: 'R105', type: 'Delux 2', number: '105', status: 'clean' },
-  { id: 'R106', type: 'Delux 2', number: '106', status: 'clean' },
+  { id: 'R104', type: 'Delux 1', number: '104', status: 'clean' },
+  { id: 'R105', type: 'Delux 1', number: '105', status: 'clean' },
+  { id: 'R106', type: 'Delux 1', number: '106', status: 'clean' },
   { id: 'R107', type: 'Delux 2', number: '107', status: 'clean' },
   { id: 'R108', type: 'Delux 1', number: '108', status: 'clean' },
   { id: 'R109', type: 'Delux 1', number: '109', status: 'clean' },
   { id: 'R110', type: 'Delux 2', number: '110', status: 'clean' },
-  { id: 'R111', type: 'Suite', number: '111', status: 'clean' },
-  { id: 'R112', type: 'Delux 2', number: '112', status: 'clean' },
-  { id: 'R113', type: 'Delux 3', number: '113', status: 'clean' },
-  { id: 'R114', type: 'Delux 3', number: '114', status: 'clean' },
-  { id: 'R115', type: 'Delux 3', number: '115', status: 'clean' },
-  { id: 'R116', type: 'Suite', number: '116', status: 'clean' },
-  { id: 'R117', type: 'Suite', number: '117', status: 'clean' },
-  { id: 'R118', type: 'Suite', number: '118', status: 'clean' },
-  { id: 'R119', type: 'Suite', number: '119', status: 'clean' },
-        { id: 'R120', type: 'Suite', number: '120', status: 'clean' }
+  { id: 'R111', type: 'Delux suit', number: '111', status: 'clean' },
+  { id: 'R112', type: 'Delux 1', number: '112', status: 'clean' },
+  { id: 'R113', type: 'Delux 1', number: '113', status: 'clean' },
+  { id: 'R114', type: 'Delux 1', number: '114', status: 'clean' },
+  { id: 'R115', type: 'Delux 1', number: '115', status: 'clean' },
+  { id: 'R116', type: 'Delux 1', number: '116', status: 'clean' },
+  { id: 'R117', type: 'Delux 1', number: '117', status: 'clean' },
+  { id: 'R118', type: 'Delux 1', number: '118', status: 'clean' },
+  { id: 'R119', type: 'Delux 1', number: '119', status: 'clean' },
+  { id: 'R120', type: 'Delux 1', number: '120', status: 'clean' },
+  { id: 'R121', type: 'Junior suit', number: '121', status: 'clean' },
+  { id: 'R122', type: ' Junior suit', number: '122', status: 'clean' }
     ];
 
     try {
