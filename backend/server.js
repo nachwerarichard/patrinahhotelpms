@@ -60,7 +60,6 @@ const mongoURI = 'mongodb+srv://nachwerarichard:hotelpms@cluster0.g4cjpwg.mongod
 mongoose.connect(mongoURI)
     .then(() => {
         console.log('MongoDB connected successfully!');
-                reinitializeRooms(); // Call the function here
 
     })
     .catch(err => {
