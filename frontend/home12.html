@@ -37,52 +37,53 @@
 
     <div id="main-content" class="flex min-h-screen" style="display: none;">
         <aside class="w-64 bg-gray-800 text-white p-6 shadow-lg">
-            <nav>
-                <ul class="space-y-2">
-                                            <h2>Patrinah Hotel </h2>
+    <div class="mb-8 flex items-center space-x-3">
+        <i class="fas fa-hotel text-3xl text-blue-400"></i>
+        <h2 class="text-xl font-bold tracking-wider">PMS Pro</h2>
+    </div>
+    <nav>
+        <ul class="space-y-2">
+            <li id="nav-booking">
+                <a href="#" class="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition duration-200">
+                    <i class="fas fa-book text-blue-400"></i>
+                    <span>Booking Management</span>
+                </a>
+            </li>
+            <li id="nav-housekeeping">
+                <a href="#" class="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition duration-200">
+                    <i class="fas fa-broom text-blue-400"></i>
+                    <span>Housekeeping</span>
+                </a>
+            </li>
+            <li id="nav-reports">
+                <a href="#" class="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition duration-200">
+                    <i class="fas fa-chart-line text-blue-400"></i>
+                    <span>Daily Reports</span>
+                </a>
+            </li>
 
-                    <li id="nav-booking">
-                        <a href="#" class="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition duration-200">
-                            <i class="fas fa-book text-blue-400"></i>
-                            <span>Booking Management</span>
-                        </a>
-                    </li>
-                    <li id="nav-housekeeping">
-                        <a href="#" class="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition duration-200">
-                            <i class="fas fa-broom text-blue-400"></i>
-                            <span>Housekeeping</span>
-                        </a>
-                    </li>
-                    <li id="nav-reports">
-                        <a href="#" class="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition duration-200">
-                            <i class="fas fa-chart-line text-blue-400"></i>
-                            <span>Daily Reports</span>
-                        </a>
-                    </li>
+            <li id="nav-calendar" class="hidden">
+                <a href="#" class="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition duration-200">
+                    <i class="fas fa-calendar-alt text-blue-400"></i>
 
-                   <li id="nav-calendar" class="hidden">
-    <a href="#" class="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition duration-200">
-        <i class="fas fa-calendar-alt text-blue-400"></i>
-        
-        <span>Calendar</span>
-    </a>
-</li>
-                    <li id="nav-audit-logs">
-                        <a href="#" class="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition duration-200">
-                            <i class="fas fa-clipboard-list text-blue-400"></i>
-                            <span>Audit Logs</span>
-                        </a>
-                    </li>
-                    <li id="nav-logout">
-                        <a href="#" onclick="logout()" class="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition duration-200">
-                            <i class="fas fa-sign-out-alt text-blue-400"></i>
-                            <span>Logout</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </aside>
-
+                    <span>Calendar</span>
+                </a>
+            </li>
+            <li id="nav-audit-logs">
+                <a href="#" class="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition duration-200">
+                    <i class="fas fa-clipboard-list text-blue-400"></i>
+                    <span>Audit Logs</span>
+                </a>
+            </li>
+            <li id="nav-logout">
+                <a href="#" onclick="logout()" class="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition duration-200">
+                    <i class="fas fa-sign-out-alt text-blue-400"></i>
+                    <span>Logout</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</aside>
         <main class="flex-1 p-8 overflow-y-auto">
             <section id="booking-management" class="section active bg-white p-6 rounded-lg shadow-md mb-8">
                 <h2 class="text-2xl font-bold mb-4 text-blue-600"><i class="fas fa-book"></i> Booking Management</h2>
