@@ -81,8 +81,14 @@
     </div>
     
     <script>
-        // Placeholder for your API base URL
-        const API_BASE_URL = 'https://patrinahhotelpms.onrender.com'; // **UPDATE THIS**
+        // --- CONFIGURATION ---
+        const API_BASE_URL = 'http://localhost:3000'; // **Ensure this matches your backend URL**
+        
+        // System A Link: Bar & Restaurant
+        const SYSTEM_A_URL = 'https://stirring-pony-fe2347.netlify.app/index52.html'; 
+        // System B Link: Front Office & Housekeeping
+        const SYSTEM_B_URL = 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html'; 
+        // ---------------------
 
         document.addEventListener('DOMContentLoaded', () => {
             const loginForm = document.getElementById('login-form');
@@ -93,48 +99,58 @@
             const authContainer = document.getElementById('auth-container');
             const loginButton = document.getElementById('login-button');
 
-            // Global variables to hold authentication details during dual access choice
-            let tempAuthData = null;
+            let tempAuthData = null; // Stores dual access data temporarily
 
             // Helper function to handle successful login and redirect
             const finalizeLogin = (data, systemKey = null) => {
                 const role = systemKey ? data[systemKey].role : data.role;
                 const username = data.username;
                 const token = data.token;
-                const finalSystem = systemKey ? systemKey.replace('system', 'System ') : data.system; // e.g., 'systemA' -> 'System A'
+                const finalSystemIdentifier = systemKey || data.system; 
 
                 // 1. Store credentials
                 localStorage.setItem('authToken', token);
                 localStorage.setItem('username', username);
                 localStorage.setItem('userRole', role);
-                localStorage.setItem('authSystem', finalSystem);
+                localStorage.setItem('authSystem', finalSystemIdentifier);
                 
-                // 2. Hide login container
-                authContainer.classList.add('hidden'); 
+                // 2. Determine the correct URL for redirection
+                let targetUrl;
+
+                if (finalSystemIdentifier.includes('System A') || finalSystemIdentifier === 'systemA') {
+                    targetUrl = SYSTEM_A_URL;
+                } else if (finalSystemIdentifier.includes('System B') || finalSystemIdentifier === 'systemB') {
+                    targetUrl = SYSTEM_B_URL;
+                } else {
+                    console.error("Unknown system identifier:", finalSystemIdentifier);
+                    alert("Login successful, but cannot determine which system to redirect to.");
+                    return; 
+                }
                 
-                // 3. **Replace this alert with your actual application initialization/redirect logic**
-                alert(`Login successful for ${username} with Role: ${role} via ${finalSystem}. Redirecting to main app...`);
-                
-                // Example: window.location.href = '/main-app-dashboard.html';
-                
-                // We'll keep the system selection visible for demonstration if not redirecting
-                // systemSelection.classList.remove('hidden'); 
+                // 3. Perform the Redirection
+                console.log(`Redirecting ${username} to: ${targetUrl} (Role: ${role})`);
+                window.location.href = targetUrl; // This is the final action
             };
 
             // Function to generate the system selection button
             const createSystemButton = (systemKey, data) => {
                 const isA = systemKey === 'systemA';
+                
+                // Use clear, meaningful labels for the buttons based on the target links
+                const systemName = isA 
+                    ? 'Bar & Restaurant System' 
+                    : 'Front Office & Housekeeping System'; 
+
                 const buttonClass = isA 
                     ? "w-full py-4 px-4 border border-transparent rounded-lg shadow-lg text-lg font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 transform hover:scale-[1.02]"
                     : "w-full py-4 px-4 border border-transparent rounded-lg shadow-lg text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 transform hover:scale-[1.02]";
+                    
                 const icon = isA ? '🍽️' : '🛏️';
-                const label = data[systemKey].label || `System ${isA ? 'A' : 'B'}`;
-
+                
                 const button = document.createElement('button');
                 button.className = buttonClass;
-                button.innerHTML = `${icon} ${label} (Role: ${data[systemKey].role})`;
+                button.innerHTML = `${icon} ${systemName} (Role: ${data[systemKey].role})`;
                 
-                // Add click listener to finalize the login with the chosen system
                 button.addEventListener('click', () => {
                     finalizeLogin(data, systemKey);
                 });
@@ -145,14 +161,14 @@
             // --- Main Login Submission Handler ---
             loginForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
-                loginButton.disabled = true; // Disable button while loading
+                loginButton.disabled = true;
                 loginButton.textContent = 'Logging in...';
 
                 const username = document.getElementById('username').value.trim();
                 const password = document.getElementById('password').value.trim();
 
                 errorMessage.classList.add('hidden');
-                systemOptions.innerHTML = ''; // Clear previous options
+                systemOptions.innerHTML = ''; 
 
                 try {
                     const response = await fetch(`${API_BASE_URL}/login`, {
@@ -166,26 +182,22 @@
                     const data = await response.json();
 
                     if (response.ok) {
-                        tempAuthData = data; // Store data temporarily
-
                         if (data.dualAccess) {
-                            // SCENARIO 1: DUAL ACCESS
+                            // SCENARIO 1: DUAL ACCESS - Show selection screen
                             loginForm.classList.add('hidden');
                             systemSelection.classList.remove('hidden');
                             authContainer.classList.remove('max-w-md');
                             authContainer.classList.add('max-w-lg');
                             
-                            // Render System A button
                             if (data.systemA) {
                                 systemOptions.appendChild(createSystemButton('systemA', data));
                             }
-                            // Render System B button
                             if (data.systemB) {
                                 systemOptions.appendChild(createSystemButton('systemB', data));
                             }
                             
                         } else {
-                            // SCENARIO 2: SINGLE ACCESS (System A or System B)
+                            // SCENARIO 2: SINGLE ACCESS - Redirect immediately
                             finalizeLogin(data);
                         }
                     } else {
@@ -205,28 +217,20 @@
 
             // --- Logout Logic ---
             logoutButton.addEventListener('click', () => {
-                // Clear inputs and stored data
                 document.getElementById('username').value = '';
                 document.getElementById('password').value = '';
                 localStorage.clear();
                 tempAuthData = null;
 
-                // Switch back to login form
                 systemSelection.classList.add('hidden');
                 loginForm.classList.remove('hidden');
                 errorMessage.classList.add('hidden');
                 
-                // Adjust container size back
                 authContainer.classList.remove('max-w-lg');
                 authContainer.classList.add('max-w-md');
 
                 alert('You have been logged out.');
             });
-
-            // Optional: Check local storage on load to see if a user is already logged in
-            // if (localStorage.getItem('authToken')) {
-            //     // Handle auto-login or redirect
-            // }
         });
     </script>
 </body>
