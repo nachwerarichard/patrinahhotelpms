@@ -262,7 +262,12 @@ const formatDate = (date) => {
 
 // --- 1. Hardcoded User Data (Kept as provided) ---
 
-
+const HARDCODED_USERS = {
+    'Nachwera Richard': { username: 'Nachwera Richard', password: '123', role: 'System A - High-Level Access' },
+    'Nelson': { username: 'Nelson', password: '123', role: 'System A - High-Level Access' },
+    'Mercy': { username: 'Mercy', password: '456', role: 'System A - Mid-Level Access' },
+    'Joshua': { username: 'Joshua', password: '456', role: 'System A - Mid-Level Access' }
+};
 
 
 // --- 2. Mock logAction Function (Needed to prevent errors) ---
@@ -1999,24 +2004,13 @@ app.post('/api/public/send-booking-confirm', async (req, res) => {
 // --- !!! WARNING: SERIOUS SECURITY VULNERABILITY !!! ---
 // Hardcoding users for demonstration purposes only.
 // DO NOT USE THIS IN PRODUCTION OR FOR ANY REAL APPLICATION.
-const HARDCODED_USERS = {
-  'Nachwera Richard': { password: '123', role: 'Nachwera Richard' },
-  'Nelson': { password: '123', role: 'Nelson' },
-  'Mercy': { password: '456', role: 'Mercy' },
-  'Joshua': { password: '456', role: 'Joshua' }
-};
+
 // --- !!! END OF WARNING !!! ---
 
 
 
 
 // Schemas
-const AuditLog = mongoose.model('AuditLog', new mongoose.Schema({
-  action: { type: String, required: true },
-  user: { type: String, required: true },
-  timestamp: { type: Date, default: Date.now },
-  details: { type: mongoose.Schema.Types.Mixed }
-}));
 
 const CashJournal = mongoose.model('CashJournal', new mongoose.Schema({
   cashAtHand: Number,
