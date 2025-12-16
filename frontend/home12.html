@@ -12,7 +12,29 @@
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
-    
+    <div id="login-container" class="min-h-screen flex items-center justify-center">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
+            <h2 class="text-2xl font-bold mb-6 text-center text-blue-600"><i class="fas fa-sign-in-alt"></i> Login</h2>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label for="username" class="block text-gray-700 font-semibold mb-2"><i class="fas fa-user"></i> Username:</label>
+                    <input type="text" id="username" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-gray-700 font-semibold mb-2"><i class="fas fa-lock"></i> Password:</label>
+                    <input type="password" id="password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 transition duration-300"><i class="fas fa-sign-in-alt"></i> Login</button>
+                <p class="text-sm text-gray-500 mt-4 text-center">Admin: user/password | Housekeeper: hk/hkpass</p>
+            </form>
+            <div id="loginMessageBox" class="mt-6 p-4 rounded-lg text-white font-bold hidden" style="display: none;">
+                <h3 id="loginMessageBoxTitle" class="text-lg mb-2"></h3>
+                <p id="loginMessageBoxContent" class="text-sm"></p>
+                <button onclick="closeLoginMessageBox()" class="mt-4 bg-white text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-200 transition duration-300">OK</button>
+            </div>
+        </div>
+    </div>
+
     <div id="main-content" class="flex min-h-screen" style="display: none;">
 
         <aside class="w-64 bg-gray-800 text-white p-6 shadow-lg">
