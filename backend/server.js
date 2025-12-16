@@ -264,11 +264,6 @@ const HARDCODED_USERS = {
     'Joshua': { username: 'Joshua', password: '456', role: 'System A - Mid-Level Access' }
 };
 
-const users = [
-    { username: 'user', password: 'password', role: 'System B - Admin' },
-    { username: 'bar', password: '789', role: 'System B - Bar Staff' },
-    { username: 'hk', password: 'hkpass', role: 'System B - Housekeeper' }
-];
 
 // --- 2. Mock logAction Function (Needed to prevent errors) ---
 // Replace this with your actual implementation if it logs to a database/file.
