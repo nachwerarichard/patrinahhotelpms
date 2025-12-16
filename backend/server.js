@@ -1697,13 +1697,7 @@ app.post('/api/public/bookings', async (req, res) => {
 // Create a .env file in your backend directory with:
 // EMAIL_USER=your_email@gmail.com
 // EMAIL_PASS=your_app_password
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER, // Use environment variable
-        pass: process.env.EMAIL_PASS // Use environment variable
-    }
-});
+
 
 // Public endpoint to send booking confirmation (from external website)
 app.post('/public/send-booking-confirmation', async (req, res) => {
