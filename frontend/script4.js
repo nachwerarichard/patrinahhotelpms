@@ -1,3 +1,4 @@
+
 const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api'; // Your Render backend URL
 
 // --- Data (will be fetched from backend) ---
@@ -296,6 +297,117 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
 }
 
 // --- Login and Role Management ---
+loginForm.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    const username = usernameInput.value;
+    const password = passwordInput.value;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            currentUserRole = data.role;
+            currentUsername = username; // Store the logged-in username
+
+            // Store login state in localStorage
+            localStorage.setItem('loggedInUser', JSON.stringify({ username: currentUsername, role: currentUserRole }));
+
+            loginContainer.style.display = 'none';
+            mainContent.style.display = 'flex';
+            applyRoleAccess(currentUserRole);
+
+            // Initialize rooms in backend if empty (run once)
+            await fetch(`${API_BASE_URL}/rooms/init`, { method: 'POST' });
+
+            // Log successful login
+            await fetch(`${API_BASE_URL}/audit-log/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'User Logged In', user: currentUsername, details: { role: currentUserRole } })
+            });
+
+            // Determine the initial section to load based on role
+            let initialSectionId = '';
+            let initialNavLinkId = '';
+
+            if (currentUserRole === 'admin') {
+                initialSectionId = 'booking-management';
+                initialNavLinkId = 'nav-booking';
+            } else if (currentUserRole === 'bar') {
+                initialSectionId = 'booking-management';
+                initialNavLinkId = 'nav-booking';
+            }
+            else if (currentUserRole === 'housekeeper') {
+                initialSectionId = 'housekeeping';
+                            document.getElementById('booking-management').style.display='none';
+
+                initialNavLinkId = 'nav-housekeeping';
+            }
+
+            // Set the active navigation link and section
+            if (initialNavLinkId) {
+                document.getElementById(initialNavLinkId).classList.add('active');
+            }
+            if (initialSectionId) {
+                document.getElementById(initialSectionId).classList.add('active');
+                // Explicitly call the rendering function for the initial active section
+                if (initialSectionId === 'booking-management') {
+                    currentPage = 1;
+                    currentSearchTerm = ''; // Reset search term
+                    await renderBookings(currentPage, currentSearchTerm);
+                } else if (initialSectionId === 'housekeeping') {
+                    await renderHousekeepingRooms();
+                } else if (initialSectionId === 'calendar') {
+                    await renderCalendar();
+                } else if (initialSectionId === 'reports') {
+                    reportDateInput.valueAsDate = new Date();
+                    await generateReport();
+                } else if (initialSectionId === 'service-reports') {
+                    const today = new Date();
+                    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                    serviceReportStartDate.value = firstDay.toISOString().split('T')[0];
+                    serviceReportEndDate.value = lastDay.toISOString().split('T')[0];
+                    await renderServiceReports();
+                } else if (initialSectionId === 'audit-logs') {
+                    const today = new Date();
+                    const thirtyDaysAgo = new Date(today);
+                    thirtyDaysAgo.setDate(today.getDate() - 30);
+                    auditLogStartDateFilter.value = thirtyDaysAgo.toISOString().split('T')[0];
+                    auditLogEndDateFilter.value = today.toISOString().split('T')[0];
+                    await renderAuditLogs();
+                }
+            }
+
+
+        } else {
+            showLoginMessageBox('Login Failed', data.message || 'Invalid username or password.');
+            // Optionally log failed login attempts (be careful with sensitive data)
+            await fetch(`${API_BASE_URL}/audit-log/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'Login Failed', user: username, details: { message: data.message || 'Invalid credentials' } })
+            });
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        showLoginMessageBox('Login Error', 'Could not connect to the server. Please try again later.');
+        await fetch(`${API_BASE_URL}/audit-log/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'Login Error (Frontend)', user: username, details: { error: error.message } })
+        });
+    }
+});
+
 
 /**
  * Handles navigation clicks, showing/hiding sections and re-rendering content.
