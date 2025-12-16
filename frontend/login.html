@@ -6,9 +6,8 @@
     <title>Hotel Systems Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles for a better aesthetic look */
         .login-bg {
-            background-image: url('https://images.unsplash.com/photo-1549488349-e09b9f1d8c06?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'); /* Placeholder image for a hotel lobby/design */
+            background-image: url('https://images.unsplash.com/photo-1549488349-e09b9f1d8c06?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
             background-size: cover;
             background-position: center;
         }
@@ -34,7 +33,7 @@
                     name="username" 
                     required 
                     class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150"
-                    placeholder="e.g., admin"
+                    placeholder="e.g., admin or Nelson"
                 >
             </div>
 
@@ -50,13 +49,14 @@
                 >
             </div>
             
-            <div id="error-message" class="text-red-600 text-sm hidden">
+            <div id="error-message" class="text-red-600 text-sm hidden font-medium">
                 Invalid username or password. Please try again.
             </div>
 
             <div>
                 <button 
                     type="submit" 
+                    id="login-button"
                     class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150"
                 >
                     Log In
@@ -65,23 +65,10 @@
         </form>
 
         <div id="system-selection" class="hidden text-center space-y-6">
-            <h2 class="text-2xl font-extrabold text-gray-900">Welcome! Select a System</h2>
+            <h2 class="text-2xl font-extrabold text-gray-900">Welcome! Select Access Point</h2>
             
-            <a href="#" class="block">
-                <button 
-                    class="w-full py-4 px-4 border border-transparent rounded-lg shadow-lg text-lg font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 transform hover:scale-[1.02]"
-                >
-                    🍽️ Bar & Restaurant Management
-                </button>
-            </a>
-
-            <a href="#" class="block">
-                <button 
-                    class="w-full py-4 px-4 border border-transparent rounded-lg shadow-lg text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 transform hover:scale-[1.02]"
-                >
-                    🛏️ Front Office & Housekeeping
-                </button>
-            </a>
+            <div id="system-options" class="space-y-4">
+                </div>
 
             <button 
                 id="logout-button"
@@ -94,63 +81,153 @@
     </div>
     
     <script>
-      document.addEventListener('DOMContentLoaded', () => {
-    const loginForm = document.getElementById('login-form');
-    const systemSelection = document.getElementById('system-selection');
-    const errorMessage = document.getElementById('error-message');
-    const logoutButton = document.getElementById('logout-button');
-    const authContainer = document.getElementById('auth-container');
+        // Placeholder for your API base URL
+        const API_BASE_URL = 'http://localhost:3000'; // **UPDATE THIS**
 
-    // --- Authentication Logic ---
-    
-    loginForm.addEventListener('submit', (event) => {
-        event.preventDefault(); // Prevent default form submission
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById('login-form');
+            const systemSelection = document.getElementById('system-selection');
+            const systemOptions = document.getElementById('system-options');
+            const errorMessage = document.getElementById('error-message');
+            const logoutButton = document.getElementById('logout-button');
+            const authContainer = document.getElementById('auth-container');
+            const loginButton = document.getElementById('login-button');
 
-        const usernameInput = document.getElementById('username').value.trim();
-        const passwordInput = document.getElementById('password').value.trim();
+            // Global variables to hold authentication details during dual access choice
+            let tempAuthData = null;
 
-        // Simple, non-secure validation (for demonstration only)
-        // **In a real application, you would send these to a server for validation**
-        const validUsername = 'admin';
-        const validPassword = 'password123';
+            // Helper function to handle successful login and redirect
+            const finalizeLogin = (data, systemKey = null) => {
+                const role = systemKey ? data[systemKey].role : data.role;
+                const username = data.username;
+                const token = data.token;
+                const finalSystem = systemKey ? systemKey.replace('system', 'System ') : data.system; // e.g., 'systemA' -> 'System A'
 
-        if (usernameInput === validUsername && passwordInput === validPassword) {
-            // Successful login: Hide form, show selection buttons
-            errorMessage.classList.add('hidden');
-            loginForm.classList.add('hidden');
-            systemSelection.classList.remove('hidden');
-            
-            // Adjust container size for better flow
-            authContainer.classList.remove('max-w-md');
-            authContainer.classList.add('max-w-lg');
-            
-        } else {
-            // Failed login: Show error message
-            errorMessage.classList.remove('hidden');
-        }
-    });
+                // 1. Store credentials
+                localStorage.setItem('authToken', token);
+                localStorage.setItem('username', username);
+                localStorage.setItem('userRole', role);
+                localStorage.setItem('authSystem', finalSystem);
+                
+                // 2. Hide login container
+                authContainer.classList.add('hidden'); 
+                
+                // 3. **Replace this alert with your actual application initialization/redirect logic**
+                alert(`Login successful for ${username} with Role: ${role} via ${finalSystem}. Redirecting to main app...`);
+                
+                // Example: window.location.href = '/main-app-dashboard.html';
+                
+                // We'll keep the system selection visible for demonstration if not redirecting
+                // systemSelection.classList.remove('hidden'); 
+            };
 
-    // --- Logout Logic ---
+            // Function to generate the system selection button
+            const createSystemButton = (systemKey, data) => {
+                const isA = systemKey === 'systemA';
+                const buttonClass = isA 
+                    ? "w-full py-4 px-4 border border-transparent rounded-lg shadow-lg text-lg font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 transform hover:scale-[1.02]"
+                    : "w-full py-4 px-4 border border-transparent rounded-lg shadow-lg text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 transform hover:scale-[1.02]";
+                const icon = isA ? '🍽️' : '🛏️';
+                const label = data[systemKey].label || `System ${isA ? 'A' : 'B'}`;
 
-    logoutButton.addEventListener('click', () => {
-        // Clear inputs and switch back to login form
-        document.getElementById('username').value = '';
-        document.getElementById('password').value = '';
+                const button = document.createElement('button');
+                button.className = buttonClass;
+                button.innerHTML = `${icon} ${label} (Role: ${data[systemKey].role})`;
+                
+                // Add click listener to finalize the login with the chosen system
+                button.addEventListener('click', () => {
+                    finalizeLogin(data, systemKey);
+                });
 
-        systemSelection.classList.add('hidden');
-        loginForm.classList.remove('hidden');
-        errorMessage.classList.add('hidden'); // Hide any previous error
-        
-        // Adjust container size back
-        authContainer.classList.remove('max-w-lg');
-        authContainer.classList.add('max-w-md');
+                return button;
+            };
 
-        // Optional: Show a quick message
-        alert('You have been logged out.');
-    });
-});
-        // JavaScript logic goes here
-        // (See next section for the JS content)
+            // --- Main Login Submission Handler ---
+            loginForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                loginButton.disabled = true; // Disable button while loading
+                loginButton.textContent = 'Logging in...';
+
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value.trim();
+
+                errorMessage.classList.add('hidden');
+                systemOptions.innerHTML = ''; // Clear previous options
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/login`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ username, password })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        tempAuthData = data; // Store data temporarily
+
+                        if (data.dualAccess) {
+                            // SCENARIO 1: DUAL ACCESS
+                            loginForm.classList.add('hidden');
+                            systemSelection.classList.remove('hidden');
+                            authContainer.classList.remove('max-w-md');
+                            authContainer.classList.add('max-w-lg');
+                            
+                            // Render System A button
+                            if (data.systemA) {
+                                systemOptions.appendChild(createSystemButton('systemA', data));
+                            }
+                            // Render System B button
+                            if (data.systemB) {
+                                systemOptions.appendChild(createSystemButton('systemB', data));
+                            }
+                            
+                        } else {
+                            // SCENARIO 2: SINGLE ACCESS (System A or System B)
+                            finalizeLogin(data);
+                        }
+                    } else {
+                        // SCENARIO 3: LOGIN FAILED
+                        errorMessage.textContent = data.error || 'Invalid username or password.';
+                        errorMessage.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    console.error('Login error:', error);
+                    errorMessage.textContent = 'Could not connect to the server or network error.';
+                    errorMessage.classList.remove('hidden');
+                } finally {
+                    loginButton.disabled = false;
+                    loginButton.textContent = 'Log In';
+                }
+            });
+
+            // --- Logout Logic ---
+            logoutButton.addEventListener('click', () => {
+                // Clear inputs and stored data
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                localStorage.clear();
+                tempAuthData = null;
+
+                // Switch back to login form
+                systemSelection.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+                errorMessage.classList.add('hidden');
+                
+                // Adjust container size back
+                authContainer.classList.remove('max-w-lg');
+                authContainer.classList.add('max-w-md');
+
+                alert('You have been logged out.');
+            });
+
+            // Optional: Check local storage on load to see if a user is already logged in
+            // if (localStorage.getItem('authToken')) {
+            //     // Handle auto-login or redirect
+            // }
+        });
     </script>
 </body>
 </html>
