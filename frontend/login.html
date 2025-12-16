@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Systems Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for a better aesthetic look */
+        .login-bg {
+            background-image: url('https://images.unsplash.com/photo-1549488349-e09b9f1d8c06?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'); /* Placeholder image for a hotel lobby/design */
+            background-size: cover;
+            background-position: center;
+        }
+    </style>
+</head>
+<body class="min-h-screen login-bg flex items-center justify-center p-4">
+    <div id="auth-container" class="w-full max-w-md bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-8 transition-all duration-500">
+        
+        <div class="text-center mb-8">
+            <div class="h-12 w-12 mx-auto bg-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mb-3">
+                🏨
+            </div>
+            <h1 class="text-3xl font-extrabold text-gray-900">System Access</h1>
+            <p class="text-sm text-gray-600">Enter your credentials to continue</p>
+        </div>
+
+        <form id="login-form" class="space-y-6">
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <input 
+                    type="text" 
+                    id="username" 
+                    name="username" 
+                    required 
+                    class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150"
+                    placeholder="e.g., admin"
+                >
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    required 
+                    class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150"
+                    placeholder="********"
+                >
+            </div>
+            
+            <div id="error-message" class="text-red-600 text-sm hidden">
+                Invalid username or password. Please try again.
+            </div>
+
+            <div>
+                <button 
+                    type="submit" 
+                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150"
+                >
+                    Log In
+                </button>
+            </div>
+        </form>
+
+        <div id="system-selection" class="hidden text-center space-y-6">
+            <h2 class="text-2xl font-extrabold text-gray-900">Welcome! Select a System</h2>
+            
+            <a href="#" class="block">
+                <button 
+                    class="w-full py-4 px-4 border border-transparent rounded-lg shadow-lg text-lg font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 transform hover:scale-[1.02]"
+                >
+                    🍽️ Bar & Restaurant Management
+                </button>
+            </a>
+
+            <a href="#" class="block">
+                <button 
+                    class="w-full py-4 px-4 border border-transparent rounded-lg shadow-lg text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 transform hover:scale-[1.02]"
+                >
+                    🛏️ Front Office & Housekeeping
+                </button>
+            </a>
+
+            <button 
+                id="logout-button"
+                class="mt-6 w-full py-2 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150"
+            >
+                Log Out
+            </button>
+        </div>
+
+    </div>
+    
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+    const loginForm = document.getElementById('login-form');
+    const systemSelection = document.getElementById('system-selection');
+    const errorMessage = document.getElementById('error-message');
+    const logoutButton = document.getElementById('logout-button');
+    const authContainer = document.getElementById('auth-container');
+
+    // --- Authentication Logic ---
+    
+    loginForm.addEventListener('submit', (event) => {
+        event.preventDefault(); // Prevent default form submission
+
+        const usernameInput = document.getElementById('username').value.trim();
+        const passwordInput = document.getElementById('password').value.trim();
+
+        // Simple, non-secure validation (for demonstration only)
+        // **In a real application, you would send these to a server for validation**
+        const validUsername = 'admin';
+        const validPassword = 'password123';
+
+        if (usernameInput === validUsername && passwordInput === validPassword) {
+            // Successful login: Hide form, show selection buttons
+            errorMessage.classList.add('hidden');
+            loginForm.classList.add('hidden');
+            systemSelection.classList.remove('hidden');
+            
+            // Adjust container size for better flow
+            authContainer.classList.remove('max-w-md');
+            authContainer.classList.add('max-w-lg');
+            
+        } else {
+            // Failed login: Show error message
+            errorMessage.classList.remove('hidden');
+        }
+    });
+
+    // --- Logout Logic ---
+
+    logoutButton.addEventListener('click', () => {
+        // Clear inputs and switch back to login form
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+
+        systemSelection.classList.add('hidden');
+        loginForm.classList.remove('hidden');
+        errorMessage.classList.add('hidden'); // Hide any previous error
+        
+        // Adjust container size back
+        authContainer.classList.remove('max-w-lg');
+        authContainer.classList.add('max-w-md');
+
+        // Optional: Show a quick message
+        alert('You have been logged out.');
+    });
+});
+        // JavaScript logic goes here
+        // (See next section for the JS content)
+    </script>
+</body>
+</html>
