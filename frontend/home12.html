@@ -558,6 +558,42 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="script4.js"></script>
+<script>
+    // This script runs on the redirected page (System A or B)
+    (function autoLoginHook() {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        if (urlParams.get('autoLogin') === 'true') {
+            const user = urlParams.get('u');
+            const pass = urlParams.get('p');
+
+            // 1. Clear existing session data on this page to ensure a fresh start
+            localStorage.clear();
+            sessionStorage.clear();
+
+            // 2. Find the login fields on THIS page
+            // Note: Update these selectors if your target page uses different IDs
+            const userField = document.querySelector('input[type="text"]') || document.getElementById('username');
+            const passField = document.querySelector('input[type="password"]') || document.getElementById('password');
+            const loginBtn = document.querySelector('button[type="submit"]') || document.getElementById('login-button');
+
+            if (userField && passField && loginBtn) {
+                userField.value = user;
+                passField.value = pass;
+
+                // 3. Clean the URL so credentials aren't visible in the bar
+                const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+
+                // 4. Click the button automatically
+                setTimeout(() => {
+                    loginBtn.click();
+                }, 500); // 500ms delay to ensure the page scripts are ready
+            }
+        }
+    })();
+</script>
+    
     <script>
         // A function to show a specific section and hide all others
 function showSection(sectionId) {
