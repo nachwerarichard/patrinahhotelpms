@@ -101,29 +101,26 @@
             let tempAuthData = null;
 
             const finalizeLogin = (data, systemKey = null) => {
-                // Determine which system key to use
-                // If dualAccess, use the systemKey clicked. If single access, use data.system
-                const selectedKey = systemKey || (data.system === 'System A' ? 'systemA' : 'systemB');
-                
-                const role = systemKey ? data[systemKey].role : data.role;
-                const username = data.username;
-                const token = data.token;
+    const selectedKey = systemKey || (data.system === 'System A' ? 'systemA' : 'systemB');
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
 
-                // 1. Store credentials
-                localStorage.setItem('authToken', token);
-                localStorage.setItem('username', username);
-                localStorage.setItem('userRole', role);
-                localStorage.setItem('authSystem', selectedKey);
-                
-                // 2. Redirect to the appropriate system link
-                const targetUrl = SYSTEM_LINKS[selectedKey];
-                
-                if (targetUrl) {
-                    window.location.href = targetUrl;
-                } else {
-                    alert("System link not found. Please contact administrator.");
-                }
-            };
+    // 1. Store credentials locally for the portal
+    localStorage.setItem('authToken', data.token);
+    localStorage.setItem('username', username);
+
+    // 2. Redirect with credentials in the URL
+    const targetUrl = SYSTEM_LINKS[selectedKey];
+    
+    if (targetUrl) {
+        // We append the credentials as parameters
+        // The "autoLogin=true" flag tells the next page to trigger the script
+        const ssoUrl = `${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}`;
+        window.location.href = ssoUrl;
+    } else {
+        alert("System link not found.");
+    }
+};
 
             const createSystemButton = (systemKey, data) => {
                 const isA = systemKey === 'systemA';
