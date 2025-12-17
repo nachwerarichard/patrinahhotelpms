@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -82,8 +81,13 @@
     </div>
     
     <script>
-        // Placeholder for your API base URL
-        const API_BASE_URL = 'https://patrinahhotelmgtsys.onrender.com'; // **UPDATE THIS**
+        const API_BASE_URL = 'https://patrinahhotelmgtsys.onrender.com';
+
+        // System Redirection Links
+        const SYSTEM_LINKS = {
+            systemA: 'https://stirring-pony-fe2347.netlify.app/index52.html', // Bar & Restaurant
+            systemB: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html'  // Front Office & HK
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             const loginForm = document.getElementById('login-form');
@@ -94,48 +98,52 @@
             const authContainer = document.getElementById('auth-container');
             const loginButton = document.getElementById('login-button');
 
-            // Global variables to hold authentication details during dual access choice
             let tempAuthData = null;
 
-            // Helper function to handle successful login and redirect
             const finalizeLogin = (data, systemKey = null) => {
+                // Determine which system key to use
+                // If dualAccess, use the systemKey clicked. If single access, use data.system
+                const selectedKey = systemKey || (data.system === 'System A' ? 'systemA' : 'systemB');
+                
                 const role = systemKey ? data[systemKey].role : data.role;
                 const username = data.username;
                 const token = data.token;
-                const finalSystem = systemKey ? systemKey.replace('system', 'System ') : data.system; // e.g., 'systemA' -> 'System A'
 
                 // 1. Store credentials
                 localStorage.setItem('authToken', token);
                 localStorage.setItem('username', username);
                 localStorage.setItem('userRole', role);
-                localStorage.setItem('authSystem', finalSystem);
+                localStorage.setItem('authSystem', selectedKey);
                 
-                // 2. Hide login container
-                authContainer.classList.add('hidden'); 
+                // 2. Redirect to the appropriate system link
+                const targetUrl = SYSTEM_LINKS[selectedKey];
                 
-                // 3. **Replace this alert with your actual application initialization/redirect logic**
-                alert(`Login successful for ${username} with Role: ${role} via ${finalSystem}. Redirecting to main app...`);
-                
-                // Example: window.location.href = '/main-app-dashboard.html';
-                
-                // We'll keep the system selection visible for demonstration if not redirecting
-                // systemSelection.classList.remove('hidden'); 
+                if (targetUrl) {
+                    window.location.href = targetUrl;
+                } else {
+                    alert("System link not found. Please contact administrator.");
+                }
             };
 
-            // Function to generate the system selection button
             const createSystemButton = (systemKey, data) => {
                 const isA = systemKey === 'systemA';
                 const buttonClass = isA 
-                    ? "w-full py-4 px-4 border border-transparent rounded-lg shadow-lg text-lg font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 transform hover:scale-[1.02]"
-                    : "w-full py-4 px-4 border border-transparent rounded-lg shadow-lg text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 transform hover:scale-[1.02]";
+                    ? "w-full py-4 px-4 border border-transparent rounded-lg shadow-lg text-lg font-medium text-white bg-green-600 hover:bg-green-700 transition duration-150 transform hover:scale-[1.02]"
+                    : "w-full py-4 px-4 border border-transparent rounded-lg shadow-lg text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition duration-150 transform hover:scale-[1.02]";
+                
                 const icon = isA ? '🍽️' : '🛏️';
-                const label = data[systemKey].label || `System ${isA ? 'A' : 'B'}`;
+                const label = isA ? 'Bar & Restaurant System' : 'Front Office & Housekeeping';
 
                 const button = document.createElement('button');
                 button.className = buttonClass;
-                button.innerHTML = `${icon} ${label} (Role: ${data[systemKey].role})`;
+                button.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <span class="text-2xl">${icon}</span>
+                        <span>${label}</span>
+                        <span class="text-xs opacity-80 font-normal">Role: ${data[systemKey].role}</span>
+                    </div>
+                `;
                 
-                // Add click listener to finalize the login with the chosen system
                 button.addEventListener('click', () => {
                     finalizeLogin(data, systemKey);
                 });
@@ -143,60 +151,43 @@
                 return button;
             };
 
-            // --- Main Login Submission Handler ---
             loginForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
-                loginButton.disabled = true; // Disable button while loading
-                loginButton.textContent = 'Logging in...';
+                loginButton.disabled = true;
+                loginButton.textContent = 'Authenticating...';
 
                 const username = document.getElementById('username').value.trim();
                 const password = document.getElementById('password').value.trim();
 
                 errorMessage.classList.add('hidden');
-                systemOptions.innerHTML = ''; // Clear previous options
+                systemOptions.innerHTML = ''; 
 
                 try {
                     const response = await fetch(`${API_BASE_URL}/login`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ username, password })
                     });
 
                     const data = await response.json();
 
                     if (response.ok) {
-                        tempAuthData = data; // Store data temporarily
-
                         if (data.dualAccess) {
-                            // SCENARIO 1: DUAL ACCESS
                             loginForm.classList.add('hidden');
                             systemSelection.classList.remove('hidden');
-                            authContainer.classList.remove('max-w-md');
-                            authContainer.classList.add('max-w-lg');
+                            authContainer.classList.replace('max-w-md', 'max-w-lg');
                             
-                            // Render System A button
-                            if (data.systemA) {
-                                systemOptions.appendChild(createSystemButton('systemA', data));
-                            }
-                            // Render System B button
-                            if (data.systemB) {
-                                systemOptions.appendChild(createSystemButton('systemB', data));
-                            }
-                            
+                            if (data.systemA) systemOptions.appendChild(createSystemButton('systemA', data));
+                            if (data.systemB) systemOptions.appendChild(createSystemButton('systemB', data));
                         } else {
-                            // SCENARIO 2: SINGLE ACCESS (System A or System B)
                             finalizeLogin(data);
                         }
                     } else {
-                        // SCENARIO 3: LOGIN FAILED
                         errorMessage.textContent = data.error || 'Invalid username or password.';
                         errorMessage.classList.remove('hidden');
                     }
                 } catch (error) {
-                    console.error('Login error:', error);
-                    errorMessage.textContent = 'Could not connect to the server or network error.';
+                    errorMessage.textContent = 'Server connection failed.';
                     errorMessage.classList.remove('hidden');
                 } finally {
                     loginButton.disabled = false;
@@ -204,30 +195,10 @@
                 }
             });
 
-            // --- Logout Logic ---
             logoutButton.addEventListener('click', () => {
-                // Clear inputs and stored data
-                document.getElementById('username').value = '';
-                document.getElementById('password').value = '';
                 localStorage.clear();
-                tempAuthData = null;
-
-                // Switch back to login form
-                systemSelection.classList.add('hidden');
-                loginForm.classList.remove('hidden');
-                errorMessage.classList.add('hidden');
-                
-                // Adjust container size back
-                authContainer.classList.remove('max-w-lg');
-                authContainer.classList.add('max-w-md');
-
-                alert('You have been logged out.');
+                location.reload();
             });
-
-            // Optional: Check local storage on load to see if a user is already logged in
-            // if (localStorage.getItem('authToken')) {
-            //     // Handle auto-login or redirect
-            // }
         });
     </script>
 </body>
