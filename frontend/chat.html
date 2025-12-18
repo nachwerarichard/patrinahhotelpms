@@ -6,39 +6,44 @@
     <title>Hotel Intelligence AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Define variables globally so all functions can see them
         let chatWindow, userInput, typingIndicator;
-        const API_BASE = 'https://patrinahhotelpms.onrender.com/api'; // Ensure this matches your port
+        const API_BASE = 'https://patrinahhotelpms.onrender.com/api';
 
-        // Initialize elements once the DOM is ready
         window.addEventListener('DOMContentLoaded', () => {
             chatWindow = document.getElementById('chat-window');
             userInput = document.getElementById('user-input');
             typingIndicator = document.getElementById('typing');
             
-            // Listen for Enter key
             userInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') handleSend();
             });
         });
 
+        // Toggle Chat Visibility
+        function toggleChat() {
+            const container = document.getElementById('chat-container');
+            container.classList.toggle('hidden');
+            container.classList.toggle('flex');
+            if (!container.classList.contains('hidden')) {
+                userInput.focus();
+            }
+        }
+
         function setInput(text) {
-            const input = document.getElementById('user-input');
-            input.value = text;
-            input.focus();
+            userInput.value = text;
+            userInput.focus();
         }
 
         function addMessage(role, text) {
             const div = document.createElement('div');
             div.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
             div.innerHTML = `
-                <div class="max-w-[85%] ${role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-bl-none'} p-4 rounded-2xl text-sm shadow-md">
+                <div class="max-w-[85%] ${role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-bl-none'} p-3 rounded-2xl text-sm shadow-md">
                     ${text}
                 </div>
             `;
-            const windowObj = document.getElementById('chat-window');
-            windowObj.appendChild(div);
-            windowObj.scrollTop = windowObj.scrollHeight;
+            chatWindow.appendChild(div);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
         async function executeAction(type) {
@@ -48,109 +53,105 @@
         }
 
         async function handleSend() {
-            const inputField = document.getElementById('user-input');
-            const query = inputField.value.trim();
+            const query = userInput.value.trim();
             if (!query) return;
 
             addMessage('user', query);
-            inputField.value = '';
-            
-            const typing = document.getElementById('typing');
-            typing.classList.remove('hidden');
+            userInput.value = '';
+            typingIndicator.classList.remove('hidden');
 
             const response = await routeRequest(query.toLowerCase());
             
-            typing.classList.add('hidden');
+            typingIndicator.classList.add('hidden');
             addMessage('ai', response);
         }
 
         async function routeRequest(q) {
             try {
-                // GET /api/rooms/available
                 if (q.includes('available') || q.includes('free')) {
                     const res = await fetch(`${API_BASE}/rooms/available?checkIn=2025-01-01&checkOut=2025-01-02`);
                     const data = await res.json();
                     return `Inventory analysis: I found **${data.length}** rooms currently available for those dates.`;
                 }
-
-                // GET /api/reports/services (Forecasting)
                 if (q.includes('revenue') || q.includes('forecast')) {
                     const res = await fetch(`${API_BASE}/reports/services?startDate=2025-01-01&endDate=2025-12-31`);
                     const data = await res.json();
                     const total = data.reduce((sum, item) => sum + (item.amount || 0), 0);
-                    const forecast = total * 1.15; // 15% AI Projection
-                    return `Financial Intelligence: Current period revenue is $${total.toLocaleString()}. Based on seasonal trends from your service reports, I forecast a revenue of **$${forecast.toLocaleString()}** for the next cycle.`;
+                    const forecast = total * 1.15; 
+                    return `Financial Intelligence: Current period revenue is $${total.toLocaleString()}. Based on seasonal trends, I forecast **$${forecast.toLocaleString()}** for the next cycle.`;
                 }
-
-                // GET /api/audit-logs
                 if (q.includes('audit') || q.includes('who')) {
                     const res = await fetch(`${API_BASE}/audit-logs`);
                     const data = await res.json();
                     const last = data[0];
-                    return `Security Audit: Latest system action was **${last.action}** by **${last.user}** at ${new Date(last.timestamp).toLocaleTimeString()}.`;
+                    return `Security Audit: Latest action was **${last.action}** by **${last.user}** at ${new Date(last.timestamp).toLocaleTimeString()}.`;
                 }
-
-                // POST /api/channel-manager/sync
                 if (q.includes('sync')) {
-                    const res = await fetch(`${API_BASE}/channel-manager/sync`, { method: 'POST' });
-                    return "Channel Manager Synchronization: API request sent. All third-party booking platforms are being updated with current inventory.";
+                    await fetch(`${API_BASE}/channel-manager/sync`, { method: 'POST' });
+                    return "Channel Manager Synchronization: API request sent. OTA platforms are being updated.";
                 }
-
-                // POST /api/rooms/init
-                if (q.includes('populate') || q.includes('init')) {
-                    await fetch(`${API_BASE}/rooms/init`, { method: 'POST' });
-                    return "System initialized: Default room configurations have been re-populated.";
-                }
-
-                return "I'm monitoring all endpoints (Bookings, Incidentals, Audit, Reports). Please ask a specific question about revenue, availability, or system logs.";
-
+                return "I'm monitoring your PMS endpoints. Ask about revenue, availability, or system logs.";
             } catch (err) {
-                return `Connection Error: I cannot reach the backend on ${API_BASE}. Ensure your server is running and CORS is enabled.`;
+                return `Connection Error: Cannot reach API. Ensure CORS is enabled.`;
             }
         }
     </script>
 </head>
-<body class="bg-slate-950 text-slate-200 h-screen flex items-center justify-center p-4">
+<body class="bg-slate-100 h-screen">
 
-    <div class="w-full max-w-3xl h-[85vh] bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+    <button onclick="toggleChat()" class="fixed bottom-6 right-6 z-50 bg-indigo-600 hover:bg-indigo-500 text-white p-4 rounded-full shadow-2xl transition-all active:scale-90 group">
+        <span class="absolute -top-1 -right-1 flex h-4 w-4">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-4 w-4 bg-indigo-500 border-2 border-white"></span>
+        </span>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+    </button>
+
+    <div id="chat-container" class="hidden fixed bottom-24 right-6 z-40 w-full max-w-[400px] h-[70vh] bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300">
         
-        <nav class="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-900/80 backdrop-blur-md">
+        <nav class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/80 backdrop-blur-md">
             <div>
-                <h1 class="text-lg font-bold tracking-tight text-white">HotelOS <span class="text-indigo-500 underline decoration-indigo-500/30">AI Agent</span></h1>
-                <p class="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Live API Integration</p>
+                <h1 class="text-md font-bold text-white">HotelOS <span class="text-indigo-500">AI</span></h1>
+                <p class="text-[9px] text-slate-500 font-mono uppercase tracking-widest">Patrinah PMS Node</p>
             </div>
-            <button onclick="executeAction('sync')" class="bg-indigo-600/10 border border-indigo-500/50 text-indigo-400 text-[11px] px-3 py-1.5 rounded-full hover:bg-indigo-600 hover:text-white transition-all">
-                Force Sync
-            </button>
+            <div class="flex gap-2">
+                <button onclick="executeAction('sync')" class="text-[9px] bg-indigo-600/10 border border-indigo-500/50 text-indigo-400 px-2 py-1 rounded-md">Sync</button>
+                <button onclick="toggleChat()" class="text-slate-500 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
         </nav>
 
-        <div id="chat-window" class="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth">
+        <div id="chat-window" class="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
             <div class="flex justify-start">
-                <div class="max-w-[85%] bg-slate-800 border border-slate-700 p-4 rounded-2xl rounded-tl-none text-sm text-slate-300">
-                    Agent Ready. Fully utilizing 18 endpoints including **Reports**, **Audit Logs**, and **Public Bookings**.
+                <div class="max-w-[85%] bg-slate-800 border border-slate-700 p-3 rounded-2xl rounded-tl-none text-xs text-slate-300">
+                    System connected to Patrinah PMS. Ask me about **Forecasts**, **Room Availability**, or **Audit Logs**.
                 </div>
             </div>
         </div>
 
-        <div id="typing" class="hidden px-6 py-2 text-[10px] font-mono text-indigo-400 animate-pulse uppercase tracking-widest">
-            Querying_Database...
+        <div id="typing" class="hidden px-4 py-1 text-[9px] font-mono text-indigo-400 animate-pulse uppercase">
+            Fetching_Data...
         </div>
 
-        <div class="p-6 bg-slate-900 border-t border-slate-800">
-            <div class="flex flex-wrap gap-2 mb-4">
-                <button onclick="setInput('Show revenue forecast')" class="text-[10px] bg-slate-800 px-3 py-1 rounded-md border border-slate-700 hover:border-indigo-500 transition-colors">Forecast</button>
-                <button onclick="setInput('Check available rooms')" class="text-[10px] bg-slate-800 px-3 py-1 rounded-md border border-slate-700 hover:border-indigo-500 transition-colors">Availability</button>
-                <button onclick="setInput('Who logged in recently?')" class="text-[10px] bg-slate-800 px-3 py-1 rounded-md border border-slate-700 hover:border-indigo-500 transition-colors">Audit</button>
+        <div class="p-4 bg-slate-900 border-t border-slate-800">
+            <div class="flex flex-wrap gap-1 mb-3">
+                <button onclick="setInput('Forecast')" class="text-[9px] bg-slate-800 px-2 py-1 rounded border border-slate-700 hover:border-indigo-500 transition-colors">Forecast</button>
+                <button onclick="setInput('Rooms')" class="text-[9px] bg-slate-800 px-2 py-1 rounded border border-slate-700 hover:border-indigo-500 transition-colors">Rooms</button>
             </div>
 
             <div class="relative group">
                 <input id="user-input" type="text" 
-                    class="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 pl-5 pr-16 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner"
-                    placeholder="Ask your data anything...">
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-4 pr-12 text-xs focus:outline-none focus:border-indigo-500 transition-all text-white"
+                    placeholder="Type a command...">
                 
                 <button onclick="handleSend()" 
-                    class="absolute right-2 top-2 bottom-2 aspect-square bg-indigo-600 rounded-xl flex items-center justify-center hover:bg-indigo-500 transition-transform active:scale-95 shadow-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                    class="absolute right-1.5 top-1.5 bottom-1.5 aspect-square bg-indigo-600 rounded-lg flex items-center justify-center hover:bg-indigo-500 transition-all active:scale-95 shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
                     </svg>
                 </button>
