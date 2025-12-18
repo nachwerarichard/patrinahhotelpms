@@ -559,39 +559,74 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="script4.js"></script>
 <script>
-    // This script runs on the redirected page (System A or B)
     (function autoLoginHook() {
-        const urlParams = new URLSearchParams(window.location.search);
-        
-        if (urlParams.get('autoLogin') === 'true') {
-            const user = urlParams.get('u');
-            const pass = urlParams.get('p');
+    const urlParams = new URLSearchParams(window.location.search);
 
-            // 1. Clear existing session data on this page to ensure a fresh start
-            localStorage.clear();
-            sessionStorage.clear();
-
-            // 2. Find the login fields on THIS page
-            // Note: Update these selectors if your target page uses different IDs
-            const userField = document.querySelector('input[type="text"]') || document.getElementById('username');
-            const passField = document.querySelector('input[type="password"]') || document.getElementById('password');
-            const loginBtn = document.querySelector('button[type="submit"]') || document.getElementById('login-button');
-
-            if (userField && passField && loginBtn) {
-                userField.value = user;
-                passField.value = pass;
-
-                // 3. Clean the URL so credentials aren't visible in the bar
-                const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-                window.history.replaceState({path: cleanUrl}, '', cleanUrl);
-
-                // 4. Click the button automatically
-                setTimeout(() => {
-                    loginBtn.click();
-                }, 500); // 500ms delay to ensure the page scripts are ready
+    if (urlParams.get('autoLogin') === 'true') {
+        // 1. Inject CSS for the blur and preloader
+        const style = document.createElement('style');
+        style.innerHTML = `
+            #auto-login-overlay {
+                position: fixed;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
+                background: rgba(255, 255, 255, 0.7);
+                backdrop-filter: blur(15px);
+                -webkit-backdrop-filter: blur(15px);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 999999;
             }
+            .loader {
+                border: 4px solid #f3f3f3;
+                border-top: 4px solid #3498db;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 2. Create and show the overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'auto-login-overlay';
+        overlay.innerHTML = '<div class="loader"></div>';
+        document.body.appendChild(overlay);
+
+        // --- Original Logic Starts ---
+        const user = urlParams.get('u');
+        const pass = urlParams.get('p');
+
+        localStorage.clear();
+        sessionStorage.clear();
+
+        const userField = document.querySelector('input[type="text"]') || document.getElementById('username');
+        const passField = document.querySelector('input[type="password"]') || document.getElementById('password');
+        const loginBtn = document.querySelector('button[type="submit"]') || document.getElementById('login-button');
+
+        if (userField && passField && loginBtn) {
+            userField.value = user;
+            passField.value = pass;
+
+            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+
+            setTimeout(() => {
+                loginBtn.click();
+                // Note: The overlay stays visible until the browser redirects to the next page
+            }, 500);
+        } else {
+            // If fields aren't found, remove the overlay so the user isn't stuck
+            overlay.remove();
         }
-    })();
+    }
+})();
 </script>
     
     <script>
