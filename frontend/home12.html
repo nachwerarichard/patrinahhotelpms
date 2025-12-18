@@ -563,23 +563,45 @@
     const urlParams = new URLSearchParams(window.location.search);
 
     if (urlParams.get('autoLogin') === 'true') {
-        // 1. Inject CSS
+        // 1. Inject CSS with your custom preloader
         const style = document.createElement('style');
         style.id = 'auto-login-styles';
         style.innerHTML = `
             #auto-login-overlay {
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                position: fixed; 
+                top: 0; left: 0; 
+                width: 100%; height: 100%;
                 background: rgba(255, 255, 255, 0.8);
-                backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-                display: flex; justify-content: center; align-items: center;
-                z-index: 999999; transition: opacity 0.5s ease;
+                backdrop-filter: blur(20px); 
+                -webkit-backdrop-filter: blur(20px);
+                display: flex; 
+                justify-content: center; 
+                align-items: center;
+                z-index: 999999; 
+                transition: opacity 0.5s ease;
             }
+
+            /* YOUR CUSTOM PRELOADER */
             .loader {
-                border: 5px solid #f3f3f3; border-top: 5px solid #3498db;
-                border-radius: 50%; width: 50px; height: 50px;
-                animation: spin 1s linear infinite;
+                --d: 22px;
+                width: 4px;
+                height: 4px;
+                border-radius: 50%;
+                color: #25b09b;
+                box-shadow: 
+                    calc(1 * var(--d))     calc(0 * var(--d))     0 0,
+                    calc(0.707 * var(--d)) calc(0.707 * var(--d)) 0 1px,
+                    calc(0 * var(--d))     calc(1 * var(--d))     0 2px,
+                    calc(-0.707 * var(--d)) calc(0.707 * var(--d)) 0 3px,
+                    calc(-1 * var(--d))    calc(0 * var(--d))     0 4px,
+                    calc(-0.707 * var(--d)) calc(-0.707 * var(--d)) 0 5px,
+                    calc(0 * var(--d))     calc(-1 * var(--d))    0 6px;
+                animation: l27 1s infinite steps(8);
             }
-            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+            @keyframes l27 {
+                100% { transform: rotate(1turn); }
+            }
         `;
         document.head.appendChild(style);
 
@@ -589,11 +611,11 @@
         overlay.innerHTML = '<div class="loader"></div>';
         document.body.appendChild(overlay);
 
-        // 3. Cleanup Logic (The Fix)
+        // 3. Cleanup Logic
         const removeOverlay = () => {
             const el = document.getElementById('auto-login-overlay');
             if (el) {
-                el.style.opacity = '0'; // Fade out effect
+                el.style.opacity = '0'; // Smooth fade out
                 setTimeout(() => el.remove(), 500); 
             }
         };
@@ -601,6 +623,7 @@
         // 4. Auto-Login Logic
         const user = urlParams.get('u');
         const pass = urlParams.get('p');
+        
         localStorage.clear();
         sessionStorage.clear();
 
@@ -612,7 +635,7 @@
             userField.value = user;
             passField.value = pass;
 
-            // Clear URL so credentials aren't leaked
+            // Clear URL so credentials aren't leaked in history
             const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
             window.history.replaceState({path: cleanUrl}, '', cleanUrl);
 
@@ -620,17 +643,16 @@
                 loginBtn.click();
                 
                 // --- WATCHDOG START ---
-                // We check every 500ms if the login form is gone. 
-                // If the form is gone, it means we are likely logged in!
                 const checkFinished = setInterval(() => {
                     const stillOnLoginPage = document.querySelector('input[type="password"]');
+                    // If password field is gone, we've moved to the dashboard
                     if (!stillOnLoginPage) {
                         removeOverlay();
                         clearInterval(checkFinished);
                     }
                 }, 500);
 
-                // Safety timeout: remove blur after 5 seconds no matter what
+                // Safety timeout: 5 seconds max
                 setTimeout(() => {
                     removeOverlay();
                     clearInterval(checkFinished);
@@ -639,7 +661,7 @@
 
             }, 500);
         } else {
-            removeOverlay(); // Remove if fields aren't found
+            removeOverlay(); // Remove if login fields aren't found
         }
     }
 })();
