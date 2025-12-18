@@ -563,46 +563,44 @@
     const urlParams = new URLSearchParams(window.location.search);
 
     if (urlParams.get('autoLogin') === 'true') {
-        // 1. Inject CSS for the blur and preloader
+        // 1. Inject CSS
         const style = document.createElement('style');
+        style.id = 'auto-login-styles';
         style.innerHTML = `
             #auto-login-overlay {
-                position: fixed;
-                top: 0; left: 0;
-                width: 100%; height: 100%;
-                background: rgba(255, 255, 255, 0.7);
-                backdrop-filter: blur(15px);
-                -webkit-backdrop-filter: blur(15px);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 999999;
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(255, 255, 255, 0.8);
+                backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+                display: flex; justify-content: center; align-items: center;
+                z-index: 999999; transition: opacity 0.5s ease;
             }
             .loader {
-                border: 4px solid #f3f3f3;
-                border-top: 4px solid #3498db;
-                border-radius: 50%;
-                width: 40px;
-                height: 40px;
+                border: 5px solid #f3f3f3; border-top: 5px solid #3498db;
+                border-radius: 50%; width: 50px; height: 50px;
                 animation: spin 1s linear infinite;
             }
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         `;
         document.head.appendChild(style);
 
-        // 2. Create and show the overlay
+        // 2. Create Overlay
         const overlay = document.createElement('div');
         overlay.id = 'auto-login-overlay';
         overlay.innerHTML = '<div class="loader"></div>';
         document.body.appendChild(overlay);
 
-        // --- Original Logic Starts ---
+        // 3. Cleanup Logic (The Fix)
+        const removeOverlay = () => {
+            const el = document.getElementById('auto-login-overlay');
+            if (el) {
+                el.style.opacity = '0'; // Fade out effect
+                setTimeout(() => el.remove(), 500); 
+            }
+        };
+
+        // 4. Auto-Login Logic
         const user = urlParams.get('u');
         const pass = urlParams.get('p');
-
         localStorage.clear();
         sessionStorage.clear();
 
@@ -614,16 +612,34 @@
             userField.value = user;
             passField.value = pass;
 
+            // Clear URL so credentials aren't leaked
             const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
             window.history.replaceState({path: cleanUrl}, '', cleanUrl);
 
             setTimeout(() => {
                 loginBtn.click();
-                // Note: The overlay stays visible until the browser redirects to the next page
+                
+                // --- WATCHDOG START ---
+                // We check every 500ms if the login form is gone. 
+                // If the form is gone, it means we are likely logged in!
+                const checkFinished = setInterval(() => {
+                    const stillOnLoginPage = document.querySelector('input[type="password"]');
+                    if (!stillOnLoginPage) {
+                        removeOverlay();
+                        clearInterval(checkFinished);
+                    }
+                }, 500);
+
+                // Safety timeout: remove blur after 5 seconds no matter what
+                setTimeout(() => {
+                    removeOverlay();
+                    clearInterval(checkFinished);
+                }, 5000);
+                // --- WATCHDOG END ---
+
             }, 500);
         } else {
-            // If fields aren't found, remove the overlay so the user isn't stuck
-            overlay.remove();
+            removeOverlay(); // Remove if fields aren't found
         }
     }
 })();
