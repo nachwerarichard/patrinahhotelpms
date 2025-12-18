@@ -81,9 +81,10 @@
     </div>
     
     <script>
-        const API_BASE_URL = 'https://patrinahhotelmgtsys.onrender.com';
+        // Define the two different APIs
+        const API_A_URL = 'https://patrinahhotelmgtsys.onrender.com';
+        const API_B_URL = 'https://patrinahhotelpms.onrender.com';
 
-        // System Redirection Links
         const SYSTEM_LINKS = {
             systemA: 'https://stirring-pony-fe2347.netlify.app/index52.html', // Bar & Restaurant
             systemB: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html'  // Front Office & HK
@@ -98,31 +99,25 @@
             const authContainer = document.getElementById('auth-container');
             const loginButton = document.getElementById('login-button');
 
-            let tempAuthData = null;
+            // Modified to handle the specific token/data of the selected system
+            const finalizeLogin = (systemData, systemKey) => {
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value.trim();
 
-            const finalizeLogin = (data, systemKey = null) => {
-    const selectedKey = systemKey || (data.system === 'System A' ? 'systemA' : 'systemB');
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
+                localStorage.setItem('authToken', systemData.token);
+                localStorage.setItem('username', username);
 
-    // 1. Store credentials locally for the portal
-    localStorage.setItem('authToken', data.token);
-    localStorage.setItem('username', username);
+                const targetUrl = SYSTEM_LINKS[systemKey];
+                
+                if (targetUrl) {
+                    const ssoUrl = `${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}`;
+                    window.location.href = ssoUrl;
+                } else {
+                    alert("System link not found.");
+                }
+            };
 
-    // 2. Redirect with credentials in the URL
-    const targetUrl = SYSTEM_LINKS[selectedKey];
-    
-    if (targetUrl) {
-        // We append the credentials as parameters
-        // The "autoLogin=true" flag tells the next page to trigger the script
-        const ssoUrl = `${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}`;
-        window.location.href = ssoUrl;
-    } else {
-        alert("System link not found.");
-    }
-};
-
-            const createSystemButton = (systemKey, data) => {
+            const createSystemButton = (systemKey, systemData) => {
                 const isA = systemKey === 'systemA';
                 const buttonClass = isA 
                     ? "w-full py-4 px-4 border border-transparent rounded-lg shadow-lg text-lg font-medium text-white bg-green-600 hover:bg-green-700 transition duration-150 transform hover:scale-[1.02]"
@@ -130,6 +125,7 @@
                 
                 const icon = isA ? '🍽️' : '🛏️';
                 const label = isA ? 'Bar & Restaurant System' : 'Front Office & Housekeeping';
+                const role = systemData.role || (systemData.user && systemData.user.role) || 'User';
 
                 const button = document.createElement('button');
                 button.className = buttonClass;
@@ -137,12 +133,12 @@
                     <div class="flex flex-col items-center">
                         <span class="text-2xl">${icon}</span>
                         <span>${label}</span>
-                        <span class="text-xs opacity-80 font-normal">Role: ${data[systemKey].role}</span>
+                        <span class="text-xs opacity-80 font-normal">Role: ${role}</span>
                     </div>
                 `;
                 
                 button.addEventListener('click', () => {
-                    finalizeLogin(data, systemKey);
+                    finalizeLogin(systemData, systemKey);
                 });
 
                 return button;
@@ -160,27 +156,46 @@
                 systemOptions.innerHTML = ''; 
 
                 try {
-                    const response = await fetch(`${API_BASE_URL}/login`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username, password })
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok) {
-                        if (data.dualAccess) {
-                            loginForm.classList.add('hidden');
-                            systemSelection.classList.remove('hidden');
-                            authContainer.classList.replace('max-w-md', 'max-w-lg');
-                            
-                            if (data.systemA) systemOptions.appendChild(createSystemButton('systemA', data));
-                            if (data.systemB) systemOptions.appendChild(createSystemButton('systemB', data));
-                        } else {
-                            finalizeLogin(data);
+                    // Helper to wrap fetch requests
+                    const loginRequest = async (url) => {
+                        try {
+                            const res = await fetch(`${url}/login`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ username, password })
+                            });
+                            return res.ok ? await res.json() : null;
+                        } catch (e) {
+                            return null;
                         }
-                    } else {
-                        errorMessage.textContent = data.error || 'Invalid username or password.';
+                    };
+
+                    // Fire both requests at once
+                    const [resA, resB] = await Promise.all([
+                        loginRequest(API_A_URL),
+                        loginRequest(API_B_URL)
+                    ]);
+
+                    if (resA && resB) {
+                        // USER FOUND IN BOTH - Show selection
+                        loginForm.classList.add('hidden');
+                        systemSelection.classList.remove('hidden');
+                        authContainer.classList.replace('max-w-md', 'max-w-lg');
+                        
+                        systemOptions.appendChild(createSystemButton('systemA', resA));
+                        systemOptions.appendChild(createSystemButton('systemB', resB));
+                    } 
+                    else if (resA) {
+                        // USER ONLY IN SYSTEM A - Auto redirect
+                        finalizeLogin(resA, 'systemA');
+                    } 
+                    else if (resB) {
+                        // USER ONLY IN SYSTEM B - Auto redirect
+                        finalizeLogin(resB, 'systemB');
+                    } 
+                    else {
+                        // NOT FOUND IN EITHER
+                        errorMessage.textContent = 'Invalid username or password in both systems.';
                         errorMessage.classList.remove('hidden');
                     }
                 } catch (error) {
