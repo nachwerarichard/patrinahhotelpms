@@ -14,32 +14,47 @@
 
 <body class="bg-gray-50 font-sans text-slate-900">
 
-<!-- SIDEBAR -->
+<!-- ================= SIDEBAR ================= -->
 <div class="fixed left-0 top-0 h-full w-64 bg-slate-900 text-white p-6 z-20">
 <h1 class="text-2xl font-bold mb-10 text-blue-400">
 <i class="fa-solid fa-hotel mr-2"></i>HR Connect
 </h1>
 <nav class="space-y-2">
-<button onclick="showTab('directory')" class="nav-btn w-full text-left p-3 rounded-lg bg-blue-600 flex items-center"><i class="fa-solid fa-users w-8"></i> Directory</button>
-<button onclick="showTab('recruitment')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center"><i class="fa-solid fa-user-plus w-8"></i> Recruitment</button>
-<button onclick="showTab('scheduling')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center"><i class="fa-solid fa-calendar-days w-8"></i> Scheduling</button>
-<button onclick="showTab('leave')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center"><i class="fa-solid fa-plane w-8"></i> Leave</button>
-<button onclick="showTab('payroll')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center"><i class="fa-solid fa-file-invoice-dollar w-8"></i> Payroll</button>
+<button onclick="showTab('directory')" class="nav-btn w-full text-left p-3 rounded-lg bg-blue-600 flex items-center">
+<i class="fa-solid fa-users w-8"></i> Directory
+</button>
+<button onclick="showTab('recruitment')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center">
+<i class="fa-solid fa-user-plus w-8"></i> Recruitment
+</button>
+<button onclick="showTab('scheduling')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center">
+<i class="fa-solid fa-calendar-days w-8"></i> Scheduling
+</button>
+<button onclick="showTab('leave')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center">
+<i class="fa-solid fa-plane w-8"></i> Leave
+</button>
+<button onclick="showTab('payroll')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center">
+<i class="fa-solid fa-file-invoice-dollar w-8"></i> Payroll
+</button>
 </nav>
 </div>
 
-<!-- MAIN -->
+<!-- ================= MAIN ================= -->
 <div class="ml-64 p-8">
-<header class="flex justify-between items-center mb-8">
+
+<header class="flex justify-between mb-8">
 <div>
-<h2 id="tab-title" class="text-3xl font-bold">Operational Pulse</h2>
+<h2 class="text-3xl font-bold">Operational Pulse</h2>
 <p id="staff-count" class="text-slate-500 italic"></p>
+</div>
+<div class="space-x-2">
+<button onclick="openApplicantModal()" class="bg-slate-200 px-4 py-2 rounded">Add Applicant</button>
+<button onclick="openModal()" class="bg-blue-600 text-white px-5 py-2 rounded font-bold">+ New Hire</button>
 </div>
 </header>
 
-<!-- DIRECTORY -->
+<!-- ================= DIRECTORY ================= -->
 <section id="directory-tab" class="tab-content">
-<div class="bg-white rounded-xl shadow border">
+<div class="bg-white rounded-xl border overflow-hidden">
 <table class="w-full">
 <thead class="bg-slate-50 border-b">
 <tr>
@@ -55,49 +70,109 @@
 </div>
 </section>
 
-<!-- RECRUITMENT -->
+<!-- ================= RECRUITMENT ================= -->
 <section id="recruitment-tab" class="tab-content hidden">
+<div class="mb-4">
+<input id="applicantSearch" oninput="renderApplicants()" class="w-full p-2 border rounded" placeholder="Filter by job title">
+</div>
 <div id="applicant-sections"></div>
 </section>
 
-<!-- PAYROLL -->
+<!-- ================= PAYROLL ================= -->
 <section id="payroll-tab" class="tab-content hidden">
-<div class="bg-slate-900 text-white p-6 rounded-xl" id="payroll-breakdown"></div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div class="bg-white p-6 rounded border">
+<input id="scPool" type="number" value="20000" class="w-full p-3 text-xl border" oninput="calculatePayroll()">
+</div>
+<div id="payroll-breakdown" class="bg-slate-900 text-white p-6 rounded"></div>
+</div>
 </section>
+
+</div>
+
+<!-- ================= MODALS ================= -->
+<div id="staffModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center">
+<div class="bg-white p-6 rounded w-full max-w-xl">
+<form id="staffForm" class="space-y-3">
+<input type="hidden" id="editId">
+<input id="staffName" placeholder="Name" class="w-full p-2 border" required>
+<select id="staffStatus" class="w-full p-2 border">
+<option>Active</option><option>On Leave</option><option>Terminated</option>
+</select>
+<input id="hireDate" type="date" class="w-full p-2 border" required>
+<select id="staffGrade" class="w-full p-2 border">
+<option value="G1">G1</option><option value="G2">G2</option><option value="G3">G3</option>
+</select>
+<input id="staffSalary" type="number" class="w-full p-2 border" required>
+<input id="staffCerts" placeholder="Certs" class="w-full p-2 border">
+<button class="bg-blue-600 text-white px-6 py-2 rounded w-full">Save</button>
+</form>
+</div>
+</div>
+
+<div id="applicantModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center">
+<div class="bg-white p-6 rounded w-full max-w-md">
+<form id="applicantForm" class="space-y-3">
+<input id="appName" placeholder="Name" class="w-full p-2 border" required>
+<input id="appRole" placeholder="Role" class="w-full p-2 border" required>
+<input id="appEmail" placeholder="Email" class="w-full p-2 border">
+<button class="bg-slate-800 text-white w-full py-2 rounded">Add</button>
+</form>
+</div>
 </div>
 
 <script>
 let employees = [
-{id:1,name:"Sarah Chen",dept:"Front Office",grade:"G2",salary:3200,shift:"Morning",status:"Active",certs:["Opera PMS"],hireDate:"2023-01-15",termDate:""},
-{id:2,name:"Marcus Miller",dept:"Kitchen",grade:"G3",salary:1800,shift:"Afternoon",status:"Active",certs:["Food Hygiene"],hireDate:"2023-06-10",termDate:""},
-{id:3,name:"Elena Rodriguez",dept:"Engineering",grade:"G1",salary:4500,shift:"Morning",status:"Active",certs:["HVAC"],hireDate:"2022-11-01",termDate:""}
+{id:1,name:"Sarah Chen",grade:"G2",status:"Active",salary:3200,certs:["PMS"],hireDate:"2023-01-01"},
+{id:2,name:"Marcus Miller",grade:"G3",status:"Active",salary:1800,certs:["Food"],hireDate:"2023-06-01"},
+{id:3,name:"Elena Rodriguez",grade:"G1",status:"Active",salary:4500,certs:["HVAC"],hireDate:"2022-11-01"}
 ];
 
 let applicants = [
-{id:101,name:"James Wilson",role:"Sous Chef",email:"james@example.com",date:"2023-10-01"},
-{id:102,name:"Linda Park",role:"Receptionist",email:"linda@example.com",date:"2023-10-05"}
+{id:101,name:"James Wilson",role:"Sous Chef",email:"a@b.com"},
+{id:102,name:"Linda Park",role:"Receptionist",email:"c@d.com"}
 ];
 
-function showTab(tab){
+function showTab(id){
 document.querySelectorAll('.tab-content').forEach(t=>t.classList.add('hidden'));
-document.getElementById(tab+'-tab').classList.remove('hidden');
-if(tab==='payroll') calculatePayroll();
-if(tab==='directory') renderDirectory();
-if(tab==='recruitment') renderApplicants();
+document.getElementById(id+'-tab').classList.remove('hidden');
+if(id==="payroll") calculatePayroll();
+if(id==="recruitment") renderApplicants();
 }
 
-/* RECRUITMENT */
+function renderDirectory(){
+employee-list.innerHTML = employees.map(e=>`
+<tr>
+<td class="p-3 font-bold">${e.name}</td>
+<td class="p-3">${e.hireDate}</td>
+<td class="p-3">${e.certs.join(", ")}</td>
+<td class="p-3">${e.grade}</td>
+<td class="p-3 space-x-2">
+<button onclick="openModal(${e.id})" class="text-blue-600"><i class="fa fa-pen"></i></button>
+<button onclick="deleteEmployee(${e.id})" class="text-red-600"><i class="fa fa-trash"></i></button>
+</td>
+</tr>
+`).join('');
+}
+
+function deleteEmployee(id){
+if(confirm("Delete this employee?")){
+employees = employees.filter(e=>e.id!==id);
+renderAll();
+}
+}
+
 function renderApplicants(){
-const c=document.getElementById('applicant-sections');
-c.innerHTML=applicants.map(a=>`
-<div class="applicant-card bg-white p-4 mb-4 rounded border">
-<h4 class="font-bold">${a.name}</h4>
-<p class="text-xs text-slate-500">${a.role} | ${a.email}</p>
-<div class="flex space-x-2 mt-3">
-<button onclick="hireApplicant(${a.id})" class="hire-btn opacity-0 bg-green-600 text-white px-3 py-1 text-xs rounded">Hire</button>
-<button onclick="deleteApplicant(${a.id})" class="delete-btn opacity-0 bg-red-600 text-white px-3 py-1 text-xs rounded">Delete</button>
+const s = applicantSearch.value.toLowerCase();
+applicant-sections.innerHTML = applicants.filter(a=>a.role.toLowerCase().includes(s)).map(a=>`
+<div class="applicant-card bg-white p-4 border rounded mb-3">
+<b>${a.name}</b> – ${a.role}
+<div class="mt-2 flex space-x-2">
+<button onclick="hireApplicant(${a.id})" class="hire-btn opacity-0 bg-green-600 text-white px-2 rounded">Hire</button>
+<button onclick="deleteApplicant(${a.id})" class="delete-btn opacity-0 bg-red-600 text-white px-2 rounded">Delete</button>
 </div>
-</div>`).join('');
+</div>
+`).join('');
 }
 
 function deleteApplicant(id){
@@ -107,59 +182,56 @@ renderApplicants();
 }
 }
 
-/* DIRECTORY */
-function renderDirectory(){
-const list=document.getElementById('employee-list');
-list.innerHTML=employees.map(e=>`
-<tr class="border-b">
-<td class="p-4 font-bold">${e.name}</td>
-<td class="p-4 text-xs">${e.hireDate}</td>
-<td class="p-4">${e.certs.join(', ')}</td>
-<td class="p-4">${e.grade}</td>
-<td class="p-4 space-x-2">
-<button onclick="deleteEmployee(${e.id})" class="text-red-600"><i class="fa-solid fa-trash"></i></button>
-</td>
-</tr>`).join('');
-document.getElementById('staff-count').innerText =
-`Active Workforce: ${employees.filter(e=>e.status==='Active').length}`;
+function hireApplicant(id){
+const a = applicants.find(x=>x.id===id);
+openModal();
+staffName.value = a.name;
+applicants = applicants.filter(x=>x.id!==id);
+renderApplicants();
 }
 
-function deleteEmployee(id){
-if(confirm("Delete this employee permanently?")){
-employees = employees.filter(e=>e.id!==id);
-renderDirectory();
-calculatePayroll();
-}
-}
-
-/* PAYROLL */
 function calculatePayroll(){
-const g1=employees.filter(e=>e.grade==="G1"&&e.status==="Active");
-const g2=employees.filter(e=>e.grade==="G2"&&e.status==="Active");
-const g3=employees.filter(e=>e.grade==="G3"&&e.status==="Active");
+const pool = +scPool.value;
+const weights = {G1:2.5,G2:1.5,G3:1};
+const active = employees.filter(e=>e.status==="Active");
+const total = active.reduce((s,e)=>s+weights[e.grade],0);
+const v = pool/total;
 
-document.getElementById('payroll-breakdown').innerHTML=`
-<h3 class="text-xl font-bold mb-4">Payroll Breakdown</h3>
+const names = g => active.filter(e=>e.grade===g).map(e=>e.name).join(", ") || "—";
 
-<div class="mb-4">
-<h4 class="text-blue-400 font-bold">G1 – Executive</h4>
-${g1.map(e=>`<p>${e.name}</p>`).join('')||'<p class="text-slate-400">None</p>'}
-</div>
-
-<div class="mb-4">
-<h4 class="text-blue-400 font-bold">G2 – Supervisor</h4>
-${g2.map(e=>`<p>${e.name}</p>`).join('')||'<p class="text-slate-400">None</p>'}
-</div>
-
-<div>
-<h4 class="text-blue-400 font-bold">G3 – Staff</h4>
-${g3.map(e=>`<p>${e.name}</p>`).join('')||'<p class="text-slate-400">None</p>'}
-</div>`;
+payroll-breakdown.innerHTML = `
+<h3 class="text-xl mb-4">Payroll</h3>
+<p><b>G1:</b> $${(v*2.5).toFixed(2)}<br><small>${names("G1")}</small></p>
+<p><b>G2:</b> $${(v*1.5).toFixed(2)}<br><small>${names("G2")}</small></p>
+<p><b>G3:</b> $${(v*1.0).toFixed(2)}<br><small>${names("G3")}</small></p>
+`;
 }
 
-window.onload=()=>{
-renderDirectory();
+staffForm.onsubmit = e=>{
+e.preventDefault();
+employees.push({
+id:Date.now(),
+name:staffName.value,
+grade:staffGrade.value,
+salary:+staffSalary.value,
+status:"Active",
+certs:staffCerts.value.split(","),
+hireDate:hireDate.value
+});
+closeModal(); renderAll();
 };
+
+function openModal(){staffModal.classList.remove('hidden')}
+function closeModal(){staffModal.classList.add('hidden')}
+function openApplicantModal(){applicantModal.classList.remove('hidden')}
+function closeApplicantModal(){applicantModal.classList.add('hidden')}
+
+function renderAll(){
+renderDirectory();
+staff-count.innerText = `Active Workforce: ${employees.filter(e=>e.status==="Active").length}`;
+}
+
+window.onload = renderAll;
 </script>
 </body>
 </html>
