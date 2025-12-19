@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grand Horizon | Elite Hotel HR</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+.applicant-card:hover .hire-btn,
+.applicant-card:hover .delete-btn { opacity: 1; }
+</style>
+</head>
+
+<body class="bg-gray-50 font-sans text-slate-900">
+
+<!-- SIDEBAR -->
+<div class="fixed left-0 top-0 h-full w-64 bg-slate-900 text-white p-6 z-20">
+<h1 class="text-2xl font-bold mb-10 text-blue-400">
+<i class="fa-solid fa-hotel mr-2"></i>HR Connect
+</h1>
+<nav class="space-y-2">
+<button onclick="showTab('directory')" class="nav-btn w-full text-left p-3 rounded-lg bg-blue-600 flex items-center"><i class="fa-solid fa-users w-8"></i> Directory</button>
+<button onclick="showTab('recruitment')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center"><i class="fa-solid fa-user-plus w-8"></i> Recruitment</button>
+<button onclick="showTab('scheduling')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center"><i class="fa-solid fa-calendar-days w-8"></i> Scheduling</button>
+<button onclick="showTab('leave')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center"><i class="fa-solid fa-plane w-8"></i> Leave</button>
+<button onclick="showTab('payroll')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center"><i class="fa-solid fa-file-invoice-dollar w-8"></i> Payroll</button>
+</nav>
+</div>
+
+<!-- MAIN -->
+<div class="ml-64 p-8">
+<header class="flex justify-between items-center mb-8">
+<div>
+<h2 id="tab-title" class="text-3xl font-bold">Operational Pulse</h2>
+<p id="staff-count" class="text-slate-500 italic"></p>
+</div>
+</header>
+
+<!-- DIRECTORY -->
+<section id="directory-tab" class="tab-content">
+<div class="bg-white rounded-xl shadow border">
+<table class="w-full">
+<thead class="bg-slate-50 border-b">
+<tr>
+<th class="p-4">Employee</th>
+<th class="p-4">Tenure</th>
+<th class="p-4">Certs</th>
+<th class="p-4">Grade</th>
+<th class="p-4">Actions</th>
+</tr>
+</thead>
+<tbody id="employee-list"></tbody>
+</table>
+</div>
+</section>
+
+<!-- RECRUITMENT -->
+<section id="recruitment-tab" class="tab-content hidden">
+<div id="applicant-sections"></div>
+</section>
+
+<!-- PAYROLL -->
+<section id="payroll-tab" class="tab-content hidden">
+<div class="bg-slate-900 text-white p-6 rounded-xl" id="payroll-breakdown"></div>
+</section>
+</div>
+
+<script>
+let employees = [
+{id:1,name:"Sarah Chen",dept:"Front Office",grade:"G2",salary:3200,shift:"Morning",status:"Active",certs:["Opera PMS"],hireDate:"2023-01-15",termDate:""},
+{id:2,name:"Marcus Miller",dept:"Kitchen",grade:"G3",salary:1800,shift:"Afternoon",status:"Active",certs:["Food Hygiene"],hireDate:"2023-06-10",termDate:""},
+{id:3,name:"Elena Rodriguez",dept:"Engineering",grade:"G1",salary:4500,shift:"Morning",status:"Active",certs:["HVAC"],hireDate:"2022-11-01",termDate:""}
+];
+
+let applicants = [
+{id:101,name:"James Wilson",role:"Sous Chef",email:"james@example.com",date:"2023-10-01"},
+{id:102,name:"Linda Park",role:"Receptionist",email:"linda@example.com",date:"2023-10-05"}
+];
+
+function showTab(tab){
+document.querySelectorAll('.tab-content').forEach(t=>t.classList.add('hidden'));
+document.getElementById(tab+'-tab').classList.remove('hidden');
+if(tab==='payroll') calculatePayroll();
+if(tab==='directory') renderDirectory();
+if(tab==='recruitment') renderApplicants();
+}
+
+/* RECRUITMENT */
+function renderApplicants(){
+const c=document.getElementById('applicant-sections');
+c.innerHTML=applicants.map(a=>`
+<div class="applicant-card bg-white p-4 mb-4 rounded border">
+<h4 class="font-bold">${a.name}</h4>
+<p class="text-xs text-slate-500">${a.role} | ${a.email}</p>
+<div class="flex space-x-2 mt-3">
+<button onclick="hireApplicant(${a.id})" class="hire-btn opacity-0 bg-green-600 text-white px-3 py-1 text-xs rounded">Hire</button>
+<button onclick="deleteApplicant(${a.id})" class="delete-btn opacity-0 bg-red-600 text-white px-3 py-1 text-xs rounded">Delete</button>
+</div>
+</div>`).join('');
+}
+
+function deleteApplicant(id){
+if(confirm("Remove this applicant?")){
+applicants = applicants.filter(a=>a.id!==id);
+renderApplicants();
+}
+}
+
+/* DIRECTORY */
+function renderDirectory(){
+const list=document.getElementById('employee-list');
+list.innerHTML=employees.map(e=>`
+<tr class="border-b">
+<td class="p-4 font-bold">${e.name}</td>
+<td class="p-4 text-xs">${e.hireDate}</td>
+<td class="p-4">${e.certs.join(', ')}</td>
+<td class="p-4">${e.grade}</td>
+<td class="p-4 space-x-2">
+<button onclick="deleteEmployee(${e.id})" class="text-red-600"><i class="fa-solid fa-trash"></i></button>
+</td>
+</tr>`).join('');
+document.getElementById('staff-count').innerText =
+`Active Workforce: ${employees.filter(e=>e.status==='Active').length}`;
+}
+
+function deleteEmployee(id){
+if(confirm("Delete this employee permanently?")){
+employees = employees.filter(e=>e.id!==id);
+renderDirectory();
+calculatePayroll();
+}
+}
+
+/* PAYROLL */
+function calculatePayroll(){
+const g1=employees.filter(e=>e.grade==="G1"&&e.status==="Active");
+const g2=employees.filter(e=>e.grade==="G2"&&e.status==="Active");
+const g3=employees.filter(e=>e.grade==="G3"&&e.status==="Active");
+
+document.getElementById('payroll-breakdown').innerHTML=`
+<h3 class="text-xl font-bold mb-4">Payroll Breakdown</h3>
+
+<div class="mb-4">
+<h4 class="text-blue-400 font-bold">G1 – Executive</h4>
+${g1.map(e=>`<p>${e.name}</p>`).join('')||'<p class="text-slate-400">None</p>'}
+</div>
+
+<div class="mb-4">
+<h4 class="text-blue-400 font-bold">G2 – Supervisor</h4>
+${g2.map(e=>`<p>${e.name}</p>`).join('')||'<p class="text-slate-400">None</p>'}
+</div>
+
+<div>
+<h4 class="text-blue-400 font-bold">G3 – Staff</h4>
+${g3.map(e=>`<p>${e.name}</p>`).join('')||'<p class="text-slate-400">None</p>'}
+</div>`;
+}
+
+window.onload=()=>{
+renderDirectory();
+};
+</script>
+</body>
+</html>
