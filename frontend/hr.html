@@ -74,14 +74,53 @@
             </div>
         </section>
 
-        <section id="payroll-tab" class="tab-content hidden text-center py-20">
-            <div class="max-w-md mx-auto">
-                <i class="fa-solid fa-chart-line text-64 text-gray-300 mb-4 text-6xl"></i>
-                <h3 class="text-xl font-bold">Payroll Processor</h3>
-                <p class="text-gray-500 mb-6">Process monthly salaries and service charge distribution.</p>
-                <button class="bg-green-600 text-white px-8 py-3 rounded-xl font-bold">Generate Payroll Report</button>
+        <section id="leave-tab" class="tab-content hidden">
+    <div class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-md">
+        <h3 class="text-xl font-bold mb-6 text-gray-800 border-b pb-4">Submit Leave Request</h3>
+        <form id="leaveForm" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Staff Member</label>
+                    <select id="leaveStaff" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Leave Type</label>
+                    <select class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                        <option>Annual Leave</option>
+                        <option>Sick Leave</option>
+                        <option>Public Holiday Offset</option>
+                    </select>
+                </div>
             </div>
-        </section>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Date Range</label>
+                <div class="flex items-center space-x-2">
+                    <input type="date" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                    <span>to</span>
+                    <input type="date" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                </div>
+            </div>
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700">Submit for Approval</button>
+        </form>
+    </div>
+</section>
+
+<section id="payroll-tab" class="tab-content hidden">
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h3 class="text-xl font-bold mb-6">Service Charge & Salary Calculator</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="space-y-4">
+                <div class="p-4 bg-blue-50 rounded-lg">
+                    <label class="block text-sm font-semibold text-blue-800">Total Monthly Hotel Service Charge ($)</label>
+                    <input type="number" id="totalSC" value="12000" class="mt-2 text-2xl font-bold bg-transparent border-none focus:ring-0 text-blue-600">
+                </div>
+                <p class="text-xs text-gray-500 italic">*Service charge is distributed equally among all active staff.</p>
+            </div>
+            <div id="payroll-results" class="space-y-3">
+                </div>
+        </div>
+    </div>
+</section>
 
     </div>
 
@@ -152,6 +191,45 @@
             renderDirectory();
             renderShifts();
         };
+
+        // Populate the Leave Form dropdown
+function populateLeaveDropdown() {
+    const select = document.getElementById('leaveStaff');
+    select.innerHTML = employees.map(e => `<option value="${e.id}">${e.name} (${e.dept})</option>`).join('');
+}
+
+// Calculate Payroll with Service Charge
+function calculatePayroll() {
+    const totalSC = document.getElementById('totalSC').value;
+    const sharePerPerson = (totalSC / employees.length).toFixed(2);
+    const resultsContainer = document.getElementById('payroll-results');
+    
+    resultsContainer.innerHTML = `
+        <h4 class="font-bold text-gray-700">Estimated Distribution:</h4>
+        <div class="flex justify-between p-3 bg-gray-50 rounded border border-dashed border-gray-300">
+            <span>Staff Count:</span>
+            <span class="font-bold">${employees.length}</span>
+        </div>
+        <div class="flex justify-between p-3 bg-green-50 rounded border border-dashed border-green-300 text-green-700">
+            <span>Bonus Per Staff:</span>
+            <span class="font-bold">$${sharePerPerson}</span>
+        </div>
+    `;
+}
+
+// Update the showTab function to include 'leave' and trigger calculations
+function showTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+    document.getElementById(tabId + '-tab').classList.remove('hidden');
+    
+    if(tabId === 'leave') populateLeaveDropdown();
+    if(tabId === 'payroll') calculatePayroll();
+}
+
+// Add an event listener to the input for real-time calculation
+document.getElementById('totalSC').addEventListener('input', calculatePayroll);
+
+        
     </script>
 </body>
 </html>
