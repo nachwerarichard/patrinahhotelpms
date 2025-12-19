@@ -3,233 +3,250 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grand Horizon | Hotel HR Portal</title>
+    <title>Grand Horizon | Pro Hotel HR</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
-<body class="bg-gray-50 font-sans">
+<body class="bg-gray-50 font-sans text-slate-900">
 
-    <div class="fixed left-0 top-0 h-full w-64 bg-slate-900 text-white p-6">
+    <div class="fixed left-0 top-0 h-full w-64 bg-slate-900 text-white p-6 z-20">
         <h1 class="text-2xl font-bold mb-10 text-blue-400"><i class="fa-solid fa-hotel mr-2"></i>HR Connect</h1>
-        <nav class="space-y-4">
-            <button onclick="showTab('directory')" class="nav-btn w-full text-left p-3 rounded-lg bg-blue-600 flex items-center">
-                <i class="fa-solid fa-users mr-3"></i> Staff Directory
-            </button>
-            <button onclick="showTab('scheduling')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center">
-                <i class="fa-solid fa-calendar-days mr-3"></i> Rosters & Shifts
-            </button>
-            <button onclick="showTab('payroll')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center">
-                <i class="fa-solid fa-money-bill-transfer mr-3"></i> Payroll & Stats
-            </button>
+        <nav class="space-y-2">
+            <button onclick="showTab('directory')" class="nav-btn w-full text-left p-3 rounded-lg bg-blue-600 flex items-center transition"><i class="fa-solid fa-users w-8"></i> Directory</button>
+            <button onclick="showTab('scheduling')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center transition"><i class="fa-solid fa-calendar-days w-8"></i> Scheduling</button>
+            <button onclick="showTab('leave')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center transition"><i class="fa-solid fa-plane w-8"></i> Leave</button>
+            <button onclick="showTab('payroll')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center transition"><i class="fa-solid fa-file-invoice-dollar w-8"></i> Payroll</button>
         </nav>
     </div>
 
     <div class="ml-64 p-8">
-        
         <header class="flex justify-between items-center mb-8">
             <div>
-                <h2 id="tab-title" class="text-3xl font-bold text-gray-800">Staff Directory</h2>
-                <p class="text-gray-500">Managing 124 active hotel employees</p>
+                <h2 id="tab-title" class="text-3xl font-bold">Staff Directory</h2>
+                <p id="staff-count" class="text-slate-500">Loading employees...</p>
             </div>
-            <div class="flex items-center space-x-4">
-                <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">+ Add New Staff</button>
-                <div class="w-10 h-10 bg-gray-300 rounded-full border-2 border-white overflow-hidden">
-                    <img src="https://ui-avatars.com/api/?name=HR+Manager" alt="User">
-                </div>
-            </div>
+            <button onclick="openModal()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-lg transition">+ New Hire</button>
         </header>
 
         <section id="directory-tab" class="tab-content">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <table class="w-full text-left border-collapse">
-                    <thead class="bg-gray-50">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 border-b">
                         <tr>
-                            <th class="p-4 border-b font-semibold text-gray-600">Employee</th>
-                            <th class="p-4 border-b font-semibold text-gray-600">Department</th>
-                            <th class="p-4 border-b font-semibold text-gray-600">Status</th>
-                            <th class="p-4 border-b font-semibold text-gray-600">Certifications</th>
-                            <th class="p-4 border-b font-semibold text-gray-600">Actions</th>
+                            <th class="p-4 font-semibold">Employee</th>
+                            <th class="p-4 font-semibold">Dept/Role</th>
+                            <th class="p-4 font-semibold">Pay Grade</th>
+                            <th class="p-4 font-semibold">Base Salary</th>
+                            <th class="p-4 font-semibold">Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="employee-list">
-                        </tbody>
+                    <tbody id="employee-list"></tbody>
                 </table>
             </div>
         </section>
 
         <section id="scheduling-tab" class="tab-content hidden">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-yellow-400">
-                    <h3 class="font-bold text-lg mb-4">Morning (06:00 - 14:00)</h3>
-                    <div id="shift-morning" class="space-y-3"></div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="shift-containers">
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-blue-400">
-                    <h3 class="font-bold text-lg mb-4">Afternoon (14:00 - 22:00)</h3>
-                    <div id="shift-afternoon" class="space-y-3"></div>
+        </section>
+
+        <section id="payroll-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-xl border border-slate-200">
+                    <h3 class="font-bold text-lg mb-4">Service Charge Distribution</h3>
+                    <input type="number" id="scPool" value="15000" class="w-full p-3 bg-slate-50 border rounded-lg mb-4" oninput="calculatePayroll()">
+                    <p class="text-sm text-slate-500 italic">Hotel policy: Service charge is distributed based on Grade multipliers.</p>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-purple-400">
-                    <h3 class="font-bold text-lg mb-4">Night (22:00 - 06:00)</h3>
-                    <div id="shift-night" class="space-y-3"></div>
-                </div>
+                <div id="payroll-breakdown" class="bg-slate-900 text-white p-6 rounded-xl shadow-xl">
+                    </div>
             </div>
         </section>
 
         <section id="leave-tab" class="tab-content hidden">
-    <div class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-md">
-        <h3 class="text-xl font-bold mb-6 text-gray-800 border-b pb-4">Submit Leave Request</h3>
-        <form id="leaveForm" class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Staff Member</label>
-                    <select id="leaveStaff" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Leave Type</label>
-                    <select class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                        <option>Annual Leave</option>
-                        <option>Sick Leave</option>
-                        <option>Public Holiday Offset</option>
-                    </select>
-                </div>
+            <div class="bg-white p-6 rounded-xl border border-slate-200 max-w-2xl">
+                <h3 class="font-bold text-lg mb-4 text-orange-600"><i class="fa-solid fa-clock-rotate-left mr-2"></i>Pending Approvals</h3>
+                <div id="leave-list" class="divide-y"></div>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Date Range</label>
-                <div class="flex items-center space-x-2">
-                    <input type="date" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                    <span>to</span>
-                    <input type="date" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                </div>
-            </div>
-            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700">Submit for Approval</button>
-        </form>
+        </section>
     </div>
-</section>
 
-<section id="payroll-tab" class="tab-content hidden">
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h3 class="text-xl font-bold mb-6">Service Charge & Salary Calculator</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="space-y-4">
-                <div class="p-4 bg-blue-50 rounded-lg">
-                    <label class="block text-sm font-semibold text-blue-800">Total Monthly Hotel Service Charge ($)</label>
-                    <input type="number" id="totalSC" value="12000" class="mt-2 text-2xl font-bold bg-transparent border-none focus:ring-0 text-blue-600">
-                </div>
-                <p class="text-xs text-gray-500 italic">*Service charge is distributed equally among all active staff.</p>
+    <div id="staffModal" class="fixed inset-0 bg-slate-900/50 hidden z-30 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-xl p-8 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="modalTitle" class="text-2xl font-bold">Add New Staff</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
             </div>
-            <div id="payroll-results" class="space-y-3">
+            <form id="staffForm" class="space-y-4">
+                <input type="hidden" id="editId">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Full Name</label>
+                        <input type="text" id="staffName" required class="w-full p-2 border rounded-md outline-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Department</label>
+                        <select id="staffDept" class="w-full p-2 border rounded-md">
+                            <option>Front Office</option><option>Housekeeping</option><option>F&B Kitchen</option><option>Engineering</option>
+                        </select>
+                    </div>
                 </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Pay Grade</label>
+                        <select id="staffGrade" class="w-full p-2 border rounded-md">
+                            <option value="G1">G1 - Executive ($5000+)</option>
+                            <option value="G2" selected>G2 - Supervisor ($3000)</option>
+                            <option value="G3">G3 - Operational ($1800)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Shift</label>
+                        <select id="staffShift" class="w-full p-2 border rounded-md">
+                            <option>Morning</option><option>Afternoon</option><option>Night</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold mt-4 hover:bg-blue-700 transition">Save Employee Record</button>
+            </form>
         </div>
-    </div>
-</section>
-
     </div>
 
     <script>
-        // Data Mockup
-        const employees = [
-            { id: 1, name: "Sarah Chen", dept: "Front Office", status: "Active", certs: ["First Aid"], shift: "Morning" },
-            { id: 2, name: "Marcus Miller", dept: "Housekeeping", status: "On Leave", certs: ["Safety Training"], shift: "Afternoon" },
-            { id: 3, name: "Elena Rodriguez", dept: "F&B Kitchen", status: "Active", certs: ["Food Hygiene Lvl 2"], shift: "Afternoon" },
-            { id: 4, name: "James Wilson", dept: "Security", status: "Active", certs: ["CCTV Op"], shift: "Night" },
-            { id: 5, name: "Sophie Taylor", dept: "F&B Service", status: "Active", certs: ["Barista Cert"], shift: "Morning" }
+        // Data State
+        let employees = [
+            { id: 1, name: "Sarah Chen", dept: "Front Office", grade: "G2", salary: 3200, shift: "Morning" },
+            { id: 2, name: "Marcus Miller", dept: "Housekeeping", grade: "G3", salary: 1800, shift: "Afternoon" }
         ];
 
-        // Tab Management
+        // Tab System
         function showTab(tabId) {
-            // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
-            // Show selected
-            document.getElementById(tabId + '-tab').classList.remove('hidden');
-            // Update Title
-            const titles = { 'directory': 'Staff Directory', 'scheduling': 'Shift Roster', 'payroll': 'Payroll Management' };
-            document.getElementById('tab-title').innerText = titles[tabId];
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-blue-600'));
             
-            // Update nav styles
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('bg-blue-600'));
+            document.getElementById(tabId + '-tab').classList.remove('hidden');
             event.currentTarget.classList.add('bg-blue-600');
+            document.getElementById('tab-title').innerText = event.currentTarget.innerText;
+            
+            if(tabId === 'payroll') calculatePayroll();
         }
 
-        // Render Directory
+        // Modal Controls
+        function openModal(id = null) {
+            const modal = document.getElementById('staffModal');
+            const form = document.getElementById('staffForm');
+            modal.classList.remove('hidden');
+            
+            if(id) {
+                const emp = employees.find(e => e.id === id);
+                document.getElementById('modalTitle').innerText = "Edit Employee";
+                document.getElementById('editId').value = emp.id;
+                document.getElementById('staffName').value = emp.name;
+                document.getElementById('staffDept').value = emp.dept;
+                document.getElementById('staffGrade').value = emp.grade;
+                document.getElementById('staffShift').value = emp.shift;
+            } else {
+                form.reset();
+                document.getElementById('editId').value = "";
+                document.getElementById('modalTitle').innerText = "New Hire Onboarding";
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('staffModal').classList.add('hidden');
+        }
+
+        // CRUD Logic
+        document.getElementById('staffForm').onsubmit = (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editId').value;
+            const data = {
+                id: id ? parseInt(id) : Date.now(),
+                name: document.getElementById('staffName').value,
+                dept: document.getElementById('staffDept').value,
+                grade: document.getElementById('staffGrade').value,
+                shift: document.getElementById('staffShift').value,
+                salary: document.getElementById('staffGrade').value === 'G1' ? 5000 : 2000
+            };
+
+            if(id) {
+                const index = employees.findIndex(emp => emp.id === parseInt(id));
+                employees[index] = data;
+            } else {
+                employees.push(data);
+            }
+            
+            closeModal();
+            renderAll();
+        };
+
+        function deleteStaff(id) {
+            if(confirm('Are you sure you want to terminate this record?')) {
+                employees = employees.filter(e => e.id !== id);
+                renderAll();
+            }
+        }
+
+        // Render Functions
+        function renderAll() {
+            renderDirectory();
+            renderShifts();
+            document.getElementById('staff-count').innerText = `Managing ${employees.length} active hotel employees`;
+        }
+
         function renderDirectory() {
             const list = document.getElementById('employee-list');
-            list.innerHTML = employees.map(emp => `
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="p-4 border-b flex items-center">
-                        <img src="https://ui-avatars.com/api/?name=${emp.name}" class="w-8 h-8 rounded-full mr-3">
-                        <span class="font-medium">${emp.name}</span>
-                    </td>
-                    <td class="p-4 border-b text-gray-600">${emp.dept}</td>
-                    <td class="p-4 border-b">
-                        <span class="px-2 py-1 rounded text-xs ${emp.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${emp.status}</span>
-                    </td>
-                    <td class="p-4 border-b">
-                        ${emp.certs.map(c => `<span class="bg-blue-50 text-blue-600 text-[10px] px-2 py-1 rounded-full mr-1">${c}</span>`).join('')}
-                    </td>
-                    <td class="p-4 border-b">
-                        <button class="text-blue-500 hover:underline text-sm">Edit</button>
+            list.innerHTML = employees.map(e => `
+                <tr class="border-b hover:bg-slate-50 transition">
+                    <td class="p-4 font-medium">${e.name}</td>
+                    <td class="p-4 text-slate-600">${e.dept}</td>
+                    <td class="p-4"><span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold">${e.grade}</span></td>
+                    <td class="p-4 font-mono text-green-600">$${e.salary.toLocaleString()}</td>
+                    <td class="p-4 space-x-3">
+                        <button onclick="openModal(${e.id})" class="text-blue-600 hover:text-blue-800"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deleteStaff(${e.id})" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
         }
 
-        // Render Shifts
         function renderShifts() {
-            ['Morning', 'Afternoon', 'Night'].forEach(shiftName => {
-                const container = document.getElementById(`shift-${shiftName.toLowerCase()}`);
-                const shiftStaff = employees.filter(e => e.shift === shiftName);
-                container.innerHTML = shiftStaff.map(s => `
-                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
-                        <span class="font-medium text-sm">${s.name}</span>
-                        <span class="text-[10px] text-gray-400 italic">${s.dept}</span>
+            const shifts = ['Morning', 'Afternoon', 'Night'];
+            const container = document.getElementById('shift-containers');
+            container.innerHTML = shifts.map(s => `
+                <div class="bg-white p-5 rounded-xl border border-slate-200">
+                    <h4 class="font-bold border-b pb-2 mb-4 flex justify-between">
+                        ${s} <span class="text-blue-600">${employees.filter(e => e.shift === s).length}</span>
+                    </h4>
+                    <div class="space-y-2">
+                        ${employees.filter(e => e.shift === s).map(emp => `
+                            <div class="p-2 bg-slate-50 rounded text-sm flex justify-between">
+                                <span>${emp.name}</span>
+                                <span class="text-[10px] uppercase text-slate-400">${emp.dept}</span>
+                            </div>
+                        `).join('')}
                     </div>
-                `).join('') || '<p class="text-gray-400 text-xs italic text-center">No staff assigned</p>';
-            });
+                </div>
+            `).join('');
         }
 
-        // Initial Load
-        window.onload = () => {
-            renderDirectory();
-            renderShifts();
-        };
+        function calculatePayroll() {
+            const pool = document.getElementById('scPool').value || 0;
+            const perStaff = (pool / employees.length).toFixed(2);
+            const totalFixed = employees.reduce((sum, e) => sum + e.salary, 0);
+            
+            document.getElementById('payroll-breakdown').innerHTML = `
+                <h3 class="text-xl font-bold mb-4 border-b border-slate-700 pb-2">Monthly Forecast</h3>
+                <div class="space-y-4">
+                    <div class="flex justify-between"><span>Base Salaries:</span><span class="font-mono">$${totalFixed.toLocaleString()}</span></div>
+                    <div class="flex justify-between"><span>Service Charge:</span><span class="font-mono">$${parseInt(pool).toLocaleString()}</span></div>
+                    <div class="flex justify-between text-blue-400 font-bold text-lg pt-4 border-t border-slate-700">
+                        <span>Total Monthly Outlay:</span><span>$${(totalFixed + parseInt(pool)).toLocaleString()}</span>
+                    </div>
+                </div>
+            `;
+        }
 
-        // Populate the Leave Form dropdown
-function populateLeaveDropdown() {
-    const select = document.getElementById('leaveStaff');
-    select.innerHTML = employees.map(e => `<option value="${e.id}">${e.name} (${e.dept})</option>`).join('');
-}
-
-// Calculate Payroll with Service Charge
-function calculatePayroll() {
-    const totalSC = document.getElementById('totalSC').value;
-    const sharePerPerson = (totalSC / employees.length).toFixed(2);
-    const resultsContainer = document.getElementById('payroll-results');
-    
-    resultsContainer.innerHTML = `
-        <h4 class="font-bold text-gray-700">Estimated Distribution:</h4>
-        <div class="flex justify-between p-3 bg-gray-50 rounded border border-dashed border-gray-300">
-            <span>Staff Count:</span>
-            <span class="font-bold">${employees.length}</span>
-        </div>
-        <div class="flex justify-between p-3 bg-green-50 rounded border border-dashed border-green-300 text-green-700">
-            <span>Bonus Per Staff:</span>
-            <span class="font-bold">$${sharePerPerson}</span>
-        </div>
-    `;
-}
-
-// Update the showTab function to include 'leave' and trigger calculations
-function showTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
-    document.getElementById(tabId + '-tab').classList.remove('hidden');
-    
-    if(tabId === 'leave') populateLeaveDropdown();
-    if(tabId === 'payroll') calculatePayroll();
-}
-
-// Add an event listener to the input for real-time calculation
-document.getElementById('totalSC').addEventListener('input', calculatePayroll);
-
-        
+        window.onload = renderAll;
     </script>
 </body>
 </html>
