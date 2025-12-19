@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grand Horizon | Elite Hotel HR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .applicant-card:hover .hire-btn { opacity: 1; }
+        .tab-content.hidden { display: none; }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-slate-900">
+
+    <div class="fixed left-0 top-0 h-full w-64 bg-slate-900 text-white p-6 z-20">
+        <h1 class="text-2xl font-bold mb-10 text-blue-400"><i class="fa-solid fa-hotel mr-2"></i>HR Connect</h1>
+        <nav class="space-y-2">
+            <button onclick="showTab('directory')" class="nav-btn w-full text-left p-3 rounded-lg bg-blue-600 flex items-center transition"><i class="fa-solid fa-users w-8"></i> Directory</button>
+            <button onclick="showTab('recruitment')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center transition"><i class="fa-solid fa-user-plus w-8"></i> Recruitment</button>
+            <button onclick="showTab('scheduling')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center transition"><i class="fa-solid fa-calendar-days w-8"></i> Scheduling</button>
+            <button onclick="showTab('leave')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center transition"><i class="fa-solid fa-plane w-8"></i> Leave Requests</button>
+            <button onclick="showTab('payroll')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center transition"><i class="fa-solid fa-file-invoice-dollar w-8"></i> Payroll</button>
+        </nav>
+    </div>
+
+    <div class="ml-64 p-8">
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h2 id="tab-title" class="text-3xl font-bold text-slate-800">Operational Pulse</h2>
+                <p id="staff-count" class="text-slate-500 italic">Tracking Lifecycle & Operations</p>
+            </div>
+            <div class="flex space-x-3">
+                <button onclick="openApplicantModal()" class="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg font-bold hover:bg-slate-200 transition">Add Applicant</button>
+                <button onclick="openModal()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-lg transition">+ New Hire</button>
+            </div>
+        </header>
+
+        <section id="directory-tab" class="tab-content">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 border-b">
+                        <tr>
+                            <th class="p-4 font-semibold">Employee</th>
+                            <th class="p-4 font-semibold">Tenure</th>
+                            <th class="p-4 font-semibold">Certs</th>
+                            <th class="p-4 font-semibold">Grade</th>
+                            <th class="p-4 font-semibold text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employee-list"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="recruitment-tab" class="tab-content hidden">
+            <div class="mb-6 flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm">
+                <div class="relative w-1/3">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400"></i>
+                    <input type="text" id="applicantSearch" oninput="renderApplicants()" placeholder="Filter by Job Title..." class="w-full pl-10 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+            <div id="applicant-sections" class="space-y-8"></div>
+        </section>
+
+        <section id="scheduling-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="shift-containers"></div>
+            <div id="notesDisplay" class="bg-white p-6 rounded-xl border">Handovers rendered via script...</div>
+        </section>
+
+        <section id="payroll-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-xl border">
+                    <h3 class="font-bold mb-4">Service Charge Pool</h3>
+                    <input type="number" id="scPool" value="20000" class="w-full p-4 bg-slate-50 border rounded-lg" oninput="calculatePayroll()">
+                </div>
+                <div id="payroll-breakdown" class="bg-slate-900 text-white p-6 rounded-xl"></div>
+            </div>
+        </section>
+
+        <section id="leave-tab" class="tab-content hidden">
+            <div id="leaveFormPlaceholder" class="p-10 text-center text-slate-400 italic">Leave system active. Select an employee to log absence.</div>
+        </section>
+
+    </div>
+
+    <div id="staffModal" class="fixed inset-0 bg-slate-900/50 hidden z-30 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-2xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <h3 id="modalTitle" class="text-2xl font-bold mb-6 text-slate-800">Staff Record</h3>
+            <form id="staffForm" class="space-y-4">
+                <input type="hidden" id="editId">
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs font-bold uppercase mb-1">Full Name</label><input type="text" id="staffName" required class="w-full p-2 border rounded"></div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1">Status</label>
+                        <select id="staffStatus" class="w-full p-2 border rounded">
+                            <option>Active</option><option>On Leave</option><option>Probation</option><option>Terminated</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs font-bold uppercase mb-1">Hire Date</label><input type="date" id="hireDate" required class="w-full p-2 border rounded"></div>
+                    <div><label class="block text-xs font-bold uppercase mb-1">Salary ($)</label><input type="number" id="staffSalary" required class="w-full p-2 border rounded"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1">Dept</label>
+                        <select id="staffDept" class="w-full p-2 border rounded">
+                            <option>Front Office</option><option>Housekeeping</option><option>Kitchen</option><option>Engineering</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1">Grade</label>
+                        <select id="staffGrade" class="w-full p-2 border rounded">
+                            <option value="G1">G1</option><option value="G2">G2</option><option value="G3">G3</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center mt-6 border-t pt-4">
+                    <button type="button" id="deleteBtn" onclick="deleteEmployeeManually()" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold hover:bg-red-100 hidden">Delete Permanent</button>
+                    <div class="space-x-2">
+                        <button type="button" onclick="closeModal()" class="px-6 py-2 text-slate-500 font-bold">Cancel</button>
+                        <button type="submit" class="bg-blue-600 text-white px-8 py-2 rounded-lg font-bold">Save Record</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let employees = [
+            { id: 1, name: "Sarah Chen", dept: "Front Office", grade: "G2", salary: 3200, shift: "Morning", status: "Active", certs: ["Opera PMS"], hireDate: "2023-01-15", termDate: "" },
+            { id: 2, name: "Marcus Miller", dept: "Kitchen", grade: "G3", salary: 1800, shift: "Afternoon", status: "Active", certs: ["Food Hygiene"], hireDate: "2023-06-10", termDate: "" }
+        ];
+
+        let applicants = [
+            { id: 101, name: "James Wilson", role: "Sous Chef", email: "james.w@example.com", resume: "cv_wilson.pdf", date: "2023-10-01" }
+        ];
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-blue-600'));
+            document.getElementById(tabId + '-tab').classList.remove('hidden');
+            const btn = Array.from(document.querySelectorAll('.nav-btn')).find(b => b.innerText.toLowerCase().includes(tabId));
+            if(btn) btn.classList.add('bg-blue-600');
+            
+            if(tabId === 'directory') renderDirectory();
+            if(tabId === 'recruitment') renderApplicants();
+        }
+
+        // --- DIRECTORY LOGIC ---
+        function renderDirectory() {
+            const list = document.getElementById('employee-list');
+            list.innerHTML = employees.map(e => `
+                <tr class="border-b hover:bg-slate-50 transition">
+                    <td class="p-4"><div class="font-bold">${e.name}</div><span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-green-100 text-green-700">${e.status}</span></td>
+                    <td class="p-4 text-xs text-slate-500">Hired: ${e.hireDate}</td>
+                    <td class="p-4"><span class="bg-blue-50 text-blue-600 text-[10px] px-1 rounded border">Cert Verified</span></td>
+                    <td class="p-4"><span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold">${e.grade}</span></td>
+                    <td class="p-4 text-right space-x-3">
+                        <button onclick="openModal(${e.id})" class="text-blue-600 hover:text-blue-800"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="confirmDelete(${e.id})" class="text-slate-300 hover:text-red-600 transition"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('staff-count').innerText = `Active Workforce: ${employees.length} Members`;
+        }
+
+        // --- DELETE LOGIC ---
+        function confirmDelete(id) {
+            const emp = employees.find(e => e.id === id);
+            if(confirm(`Are you sure you want to PERMANENTLY delete ${emp.name}? This action cannot be undone.`)) {
+                employees = employees.filter(e => e.id !== id);
+                renderDirectory();
+            }
+        }
+
+        function deleteEmployeeManually() {
+            const id = parseInt(document.getElementById('editId').value);
+            if(id) {
+                confirmDelete(id);
+                closeModal();
+            }
+        }
+
+        // --- MODAL LOGIC ---
+        function openModal(id = null) {
+            const modal = document.getElementById('staffModal');
+            document.getElementById('staffForm').reset();
+            document.getElementById('editId').value = id || '';
+            const delBtn = document.getElementById('deleteBtn');
+            
+            if(id) {
+                const emp = employees.find(e => e.id === id);
+                document.getElementById('staffName').value = emp.name;
+                document.getElementById('staffSalary').value = emp.salary;
+                document.getElementById('hireDate').value = emp.hireDate;
+                document.getElementById('staffDept').value = emp.dept;
+                document.getElementById('staffGrade').value = emp.grade;
+                delBtn.classList.remove('hidden');
+            } else {
+                delBtn.classList.add('hidden');
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() { document.getElementById('staffModal').classList.add('hidden'); }
+
+        document.getElementById('staffForm').onsubmit = (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editId').value;
+            const data = {
+                id: id ? parseInt(id) : Date.now(),
+                name: document.getElementById('staffName').value,
+                salary: parseInt(document.getElementById('staffSalary').value),
+                hireDate: document.getElementById('hireDate').value,
+                dept: document.getElementById('staffDept').value,
+                grade: document.getElementById('staffGrade').value,
+                status: document.getElementById('staffStatus').value,
+                certs: ["Standard"]
+            };
+
+            if(id) {
+                const idx = employees.findIndex(emp => emp.id === parseInt(id));
+                employees[idx] = data;
+            } else {
+                employees.push(data);
+            }
+            closeModal();
+            renderDirectory();
+        };
+
+        // Initialize
+        window.onload = () => renderDirectory();
+    </script>
+</body>
+</html>
