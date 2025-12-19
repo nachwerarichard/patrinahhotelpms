@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grand Horizon | Elite Hotel HR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 font-sans text-slate-900">
+
+    <div class="fixed left-0 top-0 h-full w-64 bg-slate-900 text-white p-6 z-20">
+        <h1 class="text-2xl font-bold mb-10 text-blue-400"><i class="fa-solid fa-hotel mr-2"></i>HR Connect</h1>
+        <nav class="space-y-2">
+            <button onclick="showTab('directory')" class="nav-btn w-full text-left p-3 rounded-lg bg-blue-600 flex items-center transition"><i class="fa-solid fa-users w-8"></i> Directory</button>
+            <button onclick="showTab('scheduling')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center transition"><i class="fa-solid fa-calendar-days w-8"></i> Scheduling</button>
+            <button onclick="showTab('handover')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center transition"><i class="fa-solid fa-comments-sm mr-2"></i> Handover Notes</button>
+            <button onclick="showTab('leave')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center transition"><i class="fa-solid fa-plane w-8"></i> Leave Requests</button>
+            <button onclick="showTab('payroll')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-800 flex items-center transition"><i class="fa-solid fa-file-invoice-dollar w-8"></i> Payroll</button>
+        </nav>
+    </div>
+
+    <div class="ml-64 p-8">
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h2 id="tab-title" class="text-3xl font-bold">Staff Directory</h2>
+                <p id="staff-count" class="text-slate-500 italic">Managing hotel human capital</p>
+            </div>
+            <button onclick="openModal()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-lg transition">+ New Hire</button>
+        </header>
+
+        <section id="directory-tab" class="tab-content">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 border-b">
+                        <tr>
+                            <th class="p-4 font-semibold">Employee & Status</th>
+                            <th class="p-4 font-semibold">Department</th>
+                            <th class="p-4 font-semibold">Certifications</th>
+                            <th class="p-4 font-semibold">Grade</th>
+                            <th class="p-4 font-semibold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employee-list"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="scheduling-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="shift-containers">
+                </div>
+        </section>
+
+        <section id="handover-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-1 bg-white p-6 rounded-xl border border-slate-200 h-fit">
+                    <h3 class="font-bold mb-4">Post Handover Note</h3>
+                    <form id="handoverForm" class="space-y-4" onsubmit="handleHandoverSubmit(event)">
+                        <div>
+                            <label class="block text-xs font-bold uppercase mb-1">Department</label>
+                            <select id="handoverDept" class="w-full p-2 border rounded">
+                                <option>Front Office</option><option>Housekeeping</option><option>Kitchen</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase mb-1">Message</label>
+                            <textarea id="handoverMsg" required class="w-full p-2 border rounded h-32" placeholder="e.g. VIP in Room 302 needs late checkout..."></textarea>
+                        </div>
+                        <button class="w-full bg-blue-600 text-white py-2 rounded font-bold">Post Note</button>
+                    </form>
+                </div>
+                <div class="lg:col-span-2 space-y-4" id="handover-list">
+                    </div>
+            </div>
+        </section>
+
+        <section id="leave-tab" class="tab-content hidden">
+            <div class="max-w-2xl bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+                <h3 class="text-xl font-bold mb-6 text-slate-800">Submit New Leave Request</h3>
+                <form id="leaveForm" class="space-y-4" onsubmit="handleLeaveSubmit(event)">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase mb-1">Employee</label>
+                            <select id="leaveStaffSelect" class="w-full p-2 border rounded" required></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase mb-1">Type</label>
+                            <select class="w-full p-2 border rounded">
+                                <option>Annual Leave</option><option>Sick Leave</option><option>Compassionate</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-xs font-bold uppercase mb-1">From</label><input type="date" class="w-full p-2 border rounded" required></div>
+                        <div><label class="block text-xs font-bold uppercase mb-1">To</label><input type="date" class="w-full p-2 border rounded" required></div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1">Reason for Leave</label>
+                        <textarea id="leaveReason" required class="w-full p-2 border rounded h-24" placeholder="Please provide specific details for management review..."></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-orange-500 text-white py-3 rounded-lg font-bold">Request Approval</button>
+                </form>
+            </div>
+        </section>
+
+        <section id="payroll-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-xl border border-slate-200">
+                    <h3 class="font-bold text-lg mb-4">Total Service Charge Pool ($)</h3>
+                    <input type="number" id="scPool" value="20000" class="w-full p-4 bg-slate-50 border rounded-lg text-2xl font-mono text-blue-600" oninput="calculatePayroll()">
+                    <div class="mt-6 space-y-2">
+                        <p class="text-xs font-bold text-slate-400 uppercase">Distribution Rule:</p>
+                        <div class="text-sm p-3 bg-blue-50 text-blue-800 rounded">G1: 2.5 pts | G2: 1.5 pts | G3: 1.0 pts</div>
+                    </div>
+                </div>
+                <div id="payroll-breakdown" class="bg-slate-900 text-white p-6 rounded-xl shadow-xl font-mono"></div>
+            </div>
+        </section>
+    </div>
+
+    <div id="staffModal" class="fixed inset-0 bg-slate-900/50 hidden z-30 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-2xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <h3 id="modalTitle" class="text-2xl font-bold mb-6 text-slate-800">Onboard New Employee</h3>
+            <form id="staffForm" class="space-y-4">
+                <input type="hidden" id="editId">
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs font-bold uppercase mb-1">Full Name</label><input type="text" id="staffName" required class="w-full p-2 border rounded"></div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1">Employment Status</label>
+                        <select id="staffStatus" class="w-full p-2 border rounded">
+                            <option value="Active">Active</option><option value="On Leave">On Leave</option><option value="Probation">Probation</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1">Department</label>
+                        <select id="staffDept" class="w-full p-2 border rounded">
+                            <option>Front Office</option><option>Housekeeping</option><option>Kitchen</option><option>Spa</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1">Pay Grade</label>
+                        <select id="staffGrade" class="w-full p-2 border rounded">
+                            <option value="G1">G1 - Executive</option><option value="G2" selected>G2 - Supervisor</option><option value="G3">G3 - Operational</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-1">Certifications (Comma Separated)</label>
+                    <input type="text" id="staffCerts" placeholder="Food Hygiene, First Aid..." class="w-full p-2 border rounded">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs font-bold uppercase mb-1">Shift</label><select id="staffShift" class="w-full p-2 border rounded"><option>Morning</option><option>Afternoon</option><option>Night</option></select></div>
+                    <div><label class="block text-xs font-bold uppercase mb-1">Base Monthly Salary ($)</label><input type="number" id="staffSalary" required class="w-full p-2 border rounded"></div>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6 border-t pt-4">
+                    <button type="button" onclick="closeModal()" class="px-6 py-2 text-slate-500">Cancel</button>
+                    <button type="submit" class="bg-blue-600 text-white px-8 py-2 rounded-lg font-bold">Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let employees = [
+            { id: 1, name: "Sarah Chen", dept: "Front Office", grade: "G2", salary: 3200, shift: "Morning", status: "Active", certs: ["First Aid", "Opera PMS"] },
+            { id: 2, name: "Marcus Miller", dept: "Kitchen", grade: "G3", salary: 1800, shift: "Afternoon", status: "Active", certs: ["Food Hygiene Lvl 3"] }
+        ];
+
+        let handovers = [
+            { dept: "Kitchen", msg: "Inventory delivery arriving at 6AM tomorrow. Needs refrigeration immediately.", time: "2 hours ago" }
+        ];
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-blue-600'));
+            document.getElementById(tabId + '-tab').classList.remove('hidden');
+            if(event) event.currentTarget.classList.add('bg-blue-600');
+            
+            if(tabId === 'payroll') calculatePayroll();
+            if(tabId === 'leave') populateLeaveDropdown();
+            if(tabId === 'scheduling') renderShifts();
+            if(tabId === 'handover') renderHandovers();
+        }
+
+        function openModal(id = null) {
+            const modal = document.getElementById('staffModal');
+            document.getElementById('staffForm').reset();
+            modal.classList.remove('hidden');
+            if(id) {
+                const emp = employees.find(e => e.id === id);
+                document.getElementById('modalTitle').innerText = "Edit Profile";
+                document.getElementById('editId').value = emp.id;
+                document.getElementById('staffName').value = emp.name;
+                document.getElementById('staffStatus').value = emp.status;
+                document.getElementById('staffDept').value = emp.dept;
+                document.getElementById('staffGrade').value = emp.grade;
+                document.getElementById('staffShift').value = emp.shift;
+                document.getElementById('staffSalary').value = emp.salary;
+                document.getElementById('staffCerts').value = emp.certs.join(', ');
+            }
+        }
+
+        function closeModal() { document.getElementById('staffModal').classList.add('hidden'); }
+
+        document.getElementById('staffForm').onsubmit = (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editId').value;
+            const certsRaw = document.getElementById('staffCerts').value;
+            const data = {
+                id: id ? parseInt(id) : Date.now(),
+                name: document.getElementById('staffName').value,
+                status: document.getElementById('staffStatus').value,
+                dept: document.getElementById('staffDept').value,
+                grade: document.getElementById('staffGrade').value,
+                shift: document.getElementById('staffShift').value,
+                salary: parseInt(document.getElementById('staffSalary').value),
+                certs: certsRaw ? certsRaw.split(',').map(c => c.trim()) : []
+            };
+            if(id) {
+                const idx = employees.findIndex(emp => emp.id === parseInt(id));
+                employees[idx] = data;
+            } else { employees.push(data); }
+            closeModal();
+            renderAll();
+        };
+
+        function renderDirectory() {
+            const list = document.getElementById('employee-list');
+            list.innerHTML = employees.map(e => `
+                <tr class="border-b hover:bg-slate-50 transition">
+                    <td class="p-4">
+                        <div class="font-bold">${e.name}</div>
+                        <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded ${e.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}">${e.status}</span>
+                    </td>
+                    <td class="p-4 text-slate-600">${e.dept}</td>
+                    <td class="p-4"><div class="flex flex-wrap gap-1">${e.certs.map(c => `<span class="bg-blue-50 text-blue-600 text-[10px] px-2 py-0.5 rounded-full border border-blue-100">${c}</span>`).join('')}</div></td>
+                    <td class="p-4 font-bold text-xs">${e.grade}</td>
+                    <td class="p-4"><button onclick="openModal(${e.id})" class="text-blue-600 hover:text-blue-800"><i class="fa-solid fa-pen"></i></button></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderShifts() {
+            const shifts = ['Morning', 'Afternoon', 'Night'];
+            const container = document.getElementById('shift-containers');
+            container.innerHTML = shifts.map(s => `
+                <div class="bg-white p-5 rounded-xl border border-slate-200">
+                    <h4 class="font-bold border-b pb-2 mb-4 flex justify-between">${s} Shift <span class="text-blue-600">${employees.filter(e => e.shift === s).length}</span></h4>
+                    <div class="space-y-2">
+                        ${employees.filter(e => e.shift === s).map(emp => `
+                            <div class="p-2 bg-slate-50 rounded flex justify-between items-center">
+                                <span class="text-sm font-medium">${emp.name}</span>
+                                <span class="text-[9px] uppercase font-bold text-slate-400">${emp.dept}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderHandovers() {
+            const list = document.getElementById('handover-list');
+            list.innerHTML = handovers.map(h => `
+                <div class="bg-white p-4 rounded-lg border-l-4 border-blue-500 shadow-sm">
+                    <div class="flex justify-between mb-2">
+                        <span class="font-bold text-blue-600 text-xs uppercase">${h.dept}</span>
+                        <span class="text-slate-400 text-xs">${h.time}</span>
+                    </div>
+                    <p class="text-sm text-slate-700">${h.msg}</p>
+                </div>
+            `).join('');
+        }
+
+        function handleHandoverSubmit(e) {
+            e.preventDefault();
+            handovers.unshift({
+                dept: document.getElementById('handoverDept').value,
+                msg: document.getElementById('handoverMsg').value,
+                time: "Just now"
+            });
+            document.getElementById('handoverMsg').value = '';
+            renderHandovers();
+        }
+
+        function calculatePayroll() {
+            const pool = document.getElementById('scPool').value || 0;
+            const weights = { "G1": 2.5, "G2": 1.5, "G3": 1.0 };
+            const totalPoints = employees.reduce((sum, e) => sum + weights[e.grade], 0);
+            const valPerPoint = totalPoints > 0 ? pool / totalPoints : 0;
+            document.getElementById('payroll-breakdown').innerHTML = `
+                <h3 class="text-xl font-bold mb-6 text-blue-400 border-b border-slate-700 pb-2">Service Charge Forecast</h3>
+                <div class="space-y-4 text-sm">
+                    <div class="flex justify-between"><span>Point Value:</span><span class="text-green-400">$${valPerPoint.toFixed(2)}</span></div>
+                    <div class="pt-4 border-t border-slate-700 space-y-1">
+                        <div class="flex justify-between"><span>G1 Distribution:</span><span>$${(valPerPoint * 2.5).toFixed(2)}</span></div>
+                        <div class="flex justify-between"><span>G2 Distribution:</span><span>$${(valPerPoint * 1.5).toFixed(2)}</span></div>
+                        <div class="flex justify-between"><span>G3 Distribution:</span><span>$${(valPerPoint * 1.0).toFixed(2)}</span></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function populateLeaveDropdown() {
+            const select = document.getElementById('leaveStaffSelect');
+            select.innerHTML = employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+        }
+
+        function handleLeaveSubmit(e) {
+            e.preventDefault();
+            alert("Leave Request Submitted with Reason. Status: Pending.");
+            document.getElementById('leaveForm').reset();
+        }
+
+        function renderAll() {
+            renderDirectory();
+            document.getElementById('staff-count').innerText = `Managing ${employees.length} employees`;
+        }
+
+        window.onload = renderAll;
+    </script>
+</body>
+</html>
