@@ -1,23 +1,37 @@
- let chatWindow, userInput, typingIndicator;
+let chatWindow, userInput, typingIndicator, toggleBtn;
         const API_BASE = 'https://patrinahhotelpms.onrender.com/api';
 
         window.addEventListener('DOMContentLoaded', () => {
             chatWindow = document.getElementById('chat-window');
             userInput = document.getElementById('user-input');
             typingIndicator = document.getElementById('typing');
+            toggleBtn = document.getElementById('toggle-icon-container');
             
             userInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') handleSend();
             });
         });
 
-        // Toggle Chat Visibility
         function toggleChat() {
             const container = document.getElementById('chat-container');
+            const isOpen = container.classList.contains('hidden');
+            
+            // Toggle visibility
             container.classList.toggle('hidden');
             container.classList.toggle('flex');
-            if (!container.classList.contains('hidden')) {
+
+            // Toggle Icon (Bubble vs X)
+            if (isOpen) {
+                toggleBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>`;
                 userInput.focus();
+            } else {
+                toggleBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>`;
             }
         }
 
