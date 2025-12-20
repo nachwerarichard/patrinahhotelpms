@@ -104,33 +104,74 @@
         </section>
 
         <section id="leave-tab" class="tab-content hidden">
-             <div class="max-w-2xl bg-white p-8 rounded-xl shadow-sm border border-slate-200">
-                <h3 class="text-xl font-bold mb-6">Leave Application Form</h3>
-                <form id="leaveForm" class="space-y-4" onsubmit="handleLeaveSubmit(event)">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold uppercase mb-1">Employee</label>
-                            <select id="leaveStaffSelect" class="w-full p-2 border rounded" required></select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase mb-1">Leave Type</label>
-                            <select class="w-full p-2 border rounded">
-                                <option>Annual Leave</option><option>Sick Leave</option><option>Emergency</option>
-                            </select>
-                        </div>
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div class="xl:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
+            <h3 class="text-xl font-bold mb-6 text-slate-800 flex items-center">
+                <i class="fa-solid fa-calendar-plus mr-2 text-orange-500"></i> New Application
+            </h3>
+            <form id="leaveForm" class="space-y-4" onsubmit="handleLeaveSubmit(event)">
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase mb-1 text-slate-500">Employee</label>
+                        <select id="leaveStaffSelect" class="w-full p-2 border rounded text-sm" required></select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase mb-1">Reason for Leave</label>
-                        <textarea id="leaveReason" required class="w-full p-2 border rounded h-24" placeholder="Briefly explain the reason..."></textarea>
+                        <label class="block text-[10px] font-bold uppercase mb-1 text-slate-500">Leave Type</label>
+                        <select id="leaveType" class="w-full p-2 border rounded text-sm">
+                            <option>Annual Leave</option>
+                            <option>Sick Leave</option>
+                            <option>Emergency</option>
+                            <option>Maternity/Paternity</option>
+                        </select>
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div><label class="block text-xs font-bold uppercase mb-1">From</label><input type="date" class="w-full p-2 border rounded"></div>
-                        <div><label class="block text-xs font-bold uppercase mb-1">To</label><input type="date" class="w-full p-2 border rounded"></div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase mb-1 text-slate-500">Reason</label>
+                    <textarea id="leaveReason" required class="w-full p-2 border rounded h-20 text-sm" placeholder="Details..."></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase mb-1 text-slate-500">Start Date</label>
+                        <input type="date" id="leaveStart" required class="w-full p-2 border rounded text-sm">
                     </div>
-                    <button type="submit" class="w-full bg-orange-500 text-white py-3 rounded-lg font-bold hover:bg-orange-600 transition">Submit Request</button>
-                </form>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase mb-1 text-slate-500">End Date</label>
+                        <input type="date" id="leaveEnd" required class="w-full p-2 border rounded text-sm">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-orange-500 text-white py-3 rounded-lg font-bold hover:bg-orange-600 transition shadow-lg shadow-orange-200">
+                    Submit Request
+                </button>
+            </form>
+        </div>
+
+        <div class="xl:col-span-2 space-y-4">
+            <div class="bg-slate-800 p-4 rounded-xl flex flex-wrap items-center justify-between gap-4 text-white">
+                <h4 class="font-bold"><i class="fa-solid fa-list-check mr-2"></i> Manage Requests</h4>
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs text-slate-400">Filter by Month:</span>
+                    <input type="month" id="leaveFilterDate" onchange="renderLeaveRequests()" class="bg-slate-700 border-none rounded text-xs p-1">
+                    <button onclick="resetLeaveFilter()" class="text-[10px] bg-slate-600 px-2 py-1 rounded">Reset</button>
+                </div>
             </div>
-        </section>
+
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="p-4 text-[10px] font-bold uppercase text-slate-500">Employee</th>
+                            <th class="p-4 text-[10px] font-bold uppercase text-slate-500">Type & Duration</th>
+                            <th class="p-4 text-[10px] font-bold uppercase text-slate-500">Status</th>
+                            <th class="p-4 text-[10px] font-bold uppercase text-slate-500 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaveRequestsList">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
 
         <section id="payroll-tab" class="tab-content hidden">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -632,6 +673,115 @@ function renderApplicants() {
             document.getElementById('handoverDateFilter').value = new Date().toISOString().split('T')[0];
             renderAll();
         };
+
+
+        // Global State for Leave Requests
+let leaveRequests = [];
+
+// 1. Handle Form Submission
+function handleLeaveSubmit(e) {
+    e.preventDefault();
+    
+    const staffSelect = document.getElementById('leaveStaffSelect');
+    const newRequest = {
+        id: Date.now(),
+        employeeId: staffSelect.value,
+        employeeName: staffSelect.options[staffSelect.selectedIndex].text,
+        type: document.getElementById('leaveType').value,
+        reason: document.getElementById('leaveReason').value,
+        start: document.getElementById('leaveStart').value,
+        end: document.getElementById('leaveEnd').value,
+        status: 'Pending', // Default status
+        submittedOn: new Date().toISOString()
+    };
+
+    leaveRequests.unshift(newRequest); // Add to beginning of list
+    e.target.reset(); // Clear form
+    renderLeaveRequests();
+}
+
+// 2. Update Status (Approve/Dismiss)
+function updateLeaveStatus(id, newStatus) {
+    const index = leaveRequests.findIndex(r => r.id === id);
+    if (index !== -1) {
+        leaveRequests[index].status = newStatus;
+        renderLeaveRequests();
+    }
+}
+
+// 3. Delete Request
+function deleteLeaveRequest(id) {
+    if (confirm("Permanently delete this leave record?")) {
+        leaveRequests = leaveRequests.filter(r => r.id !== id);
+        renderLeaveRequests();
+    }
+}
+
+// 4. Render the List with Filtering
+function renderLeaveRequests() {
+    const list = document.getElementById('leaveRequestsList');
+    const filterMonth = document.getElementById('leaveFilterDate').value; // YYYY-MM
+    
+    let filtered = leaveRequests;
+
+    // Apply Date Filter if selected
+    if (filterMonth) {
+        filtered = leaveRequests.filter(r => r.start.startsWith(filterMonth));
+    }
+
+    if (filtered.length === 0) {
+        list.innerHTML = `<tr><td colspan="4" class="p-10 text-center text-slate-400 italic text-sm">No leave requests found for this period.</td></tr>`;
+        return;
+    }
+
+    list.innerHTML = filtered.map(r => {
+        // Status Badge Logic
+        const statusStyles = {
+            'Pending': 'bg-yellow-100 text-yellow-700',
+            'Approved': 'bg-green-100 text-green-700',
+            'Dismissed': 'bg-red-100 text-red-700'
+        };
+
+        return `
+            <tr class="border-b last:border-0 hover:bg-slate-50 transition">
+                <td class="p-4">
+                    <div class="font-bold text-slate-800">${r.employeeName}</div>
+                    <div class="text-[10px] text-slate-400 truncate w-32" title="${r.reason}">${r.reason}</div>
+                </td>
+                <td class="p-4 text-xs text-slate-600">
+                    <span class="font-bold text-blue-600">${r.type}</span><br>
+                    <span class="font-mono text-slate-400">${r.start} to ${r.end}</span>
+                </td>
+                <td class="p-4">
+                    <span class="text-[9px] font-bold uppercase px-2 py-1 rounded-full ${statusStyles[r.status]}">
+                        ${r.status}
+                    </span>
+                </td>
+                <td class="p-4 text-right">
+                    <div class="flex justify-end space-x-1">
+                        ${r.status === 'Pending' ? `
+                            <button onclick="updateLeaveStatus(${r.id}, 'Approved')" class="p-1.5 text-green-600 hover:bg-green-50 rounded" title="Approve">
+                                <i class="fa-solid fa-check-circle text-lg"></i>
+                            </button>
+                            <button onclick="updateLeaveStatus(${r.id}, 'Dismissed')" class="p-1.5 text-orange-600 hover:bg-orange-50 rounded" title="Dismiss">
+                                <i class="fa-solid fa-times-circle text-lg"></i>
+                            </button>
+                        ` : ''}
+                        <button onclick="deleteLeaveRequest(${r.id})" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete">
+                            <i class="fa-solid fa-trash-can text-lg"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// 5. Reset Filter
+function resetLeaveFilter() {
+    document.getElementById('leaveFilterDate').value = '';
+    renderLeaveRequests();
+}
     </script>
 </body>
 </html>
