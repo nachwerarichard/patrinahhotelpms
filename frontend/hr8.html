@@ -433,19 +433,50 @@ function renderApplicants() {
         }
 
         // --- DIRECTORY & MODAL LOGIC ---
-        function renderDirectory() {
-            const list = document.getElementById('employee-list');
-            list.innerHTML = employees.map(e => `
-                <tr class="border-b hover:bg-slate-50 transition ${e.status === 'Terminated' ? 'opacity-50 grayscale' : ''}">
-                    <td class="p-4"><div class="font-bold">${e.name}</div><span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded ${e.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${e.status}</span></td>
-                    <td class="p-4 text-xs text-slate-500">Hired: ${e.hireDate}<br>${e.termDate ? `<span class="text-red-500 font-bold">Left: ${e.termDate}</span>` : 'Current Staff'}</td>
-                    <td class="p-4">${e.certs.map(c => `<span class="bg-blue-50 text-blue-600 text-[10px] px-1 rounded border mr-1">${c}</span>`).join('')}</td>
-                    <td class="p-4"><span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold">${e.grade}</span></td>
-                    <td class="p-4"><button onclick="openModal(${e.id})" class="text-blue-600 hover:text-blue-800"><i class="fa-solid fa-pen"></i></button></td>
-                </tr>
-            `).join('');
-        }
+       function renderDirectory() {
+    const list = document.getElementById('employee-list');
+    list.innerHTML = employees.map(e => `
+        <tr class="border-b hover:bg-slate-50 transition ${e.status === 'Terminated' ? 'opacity-50 grayscale' : ''}">
+            <td class="p-4">
+                <div class="font-bold">${e.name}</div>
+                <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded ${e.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                    ${e.status}
+                </span>
+            </td>
+            <td class="p-4 text-xs text-slate-500">
+                Hired: ${e.hireDate}<br>
+                ${e.termDate ? `<span class="text-red-500 font-bold">Left: ${e.termDate}</span>` : 'Current Staff'}
+            </td>
+            <td class="p-4">${e.certs.map(c => `<span class="bg-blue-50 text-blue-600 text-[10px] px-1 rounded border mr-1">${c}</span>`).join('')}</td>
+            <td class="p-4"><span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold">${e.grade}</span></td>
+            <td class="p-4">
+                <div class="flex space-x-3">
+                    <button onclick="openModal(${e.id})" class="text-blue-600 hover:text-blue-800">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    
+                    <button onclick="deleteEmployee(${e.id})" class="text-red-500 hover:text-red-700">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
 
+        function deleteEmployee(id) {
+    // 1. Confirm with the user before permanent deletion
+    if (confirm("Are you sure you want to permanently delete this employee? This cannot be undone.")) {
+        
+        // 2. Remove the employee from the data array
+        // Note: Ensure your 'employees' variable is declared with 'let', not 'const'
+        employees = employees.filter(emp => emp.id !== id);
+        
+        // 3. Re-render the table to show the change
+        renderDirectory();
+    }
+}
+        
         function renderShifts() {
             const shifts = ['Morning', 'Afternoon', 'Night'];
             document.getElementById('shift-containers').innerHTML = shifts.map(s => `
