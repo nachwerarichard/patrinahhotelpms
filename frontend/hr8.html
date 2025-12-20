@@ -271,20 +271,33 @@
         function openApplicantModal() { document.getElementById('applicantModal').classList.remove('hidden'); }
         function closeApplicantModal() { document.getElementById('applicantModal').classList.add('hidden'); }
 
-        document.getElementById('applicantForm').onsubmit = (e) => {
-            e.preventDefault();
-            const newApp = {
-                id: Date.now(),
-                name: document.getElementById('appName').value,
-                role: document.getElementById('appRole').value,
-                email: document.getElementById('appEmail').value,
-                resume: document.getElementById('appResume').value,
-                date: new Date().toISOString().split('T')[0]
-            };
-            applicants.push(newApp);
-            closeApplicantModal();
-            renderApplicants();
-        };
+       document.getElementById('applicantForm').onsubmit = (e) => {
+    e.preventDefault();
+
+    // 1. Get the file name from the file input
+    const fileInput = document.getElementById('appResume');
+    const fileName = fileInput.files[0] ? fileInput.files[0].name : "No file uploaded";
+
+    // 2. Create the new applicant object
+    const newApp = {
+        id: Date.now(),
+        name: document.getElementById('appName').value,
+        role: document.getElementById('appRole').value,
+        email: document.getElementById('appEmail').value,
+        phone: document.getElementById('appPhone').value, // Captured from the new contact input
+        resume: fileName, // Stores just the name of the file (e.g., "my_cv.pdf")
+        date: new Date().toISOString().split('T')[0]
+    };
+
+    // 3. Update the data and UI
+    applicants.push(newApp);
+    
+    // 4. Cleanup
+    closeApplicantModal();
+    e.target.reset(); // Resets the form fields including the file selection
+    renderApplicants();
+};
+        
 
 function renderApplicants() {
     const container = document.getElementById('applicant-sections');
@@ -320,7 +333,7 @@ function renderApplicants() {
                         </div>
                         <h5 class="font-bold text-slate-800">${a.name}</h5>
                         <p class="text-xs text-slate-500 mb-4"><i class="fa-solid fa-envelope mr-1"></i> ${a.email}</p>
-                        
+                        <p class="text-xs text-slate-500 mb-4"><i class="fa-solid fa-phone mr-1"></i> ${a.phone || 'N/A'}</p>
                         <div class="flex items-center space-x-4 border-t pt-4">
                             <button class="text-xs font-bold text-blue-600 hover:underline"><i class="fa-solid fa-file-pdf mr-1"></i> CV</button>
                             
