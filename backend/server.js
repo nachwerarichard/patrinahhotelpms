@@ -1024,7 +1024,7 @@ app.get('/api/bookings/id/:customId', async (req, res) => {
 app.get('/api/bookings', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 5; // Default to 5 records per page
+        const limit = parseInt(req.query.limit) || 500; // Default to 5 records per page
         const searchTerm = req.query.search || ''; // New: Get search term
         const skip = (page - 1) * limit;
 
