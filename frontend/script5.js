@@ -195,18 +195,17 @@ document.addEventListener('DOMContentLoaded', () => {
        });
     }});
 
-        function logout() {
-    // 1. Clear any stored user data from local storage
+function logout() {
+    // 1. Clear session data
     localStorage.removeItem('userRole');
     localStorage.removeItem('isAuthenticated');
-    // Clear any other session data if you have it
-    localStorage.removeItem('user'); 
+    localStorage.removeItem('user'); // Clear everything else too
 
-    // 2. Optional: Log to console for debugging
-    console.log("User has been logged out. Redirecting...");
+    // 2. Log for debugging
+    console.log("Session cleared. Redirecting...");
 
-    // 3. Redirect to the login page
-    window.location.href = 'https://elegant-pasca-cea136.netlify.app/frontend/login.html';
+    // 3. Replace current history entry with the login page
+    // This makes it impossible to "go back" to the dashboard
+    window.location.replace('https://elegant-pasca-cea136.netlify.app/frontend/login.html');
 }
-        
     
