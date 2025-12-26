@@ -100,22 +100,25 @@
             const loginButton = document.getElementById('login-button');
 
             // Modified to handle the specific token/data of the selected system
+
             const finalizeLogin = (systemData, systemKey) => {
-                const username = document.getElementById('username').value.trim();
-                const password = document.getElementById('password').value.trim();
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
 
-                localStorage.setItem('authToken', systemData.token);
-                localStorage.setItem('username', username);
+    localStorage.setItem('authToken', systemData.token);
+    localStorage.setItem('username', username);
 
-                const targetUrl = SYSTEM_LINKS[systemKey];
-                
-                if (targetUrl) {
-                    const ssoUrl = `${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}`;
-                    window.location.replace = ssoUrl;
-                } else {
-                    alert("System link not found.");
-                }
-            };
+    const targetUrl = SYSTEM_LINKS[systemKey];
+    
+    if (targetUrl) {
+        const ssoUrl = `${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}`;
+        
+        // CORRECT SYNTAX: Use parentheses for .replace()
+        window.location.replace(ssoUrl);
+    } else {
+        alert("System link not found.");
+    }
+};
 
             const createSystemButton = (systemKey, systemData) => {
                 const isA = systemKey === 'systemA';
