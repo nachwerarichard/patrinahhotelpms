@@ -609,17 +609,39 @@
         </div>
     </div>
 
-    <div id="messageBox" class="fixed bottom-4 right-4 bg-white p-6 rounded-lg shadow-xl max-w-sm z-50 hidden">
-        <h3 id="messageBoxTitle" class="text-lg font-bold mb-2"></h3>
-        <p id="messageBoxContent" class="text-gray-700"></p>
-        <button onclick="closeMessageBox()" class="mt-4 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300">OK</button>
-    </div>
+<div id="messageBoxOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 hidden"></div>
 
+<div id="messageBox" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full mx-4 transform transition-all">
+        <h3 id="messageBoxTitle" class="text-xl font-bold mb-2 text-gray-900"></h3>
+        <p id="messageBoxContent" class="text-gray-600"></p>
+        <div class="flex justify-end">
+            <button onclick="closeMessageBox()" class="mt-6 w-full sm:w-auto bg-indigo-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-indigo-700 transition duration-300 shadow-md">
+                OK
+            </button>
+        </div>
+    </div>
+</div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="script4.js"></script>
         <script src="chatbot.js"></script>
+<script>
+    function showMessageBox(title, content) {
+    document.getElementById('messageBoxTitle').textContent = title;
+    document.getElementById('messageBoxContent').textContent = content;
 
+    // Show both the overlay and the box
+    document.getElementById('messageBoxOverlay').classList.remove('hidden');
+    document.getElementById('messageBox').classList.remove('hidden');
+}
+
+function closeMessageBox() {
+    // Hide both
+    document.getElementById('messageBoxOverlay').classList.add('hidden');
+    document.getElementById('messageBox').classList.add('hidden');
+}
+</script>
 <script src="script5.js"></script>
     <i id="nav-channel-manager" class="hidden"></i>
         <i     id="nav-service-reports
