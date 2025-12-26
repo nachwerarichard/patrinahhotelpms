@@ -68,7 +68,7 @@
             <h2 class="text-2xl font-extrabold text-gray-900">Welcome! Select Access Point</h2>
             
             <div id="system-options" class="space-y-4">
-                </div>
+            </div>
 
             <button 
                 id="logout-button"
@@ -81,13 +81,12 @@
     </div>
     
     <script>
-        // Define the two different APIs
         const API_A_URL = 'https://patrinahhotelmgtsys.onrender.com';
         const API_B_URL = 'https://patrinahhotelpms.onrender.com/api';
 
         const SYSTEM_LINKS = {
-            systemA: 'https://stirring-pony-fe2347.netlify.app/index52.html', // Bar & Restaurant
-            systemB: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html'  // Front Office & HK
+            systemA: 'https://stirring-pony-fe2347.netlify.app/index52.html',
+            systemB: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html'
         };
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -99,7 +98,6 @@
             const authContainer = document.getElementById('auth-container');
             const loginButton = document.getElementById('login-button');
 
-            // Modified to handle the specific token/data of the selected system
             const finalizeLogin = (systemData, systemKey) => {
                 const username = document.getElementById('username').value.trim();
                 const password = document.getElementById('password').value.trim();
@@ -111,7 +109,8 @@
                 
                 if (targetUrl) {
                     const ssoUrl = `${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}`;
-                    window.location.href = ssoUrl;
+                    // CHANGED: Use .replace instead of .href to disable 'Back' button
+                    window.location.replace(ssoUrl);
                 } else {
                     alert("System link not found.");
                 }
@@ -123,17 +122,11 @@
                     ? "w-full py-4 px-4 border border-transparent rounded-lg shadow-lg text-lg font-medium text-white bg-green-600 hover:bg-green-700 transition duration-150 transform hover:scale-[1.02]"
                     : "w-full py-4 px-4 border border-transparent rounded-lg shadow-lg text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition duration-150 transform hover:scale-[1.02]";
                 
-                const icon = isA ? '🍽️' : '🛏️';
                 const label = isA ? 'Bar & Restaurant System' : 'Front Office & Housekeeping';
-                const role = systemData.role || (systemData.user && systemData.user.role) || 'User';
 
                 const button = document.createElement('button');
                 button.className = buttonClass;
-                button.innerHTML = `
-                    <div class="flex flex-col items-center">
-                        <span>${label}</span>
-                    </div>
-                `;
+                button.innerHTML = `<div class="flex flex-col items-center"><span>${label}</span></div>`;
                 
                 button.addEventListener('click', () => {
                     finalizeLogin(systemData, systemKey);
@@ -154,7 +147,6 @@
                 systemOptions.innerHTML = ''; 
 
                 try {
-                    // Helper to wrap fetch requests
                     const loginRequest = async (url) => {
                         try {
                             const res = await fetch(`${url}/login`, {
@@ -168,32 +160,26 @@
                         }
                     };
 
-                    // Fire both requests at once
                     const [resA, resB] = await Promise.all([
                         loginRequest(API_A_URL),
                         loginRequest(API_B_URL)
                     ]);
 
                     if (resA && resB) {
-                        // USER FOUND IN BOTH - Show selection
                         loginForm.classList.add('hidden');
                         systemSelection.classList.remove('hidden');
                         authContainer.classList.replace('max-w-md', 'max-w-lg');
-                        
                         systemOptions.appendChild(createSystemButton('systemA', resA));
                         systemOptions.appendChild(createSystemButton('systemB', resB));
                     } 
                     else if (resA) {
-                        // USER ONLY IN SYSTEM A - Auto redirect
                         finalizeLogin(resA, 'systemA');
                     } 
                     else if (resB) {
-                        // USER ONLY IN SYSTEM B - Auto redirect
                         finalizeLogin(resB, 'systemB');
                     } 
                     else {
-                        // NOT FOUND IN EITHER
-                        errorMessage.textContent = 'Invalid username or password in both systems.';
+                        errorMessage.textContent = 'Invalid username or password.';
                         errorMessage.classList.remove('hidden');
                     }
                 } catch (error) {
