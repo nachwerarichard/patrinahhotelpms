@@ -199,17 +199,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Clear any stored user data from local storage
     localStorage.removeItem('userRole');
     localStorage.removeItem('isAuthenticated');
+    // Clear any other session data if you have it
+    localStorage.removeItem('user'); 
 
-    // 2. Hide the main content and show the login page
-    document.getElementById('main-content').style.display = 'none';
-    document.getElementById('login-container').style.display = 'flex'; // Use flex to center it as per the Tailwind styling
+    // 2. Optional: Log to console for debugging
+    console.log("User has been logged out. Redirecting...");
 
-    // 3. Clear the login form inputs for the next user
-    document.getElementById('username').value = '';
-    document.getElementById('password').value = '';
-
-    // Optional: Show a message to the user that they have logged out
-    console.log("User has been logged out.");
+    // 3. Redirect to the login page
+    window.location.href = 'https://elegant-pasca-cea136.netlify.app/frontend/login.html';
 }
         
     
