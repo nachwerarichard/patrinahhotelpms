@@ -209,3 +209,17 @@ function logout() {
     window.location.replace('https://elegant-pasca-cea136.netlify.app/frontend/login.html');
 }
     
+    function showMessageBox(title, content) {
+    document.getElementById('messageBoxTitle').textContent = title;
+    document.getElementById('messageBoxContent').textContent = content;
+
+    // Show both the overlay and the box
+    document.getElementById('messageBoxOverlay').classList.remove('hidden');
+    document.getElementById('messageBox').classList.remove('hidden');
+}
+
+function closeMessageBox() {
+    // Hide both
+    document.getElementById('messageBoxOverlay').classList.add('hidden');
+    document.getElementById('messageBox').classList.add('hidden');
+}
