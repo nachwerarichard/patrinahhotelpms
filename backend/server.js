@@ -61,6 +61,17 @@ mongoose.connect(mongoURI)
     .then(() => {
         console.log('MongoDB connected successfully!');
 
+        const adminExists = await User.findOne({ username: 'admin' });
+        if (!adminExists) {
+            await User.create({ 
+                username: 'admin', 
+                password: '123', 
+                role: 'admin' 
+            });
+            console.log('Initial admin created: admin/123');
+        }
+        
+
     })
     .catch(err => {
         console.error('MongoDB connection error:', err);
@@ -256,7 +267,36 @@ const formatDate = (date) => {
 
 // New API endpoint to generate a combined report for a specific date
 
+// GET: Fetch all users to display in the table
+app.get('/api/admin/users', authenticateUser, authorizeRole('admin'), async (req, res) => {
+    try {
+        const users = await User.find({}, '-password'); // Send everything except passwords
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ message: 'Error fetching users' });
+    }
+});
 
+// DELETE: Remove a user by ID
+app.delete('/api/admin/users/:id', authenticateUser, authorizeRole('admin'), async (req, res) => {
+    try {
+        await User.findByIdAndDelete(req.params.id);
+        res.json({ message: 'User deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ message: 'Error deleting user' });
+    }
+});
+
+// PUT: Edit a user's role
+app.put('/api/admin/users/:id', authenticateUser, authorizeRole('admin'), async (req, res) => {
+    try {
+        const { role } = req.body;
+        await User.findByIdAndUpdate(req.params.id, { role });
+        res.json({ message: 'Role updated successfully' });
+    } catch (err) {
+        res.status(500).json({ message: 'Error updating role' });
+    }
+});
 // NEW: API endpoint to generate a combined report for a specific date
 app.get('/api/rooms/report-daily', async (req, res) => {
     try {
@@ -525,34 +565,32 @@ const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 
 
 // --- 6. Hardcoded Users for Authentication (Highly Insecure for Production!) ---
-const users = [
-        { username: 'Nelson', password: '123', role: 'admin' },
-    { username: 'Nachwera Richard', password: '123', role: 'admin' },
+const userSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    role: { type: String, enum: ['admin', 'bar', 'housekeeper'], default: 'admin' }
+});
 
-    { username: 'user', password: 'password', role: 'admin' },
-    { username: 'bar', password: '789', role: 'bar' },
-    { username: 'hk', password: 'hkpass', role: 'housekeeper' }
-];
-
+const User = mongoose.model('User', userSchema);
 // Middleware to check authentication (simple hardcoded check)
-function authenticateUser(req, res, next) {
-    const { username, password } = req.body; // Assuming credentials are in the request body for simplicity
-
-    const user = users.find(u => u.username === username && u.password === password);
-
-    if (user) {
-        req.user = user; // Attach user info to request
-        next(); // Proceed to the next middleware/route handler
-    } else {
-        res.status(401).json({ message: 'Authentication failed. Invalid credentials.' });
+async function authenticateUser(req, res, next) {
+    const { username, password } = req.body;
+    try {
+        const user = await User.findOne({ username, password });
+        if (user) {
+            req.user = user; // Attach user object to the request
+            next();
+        } else {
+            res.status(401).json({ message: 'Authentication failed. Invalid credentials.' });
+        }
+    } catch (err) {
+        res.status(500).json({ message: 'Server error during authentication' });
     }
 }
 
-// Middleware to authorize user based on role
+// Authorization: Check if the logged-in user has the right role
 function authorizeRole(requiredRole) {
     return (req, res, next) => {
-        // For simplicity, assuming req.user is set by authenticateUser middleware
-        // In a real app, this would check a token/session
         if (!req.user || req.user.role !== requiredRole) {
             return res.status(403).json({ message: 'Access denied. Insufficient permissions.' });
         }
@@ -560,6 +598,32 @@ function authorizeRole(requiredRole) {
     };
 }
 
+
+// General Login Route
+app.post('/api/login', authenticateUser, (req, res) => {
+    res.json({ 
+        message: 'Login successful', 
+        user: { username: req.user.username, role: req.user.role } 
+    });
+});
+
+// Admin Route: Create or Update users (Accessible only by Admins)
+app.post('/api/admin/manage-user', authenticateUser, authorizeRole('admin'), async (req, res) => {
+    const { targetUsername, newPassword, newRole } = req.body;
+    
+    try {
+        // findOneAndUpdate with { upsert: true } creates the user if they don't exist
+        const updatedUser = await User.findOneAndUpdate(
+            { username: targetUsername },
+            { password: newPassword, role: newRole },
+            { upsert: true, new: true }
+        );
+        
+        res.json({ message: 'User updated/created successfully', user: updatedUser });
+    } catch (err) {
+        res.status(500).json({ message: 'Error managing user', error: err.message });
+    }
+});
 /**
  * Helper function to add an entry to the audit log.
  * @param {string} action - The action performed (e.g., "Booking Created").
@@ -824,9 +888,7 @@ app.post('/api/pos/walkin/:receiptId/pay', async (req, res) => {
     }
 });
 // Authentication Route
-app.post('/api/login', authenticateUser, (req, res) => {
-    res.json({ message: 'Login successful', role: req.user.role });
-});
+
 
 // New: General Audit Log Endpoint (for frontend to log actions like login/logout)
 app.post('/api/audit-log/action', async (req, res) => {
