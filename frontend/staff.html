@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Admin - Staff Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <div class="max-w-6xl mx-auto p-4 md:p-8">
+        <header class="mb-10 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Staff Management</h1>
+                <p class="text-gray-500">Create users and manage role permissions</p>
+            </div>
+            <div id="connectionStatus" class="text-xs font-mono bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full">
+                Checking Server...
+            </div>
+        </header>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-indigo-600 mb-4">Register or Update Staff</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="flex flex-col">
+                    <label class="text-xs text-gray-400 mb-1 ml-1">Username</label>
+                    <input id="username" type="text" placeholder="e.g. Nelson" class="border p-2 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-xs text-gray-400 mb-1 ml-1">Password</label>
+                    <input id="password" type="password" placeholder="••••••••" class="border p-2 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-xs text-gray-400 mb-1 ml-1">Assign Role</label>
+                    <select id="role" class="border p-2 rounded-lg bg-gray-50 outline-none">
+                        <option value="housekeeper">Housekeeper</option>
+                        <option value="bar">Bar Staff</option>
+                        <option value="admin">Administrator</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="handleSaveUser()" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition shadow-md shadow-indigo-200">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-5 border-b border-gray-50 flex justify-between items-center bg-white">
+                <h2 class="font-bold text-gray-800">Active Staff Accounts</h2>
+                <button onclick="fetchUsers()" class="text-sm font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Sync Data
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-400 uppercase text-[10px] font-bold tracking-widest">
+                            <th class="p-5">Staff Member</th>
+                            <th class="p-5">Access Level</th>
+                            <th class="p-5">Change Permission</th>
+                            <th class="p-5 text-center">Management</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody" class="divide-y divide-gray-50 text-gray-700">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /** * CONFIGURATION
+         * Replace the URL below with your actual Render backend URL 
+         * Example: 'https://my-backend.onrender.com'
+         */
+        const API_BASE_URL = 'https://patrinahhotelpms.onrender.com'; 
+
+        // Initial load
+        window.onload = () => {
+            if(!API_BASE_URL) {
+                document.getElementById('connectionStatus').innerText = "⚠️ Setup Required: Set API_BASE_URL";
+                console.error("Please provide your Render backend URL in the script tag.");
+            } else {
+                fetchUsers();
+            }
+        };
+
+        // 1. Fetch Users from DB
+        async function fetchUsers() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/admin/users`);
+                if(!res.ok) throw new Error("Unauthorized or server error");
+                
+                const users = await res.json();
+                const tbody = document.getElementById('userTableBody');
+                document.getElementById('connectionStatus').innerText = "🟢 Server Online";
+                document.getElementById('connectionStatus').className = "text-xs font-mono bg-green-100 text-green-700 px-3 py-1 rounded-full";
+                
+                tbody.innerHTML = users.map(user => `
+                    <tr class="hover:bg-indigo-50/30 transition">
+                        <td class="p-5">
+                            <div class="font-semibold text-gray-900">${user.username}</div>
+                        </td>
+                        <td class="p-5">
+                            <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-wider border ${getRoleClass(user.role)}">
+                                ${user.role.toUpperCase()}
+                            </span>
+                        </td>
+                        <td class="p-5">
+                            <select onchange="updateRole('${user._id}', this.value)" class="text-sm bg-transparent border-b border-gray-200 focus:border-indigo-500 outline-none cursor-pointer">
+                                <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
+                                <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar</option>
+                                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                            </select>
+                        </td>
+                        <td class="p-5 text-center">
+                            <button onclick="deleteUser('${user._id}')" class="text-red-400 hover:text-red-600 transition p-2 hover:bg-red-50 rounded-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                document.getElementById('connectionStatus').innerText = "🔴 Connection Failed";
+                document.getElementById('connectionStatus').className = "text-xs font-mono bg-red-100 text-red-700 px-3 py-1 rounded-full";
+            }
+        }
+
+        // 2. Save/Update Staff
+        async function handleSaveUser() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+
+            if(!username || !password) return alert("Please fill in all fields");
+
+            const res = await fetch(`${API_BASE_URL}/api/admin/manage-user`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    targetUsername: username, 
+                    newPassword: password, 
+                    newRole: role 
+                })
+            });
+
+            if(res.ok) {
+                alert('Staff record updated!');
+                fetchUsers();
+            } else {
+                alert('Error saving user. Check admin permissions.');
+            }
+        }
+
+        // 3. Delete Staff Member
+        async function deleteUser(id) {
+            if(!confirm('This will permanently revoke this user\'s access. Continue?')) return;
+            
+            const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}`, { 
+                method: 'DELETE' 
+            });
+            
+            if(res.ok) fetchUsers();
+        }
+
+        // 4. Update Role via Select
+        async function updateRole(id, newRole) {
+            await fetch(`${API_BASE_URL}/api/admin/users/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: newRole })
+            });
+            fetchUsers();
+        }
+
+        function getRoleClass(role) {
+            if (role === 'admin') return 'bg-purple-50 text-purple-600 border-purple-200';
+            if (role === 'bar') return 'bg-orange-50 text-orange-600 border-orange-200';
+            return 'bg-emerald-50 text-emerald-600 border-emerald-200';
+        }
+    </script>
+</body>
+</html>
