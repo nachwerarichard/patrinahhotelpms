@@ -91,47 +91,65 @@
         };
 
         // 1. Fetch Users from DB
-        async function fetchUsers() {
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/admin/users`);
-                if(!res.ok) throw new Error("Unauthorized or server error");
-                
-                const users = await res.json();
-                const tbody = document.getElementById('userTableBody');
-                document.getElementById('connectionStatus').innerText = "🟢 Server Online";
-                document.getElementById('connectionStatus').className = "text-xs font-mono bg-green-100 text-green-700 px-3 py-1 rounded-full";
-                
-                tbody.innerHTML = users.map(user => `
-                    <tr class="hover:bg-indigo-50/30 transition">
-                        <td class="p-5">
-                            <div class="font-semibold text-gray-900">${user.username}</div>
-                        </td>
-                        <td class="p-5">
-                            <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-wider border ${getRoleClass(user.role)}">
-                                ${user.role.toUpperCase()}
-                            </span>
-                        </td>
-                        <td class="p-5">
-                            <select onchange="updateRole('${user._id}', this.value)" class="text-sm bg-transparent border-b border-gray-200 focus:border-indigo-500 outline-none cursor-pointer">
-                                <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
-                                <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar</option>
-                                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                            </select>
-                        </td>
-                        <td class="p-5 text-center">
-                            <button onclick="deleteUser('${user._id}')" class="text-red-400 hover:text-red-600 transition p-2 hover:bg-red-50 rounded-lg">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
-            } catch (err) {
-                document.getElementById('connectionStatus').innerText = "🔴 Connection Failed";
-                document.getElementById('connectionStatus').className = "text-xs font-mono bg-red-100 text-red-700 px-3 py-1 rounded-full";
+       async function fetchUsers() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/admin/users`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                // We send credentials in headers because GET requests don't have a body
+                'x-username': 'admin', 
+                'x-password': '123'    
             }
+        });
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || "Unauthorized");
         }
+
+        const users = await res.json();
+        const tbody = document.getElementById('userTableBody');
+        
+        // Update Status UI
+        const statusEl = document.getElementById('connectionStatus');
+        statusEl.innerText = "🟢 Server Online";
+        statusEl.className = "text-xs font-mono bg-green-100 text-green-700 px-3 py-1 rounded-full";
+
+        tbody.innerHTML = users.map(user => `
+            <tr class="hover:bg-indigo-50/30 transition">
+                <td class="p-5">
+                    <div class="font-semibold text-gray-900">${user.username}</div>
+                </td>
+                <td class="p-5">
+                    <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-wider border ${getRoleClass(user.role)}">
+                        ${user.role.toUpperCase()}
+                    </span>
+                </td>
+                <td class="p-5">
+                    <select onchange="updateRole('${user._id}', this.value)" class="text-sm bg-transparent border-b border-gray-200 focus:border-indigo-500 outline-none cursor-pointer">
+                        <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
+                        <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar</option>
+                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                    </select>
+                </td>
+                <td class="p-5 text-center">
+                    <button onclick="deleteUser('${user._id}')" class="text-red-400 hover:text-red-600 transition p-2 hover:bg-red-50 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch (err) {
+        console.error("Fetch Error:", err);
+        const statusEl = document.getElementById('connectionStatus');
+        statusEl.innerText = `🔴 ${err.message}`;
+        statusEl.className = "text-xs font-mono bg-red-100 text-red-700 px-3 py-1 rounded-full";
+    }
+}
 
         // 2. Save/Update Staff
         async function handleSaveUser() {
