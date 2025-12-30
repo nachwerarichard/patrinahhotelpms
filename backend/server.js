@@ -58,20 +58,22 @@ const port = 3000; // Backend will run on port 3000
 const mongoURI = 'mongodb+srv://nachwerarichard:hotelpms@cluster0.g4cjpwg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'; // Your MongoDB Atlas connection string
 
 mongoose.connect(mongoURI)
-    .then(() => {
-        console.log('MongoDB connected successfully!');
+   .then(async () => { // <--- MAKE SURE 'async' IS HERE
+        console.log('Connected to MongoDB');
 
-        const adminExists = await User.findOne({ username: 'admin' });
-        if (!adminExists) {
-            await User.create({ 
-                username: 'admin', 
-                password: '123', 
-                role: 'admin' 
-            });
-            console.log('Initial admin created: admin/123');
+        try {
+            const adminExists = await User.findOne({ username: 'admin' });
+            if (!adminExists) {
+                await User.create({ 
+                    username: 'admin', 
+                    password: '123', 
+                    role: 'admin' 
+                });
+                console.log('Initial admin created: admin/123');
+            }
+        } catch (error) {
+            console.error('Error seeding admin user:', error);
         }
-        
-
     })
     .catch(err => {
         console.error('MongoDB connection error:', err);
