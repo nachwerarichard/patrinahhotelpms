@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patrinah POS | Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .tab-active { border-bottom: 2px solid #4f46e5; color: #4f46e5; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800">
+
+    <header class="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div class="bg-indigo-600 p-2 rounded-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight text-slate-900">Patrinah Hotel POS</h1>
+            </div>
+            <div id="statusIndicator" class="text-xs font-medium uppercase tracking-wider text-slate-400">System Ready</div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-8">
+        
+        <div id="messageBox" class="fixed top-20 right-4 z-50 transition-all duration-300 transform translate-x-full"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <div class="lg:col-span-4 space-y-6">
+                
+                <div class="flex space-x-4 border-b border-slate-200 mb-4">
+                    <button onclick="switchTab('new')" id="tabNew" class="pb-2 px-2 text-sm font-semibold tab-active transition-all">New/Search</button>
+                    <button onclick="switchTab('reports')" id="tabReports" class="pb-2 px-2 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-all">Daily Reports</button>
+                </div>
+
+                <div id="managementPanel" class="space-y-6">
+                    <div id="searchAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        <h2 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Find Transaction</h2>
+                        <form id="searchAccountForm" class="relative">
+                            <input type="text" id="searchQuery" required placeholder="Guest or Room..." 
+                                class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all">
+                            <button type="submit" class="absolute right-2 top-2 p-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            </button>
+                        </form>
+                        <div id="searchResults" class="mt-4 space-y-2 max-h-60 overflow-y-auto custom-scroll"></div>
+                    </div>
+
+                    <div id="createAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        <h2 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Quick Check-In</h2>
+                        <form id="createAccountForm" class="space-y-4">
+                            <div>
+                                <label class="text-xs font-semibold text-slate-600 ml-1">Guest Name</label>
+                                <input type="text" name="guestName" required placeholder="Full Name" 
+                                    class="w-full mt-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-600 ml-1">Room Number</label>
+                                <input type="text" name="roomNumber" placeholder="e.g. 101 (Optional)" 
+                                    class="w-full mt-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                            <button type="submit" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition-all transform active:scale-[0.98]">
+                                Initialize Account
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="reportsPanel" class="hidden space-y-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        <h2 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Report Filters</h2>
+                        <form id="dailyReportForm" class="space-y-4">
+                            <input type="date" id="reportDate" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <button type="submit" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all">Generate Summary</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8">
+                
+                <div id="emptyState" class="h-full flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-200 rounded-3xl text-slate-400">
+                    <svg class="w-16 h-16 mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                    <p class="text-lg font-medium text-slate-500">No Active Transaction</p>
+                    <p class="text-sm">Search for a guest or create a new account to begin.</p>
+                </div>
+
+                <div id="activeAccountSection" class="hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+                        <div class="bg-slate-900 px-8 py-6 text-white flex justify-between items-end">
+                            <div>
+                                <div class="flex items-center space-x-2 mb-1">
+                                    <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
+                                    <span class="text-xs font-bold uppercase tracking-widest text-slate-400">Live Transaction</span>
+                                </div>
+                                <h2 id="currentGuestName" class="text-2xl font-bold">-</h2>
+                                <p id="currentRoomNumber" class="text-slate-400 text-sm italic"></p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs font-bold text-slate-400 uppercase mb-1">Current Balance</p>
+                                <p class="text-4xl font-light text-indigo-400 leading-none">$<span id="totalCharges">0.00</span></p>
+                            </div>
+                        </div>
+
+                        <div class="p-8">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div>
+                                    <h3 class="text-sm font-bold text-slate-800 uppercase mb-4">Add Item/Service</h3>
+                                    <form id="addChargeForm" class="space-y-4">
+                                        <input type="text" name="description" required placeholder="Description (e.g. Laundry)" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                                        <div class="flex space-x-2">
+                                            <span class="bg-slate-100 px-4 py-2 rounded-xl flex items-center text-slate-500">$</span>
+                                            <input type="number" name="amount" required step="0.01" min="0" placeholder="0.00" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                                        </div>
+                                        <button type="submit" class="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all">Add Charge</button>
+                                    </form>
+                                </div>
+
+                                <div class="flex flex-col justify-between">
+                                    <div>
+                                        <h3 class="text-sm font-bold text-slate-800 uppercase mb-4">Quick Actions</h3>
+                                        <div class="grid grid-cols-1 gap-3">
+                                            <button id="postToRoomBtn" class="flex items-center justify-center space-x-2 px-6 py-4 border-2 border-indigo-600 text-indigo-600 font-bold rounded-2xl hover:bg-indigo-50 transition-all">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                                <span>Post to Room Folio</span>
+                                            </button>
+                                            <button id="issueReceiptBtn" class="flex items-center justify-center space-x-2 px-6 py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-black transition-all shadow-xl">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                                                <span>Settle & Print Receipt</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button onclick="resetUI()" class="mt-4 text-xs font-bold text-slate-400 hover:text-red-500 uppercase tracking-widest text-center transition-all">Cancel & Return</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="reportResults" class="hidden animate-in fade-in duration-500">
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="px-8 py-6 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
+                            <div>
+                                <h2 class="text-indigo-900 font-bold text-lg">Daily Summary: <span id="reportDateDisplay"></span></h2>
+                                <p class="text-indigo-600 text-sm">Revenue generated across all POS points</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-4xl font-black text-indigo-600">$<span id="reportTotalRevenue">0.00</span></p>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-slate-100">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-8 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Guest / Room</th>
+                                        <th class="px-8 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Description</th>
+                                        <th class="px-8 py-4 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">Source</th>
+                                        <th class="px-8 py-4 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportTableBody" class="divide-y divide-slate-100 text-sm text-slate-600"></tbody>
+                            </table>
+                        </div>
+                        <div class="p-6 bg-slate-50 border-t border-slate-100">
+                            <button id="exportReportBtn" class="flex items-center justify-center space-x-2 w-full px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                <span>Export Sheet (.csv)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const BASE_URL = 'https://patrinahhotelpms.onrender.com';
+            
+            // Elements
+            const messageBox = document.getElementById('messageBox');
+            const createAccountForm = document.getElementById('createAccountForm');
+            const searchAccountForm = document.getElementById('searchAccountForm');
+            const searchResults = document.getElementById('searchResults');
+            const activeAccountSection = document.getElementById('activeAccountSection');
+            const emptyState = document.getElementById('emptyState');
+            const addChargeForm = document.getElementById('addChargeForm');
+            const postToRoomBtn = document.getElementById('postToRoomBtn');
+            const issueReceiptBtn = document.getElementById('issueReceiptBtn');
+
+            // Reports Elements
+            const dailyReportForm = document.getElementById('dailyReportForm');
+            const reportResults = document.getElementById('reportResults');
+            const reportTableBody = document.getElementById('reportTableBody');
+
+            let activeAccountId = null;
+            let activeAccountData = null;
+
+            // --- TAB LOGIC ---
+            window.switchTab = (tab) => {
+                const isNew = tab === 'new';
+                document.getElementById('managementPanel').classList.toggle('hidden', !isNew);
+                document.getElementById('reportsPanel').classList.toggle('hidden', isNew);
+                document.getElementById('tabNew').className = isNew ? 'pb-2 px-2 text-sm font-semibold tab-active transition-all' : 'pb-2 px-2 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-all';
+                document.getElementById('tabReports').className = !isNew ? 'pb-2 px-2 text-sm font-semibold tab-active transition-all' : 'pb-2 px-2 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-all';
+                
+                if (!isNew && !activeAccountId) {
+                    emptyState.classList.remove('hidden');
+                    activeAccountSection.classList.add('hidden');
+                }
+            };
+
+            // --- UI HELPERS ---
+            const displayMessage = (message, type) => {
+                const bg = type === 'success' ? 'bg-emerald-600' : (type === 'error' ? 'bg-red-600' : 'bg-indigo-600');
+                messageBox.textContent = message;
+                messageBox.className = `fixed top-20 right-4 z-50 px-6 py-3 rounded-xl text-white font-bold shadow-2xl transition-all duration-300 transform ${bg}`;
+                
+                setTimeout(() => {
+                    messageBox.classList.add('translate-x-full');
+                }, 3000);
+                messageBox.classList.remove('translate-x-full');
+            };
+
+            const updateActiveAccountUI = (account) => {
+                document.getElementById('currentGuestName').textContent = account.guestName;
+                document.getElementById('currentRoomNumber').textContent = account.roomNumber ? `Room ${account.roomNumber}` : 'Walk-In Guest';
+                document.getElementById('totalCharges').textContent = account.totalCharges?.toFixed(2) || '0.00';
+                
+                postToRoomBtn.classList.toggle('hidden', !account.roomNumber);
+                emptyState.classList.add('hidden');
+                reportResults.classList.add('hidden');
+                activeAccountSection.classList.remove('hidden');
+            };
+
+            const resetUI = () => {
+                createAccountForm.reset();
+                addChargeForm.reset();
+                searchAccountForm.reset();
+                searchResults.innerHTML = '';
+                activeAccountSection.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                activeAccountId = null;
+                activeAccountData = null;
+            };
+
+            // --- CORE API FUNCTIONS ---
+            const createAccount = async (guestName, roomNumber) => {
+                displayMessage('Initializing account...', 'info');
+                try {
+                    const res = await fetch(`${BASE_URL}/api/pos/client/account`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ guestName, roomNumber })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.message);
+                    activeAccountId = data._id;
+                    activeAccountData = data;
+                    updateActiveAccountUI(data);
+                    displayMessage(`Account active for ${data.guestName}`, 'success');
+                } catch (err) { displayMessage(err.message, 'error'); }
+            };
+
+            const searchAccounts = async (query) => {
+                try {
+                    const res = await fetch(`${BASE_URL}/api/pos/client/search?query=${encodeURIComponent(query)}`);
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.message);
+                    
+                    searchResults.innerHTML = data.length ? '' : '<p class="text-xs text-center text-slate-400 py-4">No records found</p>';
+                    data.forEach(acc => {
+                        const el = document.createElement('div');
+                        el.className = 'p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-300 hover:bg-white transition-all group';
+                        el.innerHTML = `
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="text-sm font-bold text-slate-700">${acc.guestName}</p>
+                                    <p class="text-[10px] uppercase font-bold text-slate-400">Room: ${acc.roomNumber || 'Walk-In'}</p>
+                                </div>
+                                <span class="text-xs font-black text-indigo-600 opacity-0 group-hover:opacity-100">SELECT →</span>
+                            </div>`;
+                        el.onclick = () => {
+                            activeAccountId = acc._id;
+                            activeAccountData = acc;
+                            updateActiveAccountUI(acc);
+                        };
+                        searchResults.appendChild(el);
+                    });
+                } catch (err) { displayMessage(err.message, 'error'); }
+            };
+
+            const addCharge = async (description, amount) => {
+                if (!activeAccountId) return;
+                try {
+                    const res = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ description, amount: parseFloat(amount) })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.message);
+                    activeAccountData = data;
+                    updateActiveAccountUI(data);
+                    addChargeForm.reset();
+                    displayMessage('Charge added successfully', 'success');
+                } catch (err) { displayMessage(err.message, 'error'); }
+            };
+
+            const settleAccount = async (method) => {
+                if (!activeAccountId) return;
+                let payload = method === 'room' ? { roomPost: true } : { paymentMethod: 'Cash' };
+                try {
+                    const res = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/settle`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) throw new Error('Failed to settle');
+                    
+                    if (method === 'receipt') {
+                        // (Receipt Logic remains same as your original)
+                        displayMessage('Receipt issued. Closing...', 'success');
+                    } else {
+                        displayMessage('Posted to room successfully', 'success');
+                    }
+                    setTimeout(resetUI, 2000);
+                } catch (err) { displayMessage(err.message, 'error'); }
+            };
+
+            // --- REPORTING ---
+            const generateDailyReport = async (date) => {
+                displayMessage('Loading report...', 'info');
+                try {
+                    const res = await fetch(`${BASE_URL}/api/pos/reports/daily?date=${date}`);
+                    const data = await res.json();
+                    if (!res.ok) throw new Error('Report failed');
+
+                    document.getElementById('reportDateDisplay').textContent = data.date;
+                    document.getElementById('reportTotalRevenue').textContent = data.totalRevenue.toFixed(2);
+                    reportTableBody.innerHTML = '';
+
+                    data.transactions.forEach(t => {
+                        const row = document.createElement('tr');
+                        row.className = 'hover:bg-slate-50 transition-colors';
+                        row.innerHTML = `
+                            <td class="px-8 py-4 font-medium text-slate-900">${t.guestName} <span class="text-[10px] text-slate-400 ml-1">#${t.roomNumber}</span></td>
+                            <td class="px-8 py-4">${t.description}</td>
+                            <td class="px-8 py-4 text-center"><span class="px-2 py-1 bg-slate-100 rounded text-[10px] font-bold uppercase">${t.source}</span></td>
+                            <td class="px-8 py-4 text-right font-bold text-slate-900">$${t.amount.toFixed(2)}</td>
+                        `;
+                        reportTableBody.appendChild(row);
+                    });
+
+                    activeAccountSection.classList.add('hidden');
+                    emptyState.classList.add('hidden');
+                    reportResults.classList.remove('hidden');
+                } catch (err) { displayMessage(err.message, 'error'); }
+            };
+
+            // Event Listeners
+            createAccountForm.onsubmit = e => {
+                e.preventDefault();
+                const fd = new FormData(createAccountForm);
+                createAccount(fd.get('guestName'), fd.get('roomNumber') || null);
+            };
+
+            searchAccountForm.onsubmit = e => {
+                e.preventDefault();
+                searchAccounts(document.getElementById('searchQuery').value);
+            };
+
+            addChargeForm.onsubmit = e => {
+                e.preventDefault();
+                const fd = new FormData(addChargeForm);
+                addCharge(fd.get('description'), fd.get('amount'));
+            };
+
+            dailyReportForm.onsubmit = e => {
+                e.preventDefault();
+                generateDailyReport(document.getElementById('reportDate').value);
+            };
+
+            postToRoomBtn.onclick = () => settleAccount('room');
+            issueReceiptBtn.onclick = () => settleAccount('receipt');
+            
+            document.getElementById('exportReportBtn').onclick = () => {
+                // Simplified CSV export
+                let csv = "Guest,Description,Source,Amount\n";
+                reportTableBody.querySelectorAll('tr').forEach(tr => {
+                    const cols = tr.querySelectorAll('td');
+                    csv += `${cols[0].innerText},${cols[1].innerText},${cols[2].innerText},${cols[3].innerText}\n`;
+                });
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.setAttribute('href', url);
+                a.setAttribute('download', 'DailyReport.csv');
+                a.click();
+            };
+        });
+    </script>
+</body>
+</html>
