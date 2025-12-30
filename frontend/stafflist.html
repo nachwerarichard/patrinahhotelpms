@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Admin Dashboard</title>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="flex h-screen">
+        <aside class="w-64 bg-indigo-900 text-white p-6 hidden md:block">
+            <h1 class="text-2xl font-bold mb-8">Hotel Admin</h1>
+            <nav class="space-y-4">
+                <a href="#" class="block py-2 px-4 bg-indigo-800 rounded">User Management</a>
+                <a href="#" class="block py-2 px-4 hover:bg-indigo-700">Reports</a>
+                <a href="#" class="block py-2 px-4 hover:bg-indigo-700">Settings</a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 p-8 overflow-y-auto">
+            <header class="flex justify-between items-center mb-8">
+                <h2 class="text-3xl font-semibold text-gray-800">Staff Permissions</h2>
+                <button onclick="logout()" class="text-red-600 font-medium">Logout</button>
+            </header>
+
+            <section class="bg-white p-6 rounded-lg shadow-md mb-8">
+                <h3 class="text-lg font-bold mb-4">Add or Update User</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <input id="targetUser" type="text" placeholder="Username" class="border p-2 rounded">
+                    <input id="targetPass" type="password" placeholder="Password" class="border p-2 rounded">
+                    <select id="targetRole" class="border p-2 rounded">
+                        <option value="housekeeper">Housekeeper</option>
+                        <option value="bar">Bar</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                    <button onclick="saveUser()" class="bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">Save User</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        async function saveUser() {
+            const userData = {
+                targetUsername: document.getElementById('targetUser').value,
+                newPassword: document.getElementById('targetPass').value,
+                newRole: document.getElementById('targetRole').value
+            };
+
+            const response = await fetch('/api/admin/manage-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(userData)
+            });
+
+            const result = await response.json();
+            alert(result.message);
+        }
+    </script>
+</body>
+</html>
