@@ -77,11 +77,17 @@
         const API_BASE_URL = 'https://patrinahhotelpms.onrender.com'; 
         
         // Security Headers Helper
-        const getAuthHeaders = () => ({
-            'Content-Type': 'application/json',
-            'x-username': 'admin', 
-            'x-password': '123' 
-        });
+        // This helper now pulls the token from localStorage (where you saved it during login)
+const getAuthHeaders = () => {
+    const token = localStorage.getItem('token'); // Assumes you saved the token on login
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` 
+    };
+};
+
+// If you haven't built the login page yet, for testing you can hardcode it:
+// const token = btoa('admin:123'); // This creates the Base64 string for admin/123
 
         window.onload = fetchUsers;
 
