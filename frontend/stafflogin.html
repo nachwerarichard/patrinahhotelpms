@@ -63,7 +63,7 @@ const res = await fetch(`${API_BASE_URL}/api/login`, { // Removed /auth
                     // 1. Save the token!
                     localStorage.setItem('token', data.token);
                     // 2. Redirect to your Admin page (update the filename if necessary)
-                    window.location.href = 'staff.html'; 
+                    window.location.href = 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html'; 
                 } else {
                     throw new Error(data.message || "Invalid credentials");
                 }
