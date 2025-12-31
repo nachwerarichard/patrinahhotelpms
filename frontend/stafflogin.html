@@ -35,45 +35,44 @@
     <script>
         const API_BASE_URL = 'https://patrinahhotelpms.onrender.com';
 
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('loginBtn');
-            const errorMsg = document.getElementById('errorMsg');
-            
-            // UI Feedback
-            btn.disabled = true;
-            btn.innerText = "Authenticating...";
-            errorMsg.classList.add('hidden');
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('loginBtn');
+    const errorMsg = document.getElementById('errorMsg');
+    
+    btn.disabled = true;
+    btn.innerText = "Authenticating...";
 
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
 
-            try {
-
-                // Change this line:
-const res = await fetch(`${API_BASE_URL}/api/login`, { // Removed /auth
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
-});
-
-                const data = await res.json();
-
-                if (res.ok && data.token) {
-                    // 1. Save the token!
-                    localStorage.setItem('token', data.token);
-                    // 2. Redirect to your Admin page (update the filename if necessary)
-                    window.location.href = 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html'; 
-                } else {
-                    throw new Error(data.message || "Invalid credentials");
-                }
-            } catch (err) {
-                errorMsg.innerText = err.message;
-                errorMsg.classList.remove('hidden');
-                btn.disabled = false;
-                btn.innerText = "Sign In";
-            }
+    try {
+        // MATCHING YOUR NEW ENDPOINT: /login
+        const res = await fetch(`${API_BASE_URL}/login`, { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
         });
+
+        const data = await res.json();
+
+        if (res.ok && data.token) {
+            // Store the Base64 token
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('role', data.role); // Useful for UI permissions
+            
+            // Redirect
+            window.location.href = 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html'; 
+        } else {
+            throw new Error(data.error || "Login failed");
+        }
+    } catch (err) {
+        errorMsg.innerText = err.message;
+        errorMsg.classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerText = "Sign In";
+    }
+});
     </script>
 </body>
 </html>
