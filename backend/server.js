@@ -610,9 +610,18 @@ function authorizeRole(requiredRole) {
 
 // General Login Route
 app.post('/api/login', authenticateUser, (req, res) => {
+    // Generate the Base64 token (username:password)
+    // We get the password from req.body because it's needed for the Base64 string
+    const { username, password } = req.body;
+    const authToken = Buffer.from(`${username}:${password}`).toString('base64');
+
     res.json({ 
         message: 'Login successful', 
-        user: { username: req.user.username, role: req.user.role } 
+        token: authToken, // <--- ADD THIS LINE
+        user: { 
+            username: req.user.username, 
+            role: req.user.role 
+        } 
     });
 });
 
