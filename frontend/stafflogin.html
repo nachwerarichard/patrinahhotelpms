@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel PMS - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold text-gray-900">Welcome Back</h1>
+            <p class="text-gray-500 text-sm">Log in to manage hotel staff</p>
+        </div>
+
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold uppercase text-gray-400 mb-1 ml-1">Username</label>
+                <input id="username" type="text" required class="w-full border p-3 rounded-xl bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none transition" placeholder="Admin username">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold uppercase text-gray-400 mb-1 ml-1">Password</label>
+                <input id="password" type="password" required class="w-full border p-3 rounded-xl bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none transition" placeholder="••••••••">
+            </div>
+            
+            <button type="submit" id="loginBtn" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 flex justify-center items-center">
+                <span>Sign In</span>
+            </button>
+        </form>
+
+        <p id="errorMsg" class="mt-4 text-center text-sm text-red-500 hidden"></p>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://patrinahhotelpms.onrender.com';
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            const errorMsg = document.getElementById('errorMsg');
+            
+            // UI Feedback
+            btn.disabled = true;
+            btn.innerText = "Authenticating...";
+            errorMsg.classList.add('hidden');
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.token) {
+                    // 1. Save the token!
+                    localStorage.setItem('token', data.token);
+                    // 2. Redirect to your Admin page (update the filename if necessary)
+                    window.location.href = 'staff.html'; 
+                } else {
+                    throw new Error(data.message || "Invalid credentials");
+                }
+            } catch (err) {
+                errorMsg.innerText = err.message;
+                errorMsg.classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerText = "Sign In";
+            }
+        });
+    </script>
+</body>
+</html>
