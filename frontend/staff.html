@@ -33,12 +33,12 @@
                 <div class="flex flex-col">
                     <label class="text-xs text-gray-400 mb-1 ml-1">Assign Role</label>
                     <select id="role" class="border p-2 rounded-lg bg-gray-50 outline-none">
-                        <option value="bar">Front Office</option>
-                        <option value="bar">Bar Staff</option>
-                        <option value="housekeeper">Cashier</option>
-                        <option value="housekeeper">Housekeeper</option>
-                        <option value="admin">Administrator</option>
-                    </select>
+    <option value="front_office">Front Office</option>
+    <option value="bar">Bar Staff</option>
+    <option value="cashier">Cashier</option>
+    <option value="housekeeper">Housekeeper</option>
+    <option value="admin">Administrator</option>
+</select>
                 </div>
                 <div class="flex items-end gap-2">
                     <button onclick="handleSaveUser()" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition shadow-md shadow-indigo-200">
@@ -83,8 +83,7 @@ const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
     return {
         'Content-Type': 'application/json',
-        // 'Basic' is the standard prefix for Base64 encoded credentials
-        'Authorization': `Basic ${token}` 
+        'Authorization': `Bearer ${token}` // Change 'Basic' to 'Bearer'
     };
 };
 // const token = btoa('admin:123'); // This creates the Base64 string for admin/123
@@ -93,6 +92,7 @@ const getAuthHeaders = () => {
 
         // 1. Fetch Users
         async function fetchUsers() {
+            console.log("Using Token:", localStorage.getItem('token')); // DEBUG LINE
             try {
                 const res = await fetch(`${API_BASE_URL}/api/admin/users`, {
                     method: 'GET',
