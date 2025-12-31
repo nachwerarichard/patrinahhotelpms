@@ -81,13 +81,12 @@
         // This helper now pulls the token from localStorage (where you saved it during login)
 const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
-    console.log("Current Token:", token); // Add this line to debug
     return {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}` 
+        // 'Basic' is the standard prefix for Base64 encoded credentials
+        'Authorization': `Basic ${token}` 
     };
 };
-// If you haven't built the login page yet, for testing you can hardcode it:
 // const token = btoa('admin:123'); // This creates the Base64 string for admin/123
 
         window.onload = fetchUsers;
