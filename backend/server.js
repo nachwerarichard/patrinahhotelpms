@@ -65,8 +65,8 @@ mongoose.connect(mongoURI)
             const adminExists = await User.findOne({ username: 'admin' });
             if (!adminExists) {
                 await User.create({ 
-                    username: 'admin', 
-                    password: '123', 
+                    username: 'administrator', 
+                    password: '1234', 
                     role: 'admin' 
                 });
                 console.log('Initial admin created: admin/123');
