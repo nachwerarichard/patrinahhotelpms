@@ -613,29 +613,33 @@ app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        // 1. You should verify the user exists in your DB here
-        // Example (adjust based on your DB logic):
-        // const user = await User.findOne({ username });
-        // if (!user || user.password !== password) return res.status(401).json({ message: 'Invalid credentials' });
+        // 1. Find user in database
+        // Replace 'User' with your actual Model name or db query
+        const user = await User.findOne({ username });
 
-        // 2. Generate the Token
+        // 2. Validate user and password
+        if (!user || user.password !== password) {
+            return res.status(401).json({ message: 'Invalid username or password' });
+        }
+
+        // 3. Generate the Base64 token
         const authToken = Buffer.from(`${username}:${password}`).toString('base64');
 
-        // 3. Send response (Using username from body since req.user is undefined)
+        // 4. Send response using the data found in the database
         res.json({ 
             message: 'Login successful', 
             token: authToken, 
             user: { 
-                username: username, // Changed from req.user.username
-                role: 'admin'       // Or user.role if you fetched the user from DB
+                username: user.username, 
+                role: user.role  // This now uses the role from the DB (e.g., 'admin', 'receptionist')
             } 
         });
+        
     } catch (error) {
-        console.error(error);
+        console.error("Login Error:", error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
-
 // Admin Route: Create or Update users (Accessible only by Admins)
 app.post('/api/admin/manage-user',  async (req, res) => {
     const { targetUsername, newPassword, newRole } = req.body;
