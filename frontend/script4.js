@@ -2113,10 +2113,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     const savedUser = localStorage.getItem('loggedInUser');
 
     if (savedUser) {
+        // CASE A: User is already logged in
         const userData = JSON.parse(savedUser);
-        console.log("Found saved session for", userData.username);
         
-        // If we found a user in memory, jump straight to the dashboard!
+        // This function handles the UI and the data fetching (renderBookings, etc.)
         await showDashboard(userData.username, userData.role);
+    } else {
+        // CASE B: No user found
+        // Only show the login screen, do NOT call renderBookings here
+        loginContainer.style.display = 'flex';
+        mainContent.style.display = 'none';
     }
 });
