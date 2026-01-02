@@ -609,20 +609,31 @@ function authorizeRole(requiredRole) {
 
 
 // General Login Route
-app.post('/api/login', (req, res) => {
-    // Generate the Base64 token (username:password)
-    // We get the password from req.body because it's needed for the Base64 string
-    const { username, password } = req.body;
-    const authToken = Buffer.from(`${username}:${password}`).toString('base64');
+app.post('/api/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
 
-    res.json({ 
-        message: 'Login successful', 
-        token: authToken, // <--- ADD THIS LINE
-        user: { 
-            username: req.user.username, 
-            role: req.user.role 
-        } 
-    });
+        // 1. You should verify the user exists in your DB here
+        // Example (adjust based on your DB logic):
+        // const user = await User.findOne({ username });
+        // if (!user || user.password !== password) return res.status(401).json({ message: 'Invalid credentials' });
+
+        // 2. Generate the Token
+        const authToken = Buffer.from(`${username}:${password}`).toString('base64');
+
+        // 3. Send response (Using username from body since req.user is undefined)
+        res.json({ 
+            message: 'Login successful', 
+            token: authToken, 
+            user: { 
+                username: username, // Changed from req.user.username
+                role: 'admin'       // Or user.role if you fetched the user from DB
+            } 
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
 });
 
 // Admin Route: Create or Update users (Accessible only by Admins)
