@@ -270,7 +270,7 @@ const formatDate = (date) => {
 // New API endpoint to generate a combined report for a specific date
 
 // GET: Fetch all users to display in the table
-app.get('/api/admin/users', authenticateUser, authorizeRole('admin'), async (req, res) => {
+app.get('/api/admin/users', authenticateUser,  async (req, res) => {
     try {
         const users = await User.find({}, '-password'); // Send everything except passwords
         res.json(users);
@@ -280,7 +280,7 @@ app.get('/api/admin/users', authenticateUser, authorizeRole('admin'), async (req
 });
 
 // DELETE: Remove a user by ID
-app.delete('/api/admin/users/:id', authenticateUser, authorizeRole('admin'), async (req, res) => {
+app.delete('/api/admin/users/:id', authenticateUser,  async (req, res) => {
     try {
         await User.findByIdAndDelete(req.params.id);
         res.json({ message: 'User deleted successfully' });
@@ -290,7 +290,7 @@ app.delete('/api/admin/users/:id', authenticateUser, authorizeRole('admin'), asy
 });
 
 // PUT: Edit a user's role
-app.put('/api/admin/users/:id', authenticateUser, authorizeRole('admin'), async (req, res) => {
+app.put('/api/admin/users/:id', authenticateUser, async (req, res) => {
     try {
         const { role } = req.body;
         await User.findByIdAndUpdate(req.params.id, { role });
