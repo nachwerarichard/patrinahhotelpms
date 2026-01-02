@@ -270,7 +270,7 @@ const formatDate = (date) => {
 // New API endpoint to generate a combined report for a specific date
 
 // GET: Fetch all users to display in the table
-app.get('/api/admin/users', authenticateUser,  async (req, res) => {
+app.get('/api/admin/users',  async (req, res) => {
     try {
         const users = await User.find({}, '-password'); // Send everything except passwords
         res.json(users);
@@ -280,7 +280,7 @@ app.get('/api/admin/users', authenticateUser,  async (req, res) => {
 });
 
 // DELETE: Remove a user by ID
-app.delete('/api/admin/users/:id', authenticateUser,  async (req, res) => {
+app.delete('/api/admin/users/:id',   async (req, res) => {
     try {
         await User.findByIdAndDelete(req.params.id);
         res.json({ message: 'User deleted successfully' });
@@ -290,7 +290,7 @@ app.delete('/api/admin/users/:id', authenticateUser,  async (req, res) => {
 });
 
 // PUT: Edit a user's role
-app.put('/api/admin/users/:id', authenticateUser, async (req, res) => {
+app.put('/api/admin/users/:id',  async (req, res) => {
     try {
         const { role } = req.body;
         await User.findByIdAndUpdate(req.params.id, { role });
@@ -570,7 +570,7 @@ const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 const userSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    role: { type: String, enum: ['admin', 'bar', 'housekeeper'], default: 'admin' }
+    role: { type: String, enum: ['admin', 'bar', 'housekeeper','cashier','Front office'], default: 'admin' }
 });
 
 const User = mongoose.model('User', userSchema);
@@ -609,7 +609,7 @@ function authorizeRole(requiredRole) {
 
 
 // General Login Route
-app.post('/api/login', authenticateUser, (req, res) => {
+app.post('/api/login', (req, res) => {
     // Generate the Base64 token (username:password)
     // We get the password from req.body because it's needed for the Base64 string
     const { username, password } = req.body;
@@ -626,7 +626,7 @@ app.post('/api/login', authenticateUser, (req, res) => {
 });
 
 // Admin Route: Create or Update users (Accessible only by Admins)
-app.post('/api/admin/manage-user', authenticateUser, authorizeRole('admin'), async (req, res) => {
+app.post('/api/admin/manage-user',  async (req, res) => {
     const { targetUsername, newPassword, newRole } = req.body;
     
     try {
