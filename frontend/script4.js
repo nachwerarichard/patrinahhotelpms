@@ -573,7 +573,10 @@ function applyRoleAccess(role) {
  */
 async function renderBookings(page = 1, searchTerm = '') {
     bookingsTableBody.innerHTML = ''; // Clear existing rows
-
+if (!pageInfoSpan) {
+        console.warn("Skipping renderBookings: pageInfoSpan not found on this page.");
+        return; 
+    }
     // Allow 'admin' and 'bar' roles to view bookings.
     // Restrict all other roles.
     if (currentUserRole !== 'admin' && currentUserRole !== 'bar') {
