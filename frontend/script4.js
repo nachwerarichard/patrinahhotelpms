@@ -313,11 +313,15 @@ loginForm.addEventListener('submit', async function(event) {
         const data = await response.json();
 
         if (response.ok) {
-            currentUserRole = data.role;
-            currentUsername = username; // Store the logged-in username
+            currentUserRole = data.user.role; // Extract from the nested user object
+currentUsername = data.user.username; 
 
-            // Store login state in localStorage
-            localStorage.setItem('loggedInUser', JSON.stringify({ username: currentUsername, role: currentUserRole }));
+// Store the whole object for consistency
+localStorage.setItem('loggedInUser', JSON.stringify({ 
+    username: currentUsername, 
+    role: currentUserRole,
+    token: data.token // It is good practice to store the token too
+}));
 
             loginContainer.style.display = 'none';
             mainContent.style.display = 'flex';
