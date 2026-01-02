@@ -46,7 +46,7 @@ const logoutBtn = document.getElementById('logoutBtn');
 // Pagination elements
 const prevPageBtn = document.getElementById('prevPageBtn');
 const nextPageBtn = document.getElementById('nextPageBtn');
-const pageInfoSpan = document.getElementById('pageInfo');
+const pageInfoSpan = document.getElementById('pageInfoSpan');
 
 // Incidental Charge Modal elements
 const incidentalChargeModal = document.getElementById('incidentalChargeModal');
