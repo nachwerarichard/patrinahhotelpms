@@ -453,7 +453,7 @@ event.preventDefault();
            document.getElementById('housekeeping').style.display="none";
             document.getElementById('booking-management').style.display="block";
 
-            renderBookings(currentPage, currentSearchTerm); // Ensure it renders if fallback
+           // renderBookings(currentPage, currentSearchTerm); // Ensure it renders if fallback
         }
         return;
     }
@@ -2117,7 +2117,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const userData = JSON.parse(savedUser);
         
         // This function handles the UI and the data fetching (renderBookings, etc.)
-        await showDashboard(userData.username, userData.role);
+        //await showDashboard(userData.username, userData.role);
     } else {
         // CASE B: No user found
         // Only show the login screen, do NOT call renderBookings here
