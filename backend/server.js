@@ -2263,10 +2263,6 @@ async function logAction(action, user, details = {}) {
 }
 
 // Nodemailer setup
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
-});
 
 async function notifyLowStock(item, current) {
   try {
