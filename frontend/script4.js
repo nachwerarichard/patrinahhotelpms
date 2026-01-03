@@ -331,7 +331,7 @@ async function showDashboard(username, role) {
         if (initialSectionId === 'booking-management') {
             currentPage = 1;
             currentSearchTerm = '';
-           // await renderBookings(currentPage, currentSearchTerm);
+           await renderBookings(currentPage, currentSearchTerm);
         } else if (initialSectionId === 'housekeeping') {
             await renderHousekeepingRooms();
         }
@@ -441,7 +441,7 @@ event.preventDefault();
         if (currentUserRole === 'admin') {
             document.getElementById('booking-management').classList.add('active');
             document.getElementById('nav-booking').classList.add('active');
-            renderBookings(currentPage, currentSearchTerm); // Ensure it renders if fallback
+            //renderBookings(currentPage, currentSearchTerm); // Ensure it renders if fallback
         } else if (currentUserRole === 'housekeeper') {
             document.getElementById('housekeeping').classList.add('active');
             document.getElementById('nav-housekeeping').classList.add('active');
