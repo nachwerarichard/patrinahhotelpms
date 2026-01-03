@@ -2012,14 +2012,7 @@ const statusReportSchema = new mongoose.Schema({
 
 const StatusReport = mongoose.model('StatusReport', statusReportSchema);
 
-// Inventory Schema and Model
-const inventorySchema = new mongoose.Schema({
-  item: { type: String, required: true },
-  quantity: { type: Number, required: true, min: 0, default: 0 },
-  lowStockLevel: { type: Number, required: true, min: 0, default: 0 }
-}, { timestamps: true });
 
-const Inventory = mongoose.model('Inventory', inventorySchema);
 
 const transactionSchema = new mongoose.Schema({
   item: { type: String, required: true },
@@ -2216,157 +2209,9 @@ app.delete('/status-reports/:id', async (req, res) => {
   }
 });
 
-// This is your new backend route for fetching an inventory snapshot
-app.get('/inventory/snapshot/:date', async (req, res) => {
-  try {
-    const { date } = req.params;
-    const startOfDay = new Date(date);
 
-    if (isNaN(startOfDay.getTime())) {
-      return res.status(400).json({ message: 'Invalid date format' });
-    }
 
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setUTCHours(23, 59, 59, 999);
-
-    const snapshotQuantities = await Transaction.aggregate([
-      {
-        $match: {
-          timestamp: { $lte: endOfDay }
-        }
-      },
-      {
-        $group: {
-          _id: '$item',
-          totalQuantity: {
-            $sum: {
-              $cond: [
-                { $eq: ['$action', 'add'] },
-                '$quantity',
-                { $multiply: ['$quantity', -1] }
-              ]
-            }
-          }
-        }
-      }
-    ]);
-
-    const inventoryItems = await Inventory.find({ item: { $in: snapshotQuantities.map(s => s._id) } });
-
-    const combinedSnapshot = snapshotQuantities.map(snapshotItem => {
-      const inventoryItem = inventoryItems.find(i => i.item === snapshotItem._id);
-      return {
-        item: snapshotItem._id,
-        quantity: snapshotItem.totalQuantity,
-        lowStockLevel: inventoryItem ? inventoryItem.lowStockLevel : 0
-      };
-    });
-
-    createAuditLog('Inventory Snapshot Fetched', { date: date });
-
-    res.status(200).json(combinedSnapshot);
-
-  } catch (err) {
-    console.error('❌ Error fetching inventory snapshot:', err);
-    res.status(500).json({ message: 'Server error while fetching snapshot' });
-  }
-});
-
-// Add or Use Inventory
-app.post('/inventory', async (req, res) => {
-  const { item, quantity, action, lowStockLevel } = req.body;
-
-  if (!item || !quantity || !action) {
-    return res.status(400).json({ message: 'Missing required fields' });
-  }
-
-  try {
-    let inventoryItem = await Inventory.findOne({ item: { $regex: new RegExp(`^${item}$`, 'i') } });
-    let lowStockEmailSent = false;
-
-    if (inventoryItem) {
-      if (action === 'add') {
-        inventoryItem.quantity += quantity;
-      } else if (action === 'use') {
-        if (inventoryItem.quantity < quantity) {
-          return res.status(400).json({ message: `Cannot use ${quantity} units. Only ${inventoryItem.quantity} are in stock.` });
-        }
-        inventoryItem.quantity -= quantity;
-      }
-
-      if (lowStockLevel !== undefined && lowStockLevel !== null) {
-        inventoryItem.lowStockLevel = lowStockLevel;
-      }
-
-      await inventoryItem.save();
-    } else if (action === 'add') {
-      const newLowStockLevel = lowStockLevel !== undefined && lowStockLevel !== null ? Number(lowStockLevel) : 10;
-      inventoryItem = new Inventory({ item, quantity, lowStockLevel: newLowStockLevel });
-      await inventoryItem.save();
-    } else {
-      return res.status(404).json({ message: 'Item not found in inventory' });
-    }
-
-    const newTransaction = new Transaction({
-      item: inventoryItem.item,
-      quantity: quantity,
-      action: action,
-      timestamp: new Date()
-    });
-    await newTransaction.save();
-
-    createAuditLog('Inventory Transaction', { item: inventoryItem.item, quantity, action });
-
-    lowStockEmailSent = await sendLowStockEmail(inventoryItem.item, inventoryItem.quantity, inventoryItem.lowStockLevel);
-    return res.status(200).json({ message: 'Inventory updated successfully', lowStockEmailSent });
-
-  } catch (err) {
-    console.error('❌ Error updating inventory:', err);
-    res.status(500).json({ message: 'Server error while updating inventory' });
-  }
-});
-
-// Get all inventory items
-app.get('/inventory', async (req, res) => {
-  try {
-    const items = await Inventory.find().sort({ item: 1 });
-    res.status(200).json(items);
-  } catch (err) {
-    console.error('❌ Error retrieving inventory:', err);
-    res.status(500).json({ message: 'Failed to retrieve inventory' });
-  }
-});
-
-// Update an inventory item by ID
-app.put('/inventory/:id', async (req, res) => {
-  try {
-    const updated = await Inventory.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-    if (!updated) {
-      return res.status(404).json({ message: 'Inventory item not found' });
-    }
-    await sendLowStockEmail(updated.item, updated.quantity, updated.lowStockLevel);
-    createAuditLog('Inventory Item Updated', { id: updated._id, item: updated.item });
-    res.status(200).json({ message: 'Inventory item updated successfully', updated });
-  } catch (err) {
-    console.error('❌ Error updating inventory item:', err);
-    res.status(500).json({ message: 'Update failed for inventory item' });
-  }
-});
-
-// Delete an inventory item by ID
-app.delete('/inventory/:id', async (req, res) => {
-  try {
-    const deleted = await Inventory.findByIdAndDelete(req.params.id);
-    if (!deleted) {
-      return res.status(404).json({ message: 'Inventory item not found' });
-    }
-    createAuditLog('Inventory Item Deleted', { id: req.params.id });
-    res.status(200).json({ message: 'Inventory item deleted successfully' });
-  } catch (err) {
-    console.error('❌ Error deleting inventory item:', err);
-    res.status(500).json({ message: 'Delete failed for inventory item' });
-  }
-});
+   
 
 
 //BAR AND RESTAURANT
