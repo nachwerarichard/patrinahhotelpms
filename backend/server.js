@@ -2029,14 +2029,7 @@ const transactionSchema = new mongoose.Schema({
 
 const Transaction = mongoose.model('Transaction', transactionSchema);
 
-// Audit Log Schema and Model
-const auditLogSchema = new mongoose.Schema({
-  action: { type: String, required: true },
-  details: { type: Object, required: true },
-  timestamp: { type: Date, default: Date.now }
-});
 
-const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 
 // --- Secure Logging Function ---
 async function createAuditLog(action, details) {
