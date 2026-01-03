@@ -58,7 +58,8 @@
         const SYSTEM_LINKS = {
             systemA: 'https://stirring-pony-fe2347.netlify.app/index52.html',
             systemB: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html',
-            staff: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html'
+            staff: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html',
+            housekeeping: 'https://harmonious-crumble-2ca9ba.netlify.app/home9.html'
         };
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -113,7 +114,6 @@
                     const userData = resA || resB;
 
                     if (userData) {
-                        // Determine Role (Checks both API structures)
                         const rawRole = (userData.role || (userData.user && userData.user.role) || '').toLowerCase();
                         
                         loginForm.classList.add('hidden');
@@ -125,6 +125,8 @@
                         if (rawRole === 'admin') {
                             systemOptions.appendChild(createBtn('Bar & Restaurant', 'bg-green-600 hover:bg-green-700', () => finalizeLogin(resA || userData, 'systemA')));
                             systemOptions.appendChild(createBtn('Front Office & HK', 'bg-blue-600 hover:bg-blue-700', () => finalizeLogin(resB || userData, 'systemB')));
+                            // Added Housekeeping button for Admin
+                            systemOptions.appendChild(createBtn('Housekeeping Panel', 'bg-orange-500 hover:bg-orange-600', () => finalizeLogin(resB || userData, 'housekeeping')));
                             systemOptions.appendChild(createBtn('Staff Management', 'bg-purple-600 hover:bg-purple-700', () => window.location.href = SYSTEM_LINKS.staff));
                         } 
                         else if (rawRole === 'bar' || rawRole === 'cashier') {
@@ -132,6 +134,8 @@
                         } 
                         else if (rawRole === 'housekeeping') {
                             systemOptions.appendChild(createBtn('Front Office & HK', 'bg-blue-600 hover:bg-blue-700', () => finalizeLogin(resB || userData, 'systemB')));
+                            // Added Housekeeping button for Housekeeper
+                            systemOptions.appendChild(createBtn('Housekeeping Panel', 'bg-orange-500 hover:bg-orange-600', () => finalizeLogin(resB || userData, 'housekeeping')));
                         } 
                         else {
                             errorMessage.textContent = 'Role not recognized. Contact admin.';
