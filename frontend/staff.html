@@ -36,12 +36,7 @@
         </div>
         </nav>
 
-        <div class="p-4 border-t border-gray-100">
-            <button onclick="handleLogout()" class="flex items-center gap-3 px-3 py-2 w-full text-red-500 hover:bg-red-50 rounded-lg transition">
-                <i data-lucide="log-out" class="w-5 h-5"></i>
-                <span class="font-medium">Logout</span>
-            </button>
-        </div>
+       
     </aside>
 
     <main class="flex-1 md:ml-64">
@@ -113,7 +108,7 @@
                 <div class="space-y-1">
                     <label class="text-sm font-semibold text-slate-600">Role Assignment</label>
                     <select id="role" class="w-full border border-gray-200 p-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none">
-                        <option value="front_office">Front Office</option>
+                        <option value="Front office">Front Office</option>
                         <option value="bar">Bar Staff</option>
                         <option value="cashier">Cashier</option>
                         <option value="housekeeper">Housekeeper</option>
@@ -205,6 +200,9 @@
                                 <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
                                 <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
                                 <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                <option value="cashier" ${user.role === 'admin' ? 'selected' : ''}>Cashier</option>
+                               <option value="Front office" ${user.role === 'admin' ? 'selected' : ''}>Front Office</option>
+
                             </select>
                         </td>
                         <td class="px-6 py-4 text-right">
