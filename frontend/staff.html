@@ -140,10 +140,10 @@
         };
 
         // --- AUTH LOGIC ---
-        function handleLogout() {
-            localStorage.removeItem('token');
-            window.location.href = 'https://elegant-pasca-cea136.netlify.app/frontend/stafflogin.html';
-        }
+       function handleLogout() {
+    localStorage.removeItem('token');
+    window.location.replace('https://elegant-pasca-cea136.netlify.app/frontend/stafflogin.html');
+}
 
         // --- MODAL LOGIC ---
         function openModal(editData = null) {
