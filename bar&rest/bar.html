@@ -14,6 +14,11 @@
 
   <style>
 
+        @keyframes bounce-in {
+        0% { transform: scale(0.9); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-bounce-in { animation: bounce-in 0.2s ease-out forwards; }
 
       /* Custom Keyframes for Spin Animation */
         @keyframes spin {
@@ -1169,19 +1174,19 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
   </div>
 </div>
 
-  <div id="system-hopper" class="fixed left-0 top-1/2 -translate-y-1/2 z-[9999] flex items-center group">
-    <button class="bg-indigo-600 text-white p-3 rounded-r-xl shadow-lg hover:bg-indigo-700 transition-all duration-300 flex items-center gap-2">
-        <span class="text-xl">🚀</span>
-        <span class="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-500 whitespace-nowrap font-medium pr-2">Quick Switch</span>
+  <div class="fixed bottom-6 right-6 z-50">
+    <button onclick="toggleSwitchMenu()" class="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-110">
+        <span class="text-2xl">🔄</span>
     </button>
-
-    <div class="absolute left-[-300px] group-hover:left-0 transition-all duration-500 bg-white shadow-2xl rounded-r-2xl p-4 border border-gray-200 min-w-[240px] ml-12">
-        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">Switch Department</h3>
-        <div id="hopper-options" class="space-y-2">
+    
+    <div id="switch-menu" class="hidden absolute bottom-16 right-0 w-64 bg-white rounded-lg shadow-2xl border border-gray-200 p-2 animate-bounce-in">
+        <p class="text-xs font-bold text-gray-500 px-3 py-2 uppercase">Switch Department</p>
+        <div id="available-modules" class="space-y-1">
             </div>
     </div>
 </div>
-  
+
+
   <script src="script12.js" defer></script>
 
   
