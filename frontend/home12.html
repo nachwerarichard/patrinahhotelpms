@@ -635,6 +635,68 @@
         </div>
     </div>
 </div>
+
+    <div id="system-hopper" class="fixed left-0 top-1/2 -translate-y-1/2 z-[9999] flex items-center group">
+    <button class="bg-indigo-600 text-white p-3 rounded-r-xl shadow-lg hover:bg-indigo-700 transition-all duration-300 flex items-center gap-2">
+        <span class="text-xl">🚀</span>
+        <span class="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-500 whitespace-nowrap font-medium">Switch Department</span>
+    </button>
+
+    <div class="absolute left-[-300px] group-hover:left-0 transition-all duration-500 bg-white shadow-2xl rounded-r-2xl p-4 border border-gray-200 min-w-[220px] ml-12">
+        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">Available Modules</h3>
+        <div id="hopper-options" class="space-y-2">
+            </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // 1. Configuration - Keep these synced with your main login
+        const SYSTEM_LINKS = {
+            admin: [
+                { label: 'Bar & Restaurant', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html', color: 'bg-green-600' },
+                { label: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html', color: 'bg-blue-600' },
+                { label: 'Staff Portal', url: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html', color: 'bg-purple-600' }
+            ],
+            bar: [
+                { label: 'Bar & Restaurant', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html', color: 'bg-green-600' }
+            ],
+            cashier: [
+                { label: 'Bar & Restaurant', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html', color: 'bg-green-600' }
+            ],
+            housekeeping: [
+                { label: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html', color: 'bg-blue-600' }
+            ]
+        };
+
+        // 2. Get User Info (Assumes you saved these during login)
+        // Note: You should update your login script to save 'userRole' to localStorage
+        const role = localStorage.getItem('userRole') || 'staff'; 
+        const username = localStorage.getItem('username');
+        const token = localStorage.getItem('authToken');
+
+        const container = document.getElementById('hopper-options');
+
+        // 3. Logic to show buttons based on role
+        const allowedModules = SYSTEM_LINKS[role.toLowerCase()] || [];
+
+        if (allowedModules.length === 0) {
+            container.innerHTML = '<p class="text-xs text-gray-500 px-2">No other modules available.</p>';
+        }
+
+        allowedModules.forEach(mod => {
+            const btn = document.createElement('a');
+            // We append the credentials to the URL so the next page knows who is entering
+            const secureUrl = `${mod.url}?autoLogin=true&u=${encodeURIComponent(username)}&token=${token}`;
+            
+            btn.href = secureUrl;
+            btn.className = `block w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105 ${mod.color}`;
+            btn.innerHTML = mod.label;
+            container.appendChild(btn);
+        });
+    })();
+</script>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="script4.js"></script>
