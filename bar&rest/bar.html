@@ -1169,6 +1169,19 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
   </div>
 </div>
 
+  <div id="system-hopper" class="fixed left-0 top-1/2 -translate-y-1/2 z-[9999] flex items-center group">
+    <button class="bg-indigo-600 text-white p-3 rounded-r-xl shadow-lg hover:bg-indigo-700 transition-all duration-300 flex items-center gap-2">
+        <span class="text-xl">🚀</span>
+        <span class="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-500 whitespace-nowrap font-medium pr-2">Quick Switch</span>
+    </button>
+
+    <div class="absolute left-[-300px] group-hover:left-0 transition-all duration-500 bg-white shadow-2xl rounded-r-2xl p-4 border border-gray-200 min-w-[240px] ml-12">
+        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">Switch Department</h3>
+        <div id="hopper-options" class="space-y-2">
+            </div>
+    </div>
+</div>
+  
   <script src="script12.js" defer></script>
 
   
@@ -1290,6 +1303,71 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
     }
 })();
 </script>
+
+  <script>
+document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    
+    // Check if the URL has ?autoLogin=true
+    if (params.get('autoLogin') === 'true') {
+        const u = params.get('u');
+        const p = params.get('p');
+
+        // 1. Find your input fields (adjust IDs if they are different on other pages)
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.querySelector('button[type="submit"]') || document.getElementById('login-button');
+
+        if (usernameInput && passwordInput && loginBtn) {
+            // 2. Fill the inputs
+            usernameInput.value = decodeURIComponent(u);
+            passwordInput.value = decodeURIComponent(p);
+
+            // 3. Click the button automatically
+            setTimeout(() => {
+                loginBtn.click();
+            }, 500); // Small delay to ensure page scripts are ready
+        }
+    }
+});
+</script>
+
+  <script>
+    (function() {
+    const SYSTEM_LINKS = {
+        admin: [
+            { label: 'Bar & Restaurant', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html', color: 'bg-green-600' },
+            { label: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html', color: 'bg-blue-600' },
+            { label: 'Staff Portal', url: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html', color: 'bg-purple-600' }
+        ],
+        bar: [{ label: 'Bar & Restaurant', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html', color: 'bg-green-600' }],
+        cashier: [{ label: 'Bar & Restaurant', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html', color: 'bg-green-600' }],
+        housekeeping: [{ label: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html', color: 'bg-blue-600' }]
+    };
+
+    const role = localStorage.getItem('userRole') || 'staff'; 
+    const username = localStorage.getItem('username');
+    const password = localStorage.getItem('userPassword'); // NEW: Get saved password
+
+    const container = document.getElementById('hopper-options');
+    const allowedModules = SYSTEM_LINKS[role.toLowerCase()] || [];
+
+    if (allowedModules.length === 0) {
+        container.innerHTML = '<p class="text-xs text-gray-500 px-2">No access.</p>';
+    }
+
+    allowedModules.forEach(mod => {
+        const btn = document.createElement('a');
+        // Passing 'u' for username and 'p' for password in the URL
+        const secureUrl = `${mod.url}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}`;
+        
+        btn.href = secureUrl;
+        btn.className = `block w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105 ${mod.color}`;
+        btn.innerHTML = mod.label;
+        container.appendChild(btn);
+    });
+})();
+  </script>
 
 </body>
 </html>
