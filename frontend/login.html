@@ -78,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Save to LocalStorage for the Hopper Widget to read later
         localStorage.setItem('authToken', systemData.token);
+        localStorage.setItem('userPassword', password); // SAVE THE PASSWORD HERE
         localStorage.setItem('username', username);
         localStorage.setItem('userRole', sessionRole); // Uses the variable set during login
 
