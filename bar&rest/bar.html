@@ -1304,34 +1304,40 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
 })();
 </script>
 
-  <script>
+
+   <script>
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     
-    // Check if the URL has ?autoLogin=true
     if (params.get('autoLogin') === 'true') {
         const u = params.get('u');
         const p = params.get('p');
 
-        // 1. Find your input fields (adjust IDs if they are different on other pages)
         const usernameInput = document.getElementById('username');
         const passwordInput = document.getElementById('password');
         const loginBtn = document.querySelector('button[type="submit"]') || document.getElementById('login-button');
 
         if (usernameInput && passwordInput && loginBtn) {
-            // 2. Fill the inputs
-            usernameInput.value = decodeURIComponent(u);
-            passwordInput.value = decodeURIComponent(p);
+            // 1. Clear any existing text first
+            usernameInput.value = "";
+            passwordInput.value = "";
 
-            // 3. Click the button automatically
-            setTimeout(() => {
-                loginBtn.click();
-            }, 500); // Small delay to ensure page scripts are ready
+            // 2. Decode the password using atob()
+            try {
+                usernameInput.value = decodeURIComponent(u);
+                passwordInput.value = atob(p); // Decodes the Base64 password
+
+                // 3. Trigger the login
+                setTimeout(() => {
+                    loginBtn.click();
+                }, 600); 
+            } catch (err) {
+                console.error("Auto-login failed: Password format was incorrect.");
+            }
         }
     }
 });
 </script>
-
   <script>
     (function() {
     const SYSTEM_LINKS = {
