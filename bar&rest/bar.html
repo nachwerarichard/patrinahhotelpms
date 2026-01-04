@@ -1307,7 +1307,7 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
 
  <script>
 (function() {
-    // 1. Configuration
+    // 1. CONFIGURATION
     const SYSTEM_LINKS = {
         admin: [
             { label: 'Bar & Restaurant', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html', color: 'bg-green-600' },
@@ -1316,46 +1316,44 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
         ],
         bar: [{ label: 'Bar & Restaurant', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html', color: 'bg-green-600' }],
         cashier: [{ label: 'Bar & Restaurant', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html', color: 'bg-green-600' }],
-        housekeeping: [{ label: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html', color: 'bg-blue-600' }]
+        housekeeping: [{ label: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html', color: 'bg-blue-600' }],
+        reception: [{ label: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html', color: 'bg-blue-600' }]
     };
 
-    // 2. Data Retrieval & Chain of Custody
+    // 2. DATA RECOVERY (The "Chain of Custody")
     const params = new URLSearchParams(window.location.search);
     
-    // Grab from LocalStorage OR URL (if LocalStorage was cleared)
-    let user = localStorage.getItem('username') || params.get('u');
-    let pass = localStorage.getItem('userPassword') || params.get('p');
-    let role = localStorage.getItem('userRole') || params.get('r') || 'staff'; 
+    // Try to get data from URL first, then LocalStorage
+    let user = params.get('u') || localStorage.getItem('username');
+    let pass = params.get('p') || localStorage.getItem('userPassword');
+    let role = params.get('r') || localStorage.getItem('userRole') || 'staff';
 
-    // 3. Persistence: Re-save immediately so the "next" hop has data
+    // 3. PERSISTENCE: Save back to LocalStorage immediately
     if (user) localStorage.setItem('username', user);
     if (pass) localStorage.setItem('userPassword', pass);
     if (role) localStorage.setItem('userRole', role.toLowerCase());
 
-    // 4. UI Generation
+    // 4. GENERATE SIDEBAR BUTTONS
     const container = document.getElementById('hopper-options');
-    if (!container) return; // Guard clause if element doesn't exist yet
-
-    const allowedModules = SYSTEM_LINKS[role.toLowerCase()] || [];
-
-    if (allowedModules.length === 0) {
-        container.innerHTML = '<p class="text-xs text-gray-500 px-2">No access.</p>';
-    } else {
+    if (container) {
+        const allowedModules = SYSTEM_LINKS[role.toLowerCase()] || [];
         container.innerHTML = ''; // Clear existing
+
         allowedModules.forEach(mod => {
             const btn = document.createElement('a');
-            // We ADD 'r' (role) to the URL so the next page knows what UI to show
+            // We pass u, p, and r so the NEXT page has everything it needs
             const secureUrl = `${mod.url}?autoLogin=true&u=${encodeURIComponent(user)}&p=${encodeURIComponent(pass)}&r=${encodeURIComponent(role)}`;
             
             btn.href = secureUrl;
-            btn.className = `block w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105 mb-2 ${mod.color}`;
+            btn.className = `block w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105 mb-2 text-center ${mod.color}`;
             btn.innerHTML = mod.label;
             container.appendChild(btn);
         });
     }
 
-    // 5. Auto-Login Logic (Receiver)
+    // 5. AUTO-LOGIN EXECUTION
     if (params.get('autoLogin') === 'true' && user && pass) {
+        // Wait for page to be fully ready
         window.addEventListener('load', () => {
             const usernameInput = document.getElementById('username');
             const passwordInput = document.getElementById('password');
@@ -1365,7 +1363,7 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
                 usernameInput.value = decodeURIComponent(user);
                 passwordInput.value = decodeURIComponent(pass);
 
-                // Clean URL bar so password isn't visible to shoulder-surfers
+                // Clean the URL for security
                 window.history.replaceState({}, document.title, window.location.pathname);
 
                 setTimeout(() => {
@@ -1375,7 +1373,7 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
         });
     }
 })();
-</script>  
+</script>
 
  
 </body>
