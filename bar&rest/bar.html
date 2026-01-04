@@ -1305,41 +1305,9 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
 </script>
 
 
-   <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const params = new URLSearchParams(window.location.search);
-    
-    if (params.get('autoLogin') === 'true') {
-        const u = params.get('u');
-        const p = params.get('p');
-
-        const usernameInput = document.getElementById('username');
-        const passwordInput = document.getElementById('password');
-        const loginBtn = document.querySelector('button[type="submit"]') || document.getElementById('login-button');
-
-        if (usernameInput && passwordInput && loginBtn) {
-            // 1. Clear any existing text first
-            usernameInput.value = "";
-            passwordInput.value = "";
-
-            // 2. Decode the password using atob()
-            try {
-                usernameInput.value = decodeURIComponent(u);
-                passwordInput.value = atob(p); // Decodes the Base64 password
-
-                // 3. Trigger the login
-                setTimeout(() => {
-                    loginBtn.click();
-                }, 600); 
-            } catch (err) {
-                console.error("Auto-login failed: Password format was incorrect.");
-            }
-        }
-    }
-});
-</script>
-  <script>
-    (function() {
+ <script>
+(function() {
+    // 1. Configuration
     const SYSTEM_LINKS = {
         admin: [
             { label: 'Bar & Restaurant', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html', color: 'bg-green-600' },
@@ -1351,33 +1319,63 @@ document.addEventListener('DOMContentLoaded', () => {
         housekeeping: [{ label: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html', color: 'bg-blue-600' }]
     };
 
-    const role = localStorage.getItem('userRole') || 'staff'; 
-    const username = localStorage.getItem('username');
-    const password = localStorage.getItem('userPassword'); // NEW: Get saved password
+    // 2. Data Retrieval & Chain of Custody
+    const params = new URLSearchParams(window.location.search);
+    
+    // Grab from LocalStorage OR URL (if LocalStorage was cleared)
+    let user = localStorage.getItem('username') || params.get('u');
+    let pass = localStorage.getItem('userPassword') || params.get('p');
+    let role = localStorage.getItem('userRole') || params.get('r') || 'staff'; 
 
+    // 3. Persistence: Re-save immediately so the "next" hop has data
+    if (user) localStorage.setItem('username', user);
+    if (pass) localStorage.setItem('userPassword', pass);
+    if (role) localStorage.setItem('userRole', role.toLowerCase());
+
+    // 4. UI Generation
     const container = document.getElementById('hopper-options');
+    if (!container) return; // Guard clause if element doesn't exist yet
+
     const allowedModules = SYSTEM_LINKS[role.toLowerCase()] || [];
 
     if (allowedModules.length === 0) {
         container.innerHTML = '<p class="text-xs text-gray-500 px-2">No access.</p>';
+    } else {
+        container.innerHTML = ''; // Clear existing
+        allowedModules.forEach(mod => {
+            const btn = document.createElement('a');
+            // We ADD 'r' (role) to the URL so the next page knows what UI to show
+            const secureUrl = `${mod.url}?autoLogin=true&u=${encodeURIComponent(user)}&p=${encodeURIComponent(pass)}&r=${encodeURIComponent(role)}`;
+            
+            btn.href = secureUrl;
+            btn.className = `block w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105 mb-2 ${mod.color}`;
+            btn.innerHTML = mod.label;
+            container.appendChild(btn);
+        });
     }
 
-  allowedModules.forEach(mod => {
-    const btn = document.createElement('a');
-    
-    // btoa() converts the password into a URL-safe Base64 string
-    const encodedPass = btoa(password); 
-    
-    const secureUrl = `${mod.url}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(encodedPass)}`;
-    
-    btn.href = secureUrl;
-    btn.className = `block w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105 ${mod.color}`;
-    btn.innerHTML = mod.label;
-    container.appendChild(btn);
-});
-      
+    // 5. Auto-Login Logic (Receiver)
+    if (params.get('autoLogin') === 'true' && user && pass) {
+        window.addEventListener('load', () => {
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const loginBtn = document.querySelector('button[type="submit"]') || document.getElementById('login-button');
+
+            if (usernameInput && passwordInput && loginBtn) {
+                usernameInput.value = decodeURIComponent(user);
+                passwordInput.value = decodeURIComponent(pass);
+
+                // Clean URL bar so password isn't visible to shoulder-surfers
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+                setTimeout(() => {
+                    loginBtn.click();
+                }, 800);
+            }
+        });
+    }
 })();
-  </script>
+</script>  
 
  
 </body>
