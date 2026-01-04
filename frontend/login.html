@@ -72,10 +72,11 @@
             const finalizeLogin = (systemData, systemKey) => {
                 const username = document.getElementById('username').value.trim();
                 const password = document.getElementById('password').value.trim();
-                localStorage.setItem('userRole', rawRole); // <--- ADD THIS LINE
-                localStorage.setItem('authToken', systemData.token);
-                localStorage.setItem('username', username);
 
+                localStorage.setItem('authToken', systemData.token);
+        localStorage.setItem('username', username);
+        localStorage.setItem('userRole', userRole.toLowerCase());
+                
                 const targetUrl = SYSTEM_LINKS[systemKey];
                 window.location.replace(`${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}`);
             };
