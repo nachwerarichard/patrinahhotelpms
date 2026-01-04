@@ -1,0 +1,1295 @@
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BMS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+      <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+
+
+      /* Custom Keyframes for Spin Animation */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        /* Set the max-height for the chat body (optional, but good for fixed widgets) */
+        #chatWidget {
+            max-height: 85vh; /* 85% of viewport height */
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+        }
+    /* Keep your section visibility rules */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* Table helpers */
+    .table-responsive { overflow-x: auto; }
+    table th, table td { text-align: left; padding: 12px 24px; white-space: nowrap; }
+
+    /* Hide scrollbars for the main areas */
+    #main-content, #sidebar { -ms-overflow-style: none; scrollbar-width: none; }
+    #main-content::-webkit-scrollbar, #sidebar::-webkit-scrollbar { display: none; }
+
+
+
+    /* Sidebar tilt design - diagonal background while keeping text horizontal */
+/*
+ * Color Palette used:
+ * Primary Background (Nav): #452829
+ * Dark Gray (Hover/Secondary BG): #57595B
+ * Warm Beige (Primary Accent/Text): #E8D1C5 (RGB: 232, 209, 197)
+ * Cream/Off-White (Highlight): #F3E8DF
+*/
+.tilt-btn {
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.tilt-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  /* Subtle gradient using a transparent Warm Beige (#E8D1C5) 
+    This is for the subtle background change on the hover state. 
+  */
+  transform-origin: left;
+  background: linear-gradient(90deg, 
+    rgba(232, 209, 197, 0.05),  /* Very light transparency of Warm Beige */
+    rgba(232, 209, 197, 0.1)   /* Slightly stronger transparency */
+  );
+  z-index: -1;
+  transition: transform .25s ease, opacity .25s ease;
+  opacity: 0.95;
+}
+
+/* stronger background when active */
+.tilt-btn.active::before {
+  /* Solidifying the Warm Beige (#E8D1C5) for the ACTIVE state 
+    This creates a strong, yet elegant, active indicator.
+  */
+  background: linear-gradient(90deg, 
+    rgba(232, 209, 197, 0.3), /* Higher transparency of Warm Beige */
+    rgba(232, 209, 197, 0.4)  /* Even higher transparency */
+  );
+  
+  /* OPTIONAL ALTERNATIVE: Use the Dark Gray for the active background */
+  /* background: linear-gradient(90deg, #57595B, #57595B); */
+}
+
+/* keep inner text / icon horizontal by counter-skewing */
+.tilt-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  /* REMOVED: width: 100%; */
+  justify-content: flex-start;
+}
+    
+
+    /*
+ * Color Palette used:
+ * Deep Brown-Red (Dark Text): #452829
+ * Warm Beige (Accent BG): #E8D1C5 (RGB: 232, 209, 197)
+*/
+
+/* submenu visibility */
+.submenu { display: none; }
+.submenu.open { display: block; }
+
+/* small visual for subsection active */
+.sub-item.active {
+  /* Active Background: Use a semi-transparent Warm Beige for a soft glow/highlight effect. */
+  background-color: rgba(232, 209, 197, 0.4); 
+  font-weight: 700;
+  /* Active Text: Use the darkest color (#452829) for high contrast and readability. */
+  color: #452829;
+}
+
+    /* ensure submenu list items align */
+    .sidebar-sublist button { padding-left: 1.75rem; }
+
+    /* responsive tweaks */
+    @media (max-width: 1024px) {
+      #sidebar { position: absolute; z-index: 40; }
+    }
+
+
+    @keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out;
+}
+
+
+    /* Add this to your main CSS file (or within <style> tags) */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin-custom {
+    animation: spin 1s linear infinite;
+    /* Optional: For a more 'dotted' look, you can use a custom border-radius/box-shadow trick,
+       but the standard 'spinner' border is often used to represent the MS look.
+       If you want the literal 'dotted circle', you'd need more complex CSS or an SVG.
+       The border-top method above is the standard, simple implementation. */
+}
+
+     /* Custom scrollbar for a nicer look */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; /* bg-gray-800 */ }
+        ::-webkit-scrollbar-thumb { background: #4b5563; /* bg-gray-600 */ border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; /* bg-gray-500 */ }
+        
+        /* Ensures the charts adapt cleanly */
+        .chart-container { height: 350px; width: 100%; }
+
+            @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div id="preloader" class="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-75 hidden">
+        <div class="relative w-12 h-12">
+            <div class="w-12 h-12 border-4 border-t-4 border-transparent border-t-emerald-600 rounded-full animate-spin-custom"></div>
+        </div>
+    </div>
+
+<div id="login-section" class="hidden flex flex-col items-center justify-center min-h-screen bg-[#F3E8DF] p-4">
+            <div class="p-10 rounded-xl shadow-2xl bg-[#E8D1C5] w-full max-w-sm">
+            <img src="patrina.png" alt="Patrinah Hotel Logo" class="w-24 h-24 mb-6 mx-auto rounded-full shadow-lg">
+            <h2 class="text-3xl font-bold mb-6 text-[#57595B] text-center">Login</h2>
+            
+            <input type="text" id="username" placeholder="Username" class="mb-4 p-3 border border-[#57595B] rounded-lg w-full focus:ring-[#452829] focus:border-[#452829] transition duration-150 text-[#57595B]">
+            <input type="password" id="password" placeholder="Password" class="mb-6 p-3 border border-[#57595B] rounded-lg w-full focus:ring-[#452829] focus:border-[#452829] transition duration-150 text-[#57595B]">
+            <button type="submit" onclick="login()" class="bg-[#452829] hover:bg-[#57595B] text-white font-semibold py-3 px-6 rounded-lg w-full transition duration-300 shadow-lg">Login</button>
+            
+            <p id="login-message" class="mt-4 text-red-600 font-medium text-center"></p>
+        </div>
+    </div>
+ 
+
+  <!-- APP -->
+  <div id="main-container" class="hidden h-screen overflow-hidden">
+    <div id="message-modal" class="fixed inset-0 z-50 hidden">
+
+    <div class="absolute inset-0 bg-gray-900 opacity-75"></div>
+
+    <div class="flex items-center justify-center min-h-screen p-4">
+        
+        <div class="bg-white rounded-lg shadow-2xl max-w-sm w-full z-10 p-6 transform transition-all scale-100 opacity-100">
+            
+            <h3 class="text-xl font-semibold text-gray-900 mb-4">Notification</h3>
+            
+            <p id="message-text" class="text-gray-700 mb-6 break-words">
+                </p>
+
+            <div class="flex justify-end">
+                <button id="message-close-button" type="button" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+   <div id="floating-wrapper" class="fixed bottom-4 right-4 z-50 pointer-events-none flex flex-col items-end">
+    
+    <div 
+        id="chatWidget" 
+        class="max-w-sm w-full mx-auto shadow-2xl rounded-2xl bg-white flex flex-col transform opacity-0 scale-0 pointer-events-auto"
+    >
+        <div class="bg-white rounded-t-2xl shadow-lg p-4 border-b border-gray-200">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-br from-indigo-500 to-purple-600 p-2 rounded-xl">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-gray-900">AI Business Assistant</h1>
+                    <p class="text-xs text-gray-600">Intelligent Business Analysis</p>
+                </div>
+            </div>
+        </div>
+    
+        <div class="bg-white px-4 py-3 border-b border-gray-200">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Quick Actions</p>
+            <div class="flex gap-1 flex-wrap" id="quickActions">
+                <button class="quick-action flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 rounded-lg text-xs font-medium transition-all" data-prompt="Show me a business summary">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    Summary
+                </button>
+                <button class="quick-action flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 rounded-lg text-xs font-medium transition-all" data-prompt="Check inventory status">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                    Inventory
+                </button>
+                <button class="quick-action flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 rounded-lg text-xs font-medium transition-all" data-prompt="What are my top expenses?">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Expenses
+                </button>
+                <button class="quick-action flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 rounded-lg text-xs font-medium transition-all" data-prompt="Analyze my profit">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                    Profit
+                </button>
+            </div>
+        </div>
+    
+        <div class="flex-1 overflow-y-auto bg-white p-4 space-y-3" id="messagesContainer">
+            <div class="flex justify-start">
+                <div class="max-w-[90%] rounded-2xl px-3 py-2 bg-gray-100 text-gray-900">
+                    <div class="flex items-center gap-2 mb-1">
+                        <svg class="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                        <span class="text-xs font-semibold text-indigo-600">AI Assistant</span>
+                    </div>
+                    <div class="whitespace-pre-wrap text-sm leading-relaxed">Hello! 👋 I'm your intelligent business assistant. Try asking: "Show me a **business summary**"</div>
+                </div>
+            </div>
+        </div>
+    
+        <div class="bg-white rounded-b-2xl p-3 border-t border-gray-200">
+            <div class="flex gap-2">
+                <textarea 
+                    id="messageInput"
+                    placeholder="Ask about your business data..."
+                    class="flex-1 resize-none rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    rows="1"
+                ></textarea>
+                <button
+                    id="sendButton"
+                    class="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl px-4 py-2 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 self-end text-sm"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                    </svg>
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div
+        id="chatButtonContainer"
+        class="z-50 pointer-events-auto mt-4"
+    >
+        <button
+            id="openChatButton"
+            class="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-full p-4 shadow-lg focus:outline-none focus:ring-4 focus:ring-indigo-500/50 transition-all duration-300"
+        >
+            <svg id="chatIcon" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+            </svg>
+            <svg id="closeIcon" class="w-7 h-7 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+</div>
+    
+
+    
+<header class="bg-[#F3E8DF] shadow-lg p-4 flex justify-between items-center sticky top-0 z-50">
+    <div class="flex items-center space-x-3">
+        <img src="patrina.png" alt="Patrinah Hotel Logo" class="w-10 h-10 object-contain">
+        <h1 class="text-xl font-extrabold text-[#452829] tracking-wider hidden sm:block"> Hotel</h1>
+    </div>
+
+    <div class="flex items-center space-x-4">
+        
+        <div class="flex items-center space-x-2 p-2 rounded-full hover:bg-[#E8D1C5] transition duration-150 cursor-pointer">
+            
+            <span id="current-user-display" class="username-display text-sm font-semibold text-[#57595B] **inline-block**">
+            </span>
+            <img id="user-profile-pic" 
+                 src="user.png" 
+                 alt="User Profile" 
+                 class="w-8 h-8 rounded-full object-cover border border-gray-300">
+
+        </div>
+
+        <button id="menu-toggle-open" class="text-[#57595B] hover:text-[#452829] text-xl p-2 rounded-full hover:bg-[#E8D1C5] transition duration-150 lg:hidden">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+    </div>
+</header>
+    
+   
+    <div class="flex flex-1 h-[calc(100vh-64px)]">
+      <!-- SIDEBAR -->
+
+
+      <nav id="sidebar" class="w-64 bg-[#452829] text-[#E8D1C5] flex-shrink-0 overflow-y-auto transition-transform duration-300 transform -translate-x-full lg:translate-x-0 absolute lg:relative h-full z-20 shadow-xl">
+    <div class="lg:hidden flex justify-end p-2">
+      <button id="close-sidebar"
+              class="text-[#E8D1C5] bg-[#452829] hover:bg-[#57595B] p-2 rounded-md focus:outline-none transition">
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+
+    <div class="p-4 mb-16"> 
+        <div class="mb-4 text-center font-bold text-lg text-[#F3E8DF]">BMS</div>
+
+        <div class="mb-1">
+            <button id="nav-dashboard" class="tilt-btn nav-main w-full text-left p-3 rounded-lg hover:bg-[#57595B] hover:text-[#F3E8DF] flex items-center justify-between" onclick="showSubSection('dashboard','nav-dashboard')">
+                <span class="tilt-content flex items-center">
+                    <span class="ml-3">Dashboard</span>
+                </span>
+            </button>
+        </div>
+
+        <div class="mb-1">
+            <button id="nav-inventory" class="tilt-btn nav-main w-full text-left p-3 rounded-lg hover:bg-[#57595B] hover:text-[#F3E8DF] flex items-center justify-between" data-target="inventory-submenu" onclick="toggleSubmenu('inventory-submenu','nav-inventory')">
+                <span class="tilt-content flex items-center">
+                    <span class="ml-3">Inventory</span>
+                </span>
+                <i class="fas fa-chevron-down arrow-icon"></i> 
+            </button>
+            <ul id="inventory-submenu" class="sidebar-sublist submenu mt-2 rounded-lg bg-[#57595B] p-1">
+                <li><button class="sub-item block w-full text-left p-3 rounded-md hover:bg-[#452829] hover:text-[#F3E8DF]" data-show="inventory-add" onclick="showSubSection('inventory-add','nav-inventory')">Add Inventory</button></li>
+                <li><button class="sub-item block w-full text-left p-3 rounded-md hover:bg-[#452829] hover:text-[#F3E8DF]" data-show="inventory-records" onclick="showSubSection('inventory-records','nav-inventory')">Inventory Records</button></li>
+            </ul>
+        </div>
+        
+        <div class="mb-1">
+            <button id="nav-sales" class="tilt-btn nav-main w-full text-left p-3 rounded-lg hover:bg-[#57595B] hover:text-[#F3E8DF] flex items-center justify-between" data-target="sales-submenu" onclick="toggleSubmenu('sales-submenu','nav-sales')">
+                <span class="tilt-content flex items-center">
+                    <span class="ml-3">Sales</span>
+                </span>
+                <i class="fas fa-chevron-down arrow-icon"></i>
+            </button>
+            <ul id="sales-submenu" class="sidebar-sublist submenu mt-2 rounded-lg bg-[#57595B] p-1">
+                <li><button class="sub-item block w-full text-left p-3 rounded-md hover:bg-[#452829] hover:text-[#F3E8DF]" data-show="sales-new" onclick="showSubSection('sales-new','nav-sales')">Record New Sale</button></li>
+                <li><button class="sub-item block w-full text-left p-3 rounded-md hover:bg-[#452829] hover:text-[#F3E8DF]" data-show="sales-records" onclick="showSubSection('sales-records','nav-sales')">Sales Records</button></li>
+            </ul>
+        </div>
+
+        <div class="mb-1">
+            <button id="nav-expenses" class="tilt-btn nav-main w-full text-left p-3 rounded-lg hover:bg-[#57595B] hover:text-[#F3E8DF] flex items-center justify-between" data-target="expenses-submenu" onclick="toggleSubmenu('expenses-submenu','nav-expenses')">
+                <span class="tilt-content flex items-center">
+                    <span class="ml-3">Expenses</span>
+                </span>
+                <i class="fas fa-chevron-down arrow-icon"></i>
+            </button>
+            <ul id="expenses-submenu" class="sidebar-sublist submenu mt-2 rounded-lg bg-[#57595B] p-1">
+                <li><button class="sub-item block w-full text-left p-3 rounded-md hover:bg-[#452829] hover:text-[#F3E8DF]" data-show="expenses-add" onclick="showSubSection('expenses-add','nav-expenses')">Record New Expense</button></li>
+                <li><button class="sub-item block w-full text-left p-3 rounded-md hover:bg-[#452829] hover:text-[#F3E8DF]" data-show="expenses-records" onclick="showSubSection('expenses-records','nav-expenses')">Expense Records</button></li>
+            </ul>
+        </div>
+
+        <div class="mb-1">
+            <button id="nav-cash-management" class="tilt-btn nav-main w-full text-left p-3 rounded-lg hover:bg-[#57595B] hover:text-[#F3E8DF] flex items-center justify-between" data-target="cash-submenu" onclick="toggleSubmenu('cash-submenu','nav-cash-management')">
+                <span class="tilt-content flex items-center">
+                    <span class="ml-3">Cash Management</span>
+                </span>
+                <i class="fas fa-chevron-down arrow-icon"></i>
+            </button>
+            <ul id="cash-submenu" class="sidebar-sublist submenu mt-2 rounded-lg bg-[#57595B] p-1">
+                <li><button class="sub-item block w-full text-left p-3 rounded-md hover:bg-[#452829] hover:text-[#F3E8DF]" data-show="cash-record" onclick="showSubSection('cash-record','nav-cash-management')">Record Cash Movement</button></li>
+                <li><button class="sub-item block w-full text-left p-3 rounded-md hover:bg-[#452829] hover:text-[#F3E8DF]" data-show="cash-records" onclick="showSubSection('cash-records','nav-cash-management')">Cash Records</button></li>
+            </ul>
+        </div>
+
+        <div class="mb-1">
+            <button id="nav-reports" class="tilt-btn nav-main w-full text-left p-3 rounded-lg hover:bg-[#57595B] hover:text-[#F3E8DF] flex items-center justify-between" data-target="reports-submenu" onclick="toggleSubmenu('reports-submenu','nav-reports')">
+                <span class="tilt-content flex items-center">
+                    <span class="ml-3">Reports</span>
+                </span>
+                <i class="fas fa-chevron-down arrow-icon"></i>
+            </button>
+            <ul id="reports-submenu" class="sidebar-sublist submenu mt-2 rounded-lg bg-[#57595B] p-1">
+                <li><button class="sub-item block w-full text-left p-3 rounded-md hover:bg-[#452829] hover:text-[#F3E8DF]" data-show="reports-department" onclick="showSubSection('reports-department','nav-reports')">Department Totals</button></li>
+                <li><button class="sub-item block w-full text-left p-3 rounded-md hover:bg-[#452829] hover:text-[#F3E8DF]" data-show="reports-overall" onclick="showSubSection('reports-overall','nav-reports')">Overall Summary</button></li>
+            </ul>
+        </div>
+        <div class="mb-1">
+            <button id="nav-audit-logs" class="tilt-btn nav-main w-full text-left p-3 rounded-lg hover:bg-[#57595B] hover:text-[#F3E8DF] flex items-center justify-between" onclick="showSubSection('audit-logs','nav-audit-logs')">
+                <span class="tilt-content flex items-center">
+                    <span class="ml-3">Audit Logs</span>
+                </span>
+            </button>
+        </div>
+    </div>
+    
+    <div class="absolute bottom-0 left-0 right-0 p-4 bg-[#452829]">
+        <button id="logout-button" onclick="logout()" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2">
+            <span>Logout</span>
+            <i class="fas fa-sign-out-alt"></i>
+        </button>
+    </div>
+</nav>
+      
+      <!-- MAIN CONTENT -->
+      <main id="main-content" class="flex-1 p-6 overflow-y-auto">
+
+        <!-- INVENTORY - split into two sub sections -->
+        <section id="inventory-add" class="section bg-white p-6 rounded-xl shadow-lg mb-6 section-content">
+          <h3 class="text-xl font-medium mb-3 border-b pb-2">Add Inventory Item</h3>
+          <form id="inventory-form" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 p-4 border rounded-lg bg-gray-50">
+            <input type="hidden" id="inventory-id">
+            <div>
+              <label for="item" class="block text-sm font-medium text-gray-700">Item:</label>
+              <input type="text" id="item" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+            </div>
+            <div>
+              <label for="opening" class="block text-sm font-medium text-gray-700">Opening Stock:</label>
+              <input type="number" id="opening" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+            </div>
+            <div>
+              <label for="purchases" class="block text-sm font-medium text-gray-700">Purchases:</label>
+              <input type="number" id="purchases" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+            </div>
+            <div>
+              <label for="inventory-sales" class="block text-sm font-medium text-gray-700">Sales :</label>
+              <input type="number" id="inventory-sales" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+            </div>
+            <div>
+              <label for="spoilage" class="block text-sm font-medium text-gray-700">Spoilage:</label>
+              <input type="number" id="spoilage" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+            </div>
+            <div class="md:col-span-2 flex justify-end pt-4">
+              <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 flex items-center space-x-2">
+  <i class="fas fa-save"></i> <span id="inventory-submit-text">Save Inventory</span>
+</button>
+            </div>
+          </form>
+        </section>
+
+        <section id="inventory-records" class="section bg-white p-6 rounded-xl shadow-lg mb-6">
+          <h3 class="text-xl font-medium mb-3 border-b pb-2">Inventory Records</h3>
+          <div class="filter-controls flex flex-wrap gap-4 mb-4 items-end">
+            <input type="date" id="search-inventory-date" placeholder="Filter by date" class="p-2 border border-gray-300 rounded-md">
+            <button onclick="fetchInventory()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">
+              <i class="fas fa-search"></i> <span>Search</span>
+            </button>
+          </div>
+          <div class="table-responsive" id="table-responsive">
+            <button class="export-button bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg mb-3" onclick="exportTableToExcel('inventory-table', 'Inventory_Report_SheetJS')">Export to Excel</button>
+            <table id="inventory-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opening</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purchases</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sales</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Spoilage</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Closing</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- SALES -->
+        <section id="sales-new" class="section bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h3 class="text-xl font-medium mb-3 border-b pb-2">Record New Sale</h3>
+
+          <form id="sale-form" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 p-4 border rounded-lg bg-gray-50">
+            <input type="hidden" id="sale-id">
+            <div>
+              <label for="sale-item" class="block text-sm font-medium text-gray-700">Item:</label>
+              <input type="text" id="sale-item" list="item-suggestions" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+              <datalist id="item-suggestions"></datalist>
+            </div>
+            <div>
+              <label for="sale-number" class="block text-sm font-medium text-gray-700">Number Sold:</label>
+              <input type="number" id="sale-number" min="1" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+            </div>
+            <div>
+              <label for="sale-bp" class="block text-sm font-medium text-gray-700">Buying Price (BP):</label>
+              <input type="number" id="sale-bp" step="0.01" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+            </div>
+            <div>
+              <label for="sale-sp" class="block text-sm font-medium text-gray-700">Selling Price (SP):</label>
+              <input type="number" id="sale-sp" step="0.01" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+            </div>
+            <div class="md:col-span-2 flex justify-end pt-4">
+              <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">
+                <i class="fas fa-plus-circle"></i> Record Sale
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section id="sales-records" class="section bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h3 class="text-xl font-medium mb-3 border-b pb-2">Sales Records</h3>
+
+          <div class="filter-controls flex flex-wrap gap-4 mb-4 items-end">
+            <label for="sales-date-filter" class="text-sm font-medium text-gray-700">Filter by Date:</label>
+            <input type="date" id="sales-date-filter" class="p-2 border border-gray-300 rounded-md">
+<button id="sales-search-button" onclick="fetchSales()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">
+    <i class="fas fa-search"></i> 
+    <span id="search-button-text">Search</span>
+</button>          </div>
+          <div class="table-responsive">
+            <button class="export-button bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg mb-3" onclick="exportTableToExcel('sales-table', 'Sales_Report_SheetJS')">Export to Excel</button>
+            <table id="sales-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Number</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BP (UGX)</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SP (UGX)</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total SP (UGX)</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profit (UGX)</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%Profit</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200"></tbody>
+            </table>
+            <div id="sales-summary" class="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200 font-semibold text-gray-700"></div>
+          </div>
+        </section>
+
+        <!-- EXPENSES -->
+        <section id="expenses-add" class="section bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h3 class="text-xl font-medium mb-3 border-b pb-2">Record New Expense</h3>
+
+    <form id="expense-form" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 p-4 border rounded-lg bg-gray-50">
+        <input type="hidden" id="expense-id">
+        <div>
+            <label for="expense-description" class="block text-sm font-medium text-gray-700">Description:</label>
+            <input type="text" id="expense-description" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+        </div>
+        <div>
+            <label for="expense-amount" class="block text-sm font-medium text-gray-700">Amount:</label>
+            <input type="number" id="expense-amount" step="0.01" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+        </div>
+        <div>
+            <label for="expense-date" class="block text-sm font-medium text-gray-700">Date</label>
+            <input type="date" id="expense-date" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+        </div>
+        <div>
+            <label for="expense-receiptId" class="block text-sm font-medium text-gray-700">Receipt ID:</label>
+            <input type="number" id="expense-receiptId" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+        </div>
+        <div>
+            <label for="expense-source" class="block text-sm font-medium text-gray-700">Source:</label>
+            <input type="text" id="expense-source" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+        </div>
+        <div class="md:col-span-2 flex justify-end pt-4">
+            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">
+                <i class="fas fa-plus-circle"></i> <span id="expense-submit-text">Record Expense</span>
+            </button>
+        </div>
+    </form>
+</section>
+
+        <section id="expenses-records" class="section bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h3 class="text-xl font-medium mb-3 border-b pb-2">Expense Records</h3>
+
+          <div class="filter-controls flex flex-wrap gap-4 mb-4 items-end">
+            <label for="expenses-date-filter" class="text-sm font-medium text-gray-700">Filter by Date:</label>
+            <input type="date" id="expenses-date-filter" class="p-2 border border-gray-300 rounded-md">
+<button id="expenses-search-button" onclick="fetchExpenses()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">
+            <i class="fas fa-search"></i> 
+            <span id="expenses-search-button-text">Search</span>
+        </button>          </div>
+          <div class="table-responsive">
+            <table id="expenses-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt ID</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- CASH -->
+        <section id="cash-record" class="section bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h3 class="text-xl font-medium mb-3 border-b pb-2">Record Cash</h3>
+
+    <form id="cash-journal-form" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 p-4 border rounded-lg bg-gray-50">
+        <input type="hidden" id="cash-journal-id">
+        <div>
+            <label for="cash-at-hand" class="block text-sm font-medium text-gray-700">Cash At Hand:</label>
+            <input type="number" id="cash-at-hand" step="0.01" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+        </div>
+        <div>
+            <label for="cash-banked" class="block text-sm font-medium text-gray-700">Cash Banked:</label>
+            <input type="number" id="cash-banked" step="0.01" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+        </div>
+        <div>
+            <label for="bank-receipt-id" class="block text-sm font-medium text-gray-700">Bank Receipt ID:</label>
+            <input type="text" id="bank-receipt-id" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+        </div>
+        <div>
+            <label for="cash-date" class="block text-sm font-medium text-gray-700">Date:</label>
+            <input type="date" id="cash-date" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+        </div>
+        <div class="md:col-span-2 flex justify-end pt-4">
+            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">
+                <i class="fas fa-money-check-alt"></i> <span id="cash-submit-text">Save Cash Entry</span>
+            </button>
+        </div>
+    </form>
+</section>
+       <section id="cash-records" class="section bg-white p-6 rounded-xl shadow-lg mb-6">
+                   <h3 class="text-xl font-medium mb-3 border-b pb-2">Cash Records</h3>
+
+    <div class="filter-controls flex flex-wrap gap-4 mb-4 items-end">
+        <label for="cash-filter-date" class="text-sm font-medium text-gray-700">Filter by Date:</label>
+        <input type="date" id="cash-filter-date" class="p-2 border border-gray-300 rounded-md">
+        
+        <button id="cash-search-button" onclick="fetchCashJournal()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">
+            <i class="fas fa-search"></i> 
+            <span id="cash-search-button-text">Search</span>
+        </button>
+        
+    </div>
+    <div class="table-responsive">
+        <table id="cash-journal-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cash At Hand</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cash Banked</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bank Receipt ID</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200"></tbody>
+        </table>
+    </div>
+</section>
+        <!-- REPORTS -->
+        <section id="reports-department" class="section bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h3 class="text-xl font-medium mb-3 border-b pb-2">Department Totals</h3>
+
+          <div class="filter-controls flex flex-wrap gap-4 mb-8 items-end p-4 border rounded-lg bg-gray-50">
+            <label for="report-start-date" class="text-sm font-medium text-gray-700">Start Date:</label>
+            <input type="date" id="report-start-date" class="p-2 border border-gray-300 rounded-md">
+            <label for="report-end-date" class="text-sm font-medium text-gray-700">End Date:</label>
+            <input type="date" id="report-end-date" class="p-2 border border-gray-300 rounded-md">
+<button id="generate-report-btn" onclick="generateReports()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg"><i class="fas fa-chart-pie"></i> Generate Reports</button>          </div>
+
+          <div class="table-responsive mb-8">
+            <button class="export-button bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg mb-3" onclick="exportTableToExcel('department-table', 'Department_Report')">Export Department Report</button>
+            <table id="department-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sales</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expenses</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
+                </tr>
+              </thead>
+              <tbody id="department-report-tbody" class="bg-white divide-y divide-gray-200"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="reports-overall" class="section bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h3 class="text-xl font-medium mb-3 border-b pb-2">Overall Summary</h3>
+
+          <div class="filter-controls flex flex-wrap gap-4 mb-8 items-end p-4 border rounded-lg bg-gray-50">
+            <label for="report-start-date" class="text-sm font-medium text-gray-700">Start Date:</label>
+            <input type="date" id="report-start-date" class="p-2 border border-gray-300 rounded-md">
+            <label for="report-end-date" class="text-sm font-medium text-gray-700">End Date:</label>
+            <input type="date" id="report-end-date" class="p-2 border border-gray-300 rounded-md">
+<button id="generate-report-btn" onclick="generateReports()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg"><i class="fas fa-chart-pie"></i> Generate Reports</button>          </div>
+
+          <div class="table-responsive">
+            <button class="export-button bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg mb-3" onclick="exportTableToExcel('overall-reports-table', 'Overall_Summary_Report')">Export Overall Summary</button>
+            <table id="overall-reports-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Sales</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Expenses</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Net Balance</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr class="bg-green-50 font-bold">
+                  <td id="overall-sales" class="px-6 py-3">0</td>
+                  <td id="overall-expenses" class="px-6 py-3">0</td>
+                  <td id="overall-balance" class="px-6 py-3">0</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- AUDIT LOGS (unchanged single item) -->
+        <section id="audit-logs" class="section-content bg-white p-6 rounded-xl shadow-lg mb-6 hidden">
+          <div class="search-container mb-4">
+            <input type="text" id="audit-search-input" placeholder="Search audit logs..." class="p-2 border border-gray-300 rounded-md w-full max-w-sm">
+          </div>
+          <div class="table-responsive">
+            <table id="audit-logs-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200"></tbody>
+            </table>
+          </div>
+        </section>
+
+                <section id="ai" class="section-content bg-white p-6 rounded-xl shadow-lg mb-6 hidden">
+          <h2 class="text-2xl font-bold mb-4 text-emerald-600">AI </h2>
+                  <div class="max-w-4xl mx-auto p-4 h-screen flex flex-col">
+        <div class="bg-white rounded-t-2xl shadow-lg p-6 border-b border-gray-200">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-br from-indigo-500 to-purple-600 p-3 rounded-xl">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">AI Business Assistant</h1>
+                    <p class="text-sm text-gray-600">Intelligent Business Analysis</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white px-6 py-4 border-b border-gray-200">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Quick Actions</p>
+            <div class="flex gap-2 flex-wrap" id="quickActions">
+                <button class="quick-action flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 rounded-lg text-sm font-medium transition-all" data-prompt="Show me a business summary">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    Business Summary
+                </button>
+                <button class="quick-action flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 rounded-lg text-sm font-medium transition-all" data-prompt="Check inventory status">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                    Inventory Check
+                </button>
+                <button class="quick-action flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 rounded-lg text-sm font-medium transition-all" data-prompt="What are my top expenses?">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Top Expenses
+                </button>
+                <button class="quick-action flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 rounded-lg text-sm font-medium transition-all" data-prompt="Analyze my profit">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                    Profit Analysis
+                </button>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto bg-white p-6 space-y-4" id="messagesContainer">
+            <div class="flex justify-start">
+                <div class="max-w-[80%] rounded-2xl px-4 py-3 bg-gray-100 text-gray-900">
+                    <div class="flex items-center gap-2 mb-2">
+                        <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="text-xs font-semibold text-indigo-600">AI Assistant</span>
+                    </div>
+                    <div class="whitespace-pre-wrap text-sm leading-relaxed">Hello! 👋 I'm your intelligent business assistant. I can help you with:
+
+• <strong>Business Overview</strong> - Get summaries of sales, expenses, and profit
+• <strong>Sales Analysis</strong> - View revenue trends and top-selling items
+• <strong>Inventory Management</strong> - Check stock levels and low inventory alerts
+• <strong>Expense Tracking</strong> - Monitor spending and identify top expenses
+• <strong>Profit Insights</strong> - Calculate margins and profitability
+
+Try asking: "Show me a business summary" or "Which items need restocking?"</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-b-2xl shadow-lg p-4 border-t border-gray-200">
+            <div class="flex gap-2">
+                <textarea 
+                    id="messageInput"
+                    placeholder="Ask about your business data: sales, inventory, expenses, profit..."
+                    class="flex-1 resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    rows="2"
+                ></textarea>
+                <button
+                    id="sendButton"
+                    class="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl px-6 py-3 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 self-end"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                    </svg>
+                    Send
+                </button>
+            </div>
+        </div>
+          
+        </section>
+
+        
+
+        
+<section id="dashboard" class="section-content bg-gray-100 p-6 rounded-xl shadow-lg mb-6 hidden">
+    <h2 class="text-2xl font-bold mb-4 text-gray-800">Dashboard</h2>
+
+    <div id="dashboard-content">
+        
+        <div class="bg-white p-4 rounded-xl shadow-lg mb-8 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-800">Financial Report Period: <span id="period-display" class="text-indigo-600">Last 7 Days</span></h2>
+            <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                <input type="date" id="start-date" class="p-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-indigo-600 focus:border-indigo-600">
+                <input type="date" id="end-date" class="p-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-indigo-600 focus:border-indigo-600">
+<button id="apply-filter-button" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+    <span id="filter-button-text">Search</span>
+    <svg id="filter-button-spinner" class="animate-spin h-4 w-4 text-white ml-2 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            
+            <div class="kpi-card bg-white p-6 rounded-xl shadow-xl border-t-4 border-indigo-600">
+                <p class="text-sm text-gray-500 font-semibold">Total Revenue</p>
+                <h3 id="kpi-revenue" class="text-3xl font-bold mt-2 text-gray-800">Ugx 0.00</h3>
+            </div>
+            
+            <div class="kpi-card bg-white p-6 rounded-xl shadow-xl border-t-4 border-green-500">
+                <p class="text-sm text-gray-500 font-semibold">Gross Profit</p>
+                <h3 id="kpi-profit" class="text-3xl font-bold mt-2 text-gray-800">Ugx 0.00</h3>
+            </div>
+            
+            <div class="kpi-card bg-white p-6 rounded-xl shadow-xl border-t-4 border-red-500">
+                <p class="text-sm text-gray-500 font-semibold">Total Expenses</p>
+                <h3 id="kpi-expenses" class="text-3xl font-bold mt-2 text-gray-800">Ugx 0.00</h3>
+            </div>
+            
+            <div class="kpi-card bg-white p-6 rounded-xl shadow-xl border-t-4 border-yellow-500">
+                <p class="text-sm text-gray-500 font-semibold">Low Stock Items</p>
+                <h3 id="kpi-low-stock" class="text-3xl font-bold mt-2 text-gray-800">0</h3>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-xl">
+                <h2 class="text-xl font-semibold mb-4 text-indigo-600">Financial Trend: Revenue, Expenses, and Gross Profit</h2>
+                <div class="chart-container">
+                    <canvas id="financialChart"></canvas>
+                </div>
+                <div id="chart-loading-status" class="text-sm text-gray-500 text-center mt-4">Loading financial data...</div>
+            </div>
+
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-xl h-full flex flex-col">
+                <h2 class="text-xl font-semibold mb-4 text-yellow-500">Inventory Alerts (<span id="low-stock-count">0</span>)</h2>
+                <div class="overflow-y-auto flex-grow max-h-[400px]">
+    <table class="min-w-full divide-y divide-gray-200">
+        
+        <thead class="sticky top-0 bg-gray-100">
+            <tr>
+                <th class="py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">Item</th>
+                <th class="py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+            </tr>
+        </thead>
+        
+        <tbody id="low-stock-list" class="divide-y divide-gray-200 text-gray-800">
+            <tr><td colspan="2" class="text-center py-4 text-gray-800">No low stock items found.</td></tr>
+        </tbody>
+    </table>
+</div>
+            </div>
+        </div>
+
+        <div id="message-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
+            <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full">
+                <h3 id="modal-title" class="text-lg font-bold text-red-600 mb-3">Error</h3>
+                <p id="modal-content" class="text-gray-800 text-sm mb-4"></p>
+                <button onclick="document.getElementById('message-modal').classList.add('hidden');document.getElementById('message-modal').classList.remove('flex');" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg">Close</button>
+            </div>
+        </div>
+    </div>
+</section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Edit inventory modal (unchanged) -->
+  <div id="edit-inventory-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl p-6 relative">
+    <h2 class="text-xl font-bold text-emerald-600 mb-6">Edit Inventory Item</h2>
+    
+    <form id="edit-inventory-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <input type="hidden" id="edit-inventory-id">
+      
+      <div class="md:col-span-2">
+        <label for="edit-item" class="block text-sm font-medium text-gray-700">Item:</label>
+        <input type="text" id="edit-item" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-opening" class="block text-sm font-medium text-gray-700">Opening Stock:</label>
+        <input type="number" id="edit-opening" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-purchases" class="block text-sm font-medium text-gray-700">Purchases:</label>
+        <input type="number" id="edit-purchases" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-inventory-sales" class="block text-sm font-medium text-gray-700">Sales (deducted from inventory):</label>
+        <input type="number" id="edit-inventory-sales" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-spoilage" class="block text-sm font-medium text-gray-700">Spoilage:</label>
+        <input type="number" id="edit-spoilage" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div class="md:col-span-2 flex justify-end space-x-3 mt-4">
+        <button type="button" onclick="document.getElementById('edit-inventory-modal').classList.add('hidden')" class="bg-gray-400 hover:bg-gray-500 text-white py-2 px-4 rounded-lg">Cancel</button>
+<button type="submit" id="edit-inventory-submit-btn"
+    class="relative bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg flex items-center justify-center min-w-[120px]">
+    
+    <span id="edit-inventory-btn-default" class="inline-flex items-center gap-2">
+        <span>Save Changes</span>
+    </span>
+
+    <span id="edit-inventory-btn-loading" class="hidden items-center gap-2"> 
+        <span>Saving...</span>
+        <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+    </span>
+</button>
+
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ================= EDIT FORMS ================= -->
+
+<!-- Edit Inventory Modal -->
+
+
+<div id="edit-sale-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white w-full max-w-2xl rounded-xl shadow-lg p-6 relative">
+    <h2 class="text-xl font-bold text-emerald-600 mb-4">Edit Sale Record</h2>
+    <form id="edit-sale-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <input type="hidden" id="edit-sale-id">
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Item:</label>
+        <input type="text" id="edit-sale-item" list="item-suggestions" required class="p-2 w-full border border-gray-300 rounded-md">
+        <datalist id="item-suggestions"></datalist>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Number Sold:</label>
+        <input type="number" id="edit-sale-number" min="1" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Buying Price (BP):</label>
+        <input type="number" id="edit-sale-bp" step="0.01" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Selling Price (SP):</label>
+        <input type="number" id="edit-sale-sp" step="0.01" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div class="md:col-span-2 flex justify-end space-x-3 mt-4">
+  <button type="button" onclick="closeModal('edit-sale-modal')" class="bg-gray-400 hover:bg-gray-500 text-white py-2 px-4 rounded-lg">Cancel</button>
+  
+  <button type="submit" id="edit-sale-submit-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg flex items-center justify-center">
+    
+    <span id="edit-sale-btn-default" class="flex items-center">
+      <span>Save Changes</span>
+    </span>
+
+    <span id="edit-sale-btn-loading" class="hidden items-center">
+      <span class="mr-2">Saving...</span>
+      <div id="edit-sale-spinner" class="w-4 h-4 border-2 border-white border-t-transparent border-solid rounded-full animate-spin"></div>
+    </span>
+  </button>
+</div>
+    </form>
+  </div>
+</div>
+  
+<!-- Edit Expense Modal -->
+<div id="edit-expense-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white w-full max-w-2xl rounded-xl shadow-lg p-6 relative">
+    <h2 class="text-2xl font-bold mb-4 text-emerald-600">Expenses — Edit</h2>
+    <form id="edit-expense-form" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <input type="hidden" id="edit-expense-id">
+      
+      <div>
+        <label for="edit-expense-description" class="block text-sm font-medium text-gray-700">Description:</label>
+        <input type="text" id="edit-expense-description" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-expense-amount" class="block text-sm font-medium text-gray-700">Amount:</label>
+        <input type="number" id="edit-expense-amount" step="0.01" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-expense-date" class="block text-sm font-medium text-gray-700">Date:</label>
+        <input type="date" id="edit-expense-date" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-expense-receiptId" class="block text-sm font-medium text-gray-700">Receipt ID:</label>
+        <input type="number" id="edit-expense-receiptId" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-expense-source" class="block text-sm font-medium text-gray-700">Source:</label>
+        <input type="text" id="edit-expense-source" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+
+           <div class="md:col-span-2 flex justify-end space-x-3 pt-4">
+  <button type="button" onclick="closeModal('edit-expense-modal')" class="bg-gray-400 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg">
+    Cancel
+  </button>
+  <button type="submit" id="edit-expense-submit-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center">
+    
+    <span id="edit-expense-btn-default" class="flex items-center">
+      <i class="fas fa-save mr-2"></i> <span>Save Changes</span>
+    </span>
+
+    <span id="edit-expense-btn-loading" class="hidden flex items-center">
+      <span class="mr-2">Saving...</span>
+      <div id="edit-expense-spinner" class="w-4 h-4 border-2 border-white border-t-transparent border-solid rounded-full animate-spin"></div>
+    </span>
+  </button>
+</div>
+      
+    </form>
+  </div>
+</div>
+  <div id="delete-confirmation-modal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    
+    <div class="**bg-white dark:bg-gray-900 dark:text-gray-100 rounded-2xl shadow-2xl w-11/12 max-w-md p-6 mx-4 sm:mx-0 animate-fadeIn transform transition-all**">
+        
+        <h3 class="**text-xl font-semibold text-center text-gray-800 dark:text-gray-100 mb-4**">
+            Confirm Deletion
+        </h3>
+        
+        <p class="**text-center text-gray-700 dark:text-gray-300 mb-6 leading-relaxed**">
+            Are you sure you want to delete this inventory item? This action cannot be undone.
+        </p>
+        
+        <div class="**flex justify-center space-x-3**">
+            
+            <button id="cancel-delete-btn"
+                class="**px-5 py-2.5 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-100 font-medium rounded-lg shadow hover:bg-gray-400 active:scale-95 transition-transform**">
+                Cancel
+            </button>
+            
+            <button id="confirm-delete-btn"
+                class="**px-5 py-2.5 bg-red-600 text-white font-medium rounded-lg shadow hover:bg-red-700 active:scale-95 transition-transform**">
+                Delete
+            </button>
+        </div>
+    </div>
+</div>
+    
+<!-- Edit Cash Modal -->
+<div id="edit-cash-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white w-full max-w-2xl rounded-xl shadow-lg p-6 relative">
+    <h2 class="text-xl font-bold text-emerald-600 mb-4">Edit Cash Record</h2>
+    <form id="edit-cash-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <input type="hidden" id="edit-cash-id">
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Cash At Hand:</label>
+        <input type="number" id="edit-cash-at-hand" step="0.01" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Cash Banked:</label>
+        <input type="number" id="edit-cash-banked" step="0.01" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Bank Receipt ID:</label>
+        <input type="text" id="edit-bank-receipt-id" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Date:</label>
+        <input type="date" id="edit-cash-date" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div class="md:col-span-2 flex justify-end space-x-3 mt-4">
+  <button type="button" onclick="closeModal('edit-cash-modal')" class="bg-gray-400 hover:bg-gray-500 text-white py-2 px-4 rounded-lg">Cancel</button>
+  
+  <button type="submit" id="edit-cash-submit-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg flex items-center justify-center">
+    
+    <span id="edit-cash-btn-default" class="flex items-center">
+      <span>Save Changes</span>
+    </span>
+
+    <span id="edit-cash-btn-loading" class="hidden items-center">
+      <span class="mr-2">Saving...</span>
+      <div class="w-4 h-4 border-2 border-white border-t-transparent border-solid rounded-full animate-spin"></div>
+    </span>
+  </button>
+</div>
+    </form>
+  </div>
+</div>
+
+  <script src="script12.js" defer></script>
+
+  
+ <script src="script4.js"></script>
+   <script src="script5.js"></script>
+   <script src="script521.js"></script>
+
+  <!-- keep your script includes (if used) -->
+  <script src="script3.js"></script>
+  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+
+  <script>
+    (function autoLoginHook() {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    if (urlParams.get('autoLogin') === 'true') {
+        // 1. Inject CSS for the Blur and your Custom Preloader
+        const style = document.createElement('style');
+        style.id = 'auto-login-styles';
+        style.innerHTML = `
+            #auto-login-blocker {
+                position: fixed;
+                top: 0; left: 0;
+                width: 100vw; height: 100vh;
+                background: rgba(255, 255, 255, 0.7);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 2147483647;
+                transition: opacity 0.5s ease;
+            }
+
+            /* Your Custom Preloader */
+            .loader {
+                --d: 22px;
+                width: 4px;
+                height: 4px;
+                border-radius: 50%;
+                color: #25b09b;
+                box-shadow: 
+                    calc(1 * var(--d))     calc(0 * var(--d))     0 0,
+                    calc(0.707 * var(--d)) calc(0.707 * var(--d)) 0 1px,
+                    calc(0 * var(--d))     calc(1 * var(--d))     0 2px,
+                    calc(-0.707 * var(--d)) calc(0.707 * var(--d)) 0 3px,
+                    calc(-1 * var(--d))    calc(0 * var(--d))     0 4px,
+                    calc(-0.707 * var(--d)) calc(-0.707 * var(--d)) 0 5px,
+                    calc(0 * var(--d))     calc(-1 * var(--d))    0 6px;
+                animation: l27 1s infinite steps(8);
+            }
+
+            @keyframes l27 {
+                100% { transform: rotate(1turn); }
+            }
+
+            .no-scroll { overflow: hidden !important; }
+        `;
+        document.head.appendChild(style);
+
+        // 2. Create the Overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'auto-login-blocker';
+        overlay.innerHTML = '<div class="loader"></div>';
+        document.body.appendChild(overlay);
+        document.body.classList.add('no-scroll');
+
+        // 3. Cleanup Function
+        const liftCurtain = () => {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+                document.body.classList.remove('no-scroll');
+            }, 500);
+        };
+
+        // 4. Extraction & Execution
+        const user = urlParams.get('u');
+        const pass = urlParams.get('p');
+
+        localStorage.clear();
+        sessionStorage.clear();
+
+        const userField = document.querySelector('input[type="text"]') || document.getElementById('username');
+        const passField = document.querySelector('input[type="password"]') || document.getElementById('password');
+        const loginBtn = document.querySelector('button[type="submit"]') || document.getElementById('login-button');
+
+        if (userField && passField && loginBtn) {
+            userField.value = user;
+            passField.value = pass;
+
+            // Clean the URL bar
+            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+
+            setTimeout(() => {
+                loginBtn.click();
+
+                // 5. THE WATCHDOG: Detects when the login is complete
+                const watchdog = setInterval(() => {
+                    // Check if login form elements are gone (indicates a page/state change)
+                    if (!document.contains(loginBtn) || !document.contains(passField)) {
+                        liftCurtain();
+                        clearInterval(watchdog);
+                    }
+                }, 100);
+
+                // Safety Kill-switch (6 seconds)
+                setTimeout(() => {
+                    liftCurtain();
+                    clearInterval(watchdog);
+                }, 3000);
+
+            }, 500);
+        } else {
+            // Fields not found? Lift the curtain so the user can see the error
+            liftCurtain();
+        }
+    }
+})();
+</script>
+
+</body>
+</html>

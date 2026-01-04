@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Management Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="styles.css"> 
+    <style>
+        /* Base Styling & Typography */
+        body {
+            font size: 12px;
+            margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+display: flex;
+            background-color: #f4f7f9; /* Light, soft background */
+            color: #333; /* Darker text for readability */
+        }
+
+            /* Styling for the overall sidebar header */
+.sidebar h2 {
+    /* 1. Use Flexbox for alignment */
+    display: flex; 
+    /* 2. Vertically align the logo and text in the center */
+    align-items: center; 
+    /* 3. Add necessary padding and a separator */
+    padding: 15px;
+    border-bottom: 1px solid #ddd; /* Light separator line */
+    margin-top: 0;
+    margin-bottom: 0;
+    color: #333; /* Dark text color */
+}
+
+/* Styling for the logo image itself */
+.logo-icon {
+    /* 1. Set a fixed size for the logo */
+    width: 32px; 
+    height: 32px; 
+    /* 2. Add space between the logo and the "Patrinah Hotel" text */
+    margin-right: 10px; 
+    /* 3. Ensure the image scales correctly within its box */
+    object-fit: contain; 
+}
+            
+        /* Sidebar - Brighter, modern dark blue */
+        .sidebar {
+            width: 260px; /* Slightly wider */
+            background: #1e3d59; /* Deeper, more sophisticated blue */
+            color: white;
+            height: 100vh;
+            overflow-y: auto;
+            padding-top: 20px;
+            border-radius: 0; 
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+        }
+
+        .sidebar h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #ffc300; /* Pop color for the title */
+        }
+
+        .nav-item {
+            padding: 15px 25px; /* More padding */
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s, padding-left 0.3s;
+            font-weight: 400;
+        }
+
+        .nav-item:hover, .nav-nav-item.active {
+            background: #2a5275; /* Lighter hover color */
+            padding-left: 30px;
+        }
+        
+        /* Navigation Icons */
+        .nav-item i {
+            font-size: 0.9em;
+            transition: transform 0.3s;
+        }
+
+        /* Submenu */
+        .submenu {
+            display: none;
+            flex-direction: column;
+            background: #2a5275; /* Slightly lighter submenu background */
+            padding-left: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .submenu button {
+            padding: 10px 20px;
+            border: none;
+            background: none;
+            color: white;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .submenu button:hover {
+            background: #3e6a91;
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .content h1 {
+            color: #1e3d59;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        /* Content Boxes/Tabs - Card-like appearance */
+        .tab-content {
+            display: none;
+            background: #ffffff; /* White background for the content box */
+            border-radius: 10px; /* Rounded corners */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* Soft, noticeable shadow */
+            padding: 30px;
+            margin-bottom: 30px;
+            transition: opacity 0.3s;
+        }
+
+        .tab-content h2 {
+            margin-top: 0;
+            color: #1e3d59;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffc300; /* Accent line */
+            padding-left: 10px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Form Styling */
+        .form-container > div {
+            margin-bottom: 15px;
+        }
+        
+        form label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600; /* Bolder labels */
+            color: #444;
+            font-size: 0.95em;
+        }
+
+        form input[type="text"],
+        form input[type="number"],
+        form input[type="date"],
+        form input[type="datetime-local"],
+        form select,
+        form textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        form input:focus, form select:focus, form textarea:focus {
+            border-color: #ffc300;
+            box-shadow: 0 0 5px rgba(255, 195, 0, 0.3);
+            outline: none;
+        }
+
+        /* Radio/Checkbox Alignment */
+        label.radio-label {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 25px; /* Increased spacing */
+        }
+        label.radio-label input[type="radio"] {
+            width: auto;
+            margin-right: 8px;
+            transform: scale(1.1); /* Slightly larger radio buttons */
+        }
+        
+        /* Button Styling */
+        button, .content-box button {
+            padding: 10px 20px;
+            color: white;
+            border: none;
+            border-radius: 6px; /* Slightly more rounded buttons */
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s, transform 0.1s;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        button:active, .content-box button:active {
+            transform: translateY(1px);
+        }
+
+        /* Specific Button Colors (Brighter palette) */
+        #hotelChecklistForm button[type="submit"] {
+            background-color: #2ecc71; /* Emerald Green */
+        }
+        #hotelChecklistForm button[type="submit"]:hover {
+            background-color: #27ae60;
+        }
+
+        #statusReportForm button[type="submit"] {
+            background-color: #3498db; /* Peter River Blue */
+        }
+        #statusReportForm button[type="submit"]:hover {
+            background-color: #2980b9;
+        }
+        
+        /* Table Actions Buttons */
+        #checklistsTable button, #reportsTable button {
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+        .table-wrapper {
+            overflow-x: auto; /* Makes table scrollable on small screens */
+            border: 1px solid #eee;
+            border-radius: 6px;
+        }
+
+        /* Table styling */
+        table {
+            width: 100%;
+            border-collapse: separate; /* Use 'separate' for rounded corners on cells/borders */
+            border-spacing: 0;
+            margin-top: 0;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #e9ecef; /* Light header background */
+            color: #1e3d59;
+            font-weight: 600;
+            position: sticky; /* Keep headers visible on vertical scroll */
+            top: 0;
+            z-index: 10;
+        }
+        
+        tbody tr:hover {
+            background-color: #f8f9fa; /* Subtle row hover effect */
+        }
+        
+        /* Pagination/Filter/Search styling */
+        #searchInput, #missingItemsDateFilter, #filterDate {
+            padding: 10px 12px;
+            border-radius: 6px;
+            width: calc(100% - 24px); /* Account for padding */
+        }
+        
+        /* Missing Items Summary Styling */
+        #missingItemsSummary {
+            padding: 15px;
+            background-color: #fff3cd; /* Light warning yellow */
+            border: 1px solid #ffeeba;
+            border-radius: 6px;
+            color: #856404;
+        }
+        
+        /* Utility styles for the dashboard context */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .status-arrival { background-color: #e9e0ff; color: #6f42c1; } /* Purple */
+        .status-occupied { background-color: #ffeded; color: #dc3545; } /* Red */
+        .status-departure { background-color: #fffbe6; color: #ffc107; } /* Yellow */
+        .status-vacant_ready { background-color: #edfff4; color: #28a745; } /* Green */
+        .status-vacant_not_ready { background-color: #e6f7ff; color: #007bff; } /* Blue */
+        .status-out_of_order, .status-out_of_service { background-color: #f8d7da; color: #dc3545; } /* Danger Red */
+
+        .action-btn {
+            background: none;
+            color: #3498db;
+            padding: 5px;
+            margin: 0 2px;
+            font-size: 1.1em;
+            transition: color 0.2s;
+        }
+        
+        .action-btn:hover {
+            color: #2980b9;
+        }
+
+            /* Positions logout at the bottom and gives it a distinct hover color */
+
+    </style>
+</head>
+<body>
+   <div class="sidebar">
+    <h2>
+        <img src="patrina.png" alt="Patrinah Hotel Logo" class="logo-icon">
+        Patrinah Hotel
+    </h2>
+    
+    <div class="nav-item" onclick="toggleMenu('checklistSubmenu', this)">
+        <span>Checklist</span>
+        <i class="fa-solid fa-chevron-down"></i>
+    </div>
+    <div id="checklistSubmenu" class="submenu">
+        <button onclick="showSection('checklistForm')"><i class="fa-solid fa-list-check"></i> Checklist Form</button>
+        <button onclick="showSection('checklistsTable')"><i class="fa-solid fa-table"></i> Checklists Table</button>
+        <button onclick="showSection('missingSummary')"><i class="fa-solid fa-triangle-exclamation"></i> Missing Items Summary</button>
+    </div>
+
+    <div class="nav-item" onclick="toggleMenu('reportsSubmenu', this)">
+        <span>Reports</span>
+        <i class="fa-solid fa-chevron-down"></i>
+    </div>
+    <div id="reportsSubmenu" class="submenu">
+        <button onclick="showSection('reportForm')"><i class="fa-solid fa-clipboard-list"></i> Status Report Form</button>
+        <button onclick="showSection('reportsTable')"><i class="fa-solid fa-chart-simple"></i> Status Reports Table</button>
+    </div>
+
+    <div class="nav-item logout-item" onclick="window.location.href='https://elegant-pasca-cea136.netlify.app/frontend/login.html'">
+        <span>Logout</span>
+    </div>
+</div>
+
+    <div class="content">
+
+        <div id="checklistForm" class="tab-content active">
+            <h2>Hotel Room Checklist Form</h2>
+            <form id="hotelChecklistForm" class="form-container">
+                <div>
+                    <label for="room">Room Number:</label>
+                    <select id="room" name="room" style="width: 180px;" required>
+                        <option value="">-- Select a Room --</option>
+                        <option value="101">Room 101</option>
+                        <option value="102">Room 102</option>
+                        <option value="103">Room 103</option>
+                        <option value="104">Room 104</option>
+                        <option value="101">Room 105</option>
+                        <option value="102">Room 106</option>
+                        <option value="103">Room 107</option>
+                        <option value="104">Room 108</option>
+                        <option value="101">Room 109</option>
+                        <option value="102">Room 110</option>
+                        <option value="103">Room 111</option>
+                        <option value="104">Room 112</option>
+                        <option value="101">Room 113</option>
+                        <option value="102">Room 114</option>
+                        <option value="103">Room 115</option>
+                        <option value="104">Room 116</option>
+                        <option value="101">Room 117</option>
+                        <option value="102">Room 118</option>
+                        <option value="103">Room 119</option>
+                        <option value="104">Room 120</option>
+                        <option value="104">Room 121</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="date">Date:</label>
+                    <input type="date" id="date"  style="width: 180px;" name="date" required>
+                </div>
+
+                <div class="checklist-group">
+                    <p style="font-weight: 600; margin-top: 15px; margin-bottom: 10px; color: #1e3d59;">Amenities Status:</p>
+                    <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+                        <div class="radio-group">
+                            <label style="font-weight: 400;">Towel:</label>
+                            <label class="radio-label"><input type="radio" name="towels" value="yes" required>Yes</label>
+                            <label class="radio-label"><input type="radio" name="towels" value="no" required>No</label>
+                        </div>
+                        <div class="radio-group">
+                            <label style="font-weight: 400;">Soap:</label>
+                            <label class="radio-label"><input type="radio" name="soap" value="yes" required>Yes</label>
+                            <label class="radio-label"><input type="radio" name="soap" value="no" required>No</label>
+                        </div>
+                        <div class="radio-group">
+                            <label style="font-weight: 400;">Door mat:</label>
+                            <label class="radio-label"><input type="radio" name="door mat" value="yes" required>Yes</label>
+                            <label class="radio-label"><input type="radio" name="door mat" value="no" required>No</label>
+                        </div>
+                        <div class="radio-group">
+                            <label style="font-weight: 400;">Sandals:</label>
+                            <label class="radio-label"><input type="radio" name="sandals" value="yes" required>Yes</label>
+                            <label class="radio-label"><input type="radio" name="sandals" value="no" required>No</label>
+                        </div>
+                        <div class="radio-group">
+                            <label style="font-weight: 400;">Toilet paper:</label>
+                            <label class="radio-label"><input type="radio" name="toilet paper" value="yes" required>Yes</label>
+                            <label class="radio-label"><input type="radio" name="toilet paper" value="no" required>No</label>
+                        </div>
+                        <div class="radio-group">
+                            <label style="font-weight: 400;">Trash can:</label>
+                            <label class="radio-label"><input type="radio" name="trash can" value="yes" required>Yes</label>
+                            <label class="radio-label"><input type="radio" name="trash can" value="no" required>No</label>
+                        </div>
+                        <div class="radio-group">
+                            <label style="font-weight: 400;">Remote:</label>
+                            <label class="radio-label"><input type="radio" name="remote" value="yes" required>Yes</label>
+                            <label class="radio-label"><input type="radio" name="remote" value="no" required>No</label>
+                        </div>
+                        <div class="radio-group">
+                            <label style="font-weight: 400;">TV:</label>
+                            <label class="radio-label"><input type="radio" name="tv" value="yes" required>Yes</label>
+                            <label class="radio-label"><input type="radio" name="tv" value="no" required>No</label>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 25px;">
+                    <button type="submit"><i class="fa-solid fa-check"></i> Submit Checklist</button>
+                </div>
+            </form>
+            <p id="message" style="text-align: center; color: #2ecc71; margin-top: 15px; font-weight: bold;"></p>
+        </div>
+
+        <div id="checklistsTable" class="tab-content">
+            <h2>Room Checklists Table</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 15px;">
+                <input type="search" id="searchInput" style="width: 180px;" placeholder="Search room or date..." style="flex-grow: 1;">
+                               <div style="display: flex; gap: 10px;">
+
+                <button onclick="exportToExcel()" style="background-color: #ffc300; color: #1e3d59;"><i class="fa-solid fa-file-export"></i> Export</button>
+               
+                                   <button onclick="printChecklists()" style="background-color: #3498db;"><i class="fa-solid fa-print"></i> Print</button>
+                               </div>
+                               </div>
+            
+            <div class="table-wrapper">
+                <table id="checklistTable">
+                    <thead>
+                        <tr>
+                            <th>Room</th>
+                            <th>Date</th>
+                            <th>Items</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="checklistBody">
+                        </tbody>
+                </table>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button id="prevBtn" style="background-color: #95a5a6; color: white;">&laquo; Prev</button>
+                <span id="pageInfo" style="font-weight: 600; margin: 0 15px;">Page 1 of X</span>
+                <button id="nextBtn" style="background-color: #95a5a6; color: white;">Next &raquo;</button>
+            </div>
+        </div>
+        
+        <div id="missingSummary" class="tab-content">
+            <h2>Missing Items Summary</h2>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+                <label for="missingItemsDateFilter" style="font-weight: 600; color: #1e3d59;">Filter by Date:</label>
+                <input type="date" style="width: 180px;" id="missingItemsDateFilter" style="flex-grow: 1; max-width: 250px;">
+                <button id="clearMissingItemsDateFilter" style="background-color: #95a5a6; color: white; padding: 10px 15px;"><i class="fa-solid fa-xmark"></i> Clear Filter</button>
+            </div>
+            <div id="missingItemsSummary">
+                <p>No missing items found for the selected date. Select a date to view a summary.</p>
+            </div>
+        </div>
+
+        <div id="reportForm" class="tab-content">
+            <h2>Housekeeping Room Status Report Form</h2>
+            <form id="statusReportForm" class="form-container">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div>
+                        <label for="reportRoom">Room Name/Number:</label>
+                        <input type="text" id="reportRoom" name="room" required placeholder="e.g., 101, Suite A">
+                    </div>
+                    <div>
+                        <label for="reportCategory">Category:</label>
+                        <select id="reportCategory" name="category" required>
+                            <option value="">-- Select Category --</option>
+                            <option value="deluxe1">Deluxe 1</option>
+                            <option value="deluxe2">Deluxe 2</option>
+                            <option value="deluxetwin">Deluxe Twin</option>
+                            <option value="juniorsuite">Junior Suite</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="reportStatus">Status:</label>
+                        <select id="reportStatus" name="status" required>
+                            <option value="">-- Select Status --</option>
+                            <option value="arrival">Arrival</option>
+                            <option value="occupied">Occupied</option>
+                            <option value="departure">Departure</option>
+                            <option value="vacant_ready">Vacant Ready</option>
+                            <option value="vacant_not_ready">Vacant but not Ready</option>
+                            <option value="out_of_order">Out of Order</option>
+                            <option value="out_of_service">Out of Service</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="reportDateTime">Date and Time:</label>
+                        <input type="datetime-local" id="reportDateTime" name="dateTime" required>
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="reportRemarks">Remarks:</label>
+                    <textarea id="reportRemarks" name="remarks" rows="4" placeholder="Any additional notes..."></textarea>
+                </div>
+                
+                <div style="margin-top: 25px;">
+                    <button type="submit"><i class="fa-solid fa-upload"></i> Submit Report</button>
+                </div>
+            </form>
+            <p id="statusMessage" style="text-align: center; color: #3498db; margin-top: 15px; font-weight: bold;"></p>
+        </div>
+
+        <div id="reportsTable" class="tab-content">
+            <h2>Housekeeping Status Reports Table</h2>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label for="filterDate" style="font-weight: 600; color: #1e3d59;">Filter by Date:</label>
+                    <input type="date" id="filterDate" style="width: 180px;">
+                    <button onclick="filterStatusReportsByDate()" style="background-color: #9b59b6; color: white;"><i class="fa-solid fa-filter"></i> Apply</button>
+                    <button onclick="clearStatusDateFilter()" style="background-color: #95a5a6; color: white;">Clear</button>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="exportStatusReportsToExcel()" style="background-color: #ffc300; color: #1e3d59;"><i class="fa-solid fa-file-export"></i> Export</button>
+                    <button onclick="printStatusReports()" style="background-color: #3498db;"><i class="fa-solid fa-print"></i> Print</button>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table id="statusReportTable">
+                    <thead>
+                        <tr>
+                            <th>Room</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Remarks</th>
+                            <th>Date & Time</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="statusReportBody">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    
+    <script src="script3.js"></script>
+</body>
+</html>
