@@ -53,107 +53,115 @@
 
     <script>
         const API_A_URL = 'https://patrinahhotelmgtsys.onrender.com';
-        const API_B_URL = 'https://patrinahhotelpms.onrender.com/api';
+const API_B_URL = 'https://patrinahhotelpms.onrender.com/api';
 
-        const SYSTEM_LINKS = {
-            systemA: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html',
-            systemB: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html',
-            staff: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html',
-        };
+const SYSTEM_LINKS = {
+    systemA: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html',
+    systemB: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html',
+    staff: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html',
+};
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const loginForm = document.getElementById('login-form');
-            const systemSelection = document.getElementById('system-selection');
-            const systemOptions = document.getElementById('system-options');
-            const errorMessage = document.getElementById('error-message');
-            const loginButton = document.getElementById('login-button');
-            const authContainer = document.getElementById('auth-container');
+document.addEventListener('DOMContentLoaded', () => {
+    const loginForm = document.getElementById('login-form');
+    const systemSelection = document.getElementById('system-selection');
+    const systemOptions = document.getElementById('system-options');
+    const errorMessage = document.getElementById('error-message');
+    const loginButton = document.getElementById('login-button');
+    const authContainer = document.getElementById('auth-container');
 
-            const finalizeLogin = (systemData, systemKey) => {
-                const username = document.getElementById('username').value.trim();
-                const password = document.getElementById('password').value.trim();
+    // This variable will hold the role globally within this script
+    let sessionRole = ""; 
 
-                localStorage.setItem('authToken', systemData.token);
+    const finalizeLogin = (systemData, systemKey) => {
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+        
+        // Save to LocalStorage for the Hopper Widget to read later
+        localStorage.setItem('authToken', systemData.token);
         localStorage.setItem('username', username);
-        localStorage.setItem('userRole', userRole.toLowerCase());
-                
-                const targetUrl = SYSTEM_LINKS[systemKey];
-                window.location.replace(`${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}`);
-            };
+        localStorage.setItem('userRole', sessionRole); // Uses the variable set during login
 
-            const createBtn = (label, color, onClick) => {
-                const btn = document.createElement('button');
-                btn.className = `w-full py-4 px-4 rounded-lg shadow-md text-white font-bold transition transform hover:scale-[1.02] ${color}`;
-                btn.textContent = label;
-                btn.onclick = onClick;
-                return btn;
-            };
+        const targetUrl = SYSTEM_LINKS[systemKey];
+        // Redirect with credentials
+        window.location.replace(`${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}`);
+    };
 
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                loginButton.disabled = true;
-                loginButton.textContent = 'Verifying...';
-                errorMessage.classList.add('hidden');
+    const createBtn = (label, color, onClickAction) => {
+        const btn = document.createElement('button');
+        btn.className = `w-full py-4 px-4 rounded-lg shadow-md text-white font-bold transition transform hover:scale-[1.02] ${color}`;
+        btn.textContent = label;
+        btn.onclick = onClickAction;
+        return btn;
+    };
 
-                const username = document.getElementById('username').value.trim();
-                const password = document.getElementById('password').value.trim();
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        loginButton.disabled = true;
+        loginButton.textContent = 'Verifying...';
+        errorMessage.classList.add('hidden');
 
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+
+        try {
+            const loginReq = async (url) => {
                 try {
-                    const loginReq = async (url) => {
-                        try {
-                            const res = await fetch(`${url}/login`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ username, password })
-                            });
-                            return res.ok ? await res.json() : null;
-                        } catch { return null; }
-                    };
+                    const res = await fetch(`${url}/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                    return res.ok ? await res.json() : null;
+                } catch { return null; }
+            };
 
-                    const [resA, resB] = await Promise.all([loginReq(API_A_URL), loginReq(API_B_URL)]);
-                    const userData = resA || resB;
+            const [resA, resB] = await Promise.all([loginReq(API_A_URL), loginReq(API_B_URL)]);
+            const userData = resA || resB;
 
-                    if (userData) {
-                        const rawRole = (userData.role || (userData.user && userData.user.role) || '').toLowerCase();
-                        
-                        loginForm.classList.add('hidden');
-                        systemSelection.classList.remove('hidden');
-                        authContainer.classList.replace('max-w-md', 'max-w-lg');
-                        systemOptions.innerHTML = '';
+            if (userData) {
+                // Determine the role and save it to our global sessionRole variable
+                sessionRole = (userData.role || (userData.user && userData.user.role) || '').toLowerCase();
+                
+                loginForm.classList.add('hidden');
+                systemSelection.classList.remove('hidden');
+                authContainer.classList.replace('max-w-md', 'max-w-lg');
+                systemOptions.innerHTML = '';
 
-                        // Logic for Role-Based Buttons
-                        if (rawRole === 'admin') {
-                            systemOptions.appendChild(createBtn('Bar & Restaurant', 'bg-green-600 hover:bg-green-700', () => finalizeLogin(resA || userData, 'systemA')));
-                            systemOptions.appendChild(createBtn('Front Office & Housekeeping', 'bg-blue-600 hover:bg-blue-700', () => finalizeLogin(resB || userData, 'systemB')));
-                            // Added Housekeeping button for Admin
-                            systemOptions.appendChild(createBtn('Staff Management', 'bg-purple-600 hover:bg-purple-700', () => window.location.href = SYSTEM_LINKS.staff));
-                        } 
-                        else if (rawRole === 'bar' || rawRole === 'cashier') {
-                            systemOptions.appendChild(createBtn('Bar & Restaurant', 'bg-green-600 hover:bg-green-700', () => finalizeLogin(resA || userData, 'systemA')));
-                        } 
-                        else if (rawRole === 'housekeeping') {
-                            systemOptions.appendChild(createBtn('Front Office & Housekeeping', 'bg-blue-600 hover:bg-blue-700', () => finalizeLogin(resB || userData, 'systemB')));
-                            // Added Housekeeping button for Housekeeper
-                        } 
-                        else {
-                            errorMessage.textContent = 'Role not recognized. Contact admin.';
-                            errorMessage.classList.remove('hidden');
-                        }
-                    } else {
-                        errorMessage.textContent = 'Invalid credentials.';
-                        errorMessage.classList.remove('hidden');
-                    }
-                } catch (err) {
-                    errorMessage.textContent = 'Connection error.';
+                // Generate buttons based on the sessionRole
+                if (sessionRole === 'admin') {
+                    systemOptions.appendChild(createBtn('Bar & Restaurant', 'bg-green-600 hover:bg-green-700', () => finalizeLogin(resA || userData, 'systemA')));
+                    systemOptions.appendChild(createBtn('Front Office & Housekeeping', 'bg-blue-600 hover:bg-blue-700', () => finalizeLogin(resB || userData, 'systemB')));
+                    systemOptions.appendChild(createBtn('Staff Management', 'bg-purple-600 hover:bg-purple-700', () => finalizeLogin(userData, 'staff')));
+                } 
+                else if (sessionRole === 'bar' || sessionRole === 'cashier') {
+                    systemOptions.appendChild(createBtn('Bar & Restaurant', 'bg-green-600 hover:bg-green-700', () => finalizeLogin(resA || userData, 'systemA')));
+                } 
+                else if (sessionRole === 'housekeeping' || sessionRole === 'reception') {
+                    systemOptions.appendChild(createBtn('Front Office & Housekeeping', 'bg-blue-600 hover:bg-blue-700', () => finalizeLogin(resB || userData, 'systemB')));
+                } 
+                else {
+                    errorMessage.textContent = 'Role (' + sessionRole + ') not recognized. Contact admin.';
                     errorMessage.classList.remove('hidden');
-                } finally {
-                    loginButton.disabled = false;
-                    loginButton.textContent = 'Log In';
                 }
-            });
+            } else {
+                errorMessage.textContent = 'Invalid credentials.';
+                errorMessage.classList.remove('hidden');
+            }
+        } catch (err) {
+            console.error(err);
+            errorMessage.textContent = 'Connection error.';
+            errorMessage.classList.remove('hidden');
+        } finally {
+            loginButton.disabled = false;
+            loginButton.textContent = 'Log In';
+        }
+    });
 
-            document.getElementById('logout-button').onclick = () => location.reload();
-        });
+    document.getElementById('logout-button').onclick = () => {
+        localStorage.clear();
+        location.reload();
+    };
+});
     </script>
 </body>
 </html>
