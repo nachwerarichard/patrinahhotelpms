@@ -1356,16 +1356,20 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = '<p class="text-xs text-gray-500 px-2">No access.</p>';
     }
 
-    allowedModules.forEach(mod => {
-        const btn = document.createElement('a');
-        // Passing 'u' for username and 'p' for password in the URL
-        const secureUrl = `${mod.url}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}`;
-        
-        btn.href = secureUrl;
-        btn.className = `block w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105 ${mod.color}`;
-        btn.innerHTML = mod.label;
-        container.appendChild(btn);
-    });
+  allowedModules.forEach(mod => {
+    const btn = document.createElement('a');
+    
+    // btoa() converts the password into a URL-safe Base64 string
+    const encodedPass = btoa(password); 
+    
+    const secureUrl = `${mod.url}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(encodedPass)}`;
+    
+    btn.href = secureUrl;
+    btn.className = `block w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105 ${mod.color}`;
+    btn.innerHTML = mod.label;
+    container.appendChild(btn);
+});
+      
 })();
   </script>
 
