@@ -656,7 +656,8 @@
 
 <script src="script5.js"></script>
 <script>
-    (function() {
+(function() {
+    // 1. Configuration
     const SYSTEM_LINKS = {
         admin: [
             { label: 'Bar & Restaurant', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html', color: 'bg-green-600' },
@@ -668,77 +669,62 @@
         housekeeping: [{ label: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html', color: 'bg-blue-600' }]
     };
 
-    const role = localStorage.getItem('userRole') || 'staff'; 
-    const username = localStorage.getItem('username');
-    const password = localStorage.getItem('userPassword'); // NEW: Get saved password
+    // 2. Data Retrieval & Chain of Custody
+    const params = new URLSearchParams(window.location.search);
+    
+    // Grab from LocalStorage OR URL (if LocalStorage was cleared)
+    let user = localStorage.getItem('username') || params.get('u');
+    let pass = localStorage.getItem('userPassword') || params.get('p');
+    let role = localStorage.getItem('userRole') || params.get('r') || 'staff'; 
 
+    // 3. Persistence: Re-save immediately so the "next" hop has data
+    if (user) localStorage.setItem('username', user);
+    if (pass) localStorage.setItem('userPassword', pass);
+    if (role) localStorage.setItem('userRole', role.toLowerCase());
+
+    // 4. UI Generation
     const container = document.getElementById('hopper-options');
+    if (!container) return; // Guard clause if element doesn't exist yet
+
     const allowedModules = SYSTEM_LINKS[role.toLowerCase()] || [];
 
     if (allowedModules.length === 0) {
         container.innerHTML = '<p class="text-xs text-gray-500 px-2">No access.</p>';
+    } else {
+        container.innerHTML = ''; // Clear existing
+        allowedModules.forEach(mod => {
+            const btn = document.createElement('a');
+            // We ADD 'r' (role) to the URL so the next page knows what UI to show
+            const secureUrl = `${mod.url}?autoLogin=true&u=${encodeURIComponent(user)}&p=${encodeURIComponent(pass)}&r=${encodeURIComponent(role)}`;
+            
+            btn.href = secureUrl;
+            btn.className = `block w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105 mb-2 ${mod.color}`;
+            btn.innerHTML = mod.label;
+            container.appendChild(btn);
+        });
     }
 
-   // 1. Get credentials from Storage
-    let user = localStorage.getItem('username');
-    let pass = localStorage.getItem('userPassword');
-
-    // 2. BACKUP: If storage was cleared, look at the current URL
-    const params = new URLSearchParams(window.location.search);
-    if (!user) user = params.get('u');
-    if (!pass) pass = params.get('p');
-
-    // 3. RE-SAVE: Ensure they are back in storage for the next hop
-    if (user) localStorage.setItem('username', user);
-    if (pass) localStorage.setItem('userPassword', pass);
-
-    // ... inside your loop where you create buttons ...
-    allowedModules.forEach(mod => {
-        const btn = document.createElement('a');
-        
-        // Use encodeURIComponent to keep the plain text safe
-        const secureUrl = `${mod.url}?autoLogin=true&u=${encodeURIComponent(user)}&p=${encodeURIComponent(pass)}`;
-        
-        btn.href = secureUrl;
-        btn.className = `block w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105 ${mod.color}`;
-        btn.innerHTML = mod.label;
-        container.appendChild(btn);
-    });
-        
-})();
-</script>
-    
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const params = new URLSearchParams(window.location.search);
-    
-    if (params.get('autoLogin') === 'true') {
-        const u = params.get('u');
-        const p = params.get('p');
-
-        if (u && p) {
-            // IMPORTANT: Save them back to localStorage immediately 
-            // so the Switcher Widget on THIS page can see them!
-            localStorage.setItem('username', decodeURIComponent(u));
-            localStorage.setItem('userPassword', decodeURIComponent(p));
-
+    // 5. Auto-Login Logic (Receiver)
+    if (params.get('autoLogin') === 'true' && user && pass) {
+        window.addEventListener('load', () => {
             const usernameInput = document.getElementById('username');
             const passwordInput = document.getElementById('password');
             const loginBtn = document.querySelector('button[type="submit"]') || document.getElementById('login-button');
 
             if (usernameInput && passwordInput && loginBtn) {
-                usernameInput.value = decodeURIComponent(u);
-                passwordInput.value = decodeURIComponent(p);
+                usernameInput.value = decodeURIComponent(user);
+                passwordInput.value = decodeURIComponent(pass);
 
-                // Wait for any page-specific scripts to load, then click
+                // Clean URL bar so password isn't visible to shoulder-surfers
+                window.history.replaceState({}, document.title, window.location.pathname);
+
                 setTimeout(() => {
                     loginBtn.click();
                 }, 800);
             }
-        }
+        });
     }
-});
+})();
 </script>
 </body>
 </html>
