@@ -73,20 +73,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let sessionRole = ""; 
 
     const finalizeLogin = (systemData, systemKey) => {
-        const username = document.getElementById('username').value.trim();
-        const password = document.getElementById('password').value.trim();
-        
-        // Save to LocalStorage for the Hopper Widget to read later
-        localStorage.setItem('authToken', systemData.token);
-        localStorage.setItem('userPassword', password); // SAVE THE PASSWORD HERE
-        localStorage.setItem('username', username);
-        localStorage.setItem('userRole', sessionRole); // Uses the variable set during login
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    
+    // Save to LocalStorage
+    localStorage.setItem('authToken', systemData.token);
+    localStorage.setItem('userPassword', password);
+    localStorage.setItem('username', username);
+    localStorage.setItem('userRole', sessionRole); 
 
-        const targetUrl = SYSTEM_LINKS[systemKey];
-        // Redirect with credentials
-        window.location.replace(`${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}`);
-    };
-
+    const targetUrl = SYSTEM_LINKS[systemKey];
+    
+    // Added &r= parameter to pass the role to the first department
+    window.location.replace(`${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}&r=${encodeURIComponent(sessionRole)}`);
+};
     const createBtn = (label, color, onClickAction) => {
         const btn = document.createElement('button');
         btn.className = `w-full py-4 px-4 rounded-lg shadow-md text-white font-bold transition transform hover:scale-[1.02] ${color}`;
