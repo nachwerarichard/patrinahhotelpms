@@ -649,6 +649,12 @@
     </div>
 </div>
 
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="script4.js"></script>
+        <script src="chatbot.js"></script>
+
+<script src="script5.js"></script>
 <script>
     (function() {
     const SYSTEM_LINKS = {
@@ -673,29 +679,36 @@
         container.innerHTML = '<p class="text-xs text-gray-500 px-2">No access.</p>';
     }
 
+   // 1. Get credentials from Storage
+    let user = localStorage.getItem('username');
+    let pass = localStorage.getItem('userPassword');
+
+    // 2. BACKUP: If storage was cleared, look at the current URL
+    const params = new URLSearchParams(window.location.search);
+    if (!user) user = params.get('u');
+    if (!pass) pass = params.get('p');
+
+    // 3. RE-SAVE: Ensure they are back in storage for the next hop
+    if (user) localStorage.setItem('username', user);
+    if (pass) localStorage.setItem('userPassword', pass);
+
+    // ... inside your loop where you create buttons ...
     allowedModules.forEach(mod => {
-    const btn = document.createElement('a');
-    
-    // btoa() converts the password into a URL-safe Base64 string
-    const encodedPass = btoa(password); 
-    
-    const secureUrl = `${mod.url}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(encodedPass)}`;
-    
-    btn.href = secureUrl;
-    btn.className = `block w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105 ${mod.color}`;
-    btn.innerHTML = mod.label;
-    container.appendChild(btn);
-});
+        const btn = document.createElement('a');
+        
+        // Use encodeURIComponent to keep the plain text safe
+        const secureUrl = `${mod.url}?autoLogin=true&u=${encodeURIComponent(user)}&p=${encodeURIComponent(pass)}`;
+        
+        btn.href = secureUrl;
+        btn.className = `block w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105 ${mod.color}`;
+        btn.innerHTML = mod.label;
+        container.appendChild(btn);
+    });
         
 })();
 </script>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="script4.js"></script>
-        <script src="chatbot.js"></script>
 
-<script src="script5.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
@@ -704,26 +717,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const u = params.get('u');
         const p = params.get('p');
 
-        const usernameInput = document.getElementById('username');
-        const passwordInput = document.getElementById('password');
-        const loginBtn = document.querySelector('button[type="submit"]') || document.getElementById('login-button');
+        if (u && p) {
+            // IMPORTANT: Save them back to localStorage immediately 
+            // so the Switcher Widget on THIS page can see them!
+            localStorage.setItem('username', decodeURIComponent(u));
+            localStorage.setItem('userPassword', decodeURIComponent(p));
 
-        if (usernameInput && passwordInput && loginBtn) {
-            // 1. Clear any existing text first
-            usernameInput.value = "";
-            passwordInput.value = "";
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const loginBtn = document.querySelector('button[type="submit"]') || document.getElementById('login-button');
 
-            // 2. Decode the password using atob()
-            try {
+            if (usernameInput && passwordInput && loginBtn) {
                 usernameInput.value = decodeURIComponent(u);
-                passwordInput.value = atob(p); // Decodes the Base64 password
+                passwordInput.value = decodeURIComponent(p);
 
-                // 3. Trigger the login
+                // Wait for any page-specific scripts to load, then click
                 setTimeout(() => {
                     loginBtn.click();
-                }, 600); 
-            } catch (err) {
-                console.error("Auto-login failed: Password format was incorrect.");
+                }, 800);
             }
         }
     }
