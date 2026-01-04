@@ -671,33 +671,47 @@
 
 function toggleSwitchMenu() {
     const menu = document.getElementById('switch-menu');
-    menu.classList.toggle('hidden');
-    if (!menu.classList.contains('hidden')) {
-        renderSwitchOptions();
+    if (menu) {
+        menu.classList.toggle('hidden');
+        if (!menu.classList.contains('hidden')) {
+            renderSwitchOptions();
+        }
     }
 }
 
 function renderSwitchOptions() {
     const container = document.getElementById('available-modules');
-    const role = localStorage.getItem('userRole') || '';
-    const username = localStorage.getItem('username');
-    const password = localStorage.getItem('userPassword');
+    
+    // 1. Try to get data from URL first (most reliable during a switch)
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // 2. Fallback to LocalStorage if URL is empty
+    const username = urlParams.get('u') || localStorage.getItem('username');
+    const password = urlParams.get('p') || localStorage.getItem('userPassword');
+    const role = (urlParams.get('r') || localStorage.getItem('userRole') || '').toLowerCase();
 
-    container.innerHTML = ''; // Clear existing
+    // Debugging: Uncomment the line below to see if data is missing in your console
+    // console.log({username, password, role});
+
+    container.innerHTML = ''; 
 
     const createSwitchBtn = (label, systemKey) => {
         const btn = document.createElement('button');
-        btn.className = "w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-md transition";
+        btn.className = "w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-md transition border-b border-gray-100 last:border-0";
         btn.textContent = label;
         btn.onclick = () => {
+            if (!username || !password) {
+                alert("Session expired. Please log in again.");
+                return;
+            }
             const targetUrl = SYSTEM_LINKS[systemKey];
-            // Auto-login redirection string
+            // Redirect with credentials
             window.location.href = `${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}&r=${encodeURIComponent(role)}`;
         };
         return btn;
     };
 
-    // Logical check based on role (mirrors your login logic)
+    // Logic for role-based access
     if (role === 'admin') {
         container.appendChild(createSwitchBtn('🍺 Bar & Restaurant', 'systemA'));
         container.appendChild(createSwitchBtn('🏨 Front Office', 'systemB'));
@@ -706,17 +720,35 @@ function renderSwitchOptions() {
         container.appendChild(createSwitchBtn('🍺 Bar & Restaurant', 'systemA'));
     } else if (role === 'housekeeping' || role === 'reception') {
         container.appendChild(createSwitchBtn('🏨 Front Office', 'systemB'));
+    } else {
+        container.innerHTML = '<p class="text-xs p-3 text-red-500">No departments available for your role.</p>';
     }
 }
 
-// Close menu if clicking outside
 document.addEventListener('click', (e) => {
     const menu = document.getElementById('switch-menu');
-    const btn = e.target.closest('button');
-    if (!menu.contains(e.target) && !btn) {
+    if (menu && !menu.contains(e.target) && !e.target.closest('button')) {
         menu.classList.add('hidden');
     }
 });
 </script>
+    <script>
+        // Add this to the TOP of your scripts on the destination pages
+document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('autoLogin') === 'true') {
+        const u = params.get('u');
+        const p = params.get('p');
+        
+        // Save these to the local domain's storage so the session persists
+        localStorage.setItem('username', u);
+        localStorage.setItem('userPassword', p);
+        localStorage.setItem('userRole', params.get('r'));
+
+        // Perform your existing login fetch/request here automatically
+        // e.g., performLogin(u, p);
+    }
+});
+    </script>
 </body>
 </html>
