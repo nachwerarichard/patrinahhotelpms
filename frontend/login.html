@@ -123,7 +123,7 @@
                         // Logic for Role-Based Buttons
                         if (rawRole === 'admin') {
                             systemOptions.appendChild(createBtn('Bar & Restaurant', 'bg-green-600 hover:bg-green-700', () => finalizeLogin(resA || userData, 'systemA')));
-                            systemOptions.appendChild(createBtn('Front Office $ Housekeeping', 'bg-blue-600 hover:bg-blue-700', () => finalizeLogin(resB || userData, 'systemB')));
+                            systemOptions.appendChild(createBtn('Front Office & Housekeeping', 'bg-blue-600 hover:bg-blue-700', () => finalizeLogin(resB || userData, 'systemB')));
                             // Added Housekeeping button for Admin
                             systemOptions.appendChild(createBtn('Staff Management', 'bg-purple-600 hover:bg-purple-700', () => window.location.href = SYSTEM_LINKS.staff));
                         } 
@@ -131,7 +131,7 @@
                             systemOptions.appendChild(createBtn('Bar & Restaurant', 'bg-green-600 hover:bg-green-700', () => finalizeLogin(resA || userData, 'systemA')));
                         } 
                         else if (rawRole === 'housekeeping') {
-                            systemOptions.appendChild(createBtn('Front Office & HK', 'bg-blue-600 hover:bg-blue-700', () => finalizeLogin(resB || userData, 'systemB')));
+                            systemOptions.appendChild(createBtn('Front Office & Housekeeping', 'bg-blue-600 hover:bg-blue-700', () => finalizeLogin(resB || userData, 'systemB')));
                             // Added Housekeeping button for Housekeeper
                         } 
                         else {
