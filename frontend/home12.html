@@ -7,7 +7,13 @@
     <link rel="stylesheet" href="styles4.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
     <style>
+        @keyframes bounce-in {
+        0% { transform: scale(0.9); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-bounce-in { animation: bounce-in 0.2s ease-out forwards; }
         .hidden{display:none;}
     </style>
 </head>
@@ -636,18 +642,18 @@
     </div>
 </div>
 
-    <div id="system-hopper" class="fixed left-0 top-1/2 -translate-y-1/2 z-[9999] flex items-center group">
-    <button class="bg-indigo-600 text-white p-3 rounded-r-xl shadow-lg hover:bg-indigo-700 transition-all duration-300 flex items-center gap-2">
-        <span class="text-xl">🚀</span>
-        <span class="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-500 whitespace-nowrap font-medium">Switch Department</span>
+<div class="fixed bottom-6 right-6 z-50">
+    <button onclick="toggleSwitchMenu()" class="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-110">
+        <span class="text-2xl">🔄</span>
     </button>
-
-    <div class="absolute left-[-300px] group-hover:left-0 transition-all duration-500 bg-white shadow-2xl rounded-r-2xl p-4 border border-gray-200 min-w-[220px] ml-12">
-        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">Available Modules</h3>
-        <div id="hopper-options" class="space-y-2">
+    
+    <div id="switch-menu" class="hidden absolute bottom-16 right-0 w-64 bg-white rounded-lg shadow-2xl border border-gray-200 p-2 animate-bounce-in">
+        <p class="text-xs font-bold text-gray-500 px-3 py-2 uppercase">Switch Department</p>
+        <div id="available-modules" class="space-y-1">
             </div>
     </div>
 </div>
+
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
@@ -655,74 +661,62 @@
         <script src="chatbot.js"></script>
 
 <script src="script5.js"></script>
-    <script>
-(function() {
-    // 1. CONFIGURATION
+
+<script>
     const SYSTEM_LINKS = {
-        admin: [
-            { label: 'Bar & Restaurant', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html', color: 'bg-green-600' },
-            { label: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html', color: 'bg-blue-600' },
-            { label: 'Staff Portal', url: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html', color: 'bg-purple-600' }
-        ],
-        bar: [{ label: 'Bar & Restaurant', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html', color: 'bg-green-600' }],
-        cashier: [{ label: 'Bar & Restaurant', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html', color: 'bg-green-600' }],
-        housekeeping: [{ label: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html', color: 'bg-blue-600' }],
-        reception: [{ label: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html', color: 'bg-blue-600' }]
+    systemA: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html',
+    systemB: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html',
+    staff: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html',
+};
+
+function toggleSwitchMenu() {
+    const menu = document.getElementById('switch-menu');
+    menu.classList.toggle('hidden');
+    if (!menu.classList.contains('hidden')) {
+        renderSwitchOptions();
+    }
+}
+
+function renderSwitchOptions() {
+    const container = document.getElementById('available-modules');
+    const role = localStorage.getItem('userRole') || '';
+    const username = localStorage.getItem('username');
+    const password = localStorage.getItem('userPassword');
+
+    container.innerHTML = ''; // Clear existing
+
+    const createSwitchBtn = (label, systemKey) => {
+        const btn = document.createElement('button');
+        btn.className = "w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-md transition";
+        btn.textContent = label;
+        btn.onclick = () => {
+            const targetUrl = SYSTEM_LINKS[systemKey];
+            // Auto-login redirection string
+            window.location.href = `${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}&r=${encodeURIComponent(role)}`;
+        };
+        return btn;
     };
 
-    // 2. DATA RECOVERY (The "Chain of Custody")
-    const params = new URLSearchParams(window.location.search);
-    
-    // Try to get data from URL first, then LocalStorage
-    let user = params.get('u') || localStorage.getItem('username');
-    let pass = params.get('p') || localStorage.getItem('userPassword');
-    let role = params.get('r') || localStorage.getItem('userRole') || 'staff';
-
-    // 3. PERSISTENCE: Save back to LocalStorage immediately
-    if (user) localStorage.setItem('username', user);
-    if (pass) localStorage.setItem('userPassword', pass);
-    if (role) localStorage.setItem('userRole', role.toLowerCase());
-
-    // 4. GENERATE SIDEBAR BUTTONS
-    const container = document.getElementById('hopper-options');
-    if (container) {
-        const allowedModules = SYSTEM_LINKS[role.toLowerCase()] || [];
-        container.innerHTML = ''; // Clear existing
-
-        allowedModules.forEach(mod => {
-            const btn = document.createElement('a');
-            // We pass u, p, and r so the NEXT page has everything it needs
-            const secureUrl = `${mod.url}?autoLogin=true&u=${encodeURIComponent(user)}&p=${encodeURIComponent(pass)}&r=${encodeURIComponent(role)}`;
-            
-            btn.href = secureUrl;
-            btn.className = `block w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105 mb-2 text-center ${mod.color}`;
-            btn.innerHTML = mod.label;
-            container.appendChild(btn);
-        });
+    // Logical check based on role (mirrors your login logic)
+    if (role === 'admin') {
+        container.appendChild(createSwitchBtn('🍺 Bar & Restaurant', 'systemA'));
+        container.appendChild(createSwitchBtn('🏨 Front Office', 'systemB'));
+        container.appendChild(createSwitchBtn('👥 Staff Management', 'staff'));
+    } else if (role === 'bar' || role === 'cashier') {
+        container.appendChild(createSwitchBtn('🍺 Bar & Restaurant', 'systemA'));
+    } else if (role === 'housekeeping' || role === 'reception') {
+        container.appendChild(createSwitchBtn('🏨 Front Office', 'systemB'));
     }
+}
 
-    // 5. AUTO-LOGIN EXECUTION
-    if (params.get('autoLogin') === 'true' && user && pass) {
-        // Wait for page to be fully ready
-        window.addEventListener('load', () => {
-            const usernameInput = document.getElementById('username');
-            const passwordInput = document.getElementById('password');
-            const loginBtn = document.querySelector('button[type="submit"]') || document.getElementById('login-button');
-
-            if (usernameInput && passwordInput && loginBtn) {
-                usernameInput.value = decodeURIComponent(user);
-                passwordInput.value = decodeURIComponent(pass);
-
-                // Clean the URL for security
-                window.history.replaceState({}, document.title, window.location.pathname);
-
-                setTimeout(() => {
-                    loginBtn.click();
-                }, 800);
-            }
-        });
+// Close menu if clicking outside
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('switch-menu');
+    const btn = e.target.closest('button');
+    if (!menu.contains(e.target) && !btn) {
+        menu.classList.add('hidden');
     }
-})();
+});
 </script>
 </body>
 </html>
