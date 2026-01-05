@@ -1174,18 +1174,15 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
   </div>
 </div>
 
-  <div class="fixed bottom-12 left-12 z-50">
-    <button onclick="toggleSwitchMenu()" class="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-110">
-        <span class="text-2xl">🔄</span>
+<div class="fixed bottom-12 left-[20%] z-50 flex items-center justify-center w-16 h-16">
+    
+    <button onclick="toggleSwitchMenu()" id="main-switch-btn" class="relative z-50 bg-indigo-600 hover:bg-indigo-700 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all transform active:scale-95">
+        <span class="text-2xl transition-transform duration-300" id="menu-icon">🔄</span>
     </button>
     
-    <div id="switch-menu" class="hidden absolute bottom-16 right-0 w-64 bg-white rounded-lg shadow-2xl border border-gray-200 p-2 animate-bounce-in">
-        <p class="text-xs font-bold text-gray-500 px-3 py-2 uppercase">Switch Department</p>
-        <div id="available-modules" class="space-y-1">
-            </div>
-    </div>
+    <div id="available-modules" class="absolute inset-0 flex items-center justify-center">
+        </div>
 </div>
-
 
   <script src="script12.js" defer></script>
 
@@ -1311,73 +1308,81 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
 
 <script>
     const SYSTEM_LINKS = {
-    systemA: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html',
-    systemB: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html',
-    staff: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html',
+    systemA: { label: '🍺', full: 'Bar', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html' },
+    systemB: { label: '🏨', full: 'Front', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html' },
+    staff: { label: '👥', full: 'Staff', url: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html' }
 };
 
 function toggleSwitchMenu() {
-    const menu = document.getElementById('switch-menu');
-    if (menu) {
-        menu.classList.toggle('hidden');
-        if (!menu.classList.contains('hidden')) {
-            renderSwitchOptions();
-        }
+    const container = document.getElementById('available-modules');
+    const icon = document.getElementById('menu-icon');
+    
+    // Toggle active state
+    const isActive = container.classList.toggle('is-active');
+    icon.style.transform = isActive ? 'rotate(180deg)' : 'rotate(0deg)';
+
+    if (isActive) {
+        renderRadialOptions();
+    } else {
+        const btns = container.querySelectorAll('.radial-btn');
+        btns.forEach(btn => btn.classList.remove('show'));
+        // Clean up after animation
+        setTimeout(() => { if(!container.classList.contains('is-active')) container.innerHTML = ''; }, 400);
     }
 }
 
-function renderSwitchOptions() {
+function renderRadialOptions() {
     const container = document.getElementById('available-modules');
+    const role = (localStorage.getItem('userRole') || '').toLowerCase();
     
-    // 1. Try to get data from URL first (most reliable during a switch)
-    const urlParams = new URLSearchParams(window.location.search);
-    
-    // 2. Fallback to LocalStorage if URL is empty
-    const username = urlParams.get('u') || localStorage.getItem('username');
-    const password = urlParams.get('p') || localStorage.getItem('userPassword');
-    const role = (urlParams.get('r') || localStorage.getItem('userRole') || '').toLowerCase();
-
-    // Debugging: Uncomment the line below to see if data is missing in your console
-    // console.log({username, password, role});
-
     container.innerHTML = ''; 
 
-    const createSwitchBtn = (label, systemKey) => {
-        const btn = document.createElement('button');
-        btn.className = "w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-md transition border-b border-gray-100 last:border-0";
-        btn.textContent = label;
-        btn.onclick = () => {
-            if (!username || !password) {
-                alert("Session expired. Please log in again.");
-                return;
-            }
-            const targetUrl = SYSTEM_LINKS[systemKey];
-            // Redirect with credentials
-            window.location.href = `${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}&r=${encodeURIComponent(role)}`;
-        };
-        return btn;
-    };
-
-    // Logic for role-based access
+    let modulesToShow = [];
     if (role === 'admin') {
-        container.appendChild(createSwitchBtn('🍺 Bar & Restaurant', 'systemA'));
-        container.appendChild(createSwitchBtn('🏨 Front Office', 'systemB'));
-        container.appendChild(createSwitchBtn('👥 Staff Management', 'staff'));
-    } else if (role === 'bar' || role === 'cashier') {
-        container.appendChild(createSwitchBtn('🍺 Bar & Restaurant', 'systemA'));
-    } else if (role === 'housekeeping' || role === 'reception') {
-        container.appendChild(createSwitchBtn('🏨 Front Office', 'systemB'));
-    } else {
-        container.innerHTML = '<p class="text-xs p-3 text-red-500">No departments available for your role.</p>';
+        modulesToShow = [SYSTEM_LINKS.systemA, SYSTEM_LINKS.systemB, SYSTEM_LINKS.staff];
+    } else if (['bar', 'cashier'].includes(role)) {
+        modulesToShow = [SYSTEM_LINKS.systemA];
+    } else if (['housekeeping', 'reception'].includes(role)) {
+        modulesToShow = [SYSTEM_LINKS.systemB];
     }
-}
 
-document.addEventListener('click', (e) => {
-    const menu = document.getElementById('switch-menu');
-    if (menu && !menu.contains(e.target) && !e.target.closest('button')) {
-        menu.classList.add('hidden');
-    }
-});
+    // NEW POSITIONS: Moving RIGHT and UP
+    const positions = [
+        { x: '90px',  y: '0px' },    // Directly Right
+        { x: '70px',  y: '-70px' },  // Diagonal Top-Right
+        { x: '0px',   y: '-90px' }   // Directly Above
+    ];
+
+    modulesToShow.forEach((mod, index) => {
+        const btn = document.createElement('button');
+        // Added a tooltip label for better UX since they are icons
+        btn.className = "radial-btn bg-white hover:bg-indigo-600 hover:text-white text-indigo-600 w-12 h-12 rounded-full shadow-lg flex flex-col items-center justify-center border border-gray-200 group";
+        
+        btn.innerHTML = `
+            <span class="text-xl">${mod.label}</span>
+            <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all bg-gray-800 text-white text-[10px] px-2 py-1 rounded shadow-xl">
+                ${mod.full}
+            </span>
+        `;
+
+        const pos = positions[index] || { x: '0px', y: '0px' };
+        btn.style.setProperty('--tw-translate-x', pos.x);
+        btn.style.setProperty('--tw-translate-y', pos.y);
+
+        btn.onclick = () => {
+            const u = localStorage.getItem('username');
+            const p = localStorage.getItem('userPassword');
+            window.location.href = `${mod.url}?autoLogin=true&u=${u}&p=${p}&r=${role}`;
+        };
+
+        container.appendChild(btn);
+        
+        requestAnimationFrame(() => {
+            setTimeout(() => btn.classList.add('show'), index * 50);
+        });
+    });
+}
+    
 </script>
     <script>
         // Add this to the TOP of your scripts on the destination pages
@@ -1397,7 +1402,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
     </script>
-
  
 </body>
 </html>
