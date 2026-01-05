@@ -63,9 +63,7 @@
         const user = urlParams.get('u');
         const pass = urlParams.get('p');
         
-        localStorage.clear();
-        sessionStorage.clear();
-
+        
         const userField = document.querySelector('input[type="text"]') || document.getElementById('username');
         const passField = document.querySelector('input[type="password"]') || document.getElementById('password');
         const loginBtn = document.querySelector('button[type="submit"]') || document.getElementById('login-button');
