@@ -658,7 +658,7 @@
     </div>
 </div>
 
-<div class="fixed top-12 right-12 z-50 flex items-center justify-center w-16 h-16">
+<div class="fixed bottom-12 left-[30%] z-50 flex items-center justify-center w-16 h-16">
     
     <button onclick="toggleSwitchMenu()" id="main-switch-btn" class="relative z-50 bg-indigo-600 hover:bg-indigo-700 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all transform active:scale-95">
         <span class="text-2xl transition-transform duration-300" id="menu-icon">🔄</span>
@@ -667,7 +667,6 @@
     <div id="available-modules" class="absolute inset-0 flex items-center justify-center">
         </div>
 </div>
-
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
@@ -707,7 +706,6 @@ function renderRadialOptions() {
     
     container.innerHTML = ''; 
 
-    // Define which modules to show
     let modulesToShow = [];
     if (role === 'admin') {
         modulesToShow = [SYSTEM_LINKS.systemA, SYSTEM_LINKS.systemB, SYSTEM_LINKS.staff];
@@ -717,21 +715,25 @@ function renderRadialOptions() {
         modulesToShow = [SYSTEM_LINKS.systemB];
     }
 
-    // Coordinates for the "arc" (x, y) relative to the center
-    // We use negative values to move Left and Up from the bottom-right corner
+    // NEW POSITIONS: Moving RIGHT and UP
     const positions = [
-        { x: '-90px', y: '0px' },    // Left
-        { x: '-70px', y: '-70px' },  // Diagonal Top-Left
+        { x: '90px',  y: '0px' },    // Directly Right
+        { x: '70px',  y: '-70px' },  // Diagonal Top-Right
         { x: '0px',   y: '-90px' }   // Directly Above
     ];
 
     modulesToShow.forEach((mod, index) => {
         const btn = document.createElement('button');
-        btn.className = "radial-btn bg-white hover:bg-indigo-600 hover:text-white text-indigo-600 w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-xl border border-gray-200";
-        btn.innerHTML = mod.label;
-        btn.title = mod.full;
+        // Added a tooltip label for better UX since they are icons
+        btn.className = "radial-btn bg-white hover:bg-indigo-600 hover:text-white text-indigo-600 w-12 h-12 rounded-full shadow-lg flex flex-col items-center justify-center border border-gray-200 group";
+        
+        btn.innerHTML = `
+            <span class="text-xl">${mod.label}</span>
+            <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all bg-gray-800 text-white text-[10px] px-2 py-1 rounded shadow-xl">
+                ${mod.full}
+            </span>
+        `;
 
-        // Apply the specific position from our array
         const pos = positions[index] || { x: '0px', y: '0px' };
         btn.style.setProperty('--tw-translate-x', pos.x);
         btn.style.setProperty('--tw-translate-y', pos.y);
@@ -744,12 +746,12 @@ function renderRadialOptions() {
 
         container.appendChild(btn);
         
-        // Trigger the animation in the next frame
         requestAnimationFrame(() => {
             setTimeout(() => btn.classList.add('show'), index * 50);
         });
     });
 }
+    
 </script>
     <script>
         // Add this to the TOP of your scripts on the destination pages
