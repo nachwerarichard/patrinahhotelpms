@@ -8,23 +8,22 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
-    <style>
-        .radial-btn {
+    
+<style>
+    .radial-btn {
         position: absolute;
-        transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        z-index: 40;
         opacity: 0;
-        transform: scale(0) translate(0, 0);
         pointer-events: none;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transform: translate(0, 0) scale(0.5);
     }
 
+    /* This class is added via JS to trigger the "pop out" */
     .radial-btn.show {
         opacity: 1;
         pointer-events: auto;
-        /* --distance and --angle are set via JS */
-        transform: scale(1) translate(
-            calc(cos(var(--angle)) * var(--distance)),
-            calc(sin(var(--angle)) * var(--distance))
-        );
+        transform: translate(var(--tw-translate-x), var(--tw-translate-y)) scale(1);
     }
         @keyframes bounce-in {
         0% { transform: scale(0.9); opacity: 0; }
@@ -659,12 +658,13 @@
     </div>
 </div>
 
-<div class="fixed bottom-12 left-92 z-50">
-    <button onclick="toggleSwitchMenu()" id="main-switch-btn" class="relative z-50 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-110 active:scale-95">
+<div class="fixed bottom-12 right-12 z-50 flex items-center justify-center w-16 h-16">
+    
+    <button onclick="toggleSwitchMenu()" id="main-switch-btn" class="relative z-50 bg-indigo-600 hover:bg-indigo-700 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all transform active:scale-95">
         <span class="text-2xl transition-transform duration-300" id="menu-icon">🔄</span>
     </button>
     
-    <div id="available-modules" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+    <div id="available-modules" class="absolute inset-0 flex items-center justify-center">
         </div>
 </div>
 
@@ -678,92 +678,78 @@
 
 <script>
     const SYSTEM_LINKS = {
-    systemA: { label: '🍺', full: 'Bar', key: 'systemA' },
-    systemB: { label: '🏨', full: 'Front', key: 'systemB' },
-    staff: { label: '👥', full: 'Staff', key: 'staff' },
+    systemA: { label: '🍺', full: 'Bar', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html' },
+    systemB: { label: '🏨', full: 'Front', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html' },
+    staff: { label: '👥', full: 'Staff', url: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html' }
 };
 
 function toggleSwitchMenu() {
     const container = document.getElementById('available-modules');
     const icon = document.getElementById('menu-icon');
-    const isOpening = container.classList.toggle('active');
+    
+    // Toggle active state
+    const isActive = container.classList.toggle('is-active');
+    icon.style.transform = isActive ? 'rotate(180deg)' : 'rotate(0deg)';
 
-    // Rotate the main icon
-    icon.style.transform = isOpening ? 'rotate(180deg)' : 'rotate(0deg)';
-
-    if (isOpening) {
+    if (isActive) {
         renderRadialOptions();
     } else {
-        // Hide all buttons
         const btns = container.querySelectorAll('.radial-btn');
         btns.forEach(btn => btn.classList.remove('show'));
+        // Clean up after animation
+        setTimeout(() => { if(!container.classList.contains('is-active')) container.innerHTML = ''; }, 400);
     }
 }
 
 function renderRadialOptions() {
     const container = document.getElementById('available-modules');
-    const urlParams = new URLSearchParams(window.location.search);
-    const username = urlParams.get('u') || localStorage.getItem('username');
-    const password = urlParams.get('p') || localStorage.getItem('userPassword');
-    const role = (urlParams.get('r') || localStorage.getItem('userRole') || '').toLowerCase();
-
+    const role = (localStorage.getItem('userRole') || '').toLowerCase();
+    
     container.innerHTML = ''; 
 
-    // Determine which buttons to show based on role
-    let activeModules = [];
+    // Define which modules to show
+    let modulesToShow = [];
     if (role === 'admin') {
-        activeModules = [SYSTEM_LINKS.systemA, SYSTEM_LINKS.systemB, SYSTEM_LINKS.staff];
-    } else if (role === 'bar' || role === 'cashier') {
-        activeModules = [SYSTEM_LINKS.systemA];
-    } else if (role === 'housekeeping' || role === 'reception') {
-        activeModules = [SYSTEM_LINKS.systemB];
+        modulesToShow = [SYSTEM_LINKS.systemA, SYSTEM_LINKS.systemB, SYSTEM_LINKS.staff];
+    } else if (['bar', 'cashier'].includes(role)) {
+        modulesToShow = [SYSTEM_LINKS.systemA];
+    } else if (['housekeeping', 'reception'].includes(role)) {
+        modulesToShow = [SYSTEM_LINKS.systemB];
     }
 
-    const total = activeModules.length;
-    const distance = 100; // Distance in pixels from center
-    
-    // Spread buttons between 190 and 260 degrees (Top-Left quadrant)
-    const startAngle = 190;
-    const endAngle = 260;
-    const step = total > 1 ? (endAngle - startAngle) / (total - 1) : 0;
+    // Coordinates for the "arc" (x, y) relative to the center
+    // We use negative values to move Left and Up from the bottom-right corner
+    const positions = [
+        { x: '-90px', y: '0px' },    // Left
+        { x: '-70px', y: '-70px' },  // Diagonal Top-Left
+        { x: '0px',   y: '-90px' }   // Directly Above
+    ];
 
-    activeModules.forEach((mod, index) => {
+    modulesToShow.forEach((mod, index) => {
         const btn = document.createElement('button');
-        const angleDeg = startAngle + (step * index);
-        const angleRad = angleDeg * (Math.PI / 180);
-
-        btn.className = "radial-btn bg-white hover:bg-indigo-600 hover:text-white text-indigo-600 w-12 h-12 rounded-full shadow-xl flex items-center justify-center text-xl border-2 border-indigo-500";
+        btn.className = "radial-btn bg-white hover:bg-indigo-600 hover:text-white text-indigo-600 w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-xl border border-gray-200";
         btn.innerHTML = mod.label;
         btn.title = mod.full;
-        
-        // Set custom properties for the CSS calc()
-        btn.style.setProperty('--angle', `${angleRad}rad`);
-        btn.style.setProperty('--distance', `${distance}px`);
+
+        // Apply the specific position from our array
+        const pos = positions[index] || { x: '0px', y: '0px' };
+        btn.style.setProperty('--tw-translate-x', pos.x);
+        btn.style.setProperty('--tw-translate-y', pos.y);
 
         btn.onclick = () => {
-            if (!username || !password) {
-                alert("Session expired.");
-                return;
-            }
-            const targetUrl = 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html'; // Or map back to your SYSTEM_LINKS
-            window.location.href = `${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}&r=${encodeURIComponent(role)}`;
+            const u = localStorage.getItem('username');
+            const p = localStorage.getItem('userPassword');
+            window.location.href = `${mod.url}?autoLogin=true&u=${u}&p=${p}&r=${role}`;
         };
 
         container.appendChild(btn);
         
-        // Small timeout to trigger the animation
-        setTimeout(() => btn.classList.add('show'), index * 50);
+        // Trigger the animation in the next frame
+        requestAnimationFrame(() => {
+            setTimeout(() => btn.classList.add('show'), index * 50);
+        });
     });
 }
-
-// Close menu if clicked outside
-document.addEventListener('click', (e) => {
-    const container = document.getElementById('available-modules');
-    const mainBtn = document.getElementById('main-switch-btn');
-    if (container.classList.contains('active') && !mainBtn.contains(e.target)) {
-        toggleSwitchMenu();
-    }
-});
 </script>
     <script>
         // Add this to the TOP of your scripts on the destination pages
