@@ -604,6 +604,7 @@ if (!pageInfoSpan) {
             // Conditionally render buttons based on the user's role
             if (currentUserRole === 'admin') {
                 actionButtonsHtml = `
+                    <button class="btn btn-danger btn-sm" onclick="confirDeleteBooking('${booking.id}')">Check In</button>
                     <button class="btn btn-primary btn-sm" onclick="editBooking('${booking.id}')">Edit</button>
                     <button class="btn btn-danger btn-sm" onclick="confirmDeleteBooking('${booking.id}')">Delete</button>
                     <button class="btn btn-success btn-sm" onclick="checkoutBooking('${booking.id}')" ${isCheckedOut ? 'disabled' : ''}>Check-out</button>
