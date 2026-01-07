@@ -1602,29 +1602,27 @@ async function generateReport() {
             fetch(`${API_BASE_URL}/bookings/all`),
             fetch(`${API_BASE_URL}/rooms`)
         ]);
-
-        if (!bookingsResponse.ok || !roomsResponse.ok)
-            throw new Error('Failed to fetch data');
-
         allBookings = await bookingsResponse.json();
         rooms = await roomsResponse.json();
     } catch (error) {
-        console.error('Error fetching report data:', error);
-        showMessageBox('Error', 'Failed to load bookings or rooms.', true);
+        showMessageBox('Error', 'Failed to load report data.', true);
         return;
     }
 
     const selectedDate = new Date(selectedDateStr);
     selectedDate.setHours(0, 0, 0, 0);
 
-    let totalRoomRevenue = 0;
-    let totalRoomBalance = 0;
-    let guestsCheckedIn = 0;
+    // Initialization
+    let stats = {
+        revenue: 0, balance: 0, checkedIn: 0, 
+        reserved: 0, cancelled: 0, noShows: 0,
+        cash: 0, momo: 0, bank: 0
+    };
     const roomTypeCounts = {};
     reportData = [];
 
     const tbody = document.querySelector('#roomRevenueTable tbody');
-    tbody.innerHTML = ''; // Clear previous
+    tbody.innerHTML = ''; 
 
     allBookings.forEach(booking => {
         const checkIn = new Date(booking.checkIn);
@@ -1632,124 +1630,130 @@ async function generateReport() {
         checkIn.setHours(0, 0, 0, 0);
         checkOut.setHours(0, 0, 0, 0);
 
-        if (selectedDate >= checkIn && selectedDate < checkOut) {
+        // Date Filtering Logic
+        if (selectedDate >= checkIn && selectedDate <= checkOut) {
             const room = rooms.find(r => r.number === booking.room);
             const roomType = room ? room.type : 'Unknown';
-            const roomRevenue = booking.totalDue || 0;
-            const roomBalance = booking.balance || 0;
+            const revenue = parseFloat(booking.totalDue) || 0;
+            const balance = parseFloat(booking.paymentbalance) || 0; // Fixed to match your previous property name
 
-            totalRoomRevenue += roomRevenue;
-            totalRoomBalance += roomBalance;
-            guestsCheckedIn += booking.people;
+            // 1. Financial Stats
+            stats.revenue += revenue;
+            stats.balance += balance;
+
+            // 2. Status Counts
+            const status = (booking.gueststatus || '').toLowerCase();
+            if (status === 'checked in' || booking.checkedIn) stats.checkedIn++;
+            else if (status === 'cancelled') stats.cancelled++;
+            else if (status === 'no show') stats.noShows++;
+            else stats.reserved++;
+
+            // 3. Payment Method Breakdown (Assuming you store paymentMethod in booking)
+            const method = (booking.paymentMethod || '').toLowerCase();
+            if (method === 'cash') stats.cash += revenue;
+            else if (method === 'mobile money' || method === 'momo') stats.momo += revenue;
+            else if (method === 'bank') stats.bank += revenue;
 
             if (roomType) {
                 roomTypeCounts[roomType] = (roomTypeCounts[roomType] || 0) + 1;
             }
 
-            const guestNames = booking.name || 'N/A';
-
-            // Append to table
+            // Append Row to Table
             const tr = document.createElement('tr');
+            tr.className = "border-b border-gray-200 hover:bg-gray-100";
             tr.innerHTML = `
-                <td>${booking.room}</td>
-                <td>${roomType}</td>
-                <td>${guestNames}</td>
-                <td>${roomRevenue.toFixed(2)}</td>
+                <td class="py-3 px-6">${booking.room}</td>
+                <td class="py-3 px-6">${roomType}</td>
+                <td class="py-3 px-6">${booking.name}</td>
+                <td class="py-3 px-6 font-semibold">${revenue.toFixed(2)}</td>
             `;
             tbody.appendChild(tr);
 
-            // Store for export
             reportData.push({
-                'Room Number': booking.room,
-                'Room Type': roomType,
-                'Guest Names': guestNames,
-                'Revenue': roomRevenue
+                'Room': booking.room,
+                'Type': roomType,
+                'Guest': booking.name,
+                'Revenue': revenue.toFixed(2)
             });
         }
     });
 
-    let mostBookedRoomType = 'N/A';
-    let maxCount = 0;
-    for (const type in roomTypeCounts) {
-        if (roomTypeCounts[type] > maxCount) {
-            maxCount = roomTypeCounts[type];
-            mostBookedRoomType = type;
-        }
-    }
+    // Calculate Most Booked
+    let mostBookedRoomType = Object.keys(roomTypeCounts).reduce((a, b) => roomTypeCounts[a] > roomTypeCounts[b] ? a : b, 'N/A');
 
-    reportSummary = {
-    Date: selectedDateStr,
-    'Total Room Revenue': totalRoomRevenue.toFixed(2),
-    'Total Room Balance': totalRoomBalance.toFixed(2),
-    'Guests Checked In': guestsCheckedIn,
-    'Most Booked Room Type': mostBookedRoomType,
-    'Guests Reserved': guestsCheckedIn,
-    'No Shows': guestsCheckedIn,
-};
-
-
-    document.getElementById('totalAmountReport').textContent = totalRoomRevenue.toFixed(2);
-    document.getElementById('totalBalanceReport').textContent = totalRoomBalance.toFixed(2);
+    // Update UI Summary
+    document.getElementById('totalAmountReport').textContent = stats.revenue.toFixed(2);
+    document.getElementById('totalBalanceReport').textContent = stats.balance.toFixed(2);
     document.getElementById('mostBookedRoomType').textContent = mostBookedRoomType;
-    document.getElementById('guestsCheckedIn').textContent = guestsCheckedIn;
+    
+    document.getElementById('reportCheckedIn').textContent = stats.checkedIn;
+    document.getElementById('reportReserved').textContent = stats.reserved;
+    document.getElementById('reportCancelled').textContent = stats.cancelled;
+    document.getElementById('reportNoShows').textContent = stats.noShows;
+
+    // Update Payment Breakdown
+    document.getElementById('cashRevenue').textContent = stats.cash.toFixed(2);
+    document.getElementById('momoRevenue').textContent = stats.momo.toFixed(2);
+    document.getElementById('bankRevenue').textContent = stats.bank.toFixed(2);
+    document.getElementById('totalCollected').textContent = (stats.cash + stats.momo + stats.bank).toFixed(2);
 }
 
 let reportSummary = {};  // Object holding summary info
 
 function exportReport() {
-    // Check 1: Ensure data exists
-    if (reportData.length === 0) {
+    // 1. Check if data exists
+    if (!reportData || reportData.length === 0) {
         showMessageBox('Info', 'Please generate the report before exporting.', true);
         return;
     }
 
-    const headers = Object.keys(reportData[0]);
-    const worksheet = XLSX.utils.json_to_sheet(reportData, { header: headers });
+    // 2. Prepare the main worksheet from the room-by-room table
+    const worksheet = XLSX.utils.json_to_sheet(reportData);
 
-    // Count of data rows (including header row)
-    const dataRowCount = reportData.length + 1;
+    // 3. Define the Summary Data from our reportSummary object
+    // We create a "Header Section" to appear at the very top of the Excel file
+    const headerInfo = [
+        ["DAILY REVENUE REPORT"],
+        ["Date:", reportSummary.Date || reportDateInput.value],
+        [""], // Blank line
+        ["SUMMARY STATISTICS"],
+        ["Total Revenue", reportSummary['Total Room Revenue']],
+        ["Total Balance Outstanding", reportSummary['Total Room Balance']],
+        ["Most Booked Room Type", reportSummary['Most Booked Room Type']],
+        ["Guests Checked In", reportSummary['Guests Checked In']],
+        ["Guests Reserved", reportSummary['Guests Reserved']],
+        ["Guests Cancelled", reportSummary['Guests Cancelled']],
+        ["No Shows", reportSummary['No Shows']],
+        [""], // Blank line
+        ["PAYMENT BREAKDOWN"],
+        ["Cash", document.getElementById('cashRevenue').textContent],
+        ["Mobile Money", document.getElementById('momoRevenue').textContent],
+        ["Bank", document.getElementById('bankRevenue').textContent],
+        [""], // Blank line
+        ["GUEST DETAIL LIST"]
+    ];
 
-    // --- FIX APPLIED HERE ---
-    // 1. Find column index for "Room Revenue"
-    const revenueColIndex = headers.indexOf('Room Revenue');
-
-    // 2. CRITICAL VALIDATION: Check if the column was actually found (index must be 0 or greater)
-    if (revenueColIndex === -1) {
-        console.error("Export Error: The required column 'Room Revenue' was not found in the data headers.");
-        // Optionally, you could use showMessageBox here to alert the user:
-        // showMessageBox('Error', 'Cannot export total revenue. Required column "Room Revenue" is missing.', true);
-        
-        // We will proceed with the export of the raw data, but skip the summary line.
-    } else {
-        // If the column IS found, proceed with adding the summary
-        const totalLabel = 'TOTAL REVENUE';
-        // Assuming reportSummary is available globally/in scope
-        const totalAmount = reportSummary['Total Room Revenue'] || 0; 
-        
-        // Convert 0-based index to its corresponding letter (A=0, B=1, etc.)
-        const revenueColLetter = String.fromCharCode(65 + revenueColIndex); 
-        
-        // Determine the row index for the summary (dataRowCount + 1 blank row + 1 summary row)
-        const summaryRowIndex = dataRowCount + 2; 
-
-        // Add TOTAL REVENUE label to column A
-        XLSX.utils.sheet_add_aoa(worksheet, [[totalLabel]], { origin: `A${summaryRowIndex}` });
-        
-        // Add TOTAL REVENUE amount to the correct column
-        XLSX.utils.sheet_add_aoa(worksheet, [[totalAmount]], { origin: `${revenueColLetter}${summaryRowIndex}` });
-    }
-    // --- END FIX ---
-
-
-    // Build workbook and download
+    // 4. Create a new Workbook and Worksheet
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Room Report');
+    
+    // We start the worksheet with our headerInfo instead of the raw JSON
+    const newWorksheet = XLSX.utils.aoa_to_sheet(headerInfo);
 
-    // Assuming reportDateInput is defined elsewhere and has a .value property
-    const selectedDate = typeof reportDateInput !== 'undefined' ? (reportDateInput.value || 'report') : 'report';
-    const filename = `Room_Report_${selectedDate}.xlsx`;
+    // 5. Append the reportData (the table) starting after the headerInfo
+    // headerInfo has 18 rows, so we start the table at row 19 (index 18)
+    XLSX.utils.sheet_add_json(newWorksheet, reportData, { origin: "A19", skipHeader: false });
 
-    XLSX.writeFile(workbook, filename);
+    // 6. Append the final Total at the very bottom
+    const totalRowIndex = 19 + reportData.length + 1;
+    XLSX.utils.sheet_add_aoa(newWorksheet, [
+        ["TOTAL COLLECTED", (parseFloat(document.getElementById('totalCollected').textContent) || 0).toFixed(2)]
+    ], { origin: `A${totalRowIndex}` });
+
+    // 7. Add to workbook and Save
+    XLSX.utils.book_append_sheet(workbook, newWorksheet, 'Daily Report');
+    
+    const selectedDate = reportDateInput.value || 'report';
+    XLSX.writeFile(workbook, `Hotel_Report_${selectedDate}.xlsx`);
 }
 
 // --- Housekeeping Functions ---
