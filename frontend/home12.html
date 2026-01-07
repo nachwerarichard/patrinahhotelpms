@@ -161,7 +161,7 @@
 </aside>
         <main class="flex-1 p-8 overflow-y-auto">
             <section id="booking-management" class="section active bg-white p-6 rounded-lg shadow-md mb-8">
-                <h2 class="text-2xl font-bold mb-4 text-blue-600"><i class="fas fa-book"></i> Booking Management</h2>
+                <h2 class="text-2xl font-bold mb-4 text-blue-600"><i class="fas fa-book"></i> Guest Management</h2>
                 <div class="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0 mb-6">
     <div class="relative flex items-center w-full md:w-auto">
         <i class="fas fa-search absolute left-3 text-gray-400"></i>
@@ -169,12 +169,10 @@
     </div>
 
     <div class="flex flex-wrap gap-2">
-        <button class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-300" onclick="openReservationModal()">
-            <i class="fas fa-calendar-check"></i> New Reservation
-        </button>
+        
         
         <button class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300" onclick="openBookingModal()">
-            <i class="fas fa-plus"></i> Add New Walk In
+            <i class="fas fa-plus"></i> Add New Guest
         </button>
     </div>
 </div>
@@ -265,6 +263,7 @@
                     <p class="font-semibold text-gray-700">Most Booked Room Type: <span id="mostBookedRoomType" class="font-normal text-blue-600">N/A</span></p>
                     <p class="font-semibold text-gray-700">Guests Checked In : <span id="guestsCheckedIn" class="font-normal text-blue-600">0</span></p>
                     <p class="font-semibold text-gray-700">Guests Reserved : <span id="guestsCheckedIn" class="font-normal text-blue-600">0</span></p>
+                    <p class="font-semibold text-gray-700">Guests Cancelled : <span id="guestsCheckedIn" class="font-normal text-blue-600">0</span></p>
                     <p class="font-semibold text-gray-700">No Shows: <span id="guestsCheckedIn" class="font-normal text-blue-600">0</span></p>
 
                 </div>
