@@ -620,7 +620,10 @@ if (!pageInfoSpan) {
                 <td>${booking.checkIn}</td>
                 <td>${booking.checkOut}</td>
                 <td>${booking.paymentStatus}</td>
-                <td></td>
+                <td>${booking.paymentMethod}</td>
+                <td>${booking.status}</td>
+                <td>${booking.type}</td>
+
                 <td>
                     <div class="action-buttons-container">
                         <button class="btn btn-secondary btn-sm more-actions-btn" onclick="toggleActionButtons(this)">&vellip;</button>
@@ -869,14 +872,14 @@ bookingForm.addEventListener('submit', async function(event) {
     const amountPaid = parseFloat(amountPaidInput.value); // Room amount paid
     const balance = parseFloat(balanceInput.value); // Room balance
     const paymentStatus = document.getElementById('paymentStatus').value;
+    const paymentMethod = document.getElementById('paymentMethod').value;
     const people = parseInt(document.getElementById('people').value);
     const nationality = document.getElementById('nationality').value;
     const address = document.getElementById('address').value;
     const phoneNo = document.getElementById('phoneNo').value;
     const guestEmail = document.getElementById('guestEmail').value;
     const nationalIdNo = document.getElementById('nationalIdNo').value;
-
-        const occupation = document.getElementById('occupation').value;
+    const occupation = document.getElementById('occupation').value;
     const vehno = document.getElementById('vehno').value;
     const destination = document.getElementById('destination').value;
     const checkIntime = document.getElementById('checkIntime').value;
@@ -888,7 +891,7 @@ bookingForm.addEventListener('submit', async function(event) {
     
     const bookingData = {
         name, room: roomNumber, checkIn, checkOut, nights, amtPerNight,occupation,vehno,destination,checkIntime,checkOuttime,kin,kintel,
-        totalDue, amountPaid, balance, paymentStatus, people, nationality,purpose,declarations,
+        totalDue, amountPaid, balance, paymentStatus,paymentMethod, people,transactionid,extraperson, nationality,purpose,declarations,
         address, phoneNo, guestEmail, nationalIdNo,
         username: currentUsername // Pass username for audit log
     };
