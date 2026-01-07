@@ -621,8 +621,8 @@ if (!pageInfoSpan) {
                 <td>${booking.checkOut}</td>
                 <td>${booking.paymentStatus}</td>
                 <td>${booking.paymentMethod}</td>
-                <td>${booking.status}</td>
-                <td>${booking.type}</td>
+                <td>${booking.gueststatus}</td>
+                <td>${booking.guestsource}</td>
 
                 <td>
                     <div class="action-buttons-container">
@@ -873,6 +873,10 @@ bookingForm.addEventListener('submit', async function(event) {
     const balance = parseFloat(balanceInput.value); // Room balance
     const paymentStatus = document.getElementById('paymentStatus').value;
     const paymentMethod = document.getElementById('paymentMethod').value;
+    const gueststatus = document.getElementById('gueststatus').value;
+    const guestsource = document.getElementById('guestsource').value;
+
+
     const people = parseInt(document.getElementById('people').value);
     const nationality = document.getElementById('nationality').value;
     const address = document.getElementById('address').value;
@@ -891,7 +895,7 @@ bookingForm.addEventListener('submit', async function(event) {
     
     const bookingData = {
         name, room: roomNumber, checkIn, checkOut, nights, amtPerNight,occupation,vehno,destination,checkIntime,checkOuttime,kin,kintel,
-        totalDue, amountPaid, balance, paymentStatus,paymentMethod, people,transactionid,extraperson, nationality,purpose,declarations,
+        totalDue, amountPaid, balance, paymentStatus,paymentMethod, people,transactionid,extraperson, nationality,purpose,declarations,gueststatus,guestsource,
         address, phoneNo, guestEmail, nationalIdNo,
         username: currentUsername // Pass username for audit log
     };
