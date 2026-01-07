@@ -122,12 +122,8 @@
         </div>
 
     </div>
-
-
-        
-        <aside class="w-64 bg-gray-800 text-white p-6 shadow-lg">
-
-    <nav>
+     <aside class="w-64 bg-gray-800 text-white p-6 shadow-lg flex flex-col min-h-full">
+    <nav class="flex-grow">
         <ul class="space-y-2">
             <li id="nav-booking">
                 <a href="#" class="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition duration-200">
@@ -147,7 +143,6 @@
                     <span>Daily Reports</span>
                 </a>
             </li>
-
             <li id="nav-calendar" class="hidden">
                 <a href="#" class="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition duration-200">
                     <i class="fas fa-calendar-alt text-blue-400"></i>
@@ -160,18 +155,15 @@
                     <span>Audit Logs</span>
                 </a>
             </li>
-
-            <i id="nav-channel-manager" class="hidden"></i>
-            <i  id="nav-service-reports" class="hidden"></i>
-
-            <li id="nav-logout">
-                <a href="#" onclick="logout()" class="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition duration-200">
-                    <i class="fas fa-sign-out-alt text-blue-400"></i>
-                    <span>Logout</span>
-                </a>
-            </li>
         </ul>
     </nav>
+
+    <div class="border-t border-gray-700 pt-4 mt-auto">
+        <a href="#" onclick="logout()" class="flex items-center space-x-2 p-3 rounded-lg text-red-400 hover:bg-red-900/30 hover:text-red-300 transition duration-200">
+            <i class="fas fa-sign-out-alt"></i>
+            <span class="font-semibold">Logout</span>
+        </a>
+    </div>
 </aside>
         <main class="flex-1 p-8 overflow-y-auto">
             <section id="booking-management" class="section active bg-white p-6 rounded-lg shadow-md mb-8">
