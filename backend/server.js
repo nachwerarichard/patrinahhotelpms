@@ -135,7 +135,14 @@ const bookingSchema = new mongoose.Schema({
     amountPaid: { type: Number, default: 0 }, // This is ROOM amount paid
     balance: { type: Number, default: 0 }, // This is ROOM balance
     paymentStatus: { type: String, required: true, enum: ['Pending', 'Paid', 'Partially Paid'], default: 'Pending' },
+    paymentMethod: { type: String, required: true, enum: ['Cash', 'Mobile money', 'Bank'], default: 'Cash' },
+    guestsource: { type: String, required: true, enum: ['walk in', 'OTA', 'Direct','PMS'], default: 'walk in' },
+    gueststatus: { type: String, required: true, enum: ['confirmed', 'cancelled', 'no show'], default: 'confirmed' },
+
+
     people: { type: Number, required: true },
+    transactionid: { type: Number, required: true },
+    extraperson:{ type: String, required: true },
     nationality: { type: String },
     address: { type: String },
     kin: { type: String },
