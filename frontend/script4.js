@@ -331,7 +331,7 @@ async function showDashboard(username, role) {
         if (initialSectionId === 'booking-management') {
             currentPage = 1;
             currentSearchTerm = '';
-           await renderBookings(currentPage, currentSearchTerm);
+           await s(currentPage, currentSearchTerm);
         } else if (initialSectionId === 'housekeeping') {
             await renderHousekeepingRooms();
         }
@@ -595,65 +595,76 @@ if (!pageInfoSpan) {
         currentBookings.forEach(booking => {
             const row = bookingsTableBody.insertRow();
             row.dataset.id = booking.id; // Store booking ID for easy access
-            
+            // Inside currentBookings.forEach(booking => { ... })
+const row = bookingsTableBody.insertRow();
+row.dataset.id = booking.id;
+
+// Add Tailwind classes for row highlighting
+if (booking.gueststatus === 'Cancelled') {
+    row.className = "bg-red-50 hover:bg-red-100 transition-colors opacity-75";
+} else {
+    row.className = "hover:bg-gray-50 transition-colors";
+}
             let actionButtonsHtml = '';
             
             // Check if the guest has checked out to disable the Checkout button
             const isCheckedOut = new Date(booking.checkOut) <= new Date() && rooms.find(r => r.number === booking.room)?.status === 'dirty';
 
            // Inside renderBookings loop...
+const isCancelled = booking.gueststatus === 'Cancelled';
+const baseBtn = "inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white focus:outline-none transition-all duration-200 w-full justify-center mb-1";
+
 if (currentUserRole === 'admin') {
-    // Shared base styles for consistency
-    const baseBtn = "inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200";
-
-    actionButtonsHtml = `
-        <div class="flex flex-col space-y-2 p-2">
+    if (isCancelled) {
+        // Only show Delete for already cancelled bookings
+        actionButtonsHtml = `
+            <span class="text-xs text-red-600 font-bold block mb-2 text-center uppercase">Cancelled</span>
+            <button class="${baseBtn} bg-red-600 hover:bg-red-700" onclick="confirmDeleteBooking('${booking.id}')">Delete Permanently</button>
+        `;
+    } else {
+        // Standard buttons for active bookings
+        actionButtonsHtml = `
             ${!booking.checkedIn ? 
-                `<button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500" onclick="checkinBooking('${booking.id}')">Check In</button>` : 
-                `<button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500" onclick="moveBooking('${booking.id}')">Move Room</button>`
+                `<button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">Check In</button>` : 
+                `<button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')">Move Room</button>`
             }
+            <button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">Edit</button>
+            <button class="${baseBtn} bg-amber-500 hover:bg-amber-600 ${isCheckedOut ? 'opacity-50' : ''}" onclick="checkoutBooking('${booking.id}')" ${isCheckedOut ? 'disabled' : ''}>Check-out</button>
+            <div class="border-t my-1"></div>
+            <button class="${baseBtn} bg-gray-500 hover:bg-gray-600" onclick="openCancelModal('${booking.id}')">Cancel Booking</button>
+        `;
+    }
 
-            <button class="${baseBtn} bg-blue-500 hover:bg-blue-600 focus:ring-blue-400" onclick="editBooking('${booking.id}')">Edit</button>
-            
-            <button class="${baseBtn} bg-amber-500 hover:bg-amber-600 focus:ring-amber-400 ${isCheckedOut ? 'opacity-50 cursor-not-allowed' : ''}" 
-                onclick="checkoutBooking('${booking.id}')" ${isCheckedOut ? 'disabled' : ''}>
-                Check-out
-            </button>
-
-            <div class="border-t border-gray-100 my-1 pt-1"></div>
-            
-            <button class="${baseBtn} bg-gray-500 hover:bg-gray-600 focus:ring-gray-400" onclick="confirmDeleteBooking('${booking.id}')">
-                Cancel Booking
-            </button>
-
-            <button class="${baseBtn} bg-red-600 hover:bg-red-700 focus:ring-red-500 mt-1" onclick="confirmDeleteBooking('${booking.id}')">
-                Delete Record
-            </button>
-        </div>
-    `;
 } else if (currentUserRole === 'bar') {
                 
             }
 
-            row.innerHTML = `
-                <td>${booking.name}</td>
-                <td>${booking.room}</td>
-                <td>${booking.checkIn}</td>
-                <td>${booking.checkOut}</td>
-                <td>${booking.paymentStatus}</td>
-                <td>${booking.paymentbalance}</td>
-                <td>${booking.gueststatus}</td>
-                <td>${booking.guestsource}</td>
+            // Inside the renderBookings loop
+const cancellationReason = booking.cancellationReason || "No reason provided";
 
-                <td>
-                    <div class="action-buttons-container">
-                        <button class="btn btn-secondary btn-sm more-actions-btn" onclick="toggleActionButtons(this)">&vellip;</button>
-                        <div class="hidden-action-buttons">
-                           ${actionButtonsHtml}
-                        </div>
-                    </div>
-                </td>
-            `;
+row.innerHTML = `
+    <td>${booking.name}</td>
+    <td>${booking.room}</td>
+    <td>${booking.checkIn}</td>
+    <td>${booking.checkOut}</td>
+    <td>${booking.paymentStatus}</td>
+    <td>${booking.paymentbalance}</td>
+    <td class="relative group cursor-help">
+        <span class="${isCancelled ? 'text-red-600 font-semibold' : 'text-gray-700'}">
+            ${booking.gueststatus}
+        </span>
+        
+        ${isCancelled ? `
+        <div class="invisible group-hover:visible absolute z-50 w-48 bg-gray-900 text-white text-xs rounded p-2 -mt-10 ml-4 shadow-xl">
+            <strong>Reason:</strong> ${cancellationReason}
+            <div class="bg-gray-900 w-2 h-2 rotate-45 absolute -bottom-1 left-2"></div>
+        </div>
+        ` : ''}
+    </td>
+    <td>${booking.guestsource}</td>
+    <td>...action buttons...</td>
+`;
+            
         });
     }
 
@@ -676,6 +687,46 @@ document.addEventListener('click', (event) => {
             container.classList.remove('show-buttons');
         }
     });
+});
+
+
+let bookingToCancel = null;
+
+function openCancelModal(id) {
+    bookingToCancel = id;
+    document.getElementById('cancelReasonInput').value = ''; // Clear previous input
+    document.getElementById('cancelBookingModal').classList.remove('hidden');
+}
+
+function closeCancelModal() {
+    document.getElementById('cancelBookingModal').classList.add('hidden');
+}
+
+document.getElementById('confirmCancelBtn').addEventListener('click', async () => {
+    const reason = document.getElementById('cancelReasonInput').value;
+    if (!reason) return alert("Please provide a reason.");
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings/${bookingToCancel}/cancel`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                reason: reason,
+                username: currentUsername 
+            })
+        });
+
+        if (!response.ok) throw new Error('Failed to cancel booking');
+
+        const data = await response.json();
+        closeCancelModal();
+        showMessageBox('Cancelled', data.message);
+        
+        // Refresh the table to see the status change
+        renderBookings(currentPage, currentSearchTerm);
+    } catch (error) {
+        showMessageBox('Error', error.message, true);
+    }
 });
 
 let selectedBookingId = null; // Track which booking we are moving
