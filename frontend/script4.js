@@ -669,7 +669,6 @@ const cancellationReason = booking.cancellationReason || "No reason provided";
     <td>${booking.checkIn}</td>
     <td>${booking.checkOut}</td>
     <td>${booking.paymentStatus}</td>
-    <td>${booking.paymentbalance}</td>
     <td class="relative group cursor-help">
         <span class="${isCancelled ? 'text-red-600 font-semibold' : 'text-gray-700'}">
             ${booking.gueststatus}
