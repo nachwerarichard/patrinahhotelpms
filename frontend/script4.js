@@ -615,25 +615,39 @@ const baseBtn = "inline-flex items-center px-3 py-1.5 border border-transparent 
 
 if (currentUserRole === 'admin') {
     if (isCancelled) {
-        // Only show Delete for already cancelled bookings
+        // --- UI for Cancelled Bookings ---
         actionButtonsHtml = `
-            <span class="text-xs text-red-600 font-bold block mb-2 text-center uppercase">Cancelled</span>
-            <button class="${baseBtn} bg-red-600 hover:bg-red-700" onclick="confirmDeleteBooking('${booking.id}')">Delete Permanently</button>
+            <span class="text-xs text-red-600 font-bold block mb-2 text-center uppercase tracking-wide">Cancelled</span>
+            <button class="${baseBtn} bg-red-600 hover:bg-red-700" onclick="confirmDeleteBooking('${booking.id}')">
+                Delete Permanently
+            </button>
         `;
     } else {
-        // Standard buttons for active bookings
+        // --- UI for Active Bookings ---
         actionButtonsHtml = `
             ${!booking.checkedIn ? 
                 `<button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">Check In</button>` : 
                 `<button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')">Move Room</button>`
             }
+            
             <button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">Edit</button>
-            <button class="${baseBtn} bg-amber-500 hover:bg-amber-600 ${isCheckedOut ? 'opacity-50' : ''}" onclick="checkoutBooking('${booking.id}')" ${isCheckedOut ? 'disabled' : ''}>Check-out</button>
-            <div class="border-t my-1"></div>
-            <button class="${baseBtn} bg-gray-500 hover:bg-gray-600" onclick="openCancelModal('${booking.id}')">Cancel Booking</button>
+            
+            <button class="${baseBtn} bg-amber-500 hover:bg-amber-600 ${isCheckedOut ? 'opacity-50 cursor-not-allowed' : ''}" 
+                onclick="checkoutBooking('${booking.id}')" ${isCheckedOut ? 'disabled' : ''}>
+                Check-out
+            </button>
+
+            <div class="border-t border-gray-100 my-1"></div>
+
+            <button class="${baseBtn} bg-gray-500 hover:bg-gray-600" onclick="openCancelModal('${booking.id}')">
+                Cancel Booking
+            </button>
+
+            <button class="${baseBtn} bg-red-600 hover:bg-red-700 mt-1" onclick="confirmDeleteBooking('${booking.id}')">
+                Delete Record
+            </button>
         `;
     }
-
 } else if (currentUserRole === 'bar') {
                 
             }
