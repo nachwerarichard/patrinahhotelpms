@@ -18,7 +18,6 @@ const allowedOrigins = [
     // 'http://localhost:3000', // Add your local development URL if you test locally
     // 'http://127.0.0.1:5500' // Another common local server URL if applicable
 ];
-
 app.use(cors({
     origin: function (origin, callback) {
         // Allow requests with no origin (like mobile apps or curl requests)
