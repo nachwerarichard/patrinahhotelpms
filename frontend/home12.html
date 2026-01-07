@@ -31,6 +31,27 @@
     }
     .animate-bounce-in { animation: bounce-in 0.2s ease-out forwards; }
         .hidden{display:none;}
+    /* Ensure the container stays inside the table cell */
+.action-buttons-container {
+    position: relative; 
+    display: inline-block;
+}
+
+/* Ensure the dropdown menu moves WITH the row */
+.hidden-action-buttons {
+    position: absolute;
+    right: 0;
+    top: 100%; /* Appears exactly below the button */
+    z-index: 50; /* Sits on top of other rows */
+    min-width: 150px;
+    white-space: nowrap; /* Prevents text wrapping */
+}
+
+/* Optional: If your table has 'overflow-hidden', the menu might get cut off. 
+   Apply this to the table wrapper if needed: */
+.overflow-x-auto {
+    position: relative;
+}
     </style>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen flex flex-col">
@@ -926,6 +947,27 @@ window.onclick = function(event) {
         closeReservationModal();
     }
 }
+
+        function toggleActionButtons(event, button) {
+    // Prevent the click from triggering row selection or other parent events
+    event.stopPropagation();
+
+    // Close all other open menus first
+    document.querySelectorAll('.relative div').forEach(div => {
+        if (div !== button.nextElementSibling) {
+            div.classList.add('hidden');
+        }
+    });
+
+    // Toggle the current menu
+    const menu = button.nextElementSibling;
+    menu.classList.toggle('hidden');
+}
+
+// Close menus if user clicks anywhere else on the page
+document.addEventListener('click', () => {
+    document.querySelectorAll('.relative div').forEach(div => div.classList.add('hidden'));
+});
     </script>
 </body>
 </html>
