@@ -626,6 +626,10 @@ if (currentUserRole === 'admin') {
         // --- UI for Active Bookings ---
       // --- UI for Active Bookings ---
 actionButtonsHtml = `
+
+    <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="viewBookingDetails('${booking.id}')">
+        View 
+    </button>
     ${!booking.checkedIn ? 
         `<button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">Check In</button>` : 
         `<button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')">Move Room</button>`
@@ -643,11 +647,11 @@ actionButtonsHtml = `
     <div class="border-t border-gray-100 my-1"></div>
 
     <button class="${baseBtn} bg-gray-500 hover:bg-gray-600" onclick="openCancelModal('${booking.id}')">
-        Cancel Booking
+        Cancel 
     </button>
 
     <button class="${baseBtn} bg-red-600 hover:bg-red-700 mt-1" onclick="confirmDeleteBooking('${booking.id}')">
-        Delete Record
+        Delete 
     </button>
 `;
     }
@@ -712,6 +716,49 @@ document.addEventListener('click', (event) => {
     });
 });
 
+function viewBookingDetails(id) {
+    const booking = currentBookings.find(b => b.id === id);
+    if (!booking) return;
+
+    const content = document.getElementById('viewBookingContent');
+    const modal = document.getElementById('viewBookingModal');
+
+    content.innerHTML = `
+        <div class="grid grid-cols-2 gap-4">
+            <div class="col-span-2 bg-blue-50 p-3 rounded-lg">
+                <p class="text-xs text-blue-600 uppercase font-bold">Guest Name</p>
+                <p class="text-lg font-semibold text-gray-900">${booking.name}</p>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500 uppercase font-bold">Room</p>
+                <p class="font-medium text-gray-800">${booking.room}</p>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500 uppercase font-bold">Status</p>
+                <p class="font-medium ${booking.gueststatus === 'Cancelled' ? 'text-red-600' : 'text-green-600'}">${booking.gueststatus}</p>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500 uppercase font-bold">Check-In</p>
+                <p class="text-sm text-gray-800">${booking.checkIn}</p>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500 uppercase font-bold">Check-Out</p>
+                <p class="text-sm text-gray-800">${booking.checkOut}</p>
+            </div>
+            <div class="col-span-2 border-t pt-2">
+                <p class="text-xs text-gray-500 uppercase font-bold">Payment Balance</p>
+                <p class="text-lg font-bold text-orange-600">UGX ${parseFloat(booking.paymentbalance).toLocaleString()}</p>
+            </div>
+        </div>
+    `;
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeViewModal() {
+    document.getElementById('viewBookingModal').classList.add('hidden');
+}
 
 let bookingToCancel = null;
 
