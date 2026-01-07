@@ -608,6 +608,7 @@ if (!pageInfoSpan) {
                     <button class="btn btn-primary btn-sm" onclick="editBooking('${booking.id}')">Edit</button>
                     <button class="btn btn-success btn-sm" onclick="checkoutBooking('${booking.id}')" ${isCheckedOut ? 'disabled' : ''}>Check-out</button>
                     <button class="btn btn-primary btn-sm" onclick="editBooking('${booking.id}')">Move</button>
+                    <button class="btn btn-danger btn-sm" onclick="confirmDeleteBooking('${booking.id}')">Cancel</button>
                     <button class="btn btn-danger btn-sm" onclick="confirmDeleteBooking('${booking.id}')">Delete</button>
                 `;
             } else if (currentUserRole === 'bar') {
