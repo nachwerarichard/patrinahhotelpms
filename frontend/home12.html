@@ -672,6 +672,67 @@
     </div>
 </div>
 
+    <div id="reservationModal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center p-4">
+    
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        
+        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h3 class="text-xl font-bold text-gray-800">
+                Guest Details for <span id="selectedRoomTypeDisplay" class="text-blue-600"></span> 
+                (Room <span id="selectedRoomNumberDisplay"></span>)
+            </h3>
+            <button onclick="closeReservationModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <form id="publicBookingForm" class="p-6">
+            <input type="hidden" id="bookingRoomNumber">
+            <input type="hidden" id="bookingCheckIn">
+            <input type="hidden" id="bookingCheckOut">
+            <input type="hidden" id="bookingNights">
+            <input type="hidden" id="bookingAmtPerNight">
+            <input type="hidden" id="bookingTotalDue">
+            <input type="hidden" id="bookingPeople">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="flex flex-col">
+                    <label class="text-sm font-semibold text-gray-600 mb-1" for="guestName">Full Name:</label>
+                    <input type="text" id="guestName" required class="border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-sm font-semibold text-gray-600 mb-1" for="guestEmail">Email Address:</label>
+                    <input type="email" id="guestEmail" required class="border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-sm font-semibold text-gray-600 mb-1" for="guestNationality">Nationality:</label>
+                    <input type="text" id="guestNationality" class="border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-sm font-semibold text-gray-600 mb-1" for="guestPhoneNo">Phone Number:</label>
+                    <input type="text" id="guestPhoneNo" required class="border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="flex flex-col md:col-span-2">
+                    <label class="text-sm font-semibold text-gray-600 mb-1" for="guestAddress">Address:</label>
+                    <input type="text" id="guestAddress" class="border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="flex flex-col md:col-span-2">
+                    <label class="text-sm font-semibold text-gray-600 mb-1" for="guestNationalIdNo">National ID No. (Optional):</label>
+                    <input type="text" id="guestNationalIdNo" class="border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+
+            <div class="border-t border-gray-100 pt-4 flex flex-col md:flex-row justify-between items-center gap-4">
+                <p class="text-lg">Total Due: <span class="font-bold text-green-600">$</span><strong id="finalTotalDue" class="text-green-600">0.00</strong></p>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeReservationModal()" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition">Cancel</button>
+                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-lg transition">Confirm Booking</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+    
 <div class="fixed bottom-12 left-[20%] z-50 flex items-center justify-center w-16 h-16">
     
     <button onclick="toggleSwitchMenu()" id="main-switch-btn" class="relative z-50 bg-indigo-600 hover:bg-indigo-700 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all transform active:scale-95">
@@ -784,6 +845,26 @@ document.addEventListener('DOMContentLoaded', () => {
         // e.g., performLogin(u, p);
     }
 });
+
+        function openReservationModal() {
+    const modal = document.getElementById('reservationModal');
+    modal.classList.remove('hidden'); // Show modal
+    document.body.style.overflow = 'hidden'; // Prevent scrolling background
+}
+
+function closeReservationModal() {
+    const modal = document.getElementById('reservationModal');
+    modal.classList.add('hidden'); // Hide modal
+    document.body.style.overflow = 'auto'; // Re-enable scrolling
+}
+
+// Close modal if user clicks on the dark background overlay
+window.onclick = function(event) {
+    const modal = document.getElementById('reservationModal');
+    if (event.target == modal) {
+        closeReservationModal();
+    }
+}
     </script>
 </body>
 </html>
