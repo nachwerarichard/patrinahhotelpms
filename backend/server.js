@@ -137,7 +137,7 @@ const bookingSchema = new mongoose.Schema({
     paymentMethod: { type: String, required: true, enum: ['Cash', 'Mobile money', 'Bank'], default: 'Cash' },
     guestsource: { type: String, required: true, enum: ['walk in', 'OTA', 'Direct','PMS'], default: 'walk in' },
     gueststatus: { type: String, required: true, enum: ['confirmed', 'cancelled', 'no show'], default: 'confirmed' },
-
+    cancellationReason: { type: String, default: '' },
 
     people: { type: Number, required: true },
     transactionid: { type: Number, required: true },
@@ -1451,6 +1451,32 @@ app.get('/api/rooms/available', async (req, res) => {
     }
 });
 
+app.post('/api/bookings/:id/cancel', async (req, res) => {
+    const { id } = req.params;
+    const { reason, username } = req.body;
+
+    try {
+        const booking = await Booking.findOne({ id: id });
+        if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+        // Update booking fields
+        booking.gueststatus = 'Cancelled';
+        booking.cancellationReason = reason; // Ensure this field exists in your Schema
+        await booking.save();
+
+        // Update Room to vacant
+        await Room.findOneAndUpdate({ number: booking.room }, { status: 'vacant' });
+
+        await addAuditLog('Booking Cancelled', username || 'System', {
+            bookingId: id,
+            reason: reason
+        });
+
+        res.json({ message: 'Booking cancelled successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error', error: error.message });
+    }
+});
 app.post('/api/bookings/:id/checkin', async (req, res) => {
     const { id } = req.params;
     const { username } = req.body;
