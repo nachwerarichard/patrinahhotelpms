@@ -14,7 +14,7 @@ let currentCalendarDate = new Date(); // Stores the month/year currently display
 
 // --- DOM Elements ---
 const loginContainer = document.getElementById('login-container');
-const mainContent = document.getElementById('main-content');
+const mainContent = document.getElementById('dashboard-wrapper');
 const loginForm = document.getElementById('loginForm');
 const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
