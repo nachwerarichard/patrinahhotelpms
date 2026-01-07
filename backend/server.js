@@ -122,7 +122,7 @@ const bookingSchema = new mongoose.Schema({
     name: { type: String, required: true },
     room: { type: String, required: true }, // Room number, references Room model
     occupation: { type: String }, // Room number, references Room model
-    checkIn: { type: String, required: true }, // Stored as YYYY-MM-DD string
+    checkedIn: { type: Boolean, default: false },
     vehno: { type: String }, // Room number, references Room model
     destination: { type: String },
     checkIntime: { type: String}, // Stored as YYYY-MM-DD string
@@ -1391,6 +1391,97 @@ app.post('/api/bookings/:id/checkout', async (req, res) => {
         res.status(500).json({ message: 'Error during checkout', error: error.message });
     }
 });
+
+app.post('/api/bookings/:id/move', async (req, res) => {
+    const { id } = req.params;
+    const { newRoomNumber, username } = req.body;
+
+    try {
+        // 1. Find the booking
+        const booking = await Booking.findOne({ id: id });
+        if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+        const oldRoomNumber = booking.room;
+
+        // 2. Check if the NEW room is available
+        const newRoom = await Room.findOne({ number: newRoomNumber });
+        
+        if (!newRoom) {
+            return res.status(400).json({ message: 'Target room does not exist.' });
+        }
+
+        // Logic: Only allow move if status is 'vacant' or 'clean'
+        if (newRoom.status !== 'vacant' && newRoom.status !== 'clean') {
+            return res.status(400).json({ 
+                message: `Room ${newRoomNumber} is currently ${newRoom.status} and cannot be assigned.` 
+            });
+        }
+
+        // 3. Update the Old Room to 'dirty' (needs cleaning after guest leaves)
+        await Room.findOneAndUpdate({ number: oldRoomNumber }, { status: 'dirty' });
+
+        // 4. Update the New Room to 'occupied'
+        newRoom.status = 'occupied';
+        await newRoom.save();
+
+        // 5. Update the Booking
+        booking.room = newRoomNumber;
+        await booking.save();
+
+        // 6. Audit Log
+        await addAuditLog('Guest Moved', username || 'System', {
+            bookingId: id,
+            fromRoom: oldRoomNumber,
+            toRoom: newRoomNumber
+        });
+
+        res.json({ message: `Successfully moved guest to Room ${newRoomNumber}.` });
+    } catch (error) {
+        res.status(500).json({ message: 'Error during room move', error: error.message });
+    }
+});
+
+app.get('/api/rooms/available', async (req, res) => {
+    try {
+        // Find rooms that are NOT occupied and NOT dirty
+        const availableRooms = await Room.find({ status: { $in: ['vacant', 'clean'] } });
+        res.json(availableRooms);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching available rooms' });
+    }
+});
+
+app.post('/api/bookings/:id/checkin', async (req, res) => {
+    const { id } = req.params;
+    const { username } = req.body;
+    try {
+        const booking = await Booking.findOne({ id: id });
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        // --- NEW: Update booking status ---
+        booking.checkedIn = true; 
+        await booking.save();
+
+        const room = await Room.findOne({ number: booking.room });
+        if (room) {
+            room.status = 'occupied'; 
+            await room.save();
+        }
+
+        await addAuditLog('Booking Checked In', username || 'System', {
+            bookingId: booking.id,
+            guestName: booking.name,
+            roomNumber: booking.room
+        });
+
+        res.json({ message: `Guest checked into Room ${booking.room} successfully.` });
+    } catch (error) {
+        res.status(500).json({ message: 'Error during checkin', error: error.message });
+    }
+});
+
 
 // --- Incidental Charges API ---
 
