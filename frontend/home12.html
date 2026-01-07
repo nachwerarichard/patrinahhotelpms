@@ -163,12 +163,21 @@
             <section id="booking-management" class="section active bg-white p-6 rounded-lg shadow-md mb-8">
                 <h2 class="text-2xl font-bold mb-4 text-blue-600"><i class="fas fa-book"></i> Booking Management</h2>
                 <div class="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0 mb-6">
-                    <div class="relative flex items-center w-full md:w-auto">
-                        <i class="fas fa-search absolute left-3 text-gray-400"></i>
-                        <input type="text" id="bookingSearch" placeholder="Search bookings..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <button class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300" onclick="openBookingModal()"><i class="fas fa-plus"></i> Add New Reservation</button>
-                </div>
+    <div class="relative flex items-center w-full md:w-auto">
+        <i class="fas fa-search absolute left-3 text-gray-400"></i>
+        <input type="text" id="bookingSearch" placeholder="Search bookings..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+        <button class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-300" onclick="openReservationModal()">
+            <i class="fas fa-calendar-check"></i> New Reservation
+        </button>
+        
+        <button class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300" onclick="openBookingModal()">
+            <i class="fas fa-plus"></i> Add New Walk In
+        </button>
+    </div>
+</div>
                 <div class="overflow-x-auto">
                     <table id="bookingsTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
                         <thead>
@@ -365,7 +374,7 @@
     <div id="bookingModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-4xl relative max-h-[90vh] overflow-y-auto">
             <span class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800" onclick="closeBookingModal()">&times;</span>
-            <h2 id="modalTitle" class="text-2xl font-bold mb-6 text-blue-600"><i class="fas fa-hotel"></i> Add New Booking</h2>
+            <h2 id="modalTitle" class="text-2xl font-bold mb-6 text-blue-600"><i class="fas fa-hotel"></i> Add New Walk In</h2>
             <form id="bookingForm">
     <input type="hidden" id="bookingId">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -495,7 +504,7 @@
 <div class="mt-6 flex flex-wrap justify-center gap-4">
     
     <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
-        Save Reservation
+        Save Walk In
     </button>
 </div>
 </form>
