@@ -1739,13 +1739,7 @@ async function generateReport() {
     document.getElementById('reportCheckedIn').textContent = stats.checkedIn;
     document.getElementById('reportReserved').textContent = stats.reserved;
     document.getElementById('reportCancelled').textContent = stats.cancelled;
-    document.getElementById('reportNoShows').textContent = stats.noShows;
-
-    // Update Payment Breakdown
-    document.getElementById('cashRevenue').textContent = stats.cash.toFixed(2);
-    document.getElementById('momoRevenue').textContent = stats.momo.toFixed(2);
-    document.getElementById('bankRevenue').textContent = stats.bank.toFixed(2);
-    document.getElementById('totalCollected').textContent = (stats.cash + stats.momo + stats.bank).toFixed(2);
+    document.getElementById('reportNoShows').textContent = stats.noShows;   
 }
 
 let reportSummary = {};  // Object holding summary info
