@@ -661,34 +661,36 @@ actionButtonsHtml = `
 const cancellationReason = booking.cancellationReason || "No reason provided";
 
 
-            row.innerHTML = `
-    <td>${booking.name}</td>
-    <td>${booking.room}</td>
-    <td>${booking.checkIn}</td>
-    <td>${booking.checkOut}</td>
-    <td>${booking.paymentStatus}</td>
-    <td class="relative group cursor-help">
+row.innerHTML = `
+    <td class="py-3 px-6">${booking.name}</td>
+    <td class="py-3 px-6">${booking.room}</td>
+    <td class="py-3 px-6">${booking.checkIn}</td>
+    <td class="py-3 px-6">${booking.checkOut}</td>
+    <td class="py-3 px-6">${booking.paymentStatus}</td>
+    <td class="py-3 px-6 relative group cursor-help">
         <span class="${isCancelled ? 'text-red-600 font-semibold' : 'text-gray-700'}">
             ${booking.gueststatus}
         </span>
         ${isCancelled ? `
-        <div class="invisible group-hover:visible absolute z-50 w-48 bg-gray-900 text-white text-xs rounded p-2 -mt-10 ml-4 shadow-xl">
+        <div class="invisible group-hover:visible absolute z-50 w-48 bg-gray-900 text-white text-xs rounded p-2 -top-12 left-0 shadow-xl pointer-events-none">
             <strong>Reason:</strong> ${cancellationReason}
-            <div class="bg-gray-900 w-2 h-2 rotate-45 absolute -bottom-1 left-2"></div>
+            <div class="bg-gray-900 w-2 h-2 rotate-45 absolute -bottom-1 left-4"></div>
         </div>
         ` : ''}
     </td>
-    <td>${booking.guestsource}</td>
-    <td>
-        <div class="action-buttons-container">
-            <button class="btn btn-secondary btn-sm more-actions-btn" onclick="toggleActionButtons(this)">&vellip;</button>
-            <div class="hidden-action-buttons bg-white border shadow-xl rounded-lg p-2">
+    <td class="py-3 px-6">${booking.guestsource}</td>
+    <td class="py-3 px-6 text-center">
+        <div class="relative inline-block text-left">
+            <button class="p-2 hover:bg-gray-200 rounded-full transition-colors" onclick="toggleActionButtons(event, this)">
+                <i class="fas fa-ellipsis-v text-gray-600"></i>
+            </button>
+            
+            <div class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 shadow-2xl rounded-lg p-2 z-[100] transition-all">
                ${actionButtonsHtml}
             </div>
         </div>
     </td>
 `;
-            
         });
     }
 
