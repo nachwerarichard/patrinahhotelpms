@@ -331,7 +331,7 @@ async function showDashboard(username, role) {
         if (initialSectionId === 'booking-management') {
             currentPage = 1;
             currentSearchTerm = '';
-           await s(currentPage, currentSearchTerm);
+           await (currentPage, currentSearchTerm);
         } else if (initialSectionId === 'housekeeping') {
             await renderHousekeepingRooms();
         }
