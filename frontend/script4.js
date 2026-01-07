@@ -621,6 +621,7 @@ if (!pageInfoSpan) {
                 <td>${booking.checkIn}</td>
                 <td>${booking.checkOut}</td>
                 <td>${booking.paymentStatus}</td>
+                <td>${booking.paymentbalance}</td>
                 <td>${booking.paymentMethod}</td>
                 <td>${booking.gueststatus}</td>
                 <td>${booking.guestsource}</td>
