@@ -596,7 +596,6 @@ if (!pageInfoSpan) {
             const row = bookingsTableBody.insertRow();
             row.dataset.id = booking.id; // Store booking ID for easy access
             // Inside currentBookings.forEach(booking => { ... })
-const row = bookingsTableBody.insertRow();
 row.dataset.id = booking.id;
 
 // Add Tailwind classes for row highlighting
