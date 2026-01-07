@@ -1487,7 +1487,9 @@ async function generateReport() {
     'Total Room Revenue': totalRoomRevenue.toFixed(2),
     'Total Room Balance': totalRoomBalance.toFixed(2),
     'Guests Checked In': guestsCheckedIn,
-    'Most Booked Room Type': mostBookedRoomType
+    'Most Booked Room Type': mostBookedRoomType,
+    'Guests Reserved': guestsCheckedIn,
+    'No Shows': guestsCheckedIn,
 };
 
 
