@@ -471,9 +471,27 @@
                 <option value="Bank">Bank</option>
             </select>
         </div>
+         <div class="flex flex-col">
+            <label for="guestsource" class="text-gray-700 font-semibold mb-1">Guest Source:</label>
+            <select id="guestsource" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="direct">Direct</option>
+                <option value="walk in">Walk In</option>
+                <option value="hourly">PMS</option>
+                <option value="hourly">Hourly stays</option>
+                 <div class="flex flex-col">
+            <label for="gueststatus" class="text-gray-700 font-semibold mb-1"> Guest Status:</label>
+            <select id="gueststatus" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="confirmed">Confirmed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="no show">No show</option>
+            </select>
+        </div>
+            </select>
+        </div>
+        
         <div class="flex flex-col">
-            <label for="people" class="text-gray-700 font-semibold mb-1"> Transaction ID :</label>
-            <input type="number" id="people"  class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <label for="transactionid" class="text-gray-700 font-semibold mb-1"> Transaction ID :</label>
+            <input type="number" id="transactioid"  class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
 
         <div class="flex flex-col">
