@@ -1739,7 +1739,34 @@ async function generateReport() {
     document.getElementById('reportCheckedIn').textContent = stats.checkedIn;
     document.getElementById('reportReserved').textContent = stats.reserved;
     document.getElementById('reportCancelled').textContent = stats.cancelled;
-    document.getElementById('reportNoShows').textContent = stats.noShows;   
+    document.getElementById('reportNoShows').textContent = stats.noShows;  
+
+    // --- UPDATED PAYMENT BREAKDOWN LOGIC ---
+    
+    // 1. Update the UI for specific payment categories
+    document.getElementById('cashRevenue').textContent = stats.cash.toFixed(2);
+    document.getElementById('momoRevenue').textContent = stats.momo.toFixed(2);
+    document.getElementById('bankRevenue').textContent = stats.bank.toFixed(2);
+    
+    // 2. Calculate the grand total of payments received
+    const totalPaymentsReceived = stats.cash + stats.momo + stats.bank;
+    document.getElementById('totalCollected').textContent = totalPaymentsReceived.toFixed(2);
+
+    // 3. Update the global reportSummary object (Critical for your Export function)
+    reportSummary = {
+        Date: selectedDateStr,
+        'Total Room Revenue': stats.revenue.toFixed(2),
+        'Total Room Balance': stats.balance.toFixed(2),
+        'Most Booked Room Type': mostBookedRoomType,
+        'Guests Checked In': stats.checkedIn,
+        'Guests Reserved': stats.reserved,
+        'Guests Cancelled': stats.cancelled,
+        'No Shows': stats.noShows,
+        'Cash Total': stats.cash.toFixed(2),
+        'Momo Total': stats.momo.toFixed(2),
+        'Bank Total': stats.bank.toFixed(2),
+        'Grand Total Collected': totalPaymentsReceived.toFixed(2)
+    };
 }
 
 let reportSummary = {};  // Object holding summary info
