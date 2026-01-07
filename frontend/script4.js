@@ -620,6 +620,7 @@ if (!pageInfoSpan) {
                 <td>${booking.checkIn}</td>
                 <td>${booking.checkOut}</td>
                 <td>${booking.paymentStatus}</td>
+                <td></td>
                 <td>
                     <div class="action-buttons-container">
                         <button class="btn btn-secondary btn-sm more-actions-btn" onclick="toggleActionButtons(this)">&vellip;</button>
