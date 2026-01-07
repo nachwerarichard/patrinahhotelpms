@@ -506,7 +506,6 @@ function applyRoleAccess(role) {
     document.getElementById('nav-reports').style.display = 'none';
     document.getElementById('nav-calendar').style.display = 'none';
     document.getElementById('nav-audit-logs').style.display = 'none';
-    document.getElementById('nav-channel-manager').style.display = 'none';
 
     // Show navigation links based on role
     switch (role) {
@@ -517,7 +516,6 @@ function applyRoleAccess(role) {
             document.getElementById('nav-reports').style.display = 'list-item';
             document.getElementById('nav-calendar').style.display = 'list-item';
             document.getElementById('nav-audit-logs').style.display = 'list-item';
-            document.getElementById('nav-channel-manager').style.display = 'list-item';
             break;
         case 'housekeeper':
             document.getElementById('booking-management').style.display = 'none';
