@@ -601,17 +601,37 @@ if (!pageInfoSpan) {
             // Check if the guest has checked out to disable the Checkout button
             const isCheckedOut = new Date(booking.checkOut) <= new Date() && rooms.find(r => r.number === booking.room)?.status === 'dirty';
 
-            // Conditionally render buttons based on the user's role
-            if (currentUserRole === 'admin') {
-                actionButtonsHtml = `
-                    <button class="btn btn-danger btn-sm" onclick="confirDeleteBooking('${booking.id}')">Check In</button>
-                    <button class="btn btn-primary btn-sm" onclick="editBooking('${booking.id}')">Edit</button>
-                    <button class="btn btn-success btn-sm" onclick="checkoutBooking('${booking.id}')" ${isCheckedOut ? 'disabled' : ''}>Check-out</button>
-                    <button class="btn btn-primary btn-sm" onclick="editBooking('${booking.id}')">Move</button>
-                    <button class="btn btn-danger btn-sm" onclick="confirmDeleteBooking('${booking.id}')">Cancel</button>
-                    <button class="btn btn-danger btn-sm" onclick="confirmDeleteBooking('${booking.id}')">Delete</button>
-                `;
-            } else if (currentUserRole === 'bar') {
+           // Inside renderBookings loop...
+if (currentUserRole === 'admin') {
+    // Shared base styles for consistency
+    const baseBtn = "inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200";
+
+    actionButtonsHtml = `
+        <div class="flex flex-col space-y-2 p-2">
+            ${!booking.checkedIn ? 
+                `<button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500" onclick="checkinBooking('${booking.id}')">Check In</button>` : 
+                `<button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500" onclick="moveBooking('${booking.id}')">Move Room</button>`
+            }
+
+            <button class="${baseBtn} bg-blue-500 hover:bg-blue-600 focus:ring-blue-400" onclick="editBooking('${booking.id}')">Edit</button>
+            
+            <button class="${baseBtn} bg-amber-500 hover:bg-amber-600 focus:ring-amber-400 ${isCheckedOut ? 'opacity-50 cursor-not-allowed' : ''}" 
+                onclick="checkoutBooking('${booking.id}')" ${isCheckedOut ? 'disabled' : ''}>
+                Check-out
+            </button>
+
+            <div class="border-t border-gray-100 my-1 pt-1"></div>
+            
+            <button class="${baseBtn} bg-gray-500 hover:bg-gray-600 focus:ring-gray-400" onclick="confirmDeleteBooking('${booking.id}')">
+                Cancel Booking
+            </button>
+
+            <button class="${baseBtn} bg-red-600 hover:bg-red-700 focus:ring-red-500 mt-1" onclick="confirmDeleteBooking('${booking.id}')">
+                Delete Record
+            </button>
+        </div>
+    `;
+} else if (currentUserRole === 'bar') {
                 
             }
 
@@ -658,6 +678,70 @@ document.addEventListener('click', (event) => {
     });
 });
 
+let selectedBookingId = null; // Track which booking we are moving
+
+async function moveBooking(id) {
+    selectedBookingId = id;
+    const modal = document.getElementById('moveRoomModal');
+    const select = document.getElementById('availableRoomsSelect');
+    
+    try {
+        // 1. Fetch available rooms
+        const response = await fetch(`${API_BASE_URL}/rooms/available`);
+        const rooms = await response.json();
+
+        if (rooms.length === 0) {
+            return showMessageBox('No Rooms', 'No vacant rooms available for move.', true);
+        }
+
+        // 2. Populate Select Dropdown
+        select.innerHTML = rooms.map(r => 
+            `<option value="${r.number}">Room ${r.number} (${r.type || 'Standard'})</option>`
+        ).join('');
+
+        // 3. Show Modal
+        modal.classList.remove('hidden');
+        modal.classList.add('flex'); // Center it if using flex layout
+
+    } catch (error) {
+        showMessageBox('Error', 'Could not load available rooms.', true);
+    }
+}
+
+// Handle Modal Actions
+document.getElementById('cancelMoveBtn').addEventListener('click', () => {
+    document.getElementById('moveRoomModal').classList.add('hidden');
+});
+
+document.getElementById('confirmMoveBtn').addEventListener('click', async () => {
+    const newRoomNumber = document.getElementById('availableRoomsSelect').value;
+    const modal = document.getElementById('moveRoomModal');
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings/${selectedBookingId}/move`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                newRoomNumber, 
+                username: currentUsername 
+            })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+
+        modal.classList.add('hidden');
+        showMessageBox('Success', data.message);
+        
+        // Global UI Refresh
+        renderBookings(currentPage, currentSearchTerm);
+        renderHousekeepingRooms();
+        renderCalendar();
+
+    } catch (error) {
+        showMessageBox('Move Failed', error.message, true);
+    }
+});
 
 /**
  * Sends a booking confirmation email for a given booking ID.
@@ -1058,6 +1142,37 @@ async function checkoutBooking(id) {
         showMessageBox('Error', `Failed to process checkout: ${error.message}`, true);
     }
 }
+
+async function checkinBooking(id) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings/${id}/checkin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUsername }) // Send username for audit log
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        showMessageBox('Success', data.message);
+        renderBookings(currentPage, currentSearchTerm); // Re-render to update checkout button visibility
+        renderHousekeepingRooms(); // Update housekeeping view
+        renderCalendar(); // Update calendar view
+        renderAuditLogs(); // Update audit logs
+
+        // --- NEW: Automatically send confirmation email after successful checkout ---
+        await sendConfirmationEmail(id); // Call the email function
+        // --- END NEW ---
+
+    } catch (error) {
+        console.error('Error during checkout:', error);
+        showMessageBox('Error', `Failed to process checkout: ${error.message}`, true);
+    }
+}
+
 
 // Event listeners for date and amount changes to calculate nights, total due, balance
 checkInInput.addEventListener('change', calculateNights);
