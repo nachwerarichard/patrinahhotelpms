@@ -641,7 +641,8 @@ if (currentUserRole === 'admin') {
             // Inside the renderBookings loop
 const cancellationReason = booking.cancellationReason || "No reason provided";
 
-row.innerHTML = `
+
+            row.innerHTML = `
     <td>${booking.name}</td>
     <td>${booking.room}</td>
     <td>${booking.checkIn}</td>
@@ -652,7 +653,6 @@ row.innerHTML = `
         <span class="${isCancelled ? 'text-red-600 font-semibold' : 'text-gray-700'}">
             ${booking.gueststatus}
         </span>
-        
         ${isCancelled ? `
         <div class="invisible group-hover:visible absolute z-50 w-48 bg-gray-900 text-white text-xs rounded p-2 -mt-10 ml-4 shadow-xl">
             <strong>Reason:</strong> ${cancellationReason}
@@ -661,7 +661,14 @@ row.innerHTML = `
         ` : ''}
     </td>
     <td>${booking.guestsource}</td>
-    <td>...action buttons...</td>
+    <td>
+        <div class="action-buttons-container">
+            <button class="btn btn-secondary btn-sm more-actions-btn" onclick="toggleActionButtons(this)">&vellip;</button>
+            <div class="hidden-action-buttons bg-white border shadow-xl rounded-lg p-2">
+               ${actionButtonsHtml}
+            </div>
+        </div>
+    </td>
 `;
             
         });
