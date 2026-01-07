@@ -267,6 +267,37 @@
                     <p class="font-semibold text-gray-700">No Shows: <span id="reportNoShows" class="font-normal text-blue-600">0</span></p>
 
                 </div>
+                                <div class="bg-gray-50 p-4 mt-8 rounded-lg border border-gray-200 mb-6">
+                    
+<div class="bg-gray-50 p-4 mt-8 rounded-lg border border-gray-200 mb-6">
+    <h3 class="text-lg font-bold mb-3 text-gray-700 uppercase tracking-wider">Payment Method Summary</h3>
+    <table class="min-w-full bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+        <thead>
+            <tr class="bg-gray-100 text-gray-600 uppercase text-xs leading-normal">
+                <th class="py-3 px-6 text-left border-b">Payment Method</th>
+                <th class="py-3 px-6 text-right border-b">Total Amount</th>
+            </tr>
+        </thead>
+        <tbody class="text-gray-700 text-sm">
+            <tr class="border-b border-gray-100">
+                <td class="py-3 px-6 font-medium">Cash</td>
+                <td id="cashRevenue" class="py-3 px-6 text-right font-mono">0.00</td>
+            </tr>
+            <tr class="border-b border-gray-100">
+                <td class="py-3 px-6 font-medium">Mobile Money (Momo)</td>
+                <td id="momoRevenue" class="py-3 px-6 text-right font-mono">0.00</td>
+            </tr>
+            <tr class="border-b border-gray-100">
+                <td class="py-3 px-6 font-medium">Bank Transfer</td>
+                <td id="bankRevenue" class="py-3 px-6 text-right font-mono">0.00</td>
+            </tr>
+            <tr class="bg-blue-50 font-bold text-blue-800">
+                <td class="py-4 px-6 uppercase">Total Collected</td>
+                <td id="totalCollected" class="py-4 px-6 text-right text-lg font-mono">0.00</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
                 <table id="roomRevenueTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
                     <thead>
                         <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
@@ -278,18 +309,8 @@
                     </thead>
                     <tbody class="text-gray-600 text-sm font-light"></tbody>
                 </table>
-                <div class="bg-gray-50 p-4 mt-8 rounded-lg border border-gray-200 mb-6">
-                <table id="roomRevenueTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
-                    <thead>
-                        <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
-                            <th class="py-3 px-6 text-left">Cash</th>
-                            <th class="py-3 px-6 text-left">Mobile Money</th>
-                            <th class="py-3 px-6 text-left">Bank</th>
-                            <th class="py-3 px-6 text-left"> Total Revenue</th>
-                        </tr>
-                    </thead>
-                    <tbody class="text-gray-600 text-sm font-light"></tbody>
-                </table>
+                
+
                 </div>
             </section>
 
