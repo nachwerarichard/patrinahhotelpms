@@ -272,85 +272,42 @@
     
 </section>
 
-               <section id="reports" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-    <h2 class="text-2xl font-bold mb-6 text-blue-600 flex items-center gap-2">
-        <i class="fas fa-chart-bar"></i> Daily Reports (Room Revenue Only)
-    </h2>
-
-    <div class="flex flex-wrap items-end gap-4 mb-8 bg-gray-50 p-4 rounded-xl border border-gray-100">
-        <div class="flex flex-col space-y-2">
-            <label for="reportDate" class="text-gray-700 font-semibold text-sm">
-                <i class="fas fa-calendar-day mr-1"></i> Select Date
-            </label>
-            <input type="date" id="reportDate" class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-        </div>
-        <button class="bg-blue-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-blue-700 transition shadow-sm flex items-center gap-2" onclick="generateReport()">
-            <i class="fas fa-file-alt"></i> Generate
-        </button>
-        <button class="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700 transition shadow-sm flex items-center gap-2" onclick="exportReport()">
-            <i class="fas fa-file-excel"></i> Export
-        </button>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
-            <p class="text-xs text-blue-600 uppercase font-bold mb-1">Total Revenue</p>
-            <p id="totalAmountReport" class="text-xl font-mono font-bold text-gray-800">0.00</p>
-        </div>
-        <div class="bg-orange-50 p-4 rounded-lg border border-orange-100">
-            <p class="text-xs text-orange-600 uppercase font-bold mb-1">Outstanding Balance</p>
-            <p id="totalBalanceReport" class="text-xl font-mono font-bold text-gray-800">0.00</p>
-        </div>
-        <div class="bg-purple-50 p-4 rounded-lg border border-purple-100">
-            <p class="text-xs text-purple-600 uppercase font-bold mb-1">Most Booked Type</p>
-            <p id="mostBookedRoomType" class="text-lg font-bold text-gray-800">N/A</p>
-        </div>
-        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <p class="text-xs text-gray-500 uppercase font-bold mb-1">Guest Status Summary</p>
-            <div class="text-sm space-y-1">
-                <div class="flex justify-between"><span>Checked In:</span> <span id="reportCheckedIn" class="font-bold">0</span></div>
-                <div class="flex justify-between"><span>Reserved:</span> <span id="reportReserved" class="font-bold">0</span></div>
-                <div class="flex justify-between text-red-500"><span>Cancelled:</span> <span id="reportCancelled" class="font-bold">0</span></div>
-                <div class="flex justify-between text-gray-400"><span>No Shows:</span> <span id="reportNoShows" class="font-bold">0</span></div>
-            </div>
-        </div>
-    </div>
-
+           <section id="reports" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
     <div class="mb-8">
         <h3 class="text-sm font-bold mb-3 text-gray-500 uppercase tracking-widest">Payment Method Summary</h3>
-<div class="overflow-hidden border border-gray-200 rounded-lg shadow-sm">
-    <table class="min-w-full bg-white">
-        <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
-            <tr>
-                <th class="py-3 px-6 text-left border-b">Payment Method</th>
-                <th class="py-3 px-6 text-right border-b">Total Amount</th>
-            </tr>
-        </thead>
-        <tbody class="text-gray-700 text-sm">
-            <tr class="border-b border-gray-100">
-                <td class="py-3 px-6 font-medium">Cash</td>
-                <td id="cashRevenue" class="py-3 px-6 text-right font-mono text-blue-600">0.00</td>
-            </tr>
-            <tr class="border-b border-gray-100">
-                <td class="py-3 px-6 font-medium">Mobile Money (Momo)</td>
-                <td id="momoRevenue" class="py-3 px-6 text-right font-mono text-blue-600">0.00</td>
-            </tr>
-            <tr class="border-b border-gray-100">
-                <td class="py-3 px-6 font-medium">Bank Transfer</td>
-                <td id="bankRevenue" class="py-3 px-6 text-right font-mono text-blue-600">0.00</td>
-            </tr>
-            <tr class="bg-blue-600 text-white font-bold">
-                <td class="py-4 px-6 uppercase">Total Collected</td>
-                <td id="totalCollected" class="py-4 px-6 text-right text-lg font-mono">0.00</td>
-            </tr>
-        </tbody>
-    </table>
-</div>
+        <div class="border border-gray-200 rounded-lg shadow-sm w-full">
+            <table class="min-w-full bg-white">
+                <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                    <tr>
+                        <th class="py-3 px-6 text-left border-b">Payment Method</th>
+                        <th class="py-3 px-6 text-right border-b">Total Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700 text-sm">
+                    <tr class="border-b border-gray-100">
+                        <td class="py-3 px-6 font-medium">Cash</td>
+                        <td id="cashRevenue" class="py-3 px-6 text-right font-mono text-blue-600">0.00</td>
+                    </tr>
+                    <tr class="border-b border-gray-100">
+                        <td class="py-3 px-6 font-medium">Mobile Money (Momo)</td>
+                        <td id="momoRevenue" class="py-3 px-6 text-right font-mono text-blue-600">0.00</td>
+                    </tr>
+                    <tr class="border-b border-gray-100">
+                        <td class="py-3 px-6 font-medium">Bank Transfer</td>
+                        <td id="bankRevenue" class="py-3 px-6 text-right font-mono text-blue-600">0.00</td>
+                    </tr>
+                    <tr class="bg-blue-600 text-white font-bold">
+                        <td class="py-4 px-6 uppercase">Total Collected</td>
+                        <td id="totalCollected" class="py-4 px-6 text-right text-lg font-mono">0.00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <div>
         <h3 class="text-sm font-bold mb-3 text-gray-500 uppercase tracking-widest">Room Breakdown</h3>
-        <div class="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+        <div class="border border-gray-200 rounded-lg shadow-sm w-full">
             <table id="roomRevenueTable" class="min-w-full bg-white">
                 <thead class="bg-gray-800 text-white uppercase text-xs">
                     <tr>
@@ -366,7 +323,6 @@
         </div>
     </div>
 </section>
-
             
             <section id="service-reports" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
                 <h2 class="text-2xl font-bold mb-4 text-blue-600"><i class="fas fa-concierge-bell"></i> Service Reports (Incidental Charges)</h2>
