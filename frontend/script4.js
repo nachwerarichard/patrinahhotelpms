@@ -295,7 +295,7 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
     }
 }
 
- currentUsername = username;
+ 
 
      // 2. SAVE to LocalStorage
 
