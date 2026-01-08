@@ -425,6 +425,15 @@
                         <tbody class="text-gray-600 text-sm font-light"></tbody>
                     </table>
                 </div>
+                <div class="flex justify-between items-center mt-4 px-2">
+    <button id="prevAuditPage" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg disabled:opacity-50 transition">
+        <i class="fas fa-chevron-left"></i> Previous
+    </button>
+    <span id="auditPageIndicator" class="text-gray-700 font-medium">Page 1</span>
+    <button id="nextAuditPage" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg disabled:opacity-50 transition">
+        Next <i class="fas fa-chevron-right"></i>
+    </button>
+</div>
             </section>
 
             <section id="channel-manager" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
@@ -747,10 +756,8 @@
         </div>
     </div>
 
-<div id="messageBoxOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 hidden"></div>
-
-<div id="messageBox" class="fixed inset-0 flex items-center justify-center z-50 hidden">
-    <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full mx-4 transform transition-all">
+<div id="messageBoxOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] hidden"></div>
+<div id="messageBox" class="fixed inset-0 flex items-center justify-center z-[10000] hidden">    <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full mx-4 transform transition-all">
         <h3 id="messageBoxTitle" class="text-xl font-bold mb-2 text-gray-900"></h3>
         <p id="messageBoxContent" class="text-gray-600"></p>
         <div class="flex justify-end">
