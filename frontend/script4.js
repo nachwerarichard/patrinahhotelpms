@@ -299,7 +299,6 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
 
      // 2. SAVE to LocalStorage
     localStorage.setItem('savedUsername', username);
-    localStorage.setItem('savedRole', role);
 
     // 3. Update the UI
     const displayElement = document.getElementById('display-user-name');
