@@ -1754,14 +1754,13 @@ async function generateReport() {
     // --- UPDATED PAYMENT BREAKDOWN LOGIC ---
     
     // 1. Update the UI for specific payment categories
-    document.getElementById('cashRevenue').textContent = stats.cash.toFixed(2);
-    document.getElementById('momoRevenue').textContent = stats.momo.toFixed(2);
-    document.getElementById('bankRevenue').textContent = stats.bank.toFixed(2);
-    
-    // 2. Calculate the grand total of payments received
-    const totalPaymentsReceived = stats.cash + stats.momo + stats.bank;
-    document.getElementById('totalCollected').textContent = totalPaymentsReceived.toFixed(2);
+document.getElementById('cashRevenue').textContent = stats.cash.toFixed(2);
+document.getElementById('momoRevenue').textContent = stats.momo.toFixed(2);
+document.getElementById('bankRevenue').textContent = stats.bank.toFixed(2);
 
+// 2. Calculate and Update the Total Collected
+const total = stats.cash + stats.momo + stats.bank;
+document.getElementById('totalCollected').textContent = total.toFixed(2);
     // 3. Update the global reportSummary object (Critical for your Export function)
     reportSummary = {
         Date: selectedDateStr,
