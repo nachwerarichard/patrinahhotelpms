@@ -115,12 +115,7 @@ const auditLogEndDateFilter = document.getElementById('auditLogEndDateFilter');
 const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn');
 
 
-const displayElement = document.getElementById('display-user-name');
 
-if (displayElement) {
-    displayElement.textContent = currentUsername;
-}
-// --- Utility Functions ---
 
 /*document.addEventListener('DOMContentLoaded', () => {
     const navItems = document.querySelectorAll('aside nav ul li');
