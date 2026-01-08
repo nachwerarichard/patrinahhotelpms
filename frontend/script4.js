@@ -301,7 +301,7 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
 
     // 3. Update the UI
     
-    }
+    
 // --- Login and Role Management ---
 
 async function showDashboard(username, role) {
@@ -312,7 +312,7 @@ async function showDashboard(username, role) {
     if (displayElement) {
         displayElement.textContent = username;
 
-    
+    }
     // 2. Switch the UI
     loginContainer.style.display = 'none';
     mainContent.style.display = 'flex';
