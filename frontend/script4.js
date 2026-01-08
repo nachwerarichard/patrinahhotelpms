@@ -295,12 +295,7 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
     }
 }
 
-// --- Login and Role Management ---
-
-async function showDashboard(username, role) {
-    // 1. Set global variables (so the rest of your app knows who is logged in)
-    currentUsername = username;
-    currentUserRole = role;
+ currentUsername = username;
 
      // 2. SAVE to LocalStorage
     localStorage.setItem('savedUsername', username);
@@ -311,6 +306,14 @@ async function showDashboard(username, role) {
     if (displayElement) {
         displayElement.textContent = username;
     }
+// --- Login and Role Management ---
+
+async function showDashboard(username, role) {
+    // 1. Set global variables (so the rest of your app knows who is logged in)
+    currentUsername = username;
+    currentUserRole = role;
+
+
     
     // 2. Switch the UI
     loginContainer.style.display = 'none';
