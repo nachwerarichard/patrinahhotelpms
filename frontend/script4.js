@@ -302,12 +302,16 @@ async function showDashboard(username, role) {
     currentUsername = username;
     currentUserRole = role;
 
-    // 2. Update the UI with the username
+     // 2. SAVE to LocalStorage
+    localStorage.setItem('savedUsername', username);
+    localStorage.setItem('savedRole', role);
+
+    // 3. Update the UI
     const displayElement = document.getElementById('display-user-name');
     if (displayElement) {
         displayElement.textContent = username;
     }
-
+    
     // 2. Switch the UI
     loginContainer.style.display = 'none';
     mainContent.style.display = 'flex';
