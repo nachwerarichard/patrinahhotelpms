@@ -2206,48 +2206,78 @@ exportServiceReportBtn.addEventListener('click', exportToExcel);
 /**
  * Renders the audit logs table based on filters.
  */
-async function renderAuditLogs() {
-    auditLogTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Loading audit logs...</td></tr>';
+// 1. Initialize pagination state
+let currentAuditPage = 1;
+const logsPerPage = 10;
 
-    const user = auditLogUserFilter.value;
-    const action = auditLogActionFilter.value;
-    const startDate = auditLogStartDateFilter.value;
-    const endDate = auditLogEndDateFilter.value;
-
-    let queryParams = new URLSearchParams();
-    if (user) queryParams.append('user', user);
-    if (action) queryParams.append('action', action);
-    if (startDate) queryParams.append('startDate', startDate);
-    if (endDate) queryParams.append('endDate', endDate);
-
-try {
-    const response = await fetch(`${API_BASE_URL}/audit-logs?${queryParams.toString()}`);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const logs = await response.json();
-
-    auditLogTableBody.innerHTML = ''; // Clear loading message
-
-    if (logs.length === 0) {
-        auditLogTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No audit logs found for the selected filters.</td></tr>';
-    } else {
-        logs.forEach(log => {
-            const row = auditLogTableBody.insertRow();
-            
-            // Check for the 'reason' property and explicitly remove the 'N/A' string
-            const reason = (log.details && log.details.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
-
-            row.innerHTML = `
-                <td>${new Date(log.timestamp).toLocaleString()}</td>
-                <td>${log.user}</td>
-                <td>${log.action}</td>
-                <td>${reason}</td>
-            `;
-        });
+// 2. Add Event Listeners for the buttons
+document.getElementById('prevAuditPage').addEventListener('click', () => {
+    if (currentAuditPage > 1) {
+        currentAuditPage--;
+        renderAuditLogs();
     }
-}catch (error) {
+});
+
+document.getElementById('nextAuditPage').addEventListener('click', () => {
+    currentAuditPage++;
+    renderAuditLogs();
+});
+
+// 3. Reset page to 1 when filters are applied
+document.getElementById('applyAuditLogFiltersBtn').addEventListener('click', () => {
+    currentAuditPage = 1;
+    renderAuditLogs();
+});
+
+async function renderAuditLogs() {
+    const tableBody = document.querySelector("#auditLogTable tbody");
+    const prevBtn = document.getElementById('prevAuditPage');
+    const nextBtn = document.getElementById('nextAuditPage');
+    const pageIndicator = document.getElementById('auditPageIndicator');
+
+    tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Loading audit logs...</td></tr>';
+
+    // Build Query Params
+    let queryParams = new URLSearchParams({
+        page: currentAuditPage,
+        limit: logsPerPage,
+        user: document.getElementById('auditLogUserFilter').value,
+        action: document.getElementById('auditLogActionFilter').value,
+        startDate: document.getElementById('auditLogStartDateFilter').value,
+        endDate: document.getElementById('auditLogEndDateFilter').value
+    });
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/audit-logs?${queryParams.toString()}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        const logs = await response.json();
+        tableBody.innerHTML = ''; 
+
+        // Update UI State
+        pageIndicator.innerText = `Page ${currentAuditPage}`;
+        prevBtn.disabled = (currentAuditPage === 1);
+        // Disable "Next" if we received fewer logs than the limit (meaning it's the last page)
+        nextBtn.disabled = (logs.length < logsPerPage);
+
+        if (logs.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No audit logs found.</td></tr>';
+        } else {
+            logs.forEach(log => {
+                const reason = (log.details && log.details.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
+                const row = tableBody.insertRow();
+                row.className = "border-b border-gray-200 hover:bg-gray-50"; // Optional styling
+                row.innerHTML = `
+                    <td class="py-3 px-6 text-left">${new Date(log.timestamp).toLocaleString()}</td>
+                    <td class="py-3 px-6 text-left">${log.user}</td>
+                    <td class="py-3 px-6 text-left">${log.action}</td>
+                    <td class="py-3 px-6 text-left">${reason}</td>
+                `;
+            });
+        }
+    } catch (error) {
         console.error('Error fetching audit logs:', error);
-        showMessageBox('Error', `Failed to load audit logs: ${error.message}`, true);
-        auditLogTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red;">Error loading audit logs.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red;">Error loading audit logs.</td></tr>';
     }
 }
 
