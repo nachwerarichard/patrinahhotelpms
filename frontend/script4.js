@@ -300,9 +300,7 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
      // 2. SAVE to LocalStorage
 
     // 3. Update the UI
-    const displayElement = document.getElementById('display-user-name');
-    if (displayElement) {
-        displayElement.textContent = username;
+    
     }
 // --- Login and Role Management ---
 
@@ -310,7 +308,9 @@ async function showDashboard(username, role) {
     // 1. Set global variables (so the rest of your app knows who is logged in)
     currentUsername = username;
     currentUserRole = role;
-
+    const displayElement = document.getElementById('display-user-name');
+    if (displayElement) {
+        displayElement.textContent = username;
 
     
     // 2. Switch the UI
