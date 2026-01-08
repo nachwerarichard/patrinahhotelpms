@@ -3004,46 +3004,69 @@ app.put('/cash-journal/:id', auth,  async (req, res) => {
 });
 
 // --- Audit Log Endpoints ---
-app.get('/audit-logs', auth,  async (req, res) => {
-  try {
-    const { page = 1, limit = 20, search } = req.query;
-    
-    // Validate numeric parameters
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
-    if (pageNum < 1 || limitNum < 1) {
-      return res.status(400).json({ error: 'Page and limit must be positive numbers.' });
-    }
+app.get('/audit-logs', auth, async (req, res) => {
+  try {
+    // 1. Destructure all possible filter parameters from req.query
+    const { 
+      page = 1, 
+      limit = 10, 
+      user, 
+      action, 
+      startDate, 
+      endDate 
+    } = req.query;
 
-    const skip = (pageNum - 1) * limitNum;
-    let query = {};
-    if (search) {
-      const searchRegex = new RegExp(search, 'i');
-      query = {
-        $or: [
-          { user: searchRegex },
-          { action: searchRegex },
-          { 'details.item': searchRegex },
-          { 'details.description': searchRegex }
-        ]
-      };
-    }
-    const total = await AuditLog.countDocuments(query);
-    const logs = await AuditLog.find(query)
-      .sort({ timestamp: -1 })
-      .skip(skip)
-      .limit(limitNum);
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
 
-    res.json({
-      data: logs,
-      total,
-      page: pageNum,
-      pages: Math.ceil(total / limitNum)
-    });
-  } catch (err) {
-    console.error('Error fetching audit logs on server:', err);
-    res.status(500).json({ error: err.message });
-  }
+    // 2. Build the dynamic query object
+    let query = {};
+
+    // Filter by User (Case-insensitive partial match)
+    if (user) {
+      query.user = { $regex: user, $options: 'i' };
+    }
+
+    // Filter by Action (Case-insensitive partial match)
+    if (action) {
+      query.action = { $regex: action, $options: 'i' };
+    }
+
+    // Filter by Date Range
+    if (startDate || endDate) {
+      query.timestamp = {};
+      if (startDate) {
+        // Sets start of the day
+        query.timestamp.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        // Sets end of the day (23:59:59) to ensure the full day is included
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.timestamp.$lte = end;
+      }
+    }
+
+    // 3. Execute queries
+    const total = await AuditLog.countDocuments(query);
+    const logs = await AuditLog.find(query)
+      .sort({ timestamp: -1 }) // Newest first
+      .skip(skip)
+      .limit(limitNum);
+
+    // 4. Send structured response
+    res.json({
+      data: logs,
+      total,
+      page: pageNum,
+      pages: Math.ceil(total / limitNum)
+    });
+
+  } catch (err) {
+    console.error('Error fetching audit logs on server:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
 // --- NEW REPORTING ENDPOINTS FOR DASHBOARD ---
