@@ -1052,27 +1052,69 @@ function filterBookings() {
 /**
  * Opens the booking modal for adding a new booking.
  */
+// Function to Open Modal
 async function openBookingModal() {
     const modal = document.getElementById('bookingModal');
     const form = document.getElementById('bookingForm');
     
+    // 1. Update UI Text
     document.getElementById('modalTitle').textContent = 'Add New Booking';
-    form.reset(); 
-    document.getElementById('bookingId').value = ''; 
     
-    await populateRoomDropdown(); 
+    // 2. Reset everything
+    form.reset();
+    document.getElementById('bookingId').value = '';
     
-    // Use value IDs consistently
-    document.getElementById('nights').value = 0;
-    document.getElementById('totalDue').value = 0;
-    document.getElementById('balance').value = 0;
-    document.getElementById('amountPaid').value = 0;
+    // 3. Reset calculation fields
+    const fields = ['nights', 'totalDue', 'balance', 'amountPaid'];
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.value = 0;
+    });
 
-    // FIX: Remove 'hidden' class to show the modal
+    // 4. Populate Room Dropdown
+    try {
+        await populateRoomDropdown();
+    } catch (err) {
+        console.error("Room sync failed", err);
+    }
+
+    // 5. SHOW MODAL correctly
     modal.classList.remove('hidden');
+    modal.style.display = 'flex';
 }
 
-// Ensure you have a matching close function
+// Function to Close Modal
+function closeBookingModal() {
+    const modal = document.getElementById('bookingModal');
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+}
+
+// AUTOMATIC CALCULATIONS
+document.addEventListener('input', (e) => {
+    if (['checkIn', 'checkOut', 'amtPerNight', 'amountPaid'].includes(e.target.id)) {
+        calculateBookingDetails();
+    }
+});
+
+function calculateBookingDetails() {
+    const checkIn = new Date(document.getElementById('checkIn').value);
+    const checkOut = new Date(document.getElementById('checkOut').value);
+    const rate = parseFloat(document.getElementById('amtPerNight').value) || 0;
+    const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
+
+    if (checkIn && checkOut && checkOut > checkIn) {
+        const diffTime = Math.abs(checkOut - checkIn);
+        const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        const total = nights * rate;
+        const balance = total - paid;
+
+        document.getElementById('nights').value = nights;
+        document.getElementById('totalDue').value = total.toFixed(2);
+        document.getElementById('balance').value = balance.toFixed(2);
+    }
+}
 function closeBookingModal() {
     document.getElementById('bookingModal').classList.add('hidden');
 }
