@@ -1053,6 +1053,7 @@ function filterBookings() {
  * Opens the booking modal for adding a new booking.
  */
 async function openBookingModal() {
+    const modal = document.getElementById('bookingModal');
     const form = document.getElementById('bookingForm');
     // 3. Reset the form and the hidden ID
     form.reset(); 
