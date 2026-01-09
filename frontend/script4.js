@@ -713,32 +713,33 @@ row.innerHTML = `
     pageInfoSpan.textContent = `Page ${totalCount === 0 ? 0 : currentPage} of ${totalPages}`;
 }
 
+
 function toggleActionButtons(event, button) {
-    event.stopPropagation(); // Prevent document click from firing immediately
+    event.stopPropagation();
     
-    // Close any other open menus first
-    const allMenus = document.querySelectorAll('.action-menu');
-    allMenus.forEach(m => m.classList.remove('show'));
+    // 1. Close all other menus
+    document.querySelectorAll('.action-menu').forEach(m => m.classList.remove('show'));
 
     const menu = button.nextElementSibling;
+    
+    // 2. Show the menu FIRST (so offsetHeight is not 0)
     menu.classList.add('show');
 
-    // Get coordinates of the button
+    // 3. Calculate position
     const rect = button.getBoundingClientRect();
     const menuHeight = menu.offsetHeight;
     const windowHeight = window.innerHeight;
-
-    // Check if there is enough space below. If not, show it above.
     const spaceBelow = windowHeight - rect.bottom;
     
-    // Position logic
-    menu.style.left = `${rect.left - 140}px`; // Adjust -140 based on menu width
+    // 4. Set Horizontal Position (Align to the right of the button)
+    menu.style.left = `${rect.right - 160}px`; 
     
+    // 5. Set Vertical Position (Drop up or down)
     if (spaceBelow < menuHeight + 20) {
-        // Drop UP
+        // Not enough space below - Show ABOVE the button
         menu.style.top = `${rect.top - menuHeight}px`;
     } else {
-        // Drop DOWN
+        // Enough space - Show BELOW the button
         menu.style.top = `${rect.bottom}px`;
     }
 }
