@@ -690,7 +690,7 @@ row.innerHTML = `
         ` : ''}
     </td>
     <td class="py-3 px-6">${booking.guestsource}</td>
-    // Inside your row.innerHTML loop:
+    
 <td class="py-3 px-6 text-center">
     <div class="relative inline-block text-left">
         <button class="p-2 hover:bg-gray-200 rounded-full transition-colors" 
