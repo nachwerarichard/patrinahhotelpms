@@ -31,6 +31,24 @@
     }
     .animate-bounce-in { animation: bounce-in 0.2s ease-out forwards; }
         .hidden{display:none;}
+
+    /* Add this to your style sheet */
+.action-menu {
+    display: none;
+    position: fixed; /* Fixed stays relative to the viewport, not the table cell */
+    z-index: 9999;
+    min-width: 160px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+}
+
+.action-menu.show {
+    display: block;
+}
+    
     /* Ensure the container stays inside the table cell */
 .action-buttons-container {
     position: relative; 
