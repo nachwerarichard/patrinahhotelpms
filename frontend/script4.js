@@ -1053,35 +1053,18 @@ function filterBookings() {
  * Opens the booking modal for adding a new booking.
  */
 async function openBookingModal() {
-    const modal = document.getElementById('bookingModal');
-    const form = document.getElementById('bookingForm');
-    // 3. Reset the form and the hidden ID
-    form.reset(); 
-    document.getElementById('bookingId').value = ''; 
-    
-    // 4. Reset calculated fields to zero
-    // Ensure these IDs match the HTML exactly
-    document.getElementById('nights').value = 0;
-    document.getElementById('totalDue').value = 0;
-    document.getElementById('amountPaid').value = 0;
-    document.getElementById('balance').value = 0;
-
-    // 5. Populate the dropdown from your backend
-    try {
-        await populateRoomDropdown(); 
-    } catch (error) {
-        console.error("Failed to load rooms:", error);
-    }
-
-    // 6. Show the modal
-    // Removing 'hidden' class is more reliable when using Tailwind
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
+    document.getElementById('modalTitle').textContent = 'Add New Booking';
+    bookingForm.reset(); // Clear previous form data
+    document.getElementById('bookingId').value = ''; // Clear hidden ID
+    await populateRoomDropdown(); // Populate with all clean rooms from backend
+    nightsInput.value = 0;
+    totalDueInput.value = 0;
+    balanceInput.value = 0;
+    amountPaidInput.value = 0;
+    bookingModal.style.display = 'flex';
 }
 
-/**
- * Closes the booking modal.
- */
+
 function closeBookingModal() {
     bookingModal.style.display = 'none';
 }
