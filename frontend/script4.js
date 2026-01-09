@@ -690,19 +690,17 @@ row.innerHTML = `
         ` : ''}
     </td>
     <td class="py-3 px-6">${booking.guestsource}</td>
-    
-<td class="py-3 px-6 text-center">
-    <div class="relative inline-block text-left">
-        <button class="p-2 hover:bg-gray-200 rounded-full transition-colors" 
-                onclick="toggleActionButtons(event, this)">
-            <i class="fas fa-ellipsis-v text-gray-600"></i>
-        </button>
-        
-        <div class="action-menu">
-           ${actionButtonsHtml}
+    <td class="py-3 px-6 text-center">
+        <div class="relative inline-block text-left">
+            <button class="p-2 hover:bg-gray-200 rounded-full transition-colors" onclick="toggleActionButtons(event, this)">
+                <i class="fas fa-ellipsis-v text-gray-600"></i>
+            </button>
+            
+            <div class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 shadow-2xl rounded-lg p-2 z-[100] transition-all">
+               ${actionButtonsHtml}
+            </div>
         </div>
-    </div>
-</td>
+    </td>
 `;
         });
     }
@@ -713,49 +711,10 @@ row.innerHTML = `
     pageInfoSpan.textContent = `Page ${totalCount === 0 ? 0 : currentPage} of ${totalPages}`;
 }
 
-
-function toggleActionButtons(event, button) {
-    event.stopPropagation();
-    
-    // 1. Close all other menus
-    document.querySelectorAll('.action-menu').forEach(m => m.classList.remove('show'));
-
-    const menu = button.nextElementSibling;
-    
-    // 2. Show the menu FIRST (so offsetHeight is not 0)
-    menu.classList.add('show');
-
-    // 3. Calculate position
-    const rect = button.getBoundingClientRect();
-    const menuHeight = menu.offsetHeight;
-    const windowHeight = window.innerHeight;
-    const spaceBelow = windowHeight - rect.bottom;
-    
-    // 4. Set Horizontal Position (Align to the right of the button)
-    menu.style.left = `${rect.right - 160}px`; 
-    
-    // 5. Set Vertical Position (Drop up or down)
-    if (spaceBelow < menuHeight + 20) {
-        // Not enough space below - Show ABOVE the button
-        menu.style.top = `${rect.top - menuHeight}px`;
-    } else {
-        // Enough space - Show BELOW the button
-        menu.style.top = `${rect.bottom}px`;
-    }
+function toggleActionButtons(button) {
+    const hiddenButtonsContainer = button.nextElementSibling; // Get the next sibling, which is the div containing the hidden buttons
+    hiddenButtonsContainer.classList.toggle('show-buttons'); // Toggle a class to show/hide
 }
-
-document.addEventListener('click', () => {
-    document.querySelectorAll('.action-menu').forEach(menu => {
-        menu.classList.remove('show');
-    });
-});
-
-// Also close on scroll so the menu doesn't "float" away from the row
-window.addEventListener('scroll', () => {
-    document.querySelectorAll('.action-menu').forEach(menu => {
-        menu.classList.remove('show');
-    });
-}, true);
 
 // Optional: Close open menus when clicking outside
 document.addEventListener('click', (event) => {
