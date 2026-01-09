@@ -1053,15 +1053,28 @@ function filterBookings() {
  * Opens the booking modal for adding a new booking.
  */
 async function openBookingModal() {
+    const modal = document.getElementById('bookingModal');
+    const form = document.getElementById('bookingForm');
+    
     document.getElementById('modalTitle').textContent = 'Add New Booking';
-    bookingForm.reset(); // Clear previous form data
-    document.getElementById('bookingId').value = ''; // Clear hidden ID
-    await populateRoomDropdown(); // Populate with all clean rooms from backend
-    nightsInput.value = 0;
-    totalDueInput.value = 0;
-    balanceInput.value = 0;
-    amountPaidInput.value = 0;
-    bookingModal.style.display = 'flex';
+    form.reset(); 
+    document.getElementById('bookingId').value = ''; 
+    
+    await populateRoomDropdown(); 
+    
+    // Use value IDs consistently
+    document.getElementById('nights').value = 0;
+    document.getElementById('totalDue').value = 0;
+    document.getElementById('balance').value = 0;
+    document.getElementById('amountPaid').value = 0;
+
+    // FIX: Remove 'hidden' class to show the modal
+    modal.classList.remove('hidden');
+}
+
+// Ensure you have a matching close function
+function closeBookingModal() {
+    document.getElementById('bookingModal').classList.add('hidden');
 }
 
 
