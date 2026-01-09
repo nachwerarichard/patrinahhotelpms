@@ -608,7 +608,7 @@ if (!pageInfoSpan) {
 row.dataset.id = booking.id;
 
 // Add Tailwind classes for row highlighting
-if (booking.gueststatus === 'Cancelled') {
+if (booking.gueststatus === 'cancelled') {
     row.className = "bg-red-50 hover:bg-red-100 transition-colors opacity-75";
 } else {
     row.className = "hover:bg-gray-50 transition-colors";
@@ -619,7 +619,7 @@ if (booking.gueststatus === 'Cancelled') {
             const isCheckedOut = new Date(booking.checkOut) <= new Date() && rooms.find(r => r.number === booking.room)?.status === 'dirty';
 
            // Inside renderBookings loop...
-const isCancelled = booking.gueststatus === 'Cancelled';
+const isCancelled = booking.gueststatus === 'cancelled';
 const baseBtn = "inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white focus:outline-none transition-all duration-200 w-full justify-center mb-1";
 
 if (currentUserRole === 'admin') {
