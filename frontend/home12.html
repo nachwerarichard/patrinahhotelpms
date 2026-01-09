@@ -48,11 +48,12 @@
     white-space: nowrap; /* Prevents text wrapping */
 }
 
-/* Optional: If your table has 'overflow-hidden', the menu might get cut off. 
-   Apply this to the table wrapper if needed: */
+/* Modify your wrapper class like this */
 .overflow-x-auto {
     position: relative;
+    overflow: visible !important; 
 }
+    
     </style>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen flex flex-col">
