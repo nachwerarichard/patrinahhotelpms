@@ -1057,17 +1057,25 @@ function filterBookings() {
 function openBookingModal() {
     const modal = document.getElementById('bookingModal');
     const form = document.getElementById('bookingForm');
-
-    // 1. Show the main modal
+    
+    // 1. Remove hidden from the main wrapper
     modal.classList.remove('hidden');
+    modal.style.display = 'flex'; // Force flex display
 
-    // 2. Force the form to be visible in case it's hidden
+    // 2. Look for any nested 'hidden' classes inside the modal
+    const hiddenElements = modal.querySelectorAll('.hidden');
+    hiddenElements.forEach(el => {
+        el.classList.remove('hidden');
+        console.log("Forced an inner element to show:", el.tagName, el.id);
+    });
+
+    // 3. Ensure the form itself is visible
     if (form) {
-        form.classList.remove('hidden');
-        form.style.display = 'block'; 
+        form.style.display = 'block';
+        form.style.visibility = 'visible';
+        form.style.opacity = '1';
     }
 
-    // 3. Log to the console so we KNOW the function finished
     console.log("Modal open function completed successfully.");
 }
 
