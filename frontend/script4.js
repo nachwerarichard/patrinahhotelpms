@@ -1091,8 +1091,6 @@ async function openBookingModal() {
     }
 }
 
-
-
 // AUTOMATIC CALCULATIONS
 document.addEventListener('input', (e) => {
     if (['checkIn', 'checkOut', 'amtPerNight', 'amountPaid'].includes(e.target.id)) {
