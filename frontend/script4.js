@@ -1054,29 +1054,41 @@ function filterBookings() {
  */
 // Function to Open Modal
 
-function openBookingModal() {
+async function openBookingModal() {
     const modal = document.getElementById('bookingModal');
     const form = document.getElementById('bookingForm');
     
-    // 1. Remove hidden from the main wrapper
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex'; // Force flex display
-
-    // 2. Look for any nested 'hidden' classes inside the modal
-    const hiddenElements = modal.querySelectorAll('.hidden');
-    hiddenElements.forEach(el => {
-        el.classList.remove('hidden');
-        console.log("Forced an inner element to show:", el.tagName, el.id);
-    });
-
-    // 3. Ensure the form itself is visible
-    if (form) {
-        form.style.display = 'block';
-        form.style.visibility = 'visible';
-        form.style.opacity = '1';
+    // 1. Force the Modal to show immediately
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex'; // Ensures Tailwind's flex centering works
     }
 
-    console.log("Modal open function completed successfully.");
+    // 2. Safely Update UI
+    const title = document.getElementById('modalTitle');
+    if (title) title.textContent = 'Add New Booking';
+
+    // 3. Reset the form but ensure it stays visible
+    if (form) {
+        form.reset();
+        form.style.display = 'block'; // Force the form to have a layout
+    }
+
+    // 4. Reset calculation fields
+    const fields = ['bookingId', 'nights', 'totalDue', 'balance', 'amountPaid'];
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = (id === 'bookingId') ? '' : 0;
+    });
+
+    // 5. Load external data last so it doesn't block the UI
+    try {
+        if (typeof populateRoomDropdown === "function") {
+            await populateRoomDropdown();
+        }
+    } catch (err) {
+        console.warn("Rooms could not be loaded, but the modal is open.");
+    }
 }
 
 // Function to Close Modal
