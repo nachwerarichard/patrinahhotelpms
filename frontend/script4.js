@@ -1054,44 +1054,23 @@ function filterBookings() {
  */
 // Function to Open Modal
 
-async function openBookingModal() {
+function openBookingModal() {
     const modal = document.getElementById('bookingModal');
     const form = document.getElementById('bookingForm');
-    
-    // Safety check: ensure the modal exists
-    if (!modal) return;
 
-    try {
-        // 1. Reset text and IDs
-        document.getElementById('modalTitle').textContent = 'Add New Booking';
-        document.getElementById('bookingId').value = '';
-        
-        // 2. Reset the form fields
-        if (form) form.reset();
-        
-        // 3. Reset calculation fields
-        const fields = ['nights', 'totalDue', 'balance', 'amountPaid'];
-        fields.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.value = 0;
-        });
+    // 1. Show the main modal
+    modal.classList.remove('hidden');
 
-        // 4. Try to load rooms, but don't let a failure stop the modal
-        try {
-            if (typeof populateRoomDropdown === "function") {
-                await populateRoomDropdown();
-            }
-        } catch (err) {
-            console.warn("Room dropdown failed to load, but opening modal anyway", err);
-        }
-
-    } catch (err) {
-        console.error("General error in openBookingModal:", err);
-    } finally {
-        // 5. ALWAYS show the modal at the end, even if there was an error above
-        modal.classList.remove('hidden');
+    // 2. Force the form to be visible in case it's hidden
+    if (form) {
+        form.classList.remove('hidden');
+        form.style.display = 'block'; 
     }
+
+    // 3. Log to the console so we KNOW the function finished
+    console.log("Modal open function completed successfully.");
 }
+
 // Function to Close Modal
 function closeBookingModal() {
     const modal = document.getElementById('bookingModal');
