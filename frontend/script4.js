@@ -1091,12 +1091,7 @@ async function openBookingModal() {
     }
 }
 
-// Function to Close Modal
-function closeBookingModal() {
-    const modal = document.getElementById('bookingModal');
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-}
+
 
 // AUTOMATIC CALCULATIONS
 document.addEventListener('input', (e) => {
@@ -1123,14 +1118,7 @@ function calculateBookingDetails() {
         document.getElementById('balance').value = balance.toFixed(2);
     }
 }
-function closeBookingModal() {
-    document.getElementById('bookingModal').classList.add('hidden');
-}
 
-
-function closeBookingModal() {
-    bookingModal.style.display = 'none';
-}
 
 /**
  * Handles form submission for adding/editing bookings.
