@@ -636,7 +636,7 @@ if (currentUserRole === 'admin') {
       // --- UI for Active Bookings ---
 actionButtonsHtml = `
 
-    <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="viewBooking('${booking.id}')">
+    <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="openBookModal('${booking.id}')">
         View 
     </button>
     ${!booking.checkedIn ? 
@@ -644,7 +644,7 @@ actionButtonsHtml = `
         `<button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')">Move Room</button>`
     }
     
-    <button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">Edit</button>
+    <button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="openBookModal('${booking.id}')">Edit</button>
     
     ${booking.checkedIn ? `
         <button class="${baseBtn} bg-amber-500 hover:bg-amber-600 ${isCheckedOut ? 'opacity-50 cursor-not-allowed' : ''}" 
@@ -1216,6 +1216,70 @@ bookingForm.addEventListener('submit', async function(event) {
  * Populates the modal with booking data for editing.
  * @param {string} id - The custom ID of the booking to edit.
  */
+async function openBookModal(id, isReadOnly = false) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings/id/${id}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const booking = await response.json();
+
+        if (!booking) {
+            showMessageBox('Error', 'Booking not found.', true);
+            return;
+        }
+
+        // 1. Set Title
+        document.getElementById('modalTitle').textContent = isReadOnly ? 'View Booking Details' : 'Edit Booking';
+
+        // 2. Populate Fields
+        document.getElementById('bookingId').value = booking.id;
+        document.getElementById('name').value = booking.name;
+        document.getElementById('checkIn').value = booking.checkIn;
+        document.getElementById('checkOut').value = booking.checkOut;
+        document.getElementById('nights').value = booking.nights;
+        document.getElementById('amtPerNight').value = booking.amtPerNight;
+        document.getElementById('totalDue').value = booking.totalDue;
+        document.getElementById('amountPaid').value = booking.amountPaid;
+        document.getElementById('balance').value = booking.balance;
+        document.getElementById('paymentStatus').value = booking.paymentStatus;
+        document.getElementById('people').value = booking.people;
+        document.getElementById('nationality').value = booking.nationality;
+        document.getElementById('address').value = booking.address;
+        document.getElementById('phoneNo').value = booking.phoneNo;
+        document.getElementById('guestEmail').value = booking.guestEmail;
+        document.getElementById('nationalIdNo').value = booking.nationalIdNo;
+        document.getElementById('occupation').value = booking.occupation || '';
+        document.getElementById('vehno').value = booking.vehno || '';
+        document.getElementById('destination').value = booking.destination || '';
+        document.getElementById('checkIntime').value = booking.checkIntime || '';
+        document.getElementById('checkOuttime').value = booking.checkOuttime || '';
+        document.getElementById('kin').value = booking.kin || '';
+        document.getElementById('kintel').value = booking.kintel || '';
+        document.getElementById('purpose').value = booking.purpose || '';
+        document.getElementById('declarations').value = booking.declarations || '';
+
+        await populateRoomDropdown(booking.room);
+
+        // 3. Toggle Read-Only State
+        // This targets all input, select, and textarea elements inside the form
+        const inputs = bookingModal.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.readOnly = isReadOnly; // For text inputs
+            if (input.tagName === 'SELECT') input.disabled = isReadOnly; // Selects use 'disabled'
+        });
+
+        // 4. Hide/Show Save Button
+        const saveBtn = document.getElementById('saveBookingBtn'); // Ensure your save button has this ID
+        if (saveBtn) {
+            saveBtn.style.display = isReadOnly ? 'none' : 'block';
+        }
+
+        bookingModal.style.display = 'flex';
+    } catch (error) {
+        console.error('Error loading booking:', error);
+        showMessageBox('Error', `Failed to load booking: ${error.message}`, true);
+    }
+}
+
 async function editBooking(id) {
     try {
         // Fetch the specific booking by ID
