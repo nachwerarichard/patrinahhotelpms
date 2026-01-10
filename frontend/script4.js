@@ -1053,6 +1053,7 @@ function filterBookings() {
  * Opens the booking modal for adding a new booking.
  */
 // Function to Open Modal
+
 async function openBookingModal() {
     const modal = document.getElementById('bookingModal');
     const form = document.getElementById('bookingForm');
@@ -1064,25 +1065,25 @@ async function openBookingModal() {
     form.reset();
     document.getElementById('bookingId').value = '';
     
-    // 3. Reset calculation fields
+    // 3. Reset calculation fields to 0
     const fields = ['nights', 'totalDue', 'balance', 'amountPaid'];
     fields.forEach(id => {
         const el = document.getElementById(id);
-        if(el) el.value = 0;
+        if (el) el.value = 0;
     });
 
     // 4. Populate Room Dropdown
     try {
-        await populateRoomDropdown();
+        // Ensure this function exists and fetches your available rooms
+        await populateRoomDropdown(); 
     } catch (err) {
         console.error("Room sync failed", err);
     }
 
-    // 5. SHOW MODAL correctly
+    // 5. SHOW MODAL
+    // Simply removing 'hidden' is enough because your HTML has 'flex' defined
     modal.classList.remove('hidden');
-    modal.style.display = 'flex';
 }
-
 // Function to Close Modal
 function closeBookingModal() {
     const modal = document.getElementById('bookingModal');
