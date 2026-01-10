@@ -1216,7 +1216,7 @@ bookingForm.addEventListener('submit', async function(event) {
  * Populates the modal with booking data for editing.
  * @param {string} id - The custom ID of the booking to edit.
  */
-async function openBookModal(id, isReadOnly = false) {
+async function openBookingModal(id, mode = 'view') {
     try {
         const response = await fetch(`${API_BASE_URL}/bookings/id/${id}`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -1227,55 +1227,48 @@ async function openBookModal(id, isReadOnly = false) {
             return;
         }
 
-        // 1. Set Title
-        document.getElementById('modalTitle').textContent = isReadOnly ? 'View Booking Details' : 'Edit Booking';
-
-        // 2. Populate Fields
-        document.getElementById('bookingId').value = booking.id;
-        document.getElementById('name').value = booking.name;
-        document.getElementById('checkIn').value = booking.checkIn;
-        document.getElementById('checkOut').value = booking.checkOut;
-        document.getElementById('nights').value = booking.nights;
-        document.getElementById('amtPerNight').value = booking.amtPerNight;
-        document.getElementById('totalDue').value = booking.totalDue;
-        document.getElementById('amountPaid').value = booking.amountPaid;
-        document.getElementById('balance').value = booking.balance;
-        document.getElementById('paymentStatus').value = booking.paymentStatus;
-        document.getElementById('people').value = booking.people;
-        document.getElementById('nationality').value = booking.nationality;
-        document.getElementById('address').value = booking.address;
-        document.getElementById('phoneNo').value = booking.phoneNo;
-        document.getElementById('guestEmail').value = booking.guestEmail;
-        document.getElementById('nationalIdNo').value = booking.nationalIdNo;
-        document.getElementById('occupation').value = booking.occupation || '';
-        document.getElementById('vehno').value = booking.vehno || '';
-        document.getElementById('destination').value = booking.destination || '';
-        document.getElementById('checkIntime').value = booking.checkIntime || '';
-        document.getElementById('checkOuttime').value = booking.checkOuttime || '';
-        document.getElementById('kin').value = booking.kin || '';
-        document.getElementById('kintel').value = booking.kintel || '';
-        document.getElementById('purpose').value = booking.purpose || '';
-        document.getElementById('declarations').value = booking.declarations || '';
-
-        await populateRoomDropdown(booking.room);
-
-        // 3. Toggle Read-Only State
-        // This targets all input, select, and textarea elements inside the form
-        const inputs = bookingModal.querySelectorAll('input, select, textarea');
-        inputs.forEach(input => {
-            input.readOnly = isReadOnly; // For text inputs
-            if (input.tagName === 'SELECT') input.disabled = isReadOnly; // Selects use 'disabled'
-        });
-
-        // 4. Hide/Show Save Button
+        // 1. Set Title and Save Button Visibility
+        document.getElementById('modalTitle').textContent = mode === 'view' ? 'View Booking' : 'Edit Booking';
+        
+        // Hide the "Save" or "Submit" button if we are only viewing
         const saveBtn = document.getElementById('saveBookingBtn'); // Ensure your save button has this ID
         if (saveBtn) {
-            saveBtn.style.display = isReadOnly ? 'none' : 'block';
+            saveBtn.style.display = mode === 'view' ? 'none' : 'block';
         }
 
+        // 2. Populate Fields
+        const fields = [
+            'bookingId', 'name', 'checkIn', 'checkOut', 'people', 'nationality', 
+            'address', 'phoneNo', 'guestEmail', 'nationalIdNo', 'occupation', 
+            'vehno', 'destination', 'checkIntime', 'checkOuttime', 'kin', 
+            'kintel', 'purpose', 'declarations', 'paymentStatus'
+        ];
+
+        fields.forEach(field => {
+            const element = document.getElementById(field);
+            if (element) {
+                element.value = booking[field] || '';
+                // Set read-only status based on mode
+                element.disabled = (mode === 'view');
+            }
+        });
+
+        // Handle specific inputs that might be outside the standard loop
+        nightsInput.value = booking.nights || 0;
+        amtPerNightInput.value = booking.amtPerNight || 0;
+        totalDueInput.value = booking.totalDue || 0;
+        amountPaidInput.value = booking.amountPaid || 0;
+        balanceInput.value = booking.balance || 0;
+
+        // Populate dropdown and disable it if viewing
+        await populateRoomDropdown(booking.room);
+        const roomDropdown = document.getElementById('room'); // Adjust ID as needed
+        if (roomDropdown) roomDropdown.disabled = (mode === 'view');
+
         bookingModal.style.display = 'flex';
+        
     } catch (error) {
-        console.error('Error loading booking:', error);
+        console.error('Error opening booking modal:', error);
         showMessageBox('Error', `Failed to load booking: ${error.message}`, true);
     }
 }
