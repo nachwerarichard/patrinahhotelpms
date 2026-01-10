@@ -1058,35 +1058,39 @@ async function openBookingModal() {
     const modal = document.getElementById('bookingModal');
     const form = document.getElementById('bookingForm');
     
-    // 1. Show the modal first
-    modal.classList.remove('hidden');
+    // 1. Show the main modal overlay
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
 
-    // 2. Reset the form values (this handles text/selects)
-    if (form) form.reset();
+    // 2. Reset form data
+    if (form) {
+        form.reset();
+        
+        // --- THE FIX: Force reveal all hidden containers within the form ---
+        const formContainers = form.querySelectorAll('.flex.flex-col');
+        formContainers.forEach(container => {
+            container.classList.remove('hidden');
+        });
+    }
 
-    // 3. SPECIFICALLY target only the input values
-    // Do NOT loop through the parent 'flex flex-col' divs
+    // 3. Reset specific ID values
     const fieldIds = ['bookingId', 'nights', 'totalDue', 'balance', 'amountPaid'];
     fieldIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.value = (id === 'bookingId') ? '' : 0;
-            
-            // EMERGENCY FIX: If something previously hid this element, show it
-            // We target the parent 'flex flex-col' div to remove the hidden class
-            if (el.parentElement.classList.contains('hidden')) {
-                el.parentElement.classList.remove('hidden');
-            }
         }
     });
 
-    // 4. Populate Rooms
+    // 4. Populate Rooms (Wrapped in try/catch so it can't break the UI)
     try {
         if (typeof populateRoomDropdown === "function") {
             await populateRoomDropdown();
         }
     } catch (err) {
-        console.error("Dropdown sync failed", err);
+        console.error("Room sync failed, but modal is open:", err);
     }
 }
 // AUTOMATIC CALCULATIONS
