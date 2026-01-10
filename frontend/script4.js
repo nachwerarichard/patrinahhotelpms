@@ -1058,30 +1058,31 @@ async function openBookingModal() {
     const modal = document.getElementById('bookingModal');
     const form = document.getElementById('bookingForm');
     
-    // 1. Update UI Text
-    document.getElementById('modalTitle').textContent = 'Add New Booking';
-    
-    // 2. Reset everything
+    if (!modal || !form) {
+        console.error("Modal or Form elements not found in DOM");
+        return;
+    }
+
+    // 1. Reset and Setup
     form.reset();
+    document.getElementById('modalTitle').textContent = 'Add New Booking';
     document.getElementById('bookingId').value = '';
     
-    // 3. Reset calculation fields to 0
-    const fields = ['nights', 'totalDue', 'balance', 'amountPaid'];
-    fields.forEach(id => {
+    // 2. Clear calculation fields
+    ['nights', 'totalDue', 'balance', 'amountPaid'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = 0;
     });
 
-    // 4. Populate Room Dropdown
+    // 3. Populate Rooms (Try/Catch to prevent crashing the UI)
     try {
-        // Ensure this function exists and fetches your available rooms
-        await populateRoomDropdown(); 
+        await populateRoomDropdown();
     } catch (err) {
-        console.error("Room sync failed", err);
+        console.error("Failed to load rooms:", err);
     }
 
-    // 5. SHOW MODAL
-    // Simply removing 'hidden' is enough because your HTML has 'flex' defined
+    // 4. Show Modal
+    // Use classList for Tailwind compatibility instead of .style.display
     modal.classList.remove('hidden');
 }
 // Function to Close Modal
