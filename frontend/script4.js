@@ -636,7 +636,7 @@ if (currentUserRole === 'admin') {
       // --- UI for Active Bookings ---
 actionButtonsHtml = `
 
-    <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="viewBookingDetails('${booking.id}')">
+    <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="editBooking('${booking.id}')">
         View 
     </button>
     ${!booking.checkedIn ? 
