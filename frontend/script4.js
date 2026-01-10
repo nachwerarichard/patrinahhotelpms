@@ -1058,32 +1058,39 @@ async function openBookingModal() {
     const modal = document.getElementById('bookingModal');
     const form = document.getElementById('bookingForm');
     
-    if (!modal || !form) {
-        console.error("Modal or Form elements not found in DOM");
-        return;
-    }
+    // Safety check: ensure the modal exists
+    if (!modal) return;
 
-    // 1. Reset and Setup
-    form.reset();
-    document.getElementById('modalTitle').textContent = 'Add New Booking';
-    document.getElementById('bookingId').value = '';
-    
-    // 2. Clear calculation fields
-    ['nights', 'totalDue', 'balance', 'amountPaid'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = 0;
-    });
-
-    // 3. Populate Rooms (Try/Catch to prevent crashing the UI)
     try {
-        await populateRoomDropdown();
-    } catch (err) {
-        console.error("Failed to load rooms:", err);
-    }
+        // 1. Reset text and IDs
+        document.getElementById('modalTitle').textContent = 'Add New Booking';
+        document.getElementById('bookingId').value = '';
+        
+        // 2. Reset the form fields
+        if (form) form.reset();
+        
+        // 3. Reset calculation fields
+        const fields = ['nights', 'totalDue', 'balance', 'amountPaid'];
+        fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = 0;
+        });
 
-    // 4. Show Modal
-    // Use classList for Tailwind compatibility instead of .style.display
-    modal.classList.remove('hidden');
+        // 4. Try to load rooms, but don't let a failure stop the modal
+        try {
+            if (typeof populateRoomDropdown === "function") {
+                await populateRoomDropdown();
+            }
+        } catch (err) {
+            console.warn("Room dropdown failed to load, but opening modal anyway", err);
+        }
+
+    } catch (err) {
+        console.error("General error in openBookingModal:", err);
+    } finally {
+        // 5. ALWAYS show the modal at the end, even if there was an error above
+        modal.classList.remove('hidden');
+    }
 }
 // Function to Close Modal
 function closeBookingModal() {
