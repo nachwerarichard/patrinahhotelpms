@@ -636,7 +636,7 @@ if (currentUserRole === 'admin') {
       // --- UI for Active Bookings ---
 actionButtonsHtml = `
 
-    <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="openBookModal('${booking.id}')">
+    <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="viewBooking('${booking.id}')">
         View 
     </button>
     ${!booking.checkedIn ? 
@@ -1216,7 +1216,7 @@ bookingForm.addEventListener('submit', async function(event) {
  * Populates the modal with booking data for editing.
  * @param {string} id - The custom ID of the booking to edit.
  */
-async function openBookModal(id, mode = 'view') {
+async function viewBooking(id) {
     try {
         const response = await fetch(`${API_BASE_URL}/bookings/id/${id}`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -1227,16 +1227,12 @@ async function openBookModal(id, mode = 'view') {
             return;
         }
 
-        // 1. Set Title and Save Button Visibility
-        document.getElementById('modalTitle').textContent = mode === 'view' ? 'View Booking' : 'Edit Booking';
-        
-        // Hide the "Save" or "Submit" button if we are only viewing
-        const saveBtn = document.getElementById('saveBookingBtn'); // Ensure your save button has this ID
-        if (saveBtn) {
-            saveBtn.style.display = mode === 'view' ? 'none' : 'block';
-        }
+        // 1. Set Modal Title and hide the Save button permanently
+        document.getElementById('modalTitle').textContent = 'Booking Details';
+        const saveBtn = document.getElementById('saveBookingBtn');
+        if (saveBtn) saveBtn.style.display = 'none';
 
-        // 2. Populate Fields
+        // 2. Define all fields to be populated
         const fields = [
             'bookingId', 'name', 'checkIn', 'checkOut', 'people', 'nationality', 
             'address', 'phoneNo', 'guestEmail', 'nationalIdNo', 'occupation', 
@@ -1244,32 +1240,42 @@ async function openBookModal(id, mode = 'view') {
             'kintel', 'purpose', 'declarations', 'paymentStatus'
         ];
 
+        // 3. Populate and Disable all standard fields
         fields.forEach(field => {
             const element = document.getElementById(field);
             if (element) {
                 element.value = booking[field] || '';
-                // Set read-only status based on mode
-                element.disabled = (mode === 'view');
+                element.disabled = true; // Force read-only
             }
         });
 
-        // Handle specific inputs that might be outside the standard loop
-        nightsInput.value = booking.nights || 0;
-        amtPerNightInput.value = booking.amtPerNight || 0;
-        totalDueInput.value = booking.totalDue || 0;
-        amountPaidInput.value = booking.amountPaid || 0;
-        balanceInput.value = booking.balance || 0;
+        // 4. Handle Numeric/Calculated fields
+        const numericFields = {
+            'nights': nightsInput,
+            'amtPerNight': amtPerNightInput,
+            'totalDue': totalDueInput,
+            'amountPaid': amountPaidInput,
+            'balance': balanceInput
+        };
 
-        // Populate dropdown and disable it if viewing
+        for (const [key, input] of Object.entries(numericFields)) {
+            if (input) {
+                input.value = booking[key] || 0;
+                input.disabled = true;
+            }
+        }
+
+        // 5. Handle Room Dropdown
         await populateRoomDropdown(booking.room);
-        const roomDropdown = document.getElementById('room'); // Adjust ID as needed
-        if (roomDropdown) roomDropdown.disabled = (mode === 'view');
+        const roomDropdown = document.getElementById('room');
+        if (roomDropdown) roomDropdown.disabled = true;
 
+        // 6. Show the Modal
         bookingModal.style.display = 'flex';
         
     } catch (error) {
         console.error('Error opening booking modal:', error);
-        showMessageBox('Error', `Failed to load booking: ${error.message}`, true);
+        showMessageBox('Error', `Failed to load booking details: ${error.message}`, true);
     }
 }
 
