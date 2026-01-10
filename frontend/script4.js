@@ -874,6 +874,48 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
     }
 });
 
+async function openBookingModal() {
+    const modal = document.getElementById('bookingModal');
+    const form = document.getElementById('bookingForm');
+    
+    if (!modal) return;
+
+    // 1. Force Modal Display
+    modal.classList.remove('hidden');
+    modal.style.setProperty('display', 'flex', 'important');
+
+    if (form) {
+        form.reset();
+        // 2. Force the Grid to show
+        const grid = form.querySelector('.grid');
+        if (grid) {
+            grid.style.setProperty('display', 'grid', 'important');
+        }
+
+        // 3. Force every single "flex flex-col" wrapper to show
+        const containers = form.querySelectorAll('.flex.flex-col');
+        containers.forEach(div => {
+            div.classList.remove('hidden');
+            div.style.setProperty('display', 'flex', 'important');
+            div.style.setProperty('visibility', 'visible', 'important');
+            div.style.setProperty('opacity', '1', 'important');
+        });
+    }
+
+    // 4. Reset values
+    const fieldIds = ['bookingId', 'nights', 'totalDue', 'balance', 'amountPaid'];
+    fieldIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = (id === 'bookingId') ? '' : 0;
+    });
+
+    // 5. Run dropdown logic last
+    try {
+        if (typeof populateRoomDropdown === "function") {
+            await populateRoomDropdown();
+        }
+    } catch (e) { console.log("Dropdown error ignored for UI display."); }
+}
 /**
  * Sends a booking confirmation email for a given booking ID.
  * This function is now more robust, fetching booking details if not provided.
