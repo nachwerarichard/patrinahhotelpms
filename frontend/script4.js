@@ -1216,7 +1216,7 @@ bookingForm.addEventListener('submit', async function(event) {
  * Populates the modal with booking data for editing.
  * @param {string} id - The custom ID of the booking to edit.
  */
-async function openBookingModal(id, mode = 'view') {
+async function openBookModal(id, mode = 'view') {
     try {
         const response = await fetch(`${API_BASE_URL}/bookings/id/${id}`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
