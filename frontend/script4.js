@@ -874,6 +874,11 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
     }
 });
 
+function closeBookingModal() {
+    bookingModal.style.display = 'none';
+}
+
+
 async function openBookingModal() {
     const modal = document.getElementById('bookingModal');
     const form = document.getElementById('bookingForm');
