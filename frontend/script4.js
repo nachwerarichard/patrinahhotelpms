@@ -1058,39 +1058,37 @@ async function openBookingModal() {
     const modal = document.getElementById('bookingModal');
     const form = document.getElementById('bookingForm');
     
-    // 1. Force the Modal to show immediately
-    if (modal) {
-        modal.classList.remove('hidden');
-        modal.style.display = 'flex'; // Ensures Tailwind's flex centering works
-    }
+    // 1. Show the modal first
+    modal.classList.remove('hidden');
 
-    // 2. Safely Update UI
-    const title = document.getElementById('modalTitle');
-    if (title) title.textContent = 'Add New Booking';
+    // 2. Reset the form values (this handles text/selects)
+    if (form) form.reset();
 
-    // 3. Reset the form but ensure it stays visible
-    if (form) {
-        form.reset();
-        form.style.display = 'block'; // Force the form to have a layout
-    }
-
-    // 4. Reset calculation fields
-    const fields = ['bookingId', 'nights', 'totalDue', 'balance', 'amountPaid'];
-    fields.forEach(id => {
+    // 3. SPECIFICALLY target only the input values
+    // Do NOT loop through the parent 'flex flex-col' divs
+    const fieldIds = ['bookingId', 'nights', 'totalDue', 'balance', 'amountPaid'];
+    fieldIds.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.value = (id === 'bookingId') ? '' : 0;
+        if (el) {
+            el.value = (id === 'bookingId') ? '' : 0;
+            
+            // EMERGENCY FIX: If something previously hid this element, show it
+            // We target the parent 'flex flex-col' div to remove the hidden class
+            if (el.parentElement.classList.contains('hidden')) {
+                el.parentElement.classList.remove('hidden');
+            }
+        }
     });
 
-    // 5. Load external data last so it doesn't block the UI
+    // 4. Populate Rooms
     try {
         if (typeof populateRoomDropdown === "function") {
             await populateRoomDropdown();
         }
     } catch (err) {
-        console.warn("Rooms could not be loaded, but the modal is open.");
+        console.error("Dropdown sync failed", err);
     }
 }
-
 // AUTOMATIC CALCULATIONS
 document.addEventListener('input', (e) => {
     if (['checkIn', 'checkOut', 'amtPerNight', 'amountPaid'].includes(e.target.id)) {
