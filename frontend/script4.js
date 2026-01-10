@@ -636,7 +636,7 @@ if (currentUserRole === 'admin') {
       // --- UI for Active Bookings ---
 actionButtonsHtml = `
 
-    <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="editBooking('${booking.id}')">
+    <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="viewBooking('${booking.id}')">
         View 
     </button>
     ${!booking.checkedIn ? 
@@ -1267,6 +1267,64 @@ document.getElementById('declarations').value = booking.declarations || '';
         showMessageBox('Error', `Failed to load booking for editing: ${error.message}`, true);
     }
 }
+
+async function viewBooking(id) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings/id/${id}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const booking = await response.json();
+
+        if (!booking) {
+            showMessageBox('Error', 'Booking not found.', true);
+            return;
+        }
+
+        // 1. Update Modal Title
+        document.getElementById('modalTitle').textContent = 'Booking Details (View Only)';
+
+        // 2. Populate Fields (Keeping your existing logic)
+        document.getElementById('bookingId').value = booking.id;
+        document.getElementById('name').value = booking.name;
+        document.getElementById('checkIn').value = booking.checkIn;
+        document.getElementById('checkOut').value = booking.checkOut;
+        document.getElementById('people').value = booking.people;
+        document.getElementById('nationality').value = booking.nationality;
+        document.getElementById('address').value = booking.address;
+        document.getElementById('phoneNo').value = booking.phoneNo;
+        document.getElementById('guestEmail').value = booking.guestEmail;
+        document.getElementById('nationalIdNo').value = booking.nationalIdNo;
+        
+        // Extended Details
+        document.getElementById('occupation').value = booking.occupation || '';
+        document.getElementById('vehno').value = booking.vehno || '';
+        document.getElementById('destination').value = booking.destination || '';
+        document.getElementById('kin').value = booking.kin || '';
+        document.getElementById('kintel').value = booking.kintel || '';
+        document.getElementById('purpose').value = booking.purpose || '';
+        
+        // 3. Populate Room (Async)
+        await populateRoomDropdown(booking.room);
+
+        // 4. DISABLE ALL INPUTS
+        // This targets all inputs, selects, and textareas inside the modal
+        const formElements = bookingModal.querySelectorAll('input, select, textarea');
+        formElements.forEach(el => {
+            el.disabled = true; 
+            el.style.backgroundColor = '#f9f9f9'; // Optional: make it look "read-only"
+        });
+
+        // 5. Hide the 'Save/Submit' button if it exists
+        const saveBtn = document.getElementById('saveBookingBtn'); 
+        if (saveBtn) saveBtn.style.display = 'none';
+
+        bookingModal.style.display = 'flex';
+
+    } catch (error) {
+        console.error('Error fetching booking:', error);
+        showMessageBox('Error', `Failed to load details: ${error.message}`, true);
+    }
+}
+
 
 /**
  * Initiates the deletion process by opening the reason modal.
