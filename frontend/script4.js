@@ -175,25 +175,15 @@ function closeLoginMessageBox() {
  */
 function openDeletionReasonModal(actionCallback) {
     // 1. Clear previous reason
-    if (deletionReasonInput) {
+    if (typeof deletionReasonInput !== 'undefined') {
         deletionReasonInput.value = ''; 
     }
-    
+
     // 2. Set the callback
     pendingDeletionAction = actionCallback;
 
-    // 3. FORCE DISPLAY
-    // We remove the 'hidden' class and force 'flex' using !important
-    if (deletionReasonModal) {
-        deletionReasonModal.classList.remove('hidden');
-        deletionReasonModal.style.setProperty('display', 'flex', 'important');
-        
-        // Optional: Ensure inner content isn't hidden either
-        const innerContent = deletionReasonModal.querySelector('div');
-        if (innerContent) {
-            innerContent.classList.remove('hidden');
-        }
-    }
+    // 3. Apply the Nuclear Force-Show
+    forceShowModal(deletionReasonModal);
 }
 
 /**
@@ -1101,6 +1091,37 @@ async function sendConfirmationEmail(bookingId) {
             })
         });
     }
+}
+
+/**
+ * Universally opens any modal by forcing display and removing hidden constraints.
+ * @param {string} modalId - The ID of the modal element.
+ */
+function forceOpenModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) {
+        console.error(`Modal with ID "${modalId}" not found.`);
+        return;
+    }
+
+    // 1. Remove Tailwind's hidden class
+    modal.classList.remove('hidden');
+
+    // 2. The Nuclear Option: Force Flex display over any other CSS
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.style.setProperty('visibility', 'visible', 'important');
+    modal.style.setProperty('opacity', '1', 'important');
+
+    // 3. Find any children that might accidentally have the 'hidden' class
+    // This fixes the issue where form elements or inner divs stay invisible.
+    const hiddenChildren = modal.querySelectorAll('.hidden');
+    hiddenChildren.forEach(child => {
+        // Only unhide if it's a structural div (flex/grid), not hidden inputs
+        if (child.tagName !== 'INPUT' || child.type !== 'hidden') {
+            child.classList.remove('hidden');
+            child.style.setProperty('display', '', ''); // Reset to default layout
+        }
+    });
 }
 
 /**
