@@ -174,9 +174,26 @@ function closeLoginMessageBox() {
  * @param {Function} actionCallback - The function to call if deletion is confirmed.
  */
 function openDeletionReasonModal(actionCallback) {
-    deletionReasonInput.value = ''; // Clear previous reason
+    // 1. Clear previous reason
+    if (deletionReasonInput) {
+        deletionReasonInput.value = ''; 
+    }
+    
+    // 2. Set the callback
     pendingDeletionAction = actionCallback;
-    deletionReasonModal.style.display = 'flex';
+
+    // 3. FORCE DISPLAY
+    // We remove the 'hidden' class and force 'flex' using !important
+    if (deletionReasonModal) {
+        deletionReasonModal.classList.remove('hidden');
+        deletionReasonModal.style.setProperty('display', 'flex', 'important');
+        
+        // Optional: Ensure inner content isn't hidden either
+        const innerContent = deletionReasonModal.querySelector('div');
+        if (innerContent) {
+            innerContent.classList.remove('hidden');
+        }
+    }
 }
 
 /**
