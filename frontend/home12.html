@@ -962,46 +962,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-        function openReservationModal() {
-    const modal = document.getElementById('reservationModal');
-    modal.classList.remove('hidden'); // Show modal
-    document.body.style.overflow = 'hidden'; // Prevent scrolling background
-}
-
-function closeReservationModal() {
-    const modal = document.getElementById('reservationModal');
-    modal.classList.add('hidden'); // Hide modal
-    document.body.style.overflow = 'auto'; // Re-enable scrolling
-}
-
-// Close modal if user clicks on the dark background overlay
-window.onclick = function(event) {
-    const modal = document.getElementById('reservationModal');
-    if (event.target == modal) {
-        closeReservationModal();
-    }
-}
-
-        function toggleActionButtons(event, button) {
-    // Prevent the click from triggering row selection or other parent events
-    event.stopPropagation();
-
-    // Close all other open menus first
-    document.querySelectorAll('.relative div').forEach(div => {
-        if (div !== button.nextElementSibling) {
-            div.classList.add('hidden');
-        }
-    });
-
-    // Toggle the current menu
-    const menu = button.nextElementSibling;
-    menu.classList.toggle('hidden');
-}
-
-// Close menus if user clicks anywhere else on the page
-document.addEventListener('click', () => {
-    document.querySelectorAll('.relative div').forEach(div => div.classList.add('hidden'));
-});
+       
 
 
     </script>
