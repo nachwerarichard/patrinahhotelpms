@@ -170,6 +170,29 @@ function closeLoginMessageBox() {
 }
 
 /**
+ * Global utility to force open any modal and its children
+ */
+function forceShowModal(modalElement) {
+    if (!modalElement) return;
+
+    // 1. Remove Tailwind's hidden class
+    modalElement.classList.remove('hidden');
+
+    // 2. Force Flex layout (The Nuclear Option)
+    modalElement.style.setProperty('display', 'flex', 'important');
+    modalElement.style.setProperty('visibility', 'visible', 'important');
+    modalElement.style.setProperty('opacity', '1', 'important');
+
+    // 3. Force all inner form wrappers to be visible
+    // This targets your 'flex flex-col' containers that were disappearing
+    const children = modalElement.querySelectorAll('.flex-col');
+    children.forEach(child => {
+        child.classList.remove('hidden');
+        child.style.setProperty('display', 'flex', 'important');
+    });
+}
+
+/**
  * Opens the deletion reason modal.
  * @param {Function} actionCallback - The function to call if deletion is confirmed.
  */
