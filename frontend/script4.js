@@ -581,6 +581,7 @@ function applyRoleAccess(role) {
  * @param {string} [searchTerm=''] - Optional: A search term to filter bookings.
  */
 async function renderBookings(page = 1, searchTerm = '') {
+    renderHousekeepingRooms()
     bookingsTableBody.innerHTML = ''; // Clear existing rows
 if (!pageInfoSpan) {
         console.warn("Skipping renderBookings: pageInfoSpan not found on this page.");
@@ -2119,6 +2120,7 @@ function exportReport() {
  * Renders the room cards for housekeeping, fetching data from the backend.
  */
 async function renderHousekeepingRooms() {
+    updateBookingStats()
     housekeepingRoomGrid.innerHTML = ''; // Clear existing cards
 
     let currentRooms = [];
