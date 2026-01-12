@@ -962,6 +962,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+        function toggleActionButtons(event, button) {
+    event.stopPropagation();
+
+    // ONLY hide other action menus, not all relative divs
+    document.querySelectorAll('.action-menu').forEach(div => {
+        if (div !== button.nextElementSibling) {
+            div.classList.add('hidden');
+        }
+    });
+
+    const menu = button.nextElementSibling;
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
+}
+
+// Update the global click listener
+document.addEventListener('click', () => {
+    // ONLY hide action menus when clicking away
+    document.querySelectorAll('.action-menu').forEach(div => {
+        div.classList.add('hidden');
+    });
+});
+
        
 
 
