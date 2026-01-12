@@ -742,6 +742,55 @@ row.innerHTML = `
 }
 
 
+async function updateBookingStats() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings/all`);
+        const allBookings = await response.json();
+
+        // Get "Today" in YYYY-MM-DD format to match your dates easily
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        // 1. Arrivals: Check-in is today AND status is confirmed (not yet in-house)
+        const arrivalsToday = allBookings.filter(b => {
+            const bCheckIn = new Date(b.checkIn).toISOString().split('T')[0];
+            return bCheckIn === todayStr && b.status === 'Confirmed';
+        }).length;
+
+        // 2. Departures: Check-out is today AND status is checked-in (still in-house)
+        const departuresToday = allBookings.filter(b => {
+            const bCheckOut = new Date(b.checkOut).toISOString().split('T')[0];
+            return bCheckOut === todayStr && b.status === 'Checked-In';
+        }).length;
+
+        // Update your UI elements
+        document.getElementById('stat-arrivals').textContent = arrivalsToday;
+        document.getElementById('stat-departures').textContent = departuresToday;
+
+    } catch (error) {
+        console.error('Error updating booking stats:', error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Initial load of all dashboard data
+    refreshDashboard();
+
+    // 2. Optional: Refresh data every 5 minutes to keep stats live
+    // setInterval(refreshDashboard, 300000); 
+});
+
+async function refreshDashboard() {
+    console.log("Refreshing Dashboard Stats...");
+    try {
+        // Run both in parallel for faster loading
+        await Promise.all([
+            renderHousekeepingRooms(), 
+            updateBookingStats()
+        ]);
+    } catch (error) {
+        console.error("Dashboard refresh failed:", error);
+    }
+}
 
 function viewBookingDetails(id) {
     const booking = currentBookings.find(b => b.id === id);
