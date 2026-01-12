@@ -964,12 +964,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-
-        function toggleActionButtons(event, button) {
+function toggleActionButtons(event, button) {
+    // Locate the menu (the div immediately after the button)
     const menu = button.nextElementSibling;
 
-    // 1. Close all OTHER menus first
-    document.querySelectorAll('.action-menu').forEach(openMenu => {
+    // 1. Close all other open menus first
+    document.querySelectorAll('.relative .absolute:not(.hidden)').forEach(openMenu => {
         if (openMenu !== menu) {
             openMenu.classList.add('hidden');
         }
@@ -981,19 +981,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 }
 
-// 3. The "Smart" Global Listener
+// 3. Global listener for clicking outside
 document.addEventListener('click', (event) => {
-    // Check if the click happened on an action button or inside a menu
+    // We check if the click was on the button (or the icon inside it)
     const isClickOnButton = event.target.closest('button[onclick^="toggleActionButtons"]');
-    const isClickInsideMenu = event.target.closest('.action-menu');
+    
+    // We check if the click was inside the dropdown menu itself
+    const isClickInsideMenu = event.target.closest('.absolute');
 
-    // If the click is OUTSIDE both the button and the menu, close all menus
     if (!isClickOnButton && !isClickInsideMenu) {
-        document.querySelectorAll('.action-menu').forEach(menu => {
+        // Close all menus if clicking away
+        document.querySelectorAll('.relative .absolute').forEach(menu => {
             menu.classList.add('hidden');
         });
     }
 });
+        
 
     </script>
 </body>
