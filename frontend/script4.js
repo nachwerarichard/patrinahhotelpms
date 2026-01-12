@@ -762,7 +762,6 @@ function viewBookingDetails(id) {
         </div>
     `;
 
-    
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 }
