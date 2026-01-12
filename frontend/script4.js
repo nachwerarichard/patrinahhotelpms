@@ -2079,6 +2079,23 @@ async function renderHousekeepingRooms() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         currentRooms = await response.json();
+        // 1. Calculate the totals using .filter()
+const totalOccupied = currentRooms.filter(r => r.status === 'occupied' || r.status === 'blocked').length;
+const totalClean = currentRooms.filter(r => r.status === 'clean').length;
+const totalDirty = currentRooms.filter(r => r.status === 'dirty').length;
+const totalMaintenance = currentRooms.filter(r => r.status === 'under-maintenance').length;
+
+// Note: Arrivals and Departures usually require 'isArrival' or 'isDeparture' flags in your data
+const totalArrivals = currentRooms.filter(r => r.isArrival === true).length;
+const totalDepartures = currentRooms.filter(r => r.isDeparture === true).length;
+
+// 2. Update the HTML elements by their IDs
+document.getElementById('stat-occupied').textContent = totalOccupied;
+document.getElementById('stat-clean').textContent = totalClean;
+document.getElementById('stat-dirty').textContent = totalDirty;
+document.getElementById('stat-maintenance').textContent = totalMaintenance;
+document.getElementById('stat-arrivals').textContent = totalArrivals;
+document.getElementById('stat-departures').textContent = totalDepartures;
         rooms = currentRooms; // Update local rooms array
     } catch (error) {
         console.error('Error fetching rooms for housekeeping:', error);
@@ -2087,6 +2104,7 @@ async function renderHousekeepingRooms() {
         return;
     }
 
+    
     // Group rooms by type for better organization
     const roomTypes = {};
     currentRooms.forEach(room => {
