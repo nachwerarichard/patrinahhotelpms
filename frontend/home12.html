@@ -964,21 +964,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-        function toggleActionButtons(button) {
-    const hiddenButtonsContainer = button.nextElementSibling; // Get the next sibling, which is the div containing the hidden buttons
-    hiddenButtonsContainer.classList.toggle('show-buttons'); // Toggle a class to show/hide
+function toggleActionButtons(event, button) {
+    // 1. Stop the click from immediately hitting the 'document' listener
+    event.stopPropagation();
+
+    const menu = button.nextElementSibling;
+
+    // 2. Close all OTHER menus before dealing with this one
+    document.querySelectorAll('.action-menu').forEach(openMenu => {
+        if (openMenu !== menu) {
+            openMenu.classList.add('hidden');
+        }
+    });
+
+    // 3. Toggle the current menu
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
 }
 
-// Optional: Close open menus when clicking outside
+// 4. Global listener: Close menus if you click anywhere else on the page
 document.addEventListener('click', (event) => {
-    document.querySelectorAll('.hidden-action-buttons.show-buttons').forEach(container => {
-        const parentContainer = container.closest('.action-buttons-container');
-        if (parentContainer && !parentContainer.contains(event.target)) {
-            container.classList.remove('show-buttons');
+    document.querySelectorAll('.action-menu').forEach(menu => {
+        // Only hide if the click was actually outside the menu
+        if (!menu.contains(event.target)) {
+            menu.classList.add('hidden');
         }
     });
 });
-
 
     </script>
 </body>
