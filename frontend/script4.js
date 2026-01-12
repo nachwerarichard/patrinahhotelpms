@@ -741,20 +741,7 @@ row.innerHTML = `
     pageInfoSpan.textContent = `Page ${totalCount === 0 ? 0 : currentPage} of ${totalPages}`;
 }
 
-function toggleActionButtons(button) {
-    const hiddenButtonsContainer = button.nextElementSibling; // Get the next sibling, which is the div containing the hidden buttons
-    hiddenButtonsContainer.classList.toggle('show-buttons'); // Toggle a class to show/hide
-}
 
-// Optional: Close open menus when clicking outside
-document.addEventListener('click', (event) => {
-    document.querySelectorAll('.hidden-action-buttons.show-buttons').forEach(container => {
-        const parentContainer = container.closest('.action-buttons-container');
-        if (parentContainer && !parentContainer.contains(event.target)) {
-            container.classList.remove('show-buttons');
-        }
-    });
-});
 
 function viewBookingDetails(id) {
     const booking = currentBookings.find(b => b.id === id);
