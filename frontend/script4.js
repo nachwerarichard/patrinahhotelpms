@@ -2194,7 +2194,7 @@ async function renderHousekeepingRooms() {
                     <option value="clean" ${room.status === 'clean' ? 'selected' : ''}>Clean</option>
                     <option value="dirty" ${room.status === 'dirty' ? 'selected' : ''}>Dirty</option>
                     <option value="under-maintenance" ${room.status === 'under-maintenance' ? 'selected' : ''}>Under Maintenance</option>
-                    ${room.status === 'blocked' ? `<option value="blocked" selected disabled>Blocked (Reserved)</option>` : ''}
+                    <option value="blocked" ${room.status === 'blocked' ? `<option value="blocked" selected disabled>Blocked (Reserved)</option>` : ''}
                 </select>
             `;
             housekeepingRoomGrid.appendChild(card);
