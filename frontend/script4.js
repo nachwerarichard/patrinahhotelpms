@@ -2155,10 +2155,10 @@ async function renderHousekeepingRooms() {
     });
 
     // Update your HTML elements with these new counts
-    if (document.getElementById('count-clean')) {
-        document.getElementById('count-clean').textContent = counts.clean;
-        document.getElementById('count-dirty').textContent = counts.dirty;
-        document.getElementById('count-maintenance').textContent = counts.maintenance;
+    if () {
+        document.getElementById('stat-clean').textContent = counts.clean;
+        document.getElementById('stat-dirty').textContent = counts.dirty;
+        document.getElementById('stat-maintenance').textContent = counts.maintenance;
         document.getElementById('stat-occupied').textContent = counts.blocked;
 
         // Occupied/Blocked can be mapped here too
