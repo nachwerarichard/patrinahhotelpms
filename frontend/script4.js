@@ -2155,7 +2155,7 @@ async function renderHousekeepingRooms() {
     });
 
     // Update your HTML elements with these new counts
-    if  {
+    if(document.getElementById('stat-clean'))  {
         document.getElementById('stat-clean').textContent = counts.clean;
         document.getElementById('stat-dirty').textContent = counts.dirty;
         document.getElementById('stat-maintenance').textContent = counts.maintenance;
