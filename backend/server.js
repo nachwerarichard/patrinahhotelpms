@@ -1455,34 +1455,43 @@ app.put('/api/bookings/:id/no-show', async (req, res) => {
     const { username } = req.body;
 
     try {
+        console.log("No Show request for booking id:", id);
+
         const booking = await Booking.findOne({ id });
         if (!booking) {
+            console.log("Booking not found in DB");
             return res.status(404).json({ message: 'Booking not found' });
         }
+        console.log("Booking found:", booking);
 
         booking.gueststatus = 'No Show';
         await booking.save();
+        console.log("Booking status updated");
 
         const room = await Room.findOne({ number: booking.room });
         if (room) {
-            room.status = 'clean'; // Release room since guest didn't arrive
+            room.status = 'clean';
             await room.save();
+            console.log("Room released:", room.number);
+        } else {
+            console.log("Room not found, skipping release");
         }
 
-        // Audit Log
         await addAuditLog('Booking Marked No Show', username || 'System', {
             bookingId: booking.id,
             guestName: booking.name,
             roomNumber: booking.room
         });
+        console.log("Audit log added");
 
         res.json({ message: 'Booking marked as No Show successfully' });
 
     } catch (error) {
-        console.error(error);
+        console.error("No Show Error:", error);
         res.status(500).json({ message: 'Error marking No Show', error: error.message });
     }
 });
+
 
 app.post('/api/bookings/:id/move', async (req, res) => {
     const { id } = req.params;
