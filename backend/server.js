@@ -1402,6 +1402,88 @@ app.post('/api/bookings/:id/checkout', async (req, res) => {
     }
 });
 
+// Add payment to a booking
+app.post('/api/bookings/:id/add-payment', async (req, res) => {
+    const { id } = req.params;
+    const { amount, method, username } = req.body;
+
+    if (!amount || amount <= 0) {
+        return res.status(400).json({ message: 'Invalid payment amount' });
+    }
+
+    if (!method) {
+        return res.status(400).json({ message: 'Payment method is required' });
+    }
+
+    try {
+        const booking = await Booking.findOne({ id });
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        const newBalance = Math.max(0, booking.paymentbalance - amount);
+
+        booking.paymentbalance = newBalance;
+        booking.paymentMethod = method;
+        booking.paymentStatus = newBalance === 0 ? 'Paid' : 'Partially Paid';
+
+        await booking.save();
+
+        // Audit log
+        await addAuditLog('Payment Added', username || 'System', {
+            bookingId: booking.id,
+            amount,
+            method,
+            remainingBalance: newBalance
+        });
+
+        res.json({
+            message: 'Payment added successfully',
+            newBalance,
+            paymentStatus: booking.paymentStatus
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error adding payment', error: error.message });
+    }
+});
+
+// Mark a booking as No Show
+app.put('/api/bookings/:id/no-show', async (req, res) => {
+    const { id } = req.params;
+    const { username } = req.body;
+
+    try {
+        const booking = await Booking.findOne({ id });
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        booking.gueststatus = 'No Show';
+        await booking.save();
+
+        const room = await Room.findOne({ number: booking.room });
+        if (room) {
+            room.status = 'clean'; // Release room since guest didn't arrive
+            await room.save();
+        }
+
+        // Audit Log
+        await addAuditLog('Booking Marked No Show', username || 'System', {
+            bookingId: booking.id,
+            guestName: booking.name,
+            roomNumber: booking.room
+        });
+
+        res.json({ message: 'Booking marked as No Show successfully' });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error marking No Show', error: error.message });
+    }
+});
+
 app.post('/api/bookings/:id/move', async (req, res) => {
     const { id } = req.params;
     const { newRoomNumber, username } = req.body;
