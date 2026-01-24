@@ -2015,11 +2015,11 @@ async function generateReport() {
             else stats.reserved++;
 
             // 3. Payment Method Breakdown (Assuming you store paymentMethod in booking)
-            const method = (booking.paymentMethod || '').toLowerCase();
-            if (method === 'Cash') stats.cash += revenue;
-            else if (method === 'MTN Momo' ) stats.mtn += revenue;
-             else if (method === 'Airtel Pay') stats.airtel += revenue;
-            else if (method === 'bank') stats.bank += revenue;
+            if (method.includes('cash')) stats.cash += revenue;
+            else if (method.includes('mtn')) stats.mtn += revenue;
+            else if (method.includes('airtel')) stats.airtel += revenue;
+            else if (method.includes('bank')) stats.bank += revenue;
+
 
             if (roomType) {
                 roomTypeCounts[roomType] = (roomTypeCounts[roomType] || 0) + 1;
