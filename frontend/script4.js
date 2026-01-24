@@ -676,10 +676,11 @@ actionButtonsHtml = `
     }
     
     <button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">Edit</button>
-    <button class="${baseBtn} bg-green-600 hover:bg-green-700 mt-1" onclick="openAddPaymentModal('${booking.id}')">
+    <button class="${baseBtn} bg-green-600 hover:bg-green-700 mt-1" 
+        onclick="openAddPaymentModal('${booking.id}', ${booking.paymentbalance})">
     <i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment
-</button>
-    
+   </button>
+
     ${booking.checkedIn ? `
         <button class="${baseBtn} bg-amber-500 hover:bg-amber-600 ${isCheckedOut ? 'opacity-50 cursor-not-allowed' : ''}" 
             onclick="checkoutBooking('${booking.id}')" ${isCheckedOut ? 'disabled' : ''}>
