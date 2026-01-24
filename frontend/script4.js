@@ -1266,6 +1266,8 @@ bookingForm.addEventListener('submit', async function(event) {
     const purpose = document.getElementById('purpose').value;
     const declarations = document.getElementById('declarations').value;
     const transactionid = document.getElementById('transactionid').value;
+    const extraperson = document.getElementById('extraperson').value;
+
     const bookingData = {
         name, room: roomNumber, checkIn, checkOut, nights, amtPerNight,occupation,vehno,destination,checkIntime,checkOuttime,kin,kintel,
         totalDue, amountPaid, balance, paymentStatus,paymentMethod, people,transactionid,extraperson, nationality,purpose,declarations,gueststatus,guestsource,
