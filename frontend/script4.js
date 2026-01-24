@@ -891,7 +891,7 @@ async function moveBooking(id) {
 
         // 2. Fetch available rooms, excluding conflicting ones
         const response = await fetch(
-            `${API_BASE_URL}/rooms/available?checkIn=${booking.checkIn}&checkOut=${booking.checkOut}`
+            `${API_BASE_URL}/room/available?checkIn=${booking.checkIn}&checkOut=${booking.checkOut}`
         );
 
         if (!response.ok) {
