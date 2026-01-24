@@ -1307,9 +1307,10 @@ bookingForm.addEventListener('submit', async function(event) {
         renderCalendar(); // Update calendar view
         renderAuditLogs(); // Update audit logs
     } catch (error) {
-    console.error("Booking Error:", error);
-    res.status(500).json({ message: 'Error adding booking', error: error.message });
+    console.error('Error saving booking:', error);
+    showMessageBox('Error', `Failed to save booking: ${error.message}`, true);
 }
+
 
 });
 
