@@ -1207,17 +1207,19 @@ app.post('/api/bookings', async (req, res) => {
         }
 
         // Check for conflicting bookings for the chosen room and dates
-        const conflictingBooking = await Booking.findOne({
-            room: newBookingData.room,
-            $or: [
-                // New booking starts within an existing booking OR existing booking starts within new booking
-                { checkIn: { $lt: newBookingData.checkOut }, checkOut: { $gt: newBookingData.checkIn } }
-            ]
-        });
+        // Check for conflicting bookings for the chosen room and dates
+const conflictingBooking = await Booking.findOne({
+    room: newBookingData.room,
+    checkIn: { $lt: newBookingData.checkOut },
+    checkOut: { $gt: newBookingData.checkIn }
+});
 
-        if (conflictingBooking) {
-            return res.status(400).json({ message: `Room ${newBookingData.room} is already booked for a conflicting period.` });
-        }
+if (conflictingBooking) {
+    return res.status(400).json({
+        message: `Room ${newBookingData.room} is already booked for a conflicting period.`
+    });
+}
+
 
 
         // Update room status to 'blocked'
