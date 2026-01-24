@@ -125,6 +125,7 @@ const bookingSchema = new mongoose.Schema({
     checkedIn: { type: Boolean, default: false },
     vehno: { type: String }, // Room number, references Room model
     destination: { type: String },
+    checkIn: { type: String, required: true }, // Stored as YYYY-MM-DD
     checkIntime: { type: String}, // Stored as YYYY-MM-DD string
     checkOut: { type: String, required: true }, // Stored as YYYY-MM-DD string
     checkOuttime: { type: String }, // Stored as YYYY-MM-DD string
@@ -134,7 +135,7 @@ const bookingSchema = new mongoose.Schema({
     amountPaid: { type: Number, default: 0 }, // This is ROOM amount paid
     balance: { type: Number, default: 0 }, // This is ROOM balance
     paymentStatus: { type: String, required: true, enum: ['Pending', 'Paid', 'Partially Paid'], default: 'Pending' },
-    paymentMethod: { type: String, required: true, enum: ['Cash', 'Mobile money', 'Bank'], default: 'Cash' },
+    paymentMethod: { type: String, required: true, enum: ['Cash', 'MTN Momo', 'Airtel Pay','Bank'], default: 'Cash' },
     guestsource: { type: String, required: true, enum: ['walk in', 'OTA', 'Direct','PMS'], default: 'walk in' },
     gueststatus: { type: String, required: true, enum: ['confirmed', 'cancelled', 'no show'], default: 'confirmed' },
     cancellationReason: { type: String, default: '' },
