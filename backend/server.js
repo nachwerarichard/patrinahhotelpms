@@ -141,8 +141,8 @@ const bookingSchema = new mongoose.Schema({
     cancellationReason: { type: String, default: '' },
 
     people: { type: Number, required: true },
-    transactionid: { type: Number, required: true },
-    extraperson:{ type: String, required: true },
+    transactionid: { type: String },
+    extraperson:{ type: String },
     nationality: { type: String },
     address: { type: String },
     kin: { type: String },
@@ -1240,8 +1240,10 @@ if (conflictingBooking) {
 
         res.status(201).json({ message: 'Booking added successfully!', booking: newBooking });
     } catch (error) {
-        res.status(500).json({ message: 'Error adding booking', error: error.message });
-    }
+    console.error("Booking Error:", error);
+    res.status(500).json({ message: 'Error adding booking', error: error.message });
+}
+
 });
 
 // Update an existing booking (admin only)
