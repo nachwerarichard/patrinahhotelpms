@@ -1452,11 +1452,28 @@ app.post('/api/bookings/:id/move', async (req, res) => {
 });
 
 app.get('/api/rooms/available', async (req, res) => {
+    const { checkIn, checkOut } = req.query;
+
     try {
-        // Find rooms that are NOT occupied and NOT dirty
-        const availableRooms = await Room.find({ status: { $in: ['vacant', 'clean'] } });
+        let query = { status: { $in: ['vacant', 'clean'] } };
+
+        if (checkIn && checkOut) {
+            // Exclude rooms with conflicting bookings
+            const conflictingBookings = await Booking.find({
+                $or: [
+                    { checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } }
+                ]
+            });
+
+            const bookedRoomNumbers = conflictingBookings.map(b => b.room);
+            query.number = { $nin: bookedRoomNumbers };
+        }
+
+        const availableRooms = await Room.find(query);
         res.json(availableRooms);
+
     } catch (error) {
+        console.error('Fetch available rooms error:', error);
         res.status(500).json({ message: 'Error fetching available rooms' });
     }
 });
