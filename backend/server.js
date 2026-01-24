@@ -1490,13 +1490,14 @@ app.post('/api/bookings/:id/cancel', async (req, res) => {
 app.post('/api/bookings/:id/checkin', async (req, res) => {
     const { id } = req.params;
     const { username } = req.body;
+
     try {
         const booking = await Booking.findOne({ id: id });
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found' });
         }
 
-        // --- NEW: Update booking status ---
+        // --- Update booking status ---
         booking.checkedIn = true; 
         await booking.save();
 
@@ -1513,10 +1514,20 @@ app.post('/api/bookings/:id/checkin', async (req, res) => {
         });
 
         res.json({ message: `Guest checked into Room ${booking.room} successfully.` });
+
     } catch (error) {
-        res.status(500).json({ message: 'Error during checkin', error: error.message });
+        // ✅ Log full error to server console for Render logs
+        console.error('Booking Check-In Error FULL:', error);
+
+        // ✅ Send minimal error info to frontend (you can include stack if needed for debugging)
+        res.status(500).json({
+            message: 'Error during checkin',
+            error: error.message,
+            stack: error.stack
+        });
     }
 });
+
 
 
 // --- Incidental Charges API ---
