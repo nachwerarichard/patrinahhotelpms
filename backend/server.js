@@ -1412,6 +1412,19 @@ app.post('/api/bookings/:id/move', async (req, res) => {
         if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
         const oldRoomNumber = booking.room;
+       // Only check enums that can fail validation
+const validPaymentMethods = ['Cash', 'MTN Momo','Airtel Pay', 'Bank'];
+const validGuestSources = ['walk in', 'OTA', 'Direct', 'PMS'];
+
+if (!validPaymentMethods.includes(booking.paymentMethod)) {
+    console.warn(`Invalid paymentMethod found: ${booking.paymentMethod}. Resetting to "Cash".`);
+    booking.paymentMethod = 'Cash';
+}
+
+if (!validGuestSources.includes(booking.guestsource)) {
+    console.warn(`Invalid guestsource found: ${booking.guestsource}. Resetting to "walk in".`);
+    booking.guestsource = 'walk in';
+}
 
 
         // 2. Check if the NEW room is available
