@@ -1413,21 +1413,20 @@ app.post('/api/bookings/:id/move', async (req, res) => {
 
         const oldRoomNumber = booking.room;
 
+
         // 2. Check if the NEW room is available
         const newRoom = await Room.findOne({ number: newRoomNumber });
-        
         if (!newRoom) {
             return res.status(400).json({ message: 'Target room does not exist.' });
         }
 
-        // Logic: Only allow move if status is 'vacant' or 'clean'
-        if (newRoom.status !== 'vacant' && newRoom.status !== 'clean') {
+        if (!['vacant', 'clean'].includes(newRoom.status)) {
             return res.status(400).json({ 
                 message: `Room ${newRoomNumber} is currently ${newRoom.status} and cannot be assigned.` 
             });
         }
 
-        // 3. Update the Old Room to 'dirty' (needs cleaning after guest leaves)
+        // 3. Update the Old Room to 'dirty'
         await Room.findOneAndUpdate({ number: oldRoomNumber }, { status: 'dirty' });
 
         // 4. Update the New Room to 'occupied'
@@ -1446,10 +1445,19 @@ app.post('/api/bookings/:id/move', async (req, res) => {
         });
 
         res.json({ message: `Successfully moved guest to Room ${newRoomNumber}.` });
+
     } catch (error) {
-        res.status(500).json({ message: 'Error during room move', error: error.message });
+        // Full backend logging for Render
+        console.error('Move Booking Error FULL:', error);
+
+        res.status(500).json({
+            message: 'Error during room move',
+            error: error.message,
+            stack: error.stack
+        });
     }
 });
+
 
 // Get available rooms (optionally exclude rooms with conflicting bookings)
 app.get('/api/room/available', async (req, res) => {
