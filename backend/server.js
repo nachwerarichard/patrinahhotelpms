@@ -1464,7 +1464,7 @@ app.put('/api/bookings/:id/no-show', async (req, res) => {
         }
         console.log("Booking found:", booking);
 
-        booking.gueststatus = 'No Show';
+        booking.gueststatus = 'no show';
         await booking.save();
         console.log("Booking status updated");
 
