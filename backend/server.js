@@ -1451,14 +1451,16 @@ app.post('/api/bookings/:id/move', async (req, res) => {
     }
 });
 
-app.get('/api/rooms/available', async (req, res) => {
-    const { checkIn, checkOut } = req.query;
-
+// Get available rooms (optionally exclude rooms with conflicting bookings)
+app.get('/api/room/available', async (req, res) => {
     try {
+        // Base query: rooms that are vacant or clean
         let query = { status: { $in: ['vacant', 'clean'] } };
 
+        // Optional: filter by dates to exclude rooms with conflicting bookings
+        const { checkIn, checkOut } = req.query;
+
         if (checkIn && checkOut) {
-            // Exclude rooms with conflicting bookings
             const conflictingBookings = await Booking.find({
                 $or: [
                     { checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } }
@@ -1473,10 +1475,11 @@ app.get('/api/rooms/available', async (req, res) => {
         res.json(availableRooms);
 
     } catch (error) {
-        console.error('Fetch available rooms error:', error);
-        res.status(500).json({ message: 'Error fetching available rooms' });
+        console.error('Fetch available rooms error FULL:', error);
+        res.status(500).json({ message: 'Error fetching available rooms', error: error.message });
     }
 });
+
 
 app.post('/api/bookings/:id/cancel', async (req, res) => {
     const { id } = req.params;
