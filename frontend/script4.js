@@ -1982,7 +1982,7 @@ async function generateReport() {
     let stats = {
         revenue: 0, balance: 0, checkedIn: 0, 
         reserved: 0, cancelled: 0, noShows: 0,
-        cash: 0, momo: 0, bank: 0
+        cash: 0, mtn: 0,  airtel: 0,bank: 0
     };
     const roomTypeCounts = {};
     reportData = [];
@@ -2017,7 +2017,8 @@ async function generateReport() {
             // 3. Payment Method Breakdown (Assuming you store paymentMethod in booking)
             const method = (booking.paymentMethod || '').toLowerCase();
             if (method === 'cash') stats.cash += revenue;
-            else if (method === 'mobile money' || method === 'momo') stats.momo += revenue;
+            else if (method === 'MTN Momo' || method === 'mtn') stats.mtn += revenue;
+             else if (method === 'Airtel Pay' || method === 'airtel') stats.airtel += revenue;
             else if (method === 'bank') stats.bank += revenue;
 
             if (roomType) {
@@ -2061,11 +2062,12 @@ async function generateReport() {
     
     // 1. Update the UI for specific payment categories
 document.getElementById('cashRevenue').textContent = stats.cash.toFixed(2);
-document.getElementById('momoRevenue').textContent = stats.momo.toFixed(2);
+document.getElementById('mtnRevenue').textContent = stats.mtn.toFixed(2);
+document.getElementById('airtelRevenue').textContent = stats.airtel.toFixed(2);
 document.getElementById('bankRevenue').textContent = stats.bank.toFixed(2);
 
 // 2. Calculate and Update the Total Collected
-const total = stats.cash + stats.momo + stats.bank;
+const total = stats.cash + stats.mtn +stats.airtel + stats.bank;
 document.getElementById('totalCollected').textContent = total.toFixed(2);
     // 3. Update the global reportSummary object (Critical for your Export function)
     reportSummary = {
@@ -2078,7 +2080,8 @@ document.getElementById('totalCollected').textContent = total.toFixed(2);
         'Guests Cancelled': stats.cancelled,
         'No Shows': stats.noShows,
         'Cash Total': stats.cash.toFixed(2),
-        'Momo Total': stats.momo.toFixed(2),
+        'MTN Momo Total': stats.mtn.toFixed(2),
+        'Airtel Pay Total': stats.airtel.toFixed(2),
         'Bank Total': stats.bank.toFixed(2),
         'Grand Total Collected': totalPaymentsReceived.toFixed(2)
     };
@@ -2113,7 +2116,8 @@ function exportReport() {
         [""], // Blank line
         ["PAYMENT BREAKDOWN"],
         ["Cash", document.getElementById('cashRevenue').textContent],
-        ["Mobile Money", document.getElementById('momoRevenue').textContent],
+        ["MTN Momo", document.getElementById('mtnRevenue').textContent],
+        ["Airtel Pay", document.getElementById('airtelRevenue').textContent],
         ["Bank", document.getElementById('bankRevenue').textContent],
         [""], // Blank line
         ["GUEST DETAIL LIST"]
