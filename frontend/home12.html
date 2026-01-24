@@ -925,7 +925,7 @@
     <!-- Method -->
     <div class="mb-4">
       <label class="text-sm text-gray-600">Payment Method</label>
-      <select id="paymentMethod" class="border p-2 w-full rounded">
+      <select id="payMethod" class="border p-2 w-full rounded">
         <option value="">Select method</option>
         <option value="Cash">Cash</option>
         <option value="MTN Momo">MTN Momo</option>
@@ -1085,7 +1085,7 @@ document.addEventListener('click', (event) => {
     document.getElementById('paymentBookingId').value = bookingId;
     document.getElementById('currentBalance').value = Number(balance).toFixed(2);
     document.getElementById('paymentAmount').value = '';
-    document.getElementById('paymentMethod').value = '';
+    document.getElementById('payMethod').value = '';
     document.getElementById('addPaymentModal').classList.remove('hidden');
 }
 function closePaymentModal() {
@@ -1094,7 +1094,7 @@ function closePaymentModal() {
 function submitPayment() {
     const bookingId = document.getElementById('paymentBookingId').value;
     const amount = parseFloat(document.getElementById('paymentAmount').value);
-    const method = document.getElementById('paymentMethod').value;
+    const method = document.getElementById('paymMethod').value;
 
     if (!amount || amount <= 0) {
         showMessageBox("Error", "Enter a valid amount", true);
