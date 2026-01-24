@@ -1601,7 +1601,7 @@ app.post('/api/bookings/:id/cancel', async (req, res) => {
         if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
         // Update booking fields
-        booking.gueststatus = 'Cancelled';
+        booking.gueststatus = 'cancelled';
         booking.cancellationReason = reason; // Ensure this field exists in your Schema
         await booking.save();
 
