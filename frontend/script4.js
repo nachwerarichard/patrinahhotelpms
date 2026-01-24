@@ -929,6 +929,10 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
     const modal = document.getElementById('moveRoomModal');
 
     try {
+        if (!selectedBookingId || !newRoomNumber) {
+            return showMessageBox('Error', 'Please select a room to move to.', true);
+        }
+
         const response = await fetch(`${API_BASE_URL}/bookings/${selectedBookingId}/move`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -939,20 +943,27 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
         });
 
         const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
 
+        if (!response.ok) {
+            // Handles both 400 and 500 responses from backend
+            throw new Error(data.message || 'Unknown error occurred during room move.');
+        }
+
+        // Success: close modal and show message
         modal.classList.add('hidden');
         showMessageBox('Success', data.message);
-        
-        // Global UI Refresh
+
+        // Refresh global UI
         renderBookings(currentPage, currentSearchTerm);
         renderHousekeepingRooms();
         renderCalendar();
 
     } catch (error) {
+        console.error('Move Booking Frontend Error:', error); // Logs error for debugging
         showMessageBox('Move Failed', error.message, true);
     }
 });
+
 
 function closeBookingModal() {
     bookingModal.style.display = 'none';
