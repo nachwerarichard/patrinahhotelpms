@@ -1443,7 +1443,7 @@ if (!validGuestSources.includes(booking.guestsource)) {
         await Room.findOneAndUpdate({ number: oldRoomNumber }, { status: 'dirty' });
 
         // 4. Update the New Room to 'occupied'
-        newRoom.status = 'occupied';
+        newRoom.status = 'blocked';
         await newRoom.save();
 
         // 5. Update the Booking
