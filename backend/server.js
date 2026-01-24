@@ -1447,15 +1447,14 @@ app.post('/api/bookings/:id/move', async (req, res) => {
         res.json({ message: `Successfully moved guest to Room ${newRoomNumber}.` });
 
     } catch (error) {
-        // Full backend logging for Render
-        console.error('Move Booking Error FULL:', error);
+    console.error('Move Booking Error FULL:', error);
+    res.status(500).json({
+        message: 'Error during room move',
+        error: error.message,
+        stack: error.stack
+    });
+}
 
-        res.status(500).json({
-            message: 'Error during room move',
-            error: error.message,
-            stack: error.stack
-        });
-    }
 });
 
 
