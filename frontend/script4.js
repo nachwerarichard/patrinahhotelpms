@@ -2782,3 +2782,27 @@ window.addEventListener('DOMContentLoaded', async () => {
         mainContent.style.display = 'none';
     }
 });
+
+function markNoShow(bookingId) {
+    if (!confirm("Mark this booking as No Show?")) return;
+
+    fetch(`${API_BASE_URL}/bookings/${bookingId}/no-show`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            username: currentUsername // or logged-in admin name
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        showMessageBox("Success", data.message);
+        generateReport(); // or refreshBookingsTable()
+    })
+    .catch(err => {
+        console.error(err);
+        showMessageBox("Error", "Failed to mark No Show", true);
+    });
+}
+
