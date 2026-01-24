@@ -1240,9 +1240,14 @@ if (conflictingBooking) {
 
         res.status(201).json({ message: 'Booking added successfully!', booking: newBooking });
     } catch (error) {
-    console.error("Booking Error:", error);
-    res.status(500).json({ message: 'Error adding booking', error: error.message });
+    console.error("Booking Error FULL:", error);
+    res.status(500).json({
+        message: 'Error adding booking',
+        error: error.message,
+        stack: error.stack
+    });
 }
+
 
 });
 
