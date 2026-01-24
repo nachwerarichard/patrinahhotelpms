@@ -2016,9 +2016,9 @@ async function generateReport() {
 
             // 3. Payment Method Breakdown (Assuming you store paymentMethod in booking)
             const method = (booking.paymentMethod || '').toLowerCase();
-            if (method === 'cash') stats.cash += revenue;
-            else if (method === 'MTN Momo' || method === 'mtn') stats.mtn += revenue;
-             else if (method === 'Airtel Pay' || method === 'airtel') stats.airtel += revenue;
+            if (method === 'Cash') stats.cash += revenue;
+            else if (method === 'MTN Momo' ) stats.mtn += revenue;
+             else if (method === 'Airtel Pay') stats.airtel += revenue;
             else if (method === 'bank') stats.bank += revenue;
 
             if (roomType) {
@@ -2083,7 +2083,7 @@ document.getElementById('totalCollected').textContent = total.toFixed(2);
         'MTN Momo Total': stats.mtn.toFixed(2),
         'Airtel Pay Total': stats.airtel.toFixed(2),
         'Bank Total': stats.bank.toFixed(2),
-        'Grand Total Collected': totalPaymentsReceived.toFixed(2)
+        'Grand Total Collected': total.toFixed(2)
     };
 }
 
