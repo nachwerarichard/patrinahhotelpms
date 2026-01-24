@@ -882,26 +882,39 @@ async function moveBooking(id) {
     selectedBookingId = id;
     const modal = document.getElementById('moveRoomModal');
     const select = document.getElementById('availableRoomsSelect');
-    
+
     try {
-        // 1. Fetch available rooms
-        const response = await fetch(`${API_BASE_URL}/rooms/available`);
+        // 1. Get the current booking to know checkIn/checkOut
+        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${id}`);
+        if (!bookingResponse.ok) throw new Error('Failed to fetch current booking');
+        const booking = await bookingResponse.json();
+
+        // 2. Fetch available rooms, excluding conflicting ones
+        const response = await fetch(
+            `${API_BASE_URL}/rooms/available?checkIn=${booking.checkIn}&checkOut=${booking.checkOut}`
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+        }
+
         const rooms = await response.json();
 
         if (rooms.length === 0) {
             return showMessageBox('No Rooms', 'No vacant rooms available for move.', true);
         }
 
-        // 2. Populate Select Dropdown
-        select.innerHTML = rooms.map(r => 
-            `<option value="${r.number}">Room ${r.number} (${r.type || 'Standard'})</option>`
-        ).join('');
+        // 3. Populate select dropdown
+        select.innerHTML = rooms
+            .map(r => `<option value="${r.number}">Room ${r.number} (${r.type || 'Standard'})</option>`)
+            .join('');
 
-        // 3. Show Modal
+        // 4. Show modal
         modal.classList.remove('hidden');
         modal.classList.add('flex'); // Center it if using flex layout
 
     } catch (error) {
+        console.error('Move Booking Error:', error);
         showMessageBox('Error', 'Could not load available rooms.', true);
     }
 }
