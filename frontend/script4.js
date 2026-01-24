@@ -676,6 +676,9 @@ actionButtonsHtml = `
     }
     
     <button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">Edit</button>
+    <button class="${baseBtn} bg-green-600 hover:bg-green-700 mt-1" onclick="openAddPaymentModal('${booking.id}')">
+    <i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment
+</button>
     
     ${booking.checkedIn ? `
         <button class="${baseBtn} bg-amber-500 hover:bg-amber-600 ${isCheckedOut ? 'opacity-50 cursor-not-allowed' : ''}" 
@@ -689,6 +692,9 @@ actionButtonsHtml = `
     <button class="${baseBtn} bg-gray-500 hover:bg-gray-600" onclick="openCancelModal('${booking.id}')">
         Cancel 
     </button>
+    <button class="${baseBtn} bg-yellow-500 hover:bg-yellow-600 mt-1" onclick="markNoShow('${booking.id}')">
+    <i class="fa-solid fa-user-slash mr-1"></i> No Show
+</button>
 
     <button class="${baseBtn} bg-red-600 hover:bg-red-700 mt-1" onclick="confirmDeleteBooking('${booking.id}')">
         Delete 
