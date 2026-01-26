@@ -480,7 +480,6 @@ event.preventDefault();
         // Fallback to a default accessible section if targetId is invalid
         if (currentUserRole === 'admin') {
             document.getElementById('dashbaord').classList.add('active');
-            document.getElementById('nav-dashbaord').classList.add('active');
             //renderBookings(currentPage, currentSearchTerm); // Ensure it renders if fallback
         } else if (currentUserRole === 'housekeeper') {
             document.getElementById('housekeeping').classList.add('active');
