@@ -1156,7 +1156,21 @@ app.get('/api/bookings', async (req, res) => {
             if (startDate) query.checkIn.$gte = startDate;
             if (endDate) query.checkIn.$lte = endDate;
         }
+// --- THE MISSING PART: Actually fetching the data ---
+        const [bookings, totalCount, totals] = await Promise.all([
+            Booking.find(query).sort({ checkIn: -1 }).skip(skip).limit(limit),
+            Booking.countDocuments(query),
+            Booking.aggregate([
+                { $match: query },
+                { $group: { _id: null, paid: { $sum: "$amountPaid" }, bal: { $sum: "$balance" } } }
+            ])
+        ]);
 
+        // 4. Send Response
+        res.json({
+            bookings: bookings || [],
+            totalPages: Math.ceil(totalCount / limit),
+        });
 
        
 
