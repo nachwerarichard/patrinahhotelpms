@@ -1158,12 +1158,7 @@ app.get('/api/bookings', async (req, res) => {
         }
 
 
-        res.json({
-            bookings: bookings || [],
-            totalCount,
-            totalPages: Math.ceil(totalCount / limit),
-            summary: totals[0] || { paid: 0, bal: 0 }
-        });
+       
 
     } catch (error) {
         console.error("Backend Error:", error);
