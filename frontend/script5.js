@@ -135,7 +135,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const navBooking = document.getElementById('nav-booking');
     const navHousekeeping = document.getElementById('nav-housekeeping');
     const navReports = document.getElementById('nav-reports');
-    const navOverall = document.getElementById('overall');
     const navServiceReports = document.getElementById('nav-service-reports');
     const navCalendar = document.getElementById('nav-calendar');
     const navAuditLogs = document.getElementById('nav-audit-logs');
@@ -154,13 +153,6 @@ document.addEventListener('DOMContentLoaded', () => {
         navReports.addEventListener('click', (e) => {
             e.preventDefault();
             showSection('reports');
-        });
-    }
-
-        if (navOverall) {
-        navReports.addEventListener('click', (e) => {
-            e.preventDefault();
-            showSection('overall');
         });
     }
 
