@@ -1149,7 +1149,6 @@ async function fetchReport() {
         currentData = data.bookings;
         
         renderTable(data.bookings);
-        updateSummary(data.summary);
     } catch (err) {
         console.error("Fetch error:", err);
     }
