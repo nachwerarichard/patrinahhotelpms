@@ -321,6 +321,10 @@
     </div>
 
     <div class="bg-white p-4 rounded-lg shadow mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="flex gap-2 mb-4">
+    <button onclick="setDateFilter('today')" class="bg-gray-200 px-3 py-1 rounded text-sm hover:bg-gray-300">Today</button>
+    <button onclick="setDateFilter('month')" class="bg-gray-200 px-3 py-1 rounded text-sm hover:bg-gray-300">This Month</button>
+</div>
         <input type="text" id="filterSearch" placeholder="Search Guest/Room..." class="border p-2 rounded">
         <select id="filterPaymentStatus" class="border p-2 rounded">
             <option value="">All Payment Status</option>
@@ -1181,6 +1185,21 @@ function exportToPDF() {
 
 // Initial Load
 fetchReport();
+
+        function setDateFilter(type) {
+    const dateInput = document.getElementById('filterDate');
+    const now = new Date();
+    
+    if (type === 'today') {
+        dateInput.value = now.toISOString().split('T')[0];
+    } else if (type === 'month') {
+        // Sets to first day of current month
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        dateInput.value = firstDay.toISOString().split('T')[0];
+    }
+    
+    fetchReport(); // Trigger the auto-filter
+}
     </script>
 </body>
 </html>
