@@ -1127,40 +1127,50 @@ app.get('/api/bookings/id/:customId', async (req, res) => {
 // Get all bookings with pagination and search (admin only)
 app.get('/api/bookings', async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 500; // Default to 5 records per page
-        const searchTerm = req.query.search || ''; // New: Get search term
-        const skip = (page - 1) * limit;
+        const { page = 1, limit = 500, search, guestStatus, paymentStatus, paymentMethod, guestSource, startDate, endDate } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
 
         let query = {};
-        if (searchTerm) {
-            const searchRegex = new RegExp(searchTerm, 'i'); // Case-insensitive regex
-            query = {
-                $or: [
-                    { name: searchRegex },
-                    { room: searchRegex },
-                    { nationalIdNo: searchRegex },
-                    { phoneNo: searchRegex }
-                ]
-            };
+
+        // General Search (Name, Room, ID, Phone)
+        if (search) {
+            query.$or = [
+                { name: new RegExp(search, 'i') },
+                { room: new RegExp(search, 'i') },
+                { phoneNo: new RegExp(search, 'i') }
+            ];
         }
 
-        const totalCount = await Booking.countDocuments(query); // Apply search filter to total count
-        const totalPages = Math.ceil(totalCount / limit);
+        // Exact Match Filters
+        if (guestStatus) query.gueststatus = guestStatus;
+        if (paymentStatus) query.paymentStatus = paymentStatus;
+        if (paymentMethod) query.paymentMethod = paymentMethod;
+        if (guestsource) query.guestsource = guestSource;
 
-        const bookings = await Booking.find(query) // Apply search filter to find
-                                        .skip(skip)
-                                        .limit(limit)
-                                        .sort({ checkIn: -1 }); // Sort by check-in date descending
+        // Date Range Filter (Assuming checkIn is YYYY-MM-DD)
+        if (startDate || endDate) {
+            query.checkIn = {};
+            if (startDate) query.checkIn.$gte = startDate;
+            if (endDate) query.checkIn.$lte = endDate;
+        }
+
+        const bookings = await Booking.find(query).skip(skip).limit(parseInt(limit)).sort({ checkIn: -1 });
+        const totalCount = await Booking.countDocuments(query);
+
+        // Calculate Totals for Summary Cards
+        const totals = await Booking.aggregate([
+            { $match: query },
+            { $group: { _id: null, totalPaid: { $sum: "$amountPaid" }, totalBalance: { $sum: "$balance" } } }
+        ]);
 
         res.json({
             bookings,
-            totalPages,
-            currentPage: page,
-            totalCount
+            totalCount,
+            summary: totals[0] || { totalPaid: 0, totalBalance: 0 },
+            totalPages: Math.ceil(totalCount / limit)
         });
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching bookings', error: error.message });
+        res.status(500).json({ message: error.message });
     }
 });
 
