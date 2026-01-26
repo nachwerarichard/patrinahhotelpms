@@ -2746,8 +2746,8 @@ document.addEventListener('DOMContentLoaded', async () => { // Made async to awa
             let initialNavLinkId = '';
 
             if (currentUserRole === 'admin') {
-                initialSectionId = 'booking-management';
-                initialNavLinkId = 'nav-booking';
+                initialSectionId = 'dashboard';
+                initialNavLinkId = 'nav-dashboard';
             }else if (currentUserRole === 'bar') {
                 initialSectionId = 'booking-management';
                 initialNavLinkId = 'nav-booking';
