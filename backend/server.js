@@ -1146,6 +1146,9 @@ app.get('/api/bookings', async (req, res) => {
         // 2. Handle Specific Filters (Only add if they have a value)
         if (gueststatus) query.gueststatus = gueststatus;
         if (paymentStatus) query.paymentStatus = paymentStatus;
+        if (guestsource) query.guestsource = guestsource;
+        if (paymentMethod) query.paymentMethod = paymentMethod;
+
 
         // 3. Handle Date Range (Assuming checkIn is 'YYYY-MM-DD')
         if (startDate || endDate) {
