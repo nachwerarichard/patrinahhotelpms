@@ -351,9 +351,9 @@ async function showDashboard(username, role) {
     let initialSectionId = '';
     let initialNavLinkId = '';
 
-    if (role === 'admin' || role === 'bar') {
-        initialSectionId = 'booking-management';
-        initialNavLinkId = 'nav-booking';
+    if (role === 'admin') {
+        initialSectionId = 'dashboard';
+        initialNavLinkId = 'nav-dashboard';
     } else if (role === 'housekeeper') {
         initialSectionId = 'housekeeping';
         document.getElementById('booking-management').style.display = 'none';
