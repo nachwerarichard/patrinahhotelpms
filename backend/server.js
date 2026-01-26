@@ -1157,15 +1157,6 @@ app.get('/api/bookings', async (req, res) => {
             if (endDate) query.checkIn.$lte = endDate;
         }
 
-        // 4. Get Data and Totals in parallel for speed
-        const [bookings, totalCount, totals] = await Promise.all([
-            Booking.find(query).sort({ checkIn: -1 }).skip(skip).limit(limit),
-            Booking.countDocuments(query),
-            Booking.aggregate([
-                { $match: query },
-                { $group: { _id: null, paid: { $sum: "$amountPaid" }, bal: { $sum: "$balance" } } }
-            ])
-        ]);
 
         res.json({
             bookings: bookings || [],
