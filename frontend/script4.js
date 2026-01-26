@@ -542,6 +542,7 @@ event.preventDefault();
 function applyRoleAccess(role) {
     // Hide all navigation links by default
     document.getElementById('nav-booking').style.display = 'none';
+    document.getElementById('nav-dashboard').style.display = 'none';
     document.getElementById('nav-housekeeping').style.display = 'none';
     document.getElementById('nav-reports').style.display = 'none';
     document.getElementById('nav-calendar').style.display = 'none';
