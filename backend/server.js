@@ -1127,7 +1127,7 @@ app.get('/api/bookings/id/:customId', async (req, res) => {
 // Get all bookings with pagination and search (admin only)
 app.get('/api/bookings', async (req, res) => {
     try {
-        const { search, gueststatus, paymentStatus, startDate, endDate } = req.query;
+        const { search, gueststatus, paymentStatus, startDate, endDate,guestsource,paymentMethod} = req.query;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 500;
         const skip = (page - 1) * limit;
