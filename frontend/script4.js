@@ -545,7 +545,6 @@ function applyRoleAccess(role) {
     document.getElementById('nav-booking').style.display = 'none';
     document.getElementById('nav-housekeeping').style.display = 'none';
     document.getElementById('nav-reports').style.display = 'none';
-
     document.getElementById('nav-calendar').style.display = 'none';
     document.getElementById('nav-audit-logs').style.display = 'none';
 
@@ -555,7 +554,6 @@ function applyRoleAccess(role) {
             // Admins see everything
             document.getElementById('nav-booking').style.display = 'list-item';
             document.getElementById('nav-housekeeping').style.display = 'list-item';
-
             document.getElementById('nav-reports').style.display = 'list-item';
             document.getElementById('nav-calendar').style.display = 'list-item';
             document.getElementById('nav-audit-logs').style.display = 'list-item';
@@ -2807,4 +2805,3 @@ function markNoShow(bookingId) {
         showMessageBox("Error", "Failed to mark No Show", true);
     });
 }
-
