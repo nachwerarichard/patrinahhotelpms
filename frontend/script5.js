@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     if (navDashboard) {
-        navBooking.addEventListener('click', (e) => {
+        navDashboard.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
             showSection('dashbaord');
         });
