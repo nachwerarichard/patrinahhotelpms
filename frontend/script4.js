@@ -457,7 +457,7 @@ event.preventDefault();
     }
     
     // Block 'bar' user from accessing sections they don't have permission for
-    const barRestrictedSections = ['housekeeping', 'reports', 'service-reports', 'audit-logs'];
+    const barRestrictedSections = ['housekeeping', 'reports', 'service-reports', 'audit-logs','dashboard'];
     if (currentUserRole === 'bar' && barRestrictedSections.includes(targetId)) {
         showMessageBox('Access Denied', 'You do not have permission to access this section.', true);
         return;
