@@ -1127,12 +1127,14 @@ app.get('/api/bookings/id/:customId', async (req, res) => {
 // Get all bookings with pagination and search (admin only)
 app.get('/api/bookings', async (req, res) => {
     try {
-        const { page = 1, limit = 500, search, guestStatus, paymentStatus, paymentMethod, guestSource, startDate, endDate } = req.query;
-        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const { search, gueststatus, paymentStatus, startDate, endDate } = req.query;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 500;
+        const skip = (page - 1) * limit;
 
         let query = {};
 
-        // General Search (Name, Room, ID, Phone)
+        // 1. Handle General Search
         if (search) {
             query.$or = [
                 { name: new RegExp(search, 'i') },
@@ -1141,39 +1143,43 @@ app.get('/api/bookings', async (req, res) => {
             ];
         }
 
-        // Exact Match Filters
-        if (guestStatus) query.gueststatus = guestStatus;
+        // 2. Handle Specific Filters (Only add if they have a value)
+        if (gueststatus) query.gueststatus = gueststatus;
         if (paymentStatus) query.paymentStatus = paymentStatus;
-        if (paymentMethod) query.paymentMethod = paymentMethod;
-        if (guestsource) query.guestsource = guestSource;
 
-        // Date Range Filter (Assuming checkIn is YYYY-MM-DD)
+        // 3. Handle Date Range (Assuming checkIn is 'YYYY-MM-DD')
         if (startDate || endDate) {
             query.checkIn = {};
             if (startDate) query.checkIn.$gte = startDate;
             if (endDate) query.checkIn.$lte = endDate;
         }
 
-        const bookings = await Booking.find(query).skip(skip).limit(parseInt(limit)).sort({ checkIn: -1 });
-        const totalCount = await Booking.countDocuments(query);
-
-        // Calculate Totals for Summary Cards
-        const totals = await Booking.aggregate([
-            { $match: query },
-            { $group: { _id: null, totalPaid: { $sum: "$amountPaid" }, totalBalance: { $sum: "$balance" } } }
+        // 4. Get Data and Totals in parallel for speed
+        const [bookings, totalCount, totals] = await Promise.all([
+            Booking.find(query).sort({ checkIn: -1 }).skip(skip).limit(limit),
+            Booking.countDocuments(query),
+            Booking.aggregate([
+                { $match: query },
+                { $group: { _id: null, paid: { $sum: "$amountPaid" }, bal: { $sum: "$balance" } } }
+            ])
         ]);
 
         res.json({
-            bookings,
+            bookings: bookings || [],
             totalCount,
-            summary: totals[0] || { totalPaid: 0, totalBalance: 0 },
-            totalPages: Math.ceil(totalCount / limit)
+            totalPages: Math.ceil(totalCount / limit),
+            summary: totals[0] || { paid: 0, bal: 0 }
         });
+
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error("Backend Error:", error);
+        res.status(500).json({ 
+            bookings: [], 
+            message: 'Server error', 
+            error: error.message 
+        });
     }
 });
-
 // Get all bookings (for calendar view and reports, no pagination)
 app.get('/api/bookings/all', async (req, res) => {
     try {
