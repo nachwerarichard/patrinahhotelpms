@@ -553,7 +553,7 @@ function applyRoleAccess(role) {
         case 'admin':
             // Admins see everything
             document.getElementById('nav-booking').style.display = 'list-item';
-                        document.getElementById('nav-dashbaord').style.display = 'list-item';
+                        document.getElementById('nav-dashboard').style.display = 'list-item';
 
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             document.getElementById('nav-reports').style.display = 'list-item';
