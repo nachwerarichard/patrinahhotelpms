@@ -348,6 +348,8 @@
             <option value="MTN Momo">MTN Momo</option>
         </select>
         <input type="date" id="filterDate" class="border p-2 rounded">
+        <input type="date" id="endDate" class="border p-2 rounded">
+
         
         <div class="md:col-span-4 flex gap-2">
             <button onclick="exportToExcel()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Export Excel</button>
@@ -1129,6 +1131,7 @@ async function fetchReport() {
     const paymentMethod = document.getElementById('filterPaymentMethod').value;
     const guestsource= document.getElementById('filterGuestSource').value;
     const date = document.getElementById('filterDate').value;
+    const enddate = document.getElementById('endDate').value;
 
     const params = new URLSearchParams({
         search,
@@ -1136,7 +1139,8 @@ async function fetchReport() {
         gueststatus,
         paymentMethod,
         guestsource,
-        startDate: date // Using same date for simple filter
+        startDate: date, // Using same date for simple filter
+        endDate: enddate 
     });
 
     try {
