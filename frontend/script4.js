@@ -340,8 +340,7 @@ async function showDashboard(username, role) {
     currentUserRole = role;
     const displayElement = document.getElementById('display-user-name');
     if (displayElement) {
-        displayElement.textContent = username;
-
+        displayElement.textContent = currentUsername;
     }
     // 2. Switch the UI
     loginContainer.style.display = 'none';
@@ -353,8 +352,8 @@ async function showDashboard(username, role) {
     let initialNavLinkId = '';
 
     if (role === 'admin' || role === 'bar') {
-        initialSectionId = 'booking-management';
-        initialNavLinkId = 'nav-booking';
+        initialSectionId = 'dashboard';
+        initialNavLinkId = 'nav-dashbaord';
     } else if (role === 'housekeeper') {
         initialSectionId = 'housekeeping';
         document.getElementById('booking-management').style.display = 'none';
@@ -480,8 +479,8 @@ event.preventDefault();
         
         // Fallback to a default accessible section if targetId is invalid
         if (currentUserRole === 'admin') {
-            document.getElementById('booking-management').classList.add('active');
-            document.getElementById('nav-booking').classList.add('active');
+            document.getElementById('dashbaord').classList.add('active');
+            document.getElementById('nav-dashbaord').classList.add('active');
             //renderBookings(currentPage, currentSearchTerm); // Ensure it renders if fallback
         } else if (currentUserRole === 'housekeeper') {
             document.getElementById('housekeeping').classList.add('active');
@@ -553,6 +552,8 @@ function applyRoleAccess(role) {
         case 'admin':
             // Admins see everything
             document.getElementById('nav-booking').style.display = 'list-item';
+                        document.getElementById('nav-dashbaord').style.display = 'list-item';
+
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             document.getElementById('nav-reports').style.display = 'list-item';
             document.getElementById('nav-calendar').style.display = 'list-item';
