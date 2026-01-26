@@ -1189,13 +1189,9 @@ function renderTable(bookings) {
     `).join('');
 }
 
-function updateSummary(summary) {
-    document.getElementById('sumPaid').innerText = `UGX ${summary.totalPaid.toLocaleString()}`;
-    document.getElementById('sumBalance').innerText = `UGX ${summary.totalBalance.toLocaleString()}`;
-}
 
 // Event Listeners for Auto-Filter
-const inputs = ['filterSearch', 'filterPaymentStatus', 'filterGuestStatus', 'filterDate'];
+const inputs = ['filterSearch', 'filterPaymentStatus', 'filterGuestStatus', 'filterDate','endDate','filterGuestSource','filterPaymentMethod'];
 inputs.forEach(id => {
     document.getElementById(id).addEventListener('input', debounce(() => fetchReport()));
 });
