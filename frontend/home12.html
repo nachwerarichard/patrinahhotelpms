@@ -337,6 +337,16 @@
             <option value="confirmed">Confirmed</option>
             <option value="cancelled">Cancelled</option>
         </select>
+        <select id="filterGuestSource" class="border p-2 rounded">
+            <option value="">All Guest Source</option>
+            <option value="walk in">Confirmed</option>
+            <option value="Direct">Cancelled</option>
+        </select>
+        <select id="filterPaymentMethod" class="border p-2 rounded">
+            <option value="">Payment  Method</option>
+            <option value="Cash">Cash</option>
+            <option value="MTN Momo">MTN Momo</option>
+        </select>
         <input type="date" id="filterDate" class="border p-2 rounded">
         
         <div class="md:col-span-4 flex gap-2">
@@ -1115,13 +1125,17 @@ function debounce(func, timeout = 300) {
 async function fetchReport() {
     const search = document.getElementById('filterSearch').value;
     const paymentStatus = document.getElementById('filterPaymentStatus').value;
-    const guestStatus = document.getElementById('filterGuestStatus').value;
+    const gueststatus = document.getElementById('filterGuestStatus').value;
+    const paymentMethod = document.getElementById('filterPaymentMethod').value;
+    const guestsource= document.getElementById('filterGuestSource').value;
     const date = document.getElementById('filterDate').value;
 
     const params = new URLSearchParams({
         search,
         paymentStatus,
-        guestStatus,
+        gueststatus,
+        paymentMethod,
+        guestsource,
         startDate: date // Using same date for simple filter
     });
 
