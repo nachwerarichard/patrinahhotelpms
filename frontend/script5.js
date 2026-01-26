@@ -133,6 +133,8 @@ function showSection(sectionId) {
 // Add event listeners to the navigation links
 document.addEventListener('DOMContentLoaded', () => {
     const navBooking = document.getElementById('nav-booking');
+        const navDashboard = document.getElementById('nav-dashboard');
+
     const navHousekeeping = document.getElementById('nav-housekeeping');
     const navReports = document.getElementById('nav-reports');
     const navServiceReports = document.getElementById('nav-service-reports');
@@ -146,7 +148,12 @@ document.addEventListener('DOMContentLoaded', () => {
             showSection('booking-management');
         });
     }
-
+    if (navDashboard) {
+        navBooking.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('dashbaord');
+        });
+    }
    
 
     if (navReports) {
