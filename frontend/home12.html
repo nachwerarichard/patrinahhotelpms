@@ -354,7 +354,10 @@
                     <th class="p-3 border">Check In</th>
                     <th class="p-3 border">Paid</th>
                     <th class="p-3 border">Balance</th>
-                    <th class="p-3 border">Status</th>
+                    <th class="p-3 border">Payment Status</th>
+                    <th class="p-3 border"> Guest Status</th>
+                    <th class="p-3 border"> Payment Method</th>
+                    <th class="p-3 border">Guest Source</th>
                 </tr>
             </thead>
             <tbody id="tableBody"></tbody>
@@ -1148,6 +1151,22 @@ function renderTable(bookings) {
                     ${b.paymentStatus}
                 </span>
             </td>
+            <td class="p-3 border">
+                <span class="px-2 py-1 rounded text-xs ${b.paymentStatus === 'confirmed' ? 'bg-green-200' : 'bg-yellow-200'}">
+                    ${b.gueststatus}
+                </span>
+            </td>
+            <td class="p-3 border">
+                <span class="px-2 py-1 rounded text-xs ${b.paymentStatus === 'Cash' ? 'bg-green-200' : 'bg-yellow-200'}">
+                    ${b.paymentMethod}
+                </span>
+            </td>
+                        <td class="p-3 border">
+                <span class="px-2 py-1 rounded text-xs ${b.paymentStatus === 'walk in' ? 'bg-green-200' : 'bg-yellow-200'}">
+                    ${b.guestsource}
+                </span>
+            </td>
+
         </tr>
     `).join('');
 }
