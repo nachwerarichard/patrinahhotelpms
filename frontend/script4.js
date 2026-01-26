@@ -2674,7 +2674,6 @@ async function simulateChannelManagerSync() {
 // --- Initial Load and Event Listeners ---
 document.addEventListener('DOMContentLoaded', async () => { // Made async to await rendering functions
     // Set default date for reports
-    reportDateInput.valueAsDate = new Date();
 
     const storedUser = localStorage.getItem('loggedInUser');
     if (storedUser) {
