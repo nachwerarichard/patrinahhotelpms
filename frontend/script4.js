@@ -2763,12 +2763,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Made async to awa
             }
             if (initialSectionId) {
                 document.getElementById(initialSectionId).classList.add('active');
-                // Explicitly call the rendering function for the initial active section
-                if (initialSectionId === 'booking-management') {
-                    currentPage = 1;
-                    currentSearchTerm = ''; // Reset search term
-                    await renderBookings(currentPage, currentSearchTerm);
-                } else if (initialSectionId === 'housekeeping') {
+                if (initialSectionId === 'housekeeping') {
                     await renderHousekeepingRooms();
                 } else if (initialSectionId === 'calendar') {
                     await renderCalendar();
