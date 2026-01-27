@@ -1381,8 +1381,7 @@ fetchReport();
     <script>
         async function updateDashboard() {
   try {
-    const response = await fetch('/api/bookings/all');
-    const allBookings = await response.json();
+const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookings = await response.json();
 
     // 1. Setup Today's Date (Match your YYYY-MM-DD format)
     const today = new Date().toISOString().split('T')[0];
@@ -1456,7 +1455,7 @@ updateDashboard();
     <script>
         async function updateroomDashboard() {
     try {
-        const response = await fetch('/api/rooms');
+        const response = await fetch('${API_BASE_URL}/api/rooms');
         const rooms = await response.json();
 
         // 1. Process Data
