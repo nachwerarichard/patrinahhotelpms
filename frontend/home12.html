@@ -1189,7 +1189,7 @@ document.addEventListener('click', (event) => {
 });
         function openAddPaymentModal(bookingId, balance) {
     document.getElementById('paymentBookingId').value = bookingId;
-    document.getElementById('currentBalance').value = balance;
+    document.getElementById('currentBalance').value = booking.balance;
     document.getElementById('paymentAmount').value = '';
     document.getElementById('payMethod').value = '';
     document.getElementById('addPaymentModal').classList.remove('hidden');
