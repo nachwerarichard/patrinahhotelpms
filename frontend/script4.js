@@ -2683,7 +2683,6 @@ async function simulateChannelManagerSync() {
 }
 
 async function fetchReport() {
-    // Get values safely
     const search = document.getElementById('filterSearch')?.value || '';
     const payStatus = document.getElementById('filterPaymentStatus')?.value || '';
     const guestStat = document.getElementById('filterGuestStatus')?.value || '';
@@ -2696,15 +2695,40 @@ async function fetchReport() {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         
         const data = await response.json();
-        
-        // Use the || [] fallback to ensure map() never hits undefined
-        renderTable(data.bookings || []);
-        updateSummary(data.summary || { paid: 0, bal: 0 });
+        const bookings = data.bookings || [];
+
+        // --- NEW: Financial Calculations ---
+        const financialSummary = bookings.reduce((acc, booking) => {
+            // Ensure values are treated as numbers, default to 0 if missing
+            const paid = parseFloat(booking.amountPaid) || 0;
+            const balance = parseFloat(booking.balance) || 0;
+            
+            acc.totalPaid += paid;
+            acc.totalBalance += balance;
+            return acc;
+        }, { totalPaid: 0, totalBalance: 0 });
+
+        // Update the UI
+        renderTable(bookings);
+        updateSummary(financialSummary);
         
     } catch (error) {
         console.error("Fetch error:", error);
-        // Clear table on error so user doesn't see old data
         renderTable([]); 
+        updateSummary({ totalPaid: 0, totalBalance: 0 });
+    }
+}
+function updateSummary(summary) {
+    // Select the specific text elements
+    const paidElement = document.getElementById('sumPaid');
+    const balanceElement = document.getElementById('sumBalance');
+
+    if (paidElement && balanceElement) {
+        // Update text content with formatted numbers
+        paidElement.textContent = `$${summary.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        balanceElement.textContent = `$${summary.totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    } else {
+        console.warn("Summary ID elements not found in the DOM.");
     }
 }
 
