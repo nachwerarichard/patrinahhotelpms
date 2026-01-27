@@ -2240,12 +2240,6 @@ async function renderHousekeepingRooms() {
         document.getElementById('stat-dirty').textContent = counts.dirty;
         document.getElementById('stat-maintenance').textContent = counts.maintenance;
         document.getElementById('stat-occupied').textContent = counts.blocked;
-
-         document.getElementById('stats-clean').textContent = counts.clean;
-        document.getElementById('stats-dirty').textContent = counts.dirty;
-        document.getElementById('stats-maintenance').textContent = counts.maintenance;
-        document.getElementById('stats-occupied').textContent = counts.blocked;
-
         // Occupied/Blocked can be mapped here too
     }
     // Group rooms by type for better organization
