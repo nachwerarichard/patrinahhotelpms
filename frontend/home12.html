@@ -621,7 +621,7 @@
   <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-4xl relative max-h-[90vh] overflow-y-auto flex flex-col">
     
     <!-- Top Close Button -->
-    <span class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-red-800" onclick="closeBookingModal()">&times;</span>
+    <button class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-red-800" onclick="closeBookingModal()">&times;</button>
 
     <h2 id="modalTitle" class="text-2xl font-bold mb-6 text-blue-600"><i class="fas fa-hotel"></i> Add New Walk In</h2>
             <form id="bookingForm">
@@ -836,7 +836,7 @@
 
     <div id="viewChargesModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-3xl relative max-h-[90vh] overflow-y-auto">
-            <span class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800" onclick="closeViewChargesModal()">&times;</span>
+            <button class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800" onclick="closeViewChargesModal()">&times;</button>
             <h2 class="text-2xl font-bold mb-6 text-blue-600"><i class="fas fa-file-invoice"></i> Incidental Charges for <span id="viewChargesGuestName" class="font-normal"></span> (Room <span id="viewChargesRoomNumber" class="font-normal"></span>)</h2>
             <div class="overflow-x-auto">
                 <table id="incidentalChargesTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
