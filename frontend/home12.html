@@ -359,9 +359,18 @@
         <p class="text-sm font-medium text-gray-500 uppercase">Today's Arrivals</p>
         <p id="total-arrivals" class="text-2xl font-bold text-gray-900">0</p>
       </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-500">
+        <p class="text-sm font-medium text-gray-500 uppercase">Today's Departures</p>
+        <p id="total-departures" class="text-2xl font-bold text-gray-900">0</p>
+      </div>
       <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
         <p class="text-sm font-medium text-gray-500 uppercase">Expected Revenue</p>
         <p id="today-revenue" class="text-2xl font-bold text-gray-900">$0</p>
+      </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+        <p class="text-sm font-medium text-gray-500 uppercase">Expected Revenue</p>
+        <p id="today-balance" class="text-2xl font-bold text-gray-900">$0</p>
       </div>
       <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500">
         <p class="text-sm font-medium text-gray-500 uppercase">Pending Payments</p>
@@ -1400,18 +1409,23 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
 
     // 2. Filter data for "Today's Arrivals"
     const todayBookings = allBookings.filter(b => b.checkIn === today);
+    const todaycheckout = allBookings.filter(b => b.checkOut === today);
 
     // 3. Calculate KPIs
     const kpis = {
       arrivals: todayBookings.length,
+      departures: todaycheckout.length,
       revenue: todayBookings.reduce((sum, b) => sum + b.totalDue, 0),
+      balance: todayBookings.reduce((sum, b) => sum + b.balance, 0),
       pending: todayBookings.filter(b => b.paymentStatus === 'Pending').length,
       noShow: todayBookings.filter(b => b.gueststatus === 'no show').length
     };
 
     // 4. Update UI Text
     document.getElementById('total-arrivals').innerText = kpis.arrivals;
+    document.getElementById('total-departures').innerText = kpis.departures;
     document.getElementById('today-revenue').innerText = `$${kpis.revenue.toLocaleString()}`;
+    document.getElementById('today-balance').innerText = `$${kpis.revenue.toLocaleString()}`;
     document.getElementById('pending-count').innerText = kpis.pending;
     document.getElementById('no-show-count').innerText = kpis.noShow;
 
