@@ -2687,56 +2687,6 @@ async function simulateChannelManagerSync() {
     }
 }
 
-async function fetchReport() {
-    const search = document.getElementById('filterSearch')?.value || '';
-    const payStatus = document.getElementById('filterPaymentStatus')?.value || '';
-    const guestStat = document.getElementById('filterGuestStatus')?.value || '';
-    const date = document.getElementById('filterDate')?.value || '';
-
-    const url = `${API_BASE_URL}/bookings?search=${search}&paymentStatus=${payStatus}&gueststatus=${guestStat}&startDate=${date}`;
-
-    try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        
-        const data = await response.json();
-        const bookings = data.bookings || [];
-
-
-        // Update the UI
-        renderTable(bookings);
-        
-    } catch (error) {
-        console.error("Fetch error:", error);
-        renderTable([]); 
-    }
-}
-
-
-function renderTable(bookings) {
-    const tbody = document.getElementById('tableBody');
-    if (!tbody) return;
-
-    if (bookings.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">No records found matching your filters.</td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = bookings.map(b => `
-        <tr class="border-b hover:bg-gray-50">
-            <td class="p-3">${b.name}</td>
-            <td class="p-3 font-mono">${b.room}</td>
-            <td class="p-3 text-sm">${b.checkIn}</td>
-            <td class="p-3 text-green-700 font-bold">${(b.amountPaid || 0).toLocaleString()}</td>
-            <td class="p-3 text-red-600 font-bold">${(b.balance || 0).toLocaleString()}</td>
-            <td class="p-3">
-                <span class="px-2 py-1 text-xs rounded-full ${b.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
-                    ${b.paymentStatus}
-                </span>
-            </td>
-        </tr>
-    `).join('');
-}
 
 // --- Initial Load and Event Listeners ---
 document.addEventListener('DOMContentLoaded', async () => { // Made async to await rendering functions
@@ -2780,7 +2730,6 @@ document.addEventListener('DOMContentLoaded', async () => { // Made async to awa
                     await renderCalendar();
                 } else if (initialSectionId === 'reports') {
                     reportDateInput.valueAsDate = new Date();
-                    await fetchReport();
                 } else if (initialSectionId === 'service-reports') {
                     const today = new Date();
                     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
