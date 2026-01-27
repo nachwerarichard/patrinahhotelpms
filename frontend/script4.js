@@ -683,7 +683,7 @@ actionButtonsHtml = `
         onclick="openAddPaymentModal('${booking.id}', ${booking.paymentbalance})">
     <i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment
    </button>
-                            <button class=" ${baseBtn} bg-black-500 btn btn-info" onclick="printReceipt('${booking.id}')"><i class="fas fa-print"></i> Receipt</button>
+                            <button class=" ${baseBtn} bg-brown-500 btn btn-info" onclick="printReceipt('${booking.id}')"><i class="fas fa-print"></i> Receipt</button>
 
     ${booking.checkedIn ? `
         <button class="${baseBtn} bg-amber-500 hover:bg-amber-600 ${isCheckedOut ? 'opacity-50 cursor-not-allowed' : ''}" 
