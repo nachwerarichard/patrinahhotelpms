@@ -348,7 +348,12 @@
 <div class="p-6 bg-gray-50 min-h-screen">
   <div class="max-w-7xl mx-auto">
     <h1 class="text-3xl font-bold text-gray-800 mb-6">Today's Front Desk Overview</h1>
-
+<div class="p-8 bg-gray-50 min-h-screen">
+  <h2 class="text-2xl font-bold text-gray-800 mb-6">Operations Overview</h2>
+  
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="stats-container">
+    </div>
+</div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
       <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
         <p class="text-sm font-medium text-gray-500 uppercase">Today's Arrivals</p>
@@ -1446,6 +1451,58 @@ function renderCharts(statusData, sourceData) {
 
 // Initialize
 updateDashboard();
+        
+    </script>
+    <script>
+        async function updateroomDashboard() {
+    try {
+        const response = await fetch('/api/rooms');
+        const rooms = await response.json();
+
+        // 1. Process Data
+        const total = rooms.length;
+        const clean = rooms.filter(r => r.status === 'clean').length;
+        const dirty = rooms.filter(r => r.status === 'dirty').length;
+        const maintenance = rooms.filter(r => r.status === 'under-maintenance' || r.status === 'blocked').length;
+
+        // 2. Define KPIs to render
+        const kpis = [
+            { label: 'Total Rooms', value: total, color: 'text-blue-600', bg: 'bg-blue-100' },
+            { label: 'Ready to Assign', value: clean, color: 'text-green-600', bg: 'bg-green-100' },
+            { label: 'Needs Cleaning', value: dirty, color: 'text-yellow-600', bg: 'bg-yellow-100' },
+            { label: 'Out of Order', value: maintenance, color: 'text-red-600', bg: 'bg-red-100' }
+        ];
+
+        // 3. Render Cards
+        const container = document.getElementById('stats-container');
+        container.innerHTML = kpis.map(kpi => `
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">${kpi.label}</p>
+                        <p class="mt-2 text-3xl font-bold ${kpi.color}">${kpi.value}</p>
+                    </div>
+                    <div class="p-3 rounded-full ${kpi.bg} ${kpi.color}">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="w-full bg-gray-200 rounded-full h-1.5">
+                        <div class="bg-blue-500 h-1.5 rounded-full" style="width: ${(kpi.value / total * 100).toFixed(0)}%"></div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+    } catch (error) {
+        console.error('Failed to update stats:', error);
+    }
+}
+
+// Initialize
+updateroomDashboard();
     </script>
 </body>
 </html>
