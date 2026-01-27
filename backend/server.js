@@ -950,7 +950,7 @@ app.post('/api/audit-log/action', async (req, res) => {
 //async function reinitializeRooms() {
     //const initialRooms = [
        // { id: 'R101', type: 'Delux 1', number: '101', status: 'clean' },
-        { id: 'R103', type: 'Delux 1', number: '103', status: 'clean' },
+       // { id: 'R103', type: 'Delux 1', number: '103', status: 'clean' },
   //{ id: 'R104', type: 'Delux 1', number: '104', status: 'clean' },
   //{ id: 'R105', type: 'Delux 1', number: '105', status: 'clean' },
   //{ id: 'R106', type: 'Delux 1', number: '106', status: 'clean' },
@@ -3421,7 +3421,7 @@ app.get('/reports/low-stock-items', auth,  async (req, res) => {
 
 
 
-
+const port = process.env.PORT || 3000;
 
 // --- 8. Start the Server ---
 app.listen(port, () => {
