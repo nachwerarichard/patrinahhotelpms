@@ -1381,6 +1381,8 @@ fetchReport();
 }
     </script>
     <script>
+        const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api'; // Your Render backend URL
+
         async function updateDashboard() {
   try {
 const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookings = await response.json();
