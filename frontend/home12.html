@@ -865,7 +865,7 @@
             <span class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800 print:hidden" onclick="closeReceiptModal()">&times;</span>
             <div class="receipt-content print:p-8">
                 <div class="flex flex-col items-center text-center mb-6">
-                    <img src="https://placehold.co/150x50/3498db/ffffff?text=Patrinah+Hotel" alt="Patrinah Hotel" class="hotel-logo mb-4">
+                    <img src="/patrinah.png" alt="Patrinah Hotel" class="hotel-logo mb-4">
                     <h3 class="text-2xl font-bold mb-2 text-blue-600"><i class="fas fa-receipt"></i> Guest Bill / Receipt</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-700 w-full md:w-auto">
                         <p class="text-left"><strong>Guest Name:</strong> <span id="receiptGuestName"></span></p>
@@ -896,24 +896,9 @@
                             </tr>
                         </tbody>
                     </table>
-                </div>
-                <h4 class="text-xl font-bold mt-8 mb-4 text-gray-800">Incidental Charges</h4>
-                <div class="overflow-x-auto">
-                    <table id="receiptIncidentalChargesTable" class="w-full text-left table-auto border-collapse border border-gray-200">
-                        <thead>
-                            <tr class="bg-gray-100 text-gray-600 text-sm uppercase">
-                                <th class="py-2 px-4 border border-gray-200">Type</th>
-                                <th class="py-2 px-4 border border-gray-200">Description</th>
-                                <th class="py-2 px-4 border border-gray-200">Amount</th>
-                                <th class="py-2 px-4 border border-gray-200">Date</th>
-                            </tr>
-                        </thead>
-                        <tbody class="text-gray-600 text-sm"></tbody>
-                    </table>
-                </div>
+                </div>        
                 <div class="flex flex-col items-end text-lg font-bold mt-8 space-y-2">
                     <p class="w-full text-right">Subtotal (Room): <span id="receiptSubtotalRoom" class="text-blue-600">0.00</span></p>
-                    <p class="w-full text-right">Subtotal (Incidentals): <span id="receiptSubtotalIncidentals" class="text-blue-600">0.00</span></p>
                     <p class="w-full text-right">Total Bill: <span id="receiptTotalBill" class="text-green-600">0.00</span></p>
                     <p class="w-full text-right">Amount Paid: <span id="receiptAmountPaid" class="text-green-600">0.00</span></p>
                     <p class="w-full text-right">Balance Due: <span id="receiptBalanceDue" class="text-red-600">0.00</span></p>
