@@ -1400,7 +1400,9 @@ app.post('/api/bookings/:id/checkout', async (req, res) => {
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found' });
         }
-
+// Update the guest's status
+        booking.gueststatus = 'checkedout'; 
+        await booking.save();
         const room = await Room.findOne({ number: booking.room });
         if (room) {
             room.status = 'dirty'; // Mark room as dirty
@@ -1649,7 +1651,8 @@ app.post('/api/bookings/:id/checkin', async (req, res) => {
         // --- Update booking status ---
         booking.checkedIn = true; 
         await booking.save();
-
+booking.gueststatus='checkedin';
+await booking.save();
         const room = await Room.findOne({ number: booking.room });
         if (room) {
             room.status = 'occupied'; 
