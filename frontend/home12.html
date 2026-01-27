@@ -1222,7 +1222,7 @@ function submitPayment() {
     .then(() => {
         showMessageBox("Success", "Payment added successfully");
         closePaymentModal();
-        generateReport(); // refresh your stats + table
+         updateDashboard();
     })
     .catch(err => {
         console.error(err);
