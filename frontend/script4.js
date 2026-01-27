@@ -1479,7 +1479,7 @@ async function viewBooking(id) {
         });
 
         // 5. Hide the 'Save/Submit' button if it exists
-        const saveBtn = document.getElementById('saveBookingBtn'); 
+        const saveBtn = document.getElementById('saveBookin'); 
         if (saveBtn) saveBtn.style.display = 'none';
 
         bookingModal.style.display = 'flex';
