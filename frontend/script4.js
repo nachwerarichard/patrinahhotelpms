@@ -336,7 +336,6 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
 
 async function showDashboard(username, role) {
     // 1. Set global variables (so the rest of your app knows who is logged in)
-    currentUsername = username;
     currentUserRole = role;
     const displayElement = document.getElementById('display-user-name');
     if (displayElement) {
@@ -1566,32 +1565,35 @@ async function checkoutBooking(id) {
         const response = await fetch(`${API_BASE_URL}/bookings/${id}/checkout`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUsername }) // Send username for audit log
+            body: JSON.stringify({ username: currentUsername }) 
         });
 
+        // 1. Correctly close the error check block
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-
-
-        if (!updatedBooking) {
-            return res.status(404).json({ message: 'Booking not found' });
         }
+
+        // 2. Process successful response
         const data = await response.json();
         showMessageBox('Success', data.message);
-        renderBookings(currentPage, currentSearchTerm); // Re-render to update checkout button visibility
-        renderHousekeepingRooms(); // Update housekeeping view
-        renderCalendar(); // Update calendar view
-        renderAuditLogs(); // Update audit logs
 
-        // --- NEW: Automatically send confirmation email after successful checkout ---
-        await sendConfirmationEmail(id); // Call the email function
-        // --- END NEW ---
+        // 3. UI Updates
+        renderBookings(currentPage, currentSearchTerm);
+        renderHousekeepingRooms();
+        renderCalendar();
+        renderAuditLogs();
+
+        // Update the financial report/summary if the function exists
+        if (typeof fetchReport === 'function') fetchReport();
+
+        // 4. Send email
+        await sendConfirmationEmail(id);
 
     } catch (error) {
         console.error('Error during checkout:', error);
         showMessageBox('Error', `Failed to process checkout: ${error.message}`, true);
-    }
+    } // This catch now matches the try block correctly
 }
 
 async function checkinBooking(id) {
