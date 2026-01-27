@@ -1572,8 +1572,11 @@ async function checkoutBooking(id) {
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
 
+
+        if (!updatedBooking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
         const data = await response.json();
         showMessageBox('Success', data.message);
         renderBookings(currentPage, currentSearchTerm); // Re-render to update checkout button visibility
