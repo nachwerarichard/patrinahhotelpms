@@ -48,7 +48,6 @@ app.use(express.json()); // This should also be before your routes to parse JSON
 
 
 // --- 2. Initialize Express App ---
-const port = 3000; // Backend will run on port 3000
 
 // --- 3. Middleware Setup ---
 
