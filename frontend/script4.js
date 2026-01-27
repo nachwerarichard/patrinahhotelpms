@@ -2752,20 +2752,33 @@ async function fetchReport() {
         updateSummary({ totalPaid: 0, totalBalance: 0 });
     }
 }
+const financialSummary = bookings.reduce((acc, booking) => {
+    // 1. Force conversion to Number just in case they come as strings
+    // 2. Ensure we use the exact keys from your schema
+    const paid = Number(booking.amountPaid) || 0;
+    const bal = Number(booking.balance) || 0;
+    
+    acc.totalPaid += paid;
+    acc.totalBalance += bal;
+    
+    return acc;
+}, { totalPaid: 0, totalBalance: 0 });
+
+console.log("Calculated Summary:", financialSummary); // Debugging: Check your console!
+
 function updateSummary(summary) {
-    // Select the specific text elements
     const paidElement = document.getElementById('sumPaid');
     const balanceElement = document.getElementById('sumBalance');
 
+    // Default to 0 if the math failed somewhere
+    const totalPaid = summary.totalPaid || 0;
+    const totalBal = summary.totalBalance || 0;
+
     if (paidElement && balanceElement) {
-        // Update text content with formatted numbers
-        paidElement.textContent = `$${summary.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        balanceElement.textContent = `$${summary.totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    } else {
-        console.warn("Summary ID elements not found in the DOM.");
+        paidElement.textContent = `$${totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+        balanceElement.textContent = `$${totalBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     }
 }
-
 function renderTable(bookings) {
     const tbody = document.getElementById('tableBody');
     if (!tbody) return;
