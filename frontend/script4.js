@@ -4,7 +4,6 @@ const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api'; // Your Render
 let rooms = [];
 let bookings = []; // This will now hold the currently displayed page's bookings or filtered bookings
 let currentUserRole = null; // To store the role of the logged-in user
-let currentUsername = null; // New: To store the username of the logged-in user for audit logs
 let currentPage = 1;
 const recordsPerPage = 5; // Maximum 5 booking records per page
 let currentSearchTerm = ''; // New: To keep track of the active search term for pagination
