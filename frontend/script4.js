@@ -2730,54 +2730,17 @@ async function fetchReport() {
         const data = await response.json();
         const bookings = data.bookings || [];
 
-        // --- NEW: Financial Calculations ---
-        const financialSummary = bookings.reduce((acc, booking) => {
-            // Ensure values are treated as numbers, default to 0 if missing
-            const paid = parseFloat(booking.amountPaid) || 0;
-            const balance = parseFloat(booking.balance) || 0;
-            
-            acc.totalPaid += paid;
-            acc.totalBalance += balance;
-            return acc;
-        }, { totalPaid: 0, totalBalance: 0 });
 
         // Update the UI
         renderTable(bookings);
-        updateSummary(financialSummary);
         
     } catch (error) {
         console.error("Fetch error:", error);
         renderTable([]); 
-        updateSummary({ totalPaid: 0, totalBalance: 0 });
     }
 }
-const financialSummary = bookings.reduce((acc, booking) => {
-    // 1. Force conversion to Number just in case they come as strings
-    // 2. Ensure we use the exact keys from your schema
-    const paid = Number(booking.amountPaid) || 0;
-    const bal = Number(booking.balance) || 0;
-    
-    acc.totalPaid += paid;
-    acc.totalBalance += bal;
-    
-    return acc;
-}, { totalPaid: 0, totalBalance: 0 });
 
-console.log("Calculated Summary:", financialSummary); // Debugging: Check your console!
 
-function updateSummary(summary) {
-    const paidElement = document.getElementById('sumPaid');
-    const balanceElement = document.getElementById('sumBalance');
-
-    // Default to 0 if the math failed somewhere
-    const totalPaid = summary.totalPaid || 0;
-    const totalBal = summary.totalBalance || 0;
-
-    if (paidElement && balanceElement) {
-        paidElement.textContent = `$${totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-        balanceElement.textContent = `$${totalBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-    }
-}
 function renderTable(bookings) {
     const tbody = document.getElementById('tableBody');
     if (!tbody) return;
