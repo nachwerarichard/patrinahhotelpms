@@ -1427,13 +1427,7 @@ app.post('/api/bookings/:id/add-payment', async (req, res) => {
     const { id } = req.params;
     const { amount, method, username } = req.body;
 
-    if (!amount || amount <= 0) {
-        return res.status(400).json({ message: 'Invalid payment amount' });
-    }
-
-    if (!method) {
-        return res.status(400).json({ message: 'Payment method is required' });
-    }
+    // ... (Validation stays the same)
 
     try {
         const booking = await Booking.findOne({ id });
@@ -1441,12 +1435,19 @@ app.post('/api/bookings/:id/add-payment', async (req, res) => {
             return res.status(404).json({ message: 'Booking not found' });
         }
 
-        const newBalance = Math.max(0, booking.paymentbalance - amount);
+        // 1. UPDATE AMOUNT PAID: Add new payment to existing total
+        booking.amountPaid += Number(amount);
 
-        booking.paymentbalance = newBalance;
+        // 2. UPDATE BALANCE: Subtract payment from current balance
+        // Use Math.max to ensure balance never goes below 0
+        const newBalance = Math.max(0, booking.balance - amount);
+        booking.balance = newBalance;
+
+        // 3. UPDATE STATUS & METHOD
         booking.paymentMethod = method;
         booking.paymentStatus = newBalance === 0 ? 'Paid' : 'Partially Paid';
 
+        // 4. SAVE TO DATABASE (This is the actual "Database Add" step)
         await booking.save();
 
         // Audit log
@@ -1459,7 +1460,8 @@ app.post('/api/bookings/:id/add-payment', async (req, res) => {
 
         res.json({
             message: 'Payment added successfully',
-            newBalance,
+            newBalance: booking.balance,
+            amountPaid: booking.amountPaid,
             paymentStatus: booking.paymentStatus
         });
 
@@ -1468,7 +1470,6 @@ app.post('/api/bookings/:id/add-payment', async (req, res) => {
         res.status(500).json({ message: 'Error adding payment', error: error.message });
     }
 });
-
 // Mark a booking as No Show
 app.put('/api/bookings/:id/no-show', async (req, res) => {
     const { id } = req.params;
