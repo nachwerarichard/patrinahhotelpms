@@ -1298,56 +1298,64 @@ function renderTable(bookings) {
     const sumPaidDisplay = document.getElementById('sumPaid');
     const sumBalanceDisplay = document.getElementById('sumBalance');
 
+    // Handle empty data gracefully
+    if (!bookings || bookings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="p-3 text-center">No bookings found</td></tr>';
+        sumPaidDisplay.textContent = "$0.00";
+        sumBalanceDisplay.textContent = "$0.00";
+        return;
+    }
+
     // 1. Calculate Totals
     const totalPaid = bookings.reduce((sum, b) => sum + Number(b.amountPaid || 0), 0);
     const totalBalance = bookings.reduce((sum, b) => sum + Number(b.balance || 0), 0);
 
-    // 2. Update the Summary Cards (formatted as currency)
+    // 2. Update the Summary Cards
     sumPaidDisplay.textContent = `$${totalPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
     sumBalanceDisplay.textContent = `$${totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
 
-    // 3. Render Table Rows
-    tbody.innerHTML = bookings.map(b => `
+    // 3. Generate Table Rows
+    const rows = bookings.map(b => `
         <tr class="hover:bg-gray-50">
             <td class="p-3 border">${b.name}</td>
             <td class="p-3 border">${b.room}</td>
             <td class="p-3 border">${b.checkIn}</td>
             <td class="p-3 border text-green-600 font-bold">${b.amountPaid}</td>
             <td class="p-3 border text-red-600 font-bold">${b.balance}</td>
-            <td class="p-3 border">
+            <td class="p-3 border text-center">
                 <span class="px-2 py-1 rounded text-xs ${b.paymentStatus === 'Paid' ? 'bg-green-200' : 'bg-yellow-200'}">
                     ${b.paymentStatus}
                 </span>
             </td>
-            <td class="p-3 border">
+            <td class="p-3 border text-center">
                 <span class="px-2 py-1 rounded text-xs ${b.gueststatus === 'confirmed' ? 'bg-green-200' : 'bg-yellow-200'}">
                     ${b.gueststatus}
                 </span>
             </td>
-            <td class="p-3 border">
+            <td class="p-3 border text-center">
                 <span class="px-2 py-1 rounded text-xs ${b.paymentMethod === 'Cash' ? 'bg-green-200' : 'bg-yellow-200'}">
                     ${b.paymentMethod}
                 </span>
             </td>
-            <td class="p-3 border">
+            <td class="p-3 border text-center">
                 <span class="px-2 py-1 rounded text-xs ${b.guestsource === 'walk in' ? 'bg-green-200' : 'bg-yellow-200'}">
                     ${b.guestsource}
                 </span>
             </td>
         </tr>
     `).join('');
-}
-    // 3. Create the Summary/Total Row
+
+    // 4. Create the Summary/Total Row
     const totalRow = `
         <tr class="bg-gray-100 font-bold">
             <td colspan="3" class="p-3 border text-right">TOTALS:</td>
-            <td class="p-3 border text-green-700">${totalPaid.toLocaleString()}</td>
-            <td class="p-3 border text-red-700">${totalBalance.toLocaleString()}</td>
+            <td class="p-3 border text-green-700">$${totalPaid.toLocaleString()}</td>
+            <td class="p-3 border text-red-700">$${totalBalance.toLocaleString()}</td>
             <td colspan="4" class="p-3 border"></td>
         </tr>
     `;
 
-    // 4. Update the DOM
+    // 5. Update the DOM once
     tbody.innerHTML = rows + totalRow;
 }
 
