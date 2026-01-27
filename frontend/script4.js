@@ -1612,8 +1612,6 @@ async function checkoutBooking(id) {
         renderCalendar();
         renderAuditLogs();
 
-        // Update the financial report/summary if the function exists
-        if (typeof fetchReport === 'function') fetchReport();
 
         // 4. Send email
         await sendConfirmationEmail(id);
@@ -2729,7 +2727,6 @@ document.addEventListener('DOMContentLoaded', async () => { // Made async to awa
                 } else if (initialSectionId === 'calendar') {
                     await renderCalendar();
                 } else if (initialSectionId === 'reports') {
-                    reportDateInput.valueAsDate = new Date();
                 } else if (initialSectionId === 'service-reports') {
                     const today = new Date();
                     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
