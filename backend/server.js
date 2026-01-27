@@ -986,14 +986,14 @@ app.post('/api/audit-log/action', async (req, res) => {
 //}
 
 
-app.post('/api/rooms/init', async (req, res) => {
-    const result = await reinitializeRooms();
-    if (result.success) {
-        res.status(201).json({ message: result.message });
-    } else {
-        res.status(500).json({ message: result.message, error: result.error });
-    }
-});
+//app.post('/api/rooms/init', async (req, res) => {
+    //const result = await reinitializeRooms();
+    //if (result.success) {
+      //  res.status(201).json({ message: result.message });
+    //} else {
+      //  res.status(500).json({ message: result.message, error: result.error });
+    //}
+//});
 
 
 
