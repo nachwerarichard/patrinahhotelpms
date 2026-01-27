@@ -103,14 +103,7 @@
     }
 })();
 
-// Save to storage
-localStorage.setItem('hotel_username', currentUsername);
 
-// Also update the display immediately
-const displayElement = document.getElementById('display-user-name');
-if (displayElement) {
-    displayElement.textContent = currentUsername;
-}
 document.addEventListener('DOMContentLoaded', () => {
     // Attempt to get the name from storage
     const savedUsername = localStorage.getItem('hotel_username');
