@@ -1311,8 +1311,8 @@ function renderTable(bookings) {
     const totalBalance = bookings.reduce((sum, b) => sum + Number(b.balance || 0), 0);
 
     // 2. Update the Summary Cards
-    sumPaidDisplay.textContent = `$${totalPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-    sumBalanceDisplay.textContent = `$${totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+    sumPaidDisplay.textContent = `UGX ${totalPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+    sumBalanceDisplay.textContent = `UGX ${totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
 
     // 3. Generate Table Rows
     const rows = bookings.map(b => `
