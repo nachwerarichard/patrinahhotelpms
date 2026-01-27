@@ -1407,7 +1407,11 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
 
     // 4. Update UI Text
     document.getElementById('total-arrivals').innerText = kpis.arrivals;
-    document.getElementById('total-departures').innerText = kpis.departures;
+          document.getElementById('stat-arrivals').innerText = kpis.arrivals;
+
+    document.getElementById('stat-departures').innerText = kpis.departures;
+          document.getElementById('total-departures').innerText = kpis.departures;
+
     document.getElementById('today-revenue').innerText = `$${kpis.revenue.toLocaleString()}`;
     document.getElementById('today-balance').innerText = `$${kpis.balance.toLocaleString()}`;
     document.getElementById('pending-count').innerText = kpis.pending;
