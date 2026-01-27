@@ -310,99 +310,62 @@
     </button>
 </div>
             </section>
-            <section id="dashbaord" class="section active bg-white p-6 rounded-lg shadow-md mb-8 ">
-                <h2 class="text-2xl font-bold mb-4 text-blue-600"><i class="fas fa-book"></i> Dashbaord</h2>
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded shadow-sm">
-        <p class="text-xs uppercase font-bold text-blue-600">Occupied</p>
-        <p class="text-2xl font-semibold text-gray-800" id="stats-occupied">0</p>
+
+            <section id="dashboard" class="section active bg-white p-6 rounded-lg shadow-md mb-8">
+    <div class="flex items-center justify-between mb-6 border-b pb-4">
+        <h2 class="text-2xl font-bold text-blue-600">
+            <i class="fas fa-chart-line mr-2"></i> Dashboard Overview
+        </h2>
+        <h1 class="text-xl font-semibold text-gray-800">Today's Front Desk</h1>
     </div>
 
-    <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded shadow-sm">
-        <p class="text-xs uppercase font-bold text-green-600">Clean</p>
-        <p class="text-2xl font-semibold text-gray-800" id="stats-clean">0</p>
-    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500 hover:shadow-md transition-shadow">
+            <p class="text-sm font-medium text-gray-500 uppercase">Today's Arrivals</p>
+            <p id="total-arrivals" class="text-2xl font-bold text-gray-900">0</p>
+        </div>
 
-    <div class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded shadow-sm">
-        <p class="text-xs uppercase font-bold text-orange-600">Dirty</p>
-        <p class="text-2xl font-semibold text-gray-800" id="stats-dirty">0</p>
-    </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-500 hover:shadow-md transition-shadow">
+            <p class="text-sm font-medium text-gray-500 uppercase">Today's Departures</p>
+            <p id="total-departures" class="text-2xl font-bold text-gray-900">0</p>
+        </div>
 
-    <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded shadow-sm">
-        <p class="text-xs uppercase font-bold text-indigo-600">Arrivals</p>
-        <p class="text-2xl font-semibold text-gray-800" id="stats-arrivals">0</p>
-    </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500 hover:shadow-md transition-shadow">
+            <p class="text-sm font-medium text-gray-500 uppercase">Today's Revenue</p>
+            <p id="today-revenue" class="text-2xl font-bold text-gray-900">$0</p>
+        </div>
 
-    <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded shadow-sm">
-        <p class="text-xs uppercase font-bold text-purple-600">Departures</p>
-        <p class="text-2xl font-semibold text-gray-800" id="stats-departures">0</p>
-    </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500 hover:shadow-md transition-shadow">
+            <p class="text-sm font-medium text-gray-500 uppercase">Pending Payments</p>
+            <p id="pending-count" class="text-2xl font-bold text-gray-900">0</p>
+        </div>
 
-    <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded shadow-sm">
-        <p class="text-xs uppercase font-bold text-red-600">Maintenance</p>
-        <p class="text-2xl font-semibold text-gray-800" id="stats-maintenance">2</p>
-    </div>
-</div>
-
-
-<div class="p-6 bg-gray-50 min-h-screen">
-  <div class="max-w-7xl mx-auto">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">Today's Front Desk Overview</h1>
-<div class="p-8 bg-gray-50 min-h-screen">
-  <h2 class="text-2xl font-bold text-gray-800 mb-6">Operations Overview</h2>
-  
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="stats-container">
-    </div>
-</div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
-        <p class="text-sm font-medium text-gray-500 uppercase">Today's Arrivals</p>
-        <p id="total-arrivals" class="text-2xl font-bold text-gray-900">0</p>
-      </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-500">
-        <p class="text-sm font-medium text-gray-500 uppercase">Today's Departures</p>
-        <p id="total-departures" class="text-2xl font-bold text-gray-900">0</p>
-      </div>
-      <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
-        <p class="text-sm font-medium text-gray-500 uppercase">Expected Revenue</p>
-        <p id="today-revenue" class="text-2xl font-bold text-gray-900">$0</p>
-      </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
-        <p class="text-sm font-medium text-gray-500 uppercase">Expected Revenue</p>
-        <p id="today-balance" class="text-2xl font-bold text-gray-900">$0</p>
-      </div>
-      <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500">
-        <p class="text-sm font-medium text-gray-500 uppercase">Pending Payments</p>
-        <p id="pending-count" class="text-2xl font-bold text-gray-900">0</p>
-      </div>
-      <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
-        <p class="text-sm font-medium text-gray-500 uppercase">No Shows</p>
-        <p id="no-show-count" class="text-2xl font-bold text-gray-900">0</p>
-      </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500 hover:shadow-md transition-shadow">
+            <p class="text-sm font-medium text-gray-500 uppercase">No Shows</p>
+            <p id="no-show-count" class="text-2xl font-bold text-gray-900">0</p>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      <div class="bg-white p-6 rounded-xl shadow-sm">
-        <h3 class="text-lg font-semibold mb-4 text-gray-700">Guest Status (Today)</h3>
-        <div class="h-64">
-           <canvas id="statusChart"></canvas>
+        <div class="bg-gray-50 p-6 rounded-xl border border-gray-100">
+            <h3 class="text-lg font-semibold mb-4 text-gray-700">Guest Status (Today)</h3>
+            <div class="h-64">
+                <canvas id="statusChart"></canvas>
+            </div>
         </div>
-      </div>
 
-      <div class="bg-white p-6 rounded-xl shadow-sm">
-        <h3 class="text-lg font-semibold mb-4 text-gray-700">Booking Sources</h3>
-        <div class="h-64">
-           <canvas id="sourceChart"></canvas>
+        <div class="bg-gray-50 p-6 rounded-xl border border-gray-100">
+            <h3 class="text-lg font-semibold mb-4 text-gray-700">Booking Sources</h3>
+            <div class="h-64">
+                <canvas id="sourceChart"></canvas>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
-</div>
-</div>
-               
-            </section>
 
+    <div id="stats-container" class="mt-8 grid grid-cols-1 gap-4">
+        </div>
+</section>
+            
             <section id="housekeeping" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
                 <h2 class="text-2xl font-bold mb-4 text-blue-600"><i class="fas fa-broom"></i> Housekeeping</h2>
                 
