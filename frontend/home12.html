@@ -1474,14 +1474,17 @@ updateDashboard();
         const total = rooms.length;
         const clean = rooms.filter(r => r.status === 'clean').length;
         const dirty = rooms.filter(r => r.status === 'dirty').length;
-        const maintenance = rooms.filter(r => r.status === 'under-maintenance' || r.status === 'blocked').length;
+        const maintenance = rooms.filter(r => r.status === 'under-maintenance').length;
+        const occupied = rooms.filter(r => r.status === 'blocked').length;
 
         // 2. Define KPIs to render
         const kpis = [
             { label: 'Total Rooms', value: total, color: 'text-blue-600', bg: 'bg-blue-100' },
             { label: 'Ready to Assign', value: clean, color: 'text-green-600', bg: 'bg-green-100' },
             { label: 'Needs Cleaning', value: dirty, color: 'text-yellow-600', bg: 'bg-yellow-100' },
-            { label: 'Out of Order', value: maintenance, color: 'text-red-600', bg: 'bg-red-100' }
+            { label: 'Out of Order', value: maintenance, color: 'text-red-600', bg: 'bg-red-100' },
+            { label: 'Occupied', value: occupied, color: 'text-white-600', bg: 'bg-orange-100' }
+
         ];
 
         // 3. Render Cards
