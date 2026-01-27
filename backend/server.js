@@ -119,7 +119,7 @@ const Room = mongoose.model('Room', roomSchema);
 const bookingSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true }, // Your custom booking ID (e.g., 'BKG001')
     name: { type: String, required: true },
-    room: { type: String, required: true }, // Room number, references Room model
+    room: { type: String }, // Room number, references Room model
     occupation: { type: String }, // Room number, references Room model
     checkedIn: { type: Boolean, default: false },
     vehno: { type: String }, // Room number, references Room model
