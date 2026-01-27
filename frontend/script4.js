@@ -1380,68 +1380,6 @@ bookingForm.addEventListener('submit', async function(event) {
  * Populates the modal with booking data for editing.
  * @param {string} id - The custom ID of the booking to edit.
  */
-async function viewBooking(id) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/bookings/id/${id}`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const booking = await response.json();
-
-        if (!booking) {
-            showMessageBox('Error', 'Booking not found.', true);
-            return;
-        }
-
-        // 1. Set Modal Title and hide the Save button permanently
-        document.getElementById('modalTitle').textContent = 'Booking Details';
-        const saveBtn = document.getElementById('saveBookingBtn');
-        if (saveBtn) saveBtn.style.display = 'none';
-
-        // 2. Define all fields to be populated
-        const fields = [
-            'bookingId', 'name', 'checkIn', 'checkOut', 'people', 'nationality', 
-            'address', 'phoneNo', 'guestEmail', 'nationalIdNo', 'occupation', 
-            'vehno', 'destination', 'checkIntime', 'checkOuttime', 'kin', 
-            'kintel', 'purpose', 'declarations', 'paymentStatus'
-        ];
-
-        // 3. Populate and Disable all standard fields
-        fields.forEach(field => {
-            const element = document.getElementById(field);
-            if (element) {
-                element.value = booking[field] || '';
-                element.disabled = true; // Force read-only
-            }
-        });
-
-        // 4. Handle Numeric/Calculated fields
-        const numericFields = {
-            'nights': nightsInput,
-            'amtPerNight': amtPerNightInput,
-            'totalDue': totalDueInput,
-            'amountPaid': amountPaidInput,
-            'balance': balanceInput
-        };
-
-        for (const [key, input] of Object.entries(numericFields)) {
-            if (input) {
-                input.value = booking[key] || 0;
-                input.disabled = true;
-            }
-        }
-
-        // 5. Handle Room Dropdown
-        await populateRoomDropdown(booking.room);
-        const roomDropdown = document.getElementById('room');
-        if (roomDropdown) roomDropdown.disabled = true;
-
-        // 6. Show the Modal
-        bookingModal.style.display = 'flex';
-        
-    } catch (error) {
-        console.error('Error opening booking modal:', error);
-        showMessageBox('Error', `Failed to load booking details: ${error.message}`, true);
-    }
-}
 
 async function editBooking(id) {
     try {
