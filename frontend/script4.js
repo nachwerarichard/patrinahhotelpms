@@ -1951,7 +1951,6 @@ async function printReceipt(bookingCustomId) {
         const finalBalanceDue = totalBill - totalAmountPaid;
 
         receiptSubtotalRoomSpan.textContent = roomSubtotal.toFixed(2);
-        receiptSubtotalIncidentalsSpan.textContent = totalIncidentalChargesAmount.toFixed(2);
         receiptTotalBillSpan.textContent = totalBill.toFixed(2);
         receiptAmountPaidSpan.textContent = totalAmountPaid.toFixed(2);
         receiptBalanceDueSpan.textContent = finalBalanceDue.toFixed(2);
