@@ -710,7 +710,7 @@ actionButtonsHtml = `
     <button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">Edit</button>
 
     <button class="${baseBtn} bg-green-600 hover:bg-green-700 mt-1" 
-        onclick="openAddPaymentModal('${booking.id}', ${booking.paymentbalance})">
+        onclick="openAddPaymentModal('${booking.id}', ${booking.balance})">
     <i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment
    </button>
                             <button class=" ${baseBtn} bg-orange-500 btn btn-info" onclick="printReceipt('${booking.id}')"><i class="fas fa-print"></i> Receipt</button>
