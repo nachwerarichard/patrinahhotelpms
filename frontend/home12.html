@@ -1257,6 +1257,23 @@ async function fetchReport() {
     const date = document.getElementById('filterDate').value;
     const enddate = document.getElementById('endDate').value;
 
+    // 2. Check if anything is selected
+    const hasActiveFilter = search || paymentStatus || gueststatus || 
+                            paymentMethod || guestsource || date || enddate;
+
+    // 3. IF CLEAR/EMPTY: Wipe the table and stop
+    if (!hasActiveFilter) {
+        // Clear the table body
+        document.getElementById('tableBody').innerHTML = '';
+        
+        // Reset summary cards to zero
+        document.getElementById('sumPaid').textContent = "UGX 0.00";
+        document.getElementById('sumBalance').textContent = "UGX 0.00";
+        
+        console.log("Filters cleared. Table wiped.");
+        return; // Stop the function here
+    }
+    
     const params = new URLSearchParams({
         search,
         paymentStatus,
