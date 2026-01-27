@@ -352,7 +352,7 @@ async function showDashboard(username, role) {
     let initialNavLinkId = '';
 
     if (role === 'admin') {
-        initialSectionId = 'dashboard';
+        initialSectionId = 'dashbaord';
         initialNavLinkId = 'nav-dashboard';
     } else if (role === 'housekeeper') {
         initialSectionId = 'housekeeping';
