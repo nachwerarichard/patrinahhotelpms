@@ -405,7 +405,7 @@ loginForm.addEventListener('submit', async function(event) {
             await showDashboard(data.user.username, data.user.role);
 
             // Run your background audit logs
-            await fetch(`${API_BASE_URL}/rooms/init`, { method: 'POST' });
+            //await fetch(`${API_BASE_URL}/rooms/init`, { method: 'POST' });
             await fetch(`${API_BASE_URL}/audit-log/action`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
