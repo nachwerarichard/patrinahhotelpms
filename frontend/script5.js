@@ -103,12 +103,22 @@
     }
 })();
 
+function closeSection(sectionId) {
+  const element = document.getElementById(sectionId);
+  
+  if (element) {
+    element.classList.add('hidden');
+  } else {
+    console.warn(`Element with ID "${sectionId}" not found.`);
+  }
+}
         // A function to show a specific section and hide all others
 function showSection(sectionId) {
     // Hide all sections first
     const sections = document.querySelectorAll('main > section');
     sections.forEach(section => {
         section.classList.add('hidden');
+        closeSection(dashbaord);
     });
 
     // Then show the target section
