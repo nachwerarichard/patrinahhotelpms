@@ -804,9 +804,6 @@ async function updateBookingStats() {
             return bCheckOut === todayStr && b.status === 'Checked-In';
         }).length;
 
-        // Update your UI elements
-        document.getElementById('stat-arrivals').textContent = arrivalsToday;
-        document.getElementById('stat-departures').textContent = departuresToday;
 
     } catch (error) {
         console.error('Error updating booking stats:', error);
