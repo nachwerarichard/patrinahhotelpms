@@ -1946,7 +1946,7 @@ async function printReceipt(bookingCustomId) {
 
         // Calculate and populate summary
         const roomSubtotal = parseFloat(booking.totalDue);
-        const totalBill = roomSubtotal + totalIncidentalChargesAmount;
+        const totalBill = roomSubtotal;
         const totalAmountPaid = parseFloat(booking.amountPaid); // This is room amount paid
         const finalBalanceDue = totalBill - totalAmountPaid;
 
