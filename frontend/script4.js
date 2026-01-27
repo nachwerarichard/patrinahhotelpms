@@ -116,6 +116,23 @@ const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn
 
 
 
+// 1. Get the raw string from storage
+const userDataString = localStorage.getItem('loggedInUser');
+
+// 2. Parse it back into an object, or default to null
+const userData = userDataString ? JSON.parse(userDataString) : null;
+
+// 3. Set your global variable used by checkoutBooking and others
+let currentUsername = userData ? userData.username : 'Guest';
+let currentUserRole = userData ? userData.role : null;
+
+// 4. Update the UI immediately on page load
+document.addEventListener('DOMContentLoaded', () => {
+    const displayElement = document.getElementById('display-user-name');
+    if (displayElement && userData) {
+        displayElement.textContent = userData.username;
+    }
+});
 
 /*document.addEventListener('DOMContentLoaded', () => {
     const navItems = document.querySelectorAll('aside nav ul li');
@@ -337,10 +354,14 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
 async function showDashboard(username, role) {
     // 1. Set global variables (so the rest of your app knows who is logged in)
     currentUserRole = role;
-    const displayElement = document.getElementById('display-user-name');
-    if (displayElement) {
-        displayElement.textContent = currentUsername;
-    }
+    // Save to storage
+localStorage.setItem('hotel_username', currentUsername);
+
+// Also update the display immediately
+const displayElement = document.getElementById('display-user-name');
+if (displayElement) {
+    displayElement.textContent = currentUsername;
+}
     // 2. Switch the UI
     loginContainer.style.display = 'none';
     mainContent.style.display = 'flex';
@@ -399,6 +420,19 @@ loginForm.addEventListener('submit', async function(event) {
                 role: data.user.role,
                 token: data.token 
             }));
+         
+
+    // Update global variables for immediate use in the session
+    currentUsername = data.user.username;
+    currentUserRole = data.user.role;
+
+    // Update the text on the screen
+    const displayElement = document.getElementById('display-user-name');
+    if (displayElement) {
+        displayElement.textContent = currentUsername;
+    }
+
+    
 
             // TRIGGER THE DASHBOARD
             await showDashboard(data.user.username, data.user.role);
