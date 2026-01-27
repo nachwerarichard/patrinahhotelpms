@@ -11,6 +11,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
+    <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
     .radial-btn {
         position: absolute;
@@ -340,41 +343,48 @@
         <p class="text-2xl font-semibold text-gray-800" id="stats-maintenance">2</p>
     </div>
 </div>
-  <div class="max-w-6xl mx-auto">
-    <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold text-gray-800">Today's Guest Status</h2>
-      <span id="current-date-display" class="text-gray-500 font-medium"></span>
+
+
+<div class="p-6 bg-gray-50 min-h-screen">
+  <div class="max-w-7xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Today's Front Desk Overview</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+        <p class="text-sm font-medium text-gray-500 uppercase">Today's Arrivals</p>
+        <p id="total-arrivals" class="text-2xl font-bold text-gray-900">0</p>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+        <p class="text-sm font-medium text-gray-500 uppercase">Expected Revenue</p>
+        <p id="today-revenue" class="text-2xl font-bold text-gray-900">$0</p>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500">
+        <p class="text-sm font-medium text-gray-500 uppercase">Pending Payments</p>
+        <p id="pending-count" class="text-2xl font-bold text-gray-900">0</p>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
+        <p class="text-sm font-medium text-gray-500 uppercase">No Shows</p>
+        <p id="no-show-count" class="text-2xl font-bold text-gray-900">0</p>
+      </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-      <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-green-500">
-        <p class="text-sm text-gray-500 uppercase">Confirmed</p>
-        <p id="count-confirmed" class="text-2xl font-bold">0</p>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div class="bg-white p-6 rounded-xl shadow-sm">
+        <h3 class="text-lg font-semibold mb-4 text-gray-700">Guest Status (Today)</h3>
+        <div class="h-64">
+           <canvas id="statusChart"></canvas>
+        </div>
       </div>
-      <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-red-500">
-        <p class="text-sm text-gray-500 uppercase">Cancelled</p>
-        <p id="count-cancelled" class="text-2xl font-bold">0</p>
-      </div>
-      <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-yellow-500">
-        <p class="text-sm text-gray-500 uppercase">No Show</p>
-        <p id="count-noshow" class="text-2xl font-bold">0</p>
-      </div>
-    </div>
 
-    <div class="bg-white rounded-xl shadow-md overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-100">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guest</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Room</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-          </tr>
-        </thead>
-        <tbody id="guest-list-body" class="divide-y divide-gray-200">
-          </tbody>
-      </table>
+      <div class="bg-white p-6 rounded-xl shadow-sm">
+        <h3 class="text-lg font-semibold mb-4 text-gray-700">Booking Sources</h3>
+        <div class="h-64">
+           <canvas id="sourceChart"></canvas>
+        </div>
+      </div>
     </div>
   </div>
+</div>
                
             </section>
 
@@ -1364,57 +1374,78 @@ fetchReport();
 }
     </script>
     <script>
-        async function updateGuestStatus() {
+        async function updateDashboard() {
   try {
     const response = await fetch('/api/bookings/all');
-    const bookings = await response.json();
+    const allBookings = await response.json();
 
-    // 1. Get Today's Date in YYYY-MM-DD format
-    const today = new String(new Date().toISOString().split('T')[0]);
-    document.getElementById('current-date-display').innerText = today;
+    // 1. Setup Today's Date (Match your YYYY-MM-DD format)
+    const today = new Date().toISOString().split('T')[0];
 
-    // 2. Filter bookings for today
-    const todaysBookings = bookings.filter(b => b.checkIn === today);
+    // 2. Filter data for "Today's Arrivals"
+    const todayBookings = allBookings.filter(b => b.checkIn === today);
 
-    // 3. Update Counts
-    const stats = { confirmed: 0, cancelled: 0, 'no show': 0 };
-    todaysBookings.forEach(b => stats[b.gueststatus]++);
+    // 3. Calculate KPIs
+    const kpis = {
+      arrivals: todayBookings.length,
+      revenue: todayBookings.reduce((sum, b) => sum + b.totalDue, 0),
+      pending: todayBookings.filter(b => b.paymentStatus === 'Pending').length,
+      noShow: todayBookings.filter(b => b.gueststatus === 'no show').length
+    };
 
-    document.getElementById('count-confirmed').innerText = stats.confirmed;
-    document.getElementById('count-cancelled').innerText = stats.cancelled;
-    document.getElementById('count-noshow').innerText = stats['no show'];
+    // 4. Update UI Text
+    document.getElementById('total-arrivals').innerText = kpis.arrivals;
+    document.getElementById('today-revenue').innerText = `$${kpis.revenue.toLocaleString()}`;
+    document.getElementById('pending-count').innerText = kpis.pending;
+    document.getElementById('no-show-count').innerText = kpis.noShow;
 
-    // 4. Render Table
-    const tableBody = document.getElementById('guest-list-body');
-    tableBody.innerHTML = todaysBookings.map(booking => `
-      <tr class="hover:bg-gray-50">
-        <td class="px-6 py-4 font-medium text-gray-900">${booking.name}</td>
-        <td class="px-6 py-4 text-gray-600">Room ${booking.room}</td>
-        <td class="px-6 py-4">
-          <span class="px-3 py-1 rounded-full text-xs font-semibold ${getStatusClass(booking.gueststatus)}">
-            ${booking.gueststatus.toUpperCase()}
-          </span>
-        </td>
-      </tr>
-    `).join('');
+    // 5. Aggregate Data for Charts
+    const statusCounts = { confirmed: 0, cancelled: 0, 'no show': 0 };
+    const sourceCounts = { 'walk in': 0, 'OTA': 0, 'Direct': 0, 'PMS': 0 };
+
+    todayBookings.forEach(b => {
+      statusCounts[b.gueststatus]++;
+      sourceCounts[b.guestsource]++;
+    });
+
+    renderCharts(statusCounts, sourceCounts);
 
   } catch (error) {
-    console.error('Error loading guest status:', error);
+    console.error('Failed to load dashboard data:', error);
   }
 }
 
-// Helper for Tailwind colors based on status
-function getStatusClass(status) {
-  switch (status) {
-    case 'confirmed': return 'bg-green-100 text-green-800';
-    case 'cancelled': return 'bg-red-100 text-red-800';
-    case 'no show': return 'bg-yellow-100 text-yellow-800';
-    default: return 'bg-gray-100 text-gray-800';
-  }
+function renderCharts(statusData, sourceData) {
+  // Status Doughnut Chart
+  new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(statusData),
+      datasets: [{
+        data: Object.values(statusData),
+        backgroundColor: ['#3B82F6', '#EF4444', '#F59E0B']
+      }]
+    },
+    options: { maintainAspectRatio: false }
+  });
+
+  // Source Bar Chart
+  new Chart(document.getElementById('sourceChart'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(sourceData),
+      datasets: [{
+        label: 'Bookings by Source',
+        data: Object.values(sourceData),
+        backgroundColor: '#10B981'
+      }]
+    },
+    options: { maintainAspectRatio: false }
+  });
 }
 
-// Run on page load
-updateGuestStatus();
+// Initialize
+updateDashboard();
     </script>
 </body>
 </html>
