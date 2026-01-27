@@ -103,6 +103,33 @@
     }
 })();
 
+// Save to storage
+localStorage.setItem('hotel_username', currentUsername);
+
+// Also update the display immediately
+const displayElement = document.getElementById('display-user-name');
+if (displayElement) {
+    displayElement.textContent = currentUsername;
+}
+document.addEventListener('DOMContentLoaded', () => {
+    // Attempt to get the name from storage
+    const savedUsername = localStorage.getItem('hotel_username');
+
+    if (savedUsername) {
+        // Set the global variable so your other functions can use it
+        currentUsername = savedUsername; 
+
+        // Update the display element
+        const displayElement = document.getElementById('display-user-name');
+        if (displayElement) {
+            displayElement.textContent = savedUsername;
+        }
+    } else {
+        // Optional: Redirect to login if no username is found
+        // window.location.href = 'login.html';
+    }
+});
+
 function closeSection(sectionId) {
   const element = document.getElementById(sectionId);
   
@@ -215,7 +242,7 @@ function logout() {
     localStorage.removeItem('userRole');
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('user'); // Clear everything else too
-
+   localStorage.removeItem('hotel_username');
     // 2. Log for debugging
     console.log("Session cleared. Redirecting...");
 
