@@ -1455,7 +1455,7 @@ updateDashboard();
     <script>
         async function updateroomDashboard() {
     try {
-        const response = await fetch('${API_BASE_URL}/api/rooms');
+        const response = await fetch('${API_BASE_URL}/rooms');
         const rooms = await response.json();
 
         // 1. Process Data
