@@ -1395,7 +1395,7 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
     document.getElementById('total-arrivals').innerText = kpis.arrivals;
     document.getElementById('total-departures').innerText = kpis.departures;
     document.getElementById('today-revenue').innerText = `$${kpis.revenue.toLocaleString()}`;
-    document.getElementById('today-balance').innerText = `$${kpis.balance.toLocaleString()}`;
+    document.getElementById('today-balance').innerText = `$${kpis.revenue.toLocaleString()}`;
     document.getElementById('pending-count').innerText = kpis.pending;
     document.getElementById('no-show-count').innerText = kpis.noShow;
 
