@@ -1371,7 +1371,7 @@ function exportToPDF() {
 }
 
 // Initial Load
-fetchReport();
+//fetchReport();
 
         function setDateFilter(type) {
     const dateInput = document.getElementById('filterDate');
@@ -1385,7 +1385,7 @@ fetchReport();
         dateInput.value = firstDay.toISOString().split('T')[0];
     }
     
-    fetchReport(); // Trigger the auto-filter
+    //fetchReport(); // Trigger the auto-filter
 }
         function printReport() {
     // Optional: Add a title to the browser tab specifically for the print header
