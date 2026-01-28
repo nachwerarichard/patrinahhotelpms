@@ -1429,7 +1429,7 @@ async function viewBooking(id) {
         }
 
         // 1. Update Modal Title
-        document.getElementById('modalTitle').textContent = 'Booking Details (View Only)';
+        document.getElementById('modalTitle').textContent = 'Booking Details';
 
        // 2. Populate Fields
 // --- Primary IDs and Guest Info ---
