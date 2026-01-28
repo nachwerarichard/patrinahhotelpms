@@ -2179,17 +2179,20 @@ async function renderHousekeepingRooms() {
         roomTypes[type].sort((a, b) => parseInt(a.number) - parseInt(b.number)).forEach(room => {
             const card = document.createElement('div');
             card.classList.add('room-card');
-            card.innerHTML = `
-                <h4>Room ${room.number}</h4>
-                <p>Type: ${room.type}</p>
-                <p class="status status-${room.status}">${room.status.replace('-', ' ').toUpperCase()}</p>
-                <select onchange="updateRoomStatus('${room.id}', this.value)">
-                    <option value="clean" ${room.status === 'clean' ? 'selected' : ''}>Clean</option>
-                    <option value="dirty" ${room.status === 'dirty' ? 'selected' : ''}>Dirty</option>
-                    <option value="under-maintenance" ${room.status === 'under-maintenance' ? 'selected' : ''}>Under Maintenance</option>
-                    <option value="blocked" ${room.status === 'blocked' ? `<option value="blocked" selected disabled>Blocked (Reserved)</option>` : ''}
-                </select>
-            `;
+           card.innerHTML = `
+    <h4>Room ${room.number}</h4>
+    <p>Type: ${room.type}</p>
+    <p class="status status-${room.status}">${room.status.replace('-', ' ').toUpperCase()}</p>
+    <select onchange="updateRoomStatus('${room.id}', this.value)">
+        <option value="clean" ${room.status === 'clean' ? 'selected' : ''}>Clean</option>
+        <option value="dirty" ${room.status === 'dirty' ? 'selected' : ''}>Dirty</option>
+        <option value="under-maintenance" ${room.status === 'under-maintenance' ? 'selected' : ''}>Under Maintenance</option>
+        
+        <option value="blocked" ${room.status === 'blocked' ? 'selected ' : ''}>
+            ${room.status === 'blocked' ? 'Blocked (Reserved)' : 'Blocked'}
+        </option>
+    </select>
+`;
             housekeepingRoomGrid.appendChild(card);
 
             // Disable dropdown if room is blocked
