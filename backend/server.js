@@ -1061,42 +1061,27 @@ app.get('/api/rooms/report', async (req, res) => {
 
 // Update room status (accessible by admin and housekeeper)
 app.put('/api/rooms/:id', async (req, res) => {
-    const { id } = req.params; // This `id` is the custom room `id` (e.g., R101)
-    const { status, reason, username } = req.body; // Added reason and username for audit log
+    const { id } = req.params;
+    const { status, reason, username } = req.body; 
     try {
-        const room = await Room.findOne({ id: id }); // Find by custom `id`
-        if (!room) {
-            return res.status(404).json({ message: 'Room not found' });
-        }
+        const room = await Room.findOne({ id: id });
+        if (!room) return res.status(404).json({ message: 'Room not found' });
 
         const oldStatus = room.status;
 
-        // Prevent changing status if room is currently blocked by an *active* reservation
-        // This check ensures that a room currently occupied cannot be manually set to 'clean' or 'under-maintenance'
-        const now = new Date();
-        now.setHours(0,0,0,0);
-        const isRoomCurrentlyBlocked = await Booking.exists({
-            room: room.number, // Check bookings by room number
-            checkIn: { $lte: now.toISOString().split('T')[0] }, // Booking has started or starts today
-            checkOut: { $gt: now.toISOString().split('T')[0] }  // Booking has not ended (checkOut is later than today)
-        });
-
-        // If the room is currently blocked by an active booking and the new status is not 'blocked', prevent the change.
-        // This is to prevent housekeepers from accidentally unblocking an occupied room.
-        if (isRoomCurrentlyBlocked && status !== 'blocked' && room.status === 'blocked') {
-            return res.status(400).json({ message: `Room ${room.number} is currently reserved. Its status cannot be manually changed from 'blocked' while occupied.` });
-        }
+        // --- I REMOVED THE isRoomCurrentlyBlocked CHECK HERE ---
+        // This allows you to change the status regardless of bookings.
 
         room.status = status;
         await room.save();
 
-        // Audit Log
-        await addAuditLog('Room Status Updated', username || 'System', { // Use username from body
+        // Audit Log remains so you can still track who changed it
+        await addAuditLog('Room Status Updated', username || 'System', {
             roomId: room.id,
             roomNumber: room.number,
             oldStatus: oldStatus,
             newStatus: status,
-            reason: reason || 'N/A' // Include reason if provided
+            reason: reason || 'N/A'
         });
 
         res.json({ message: 'Room status updated successfully', room });
@@ -1104,7 +1089,6 @@ app.put('/api/rooms/:id', async (req, res) => {
         res.status(500).json({ message: 'Error updating room status', error: error.message });
     }
 });
-
 
 // --- Bookings API ---
 
