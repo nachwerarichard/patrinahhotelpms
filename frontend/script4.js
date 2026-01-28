@@ -1041,12 +1041,12 @@ async function sendConfirmationEmail(bookingId) {
     }
     const recipientEmail = bookingToSend.guestEmail ? bookingToSend.guestEmail.trim() : '';  // Use email from fetched booking
     if (!recipientEmail) {
-        showMessageBox('No Email Found', `No email address found for guest "${bookingToSend.name}". Email not sent.`, true);
+        showMessageBox('No Email Found', `Guest checkedout but no email address found for  "${bookingToSend.name}". Email not sent.`, true);
         return;
     }
 
     if (!/\S+@\S+\.\S+/.test(recipientEmail)) {
-        showMessageBox('Error', `Invalid email format for guest "${bookingToSend.name}". Please update the booking with a valid email address.`, true);
+        showMessageBox('Error', `Invalid email format for guest "${bookingToSend.name}". Guest Checked but email not sent`, true);
         return;
     }
 
