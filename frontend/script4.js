@@ -1589,7 +1589,8 @@ async function checkinBooking(id) {
             renderBookings(currentPage, currentSearchTerm),
             renderHousekeepingRooms(),
             renderCalendar(),
-            renderAuditLogs()
+            renderAuditLogs(),
+             updateDashboard()
         ]);
 
     } catch (error) {
