@@ -124,17 +124,17 @@ const bookingSchema = new mongoose.Schema({
     checkedIn: { type: Boolean, default: false },
     vehno: { type: String }, // Room number, references Room model
     destination: { type: String },
-    checkIn: { type: String, required: true }, // Stored as YYYY-MM-DD
+    checkIn: { type: String }, // Stored as YYYY-MM-DD
     checkIntime: { type: String}, // Stored as YYYY-MM-DD string
     checkOut: { type: String, required: true }, // Stored as YYYY-MM-DD string
     checkOuttime: { type: String }, // Stored as YYYY-MM-DD string
     nights: { type: Number, required: true },
-    amtPerNight: { type: Number, required: true },
-    totalDue: { type: Number, required: true }, // This is ROOM total due
-    amountPaid: { type: Number, default: 0 }, // This is ROOM amount paid
+    amtPerNight: { type: Number },
+    totalDue: { type: Number }, // This is ROOM total due
+    amountPaid: { type: Number}, // This is ROOM amount paid
     balance: { type: Number, default: 0 }, // This is ROOM balance
-    paymentStatus: { type: String, required: true, enum: ['Pending', 'Paid', 'Partially Paid'], default: 'Pending' },
-    paymentMethod: { type: String, required: true, enum: ['Cash', 'MTN Momo', 'Airtel Pay','Bank'], default: 'Cash' },
+    paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Partially Paid'], default: 'Pending' },
+    paymentMethod: { type: String, enum: ['Cash', 'MTN Momo', 'Airtel Pay','Bank'], default: 'Cash' },
     guestsource: { type: String, required: true, enum: ['walk in', 'OTA', 'Direct','PMS','hourly'], default: 'walk in' },
     gueststatus: { type: String, required: true, enum: ['confirmed', 'cancelled', 'no show', 'checkedin', 'reserved','checkedout'], default: 'confirmed' },
     cancellationReason: { type: String, default: '' },
@@ -1375,42 +1375,40 @@ app.delete('/api/bookings/:id', async (req, res) => {
     }
 });
 
-// Checkout a booking
 app.post('/api/bookings/:id/checkout', async (req, res) => {
     const { id } = req.params;
-    const { username } = req.body; 
+    const { username } = req.body;
     try {
-        const booking = await Booking.findOne({ id: id });
+        // 1. Update booking status without triggering full schema validation
+        const booking = await Booking.findOneAndUpdate(
+            { id: id },
+            { $set: { gueststatus: 'checkedout' } },
+            { new: true }
+        );
+
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found' });
         }
 
-        booking.gueststatus = 'checkedout'; 
-        await booking.save();
+        // 2. Update the room status
+        const room = await Room.findOneAndUpdate(
+            { number: booking.room },
+            { $set: { status: 'dirty' } }
+        );
 
-        const room = await Room.findOne({ number: booking.room });
-        if (room) {
-            room.status = 'dirty'; 
-            await room.save();
-        }
-
-        await addAuditLog('Booking Checked Out', username || 'System', { 
+        // 3. Audit Log
+        await addAuditLog('Booking Checked Out', username || 'System', {
             bookingId: booking.id,
             guestName: booking.name,
             roomNumber: booking.room
         });
 
         res.json({ message: `Room ${booking.room} marked as dirty upon checkout.` });
-
     } catch (error) {
         console.error("DETAILED BACKEND ERROR:", error);
-        res.status(500).json({ 
-            message: 'Error during checkout', 
-            details: error.message 
-        });
+        res.status(500).json({ message: 'Error during checkout', error: error.message });
     }
-}); // <--- MAKE SURE THIS IS HERE TO CLOSE THE ROUTE
-
+});
 // Add payment to a booking
 app.post('/api/bookings/:id/add-payment', async (req, res) => {
     const { id } = req.params;
