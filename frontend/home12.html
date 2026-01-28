@@ -1466,33 +1466,47 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
 }
 
 function renderCharts(statusData, sourceData) {
-  // Status Pie Chart
+  // Status Bar Chart
   new Chart(document.getElementById('statusChart'), {
-    type: 'pie', // Changed from 'doughnut' to 'pie'
+    type: 'bar', // Changed to Bar
     data: {
       labels: Object.keys(statusData),
       datasets: [{
+        label: 'Room Count',
         data: Object.values(statusData),
         backgroundColor: [
           '#3B82F6', // Blue
           '#EF4444', // Red
           '#F59E0B', // Amber
-          '#10B981', // Emerald (Added a 4th color just in case)
-          '#8B5CF6'  // Violet (Added a 5th color just in case)
+          '#10B981', // Emerald
+          '#8B5CF6'  // Violet
         ],
-        borderWidth: 1
+        borderWidth: 0,
+        borderRadius: 8 // Rounds the top of the bars
       }]
     },
     options: { 
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          position: 'bottom' // Moves labels to the bottom for a cleaner look
+          display: false // Hidden because the X-axis tells us what is what
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1 // Ensures we only see whole numbers (since you can't have 1.5 rooms)
+          }
+        },
+        x: {
+          grid: {
+            display: false // Cleans up the look by removing vertical lines
+          }
         }
       }
     }
   });
-
 
   // Source Bar Chart
   new Chart(document.getElementById('sourceChart'), {
