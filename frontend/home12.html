@@ -1466,8 +1466,6 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
 }
 
 function renderCharts(statusData, sourceData) {
-  // Status Bar Chart
-  new Chart(document.getElementById('statusChart'), {
     type: 'bar', // Changed to Bar
     data: {
       labels: Object.keys(statusData),
