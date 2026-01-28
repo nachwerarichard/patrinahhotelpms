@@ -1466,18 +1466,33 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
 }
 
 function renderCharts(statusData, sourceData) {
-  // Status Doughnut Chart
+  // Status Pie Chart
   new Chart(document.getElementById('statusChart'), {
-    type: 'doughnut',
+    type: 'pie', // Changed from 'doughnut' to 'pie'
     data: {
       labels: Object.keys(statusData),
       datasets: [{
         data: Object.values(statusData),
-        backgroundColor: ['#3B82F6', '#EF4444', '#F59E0B']
+        backgroundColor: [
+          '#3B82F6', // Blue
+          '#EF4444', // Red
+          '#F59E0B', // Amber
+          '#10B981', // Emerald (Added a 4th color just in case)
+          '#8B5CF6'  // Violet (Added a 5th color just in case)
+        ],
+        borderWidth: 1
       }]
     },
-    options: { maintainAspectRatio: false }
+    options: { 
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom' // Moves labels to the bottom for a cleaner look
+        }
+      }
+    }
   });
+
 
   // Source Bar Chart
   new Chart(document.getElementById('sourceChart'), {
