@@ -278,7 +278,7 @@
 
     <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded shadow-sm">
         <p class="text-xs uppercase font-bold text-red-600">Maintenance</p>
-        <p class="text-2xl font-semibold text-gray-800" id="stat-maintenance">0</p>
+        <p class="text-2xl font-semibold text-gray-800" id="stat-maintenance">2</p>
     </div>
 </div>
                     <table id="bookingsTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
@@ -1466,67 +1466,63 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
 }
 
 function renderCharts(statusData, sourceData) {
-    // FIX: Convert any NaN values to 0 so the chart doesn't crash
-    const cleanStatusData = {};
-    Object.keys(statusData).forEach(key => {
-        cleanStatusData[key] = isNaN(statusData[key]) ? 0 : statusData[key];
-    });
-
-    console.log("Cleaned Data:", cleanStatusData);
-
-    const statusCanvas = document.getElementById('statusChart');
-    if (statusCanvas) {
-        if (statusChartInstance) statusChartInstance.destroy();
-
-        statusChartInstance = new Chart(statusCanvas, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(cleanStatusData), // Use the cleaned version
-                datasets: [{
-                    label: 'Rooms',
-                    data: Object.values(cleanStatusData), // Use the cleaned version
-                    backgroundColor: ['#3B82F6', '#EF4444', '#F59E0B', '#10B981']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        });
-    }
-    // ... second chart code
-
-
-    // --- CHART 2: SOURCE ---
-    const sourceCanvas = document.getElementById('sourceChart');
-    if (sourceCanvas && sourceData && Object.keys(sourceData).length > 0) {
-        if (sourceChartInstance) {
-            sourceChartInstance.destroy();
+  // Status Bar Chart
+  new Chart(document.getElementById('statusChart'), {
+    type: 'bar', // Changed to Bar
+    data: {
+      labels: Object.keys(statusData),
+      datasets: [{
+        label: 'Room Count',
+        data: Object.values(statusData),
+        backgroundColor: [
+          '#3B82F6', // Blue
+          '#EF4444', // Red
+          '#F59E0B', // Amber
+          '#10B981', // Emerald
+          '#8B5CF6'  // Violet
+        ],
+        borderWidth: 0,
+        borderRadius: 8 // Rounds the top of the bars
+      }]
+    },
+    options: { 
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false // Hidden because the X-axis tells us what is what
         }
-
-        sourceChartInstance = new Chart(sourceCanvas, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(sourceData),
-                datasets: [{
-                    label: 'Bookings',
-                    data: Object.values(sourceData),
-                    backgroundColor: '#10B981',
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
-                    x: { grid: { display: false } }
-                }
-            }
-        });
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1 // Ensures we only see whole numbers (since you can't have 1.5 rooms)
+          }
+        },
+        x: {
+          grid: {
+            display: false // Cleans up the look by removing vertical lines
+          }
+        }
+      }
     }
+  });
+
+  // Source Bar Chart
+  new Chart(document.getElementById('sourceChart'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(sourceData),
+      datasets: [{
+        label: 'Bookings by Source',
+        data: Object.values(sourceData),
+        backgroundColor: '#10B981'
+      }]
+    },
+    options: { maintainAspectRatio: false }
+  });
 }
+
 // Initialize
 updateDashboard();
         
