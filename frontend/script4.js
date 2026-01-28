@@ -1041,7 +1041,7 @@ async function sendConfirmationEmail(bookingId) {
     }
     const recipientEmail = bookingToSend.guestEmail ? bookingToSend.guestEmail.trim() : '';  // Use email from fetched booking
     if (!recipientEmail) {
-        showMessageBox('Input Required', `No email address found for guest "${bookingToSend.name}". Email not sent.`, true);
+        showMessageBox('No Email Found', `No email address found for guest "${bookingToSend.name}". Email not sent.`, true);
         return;
     }
 
