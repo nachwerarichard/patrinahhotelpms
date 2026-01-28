@@ -1373,6 +1373,7 @@ document.getElementById('phoneNo').value = booking.phoneNo || '';
 document.getElementById('guestEmail').value = booking.guestEmail || '';
 
 // --- Room & Stay Details ---
+await populateRoomDropdown(booking.room);
 document.getElementById('room').value = booking.room || '';
 document.getElementById('checkIn').value = booking.checkIn || '';
 document.getElementById('checkIntime').value = booking.checkIntime || '';
