@@ -1065,7 +1065,7 @@ async function sendConfirmationEmail(bookingId) {
         // Check if the response is OK (status 2xx) AND if it's JSON
         const contentType = response.headers.get("content-type");
         if (!response.ok || !contentType || !contentType.includes("application/json")) {
-            let errorMessage = 'Failed to send confirmation email. Unexpected response from server.';
+            let errorMessage = ' Guest checked out, but the  email failed to send (Connection Timeout)..';
             let auditDetailsError = 'Unknown error or non-JSON response'; // Default for audit log
 
             // Attempt to read the response as text for more detailed debugging
