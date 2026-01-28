@@ -1067,7 +1067,6 @@ async function sendConfirmationEmail(bookingId) {
         if (!response.ok || !contentType || !contentType.includes("application/json")) {
             let errorMessage = ' Guest checked out, but the  email was not sent (Connection Timeout)..';
             let auditDetailsError = 'Unknown error or non-JSON response'; // Default for audit log
-            messageBox.style.display = 'none'; // Use flex for centering
 
             // Attempt to read the response as text for more detailed debugging
             try {
