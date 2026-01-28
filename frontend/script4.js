@@ -1068,31 +1068,9 @@ async function sendConfirmationEmail(bookingId) {
             let errorMessage = ' Guest checked out, but the  email was not sent (Connection Timeout)..';
             let auditDetailsError = 'Unknown error or non-JSON response'; // Default for audit log
 
-            // Attempt to read the response as text for more detailed debugging
-            try {
-                const textResponse = await response.text();
-                console.error("Server responded with non-JSON or error status:", textResponse);
+    
 
-                if (response.status === 404) {
-                    errorMessage = 'Email service endpoint not found. Please verify the API URL.';
-                    auditDetailsError = `404 Not Found: ${textResponse.substring(0, 200)}`; // Log part of the HTML
-                } else if (response.status === 500) {
-                    errorMessage = 'Internal server error while sending email. Please check server logs.';
-                    auditDetailsError = `500 Internal Server Error: ${textResponse.substring(0, 200)}`;
-                } else if (response.status >= 400) {
-                    errorMessage = `Server error: ${response.status} ${response.statusText}.`;
-                    auditDetailsError = `HTTP ${response.status}: ${textResponse.substring(0, 200)}`;
-                } else {
-                    // Non-OK but not a typical error code, still non-JSON
-                    auditDetailsError = `Unexpected non-JSON response (Status: ${response.status}): ${textResponse.substring(0, 200)}`;
-                }
-            } catch (parseError) {
-                console.error("Could not read response as text:", parseError);
-                // If even reading as text fails, stick with generic error message
-                auditDetailsError = `Failed to parse response body: ${parseError.message}`;
-            }
-
-            showMessageBox('Email Sending Failed', errorMessage, true);
+            showMessageBox('Email Sending Message', errorMessage, true);
 
             // Audit log for failed email sending due to unexpected response
             await fetch(`${API_BASE_URL}/audit-log/action`, {
