@@ -1623,6 +1623,7 @@ app.post('/api/bookings/:id/cancel', async (req, res) => {
         res.status(500).json({ message: 'Error', error: error.message });
     }
 });
+
 app.post('/api/bookings/:id/checkin', async (req, res) => {
     const { id } = req.params;
     const { username } = req.body;
@@ -1633,38 +1634,43 @@ app.post('/api/bookings/:id/checkin', async (req, res) => {
             return res.status(404).json({ message: 'Booking not found' });
         }
 
-        // --- Update booking status ---
+        // 1. UPDATE BOOKING (Do it all in one save)
         booking.checkedIn = true; 
+        booking.gueststatus = 'checkedin';
         await booking.save();
-booking.gueststatus='checkedin';
-await booking.save();
+
+        // 2. UPDATE ROOM
         const room = await Room.findOne({ number: booking.room });
         if (room) {
+            // Ensure 'occupied' is a valid status in your system; 
+            // otherwise use 'blocked' if that's what your CSS uses.
             room.status = 'occupied'; 
             await room.save();
         }
 
-        await addAuditLog('Booking Checked In', username || 'System', {
-            bookingId: booking.id,
-            guestName: booking.name,
-            roomNumber: booking.room
-        });
+        // 3. AUDIT LOG (Wrapped in a try/catch so it doesn't break the whole request)
+        try {
+            await addAuditLog('Booking Checked In', username || 'System', {
+                bookingId: booking.id,
+                guestName: booking.name,
+                roomNumber: booking.room
+            });
+        } catch (auditError) {
+            console.error('Audit Log failed but checkin succeeded:', auditError);
+            // We don't throw here so the user still gets a success message
+        }
 
-        res.json({ message: `Guest checked into Room ${booking.room} successfully.` });
+        // 4. FINAL RESPONSE
+        return res.json({ message: `Guest checked into Room ${booking.room} successfully.` });
 
     } catch (error) {
-        // ✅ Log full error to server console for Render logs
-        console.error('Booking Check-In Error FULL:', error);
-
-        // ✅ Send minimal error info to frontend (you can include stack if needed for debugging)
-        res.status(500).json({
+        console.error('CRITICAL Check-In Error:', error);
+        return res.status(500).json({
             message: 'Error during checkin',
-            error: error.message,
-            stack: error.stack
+            error: error.message
         });
     }
 });
-
 
 
 // --- Incidental Charges API ---
