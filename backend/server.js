@@ -1988,7 +1988,7 @@ const transporter = nodemailer.createTransport({
         pass: process.env.EMAIL_PASS // Must be a 16-digit App Password
     },
     // Reliability settings for Render/Cloud environments
-    connectionTimeout: 10000, // 10 seconds to establish connection
+    connectionTimeout: 5000, // 10 seconds to establish connection
     greetingTimeout: 5000,    // 5 seconds to wait for SMTP greeting
     socketTimeout: 20000,     // 20 seconds of inactivity before closing
     pool: true                // Use a connection pool for better performance
