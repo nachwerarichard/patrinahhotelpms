@@ -278,7 +278,7 @@
 
     <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded shadow-sm">
         <p class="text-xs uppercase font-bold text-red-600">Maintenance</p>
-        <p class="text-2xl font-semibold text-gray-800" id="stat-maintenance">2</p>
+        <p class="text-2xl font-semibold text-gray-800" id="stat-maintenance">0</p>
     </div>
 </div>
                     <table id="bookingsTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
@@ -1466,47 +1466,33 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
 }
 
 function renderCharts(statusData, sourceData) {
-  // Status Bar Chart
+  // Status Pie Chart
   new Chart(document.getElementById('statusChart'), {
-    type: 'bar', // Changed to Bar
+    type: 'pie', // Changed from 'doughnut' to 'pie'
     data: {
       labels: Object.keys(statusData),
       datasets: [{
-        label: 'Room Count',
         data: Object.values(statusData),
         backgroundColor: [
           '#3B82F6', // Blue
           '#EF4444', // Red
           '#F59E0B', // Amber
-          '#10B981', // Emerald
-          '#8B5CF6'  // Violet
+          '#10B981', // Emerald (Added a 4th color just in case)
+          '#8B5CF6'  // Violet (Added a 5th color just in case)
         ],
-        borderWidth: 0,
-        borderRadius: 8 // Rounds the top of the bars
+        borderWidth: 1
       }]
     },
     options: { 
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          display: false // Hidden because the X-axis tells us what is what
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            stepSize: 1 // Ensures we only see whole numbers (since you can't have 1.5 rooms)
-          }
-        },
-        x: {
-          grid: {
-            display: false // Cleans up the look by removing vertical lines
-          }
+          position: 'bottom' // Moves labels to the bottom for a cleaner look
         }
       }
     }
   });
+
 
   // Source Bar Chart
   new Chart(document.getElementById('sourceChart'), {
