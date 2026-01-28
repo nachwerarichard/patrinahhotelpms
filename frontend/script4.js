@@ -1387,7 +1387,8 @@ document.getElementById('kintel').value = booking.kintel || ''; // Next of kin p
 // Purpose/Declarations
 document.getElementById('purpose').value = booking.purpose || '';
 document.getElementById('declarations').value = booking.declarations || '';
-
+const saveBtn = document.getElementById('saveBookingBtn'); 
+        if (saveBtn) saveBtn.style.display = 'flex';
         bookingModal.style.display = 'flex';
     } catch (error) {
         console.error('Error fetching booking for edit:', error);
@@ -1441,7 +1442,7 @@ async function viewBooking(id) {
         });
 
         // 5. Hide the 'Save/Submit' button if it exists
-        const saveBtn = document.getElementById('saveBooking'); 
+        const saveBtn = document.getElementById('saveBookingBtn'); 
         if (saveBtn) saveBtn.style.display = 'none';
 
         bookingModal.style.display = 'flex';
