@@ -605,187 +605,199 @@
         </main>
     </div>
 
-    <div id="bookingModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
-  <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-4xl relative max-h-[90vh] overflow-y-auto flex flex-col">
-    
-    <!-- Top Close Button -->
-    <button class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-red-800" onclick="closeBookingModal()">&times;</button>
-<div class="mt-4 flex justify-center">
-        <button type="button" class="bg-gray-300 text-gray-700 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition duration-300" onclick="closeBookingModal()">
-          Close
-        </button>
-      </div>
-    <h2 id="modalTitle" class="text-2xl font-bold mb-6 text-blue-600"><i class="fas fa-hotel"></i> Add New Guest</h2>
-            <form id="bookingForm">
-    <input type="text" id="bookingId">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div class="flex flex-col">
-            <label for="name" class="text-gray-700 font-semibold mb-1"> Guest Name:</label>
-            <input type="text" id="name" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="name" class="text-gray-700 font-semibold mb-1"> Occupation:</label>
-            <input type="text" id="occupation" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="room" class="text-gray-700 font-semibold mb-1"> Room Number:</label>
-            <select id="room"  class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Select a Room</option>
-            </select>
-        </div>
-        <div class="flex flex-col">
-            <label for="checkIn" class="text-gray-700 font-semibold mb-1"> Check-in Date:</label>
-            <input type="date" id="checkIn" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="checkOut" class="text-gray-700 font-semibold mb-1"> Check-in Time:</label>
-            <input type="time" id="checkIntime"  class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="checkOut" class="text-gray-700 font-semibold mb-1"> Check-out Date:</label>
-            <input type="date" id="checkOut" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="checkOut" class="text-gray-700 font-semibold mb-1"> Check-out Time:</label>
-            <input type="time" id="checkOuttime"  class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="name" class="text-gray-700 font-semibold mb-1"> Vehicle No:</label>
-            <input type="text" id="vehno" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-
-        <div class="flex flex-col">
-            <label for="name" class="text-gray-700 font-semibold mb-1"> Next Destination:</label>
-            <input type="text" id="destination" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-
-        <div class="flex flex-col">
-            <label for="nights" class="text-gray-700 font-semibold mb-1"> Nights:</label>
-            <input type="number" id="nights" readonly class="px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
-        </div>
-        <div class="flex flex-col">
-            <label for="amtPerNight" class="text-gray-700 font-semibold mb-1"> Amount Per Night:</label>
-            <input type="number" id="amtPerNight" step="0.01" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="totalDue" class="text-gray-700 font-semibold mb-1"> Room Total Due:</label>
-            <input type="number" id="totalDue" step="0.01" readonly class="px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
-        </div>
-        <div class="flex flex-col">
-            <label for="amountPaid" class="text-gray-700 font-semibold mb-1"> Room Amount Paid:</label>
-            <input type="number" id="amountPaid" step="0.01" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="balance" class="text-gray-700 font-semibold mb-1"> Room Balance:</label>
-            <input type="number" id="balance" step="0.01" readonly class="px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
-        </div>
-        <div class="flex flex-col">
-            <label for="paymentStatus" class="text-gray-700 font-semibold mb-1"> Payment Status:</label>
-            <select id="paymentStatus" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="Pending">Pending</option>
-                <option value="Partially Paid">Partially Paid</option>
-                <option value="Paid">Paid</option>
-            </select>
-        </div>
-                <div class="flex flex-col">
-            <label for="paymentStatus" class="text-gray-700 font-semibold mb-1"> Payment Method:</label>
-            <select id="paymentMethod" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="Cash">Cash</option>
-                <option value="MTN Momo">MTN Momo</option>
-                <option value="Airtel Pay">Airtel Pay</option>
-                <option value="Bank">Bank</option>
-            </select>
-        </div>
-         <div class="flex flex-col">
-            <label for="guestsource" class="text-gray-700 font-semibold mb-1">Guest Source:</label>
-            <select id="guestsource" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="Direct">Direct</option>
-                <option value="walk in">Walk In</option>
-                <option value="PMS">PMS</option>
-                <option value="hourly">Hourly stays</option>
-            </select>
-         </div>
-         <div class="flex flex-col">
-            <label for="gueststatus" class="text-gray-700 font-semibold mb-1"> Guest Status:</label>   
-            <select id="gueststatus" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="confirmed">Confirmed</option>
-                <option value="checkedin">Checked In</option>
-                <option value="checkedout">Checked Out</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="no show">No show</option>
-                <option value="reservation">Reservation</option>
-
-            </select>
-        </div>
+    <div id="bookingModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center p-4 z-50 hidden transition-opacity duration-300">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl relative max-h-[92vh] flex flex-col overflow-hidden">
         
-        <div class="flex flex-col">
-            <label for="transactionid" class="text-gray-700 font-semibold mb-1"> Transaction ID :</label>
-            <input type="number" id="transactionid"  class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <div class="px-8 py-4 bg-blue-600 flex justify-between items-center">
+            <h2 id="modalTitle" class="text-xl font-bold text-white flex items-center gap-2">
+                <i class="fas fa-hotel"></i> Guest Booking Details
+            </h2>
+            <button class="text-white hover:text-gray-200 text-2xl font-bold transition" onclick="closeBookingModal()">&times;</button>
         </div>
 
-        <div class="flex flex-col">
-            <label for="people" class="text-gray-700 font-semibold mb-1"> Number of People:</label>
-            <input type="number" id="people" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="extraperson" class="text-gray-700 font-semibold mb-1"> Name of extra person if any :</label>
-            <input type="text" id="extraperson" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="nationality" class="text-gray-700 font-semibold mb-1"> Nationality:</label>
-            <input type="text" id="nationality" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="nationalIdNo" class="text-gray-700 font-semibold mb-1"> Passport/ID No:</label>
-            <input type="text" id="nationalIdNo" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="address" class="text-gray-700 font-semibold mb-1"> Address:</label>
-            <input type="text" id="address" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="phoneNo" class="text-gray-700 font-semibold mb-1"> Phone Number:</label>
-            <input type="text" id="phoneNo" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="name" class="text-gray-700 font-semibold mb-1"> Next of Kin Name:</label>
-            <input type="text" id="kin" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="name" class="text-gray-700 font-semibold mb-1"> Next of kin tel contact</label>
-            <input type="text" id="kintel" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="name" class="text-gray-700 font-semibold mb-1"> Purpose of visit:</label>
-            <input type="text" id="purpose" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="guestEmail" class="text-gray-700 font-semibold mb-1">Guest Email:</label>
-            <input type="email" id="guestEmail" name="guestEmail" placeholder="guest@example.com" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex flex-col">
-            <label for="name" class="text-gray-700 font-semibold mb-1"> Declarations</label>
-            <input type="text" id="declarations" required class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <div class="p-8 overflow-y-auto">
+            <form id="bookingForm" class="space-y-8">
+                <input type="hidden" id="bookingId">
+
+                <section>
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-blue-500 border-b border-blue-100 mb-4 pb-1">1. Guest Personal Information</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        <div class="flex flex-col">
+                            <label for="name" class="text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
+                            <input type="text" id="name" required class="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="nationality" class="text-xs font-bold text-gray-500 uppercase mb-1">Nationality</label>
+                            <input type="text" id="nationality" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="nationalIdNo" class="text-xs font-bold text-gray-500 uppercase mb-1">Passport / ID No.</label>
+                            <input type="text" id="nationalIdNo" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="guestEmail" class="text-xs font-bold text-gray-500 uppercase mb-1">Email Address</label>
+                            <input type="email" id="guestEmail" placeholder="guest@example.com" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="phoneNo" class="text-xs font-bold text-gray-500 uppercase mb-1">Phone Number</label>
+                            <input type="text" id="phoneNo" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="occupation" class="text-xs font-bold text-gray-500 uppercase mb-1">Occupation</label>
+                            <input type="text" id="occupation" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="md:col-span-2 lg:col-span-3 flex flex-col">
+                            <label for="address" class="text-xs font-bold text-gray-500 uppercase mb-1">Permanent Address</label>
+                            <input type="text" id="address" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-blue-500 border-b border-blue-100 mb-4 pb-1">2. Room & Stay Details</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                        <div class="flex flex-col">
+                            <label for="room" class="text-xs font-bold text-gray-500 uppercase mb-1">Room Number</label>
+                            <select id="room" class="px-3 py-2 border border-gray-300 rounded-md bg-white">
+                                <option value="">Select Room</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="checkIn" class="text-xs font-bold text-gray-500 uppercase mb-1">Check-In Date</label>
+                            <input type="date" id="checkIn" required class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="checkIntime" class="text-xs font-bold text-gray-500 uppercase mb-1">Check-In Time</label>
+                            <input type="time" id="checkIntime" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="checkOut" class="text-xs font-bold text-gray-500 uppercase mb-1">Check-Out Date</label>
+                            <input type="date" id="checkOut" required class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="checkOuttime" class="text-xs font-bold text-gray-500 uppercase mb-1">Check-Out Time</label>
+                            <input type="time" id="checkOuttime" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="nights" class="text-xs font-bold text-gray-500 uppercase mb-1">Total Nights</label>
+                            <input type="number" id="nights" readonly class="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500 font-bold">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="people" class="text-xs font-bold text-gray-500 uppercase mb-1">No. of People</label>
+                            <input type="number" id="people" required class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="extraperson" class="text-xs font-bold text-gray-500 uppercase mb-1">Extra Person Name</label>
+                            <input type="text" id="extraperson" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-blue-50 p-6 rounded-xl border border-blue-100">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-blue-700 mb-4">3. Financial Information</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                        <div class="flex flex-col">
+                            <label for="amtPerNight" class="text-xs font-bold text-blue-800 uppercase mb-1">Rate Per Night</label>
+                            <input type="number" id="amtPerNight" step="0.01" required class="px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="totalDue" class="text-xs font-bold text-blue-800 uppercase mb-1">Total Due</label>
+                            <input type="number" id="totalDue" step="0.01" readonly class="px-3 py-2 border border-blue-200 rounded-md bg-white font-bold text-blue-900">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="amountPaid" class="text-xs font-bold text-blue-800 uppercase mb-1">Amount Paid</label>
+                            <input type="number" id="amountPaid" step="0.01" class="px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="balance" class="text-xs font-bold text-red-700 uppercase mb-1">Balance</label>
+                            <input type="number" id="balance" step="0.01" readonly class="px-3 py-2 border border-blue-200 rounded-md bg-white font-bold text-red-600">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="paymentMethod" class="text-xs font-bold text-blue-800 uppercase mb-1">Payment Method</label>
+                            <select id="paymentMethod" class="px-3 py-2 border border-blue-200 rounded-md bg-white">
+                                <option value="Cash">Cash</option>
+                                <option value="MTN Momo">MTN Momo</option>
+                                <option value="Airtel Pay">Airtel Pay</option>
+                                <option value="Bank">Bank</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="transactionid" class="text-xs font-bold text-blue-800 uppercase mb-1">Transaction ID</label>
+                            <input type="text" id="transactionid" class="px-3 py-2 border border-blue-200 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="paymentStatus" class="text-xs font-bold text-blue-800 uppercase mb-1">Payment Status</label>
+                            <select id="paymentStatus" class="px-3 py-2 border border-blue-200 rounded-md bg-white">
+                                <option value="Pending">Pending</option>
+                                <option value="Partially Paid">Partially Paid</option>
+                                <option value="Paid">Paid</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="gueststatus" class="text-xs font-bold text-blue-800 uppercase mb-1">Guest Status</label>
+                            <select id="gueststatus" class="px-3 py-2 border border-blue-200 rounded-md bg-white font-bold text-blue-600">
+                                <option value="reservation">Reservation</option>
+                                <option value="confirmed">Confirmed</option>
+                                <option value="checkedin">Checked In</option>
+                                <option value="checkedout">Checked Out</option>
+                                <option value="cancelled">Cancelled</option>
+                                <option value="no show">No show</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-blue-500 border-b border-blue-100 mb-4 pb-1">4. Travel & Emergency</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        <div class="flex flex-col">
+                            <label for="vehno" class="text-xs font-bold text-gray-500 uppercase mb-1">Vehicle No.</label>
+                            <input type="text" id="vehno" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="destination" class="text-xs font-bold text-gray-500 uppercase mb-1">Next Destination</label>
+                            <input type="text" id="destination" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="guestsource" class="text-xs font-bold text-gray-500 uppercase mb-1">Booking Source</label>
+                            <select id="guestsource" class="px-3 py-2 border border-gray-300 rounded-md bg-white">
+                                <option value="Direct">Direct</option>
+                                <option value="walk in">Walk In</option>
+                                <option value="PMS">PMS</option>
+                                <option value="hourly">Hourly stays</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="kin" class="text-xs font-bold text-gray-500 uppercase mb-1">Next of Kin Name</label>
+                            <input type="text" id="kin" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="kintel" class="text-xs font-bold text-gray-500 uppercase mb-1">Kin Tel Contact</label>
+                            <input type="text" id="kintel" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="purpose" class="text-xs font-bold text-gray-500 uppercase mb-1">Purpose of Visit</label>
+                            <input type="text" id="purpose" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="md:col-span-3 flex flex-col">
+                            <label for="declarations" class="text-xs font-bold text-gray-500 uppercase mb-1">Guest Declarations</label>
+                            <textarea id="declarations" rows="2" class="px-3 py-2 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                        </div>
+                    </div>
+                </section>
+            </form>
         </div>
 
+        <div class="px-8 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+            <button type="button" onclick="closeBookingModal()" class="px-6 py-2 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-100 transition">
+                Cancel
+            </button>
+            <button type="submit" form="bookingForm" id="saveBookingBtn" class="px-8 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition">
+                Save Booking
+            </button>
+        </div>
     </div>
-<div class="mt-6 flex flex-wrap justify-center gap-4">
-    
-    <button type="submit" id="saveBookingBtn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
-        Save 
-    </button>
 </div>
-                 <!-- Bottom Close Button -->
-      <div class="mt-4 flex justify-center">
-        <button type="button" class="bg-gray-300 text-gray-700 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition duration-300" onclick="closeBookingModal()">
-          Close
-        </button>
-      </div>
-</form>
-
-        </div>
-    </div>
-
     <div id="incidentalChargeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md relative">
             <span class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800" onclick="closeIncidentalChargeModal()">&times;</span>
