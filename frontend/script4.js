@@ -967,6 +967,9 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
 
 function closeBookingModal() {
     bookingModal.style.display = 'none';
+    document.getElementById('modalTitle').textContent = 'Add New Guest';
+    document.getElementById('saveBookingBtn').textContent = 'Save';
+
 }
 
 
@@ -1360,6 +1363,7 @@ inputs.forEach(input => {
     input.removeAttribute('readonly');
     input.disabled = false;
 });
+        document.getElementById('modalTitle').textContent = 'Edit  Guest Details';
 
 // 2. Populate Fields
 // --- Primary IDs and Guest Info ---
@@ -1402,9 +1406,10 @@ document.getElementById('kin').value = booking.kin || '';
 document.getElementById('kintel').value = booking.kintel || '';
 document.getElementById('purpose').value = booking.purpose || '';
 document.getElementById('declarations').value = booking.declarations || '';
-        
+
 const saveBtn = document.getElementById('saveBookingBtn'); 
         if (saveBtn) saveBtn.style.display = 'flex';
+        saveBtn.textContent = 'Update';
         bookingModal.style.display = 'flex';
     } catch (error) {
         console.error('Error fetching booking for edit:', error);
