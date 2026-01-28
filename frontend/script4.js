@@ -1354,6 +1354,12 @@ async function editBooking(id) {
             showMessageBox('Error', 'Booking not found for editing.', true);
             return;
         }
+        // Add this inside editBooking(id) before assigning values
+const inputs = bookingModal.querySelectorAll('input, select, textarea');
+inputs.forEach(input => {
+    input.removeAttribute('readonly');
+    input.disabled = false;
+});
 
 // 2. Populate Fields
 // --- Primary IDs and Guest Info ---
