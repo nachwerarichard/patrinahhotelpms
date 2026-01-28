@@ -1036,12 +1036,12 @@ async function sendConfirmationEmail(bookingId) {
         }
     } catch (error) {
         console.error('Error fetching booking for email:', error);
-        showMessageBox('Error', `Failed to retrieve booking details for email: ${error.message}`, true);
+        showMessageBox('Message', `Failed to retrieve booking details for email: ${error.message}`, true);
         return;
     }
     const recipientEmail = bookingToSend.guestEmail ? bookingToSend.guestEmail.trim() : '';  // Use email from fetched booking
     if (!recipientEmail) {
-        showMessageBox('No Email Found', `Guest checkedout but no email address found for  "${bookingToSend.name}". Email not sent.`, true);
+        showMessageBox('Message', `Guest checkedout but no email address found for  "${bookingToSend.name}". Email not sent.`, true);
         return;
     }
 
@@ -1050,7 +1050,7 @@ async function sendConfirmationEmail(bookingId) {
         return;
     }
 
-    showMessageBox('Sending Email', 'Attempting to send confirmation email...', false);
+    showMessageBox('Message', 'Attempting to send confirmation email...', false);
 
     // 2. API Call and Robust Error Handling
     try {
@@ -1070,7 +1070,7 @@ async function sendConfirmationEmail(bookingId) {
 
     
 
-            showMessageBox('Email Sending Message', errorMessage, true);
+            showMessageBox('Message', errorMessage, true);
 
             // Audit log for failed email sending due to unexpected response
             await fetch(`${API_BASE_URL}/audit-log/action`, {
@@ -1096,7 +1096,7 @@ async function sendConfirmationEmail(bookingId) {
         const data = await response.json(); // Safely parse JSON after checks
 
         if (response.ok) {
-            showMessageBox('Email Sent', data.message || 'Confirmation email sent successfully!', false);
+            showMessageBox('Message', data.message || 'Confirmation email sent successfully!', false);
             // Audit log for successful email sending
             await fetch(`${API_BASE_URL}/audit-log/action`, {
                 method: 'POST',
