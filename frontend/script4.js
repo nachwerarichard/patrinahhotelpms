@@ -2218,14 +2218,8 @@ async function updateRoomStatus(roomId, newStatus) {
         return;
     }
 
-    // If changing from 'blocked' to something else, require a reason
-    if (room.status === 'blocked' && newStatus !== 'blocked') {
-        openDeletionReasonModal(async (reason) => { // Reusing deletion reason modal for general status change reasons
-            await performRoomStatusUpdate(roomId, newStatus, reason);
-        });
-    } else {
-        await performRoomStatusUpdate(roomId, newStatus);
-    }
+    // Just do the update immediately without asking for a reason
+    await performRoomStatusUpdate(roomId, newStatus);
 }
 
 async function performRoomStatusUpdate(roomId, newStatus, reason = null) {
