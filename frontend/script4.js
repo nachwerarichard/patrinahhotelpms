@@ -1567,10 +1567,11 @@ async function checkoutBooking(id) {
 
 async function checkinBooking(id) {
     try {
+        // Send the check-in request immediately
         const response = await fetch(`${API_BASE_URL}/bookings/${id}/checkin`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUsername }) // Send username for audit log
+            body: JSON.stringify({ username: currentUsername || 'Unknown User' }) 
         });
 
         if (!response.ok) {
@@ -1579,19 +1580,23 @@ async function checkinBooking(id) {
         }
 
         const data = await response.json();
-        showMessageBox('Success', data.message);
-        renderBookings(currentPage, currentSearchTerm); // Re-render to update checkout button visibility
-        renderHousekeepingRooms(); // Update housekeeping view
-        renderCalendar(); // Update calendar view
-        renderAuditLogs(); // Update audit logs
+        
+        // Success Feedback
+        showMessageBox('Success', data.message || 'Guest checked in successfully.');
 
+        // Refresh all parts of the dashboard at once
+        await Promise.all([
+            renderBookings(currentPage, currentSearchTerm),
+            renderHousekeepingRooms(),
+            renderCalendar(),
+            renderAuditLogs()
+        ]);
 
     } catch (error) {
         console.error('Error during checkin:', error);
         showMessageBox('Error', `Failed to process checkin: ${error.message}`, true);
     }
 }
-
 
 // Event listeners for date and amount changes to calculate nights, total due, balance
 checkInInput.addEventListener('change', calculateNights);
