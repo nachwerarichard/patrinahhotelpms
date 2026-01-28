@@ -831,45 +831,7 @@ async function refreshDashboard() {
     }
 }
 
-function viewBookingDetails(id) {
-    const booking = currentBookings.find(b => b.id === id);
-    if (!booking) return;
 
-    const content = document.getElementById('viewBookingContent');
-    const modal = document.getElementById('viewBookingModal');
-
-    content.innerHTML = `
-        <div class="grid grid-cols-2 gap-4">
-            <div class="col-span-2 bg-blue-50 p-3 rounded-lg">
-                <p class="text-xs text-blue-600 uppercase font-bold">Guest Name</p>
-                <p class="text-lg font-semibold text-gray-900">${booking.name}</p>
-            </div>
-            <div>
-                <p class="text-xs text-gray-500 uppercase font-bold">Room</p>
-                <p class="font-medium text-gray-800">${booking.room}</p>
-            </div>
-            <div>
-                <p class="text-xs text-gray-500 uppercase font-bold">Status</p>
-                <p class="font-medium ${booking.gueststatus === 'Cancelled' ? 'text-red-600' : 'text-green-600'}">${booking.gueststatus}</p>
-            </div>
-            <div>
-                <p class="text-xs text-gray-500 uppercase font-bold">Check-In</p>
-                <p class="text-sm text-gray-800">${booking.checkIn}</p>
-            </div>
-            <div>
-                <p class="text-xs text-gray-500 uppercase font-bold">Check-Out</p>
-                <p class="text-sm text-gray-800">${booking.checkOut}</p>
-            </div>
-            <div class="col-span-2 border-t pt-2">
-                <p class="text-xs text-gray-500 uppercase font-bold">Payment Balance</p>
-                <p class="text-lg font-bold text-orange-600">UGX ${parseFloat(booking.paymentbalance).toLocaleString()}</p>
-            </div>
-        </div>
-    `;
-
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-}
 
 function closeViewModal() {
     document.getElementById('viewBookingModal').classList.add('hidden');
@@ -1479,7 +1441,7 @@ async function viewBooking(id) {
         });
 
         // 5. Hide the 'Save/Submit' button if it exists
-        const saveBtn = document.getElementById('saveBookin'); 
+        const saveBtn = document.getElementById('saveBooking'); 
         if (saveBtn) saveBtn.style.display = 'none';
 
         bookingModal.style.display = 'flex';
