@@ -2026,9 +2026,82 @@ app.post('/public/send-booking-confirmation', async (req, res) => {
         res.status(500).json({ message: 'Failed to send confirmation email.', error: error.message });
     }
 });
-
-// NEW: Endpoint to send detailed booking confirmation/receipt email (used by internal PMS)
 app.post('/api/bookings/:customId/send-email', async (req, res) => {
+    try {
+        const { customId } = req.params; 
+        const { recipientEmail } = req.body;
+
+        // 1. Check if email exists/is valid. 
+        // Instead of returning 400 (Error), we handle it gracefully for the UI.
+        const hasNoEmail = !recipientEmail || !/\S+@\S+\.\S+/.test(recipientEmail);
+
+        // 2. Find booking by custom ID
+        const booking = await Booking.findOne({ id: customId });
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found.' });
+        }
+
+        // If no email, we skip the mailing logic entirely but return a specific status
+        if (hasNoEmail) {
+            await addAuditLog('Checkout - No Email Sent', req.body.username || 'System', {
+                bookingId: booking.id,
+                reason: 'No valid email address provided'
+            });
+
+            return res.status(200).json({ 
+                message: 'Guest checked out successfully, but no confirmation email was sent because the email address is missing or invalid.',
+                emailSent: false 
+            });
+        }
+
+        // 3. Normal logic continues if email exists...
+        const roomDetails = await Room.findOne({ number: booking.room });
+
+        let nights = booking.nights || 0;
+        let rate = booking.amtPerNight || 0;
+        let amountPaid = booking.amountPaid || 0;
+        let roomTotalDue = nights * rate;
+        let totalBill = roomTotalDue;
+        let balanceDue = totalBill - amountPaid;
+        let paymentStatus = balanceDue <= 0 ? 'Paid' : (amountPaid > 0 ? 'Partially Paid' : 'Pending');
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: recipientEmail,
+            subject: `Patrinah Hotel - Booking Confirmation for Room ${booking.room}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h2 style="color: #0056b3;">Booking Confirmation - Patrinah Hotel</h2>
+                    <p>Dear ${booking.name || 'Guest'},</p>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Booking ID:</strong></td><td>${booking.id}</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Total Bill:</strong></td><td>UGX ${totalBill.toFixed(2)}</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Balance Due:</strong></td><td>UGX ${balanceDue.toFixed(2)}</td></tr>
+                    </table>
+                    <p>Sincerely,<br>The Patrinah Hotel Team</p>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        await addAuditLog('Sent Confirmation Email', req.body.username || 'System', {
+            bookingId: booking.id,
+            recipient: recipientEmail
+        });
+
+        res.status(200).json({ 
+            message: 'Guest checked out and confirmation email sent successfully!',
+            emailSent: true 
+        });
+
+    } catch (error) {
+        console.error('BACKEND EMAIL ERROR:', error);
+        res.status(500).json({ message: 'Internal server error during email process.', error: error.message });
+    }
+});
+// old: Endpoint to send detailed booking confirmation/receipt email (used by internal PMS)
+app.post('/api/bookings/:customId/sen-email', async (req, res) => {
     try {
         const { customId } = req.params; // This is the custom booking ID (e.g., BKG001)
         const { recipientEmail } = req.body;
