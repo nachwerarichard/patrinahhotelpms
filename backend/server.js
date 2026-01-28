@@ -1644,7 +1644,7 @@ app.post('/api/bookings/:id/checkin', async (req, res) => {
         if (room) {
             // Ensure 'occupied' is a valid status in your system; 
             // otherwise use 'blocked' if that's what your CSS uses.
-            room.status = 'occupied'; 
+            room.status = 'blocked'; 
             await room.save();
         }
 
