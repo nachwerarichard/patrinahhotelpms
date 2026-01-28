@@ -736,7 +736,7 @@
                         <div class="flex flex-col">
                             <label for="gueststatus" class="text-xs font-bold text-blue-800 uppercase mb-1">Guest Status</label>
                             <select id="gueststatus" class="px-3 py-2 border border-blue-200 rounded-md bg-white font-bold text-blue-600">
-                                <option value="reservation">Reservation</option>
+                                <option value="reserved">Reservation</option>
                                 <option value="confirmed">Confirmed</option>
                                 <option value="checkedin">Checked In</option>
                                 <option value="checkedout">Checked Out</option>
@@ -1450,7 +1450,7 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
     document.getElementById('no-show-count').innerText = kpis.noShow;
 
     // 5. Aggregate Data for Charts
-    const statusCounts = { confirmed: 0, cancelled: 0, 'no show': 0 };
+    const statusCounts = { 'confirmed': 0, 'cancelled': 0, 'no show': 0, 'checkedin' :0,'reserved' :0 };
     const sourceCounts = { 'walk in': 0, 'OTA': 0, 'Direct': 0, 'PMS': 0 };
 
     todayBookings.forEach(b => {
