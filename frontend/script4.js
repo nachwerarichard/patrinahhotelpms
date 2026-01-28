@@ -1355,38 +1355,48 @@ async function editBooking(id) {
             return;
         }
 
-        document.getElementById('modalTitle').textContent = 'Edit Booking';
-        document.getElementById('bookingId').value = booking.id;
-        document.getElementById('name').value = booking.name;
-        await populateRoomDropdown(booking.room); // Pass current room to keep it selected even if blocked
-        document.getElementById('checkIn').value = booking.checkIn;
-        document.getElementById('checkOut').value = booking.checkOut;
-        nightsInput.value = booking.nights;
-        amtPerNightInput.value = booking.amtPerNight;
-        totalDueInput.value = booking.totalDue;
-        amountPaidInput.value = booking.amountPaid;
-        balanceInput.value = booking.balance;
-        document.getElementById('paymentStatus').value = booking.paymentStatus;
-        document.getElementById('people').value = booking.people;
-        document.getElementById('nationality').value = booking.nationality;
-        document.getElementById('address').value = booking.address;
-        document.getElementById('phoneNo').value = booking.phoneNo;
-        document.getElementById('guestEmail').value = booking.guestEmail;
-        document.getElementById('nationalIdNo').value = booking.nationalIdNo;
-        // Booking Details
+// 2. Populate Fields
+// --- Primary IDs and Guest Info ---
+document.getElementById('bookingId').value = booking.id || '';
+document.getElementById('name').value = booking.name || '';
 document.getElementById('occupation').value = booking.occupation || '';
+document.getElementById('nationality').value = booking.nationality || '';
+document.getElementById('nationalIdNo').value = booking.nationalIdNo || '';
+document.getElementById('address').value = booking.address || '';
+document.getElementById('phoneNo').value = booking.phoneNo || '';
+document.getElementById('guestEmail').value = booking.guestEmail || '';
+
+// --- Room & Stay Details ---
+document.getElementById('room').value = booking.room || '';
+document.getElementById('checkIn').value = booking.checkIn || '';
+document.getElementById('checkIntime').value = booking.checkIntime || '';
+document.getElementById('checkOut').value = booking.checkOut || '';
+document.getElementById('checkOuttime').value = booking.checkOuttime || '';
+document.getElementById('nights').value = booking.nights || 0;
+document.getElementById('people').value = booking.people || 1;
+document.getElementById('extraperson').value = booking.extraperson || '';
+
+// --- Financials ---
+document.getElementById('amtPerNight').value = booking.amtPerNight || 0;
+document.getElementById('totalDue').value = booking.totalDue || 0;
+document.getElementById('amountPaid').value = booking.amountPaid || 0;
+document.getElementById('balance').value = booking.balance || 0;
+
+// --- Status & Methods ---
+document.getElementById('paymentStatus').value = booking.paymentStatus || 'Pending';
+document.getElementById('paymentMethod').value = booking.paymentMethod || 'Cash';
+document.getElementById('guestsource').value = booking.guestsource || 'walk in';
+document.getElementById('gueststatus').value = booking.gueststatus || 'confirmed';
+document.getElementById('transactionid').value = booking.transactionid || '';
+
+// --- Logistics & Extras ---
 document.getElementById('vehno').value = booking.vehno || '';
 document.getElementById('destination').value = booking.destination || '';
-document.getElementById('checkIntime').value = booking.checkIntime || '';
-document.getElementById('checkOuttime').value = booking.checkOuttime || '';
-
-// Guest Contact/Identity Details
-document.getElementById('kin').value = booking.kin || ''; // Next of kin
-document.getElementById('kintel').value = booking.kintel || ''; // Next of kin phone
-
-// Purpose/Declarations
+document.getElementById('kin').value = booking.kin || '';
+document.getElementById('kintel').value = booking.kintel || '';
 document.getElementById('purpose').value = booking.purpose || '';
 document.getElementById('declarations').value = booking.declarations || '';
+        
 const saveBtn = document.getElementById('saveBookingBtn'); 
         if (saveBtn) saveBtn.style.display = 'flex';
         bookingModal.style.display = 'flex';
@@ -1410,26 +1420,47 @@ async function viewBooking(id) {
         // 1. Update Modal Title
         document.getElementById('modalTitle').textContent = 'Booking Details (View Only)';
 
-        // 2. Populate Fields (Keeping your existing logic)
-        document.getElementById('bookingId').value = booking.id;
-        document.getElementById('name').value = booking.name;
-        document.getElementById('checkIn').value = booking.checkIn;
-        document.getElementById('checkOut').value = booking.checkOut;
-        document.getElementById('people').value = booking.people;
-        document.getElementById('nationality').value = booking.nationality;
-        document.getElementById('address').value = booking.address;
-        document.getElementById('phoneNo').value = booking.phoneNo;
-        document.getElementById('guestEmail').value = booking.guestEmail;
-        document.getElementById('nationalIdNo').value = booking.nationalIdNo;
-        
-        // Extended Details
-        document.getElementById('occupation').value = booking.occupation || '';
-        document.getElementById('vehno').value = booking.vehno || '';
-        document.getElementById('destination').value = booking.destination || '';
-        document.getElementById('kin').value = booking.kin || '';
-        document.getElementById('kintel').value = booking.kintel || '';
-        document.getElementById('purpose').value = booking.purpose || '';
-        
+       // 2. Populate Fields
+// --- Primary IDs and Guest Info ---
+document.getElementById('bookingId').value = booking.id || '';
+document.getElementById('name').value = booking.name || '';
+document.getElementById('occupation').value = booking.occupation || '';
+document.getElementById('nationality').value = booking.nationality || '';
+document.getElementById('nationalIdNo').value = booking.nationalIdNo || '';
+document.getElementById('address').value = booking.address || '';
+document.getElementById('phoneNo').value = booking.phoneNo || '';
+document.getElementById('guestEmail').value = booking.guestEmail || '';
+
+// --- Room & Stay Details ---
+document.getElementById('room').value = booking.room || '';
+document.getElementById('checkIn').value = booking.checkIn || '';
+document.getElementById('checkIntime').value = booking.checkIntime || '';
+document.getElementById('checkOut').value = booking.checkOut || '';
+document.getElementById('checkOuttime').value = booking.checkOuttime || '';
+document.getElementById('nights').value = booking.nights || 0;
+document.getElementById('people').value = booking.people || 1;
+document.getElementById('extraperson').value = booking.extraperson || '';
+
+// --- Financials ---
+document.getElementById('amtPerNight').value = booking.amtPerNight || 0;
+document.getElementById('totalDue').value = booking.totalDue || 0;
+document.getElementById('amountPaid').value = booking.amountPaid || 0;
+document.getElementById('balance').value = booking.balance || 0;
+
+// --- Status & Methods ---
+document.getElementById('paymentStatus').value = booking.paymentStatus || 'Pending';
+document.getElementById('paymentMethod').value = booking.paymentMethod || 'Cash';
+document.getElementById('guestsource').value = booking.guestsource || 'walk in';
+document.getElementById('gueststatus').value = booking.gueststatus || 'confirmed';
+document.getElementById('transactionid').value = booking.transactionid || '';
+
+// --- Logistics & Extras ---
+document.getElementById('vehno').value = booking.vehno || '';
+document.getElementById('destination').value = booking.destination || '';
+document.getElementById('kin').value = booking.kin || '';
+document.getElementById('kintel').value = booking.kintel || '';
+document.getElementById('purpose').value = booking.purpose || '';
+document.getElementById('declarations').value = booking.declarations || '';
         // 3. Populate Room (Async)
         await populateRoomDropdown(booking.room);
 
