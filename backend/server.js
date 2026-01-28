@@ -1978,12 +1978,18 @@ app.post('/api/public/bookings', async (req, res) => {
 // Create a .env file in your backend directory with:
 // EMAIL_USER=your_email@gmail.com
 // EMAIL_PASS=your_app_password
+
 const transporter = nodemailer.createTransport({
     service: 'gmail',
+    port: 465,
+    secure: true, 
     auth: {
-        user: process.env.EMAIL_USER, // Use environment variable
-        pass: process.env.EMAIL_PASS // Use environment variable
-    }
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    },
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 5000,
+    socketTimeout: 15000
 });
 
 // Public endpoint to send booking confirmation (from external website)
