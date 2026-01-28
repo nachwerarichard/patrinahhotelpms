@@ -1980,16 +1980,18 @@ app.post('/api/public/bookings', async (req, res) => {
 // EMAIL_PASS=your_app_password
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
     port: 465,
-    secure: true, 
+    secure: true, // true for 465, false for other ports
     auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },,
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 5000,
-    socketTimeout: 15000
+        pass: process.env.EMAIL_PASS // Must be a 16-digit App Password
+    },
+    // Reliability settings for Render/Cloud environments
+    connectionTimeout: 10000, // 10 seconds to establish connection
+    greetingTimeout: 5000,    // 5 seconds to wait for SMTP greeting
+    socketTimeout: 20000,     // 20 seconds of inactivity before closing
+    pool: true                // Use a connection pool for better performance
 });
 
 // Public endpoint to send booking confirmation (from external website)
