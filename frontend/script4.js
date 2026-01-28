@@ -1585,13 +1585,10 @@ async function checkinBooking(id) {
         renderCalendar(); // Update calendar view
         renderAuditLogs(); // Update audit logs
 
-        // --- NEW: Automatically send confirmation email after successful checkout ---
-        await sendConfirmationEmail(id); // Call the email function
-        // --- END NEW ---
 
     } catch (error) {
-        console.error('Error during checkout:', error);
-        showMessageBox('Error', `Failed to process checkout: ${error.message}`, true);
+        console.error('Error during checkin:', error);
+        showMessageBox('Error', `Failed to process checkin: ${error.message}`, true);
     }
 }
 
