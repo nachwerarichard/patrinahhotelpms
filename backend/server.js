@@ -1375,40 +1375,41 @@ app.delete('/api/bookings/:id', async (req, res) => {
     }
 });
 
-// Checkout a booking (admin only, marks room as dirty)
+// Checkout a booking
 app.post('/api/bookings/:id/checkout', async (req, res) => {
     const { id } = req.params;
-    const { username } = req.body; // Extract username
+    const { username } = req.body; 
     try {
         const booking = await Booking.findOne({ id: id });
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found' });
         }
-// Update the guest's status
+
         booking.gueststatus = 'checkedout'; 
         await booking.save();
+
         const room = await Room.findOne({ number: booking.room });
         if (room) {
-            room.status = 'dirty'; // Mark room as dirty
+            room.status = 'dirty'; 
             await room.save();
         }
 
-        // Audit Log
-        await addAuditLog('Booking Checked Out', username || 'System', { // Use username from body
+        await addAuditLog('Booking Checked Out', username || 'System', { 
             bookingId: booking.id,
             guestName: booking.name,
             roomNumber: booking.room
         });
 
         res.json({ message: `Room ${booking.room} marked as dirty upon checkout.` });
+
     } catch (error) {
-    console.error("DETAILED BACKEND ERROR:", error); // This shows up in Render logs
-    res.status(500).json({ 
-        message: 'Error during checkout', 
-        details: error.message,
-        stack: error.stack // Only do this during debugging!
-    });
-}
+        console.error("DETAILED BACKEND ERROR:", error);
+        res.status(500).json({ 
+            message: 'Error during checkout', 
+            details: error.message 
+        });
+    }
+}); // <--- MAKE SURE THIS IS HERE TO CLOSE THE ROUTE
 
 // Add payment to a booking
 app.post('/api/bookings/:id/add-payment', async (req, res) => {
