@@ -1022,10 +1022,6 @@ async function openBookingModal() {
  */
 async function sendConfirmationEmail(bookingId) {
     // 1. Role and Input Validation
-    if (currentUserRole !== 'admin') {
-        showMessageBox('Access Denied', 'Only Admin users can send confirmation emails.', true);
-        return;
-    }
 
     let bookingToSend;
     try {
