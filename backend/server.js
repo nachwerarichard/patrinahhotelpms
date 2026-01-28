@@ -1973,7 +1973,7 @@ app.post('/api/public/bookings', async (req, res) => {
 });
 
 
-// Nodemailer Transporter Setup
+// Nodemailer  Setup
 // IMPORTANT: Use environment variables for sensitive information like email and password.
 // Create a .env file in your backend directory with:
 // EMAIL_USER=your_email@gmail.com
@@ -1986,7 +1986,10 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-    }
+    },,
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 5000,
+    socketTimeout: 15000
 });
 
 // Public endpoint to send booking confirmation (from external website)
