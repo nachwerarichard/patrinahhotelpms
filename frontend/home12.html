@@ -1465,44 +1465,37 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
   }
 }
 
-
-        // 1. Declare these at the very top of your script (outside any functions)
-let statusChartInstance = null;
-let sourceChartInstance = null;
-
 function renderCharts(statusData, sourceData) {
-    console.log("Status Data:", statusData); // Debug: Check your console to see if data exists
+    // FIX: Convert any NaN values to 0 so the chart doesn't crash
+    const cleanStatusData = {};
+    Object.keys(statusData).forEach(key => {
+        cleanStatusData[key] = isNaN(statusData[key]) ? 0 : statusData[key];
+    });
 
-    // --- CHART 1: STATUS ---
+    console.log("Cleaned Data:", cleanStatusData);
+
     const statusCanvas = document.getElementById('statusChart');
-    if (statusCanvas && statusData && Object.keys(statusData).length > 0) {
-        // Destroy existing chart to prevent the "Canvas already in use" error
-        if (statusChartInstance) {
-            statusChartInstance.destroy();
-        }
+    if (statusCanvas) {
+        if (statusChartInstance) statusChartInstance.destroy();
 
         statusChartInstance = new Chart(statusCanvas, {
             type: 'bar',
             data: {
-                labels: Object.keys(statusData),
+                labels: Object.keys(cleanStatusData), // Use the cleaned version
                 datasets: [{
                     label: 'Rooms',
-                    data: Object.values(statusData),
-                    backgroundColor: ['#3B82F6', '#EF4444', '#F59E0B', '#10B981'],
-                    borderRadius: 6
+                    data: Object.values(cleanStatusData), // Use the cleaned version
+                    backgroundColor: ['#3B82F6', '#EF4444', '#F59E0B', '#10B981']
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
-                    x: { grid: { display: false } }
-                }
+                maintainAspectRatio: false
             }
         });
     }
+    // ... second chart code
+
 
     // --- CHART 2: SOURCE ---
     const sourceCanvas = document.getElementById('sourceChart');
