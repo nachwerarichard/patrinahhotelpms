@@ -349,7 +349,10 @@
                     <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Expected Revenue</p>
                     <p id="today-revenue" class="text-3xl font-extrabold text-gray-900 mt-1">UGX 0</p>
                 </div>
-
+<div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-500">
+                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Amouunt Paid</p>
+                    <p id="today-amountpaid" class="text-3xl font-extrabold text-gray-900 mt-1">UGX 0</p>
+                </div>
                 <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-indigo-500">
                     <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Current Balance</p>
                     <p id="today-balance" class="text-3xl font-extrabold text-gray-900 mt-1">UGX 0</p>
@@ -1431,6 +1434,7 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
     const kpis = {
       arrivals: todayBookings.length,
       departures: todaycheckout.length,
+      amountpaid: todayBookings.reduce((sum, b) => sum + b.amountPaid, 0),
       revenue: todayBookings.reduce((sum, b) => sum + b.totalDue, 0),
       balance: todayBookings.reduce((sum, b) => sum + b.balance, 0),
       pending: todayBookings.filter(b => 
@@ -1445,6 +1449,7 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
 
     document.getElementById('departures').innerText = kpis.departures;
           document.getElementById('total-departures').innerText = kpis.departures;
+    document.getElementById('today-amountpaid').innerText = `UGX${kpis.amountpaid.toLocaleString()}`;
 
     document.getElementById('today-revenue').innerText = `UGX${kpis.revenue.toLocaleString()}`;
     document.getElementById('today-balance').innerText = `UGX${kpis.balance.toLocaleString()}`;
