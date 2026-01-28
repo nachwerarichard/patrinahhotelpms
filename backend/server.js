@@ -1402,9 +1402,13 @@ app.post('/api/bookings/:id/checkout', async (req, res) => {
 
         res.json({ message: `Room ${booking.room} marked as dirty upon checkout.` });
     } catch (error) {
-        res.status(500).json({ message: 'Error during checkout', error: error.message });
-    }
-});
+    console.error("DETAILED BACKEND ERROR:", error); // This shows up in Render logs
+    res.status(500).json({ 
+        message: 'Error during checkout', 
+        details: error.message,
+        stack: error.stack // Only do this during debugging!
+    });
+}
 
 // Add payment to a booking
 app.post('/api/bookings/:id/add-payment', async (req, res) => {
