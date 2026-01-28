@@ -2198,7 +2198,7 @@ async function renderHousekeepingRooms() {
             // Disable dropdown if room is blocked
             const selectElement = card.querySelector('select');
             if (room.status === 'blocked') {
-                selectElement.disabled = true;
+                selectElement.disabled = false;
             } else {
                 selectElement.disabled = false;
             }
