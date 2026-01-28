@@ -1433,7 +1433,9 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
       departures: todaycheckout.length,
       revenue: todayBookings.reduce((sum, b) => sum + b.totalDue, 0),
       balance: todayBookings.reduce((sum, b) => sum + b.balance, 0),
-      pending: todayBookings.filter(b => b.paymentStatus === 'Partially Paid').length,
+      pending: todayBookings.filter(b => 
+  ['Partially Paid',  'Pending'].includes(b.paymentStatus)
+).length,
       noShow: todayBookings.filter(b => b.gueststatus === 'no show').length
     };
 
