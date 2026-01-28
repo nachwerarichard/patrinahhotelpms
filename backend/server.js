@@ -1614,7 +1614,7 @@ app.post('/api/bookings/:id/cancel', async (req, res) => {
         await booking.save();
 
         // Update Room to vacant
-        await Room.findOneAndUpdate({ number: booking.room }, { status: 'vacant' });
+        await Room.findOneAndUpdate({ number: booking.room }, { status: 'clean' });
 
         await addAuditLog('Booking Cancelled', username || 'System', {
             bookingId: id,
