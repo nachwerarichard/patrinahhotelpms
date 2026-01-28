@@ -1465,31 +1465,35 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
   }
 }
 
-// 1. Define variables at the TOP of your script to hold the chart instances
+
+        // 1. Declare these at the very top of your script (outside any functions)
 let statusChartInstance = null;
 let sourceChartInstance = null;
 
 function renderCharts(statusData, sourceData) {
-    // --- STATUS CHART ---
-    const statusCtx = document.getElementById('statusChart');
-    if (statusCtx) {
-        // 2. Destroy the old chart if it exists
+    console.log("Status Data:", statusData); // Debug: Check your console to see if data exists
+
+    // --- CHART 1: STATUS ---
+    const statusCanvas = document.getElementById('statusChart');
+    if (statusCanvas && statusData && Object.keys(statusData).length > 0) {
+        // Destroy existing chart to prevent the "Canvas already in use" error
         if (statusChartInstance) {
             statusChartInstance.destroy();
         }
 
-        statusChartInstance = new Chart(statusCtx, {
+        statusChartInstance = new Chart(statusCanvas, {
             type: 'bar',
             data: {
                 labels: Object.keys(statusData),
                 datasets: [{
-                    label: 'Room Count',
+                    label: 'Rooms',
                     data: Object.values(statusData),
-                    backgroundColor: ['#3B82F6', '#EF4444', '#F59E0B', '#10B981', '#8B5CF6'],
-                    borderRadius: 8
+                    backgroundColor: ['#3B82F6', '#EF4444', '#F59E0B', '#10B981'],
+                    borderRadius: 6
                 }]
             },
-            options: { 
+            options: {
+                responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
@@ -1500,25 +1504,26 @@ function renderCharts(statusData, sourceData) {
         });
     }
 
-    // --- SOURCE CHART ---
-    const sourceCtx = document.getElementById('sourceChart');
-    if (sourceCtx) {
+    // --- CHART 2: SOURCE ---
+    const sourceCanvas = document.getElementById('sourceChart');
+    if (sourceCanvas && sourceData && Object.keys(sourceData).length > 0) {
         if (sourceChartInstance) {
             sourceChartInstance.destroy();
         }
 
-        sourceChartInstance = new Chart(sourceCtx, {
+        sourceChartInstance = new Chart(sourceCanvas, {
             type: 'bar',
             data: {
                 labels: Object.keys(sourceData),
                 datasets: [{
-                    label: 'Bookings by Source',
+                    label: 'Bookings',
                     data: Object.values(sourceData),
                     backgroundColor: '#10B981',
-                    borderRadius: 8
+                    borderRadius: 6
                 }]
             },
-            options: { 
+            options: {
+                responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
