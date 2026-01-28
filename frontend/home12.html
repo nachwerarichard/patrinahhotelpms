@@ -1465,67 +1465,69 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
   }
 }
 
+// 1. Define variables at the TOP of your script to hold the chart instances
+let statusChartInstance = null;
+let sourceChartInstance = null;
+
 function renderCharts(statusData, sourceData) {
-    // 1. Status Bar Chart
-    // Added the missing constructor line below:
-    new Chart(document.getElementById('statusChart'), {
-        type: 'bar', 
-        data: {
-            labels: Object.keys(statusData),
-            datasets: [{
-                label: 'Room Count',
-                data: Object.values(statusData),
-                backgroundColor: [
-                    '#3B82F6', // Blue
-                    '#EF4444', // Red
-                    '#F59E0B', // Amber
-                    '#10B981', // Emerald
-                    '#8B5CF6'  // Violet
-                ],
-                borderWidth: 0,
-                borderRadius: 8
-            }]
-        },
-        options: { 
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
+    // --- STATUS CHART ---
+    const statusCtx = document.getElementById('statusChart');
+    if (statusCtx) {
+        // 2. Destroy the old chart if it exists
+        if (statusChartInstance) {
+            statusChartInstance.destroy();
+        }
+
+        statusChartInstance = new Chart(statusCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(statusData),
+                datasets: [{
+                    label: 'Room Count',
+                    data: Object.values(statusData),
+                    backgroundColor: ['#3B82F6', '#EF4444', '#F59E0B', '#10B981', '#8B5CF6'],
+                    borderRadius: 8
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { stepSize: 1 }
-                },
-                x: {
-                    grid: { display: false }
+            options: { 
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: { grid: { display: false } }
                 }
             }
-        }
-    });
+        });
+    }
 
-    // 2. Source Bar Chart
-    new Chart(document.getElementById('sourceChart'), {
-        type: 'bar',
-        data: {
-            labels: Object.keys(sourceData),
-            datasets: [{
-                label: 'Bookings by Source',
-                data: Object.values(sourceData),
-                backgroundColor: '#10B981',
-                borderRadius: 8
-            }]
-        },
-        options: { 
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 1 } },
-                x: { grid: { display: false } }
-            }
+    // --- SOURCE CHART ---
+    const sourceCtx = document.getElementById('sourceChart');
+    if (sourceCtx) {
+        if (sourceChartInstance) {
+            sourceChartInstance.destroy();
         }
-    });
+
+        sourceChartInstance = new Chart(sourceCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(sourceData),
+                datasets: [{
+                    label: 'Bookings by Source',
+                    data: Object.values(sourceData),
+                    backgroundColor: '#10B981',
+                    borderRadius: 8
+                }]
+            },
+            options: { 
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
 }
 // Initialize
 updateDashboard();
