@@ -1466,61 +1466,67 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
 }
 
 function renderCharts(statusData, sourceData) {
-    type: 'bar', // Changed to Bar
-    data: {
-      labels: Object.keys(statusData),
-      datasets: [{
-        label: 'Room Count',
-        data: Object.values(statusData),
-        backgroundColor: [
-          '#3B82F6', // Blue
-          '#EF4444', // Red
-          '#F59E0B', // Amber
-          '#10B981', // Emerald
-          '#8B5CF6'  // Violet
-        ],
-        borderWidth: 0,
-        borderRadius: 8 // Rounds the top of the bars
-      }]
-    },
-    options: { 
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false // Hidden because the X-axis tells us what is what
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            stepSize: 1 // Ensures we only see whole numbers (since you can't have 1.5 rooms)
-          }
+    // 1. Status Bar Chart
+    // Added the missing constructor line below:
+    new Chart(document.getElementById('statusChart'), {
+        type: 'bar', 
+        data: {
+            labels: Object.keys(statusData),
+            datasets: [{
+                label: 'Room Count',
+                data: Object.values(statusData),
+                backgroundColor: [
+                    '#3B82F6', // Blue
+                    '#EF4444', // Red
+                    '#F59E0B', // Amber
+                    '#10B981', // Emerald
+                    '#8B5CF6'  // Violet
+                ],
+                borderWidth: 0,
+                borderRadius: 8
+            }]
         },
-        x: {
-          grid: {
-            display: false // Cleans up the look by removing vertical lines
-          }
+        options: { 
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
         }
-      }
-    }
-  });
+    });
 
-  // Source Bar Chart
-  new Chart(document.getElementById('sourceChart'), {
-    type: 'bar',
-    data: {
-      labels: Object.keys(sourceData),
-      datasets: [{
-        label: 'Bookings by Source',
-        data: Object.values(sourceData),
-        backgroundColor: '#10B981'
-      }]
-    },
-    options: { maintainAspectRatio: false }
-  });
+    // 2. Source Bar Chart
+    new Chart(document.getElementById('sourceChart'), {
+        type: 'bar',
+        data: {
+            labels: Object.keys(sourceData),
+            datasets: [{
+                label: 'Bookings by Source',
+                data: Object.values(sourceData),
+                backgroundColor: '#10B981',
+                borderRadius: 8
+            }]
+        },
+        options: { 
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
 }
-
 // Initialize
 updateDashboard();
         
