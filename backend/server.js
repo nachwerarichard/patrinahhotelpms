@@ -1927,11 +1927,6 @@ app.post('/api/public/bookings', async (req, res) => {
         // Generate a unique ID for the new booking
         const newBookingId = `WEB${Math.floor(Math.random() * 90000) + 10000}`; // Example: WEB12345
 
-        const roomDoc = await Room.findOne({ number: room });
-        if (!roomDoc) {
-            return res.status(404).json({ message: 'Selected room not found.' });
-        }
-
         // Re-check for conflicting bookings across ALL rooms for the chosen dates
 const conflictingBooking = await Booking.findOne({
     $or: [
