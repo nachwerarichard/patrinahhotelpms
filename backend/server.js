@@ -135,7 +135,7 @@ const bookingSchema = new mongoose.Schema({
     balance: { type: Number, default: 0 }, // This is ROOM balance
     paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Partially Paid'], default: 'Pending' },
     paymentMethod: { type: String, enum: ['Cash', 'MTN Momo', 'Airtel Pay','Bank'], default: 'Cash' },
-    guestsource: { type: String, required: true, enum: ['walk in', 'OTA', 'Direct','PMS','hourly'], default: 'walk in' },
+    guestsource: { type: String, required: true, enum: ['walk in', 'OTA', 'Web'], default: 'walk in' },
     gueststatus: { type: String, required: true, enum: ['confirmed', 'cancelled', 'no show', 'checkedin', 'reserved','checkedout'], default: 'confirmed' },
     cancellationReason: { type: String, default: '' },
 
@@ -1932,25 +1932,23 @@ app.post('/api/public/bookings', async (req, res) => {
             return res.status(404).json({ message: 'Selected room not found.' });
         }
 
-        // Re-check for conflicting bookings for the chosen room and dates
-        const conflictingBooking = await Booking.findOne({
-            room: room,
-            $or: [
-                { checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } }
-            ]
-        });
+        // Re-check for conflicting bookings across ALL rooms for the chosen dates
+const conflictingBooking = await Booking.findOne({
+    $or: [
+        { checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } }
+    ]
+});
 
         if (conflictingBooking) {
             return res.status(400).json({ message: `Room ${room} is no longer available for the selected period.` });
         }
 
-        // Update room status to 'blocked'
-        roomDoc.status = 'blocked';
-        await roomDoc.save();
+        
 
         const newBooking = new Booking({
             id: newBookingId,
-            name,guestEmail,  checkIn, checkOut , people, phoneNo
+            name,guestEmail,  checkIn, checkOut , people, phoneNo, gueststatus: 'Reserved',
+            guestsource: 'Web'
         });
         await newBooking.save();
 
