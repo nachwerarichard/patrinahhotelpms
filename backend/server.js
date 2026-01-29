@@ -1916,10 +1916,10 @@ app.get('/api/public/rooms/available', async (req, res) => {
 
 // Public endpoint to add a new booking (from external website)
 app.post('/api/public/bookings', async (req, res) => {
-    const { name, guestEmail, room, checkIn, checkOut, nights, amtPerNight, totalDue, amountPaid, balance, paymentStatus, people, nationality, address, phoneNo, nationalIdNo } = req.body;
+    const { name, guestEmail,  checkIn, checkOut, people, phoneNo } = req.body;
 
     // Basic validation
-    if (!name || !room || !checkIn || !checkOut || !nights || !amtPerNight || !totalDue || !people) {
+    if (!name || !checkIn || !checkOut ) {
         return res.status(400).json({ message: 'Missing required booking fields.' });
     }
 
@@ -1950,9 +1950,7 @@ app.post('/api/public/bookings', async (req, res) => {
 
         const newBooking = new Booking({
             id: newBookingId,
-            name,guestEmail, room, checkIn, checkOut, nights, amtPerNight,
-            totalDue, amountPaid, balance, paymentStatus, people, nationality,
-            address, phoneNo, nationalIdNo
+            name,guestEmail,  checkIn, checkOut, , people, phoneNo
         });
         await newBooking.save();
 
