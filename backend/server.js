@@ -1950,7 +1950,7 @@ app.post('/api/public/bookings', async (req, res) => {
 
         const newBooking = new Booking({
             id: newBookingId,
-            name,guestEmail,  checkIn, checkOut, , people, phoneNo
+            name,guestEmail,  checkIn, checkOut , people, phoneNo
         });
         await newBooking.save();
 
