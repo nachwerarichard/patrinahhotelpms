@@ -128,7 +128,7 @@ const bookingSchema = new mongoose.Schema({
     checkIntime: { type: String}, // Stored as YYYY-MM-DD string
     checkOut: { type: String, required: true }, // Stored as YYYY-MM-DD string
     checkOuttime: { type: String }, // Stored as YYYY-MM-DD string
-    nights: { type: Number, required: true },
+    nights: { type: Number },
     amtPerNight: { type: Number },
     totalDue: { type: Number }, // This is ROOM total due
     amountPaid: { type: Number}, // This is ROOM amount paid
@@ -1942,7 +1942,7 @@ const conflictingBooking = await Booking.findOne({
 
         const newBooking = new Booking({
             id: newBookingId,
-            name,guestEmail,  checkIn, checkOut , people, phoneNo, gueststatus: 'Reserved',
+            name,guestEmail,  checkIn, checkOut , people, phoneNo, gueststatus: 'reserved',
             guestsource: 'Web'
         });
         await newBooking.save();
