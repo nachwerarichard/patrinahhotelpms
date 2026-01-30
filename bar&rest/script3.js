@@ -2,7 +2,7 @@
 // New function to handle the modal display and population
 function openEditModal(item) {
     // Check permission
-    const allowedToEditInventory = ['admin'];
+    const allowedToEditInventory = 'admin';
     if (!allowedToEditInventory.includes(currentUserRole)) {
         showMessage('Permission Denied: You cannot edit inventory items.');
         return;
