@@ -687,7 +687,6 @@ async function submitCashJournalForm(event) {
     }
 }
 
-const API_BASE_URL = 'https://patrinahhotelpms.onrender.com';
 let inventoryCache = [];
 
 /**
