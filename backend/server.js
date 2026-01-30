@@ -2594,8 +2594,8 @@ const Inventory = mongoose.model('Inventory', new mongoose.Schema({
   sales: Number,
   spoilage: Number,
   closing: Number,
-    bp:Number,
-    sp:Number,
+    buyingprice:Number,
+    sellingprice:Number,
   date: { type: Date, default: Date.now }
 }));
 
@@ -2809,7 +2809,7 @@ app.post('/logout', auth, async (req, res) => {
 
 app.post('/inventory', auth,  async (req, res) => {
   try {
-    const { item, opening, purchases , sales , spoilage,sp,bp  } = req.body;
+    const { item, opening, purchases , sales , spoilage,sellingprice,buyingprice  } = req.body;
     
     // Validation to prevent negative values
     if (opening < 0 || purchases < 0 || sales < 0 || spoilage < 0) {
