@@ -3232,7 +3232,7 @@ app.get('/cash-journal', auth,  async (req, res) => {
 
 app.put('/cash-journal/:id', auth,  async (req, res) => {
   try {
-    const { cashAtHand, cashBanked,cashOnPhone bankReceiptId, date } = req.body;
+    const { cashAtHand, cashBanked,cashOnPhone ,bankReceiptId, date } = req.body;
     const updatedEntry = await CashJournal.findByIdAndUpdate(
       req.params.id,
       { cashAtHand, cashBanked, cashOnPhone,bankReceiptId, responsiblePerson: req.user.username, date: date ? new Date(date) : undefined },
