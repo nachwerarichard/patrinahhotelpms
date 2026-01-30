@@ -2604,14 +2604,19 @@ const Inventory = mongoose.model('Inventory', new mongoose.Schema({
 }));
 
 const Sale = mongoose.model('Sale', new mongoose.Schema({
-  department: String,
-  item: String,
-  number: Number,
-  bp: Number,
-  sp: Number,
-  profit: Number,
-  percentageprofit: Number,
-  date: { type: Date, default: Date.now }
+  department: { 
+    type: String, 
+    required: true,
+    enum: ['Bar', 'Restaurant', 'Kitchen'], // Strict list of allowed values
+    trim: true
+  },
+  item: { type: String, required: true },
+  number: { type: Number, required: true, min: 1 },
+  bp: { type: Number, required: true, min: 0 },
+  sp: { type: Number, required: true, min: 0 },
+  profit: Number,
+  percentageprofit: Number,
+  date: { type: Date, default: Date.now }
 }));
 
 const Expense = mongoose.model('Expense', new mongoose.Schema({
