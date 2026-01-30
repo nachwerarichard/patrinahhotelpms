@@ -1113,7 +1113,6 @@ function renderSalesTable(sales) {
         row.insertCell().textContent = sale.sp;
 
         const totalSellingPrice = sale.sp * sale.number;
-        row.insertCell().textContent = totalSellingPrice.toFixed(2);
         // Add the current sale's total selling price to the sum
         totalSellingPriceSum += totalSellingPrice;
 
