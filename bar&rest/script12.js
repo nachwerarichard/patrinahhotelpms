@@ -855,7 +855,7 @@ async function submitInventoryForm(event) {
 
     // ... (Basic validation remains the same) ...
 
-    if (!item || isNaN(opening) || isNaN(purchases) || isNaN(sales) || isNaN(spoilage)) {
+    if (!item || isNaN(opening)) {
         showMessage('Please fill in all inventory fields correctly with valid numbers.');
         return;
     }
