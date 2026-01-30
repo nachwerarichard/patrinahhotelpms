@@ -3190,15 +3190,16 @@ app.put('/expenses/:id', auth, async (req, res) => {
 // --- Cash Management Endpoints ---
 app.post('/cash-journal', auth, async (req, res) => {
   try {
-    const { cashAtHand, cashBanked, bankReceiptId, date } = req.body;
+    const { cashAtHand, cashBanked, cashOnPhone,bankReceiptId, date } = req.body;
     const newEntry = await CashJournal.create({
       cashAtHand,
       cashBanked,
+      cashOnPhone,
       bankReceiptId,
       responsiblePerson: req.user.username,
       date: date ? new Date(date) : new Date()
     });
-    await logAction('Cash Entry Created', req.user.username, { entryId: newEntry._id, cashAtHand: newEntry.cashAtHand, cashBanked: newEntry.cashBanked });
+    await logAction('Cash Entry Created', req.user.username, { entryId: newEntry._id, cashAtHand: newEntry.cashAtHand,cashOnPhone: newEntry.cashOnPhone, cashBanked: newEntry.cashBanked });
     res.status(201).json(newEntry);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -3226,10 +3227,10 @@ app.get('/cash-journal', auth,  async (req, res) => {
 
 app.put('/cash-journal/:id', auth,  async (req, res) => {
   try {
-    const { cashAtHand, cashBanked, bankReceiptId, date } = req.body;
+    const { cashAtHand, cashBanked,cashOnPhone bankReceiptId, date } = req.body;
     const updatedEntry = await CashJournal.findByIdAndUpdate(
       req.params.id,
-      { cashAtHand, cashBanked, bankReceiptId, responsiblePerson: req.user.username, date: date ? new Date(date) : undefined },
+      { cashAtHand, cashBanked, cashOnPhone,bankReceiptId, responsiblePerson: req.user.username, date: date ? new Date(date) : undefined },
       { new: true }
     );
     if (!updatedEntry) {
