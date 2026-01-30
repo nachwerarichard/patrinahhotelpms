@@ -520,6 +520,23 @@
           <form id="sale-form" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 p-4 border rounded-lg bg-gray-50">
             <input type="hidden" id="sale-id">
             <div>
+  <label for="department-item" class="block text-sm font-medium text-gray-700">Department:</label>
+  <input 
+    type="text" 
+    id="department-item" 
+    list="department-options" 
+    required 
+    class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+    placeholder="Select or type a department..."
+  >
+  
+  <datalist id="department-options">
+    <option value="Bar">
+    <option value="Restaurant">
+  </datalist>
+</div>
+
+            <div>
               <label for="sale-item" class="block text-sm font-medium text-gray-700">Item:</label>
               <input type="text" id="sale-item" list="item-suggestions" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
               <datalist id="item-suggestions"></datalist>
@@ -1020,6 +1037,22 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
     <h2 class="text-xl font-bold text-emerald-600 mb-4">Edit Sale Record</h2>
     <form id="edit-sale-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <input type="hidden" id="edit-sale-id">
+      <div>
+  <label for="department-item" class="block text-sm font-medium text-gray-700">Department:</label>
+  <input 
+    type="text" 
+    id="department-item" 
+    list="department-options" 
+    required 
+    class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+    placeholder="Select or type a department..."
+  >
+  
+  <datalist id="department-options">
+    <option value="Bar">
+    <option value="Restaurant">
+  </datalist>
+</div>
       <div>
         <label class="block text-sm font-medium text-gray-700">Item:</label>
         <input type="text" id="edit-sale-item" list="item-suggestions" required class="p-2 w-full border border-gray-300 rounded-md">
