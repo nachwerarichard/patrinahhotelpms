@@ -2074,6 +2074,7 @@ function renderCashJournalTable(records) {
         row.insertCell().textContent = new Date(record.date).toLocaleDateString();
         row.insertCell().textContent = record.cashAtHand.toFixed(2);
         row.insertCell().textContent = record.cashBanked.toFixed(2);
+        row.insertCell().textContent = record.cashOnPhone.toFixed(2);
         row.insertCell().textContent = record.bankReceiptId;
         const actionsCell = row.insertCell();
         actionsCell.className = 'actions';
@@ -2151,7 +2152,8 @@ async function submitEditCashForm(event) {
 
     const id = idInput.value;
     const cashAtHand = parseFloat(cashAtHandInput.value);
-    const cashBanked = parseFloat(cashBankedInput.value);
+    const cashBanked = parseFloat(cashOnPhoneInput.value);
+    const cashOnPhone = parseFloat(cashBankedInput.value);
     const bankReceiptId = bankReceiptIdInput.value;
     const date = cashDateInput.value; 
 
@@ -2161,7 +2163,7 @@ async function submitEditCashForm(event) {
         return;
     }
 
-    const cashData = { cashAtHand, cashBanked, bankReceiptId, date };
+    const cashData = { cashAtHand, cashBanked, bankReceiptId, date,cashOnPhone };
 
     // --- 1. START LOADING STATE ---
     setCashButtonLoading(true);
@@ -2214,14 +2216,15 @@ function populateEditCashModal(record) {
     const idInput = document.getElementById('edit-cash-id'); 
     const cashBankedInput = document.getElementById('edit-cash-banked');
     const bankReceiptIdInput = document.getElementById('edit-bank-receipt-id');
+    const cashOnPhoneInput = document.getElementById('edit-cash-on-phone');
     const cashDateInput = document.getElementById('edit-cash-date');
 
     // Populate the form fields
     if (idInput) idInput.value = record._id;
     if (cashAtHandInput) cashAtHandInput.value = record.cashAtHand;
     if (cashBankedInput) cashBankedInput.value = record.cashBanked;
+    if (cashOnPhoneInput) cashOnPhoneInput.value = record.cashOnPhone;
     if (bankReceiptIdInput) bankReceiptIdInput.value = record.bankReceiptId;
-    
     // Format the date if it exists
     if (cashDateInput && record.date) {
         cashDateInput.value = new Date(record.date).toISOString().split('T')[0];
