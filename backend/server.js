@@ -2594,6 +2594,8 @@ const Inventory = mongoose.model('Inventory', new mongoose.Schema({
   sales: Number,
   spoilage: Number,
   closing: Number,
+    bp:Number,
+    sp:Number,
   date: { type: Date, default: Date.now }
 }));
 
