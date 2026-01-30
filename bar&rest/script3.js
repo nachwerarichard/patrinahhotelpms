@@ -722,26 +722,10 @@ document.getElementById('sale-item').addEventListener('input', function(e) {
     );
     
     if (itemData) {
-        // This will show a table in your F12 Console so you can see the exact names
-        console.table(itemData); 
-
-        // 1. Set Buying Price
-        document.getElementById('sale-bp').value = itemData.buyingprice || itemData.buyingPrice || 0;
-
-        // 2. Set Selling Price - We check every possible typo
-        const spValue = itemData.sellingprice || 
-                        itemData.sellingPrice || 
-                        itemData.sp || 
-                        itemData.SellingPrice || 0;
-        
-        document.getElementById('sale-sp').value = spValue;
-
-        // If it's still 0, let's see why
-        if (!spValue) {
-            console.warn("Found the item, but no selling price field exists in the data for:", selectedItemName);
-        }
+        // Use the exact key from your log: 'buyingprice' and 'sellingprice'
+        document.getElementById('sale-bp').value = itemData.buyingprice || 0;
+        document.getElementById('sale-sp').value = itemData.sellingprice || 0;
     }
-});  // Case-insensitive search to be safe
-
+});
 
 window.addEventListener('DOMContentLoaded', loadInventory);
