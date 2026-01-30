@@ -2212,7 +2212,6 @@ function populateEditCashModal(record) {
 
     // 2. Update the IDs to match the input fields in your HTML for the edit modal
     const idInput = document.getElementById('edit-cash-id'); 
-    const cashAtHandInput = document.getElementById('edit-cash-at-hand');
     const cashBankedInput = document.getElementById('edit-cash-banked');
     const bankReceiptIdInput = document.getElementById('edit-bank-receipt-id');
     const cashDateInput = document.getElementById('edit-cash-date');
