@@ -2831,6 +2831,9 @@ app.post('/inventory', auth,  async (req, res) => {
     record.spoilage += spoilage;
     record.closing = newClosing;
 
+      // ADD THESE LINES:
+record.sellingprice = sellingprice ?? record.sellingprice;
+record.buyingprice = buyingprice ?? record.buyingprice;
     await record.save();
 
     // Check if the item name starts with 'rest' before sending a notification
@@ -2878,6 +2881,9 @@ app.put('/inventory/:id', auth, async (req, res) => {
         record.purchases = purchases ?? record.purchases;
         record.sales = sales ?? record.sales;
         record.spoilage = spoilage ?? record.spoilage;
+        // FIX: Assign the price values here
+        record.sellingprice = sellingprice ?? record.sellingprice;
+        record.buyingprice = buyingprice ?? record.buyingprice;
         
         // Recalculate closing stock based on the updated values
         const newClosing = record.opening + record.purchases - record.sales - record.spoilage;
@@ -2964,7 +2970,9 @@ app.get('/inventory',  async (req, res) => {
                         purchases: 0,
                         sales: 0,
                         spoilage: 0,
-                        closing: latestBeforeDate ? latestBeforeDate.closing : 0
+                        closing: latestBeforeDate ? latestBeforeDate.closing : 0,
+                        sellingprice: latestBeforeDate ? latestBeforeDate.sellingprice : 0, // Add this
+                        buyingprice: latestBeforeDate ? latestBeforeDate.buyingprice : 0    // Add this
                     };
                 }
             }));
