@@ -838,7 +838,7 @@ async function submitInventoryForm(event) {
 
     // ... (Basic check for form elements remains the same) ...
 
-    if (!idInput || !itemInput || !openingInput || !purchasesInput || !inventorySalesInput || !spoilageInput) {
+    if (!idInput || !itemInput || !sellingpriceInput || !buyingpriceInput ) {
         showMessage('Inventory form elements are missing.');
         return;
     }
