@@ -34,8 +34,8 @@ function openEditModal(item) {
     purchasesInput.value = item.purchases;
     salesInput.value = item.sales;
     spoilageInput.value = item.spoilage;
-    sellingpriceInput.value = item.sp;
-    buyingpriceInput.value = item.bp;
+    sellingpriceInput.value = item.sellingprice;
+    buyingpriceInput.value = item.buyingprice;
 
 
 
@@ -60,44 +60,9 @@ function openEditModal(item) {
  * Manages the loading state of the Edit Inventory button.
  * @param {boolean} isLoading - True to show the 'Saving...' state, false to show 'Save Changes'.
  */
-async function submitEditForm(event) {
-  event.preventDefault();
 
-  // Basic validation omitted for brevity...
 
-  setEditInventoryLoading(true);
-  await new Promise(requestAnimationFrame); // ensure loader shows
 
-  try {
-    const response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(inventoryData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || `Server responded with ${response.status}`);
-    }
-
-    showMessage('Inventory item updated successfully! 🎉');
-    setTimeout(() => {
-      setEditInventoryLoading(false);
-      document.getElementById('edit-inventory-modal').classList.add('hidden');
-      fetchInventory();
-    }, 1000);
-  } catch (err) {
-    console.error('Error updating inventory:', err);
-    showMessage(`Failed to update: ${err.message}`, true);
-    setEditInventoryLoading(false);
-  }
-}
-
-/**
- * Toggles the loading state for the Edit Inventory form button.
- * IMPORTANT: This version adds/removes the 'flex' class to properly display the spinner.
- * @param {boolean} isLoading - true to show loader, false to hide.
- */
 function setEditInventoryLoading(isLoading) {
     const submitBtn = document.getElementById('edit-inventory-submit-btn');
     const defaultSpan = document.getElementById('edit-inventory-btn-default');
@@ -188,6 +153,10 @@ async function submitEditForm(event) {
   const purchasesInput = document.getElementById('edit-purchases');
   const salesInput = document.getElementById('edit-inventory-sales');
   const spoilageInput = document.getElementById('edit-spoilage');
+      const sellingpriceInput = document.getElementById('edit-sellingprice');
+      const buyingpriceInput = document.getElementById('edit-buyingprice');
+
+
 
   // Log whether elements were found
   console.log('[debug] elements:', {
@@ -196,10 +165,12 @@ async function submitEditForm(event) {
     openingInput: !!openingInput,
     purchasesInput: !!purchasesInput,
     salesInput: !!salesInput,
-    spoilageInput: !!spoilageInput
+    spoilageInput: !!spoilageInput,
+      sellingpriceInput:!!sellingpriceInput,
+      buyingpriceInput:!! buyingpriceInput
   });
 
-  if (!idInput || !itemInput || !openingInput || !purchasesInput || !salesInput || !spoilageInput) {
+  if (!idInput || !itemInput || !buyingpriceInput) {
     console.error('[debug] Edit form elements are missing. Aborting update.');
     showMessage('Edit form elements are missing. Cannot proceed with update.', true);
     return;
