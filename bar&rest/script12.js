@@ -1661,7 +1661,7 @@ function populateEditExpenseModal(expense) {
     
     // 2. Target the form fields within the modal
     const idInput = document.getElementById('edit-expense-id');
-    const descriptionInput = document.getElementById('edit-expense-department');
+    const departmentInput = document.getElementById('edit-expense-department');
     const descriptionInput = document.getElementById('edit-expense-description');
     const amountInput = document.getElementById('edit-expense-amount');
     const dateInput = document.getElementById('edit-expense-date'); // Targets the new date input in the modal
