@@ -157,6 +157,9 @@ function openEditModal(item) {
     const purchasesInput = document.getElementById('edit-purchases');
     const salesInput = document.getElementById('edit-inventory-sales');
     const spoilageInput = document.getElementById('edit-spoilage');
+        const sellingpriceInput = document.getElementById('edit-sellingprice');
+        const buyingpriceInput = document.getElementById('edit-buyingprice');
+
 
     // Populate the form with the item's data
     idInput.value = item._id;
@@ -165,6 +168,8 @@ function openEditModal(item) {
     purchasesInput.value = item.purchases;
     salesInput.value = item.sales;
     spoilageInput.value = item.spoilage;
+    sellingpriceInput.value=item.sellingprice;
+    buyingpriceInput.value=item.buyingprice;
 
     // Show the modal
     modal.style.display = 'flex'; // Use 'flex' here if that's what your CSS expects for centering
