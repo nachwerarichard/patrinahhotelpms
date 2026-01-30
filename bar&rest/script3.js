@@ -687,8 +687,6 @@ async function submitCashJournalForm(event) {
     }
 }
 
-let inventoryCache = [];
-
 /**
  * 1. Fetch data from the lookup endpoint using the Base URL
  */
