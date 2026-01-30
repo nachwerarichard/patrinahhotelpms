@@ -1,40 +1,36 @@
     // New function to handle the modal display and population
 // New function to handle the modal display and population
 function openEditModal(item) {
-    // Check permission
-    const allowedToEditInventory = 'admin';
-    if (!allowedToEditInventory.includes(currentUserRole)) {
+    // 1. Normalize the role from the database to Uppercase
+    // This ensures 'admin', 'Admin', and 'ADMIN' all pass the test
+    const normalizedUserRole = currentUserRole ? currentUserRole.toUpperCase().trim() : '';
+
+    // 2. Compare against the uppercase string
+    if (normalizedUserRole !== 'ADMIN') {
         showMessage('Permission Denied: You cannot edit inventory items.');
         return;
     }
 
-    // --- ADDED VALIDATION HERE ---
+    // --- REST OF YOUR VALIDATION ---
     if (!item || !item._id) {
         showMessage('Error: Inventory item data is missing or invalid.');
         return;
     }
 
-    // Get the modal and form elements
     const modal = document.getElementById('edit-inventory-modal');
-    const idInput = document.getElementById('edit-inventory-id');
-    const itemInput = document.getElementById('edit-item');
-    const openingInput = document.getElementById('edit-opening');
-    const purchasesInput = document.getElementById('edit-purchases');
-    const salesInput = document.getElementById('edit-inventory-sales');
-    const spoilageInput = document.getElementById('edit-spoilage');
+    
+    // Safety check: ensure the modal exists before trying to style it
+    if (modal) {
+        document.getElementById('edit-inventory-id').value = item._id;
+        document.getElementById('edit-item').value = item.item;
+        document.getElementById('edit-opening').value = item.opening;
+        document.getElementById('edit-purchases').value = item.purchases;
+        document.getElementById('edit-inventory-sales').value = item.sales;
+        document.getElementById('edit-spoilage').value = item.spoilage;
 
-    // Populate the form with the item's data
-    idInput.value = item._id;
-    itemInput.value = item.item;
-    openingInput.value = item.opening;
-    purchasesInput.value = item.purchases;
-    salesInput.value = item.sales;
-    spoilageInput.value = item.spoilage;
-
-    // Show the modal
-    modal.style.display = 'flex'; // Use 'flex' here if that's what your CSS expects for centering
+        modal.style.display = 'flex';
+    }
 }
-        
 // New function to handle the form submission for the modal
 /**
  * Manages the loading state of the Edit Inventory button.
