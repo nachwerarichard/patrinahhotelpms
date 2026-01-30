@@ -732,7 +732,8 @@ function renderInventoryTable(inventory) {
         const purchases = item.purchases || 0;
         const sales = item.sales || 0;
         const spoilage = item.spoilage || 0;
-
+        const sellingprice =item.sellingprice;
+        const buyingprice =item.buyingprice;
         // The calculated closing value is now provided by the backend, or is null.
         const closing = item.closing;
 
@@ -740,6 +741,11 @@ function renderInventoryTable(inventory) {
         row.insertCell().textContent = purchases;
         row.insertCell().textContent = sales;
         row.insertCell().textContent = spoilage;
+         row.insertCell().textContent = spoilage;
+                 row.insertCell().textContent = buyingprice;
+                 row.insertCell().textContent = sellingprice;
+
+
 
         // Conditionally render closing stock based on the value from the backend
         const closingStockCell = row.insertCell();
