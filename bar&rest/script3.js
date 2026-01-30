@@ -720,15 +720,25 @@ function populateDatalist(items) {
 /**
  * 3. Populate BP and SP when an item is selected
  */
+/**
+ * 3. Populate BP and SP when an item is selected
+ */
 document.getElementById('sale-item').addEventListener('input', function(e) {
     const selectedItemName = e.target.value;
     
-    // Find matching item in our cached array
+    // Find matching item
     const itemData = inventoryCache.find(inv => inv.item === selectedItemName);
     
     if (itemData) {
-        document.getElementById('sale-bp').value = itemData.buyingprice || 0;
-        document.getElementById('sale-sp').value = itemData.sellingprice || 0;
+        console.log("Item found:", itemData); // DEBUG: Check this in your browser console (F12)
+
+        // 1. Update Buying Price (checking both possible names)
+        const bp = itemData.buyingprice ?? itemData.buyingPrice ?? 0;
+        document.getElementById('sale-bp').value = bp;
+
+        // 2. Update Selling Price (checking both possible names)
+        const sp = itemData.sellingprice ?? itemData.sellingPrice ?? 0;
+        document.getElementById('sale-sp').value = sp;
     }
 });
 
