@@ -692,14 +692,16 @@ let inventoryCache = [];
 /**
  * 1. Fetch data from the lookup endpoint using the Base URL
  */
+const API_BASE_URL = 'https://patrinahhotelpms.onrender.com';
+let inventoryCache = [];
+
 async function loadInventory() {
     try {
-        // Correctly joining the base URL with the endpoint
         const response = await fetch(`${API_BASE_URL}/inventory/lookup`); 
         if (!response.ok) throw new Error('Network response was not ok');
         
-        const items = await response.json();
-        inventoryCache = items; 
+        inventoryCache = await response.json();
+        console.log("Inventory Loaded:", inventoryCache); // Check if sellingprice exists here
         
         populateDatalist(inventoryCache);
     } catch (err) {
@@ -707,47 +709,41 @@ async function loadInventory() {
     }
 }
 
-/**
- * 2. Fill the datalist options
- */
 function populateDatalist(items) {
     const datalist = document.getElementById('item-suggestions');
+    if (!datalist) return;
     datalist.innerHTML = items
         .map(inv => `<option value="${inv.item}">`)
         .join('');
 }
 
-/**
- * 3. Populate BP and SP when an item is selected
- */
-/**
- * 3. Populate BP and SP when an item is selected
- */
+// Use the 'input' event for immediate population
 document.getElementById('sale-item').addEventListener('input', function(e) {
-    const selectedItemName = e.target.value;
-    const itemData = inventoryCache.find(inv => inv.item === selectedItemName);
+    const selectedItemName = e.target.value.trim();
+    
+    // Case-insensitive search to be safe
+    const itemData = inventoryCache.find(inv => 
+        inv.item && inv.item.toLowerCase() === selectedItemName.toLowerCase()
+    );
     
     if (itemData) {
-        console.log("Fetched Item:", itemData); // IMPORTANT: Check this in F12 console
+        // Log to see exactly what keys we have
+        console.log("Found Item Data:", itemData);
 
-        // Check for both lowercase and camelCase just in case
-        const bp = itemData.buyingprice || itemData.buyingPrice || 0;
-        const sp = itemData.sellingprice || itemData.sellingPrice || 0;
+        // Target the inputs
+        const bpInput = document.getElementById('sale-bp');
+        const spInput = document.getElementById('sale-sp');
 
-        document.getElementById('sale-bp').value = bp;
-        document.getElementById('sale-sp').value = sp;
+        // Populate using all possible naming conventions
+        if (bpInput) {
+            bpInput.value = itemData.buyingprice ?? itemData.buyingPrice ?? 0;
+        }
+        
+        if (spInput) {
+            // This is the line that was likely failing
+            spInput.value = itemData.sellingprice ?? itemData.sellingPrice ?? 0;
+        }
     }
 });
 
-/**
- * 4. (Bonus) Clear prices if the user clears the item name
- */
-document.getElementById('sale-item').addEventListener('change', function(e) {
-    if (!e.target.value) {
-        document.getElementById('sale-bp').value = '';
-        document.getElementById('sale-sp').value = '';
-    }
-});
-
-// Initialize
 window.addEventListener('DOMContentLoaded', loadInventory);
