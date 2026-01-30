@@ -1628,6 +1628,7 @@ function renderExpensesTable(expenses) {
 
     expenses.forEach(expense => {
         const row = tbody.insertRow();
+        row.insertCell().textContent = expense.department;
         row.insertCell().textContent = expense.description;
         row.insertCell().textContent = expense.amount.toFixed(2);
         row.insertCell().textContent = new Date(expense.date).toLocaleDateString();
@@ -1660,6 +1661,7 @@ function populateEditExpenseModal(expense) {
     
     // 2. Target the form fields within the modal
     const idInput = document.getElementById('edit-expense-id');
+    const descriptionInput = document.getElementById('edit-expense-department');
     const descriptionInput = document.getElementById('edit-expense-description');
     const amountInput = document.getElementById('edit-expense-amount');
     const dateInput = document.getElementById('edit-expense-date'); // Targets the new date input in the modal
@@ -1669,6 +1671,7 @@ function populateEditExpenseModal(expense) {
     // 3. Populate the fields
     if (idInput) idInput.value = expense._id; // Assuming your expense object has a unique identifier called _id
     if (descriptionInput) descriptionInput.value = expense.description;
+    if (departmentInput) departmentInput.value = expense.department;
     if (amountInput) amountInput.value = expense.amount;
     if (receiptIdInput) receiptIdInput.value = expense.receiptId;
     if (sourceInput) sourceInput.value = expense.source || '';
@@ -1705,6 +1708,7 @@ function populateEditExpenseModal(expense) {
     
     // 2. Target the form fields within the modal
     const idInput = document.getElementById('edit-expense-id');
+    const departmentInput = document.getElementById('edit-expense-department');
     const descriptionInput = document.getElementById('edit-expense-description');
     const amountInput = document.getElementById('edit-expense-amount');
     const dateInput = document.getElementById('edit-expense-date'); // Targets the new date input in the modal
@@ -1714,6 +1718,7 @@ function populateEditExpenseModal(expense) {
     // 3. Populate the fields
     if (idInput) idInput.value = expense._id; // Assuming your expense object has a unique identifier called _id
     if (descriptionInput) descriptionInput.value = expense.description;
+    if (departmentInput) departmentInput.value = expense.department;
     if (amountInput) amountInput.value = expense.amount;
     if (receiptIdInput) receiptIdInput.value = expense.receiptId;
     if (sourceInput) sourceInput.value = expense.source || '';
@@ -1785,6 +1790,7 @@ async function submitEditExpenseForm(event) {
     
     // 1. Get values from the EDIT modal form (omitted for brevity)
     const id = document.getElementById('edit-expense-id').value;
+    const department = document.getElementById('edit-expense-department').value;
     const description = document.getElementById('edit-expense-description').value;
     const amount = parseFloat(document.getElementById('edit-expense-amount').value);
     const date = document.getElementById('edit-expense-date').value;
@@ -1796,7 +1802,7 @@ async function submitEditExpenseForm(event) {
         return;
     }
 
-    const expenseData = { description, amount, receiptId, source, date, recordedBy: currentUsername };
+    const expenseData = { description,department, amount, receiptId, source, date, recordedBy: currentUsername };
 
     // --- 1. SHOW PRELOADER & DISABLE BUTTON ---
     setEditButtonLoading(true);
@@ -1846,6 +1852,7 @@ async function submitExpenseForm(event) {
     }
 
     const idInput = document.getElementById('expense-id');
+    const departmentInput = document.getElementById('expense-department');
     const descriptionInput = document.getElementById('expense-description');
     const amountInput = document.getElementById('expense-amount');
     const receiptIdInput = document.getElementById('expense-receiptId');
@@ -1859,6 +1866,7 @@ async function submitExpenseForm(event) {
     }
 
     const id = idInput.value;
+    const department = departmentInput.value;
     const description = descriptionInput.value;
     const amount = parseFloat(amountInput.value);
     const receiptId = receiptIdInput.value;
@@ -1871,7 +1879,7 @@ async function submitExpenseForm(event) {
         return;
     }
 
-    const expenseData = { description, amount, receiptId, source, date, recordedBy };
+    const expenseData = { description, department,amount, receiptId, source, date, recordedBy };
 
     try {
         // 2. Change button text to 'Processing...' and disable it ⏳
@@ -1952,6 +1960,7 @@ async function submitExpenseForm(event) {
 
 function populateExpenseForm(expense) {
     const idInput = document.getElementById('expense-id');
+    const departmentInput = document.getElementById('expense-department');
     const descriptionInput = document.getElementById('expense-description');
     const amountInput = document.getElementById('expense-amount');
     const receiptIdInput = document.getElementById('expense-receiptId');
@@ -1959,6 +1968,7 @@ function populateExpenseForm(expense) {
     const expenseDateInput = document.getElementById('expenses-date-filter');
 
     if (idInput) idInput.value = expense._id;
+    if (departmentInput) descriptionInput.value = expense.department;
     if (descriptionInput) descriptionInput.value = expense.description;
     if (amountInput) amountInput.value = expense.amount;
     if (receiptIdInput) receiptIdInput.value = expense.receiptId;
