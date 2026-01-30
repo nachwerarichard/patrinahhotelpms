@@ -686,3 +686,47 @@ async function submitCashJournalForm(event) {
         submitButton.disabled = false;
     }
 }
+
+// Store inventory data globally for quick access
+let inventoryCache = [];
+
+// 1. Fetch data from your /inventory endpoint
+async function loadInventory() {
+    try {
+        const response = await fetch('/inventory?limit=1000'); // Adjust limit as needed
+        const result = await response.json();
+        // Accessing result.data based on your Express route structure
+        inventoryCache = result.data || []; 
+        populateDatalist(inventoryCache);
+    } catch (err) {
+        console.error('Error loading inventory:', err);
+    }
+}
+
+// 2. Fill the datalist options
+function populateDatalist(items) {
+    const datalist = document.getElementById('item-suggestions');
+    datalist.innerHTML = items
+        .map(inv => `<option value="${inv.item}">`)
+        .join('');
+}
+
+// 3. Listen for selection to populate BP and SP
+document.getElementById('sale-item').addEventListener('input', function(e) {
+    const selectedItemName = e.target.value;
+    
+    // Find the item in our cache
+    const itemData = inventoryCache.find(inv => inv.item === selectedItemName);
+    
+    if (itemData) {
+        // Populate the fields
+        document.getElementById('sale-bp').value = itemData.buyingprice || 0;
+        document.getElementById('sale-sp').value = itemData.sellingprice || 0;
+        
+        // Optional: Update department if tracked in DB
+        // document.getElementById('department-item').value = itemData.department;
+    }
+});
+
+// Initialize on page load
+window.addEventListener('DOMContentLoaded', loadInventory);
