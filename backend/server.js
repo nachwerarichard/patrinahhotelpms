@@ -2588,15 +2588,19 @@ const CashJournal = mongoose.model('CashJournal', new mongoose.Schema({
 }));
 
 const Inventory = mongoose.model('Inventory', new mongoose.Schema({
-  item: String,
-  opening: Number,
-  purchases: Number,
-  sales: Number,
-  spoilage: Number,
-  closing: Number,
-    buyingprice:Number,
-    sellingprice:Number,
-  date: { type: Date, default: Date.now }
+  item: { type: String, required: true },
+  opening: { type: Number, default: 0 },
+  purchases: { type: Number, default: 0 },
+  sales: { type: Number, default: 0 },
+  spoilage: { type: Number, default: 0 },
+  closing: { type: Number, default: 0 },
+  buyingprice: { type: Number, default: 0 },
+  sellingprice: { type: Number, default: 0 },
+  
+  // NEW FIELD: This controls the logic for Bar vs Restaurant
+  trackInventory: { type: Boolean, default: true }, 
+  
+  date: { type: Date, default: Date.now }
 }));
 
 const Sale = mongoose.model('Sale', new mongoose.Schema({
@@ -2807,47 +2811,61 @@ app.post('/logout', auth, async (req, res) => {
 
 // --- Inventory Endpoints (Corrected) ---
 
-app.post('/inventory', auth,  async (req, res) => {
-  try {
-    const { item, opening, purchases , sales , spoilage,sellingprice,buyingprice  } = req.body;
-    
-    // Validation to prevent negative values
-    if (opening < 0 || purchases < 0 || sales < 0 || spoilage < 0) {
-      return res.status(400).json({ error: 'Inventory values cannot be negative.' });
-    }
+app.post('/inventory', auth, async (req, res) => {
+  try {
+    const { item, opening, purchases, sales, spoilage, sellingprice, buyingprice, trackInventory } = req.body;
 
-    // Find today's inventory record or create a new one
-    let record = await getTodayInventory(item, opening);
-    
-    // Update the record with new values
-    const newClosing = record.opening + record.purchases + purchases - record.sales - sales - record.spoilage - spoilage;
+    // 1. Enhanced Validation: Prevent negative inventory values AND prices
+    if (opening < 0 || purchases < 0 || sales < 0 || spoilage < 0 || sellingprice < 0 || buyingprice < 0) {
+      return res.status(400).json({ error: 'Values and prices cannot be negative.' });
+    }
 
-    if (newClosing < 0) {
-      return res.status(400).json({ error: 'Action would result in negative inventory.' });
-    }
-    
-    record.purchases += purchases;
-    record.sales += sales;
-    record.spoilage += spoilage;
-    record.closing = newClosing;
+    // Find today's inventory record or create a new one
+    let record = await getTodayInventory(item, opening);
+    
+    // 2. Map the trackInventory status
+    // Use the value from the request if provided, otherwise keep what the record has
+    if (trackInventory !== undefined) {
+      record.trackInventory = trackInventory;
+    }
 
-      // ADD THESE LINES:
-record.sellingprice = sellingprice ?? record.sellingprice;
-record.buyingprice = buyingprice ?? record.buyingprice;
-    await record.save();
+    // Update the record with new values
+    const newClosing = record.opening + record.purchases + purchases - record.sales - sales - record.spoilage - spoilage;
 
-    // Check if the item name starts with 'rest' before sending a notification
-    if (record.closing < Number(process.env.LOW_STOCK_THRESHOLD) && !record.item.toLowerCase().startsWith('rest')) {
-      notifyLowStock(record.item, record.closing);
-    }
-    
-    await logAction('Inventory Updated/Created', req.user.username, { item: record.item, closing: record.closing });
-    res.status(200).json(record);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    // 3. Conditional Negative Check
+    // ONLY block if trackInventory is true. If false (Restaurant), allow the save.
+    if (record.trackInventory && newClosing < 0) {
+      return res.status(400).json({ error: 'Action would result in negative inventory for a tracked item.' });
+    }
+    
+    record.purchases += purchases;
+    record.sales += sales;
+    record.spoilage += spoilage;
+    record.closing = newClosing;
+
+    // Save the prices
+    record.sellingprice = sellingprice ?? record.sellingprice;
+    record.buyingprice = buyingprice ?? record.buyingprice;
+
+    await record.save();
+
+    // 4. Update Notification Logic
+    // Use trackInventory flag instead of the 'rest' prefix check
+    if (record.trackInventory && record.closing < Number(process.env.LOW_STOCK_THRESHOLD)) {
+      notifyLowStock(record.item, record.closing);
+    }
+    
+    await logAction('Inventory Updated/Created', req.user.username, { 
+      item: record.item, 
+      closing: record.closing,
+      tracked: record.trackInventory 
+    });
+
+    res.status(200).json(record);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
-
 /**
  * Handles PUT requests to update an existing inventory item.
  * This version of the route has the date check removed, allowing for
@@ -2860,146 +2878,148 @@ app.put('/inventory/:id', auth, async (req, res) => {
             return res.status(404).json({ error: 'Inventory item not found' });
         }
 
-        const { item, opening, purchases, sales, spoilage, sellingprice, buyingprice } = req.body;
+        // Destructure trackInventory from req.body
+        const { item, opening, purchases, sales, spoilage, sellingprice, buyingprice, trackInventory } = req.body;
         
-        // 1. UPDATED VALIDATION: Include prices in the negative check
+        // 1. Validation for negative values
         if (
             (opening !== undefined && opening < 0) || 
             (purchases !== undefined && purchases < 0) || 
             (sales !== undefined && sales < 0) || 
             (spoilage !== undefined && spoilage < 0) ||
-            (sellingprice !== undefined && sellingprice < 0) || // Check price
-            (buyingprice !== undefined && buyingprice < 0)    // Check price
+            (sellingprice !== undefined && sellingprice < 0) || 
+            (buyingprice !== undefined && buyingprice < 0)
         ) {
             return res.status(400).json({ error: 'Inventory values and prices cannot be negative.' });
         }
 
-        // 2. ASSIGNMENTS: Map the body values to the database record
+        // 2. Assign the new trackInventory status if provided
+        if (trackInventory !== undefined) {
+            record.trackInventory = trackInventory;
+        }
+
         record.item = item ?? record.item;
         record.opening = opening ?? record.opening;
         record.purchases = purchases ?? record.purchases;
         record.sales = sales ?? record.sales;
         record.spoilage = spoilage ?? record.spoilage;
-        
-        // FIX IS HERE:
         record.buyingprice = buyingprice ?? record.buyingprice;
         record.sellingprice = sellingprice ?? record.sellingprice;
         
         // Recalculate closing stock
         const newClosing = record.opening + record.purchases - record.sales - record.spoilage;
         
-        if (newClosing < 0) {
-            return res.status(400).json({ error: 'Action would result in negative inventory.' });
+        // 3. Conditional Negative Check based on tracking status
+        if (record.trackInventory && newClosing < 0) {
+            return res.status(400).json({ error: 'Action would result in negative inventory for a tracked item.' });
         }
 
         record.closing = newClosing;
 
-        // 3. SAVE: Now the prices are actually inside the 'record' object to be saved
         await record.save();
 
-        if (record.closing < Number(process.env.LOW_STOCK_THRESHOLD) && !record.item.toLowerCase().startsWith('rest')) {
+        // 4. Notification logic using the flag instead of prefix
+        if (record.trackInventory && record.closing < Number(process.env.LOW_STOCK_THRESHOLD)) {
             notifyLowStock(record.item, record.closing);
         }
 
-        await logAction('Inventory Updated', req.user.username, { itemId: record._id, item: record.item, newClosing: record.closing });
+        await logAction('Inventory Updated', req.user.username, { 
+            itemId: record._id, 
+            item: record.item, 
+            newClosing: record.closing,
+            tracked: record.trackInventory 
+        });
+
         res.json(record);
 
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
+app.get('/inventory', async (req, res) => {
+    try {
+        const { item, low, date, page = 1, limit = 10 } = req.query;
+        let filter = {};
+        
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const lowNum = low !== undefined ? parseInt(low) : undefined;
+        
+        if (pageNum < 1 || limitNum < 1 || (lowNum !== undefined && lowNum < 0)) {
+            return res.status(400).json({ error: 'Numeric query parameters (page, limit, low) cannot be negative or zero.' });
+        }
 
-app.get('/inventory',  async (req, res) => {
-    try {
-        const { item, low, date, page = 1, limit = 10 } = req.query;
-        let filter = {};
-        
-        // Validate numeric parameters
-        const pageNum = parseInt(page);
-        const limitNum = parseInt(limit);
-        const lowNum = low !== undefined ? parseInt(low) : undefined;
-        
-        if (pageNum < 1 || limitNum < 1 || (lowNum !== undefined && lowNum < 0)) {
-            return res.status(400).json({ error: 'Numeric query parameters (page, limit, low) cannot be negative or zero.' });
-        }
+        if (date) {
+            const { utcStart, utcEnd, error } = getStartAndEndOfDayInUTC(date);
+            if (error) return res.status(400).json({ error });
 
-        if (date) {
-            const { utcStart, utcEnd, error } = getStartAndEndOfDayInUTC(date);
-            if (error) {
-                return res.status(400).json({ error });
-            }
+            const allItems = await Inventory.distinct('item');
+            const dailyRecords = await Inventory.find({
+                date: { $gte: utcStart, $lt: utcEnd }
+            });
 
-            const allItems = await Inventory.distinct('item');
-            const dailyRecords = await Inventory.find({
-                date: { $gte: utcStart, $lt: utcEnd }
-            });
+            const recordsMap = new Map();
+            dailyRecords.forEach(record => recordsMap.set(record.item, record));
 
-            const recordsMap = new Map();
-            dailyRecords.forEach(record => {
-                recordsMap.set(record.item, record);
-            });
+            const report = await Promise.all(allItems.map(async (singleItem) => {
+                const record = recordsMap.get(singleItem);
 
-            const report = await Promise.all(allItems.map(async (singleItem) => {
-                const record = recordsMap.get(singleItem);
+                if (record) {
+                    return {
+                        _id: record._id,
+                        item: singleItem,
+                        opening: record.opening,
+                        purchases: record.purchases,
+                        sales: record.sales,
+                        spoilage: record.spoilage,
+                        closing: record.closing,
+                        sellingprice: record.sellingprice,
+                        buyingprice: record.buyingprice, // FIXED TYPO: buyingrice -> buyingprice
+                        trackInventory: record.trackInventory // ADDED THIS
+                    };
+                } else {
+                    const latestBeforeDate = await Inventory.findOne({
+                        item: singleItem,
+                        date: { $lt: utcStart }
+                    }).sort({ date: -1 });
 
-                if (record) {
-                    // Item had activity on this day, use its record
-                    return {
-                        _id: record._id, // Add the _id field here
-                        item: singleItem,
-                        opening: record.opening,
-                        purchases: record.purchases,
-                        sales: record.sales,
-                        spoilage: record.spoilage,
-                        closing: record.closing,
-                        sellingprice:record.sellingprice,
-                        buyingprice:record.buyingrice
-                    };
-                } else {
-                    // Item had no activity. Find its most recent closing stock before this date.
-                    const latestBeforeDate = await Inventory.findOne({
-                        item: singleItem,
-                        date: { $lt: utcStart }
-                    }).sort({ date: -1 });
+                    return {
+                        _id: latestBeforeDate ? latestBeforeDate._id : null,
+                        item: singleItem,
+                        opening: latestBeforeDate ? latestBeforeDate.closing : 0,
+                        purchases: 0,
+                        sales: 0,
+                        spoilage: 0,
+                        closing: latestBeforeDate ? latestBeforeDate.closing : 0,
+                        sellingprice: latestBeforeDate ? latestBeforeDate.sellingprice : 0,
+                        buyingprice: latestBeforeDate ? latestBeforeDate.buyingprice : 0,
+                        trackInventory: latestBeforeDate ? latestBeforeDate.trackInventory : true // ADDED THIS
+                    };
+                }
+            }));
+            
+            return res.json({ date, report });
+        }
 
-                    return {
-                        // The id for this item comes from the latest record
-                        _id: latestBeforeDate ? latestBeforeDate._id : null,
-                        item: singleItem,
-                        opening: latestBeforeDate ? latestBeforeDate.closing : 0,
-                        purchases: 0,
-                        sales: 0,
-                        spoilage: 0,
-                        closing: latestBeforeDate ? latestBeforeDate.closing : 0,
-                        sellingprice: latestBeforeDate ? latestBeforeDate.sellingprice : 0, // Add this
-                        buyingprice: latestBeforeDate ? latestBeforeDate.buyingprice : 0    // Add this
-                    };
-                }
-            }));
-            
-            return res.json({ date, report });
-        }
+        if (item) filter.item = new RegExp(item, 'i');
+        if (low) filter.closing = { $lt: lowNum };
+        
+        const skip = (pageNum - 1) * limitNum;
+        const [total, docs] = await Promise.all([
+            Inventory.countDocuments(filter),
+            Inventory.find(filter).skip(skip).limit(limitNum).sort({ item: 1 })
+        ]);
 
-        // --- Original `/inventory` logic continues below if no date is provided ---
-        if (item) filter.item = new RegExp(item, 'i');
-        if (low) filter.closing = { $lt: lowNum };
-        
-        const skip = (pageNum - 1) * limitNum;
-        const [total, docs] = await Promise.all([
-            Inventory.countDocuments(filter),
-            Inventory.find(filter).skip(skip).limit(limitNum).sort({ item: 1 })
-        ]);
+        res.json({
+            data: docs,
+            total,
+            page: pageNum,
+            pages: Math.ceil(total / limitNum)
+        });
 
-        res.json({
-            data: docs,
-            total,
-            page: pageNum,
-            pages: Math.ceil(total / limitNum)
-        });
-
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 
