@@ -1,17 +1,8 @@
     // New function to handle the modal display and population
 // New function to handle the modal display and population
 function openEditModal(item) {
-    // 1. Normalize the role from the database to Uppercase
-    // This ensures 'admin', 'Admin', and 'ADMIN' all pass the test
-    const normalizedUserRole = currentUserRole ? currentUserRole.toUpperCase().trim() : '';
-
-    // 2. Compare against the uppercase string
-    if (normalizedUserRole !== 'ADMIN') {
-        showMessage('Permission Denied: You cannot edit inventory items.');
-        return;
-    }
-
-    // --- REST OF YOUR VALIDATION ---
+    // --- VALIDATION ---
+    // We still keep this to ensure the app doesn't crash if data is missing
     if (!item || !item._id) {
         showMessage('Error: Inventory item data is missing or invalid.');
         return;
@@ -21,6 +12,7 @@ function openEditModal(item) {
     
     // Safety check: ensure the modal exists before trying to style it
     if (modal) {
+        // Populate the form fields with the item data
         document.getElementById('edit-inventory-id').value = item._id;
         document.getElementById('edit-item').value = item.item;
         document.getElementById('edit-opening').value = item.opening;
@@ -28,10 +20,12 @@ function openEditModal(item) {
         document.getElementById('edit-inventory-sales').value = item.sales;
         document.getElementById('edit-spoilage').value = item.spoilage;
 
+        // Show the modal
         modal.style.display = 'flex';
+    } else {
+        console.error("Could not find the modal element: 'edit-inventory-modal'");
     }
 }
-// New function to handle the form submission for the modal
 /**
  * Manages the loading state of the Edit Inventory button.
  * @param {boolean} isLoading - True to show the 'Saving...' state, false to show 'Save Changes'.
