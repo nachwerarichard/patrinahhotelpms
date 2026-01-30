@@ -2854,59 +2854,59 @@ record.buyingprice = buyingprice ?? record.buyingprice;
  * the modification of past inventory records.
  */
 app.put('/inventory/:id', auth, async (req, res) => {
-    try {
-        const record = await Inventory.findById(req.params.id);
-        if (!record) {
-            return res.status(404).json({ error: 'Inventory item not found' });
-        }
+    try {
+        const record = await Inventory.findById(req.params.id);
+        if (!record) {
+            return res.status(404).json({ error: 'Inventory item not found' });
+        }
 
-        // The date check to prevent editing past records has been removed
-        // to fulfill the request to allow editing of historical data.
+        const { item, opening, purchases, sales, spoilage, sellingprice, buyingprice } = req.body;
+        
+        // 1. UPDATED VALIDATION: Include prices in the negative check
+        if (
+            (opening !== undefined && opening < 0) || 
+            (purchases !== undefined && purchases < 0) || 
+            (sales !== undefined && sales < 0) || 
+            (spoilage !== undefined && spoilage < 0) ||
+            (sellingprice !== undefined && sellingprice < 0) || // Check price
+            (buyingprice !== undefined && buyingprice < 0)    // Check price
+        ) {
+            return res.status(400).json({ error: 'Inventory values and prices cannot be negative.' });
+        }
 
-        // Update fields and recalculate closing stock
-        const { item, opening, purchases, sales, spoilage,sellingprice,buyingprice } = req.body;
-        
-        // Validation to prevent negative values
-        if (
-            (opening !== undefined && opening < 0) || 
-            (purchases !== undefined && purchases < 0) || 
-            (sales !== undefined && sales < 0) || 
-            (spoilage !== undefined && spoilage < 0)
-        ) {
-            return res.status(400).json({ error: 'Inventory values cannot be negative.' });
-        }
-
-        record.item = item ?? record.item;
-        record.opening = opening ?? record.opening;
-        record.purchases = purchases ?? record.purchases;
-        record.sales = sales ?? record.sales;
-        record.spoilage = spoilage ?? record.spoilage;
-        // FIX: Assign the price values here
-        record.sellingprice = sellingprice ?? record.sellingprice;
+        // 2. ASSIGNMENTS: Map the body values to the database record
+        record.item = item ?? record.item;
+        record.opening = opening ?? record.opening;
+        record.purchases = purchases ?? record.purchases;
+        record.sales = sales ?? record.sales;
+        record.spoilage = spoilage ?? record.spoilage;
+        
+        // FIX IS HERE:
         record.buyingprice = buyingprice ?? record.buyingprice;
-        
-        // Recalculate closing stock based on the updated values
-        const newClosing = record.opening + record.purchases - record.sales - record.spoilage;
-        
-        if (newClosing < 0) {
-            return res.status(400).json({ error: 'Action would result in negative inventory.' });
-        }
+        record.sellingprice = sellingprice ?? record.sellingprice;
+        
+        // Recalculate closing stock
+        const newClosing = record.opening + record.purchases - record.sales - record.spoilage;
+        
+        if (newClosing < 0) {
+            return res.status(400).json({ error: 'Action would result in negative inventory.' });
+        }
 
-        record.closing = newClosing;
+        record.closing = newClosing;
 
-        await record.save();
+        // 3. SAVE: Now the prices are actually inside the 'record' object to be saved
+        await record.save();
 
-        // Check if the item name starts with 'rest' before sending a notification
-        if (record.closing < Number(process.env.LOW_STOCK_THRESHOLD) && !record.item.toLowerCase().startsWith('rest')) {
-            notifyLowStock(record.item, record.closing);
-        }
+        if (record.closing < Number(process.env.LOW_STOCK_THRESHOLD) && !record.item.toLowerCase().startsWith('rest')) {
+            notifyLowStock(record.item, record.closing);
+        }
 
-        await logAction('Inventory Updated', req.user.username, { itemId: record._id, item: record.item, newClosing: record.closing });
-        res.json(record);
+        await logAction('Inventory Updated', req.user.username, { itemId: record._id, item: record.item, newClosing: record.closing });
+        res.json(record);
 
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.get('/inventory',  async (req, res) => {
