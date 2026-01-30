@@ -125,7 +125,7 @@ document.getElementById('edit-inventory-form').addEventListener('submit', submit
 // New function to handle the modal display and population
 function openEditModal(item) {
     // Check permission
-    const allowedToEditInventory = ['Nachwera Richard', 'Nelson', 'Florence'];
+    const allowedToEditInventory = ['admin'];
     if (!allowedToEditInventory.includes(currentUserRole)) {
         showMessage('Permission Denied: You cannot edit inventory items.');
         return;
