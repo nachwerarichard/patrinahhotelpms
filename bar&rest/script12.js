@@ -1591,7 +1591,7 @@ function updateExpensesSearchButton(text, iconClass) {
 }
 
 function updateSearchButton(text, iconClass) {
-    const button = document.getElementById('inventry-search-button');
+    const button = document.getElementById('inventory-search-button');
     if (!button) {
         console.error("Inventory search button not found.");
         return;
