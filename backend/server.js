@@ -2723,34 +2723,45 @@ function getStartAndEndOfDayInUTC(dateString) {
 // --- INVENTORY HELPERS (CORRECTED) ---
 // This helper function correctly finds or creates today's inventory record.
 async function getTodayInventory(itemName, initialOpening = 0) {
-  // Ensure the initial opening value is not negative.
-  initialOpening = Math.max(0, initialOpening);
-  
-  const { utcStart, utcEnd } = getStartAndEndOfDayInUTC(new Date().toISOString().slice(0, 10));
-  
-  // Find a record for today within the correct EAT date range
-  let record = await Inventory.findOne({ item: itemName, date: { $gte: utcStart, $lt: utcEnd } });
+  // Ensure the initial opening value is not negative.
+  initialOpening = Math.max(0, initialOpening);
+  
+  const { utcStart, utcEnd } = getStartAndEndOfDayInUTC(new Date().toISOString().slice(0, 10));
+  
+  // Find a record for today
+  let record = await Inventory.findOne({ item: itemName, date: { $gte: utcStart, $lt: utcEnd } });
 
-  if (!record) {
-    // If no record exists, get yesterday's closing
-    const latest = await Inventory.findOne({ item: itemName }).sort({ date: -1 });
-    const opening = latest ? latest.closing : initialOpening;
-    
-    // Create the new record for today
-    record = await Inventory.create({
-      item: itemName,
-      opening,
-      purchases: 0,
-      sales: 0,
-      spoilage: 0,
-      closing: opening,
-      date: new Date()
-    });
-  }
+  if (!record) {
+    // 1. Get the most recent record for this item (Yesterday or older)
+    const latest = await Inventory.findOne({ item: itemName }).sort({ date: -1 });
+    
+    const opening = latest ? latest.closing : initialOpening;
+    
+    // 2. Carry over the settings and prices
+    // If 'latest' exists, we use its settings. If not, we use defaults.
+    const trackInventory = latest ? latest.trackInventory : true;
+    const buyingprice = latest ? latest.buyingprice : 0;
+    const sellingprice = latest ? latest.sellingprice : 0;
+    
+    // 3. Create the new record for today with carried-over data
+    record = await Inventory.create({
+      item: itemName,
+      opening,
+      purchases: 0,
+      sales: 0,
+      spoilage: 0,
+      closing: opening,
+      trackInventory, // Carry over tracking status
+      buyingprice,    // Carry over prices
+      sellingprice,   // Carry over prices
+      date: new Date()
+    });
+    
+    console.log(`[Inventory] New daily record created for ${itemName}. Tracking: ${trackInventory}`);
+  }
 
-  return record;
+  return record;
 }
-
 // --- 1. Hardcoded User Data (Kept as provided) ---
 
 
@@ -3037,60 +3048,70 @@ app.delete('/inventory/:id', auth,  async (req, res) => {
 });
 
 // --- Sales Endpoints (Corrected) ---
-app.post('/sales', auth,  async (req, res) => {
-  try {
-    const { item, department,number, bp, sp } = req.body;
-    
-    // Input validation
-    if (number < 0) {
-      return res.status(400).json({ error: 'Number of items in a sale cannot be negative.' });
-    }
-    
-    // Check if the sale would result in negative inventory before proceeding.
-    if (item && typeof number === 'number' && number > 0) {
-      const todayInventory = await getTodayInventory(item);
-      // --- Refined Logic: Check against opening + purchases ---
-      const currentAvailableStock = todayInventory.opening + todayInventory.purchases;
-      const newTotalSales = todayInventory.sales + number;
+app.post('/sales', auth, async (req, res) => {
+  try {
+    const { item, department, number, bp, sp } = req.body;
 
-      // MODIFICATION: Check stock level ONLY if the item name does not start with 'rest'.
-      // This allows 'rest' items to be sold even if the total sales exceed available stock.
-      if (newTotalSales > currentAvailableStock && !item.toLowerCase().startsWith('rest')) {
-        return res.status(400).json({ error: `Not enough stock for ${item}. Total sales (${newTotalSales}) cannot exceed available stock (${currentAvailableStock}).` });
-      }
+    // 1. Basic Validation
+    if (!item) return res.status(400).json({ error: 'Item name is required.' });
+    if (number <= 0) return res.status(400).json({ error: 'Sale quantity must be greater than zero.' });
 
-      todayInventory.sales = newTotalSales;
-      todayInventory.closing = currentAvailableStock - todayInventory.sales - todayInventory.spoilage;
-      await todayInventory.save();
+    // 2. Fetch the Inventory record (which now contains trackInventory status)
+    const todayInventory = await getTodayInventory(item);
 
-      console.log(`Inventory updated for "${item}". New closing stock: ${todayInventory.closing}.`);
-      if (todayInventory.closing < Number(process.env.LOW_STOCK_THRESHOLD) && !todayInventory.item.toLowerCase().startsWith('rest')) {
-        notifyLowStock(item, todayInventory.closing);
-      }
-    } else {
-      console.warn("Warning: Sale request missing valid 'item' or 'number' for inventory deduction. Inventory not updated.");
-    }
+    // 3. Dynamic Inventory Logic
+    const currentAvailableStock = todayInventory.opening + todayInventory.purchases;
+    const newTotalSales = todayInventory.sales + number;
 
-    const totalBuyingPrice = bp * number;
-    const totalSellingPrice = sp * number;
-    const profit = totalSellingPrice - totalBuyingPrice;
-    const percentageProfit = totalBuyingPrice !== 0 ? (profit / totalBuyingPrice) * 100 : 0;
-    
-    // Create the sale record after the inventory check
-    const sale = await Sale.create({
-      ...req.body,
-      profit,
-      percentageprofit: percentageProfit,
-      date: new Date()
-    });
+    // CHECK: Only block if tracking is ENABLED for this specific item
+    if (todayInventory.trackInventory && newTotalSales > currentAvailableStock) {
+      return res.status(400).json({ 
+        error: `Insufficient stock for ${item}. available: ${currentAvailableStock - todayInventory.sales}` 
+      });
+    }
 
-    await logAction('Sale Created', req.user.username, { saleId: sale._id, item: sale.item, number: sale.number, sp: sale.sp });
-    res.status(201).json(sale);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    // 4. Update the Inventory counts
+    todayInventory.sales = newTotalSales;
+    
+    // Recalculate closing
+    const calculatedClosing = currentAvailableStock - todayInventory.sales - todayInventory.spoilage;
+    
+    // Safety: If not tracking inventory, don't let the closing stock look negative in reports
+    todayInventory.closing = (!todayInventory.trackInventory && calculatedClosing < 0) ? 0 : calculatedClosing;
+
+    await todayInventory.save();
+
+    // 5. Low Stock Notification (Only if tracked)
+    if (todayInventory.trackInventory && todayInventory.closing < Number(process.env.LOW_STOCK_THRESHOLD)) {
+      notifyLowStock(item, todayInventory.closing);
+    }
+
+    // 6. Financial Calculations
+    const totalBuyingPrice = bp * number;
+    const totalSellingPrice = sp * number;
+    const profit = totalSellingPrice - totalBuyingPrice;
+    const percentageProfit = totalBuyingPrice !== 0 ? (profit / totalBuyingPrice) * 100 : 0;
+
+    // 7. Create the Sale record
+    const sale = await Sale.create({
+      item,
+      department,
+      number,
+      bp,
+      sp,
+      profit,
+      percentageprofit: percentageProfit,
+      date: new Date()
+    });
+
+    await logAction('Sale Created', req.user.username, { saleId: sale._id, item, number });
+    res.status(201).json(sale);
+
+  } catch (err) {
+    console.error('Sale error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
-
 
 
 
