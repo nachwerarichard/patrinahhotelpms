@@ -692,7 +692,6 @@ let inventoryCache = [];
 /**
  * 1. Fetch data from the lookup endpoint using the Base URL
  */
-const API_BASE_URL = 'https://patrinahhotelpms.onrender.com';
 let inventoryCache = [];
 
 async function loadInventory() {
