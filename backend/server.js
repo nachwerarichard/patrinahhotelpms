@@ -2809,7 +2809,7 @@ app.post('/logout', auth, async (req, res) => {
 
 app.post('/inventory', auth,  async (req, res) => {
   try {
-    const { item, opening, purchases = 0, sales = 0, spoilage = 0 } = req.body;
+    const { item, opening, purchases , sales , spoilage,sp,bp  } = req.body;
     
     // Validation to prevent negative values
     if (opening < 0 || purchases < 0 || sales < 0 || spoilage < 0) {
@@ -2861,7 +2861,7 @@ app.put('/inventory/:id', auth, async (req, res) => {
         // to fulfill the request to allow editing of historical data.
 
         // Update fields and recalculate closing stock
-        const { item, opening, purchases, sales, spoilage } = req.body;
+        const { item, opening, purchases, sales, spoilage,sp,bp } = req.body;
         
         // Validation to prevent negative values
         if (
@@ -2945,7 +2945,9 @@ app.get('/inventory',  async (req, res) => {
                         purchases: record.purchases,
                         sales: record.sales,
                         spoilage: record.spoilage,
-                        closing: record.closing
+                        closing: record.closing,
+                        sp:record.sp,
+                        bp:record.bp
                     };
                 } else {
                     // Item had no activity. Find its most recent closing stock before this date.
