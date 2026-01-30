@@ -849,18 +849,18 @@ async function submitInventoryForm(event) {
     const purchases = parseInt(purchasesInput.value);
     const sales = parseInt(inventorySalesInput.value);
     const spoilage = parseInt(spoilageInput.value);
-    const bp = parseInt(buyingpriceInput.value);
-    const sp = parseInt(sellingpriceInput.value);
+    const buyingprice = parseInt(buyingpriceInput.value);
+    const sellingprice = parseInt(sellingpriceInput.value);
 
 
     // ... (Basic validation remains the same) ...
 
-    if (!item || isNaN(sp)) {
+    if (!item || isNaN(sellingprice)) {
         showMessage('Please fill in all inventory fields correctly with valid numbers.');
         return;
     }
 
-    const inventoryData = { item, opening, purchases, sales, spoilage,bp,sp};
+    const inventoryData = { item, opening, purchases, sales, spoilage,buyingprice,sellingprice};
 
     try {
         // 2. Change button text to 'Processing...' and disable it ⏳
