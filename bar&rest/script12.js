@@ -1111,6 +1111,7 @@ function renderSalesTable(sales) {
         }
 
         const row = tbody.insertRow();
+        row.insertCell().textContent = sale.department;
         row.insertCell().textContent = sale.item;
         row.insertCell().textContent = sale.number;
         row.insertCell().textContent = sale.bp;
@@ -1257,6 +1258,7 @@ async function submitSaleForm(event) {
 
     const idInput = document.getElementById('sale-id');
     const itemInput = document.getElementById('sale-item');
+    const departmentInput = document.getElementById('department-item');
     const numberInput = document.getElementById('sale-number');
     const bpInput = document.getElementById('sale-bp');
     const spInput = document.getElementById('sale-sp');
@@ -1269,6 +1271,7 @@ async function submitSaleForm(event) {
 
     const id = idInput.value;
     const item = itemInput.value;
+    const department = departmentInput.value;
     const number = parseInt(numberInput.value);
     const bp = parseFloat(bpInput.value);
     const sp = parseFloat(spInput.value);
@@ -1292,6 +1295,7 @@ async function submitSaleForm(event) {
     }
 
     const saleData = {
+        department,
         item,
         number,
         bp,
