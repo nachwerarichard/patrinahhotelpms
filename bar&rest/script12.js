@@ -543,19 +543,15 @@ async function fetchInventory() {
     updateSearchButton('Searching', 'fas fa-spinner fa-spin'); 
 
     try {
-        // ... (Filter logic remains the same) ...
         const itemFilterInput = document.getElementById('search-inventory-item');
-        // ... (other filter inputs) ...
         const dateFilterInput = document.getElementById('search-inventory-date');
         
         const itemFilter = itemFilterInput ? itemFilterInput.value : '';
-        // ... (other filter values) ...
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
 
         let url = `${API_BASE_URL}/inventory`;
         const params = new URLSearchParams();
         if (itemFilter) params.append('item', itemFilter);
-        // ... (append other params) ...
         if (dateFilter) params.append('date', dateFilter); 
         
         if (!dateFilter) {
@@ -565,36 +561,27 @@ async function fetchInventory() {
 
         url += `?${params.toString()}`;
 
-        // ----------------------------------------------------
         // Step 1: Execute fetch
         const response = await authenticatedFetch(url);
-        // ----------------------------------------------------
 
         if (!response) {
-            // This handles cases where authenticatedFetch explicitly returns null or undefined
-            // (though your provided code returns an object, keeping this as a safeguard)
             updateSearchButton('Search', 'fas fa-search');
             return;
         }
 
-        // ----------------------------------------------------------------------------------
-        // >> CRITICAL FIX HERE: Check for .ok (Handles 401/403 forced logout) <<
-        // If authenticatedFetch returned the custom error object { ok: false, status: 401 },
-        // this check is TRUE and we skip response.json().
-        // ----------------------------------------------------------------------------------
+        // Check for .ok (Handles 401/403 forced logout)
         if (response.ok === false) { 
             console.log(`Inventory fetch aborted due to status: ${response.status}. Session handled.`);
             updateSearchButton('Search', 'fas fa-search');
-            return; // STOP EXECUTION
+            return; 
         }
         
-        // Step 2: Safely call .json() because the token was valid (or logout was handled)
+        // Step 2: Parse JSON
         const result = await response.json(); 
 
-        // ----------------------------------------------------
-
-        // ... (Rest of the success logic remains the same) ...
-          let inventoryData; // Name the variable here        if (dateFilter) {
+        // Step 3: Handle Data Assignment
+        let inventoryData; 
+        if (dateFilter) {
             inventoryData = result.report;
             renderPagination(1, 1);
         } else {
@@ -602,12 +589,12 @@ async function fetchInventory() {
             renderPagination(result.page, result.pages);
         }
         
+        // Render the table
         renderInventoryTable(inventoryData);
 
-        // 2. Change button text to 'Done' after successful display
+        // 2. Success UI Updates
         updateSearchButton('Done', 'fas fa-check');
 
-        // 3. Set a timeout to revert the button text back to 'Search' after 2 seconds
         setTimeout(() => {
             updateSearchButton('Search', 'fas fa-search');
         }, 2000); 
@@ -615,8 +602,6 @@ async function fetchInventory() {
     } catch (error) {
         console.error('Error fetching inventory:', error);
         showMessage('Failed to fetch inventory: ' + error.message);
-        
-        // Ensure the button is reverted to 'Search' on error
         updateSearchButton('Search', 'fas fa-search');
     }
 }
