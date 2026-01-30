@@ -717,30 +717,31 @@ function populateDatalist(items) {
 // Use the 'input' event for immediate population
 document.getElementById('sale-item').addEventListener('input', function(e) {
     const selectedItemName = e.target.value.trim();
-    
-    // Case-insensitive search to be safe
     const itemData = inventoryCache.find(inv => 
         inv.item && inv.item.toLowerCase() === selectedItemName.toLowerCase()
     );
     
     if (itemData) {
-        // Log to see exactly what keys we have
-        console.log("Found Item Data:", itemData);
+        // This will show a table in your F12 Console so you can see the exact names
+        console.table(itemData); 
 
-        // Target the inputs
-        const bpInput = document.getElementById('sale-bp');
-        const spInput = document.getElementById('sale-sp');
+        // 1. Set Buying Price
+        document.getElementById('sale-bp').value = itemData.buyingprice || itemData.buyingPrice || 0;
 
-        // Populate using all possible naming conventions
-        if (bpInput) {
-            bpInput.value = itemData.buyingprice ?? itemData.buyingPrice ?? 0;
-        }
+        // 2. Set Selling Price - We check every possible typo
+        const spValue = itemData.sellingprice || 
+                        itemData.sellingPrice || 
+                        itemData.sp || 
+                        itemData.SellingPrice || 0;
         
-        if (spInput) {
-            // This is the line that was likely failing
-            spInput.value = itemData.sellingprice ?? itemData.sellingPrice ?? 0;
+        document.getElementById('sale-sp').value = spValue;
+
+        // If it's still 0, let's see why
+        if (!spValue) {
+            console.warn("Found the item, but no selling price field exists in the data for:", selectedItemName);
         }
     }
-});
+});  // Case-insensitive search to be safe
+
 
 window.addEventListener('DOMContentLoaded', loadInventory);
