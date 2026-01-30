@@ -1602,6 +1602,37 @@ function updateExpensesSearchButton(text, iconClass) {
         button.classList.remove('opacity-75', 'cursor-not-allowed');
     }
 }
+
+function updateSearchButton(text, iconClass) {
+    const button = document.getElementById('inventry-search-button');
+    if (!button) {
+        console.error("Inventory search button not found.");
+        return;
+    }
+
+    const iconElement = button.querySelector('i');
+    const textElement = button.querySelector('#inventory-search-button-text');
+
+    if (iconElement) {
+        // Clear old classes and apply new ones for the icon
+        iconElement.className = '';
+        iconElement.className = iconClass;
+    }
+
+    if (textElement) {
+        textElement.textContent = text;
+    }
+
+    // Disable the button while searching to prevent multiple requests
+    if (text === 'Searching') {
+        button.disabled = true;
+        button.classList.add('opacity-75', 'cursor-not-allowed');
+    } else {
+        button.disabled = false;
+        button.classList.remove('opacity-75', 'cursor-not-allowed');
+    }
+}
+
 function renderExpensesPagination(current, totalPages) {
     const container = document.getElementById('expenses-pagination');
     if (!container) return;
