@@ -194,11 +194,13 @@ async function submitEditForm(event) {
   const purchases = parseInt(purchasesInput.value, 10);
   const sales = parseInt(salesInput.value, 10);
   const spoilage = parseInt(spoilageInput.value, 10);
+  const sellingprice = parseInt(sellingpriceInput.value, 10);
+  const buyingprice = parseInt(buyingpriceInput.value, 10);
 
-  console.log('[debug] parsed values', { id, item, opening, purchases, sales, spoilage });
 
-  if (isNaN(opening) || isNaN(purchases) || isNaN(sales) || isNaN(spoilage) ||
-      opening < 0 || purchases < 0 || sales < 0 || spoilage < 0) {
+  console.log('[debug] parsed values', { id, item, opening, purchases, sales, spoilage,sellingprice,buyingprice });
+
+  if (isNaN(item) || isNaN(sellingprice) || isNaN(buyingprice)) {
     console.error('[debug] validation failed: numeric fields invalid');
     showMessage('All numerical fields must be valid non-negative numbers.', true);
     setEditInventoryLoading(false);
