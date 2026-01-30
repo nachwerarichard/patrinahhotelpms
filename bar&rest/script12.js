@@ -831,6 +831,10 @@ async function submitInventoryForm(event) {
     const purchasesInput = document.getElementById('purchases');
     const inventorySalesInput = document.getElementById('inventory-sales');
     const spoilageInput = document.getElementById('spoilage');
+    const buyingpriceInput = document.getElementById('buyingprice');
+    const sellingpriceInput = document.getElementById('sellingprice');
+
+
 
     // ... (Basic check for form elements remains the same) ...
 
@@ -845,6 +849,9 @@ async function submitInventoryForm(event) {
     const purchases = parseInt(purchasesInput.value);
     const sales = parseInt(inventorySalesInput.value);
     const spoilage = parseInt(spoilageInput.value);
+    const bp = parseInt(buyingpriceInput.value);
+    const sp = parseInt(sellingpriceInput.value);
+
 
     // ... (Basic validation remains the same) ...
 
@@ -853,7 +860,7 @@ async function submitInventoryForm(event) {
         return;
     }
 
-    const inventoryData = { item, opening, purchases, sales, spoilage };
+    const inventoryData = { item, opening, purchases, sales, spoilage,bp,sp};
 
     try {
         // 2. Change button text to 'Processing...' and disable it ⏳
