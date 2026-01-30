@@ -594,7 +594,7 @@ async function fetchInventory() {
         // ----------------------------------------------------
 
         // ... (Rest of the success logic remains the same) ...
-        let inventoryData;
+        let ;
         if (dateFilter) {
             inventoryData = result.report;
             renderPagination(1, 1);
