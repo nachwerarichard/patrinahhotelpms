@@ -879,7 +879,7 @@ async function submitInventoryForm(event) {
 
         if (id && id !== '') {
             // Edit operation (PUT)
-            const allowedToEditInventory = ['admin'];
+            const allowedToEditInventory = 'admin';
             if (!allowedToEditInventory.includes(currentUserRole)) {
                 showMessage('Permission Denied: Only administrators can edit inventory.');
                 // 3a. Revert button and enable it immediately on permission failure
