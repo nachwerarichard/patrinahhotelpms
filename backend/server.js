@@ -2827,6 +2827,25 @@ app.post('/logout', auth, async (req, res) => {
 
 // --- Inventory Endpoints (Corrected) ---
 
+// Specific endpoint for the sales form dropdown
+app.get('/inventory/lookup', async (req, res) => {
+    try {
+        // Gets unique items with their most recent prices
+        const items = await Inventory.aggregate([
+            { $sort: { date: -1 } },
+            { $group: {
+                _id: "$item",
+                buyingprice: { $first: "$buyingprice" },
+                sellingprice: { $first: "$sellingprice" },
+                item: { $first: "$item" }
+            }}
+        ]);
+        res.json(items);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/inventory', auth, async (req, res) => {
   try {
     const { item, opening, purchases, sales, spoilage, sellingprice, buyingprice, trackInventory } = req.body;
