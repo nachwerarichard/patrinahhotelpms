@@ -837,6 +837,7 @@ async function submitInventoryForm(event) {
     const spoilageInput = document.getElementById('spoilage');
     const buyingpriceInput = document.getElementById('buyingprice');
     const sellingpriceInput = document.getElementById('sellingprice');
+    const trackInventoryInput = document.getElementById('trackInventory');
 
 
 
@@ -855,16 +856,15 @@ async function submitInventoryForm(event) {
     const spoilage = parseInt(spoilageInput.value);
     const buyingprice = parseInt(buyingpriceInput.value);
     const sellingprice = parseInt(sellingpriceInput.value);
-
-
+    const trackInventory = trackInventoryInput.checked;
     // ... (Basic validation remains the same) ...
 
-    if (!item || isNaN(sellingprice)) {
+    if (!item || isNaN(sellingprice)|| !trackInventoryInput) {
         showMessage('Please fill in all inventory fields correctly with valid numbers.');
         return;
     }
 
-    const inventoryData = { item, opening, purchases, sales, spoilage,buyingprice,sellingprice};
+    const inventoryData = { item, opening, purchases, sales, spoilage,buyingprice,sellingprice,trackInventory };
 
     try {
         // 2. Change button text to 'Processing...' and disable it ⏳
