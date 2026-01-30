@@ -2139,7 +2139,7 @@ async function submitEditCashForm(event) {
     // Target the new modal input IDs
     const idInput = document.getElementById('edit-cash-id');
     const cashAtHandInput = document.getElementById('edit-cash-at-hand');
-    const cashAtHandInput = document.getElementById('edit-cash-on-phone');
+    const cashOnPhoneInput = document.getElementById('edit-cash-on-phone');
     const cashBankedInput = document.getElementById('edit-cash-banked');
     const bankReceiptIdInput = document.getElementById('edit-bank-receipt-id');
     const cashDateInput = document.getElementById('edit-cash-date');
