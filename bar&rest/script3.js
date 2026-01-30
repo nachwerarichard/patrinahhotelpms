@@ -201,7 +201,8 @@ async function submitEditForm(event) {
   console.log('[debug] parsed values', { id, item, opening, purchases, sales, spoilage,sellingprice,buyingprice });
 
   const currentStock = opening + purchases - sales - spoilage;
-  const inventoryData = { item, opening, purchases, sales, spoilage, currentStock };
+  const inventoryData = { item, opening, purchases, sales, spoilage, currentStock,sellingprice, 
+  buyingprice, };
 
   try {
     console.log('[debug] starting fetch to', `${API_BASE_URL}/inventory/${id}`, 'with', inventoryData);
