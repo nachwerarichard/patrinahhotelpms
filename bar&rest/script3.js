@@ -221,7 +221,23 @@ async function submitEditForm(event) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(inventoryData)
     });
+       if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Server responded with ${response.status}`);
+    }
 
+    showMessage('Inventory item updated successfully! 🎉');
+    setTimeout(() => {
+      setEditInventoryLoading(false);
+      document.getElementById('edit-inventory-modal').classList.add('hidden');
+      fetchInventory();
+    }, 1000);
+  } catch (err) {
+    console.error('Error updating inventory:', err);
+    showMessage(`Failed to update: ${err.message}`, true);
+    setEditInventoryLoading(false);
+  }
+}
     // ... rest of the function (success handling, modal closing, etc.) remains the same ...
 // ----- Debuggable loader toggle -----
 function setEditInventoryLoading(isLoading) {
