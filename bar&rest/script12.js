@@ -878,7 +878,15 @@ async function submitInventoryForm(event) {
         // ... (API logic remains the same) ...
 
         if (id && id !== '') {
-            
+            // Edit operation (PUT)
+            const allowedToEditInventory = 'admin';
+            if (!allowedToEditInventory.includes(currentUserRole)) {
+                showMessage('Permission Denied: Only administrators can edit inventory.');
+                // 3a. Revert button and enable it immediately on permission failure
+                submitTextSpan.textContent = originalButtonText;
+                if (submitIcon) submitIcon.className = originalIconClass;
+                submitButton.disabled = false;
+                return;
             }
             response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
                 method: 'PUT',
