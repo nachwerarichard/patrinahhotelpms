@@ -1092,21 +1092,17 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
     <h2 class="text-xl font-bold text-emerald-600 mb-4">Edit Sale Record</h2>
     <form id="edit-sale-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <input type="hidden" id="edit-sale-id">
-      <div>
+       <div>
   <label for="department-item" class="block text-sm font-medium text-gray-700">Department:</label>
-  <input 
-    type="text" 
+  <select 
     id="department-item" 
-    list="department-options" 
     required 
-    class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-    placeholder="Select or type a department..."
+    class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 bg-white"
   >
-  
-  <datalist id="department-options">
-    <option value="Bar">
-    <option value="Restaurant">
-  </datalist>
+    <option value="" disabled selected>Select a department...</option>
+    <option value="Bar">Bar</option>
+    <option value="Restaurant">Restaurant</option>
+     </select>
 </div>
       <div>
         <label class="block text-sm font-medium text-gray-700">Item:</label>
