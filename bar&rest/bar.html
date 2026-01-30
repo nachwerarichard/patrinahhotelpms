@@ -457,41 +457,57 @@
         <section id="inventory-add" class="section bg-white p-6 rounded-xl shadow-lg mb-6 section-content">
           <h3 class="text-xl font-medium mb-3 border-b pb-2">Add Inventory Item</h3>
           <form id="inventory-form" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 p-4 border rounded-lg bg-gray-50">
-            <input type="hidden" id="inventory-id">
-            <div>
-              <label for="item" class="block text-sm font-medium text-gray-700">Item:</label>
-              <input type="text" id="item" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
-            </div>
-            <div>
-              <label for="opening" class="block text-sm font-medium text-gray-700">Opening Stock:</label>
-              <input type="number" id="opening" min="0"  class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
-            </div>
-            <div>
-              <label for="purchases" class="block text-sm font-medium text-gray-700">Purchases:</label>
-              <input type="number" id="purchases" min="0"  class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
-            </div>
-            <div>
-              <label for="inventory-sales" class="block text-sm font-medium text-gray-700">Sales :</label>
-              <input type="number" id="inventory-sales" min="0"  class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
-            </div>
-            <div>
-              <label for="spoilage" class="block text-sm font-medium text-gray-700">Spoilage:</label>
-              <input type="number" id="spoilage" min="0"  class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
-            </div>
-            <div>
-              <label for="spoilage" class="block text-sm font-medium text-gray-700">Buying Price:</label>
-              <input type="number" id="buyingprice" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
-            </div>
-            <div>
-              <label for="spoilage" class="block text-sm font-medium text-gray-700">Selling Price:</label>
-              <input type="number" id="sellingprice" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
-            </div>
-            <div class="md:col-span-2 flex justify-end pt-4">
-              <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 flex items-center space-x-2">
-  <i class="fas fa-save"></i> <span id="inventory-submit-text">Save Inventory</span>
-</button>
-            </div>
-          </form>
+  <input type="hidden" id="inventory-id">
+  
+  <div>
+    <label for="item" class="block text-sm font-medium text-gray-700">Item:</label>
+    <input type="text" id="item" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+  </div>
+
+  <div>
+    <label for="opening" class="block text-sm font-medium text-gray-700">Opening Stock:</label>
+    <input type="number" id="opening" min="0" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+  </div>
+
+  <div>
+    <label for="purchases" class="block text-sm font-medium text-gray-700">Purchases:</label>
+    <input type="number" id="purchases" min="0" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+  </div>
+
+  <div>
+    <label for="inventory-sales" class="block text-sm font-medium text-gray-700">Sales:</label>
+    <input type="number" id="inventory-sales" min="0" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+  </div>
+
+  <div>
+    <label for="spoilage" class="block text-sm font-medium text-gray-700">Spoilage:</label>
+    <input type="number" id="spoilage" min="0" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+  </div>
+
+  <div>
+    <label for="buyingprice" class="block text-sm font-medium text-gray-700">Buying Price:</label>
+    <input type="number" id="buyingprice" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+  </div>
+
+  <div>
+    <label for="sellingprice" class="block text-sm font-medium text-gray-700">Selling Price:</label>
+    <input type="number" id="sellingprice" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+  </div>
+
+  <div class="flex items-center space-x-3 pt-6">
+    <input type="checkbox" id="trackInventory" checked class="h-5 w-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500">
+    <label for="trackInventory" class="text-sm font-medium text-gray-700">
+      Track Stock Levels <span class="text-xs text-gray-500 font-normal">(Disable for Kitchen/Restaurant items)</span>
+    </label>
+  </div>
+
+  <div class="md:col-span-2 flex justify-end pt-4">
+    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 flex items-center space-x-2">
+      <i class="fas fa-save"></i> 
+      <span id="inventory-submit-text">Save Inventory</span>
+    </button>
+  </div>
+</form>
         </section>
 
         <section id="inventory-records" class="section bg-white p-6 rounded-xl shadow-lg mb-6">
