@@ -711,14 +711,14 @@ function renderInventoryTable(inventory) {
 
     // Filter to include only items where the 'item' name starts with 'bar' (case-insensitive)
     const filteredInventory = inventory.filter(item =>
-        item.item.toLowerCase().startsWith('bar')
+        item.item.toLowerCase()
     );
 
     if (filteredInventory.length === 0) {
         const row = tbody.insertRow();
         const cell = row.insertCell();
         cell.colSpan = 7;
-        cell.textContent = 'No inventory items starting with "bar" were found.';
+        cell.textContent = 'No inventory items  found.';
         cell.style.textAlign = 'center';
         return;
     }
