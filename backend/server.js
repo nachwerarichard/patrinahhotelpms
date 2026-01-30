@@ -2831,13 +2831,19 @@ app.post('/logout', auth, async (req, res) => {
 app.get('/inventory/lookup', async (req, res) => {
     try {
         const items = await Inventory.aggregate([
+            // 1. Sort by date so we get newest first
             { $sort: { date: -1 } },
+            // 2. Group by item name
             { $group: {
                 _id: "$item",
                 item: { $first: "$item" },
+                // Use $max or $first, but we ensure we handle the field name
                 buyingprice: { $first: "$buyingprice" },
-                // Explicitly ensuring this is named 'sellingprice'
-                sellingprice: { $first: "$sellingprice" } 
+                sellingprice: { $first: "$sellingprice" }
+            }},
+            // 3. Optional: Filter out any items that don't have prices yet
+            { $match: { 
+                sellingprice: { $exists: true, $gt: 0 } 
             }}
         ]);
         res.json(items);
@@ -2845,6 +2851,7 @@ app.get('/inventory/lookup', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
 app.post('/inventory', auth, async (req, res) => {
   try {
     const { item, opening, purchases, sales, spoilage, sellingprice, buyingprice, trackInventory } = req.body;
