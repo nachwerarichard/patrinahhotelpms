@@ -127,7 +127,7 @@ function setEditInventoryLoading(isLoading) {
 
 
 function closeEditModal() {
-  document.getElementById('edit-inventory-modal').style.display = 'none';
+  document.getElementById('edit-inventory-modal').classList.add('hidden');
 }
 
 
