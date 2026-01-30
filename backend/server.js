@@ -3007,7 +3007,7 @@ app.delete('/inventory/:id', auth,  async (req, res) => {
 // --- Sales Endpoints (Corrected) ---
 app.post('/sales', auth,  async (req, res) => {
   try {
-    const { item, number, bp, sp } = req.body;
+    const { item, department,number, bp, sp } = req.body;
     
     // Input validation
     if (number < 0) {
