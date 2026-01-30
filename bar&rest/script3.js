@@ -200,13 +200,6 @@ async function submitEditForm(event) {
 
   console.log('[debug] parsed values', { id, item, opening, purchases, sales, spoilage,sellingprice,buyingprice });
 
-  if (isNaN(item) || isNaN(sellingprice) || isNaN(buyingprice)) {
-    console.error('[debug] validation failed: numeric fields invalid');
-    showMessage('All numerical fields must be valid non-negative numbers.', true);
-    setEditInventoryLoading(false);
-    return;
-  }
-
   const currentStock = opening + purchases - sales - spoilage;
   const inventoryData = { item, opening, purchases, sales, spoilage, currentStock };
 
