@@ -725,19 +725,16 @@ function populateDatalist(items) {
  */
 document.getElementById('sale-item').addEventListener('input', function(e) {
     const selectedItemName = e.target.value;
-    
-    // Find matching item
     const itemData = inventoryCache.find(inv => inv.item === selectedItemName);
     
     if (itemData) {
-        console.log("Item found:", itemData); // DEBUG: Check this in your browser console (F12)
+        console.log("Fetched Item:", itemData); // IMPORTANT: Check this in F12 console
 
-        // 1. Update Buying Price (checking both possible names)
-        const bp = itemData.buyingprice ?? itemData.buyingPrice ?? 0;
+        // Check for both lowercase and camelCase just in case
+        const bp = itemData.buyingprice || itemData.buyingPrice || 0;
+        const sp = itemData.sellingprice || itemData.sellingPrice || 0;
+
         document.getElementById('sale-bp').value = bp;
-
-        // 2. Update Selling Price (checking both possible names)
-        const sp = itemData.sellingprice ?? itemData.sellingPrice ?? 0;
         document.getElementById('sale-sp').value = sp;
     }
 });
