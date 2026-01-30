@@ -687,23 +687,30 @@ async function submitCashJournalForm(event) {
     }
 }
 
-// Store inventory data globally for quick access
+const API_BASE_URL = 'https://patrinahhotelpms.onrender.com';
 let inventoryCache = [];
 
-// 1. Fetch data from your /inventory endpoint
+/**
+ * 1. Fetch data from the lookup endpoint using the Base URL
+ */
 async function loadInventory() {
     try {
-        const response = await fetch('/inventory?limit=1000'); // Adjust limit as needed
-        const result = await response.json();
-        // Accessing result.data based on your Express route structure
-        inventoryCache = result.data || []; 
+        // Correctly joining the base URL with the endpoint
+        const response = await fetch(`${API_BASE_URL}/inventory/lookup`); 
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        const items = await response.json();
+        inventoryCache = items; 
+        
         populateDatalist(inventoryCache);
     } catch (err) {
         console.error('Error loading inventory:', err);
     }
 }
 
-// 2. Fill the datalist options
+/**
+ * 2. Fill the datalist options
+ */
 function populateDatalist(items) {
     const datalist = document.getElementById('item-suggestions');
     datalist.innerHTML = items
@@ -711,22 +718,30 @@ function populateDatalist(items) {
         .join('');
 }
 
-// 3. Listen for selection to populate BP and SP
+/**
+ * 3. Populate BP and SP when an item is selected
+ */
 document.getElementById('sale-item').addEventListener('input', function(e) {
     const selectedItemName = e.target.value;
     
-    // Find the item in our cache
+    // Find matching item in our cached array
     const itemData = inventoryCache.find(inv => inv.item === selectedItemName);
     
     if (itemData) {
-        // Populate the fields
         document.getElementById('sale-bp').value = itemData.buyingprice || 0;
         document.getElementById('sale-sp').value = itemData.sellingprice || 0;
-        
-        // Optional: Update department if tracked in DB
-        // document.getElementById('department-item').value = itemData.department;
     }
 });
 
-// Initialize on page load
+/**
+ * 4. (Bonus) Clear prices if the user clears the item name
+ */
+document.getElementById('sale-item').addEventListener('change', function(e) {
+    if (!e.target.value) {
+        document.getElementById('sale-bp').value = '';
+        document.getElementById('sale-sp').value = '';
+    }
+});
+
+// Initialize
 window.addEventListener('DOMContentLoaded', loadInventory);
