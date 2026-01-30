@@ -1,4 +1,65 @@
+    // New function to handle the modal display and population
+// New function to handle the modal display and population
+function openEditModal(item) {
+    // Check permission
+    const allowedToEditInventory = ['admin'];
+    if (!allowedToEditInventory.includes(currentUserRole)) {
+        showMessage('Permission Denied: You cannot edit inventory items.');
+        return;
+    }
 
+    // --- ADDED VALIDATION HERE ---
+    if (!item || !item._id) {
+        showMessage('Error: Inventory item data is missing or invalid.');
+        return;
+    }
+
+    // Get the modal and form elements
+    const modal = document.getElementById('edit-inventory-modal');
+    const idInput = document.getElementById('edit-inventory-id');
+    const itemInput = document.getElementById('edit-item');
+    const openingInput = document.getElementById('edit-opening');
+    const purchasesInput = document.getElementById('edit-purchases');
+    const salesInput = document.getElementById('edit-inventory-sales');
+    const spoilageInput = document.getElementById('edit-spoilage');
+      const buyingpriceInput = document.getElementById('edit-buyingprice');
+      const sellingpriceInput = document.getElementById('edit-sellingprice');
+
+
+
+    // Populate the form with the item's data
+    idInput.value = item._id;
+    itemInput.value = item.item;
+    openingInput.value = item.opening;
+    purchasesInput.value = item.purchases;
+    salesInput.value = item.sales;
+    spoilageInput.value = item.spoilage;
+    sellingpriceInput.value = item.sp;
+    buyingpriceInput.value = item.bp;
+
+
+
+    // Show the modal
+    modal.style.display = 'flex'; // Use 'flex' here if that's what your CSS expects for centering
+}
+        
+// New function to handle the form submission for the modal
+/**
+ * Manages the loading state of the Edit Inventory button.
+ * @param {boolean} isLoading - True to show the 'Saving...' state, false to show 'Save Changes'.
+ */
+
+
+
+/**
+ * Manages the loading state of the Edit Inventory button.
+ * @param {boolean} isLoading - True to show the 'Saving...' state, false to show 'Save Changes'.
+ */
+
+/**
+ * Manages the loading state of the Edit Inventory button.
+ * @param {boolean} isLoading - True to show the 'Saving...' state, false to show 'Save Changes'.
+ */
 async function submitEditForm(event) {
   event.preventDefault();
 
@@ -69,12 +130,6 @@ function closeEditModal() {
   document.getElementById('edit-inventory-modal').style.display = 'none';
 }
 
-window.addEventListener('click', function(event) {
-  const modal = document.getElementById('edit-inventory-modal');
-  if (event.target === modal) {
-    closeEditModal();
-  }
-});
 
 // Add an event listener to the new edit form
 document.getElementById('edit-inventory-form').addEventListener('submit', submitEditForm);
@@ -82,7 +137,7 @@ document.getElementById('edit-inventory-form').addEventListener('submit', submit
 // New function to handle the modal display and population
 function openEditModal(item) {
     // Check permission
-    const allowedToEditInventory = ['admin '];
+    const allowedToEditInventory = ['admin'];
     if (!allowedToEditInventory.includes(currentUserRole)) {
         showMessage('Permission Denied: You cannot edit inventory items.');
         return;
