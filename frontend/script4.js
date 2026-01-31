@@ -1370,7 +1370,7 @@ document.getElementById('balance').value = booking.balance || 0;
 // --- Status & Methods ---
 document.getElementById('paymentStatus').value = booking.paymentStatus || 'Pending';
 document.getElementById('paymentMethod').value = booking.paymentMethod || 'Cash';
-document.getElementById('guestsource').value = booking.guestsource || 'walk in';
+document.getElementById('guestsource').value = booking.guestsource || 'Walk in';
 document.getElementById('gueststatus').value = booking.gueststatus || 'confirmed';
 document.getElementById('transactionid').value = booking.transactionid || '';
 
@@ -1436,7 +1436,7 @@ document.getElementById('balance').value = booking.balance || 0;
 // --- Status & Methods ---
 document.getElementById('paymentStatus').value = booking.paymentStatus || 'Pending';
 document.getElementById('paymentMethod').value = booking.paymentMethod || 'Cash';
-document.getElementById('guestsource').value = booking.guestsource || 'walk in';
+document.getElementById('guestsource').value = booking.guestsource || 'Walk in';
 document.getElementById('gueststatus').value = booking.gueststatus || 'confirmed';
 document.getElementById('transactionid').value = booking.transactionid || '';
 
