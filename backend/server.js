@@ -3008,7 +3008,7 @@ app.get('/inventory', async (req, res) => {
         itemNames = await Inventory.distinct('item');
     }
 
-    const dailyRecords = await Inventory.find({
+           const dailyRecords = await Inventory.find({
         date: { $gte: utcStart, $lt: utcEnd },
         ...(item && { item: new RegExp(item, 'i') }) // Filter by item if name exists
     });
@@ -3016,17 +3016,27 @@ app.get('/inventory', async (req, res) => {
     const recordsMap = new Map();
     dailyRecords.forEach(record => recordsMap.set(record.item, record));
 
-    const report = await Promise.all(itemNames.map(async (singleItem) => {
-        const record = recordsMap.get(singleItem);
-        if (record) return record;
-
-        // Fallback: What was the stock of this specific item before this date?
-        return await Inventory.findOne({
-            item: singleItem,
-            date: { $lt: utcStart }
-        }).sort({ date: -1 }) || { item: singleItem, opening: 0, closing: 0, purchases: 0, sales: 0 };
-    }));
+const report = await Promise.all(itemNames.map(async (singleItem) => {
+    const record = recordsMap.get(singleItem);
     
+    // If the record exists and is NOT tracked, force closing to 0
+    if (record) {
+        if (record.trackInventory === false) record.closing = 0; 
+        return record;
+    }
+
+    // Fallback logic
+    const lastRecord = await Inventory.findOne({
+        item: singleItem,
+        date: { $lt: utcStart }
+    }).sort({ date: -1 });
+
+    const result = lastRecord || { item: singleItem, opening: 0, closing: 0, purchases: 0, sales: 0, trackInventory: true };
+    
+    // Force zero if not tracked
+    if (result.trackInventory === false) result.closing = 0;
+    return result;
+}));
     return res.json({ date, report });
 }
 
