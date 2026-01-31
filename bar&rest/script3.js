@@ -492,7 +492,7 @@ async function submitEditSaleForm(event) {
         if (response.ok) {
             // Optional: If the API returns a success message object, you can read it here:
             // const result = await response.json(); 
-            
+            document.getElementById("edit-sale-modal").style.display="none";
             showMessage('Sale Updated Successfully! ✅');
             
             // 10. Success actions: Delay, reset, close modal, and refresh table data
