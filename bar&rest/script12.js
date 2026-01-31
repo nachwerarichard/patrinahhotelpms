@@ -999,21 +999,39 @@ async function submitInventoryForm(event) {
  */
 async function createNewItem() {
     if (!['admin', 'manager', 'cashier', 'bar'].includes(currentUserRole)) {
-        return showMessage('Permission Denied to add inventory.');
+        return showMessage('Permission Denied', 'You do not have permission to add inventory.', true);
     }
 
     const data = getInventoryFormData();
+    const inventoryForm = document.getElementById('inventory-form');
+
     try {
         setLoadingState(true);
         const response = await authenticatedFetch(`${API_BASE_URL}/inventory`, {
             method: 'POST',
             body: JSON.stringify(data)
         });
+
         if (response.ok) {
-            showMessage('Item Added! ✅');
+            // 1. Clear the form fields
+            if (inventoryForm) inventoryForm.reset();
+
+            // 2. Clear the hidden ID field (important for switching between edit/create)
+            const idField = document.getElementById('inventory-id');
+            if (idField) idField.value = '';
+
+            // 3. Show success message
+            showMessage('Success', 'Item Added successfully! ✅', false);
+
+            // 4. Refresh the table to show the new item
+            fetchInventory(); 
+        } else {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to save item');
         }
     } catch (error) {
-        showMessage(error);
+        console.error('Create Error:', error);
+        showMessage('Error', error.message, true);
     } finally {
         setLoadingState(false);
     }
