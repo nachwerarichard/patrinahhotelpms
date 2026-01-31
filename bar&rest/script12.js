@@ -2283,36 +2283,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 function populateEditCashModal(record) {
-    // 1. Target the main modal container, which has the ID 'edit-cash-modal'
-    const modal = document.getElementById('edit-cash-modal'); 
+    console.log("Editing Cash Record:", record);
 
-    // 2. Update the IDs to match the input fields in your HTML for the edit modal
-    const idInput = document.getElementById('edit-cash-id'); 
-    const cashBankedInput = document.getElementById('edit-cash-banked');
-    const bankReceiptIdInput = document.getElementById('edit-bank-receipt-id');
-    const cashOnPhoneInput = document.getElementById('edit-cash-on-phone');
-    const cashDateInput = document.getElementById('edit-cash-date');
+    const modal = document.getElementById('edit-cash-modal');
+    if (!modal) {
+        console.error("Modal 'edit-cash-modal' not found in HTML");
+        return;
+    }
 
-    // Populate the form fields
-    if (idInput) idInput.value = record._id;
-    if (cashAtHandInput) cashAtHandInput.value = record.cashAtHand;
-    if (cashBankedInput) cashBankedInput.value = record.cashBanked;
-    if (cashOnPhoneInput) cashOnPhoneInput.value = record.cashOnPhone;
-    if (bankReceiptIdInput) bankReceiptIdInput.value = record.bankReceiptId;
-    // Format the date if it exists
-    if (cashDateInput && record.date) {
-        cashDateInput.value = new Date(record.date).toISOString().split('T')[0];
+    // TARGET THE IDs EXACTLY AS THEY ARE IN YOUR HTML
+    document.getElementById('edit-cash-id').value = record._id || '';
+    document.getElementById('edit-cash-at-hand').value = record.cashAtHand || 0;
+    document.getElementById('edit-cash-banked').value = record.cashBanked || 0;
+    document.getElementById('edit-cash-on-phone').value = record.cashOnPhone || 0;
+    document.getElementById('edit-bank-receipt-id').value = record.bankReceiptId || '';
+
+    // Handle the Date field (YYYY-MM-DD format is required for <input type="date">)
+    if (record.date) {
+        const dateObj = new Date(record.date);
+        const formattedDate = dateObj.toISOString().split('T')[0];
+        document.getElementById('edit-cash-date').value = formattedDate;
     }
-    
-    // 3. Display the modal by removing the 'hidden' class 
-    // (since your HTML uses `class="hidden fixed inset-0..."`)
-    if (modal) {
-        modal.classList.remove('hidden');
-        // You might also want to ensure 'flex' is present if you removed it manually
-        // e.g., modal.classList.add('flex');
-    }
+
+    // Show the modal
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
 }
-
 // --- Reports Functions ---
 async function generateReports() {
     // 1. Get the button and set it to 'searching' state
