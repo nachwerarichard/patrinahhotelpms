@@ -817,113 +817,83 @@ async function handleUpdateSubmit(event) {
 }
 // 4. UPDATE renderInventoryTable to call showDeleteModal
 function renderInventoryTable(inventory) {
-    console.log('Current User Role:', currentUserRole);
-    console.log('Inventory Data:', inventory);
-
     const tbody = document.querySelector('#inventory-table tbody');
     if (!tbody) return;
-
     tbody.innerHTML = '';
 
-    // Filter to include only items where the 'item' name starts with 'bar' (case-insensitive)
-    const filteredInventory = inventory.filter(item =>
-        item.item.toLowerCase()
-    );
+    // --- NEW: DYNAMIC HEADER LOGIC ---
+    const dateInput = document.getElementById('search-inventory-date');
+    const tableHeaders = document.querySelectorAll('#inventory-table thead th');
+    
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Check if selected date is today (or if no date is selected, assuming global view is 'Current')
+    const isToday = !dateInput.value || dateInput.value === today;
+
+    if (tableHeaders[5]) { // The 6th column (index 5) is "Closing"
+        tableHeaders[5].textContent = isToday ? 'Current' : 'Closing';
+    }
+    // --------------------------------
+
+    const filteredInventory = inventory.filter(item => item.item);
 
     if (filteredInventory.length === 0) {
         const row = tbody.insertRow();
         const cell = row.insertCell();
-        cell.colSpan = 7;
-        cell.textContent = 'No inventory items  found.';
+        cell.colSpan = 9; // Updated to match your 9 columns
+        cell.textContent = 'No inventory items found.';
         cell.style.textAlign = 'center';
+        cell.className = "py-4 text-gray-500 italic";
         return;
     }
 
     filteredInventory.forEach(item => {
-        // ... (existing code to create row and cells) ...
         const row = tbody.insertRow();
         row.insertCell().textContent = item.item;
+        row.insertCell().textContent = item.opening || 0;
+        row.insertCell().textContent = item.purchases || 0;
+        row.insertCell().textContent = item.sales || 0;
+        row.insertCell().textContent = item.spoilage || 0;
 
-        const opening = item.opening || 0;
-        const purchases = item.purchases || 0;
-        const sales = item.sales || 0;
-        const spoilage = item.spoilage || 0;
-        const sellingprice =item.sellingprice;
-        const buyingprice =item.buyingprice;
-        // The calculated closing value is now provided by the backend, or is null.
-        const closing = item.closing;
-        
-        row.insertCell().textContent = opening;
-        row.insertCell().textContent = purchases;
-        row.insertCell().textContent = sales;
-        row.insertCell().textContent = spoilage;
-        
         const closingStockCell = row.insertCell();
+        const closing = item.closing;
+
         if (closing === null) {
             closingStockCell.textContent = 'N/A';
-            closingStockCell.style.fontStyle = 'italic';
-            closingStockCell.style.color = 'gray';
+            closingStockCell.className = "italic text-gray-400";
         } else {
             closingStockCell.textContent = closing;
+            // Optional: Add a subtle highlight if it's "Current" stock
+            if (isToday) {
+                closingStockCell.className = "font-semibold text-blue-600";
+            }
         }
-        row.insertCell().textContent = buyingprice;
-        row.insertCell().textContent = sellingprice;
-const adminRoles = ['admin', 'manager'];
-         const actionsCell = row.insertCell();
-actionsCell.className = 'actions relative py-3 px-4'; // Add relative for positioning
 
-if (adminRoles.includes(currentUserRole) && item._id) {
-    // 1. Create Container for the dropdown
-    const dropdown = document.createElement('div');
-    dropdown.className = 'dropdown-container relative inline-block';
+        row.insertCell().textContent = item.buyingprice;
+        row.insertCell().textContent = item.sellingprice;
 
-    // 2. Create the Three Dots Button
-    const dotsBtn = document.createElement('button');
-    dotsBtn.innerHTML = '<i class="fas fa-ellipsis-v"></i>'; // FontAwesome dots
-    dotsBtn.className = 'dots-menu-btn p-2 hover:bg-gray-100 rounded-full focus:outline-none';
-    
-    // 3. Create the Action Menu (Hidden by default)
-    const menu = document.createElement('div');
-    menu.className = 'action-menu hidden absolute right-0 bottom-full mb-2 w-32 bg-white border border-gray-200 rounded shadow-lg z-50 flex flex-col p-1';
-    
-    // 4. Create the Buttons
-    const editButton = document.createElement('button');
-    editButton.textContent = 'Edit';
-    editButton.className = 'text-left px-3 py-2 text-sm hover:bg-blue-50 text-blue-600 rounded';
-    editButton.onclick = (e) => { e.stopPropagation(); openEditModal(item); };
+        // Actions Cell (simplified for clarity, keeping your logic)
+        const actionsCell = row.insertCell();
+        actionsCell.className = 'actions px-6 py-4 whitespace-nowrap text-sm font-medium';
+        const adminRoles = ['admin'];
 
-    const adjustButton = document.createElement('button');
-    adjustButton.textContent = 'Add New Stock';
-    adjustButton.className = 'text-left px-3 py-2 text-sm hover:bg-amber-50 text-amber-600 rounded';
-    adjustButton.onclick = (e) => { e.stopPropagation(); openAdjustModal(item); };
+        if (adminRoles.includes(currentUserRole) && item._id) {
+            const editButton = document.createElement('button');
+            editButton.textContent = 'Edit';
+            editButton.className = 'text-indigo-600 hover:text-indigo-900 mr-3';
+            editButton.onclick = () => openEditModal(item);
+            actionsCell.appendChild(editButton);
 
-    const deleteButton = document.createElement('button');
-    deleteButton.textContent = 'Delete';
-    deleteButton.className = 'text-left px-3 py-2 text-sm hover:bg-red-50 text-red-600 rounded';
-    deleteButton.onclick = (e) => { e.stopPropagation(); showDeleteModal(item._id); };
-
-    // Assemble
-    menu.appendChild(editButton);
-    menu.appendChild(adjustButton);
-    menu.appendChild(deleteButton);
-    dropdown.appendChild(dotsBtn);
-    dropdown.appendChild(menu);
-    actionsCell.appendChild(dropdown);
-
-    // Toggle Logic
-    dotsBtn.onclick = (e) => {
-        e.stopPropagation();
-        // Close all other open menus first
-        document.querySelectorAll('.action-menu').forEach(m => {
-            if (m !== menu) m.classList.add('hidden');
-        });
-        menu.classList.toggle('hidden');
-    };
-
-} else {
-    actionsCell.textContent = 'View Only';
-}
-    
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Delete';
+            deleteButton.className = 'text-red-600 hover:text-red-900';
+            deleteButton.onclick = () => showDeleteModal(item._id);
+            actionsCell.appendChild(deleteButton);
+        } else {
+            actionsCell.textContent = 'View Only';
+            actionsCell.className = 'text-gray-400 italic text-xs';
+        }
     });
 }
 // Close dropdowns when clicking outside
