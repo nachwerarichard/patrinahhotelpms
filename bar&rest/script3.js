@@ -428,12 +428,12 @@ async function submitEditSaleForm(event) {
     const numberInput = document.getElementById('edit-sale-number');
     const bpInput = document.getElementById('edit-sale-bp');
     const spInput = document.getElementById('edit-sale-sp');
-    const dateInput = document.getElementById('edit-sale');
+    const dateInput = document.getElementById('edit-sale-date');
 
     const saveButton = document.getElementById('edit-sale-submit-btn');
 
     // 3. Basic check for element availability
-    if (!idInput || !itemInput || !numberInput || !bpInput || !spInput || !date ) {
+    if (!idInput || !itemInput || !numberInput || !bpInput || !spInput  ) {
         showMessage('Edit form elements are missing. Cannot proceed with update.');
         return;
     }
