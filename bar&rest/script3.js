@@ -761,3 +761,82 @@ document.getElementById('sale-item').addEventListener('input', function(e) {
     }
 });
 window.addEventListener('DOMContentLoaded', loadInventory);
+
+function populateEditCashModal(record) {
+    console.log("Editing Cash Record:", record);
+
+    const modal = document.getElementById('edit-cash-modal');
+    if (!modal) return;
+
+    // 1. Map the ID and Numeric values
+    document.getElementById('edit-cash-id').value = record._id;
+    document.getElementById('edit-cash-at-hand').value = record.cashAtHand || 0;
+    document.getElementById('edit-cash-banked').value = record.cashBanked || 0;
+    document.getElementById('edit-cash-on-phone').value = record.cashOnPhone || 0;
+    document.getElementById('edit-bank-receipt-id').value = record.bankReceiptId || '';
+
+    // 2. Format Date for the HTML input (YYYY-MM-DD)
+    if (record.date) {
+        const dateObj = new Date(record.date);
+        const formattedDate = dateObj.toISOString().split('T')[0];
+        document.getElementById('edit-cash-date').value = formattedDate;
+    }
+
+    // 3. Show the modal
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+}
+document.getElementById('edit-cash-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const id = document.getElementById('edit-cash-id').value;
+    const submitBtn = document.getElementById('edit-cash-submit-btn');
+    const defaultText = document.getElementById('edit-cash-btn-default');
+    const loadingText = document.getElementById('edit-cash-btn-loading');
+
+    const updatedData = {
+        cashAtHand: parseFloat(document.getElementById('edit-cash-at-hand').value),
+        cashBanked: parseFloat(document.getElementById('edit-cash-banked').value),
+        cashOnPhone: parseFloat(document.getElementById('edit-cash-on-phone').value),
+        bankReceiptId: document.getElementById('edit-bank-receipt-id').value,
+        date: document.getElementById('edit-cash-date').value
+    };
+
+    try {
+        // Toggle Loading State
+        submitBtn.disabled = true;
+        defaultText.classList.add('hidden');
+        loadingText.classList.remove('hidden');
+        loadingText.classList.add('flex');
+
+        const response = await authenticatedFetch(`${API_BASE_URL}/cash-journal/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedData)
+        });
+
+        if (response.ok) {
+            showMessage('Cash record updated successfully! 💰');
+            closeModal('edit-cash-modal');
+            fetchCashJournal(); // Refresh your table
+        } else {
+            const error = await response.json();
+            throw new Error(error.message || 'Update failed');
+        }
+    } catch (err) {
+        console.error(err);
+        showMessage('Error updating record: ' + err.message);
+    } finally {
+        // Reset Button State
+        submitBtn.disabled = false;
+        defaultText.classList.remove('hidden');
+        loadingText.classList.add('hidden');
+    }
+});
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+}
