@@ -2127,16 +2127,15 @@ function updateCashSearchButton(text, iconClass) {
     }
 }
 
-
-
-function renderCashJournalTable(records) {
+ function renderCashJournalTable(records) {
     const tbody = document.querySelector('#cash-journal-table tbody');
     if (!tbody) return;
     tbody.innerHTML = '';
+    
     if (records.length === 0) {
         const row = tbody.insertRow();
         const cell = row.insertCell();
-        cell.colSpan = 5;
+        cell.colSpan = 6; // Adjusted to match your column count
         cell.textContent = 'No cash records found for the selected filters.';
         cell.style.textAlign = 'center';
         return;
@@ -2144,22 +2143,28 @@ function renderCashJournalTable(records) {
 
     records.forEach(record => {
         const row = tbody.insertRow();
+        
+        // 1. Safely extract values from the 'record' object
+        // We use || 0 to prevent the .toFixed() error if data is missing
+        const hand = record.cashAtHand || 0;
+        const banked = record.cashBanked || 0;
+        const phone = record.cashOnPhone || 0;
+
+        // 2. Insert Cells
         row.insertCell().textContent = new Date(record.date).toLocaleDateString();
-        row.insertCell().textContent = cashAtHand.toFixed(2);
-        row.insertCell().textContent = cashBanked.toFixed(2);
-        row.insertCell().textContent = cashOnPhone.toFixed(2);
-        row.insertCell().textContent = record.bankReceiptId;
+        row.insertCell().textContent = hand.toFixed(2);
+        row.insertCell().textContent = banked.toFixed(2);
+        row.insertCell().textContent = phone.toFixed(2);
+        row.insertCell().textContent = record.bankReceiptId || 'N/A';
+
         const actionsCell = row.insertCell();
         actionsCell.className = 'actions';
 
-        // Only Nachwera Richard, admin, Florence can edit cash entries
         const adminRoles = ['admin'];
-        // Assuming currentUserRole is defined globally/in scope
         if (adminRoles.includes(currentUserRole)) { 
             const editButton = document.createElement('button');
             editButton.textContent = 'Edit';
-            editButton.className = 'edit bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded-lg text-sm'; // Added Tailwind classes for styling
-            // --- CHANGE IS HERE ---
+            editButton.className = 'edit bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded-lg text-sm';
             editButton.onclick = () => populateEditCashModal(record); 
             actionsCell.appendChild(editButton);
         } else {
@@ -2168,11 +2173,7 @@ function renderCashJournalTable(records) {
     });
 }
 
-/**
- * Populates the 'Edit Cash Record' modal with the selected record's data
- * and displays the modal.
- * @param {object} record - The cash journal record to be edited.
- */
+
 /**
  * Manages the loading state of the Edit Cash button.
  * @param {boolean} isLoading - True to show the 'Saving...' state, false to show 'Save Changes'.
