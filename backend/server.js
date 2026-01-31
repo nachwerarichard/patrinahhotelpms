@@ -2980,16 +2980,15 @@ app.put('/inventory/:id', auth, async (req, res) => {
 app.get('/inventory', async (req, res) => {
     try {
         const { item, low, date, page = 1, limit = 10 } = req.query;
-        let filter = {};
-        
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
         const lowNum = low !== undefined ? parseInt(low) : undefined;
         
-        if (pageNum < 1 || limitNum < 1 || (lowNum !== undefined && lowNum < 0)) {
-            return res.status(400).json({ error: 'Numeric query parameters (page, limit, low) cannot be negative or zero.' });
+        if (pageNum < 1 || limitNum < 1) {
+            return res.status(400).json({ error: 'Page and limit must be positive integers.' });
         }
 
+        // --- SCENARIO 1: SPECIFIC DATE REPORT ---
         if (date) {
             const { utcStart, utcEnd, error } = getStartAndEndOfDayInUTC(date);
             if (error) return res.status(400).json({ error });
@@ -3004,52 +3003,44 @@ app.get('/inventory', async (req, res) => {
 
             const report = await Promise.all(allItems.map(async (singleItem) => {
                 const record = recordsMap.get(singleItem);
+                if (record) return record;
 
-                if (record) {
-                    return {
-                        _id: record._id,
-                        item: singleItem,
-                        opening: record.opening,
-                        purchases: record.purchases,
-                        sales: record.sales,
-                        spoilage: record.spoilage,
-                        closing: record.closing,
-                        sellingprice: record.sellingprice,
-                        buyingprice: record.buyingprice, // FIXED TYPO: buyingrice -> buyingprice
-                        trackInventory: record.trackInventory // ADDED THIS
-                    };
-                } else {
-                    const latestBeforeDate = await Inventory.findOne({
-                        item: singleItem,
-                        date: { $lt: utcStart }
-                    }).sort({ date: -1 });
-
-                    return {
-                        _id: latestBeforeDate ? latestBeforeDate._id : null,
-                        item: singleItem,
-                        opening: latestBeforeDate ? latestBeforeDate.closing : 0,
-                        purchases: 0,
-                        sales: 0,
-                        spoilage: 0,
-                        closing: latestBeforeDate ? latestBeforeDate.closing : 0,
-                        sellingprice: latestBeforeDate ? latestBeforeDate.sellingprice : 0,
-                        buyingprice: latestBeforeDate ? latestBeforeDate.buyingprice : 0,
-                        trackInventory: latestBeforeDate ? latestBeforeDate.trackInventory : true // ADDED THIS
-                    };
-                }
+                // Fallback to latest record before this date
+                return await Inventory.findOne({
+                    item: singleItem,
+                    date: { $lt: utcStart }
+                }).sort({ date: -1 }) || { item: singleItem, opening: 0, closing: 0 };
             }));
             
             return res.json({ date, report });
         }
 
+        // --- SCENARIO 2: GENERAL SEARCH / GLOBAL VIEW ---
+        let filter = {};
         if (item) filter.item = new RegExp(item, 'i');
         if (low) filter.closing = { $lt: lowNum };
-        
+
         const skip = (pageNum - 1) * limitNum;
-        const [total, docs] = await Promise.all([
-            Inventory.countDocuments(filter),
-            Inventory.find(filter).skip(skip).limit(limitNum).sort({ item: 1 })
+
+        const aggregatePipeline = [
+            { $match: filter }, 
+            { $sort: { date: -1 } }, 
+            {
+                $group: {
+                    _id: "$item", 
+                    latestRecord: { $first: "$$ROOT" } 
+                }
+            },
+            { $replaceRoot: { newRoot: "$latestRecord" } },
+            { $sort: { item: 1 } }
+        ];
+
+        const [docs, totalCountResult] = await Promise.all([
+            Inventory.aggregate([...aggregatePipeline, { $skip: skip }, { $limit: limitNum }]),
+            Inventory.aggregate([...aggregatePipeline, { $count: "total" }])
         ]);
+
+        const total = totalCountResult.length > 0 ? totalCountResult[0].total : 0;
 
         res.json({
             data: docs,
