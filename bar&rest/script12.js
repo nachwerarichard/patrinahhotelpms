@@ -683,27 +683,39 @@ confirmDeleteBtn.addEventListener('click', () => {
 });
 
 function openAdjustModal(item) {
-    const modal = document.getElementById('inventory-modal'); // Use your existing modal ID
-    if (!modal) return;
-
-    // Fill fields
-    document.getElementById('inventory-id').value = item._id;
-    document.getElementById('item').value = item.item;
-    document.getElementById('item').readOnly = true; // Prevent renaming during adjustment
+    console.log("Opening Adjust Modal for:", item.item);
     
-    document.getElementById('opening').value = item.opening;
-    document.getElementById('purchases').value = item.purchases;
-    document.getElementById('inventory-sales').value = item.sales;
-    document.getElementById('spoilage').value = item.spoilage;
-    document.getElementById('buyingprice').value = item.buyingprice;
-    document.getElementById('sellingprice').value = item.sellingprice;
-    document.getElementById('trackInventory').checked = item.trackInventory;
+    const modal = document.getElementById('inventory-modal'); 
+    if (!modal) {
+        console.error("Could not find element with ID: inventory-modal");
+        return;
+    }
 
-    // Update Modal Title
+    // --- Fill fields (Keep your existing logic) ---
+    document.getElementById('inventory-id').value = item._id || '';
+    document.getElementById('item').value = item.item || '';
+    document.getElementById('item').readOnly = true; 
+    
+    document.getElementById('opening').value = item.opening || 0;
+    document.getElementById('purchases').value = item.purchases || 0;
+    document.getElementById('inventory-sales').value = item.sales || 0;
+    document.getElementById('spoilage').value = item.spoilage || 0;
+    document.getElementById('buyingprice').value = item.buyingprice || 0;
+    document.getElementById('sellingprice').value = item.sellingprice || 0;
+    
+    const trackInput = document.getElementById('trackInventory');
+    if (trackInput) trackInput.checked = !!item.trackInventory;
+
+    // --- Update Title ---
     const title = modal.querySelector('h2');
     if (title) title.textContent = `Adjust Stock: ${item.item}`;
 
-    modal.classList.remove('hidden'); // Show modal
+    // --- SHOW MODAL: The Robust Way ---
+    modal.classList.remove('hidden'); 
+    modal.style.display = 'flex'; // Use 'flex' if it's a centered Tailwind modal, otherwise 'block'
+    
+    // Optional: Reset scroll to top of modal if it's long
+    modal.scrollTop = 0;
 }
 // 4. UPDATE renderInventoryTable to call showDeleteModal
 function renderInventoryTable(inventory) {
