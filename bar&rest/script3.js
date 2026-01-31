@@ -717,15 +717,29 @@ function populateDatalist(items) {
 // Use the 'input' event for immediate population
 document.getElementById('sale-item').addEventListener('input', function(e) {
     const selectedItemName = e.target.value.trim();
+    
+    // 1. Find the item in the cache
     const itemData = inventoryCache.find(inv => 
         inv.item && inv.item.toLowerCase() === selectedItemName.toLowerCase()
     );
     
     if (itemData) {
-        // Use the exact key from your log: 'buyingprice' and 'sellingprice'
-        document.getElementById('sale-bp').value = itemData.buyingprice || 0;
-        document.getElementById('sale-sp').value = itemData.sellingprice || 0;
+        // 2. Select the elements directly
+        const bpField = document.getElementById('sale-bp');
+        const spField = document.getElementById('sale-sp');
+
+        // 3. Force the values into the fields
+        if (bpField) {
+            bpField.value = itemData.buyingprice;
+        }
+
+        if (spField) {
+            // We use the exact key from your console log: 'sellingprice'
+            spField.value = itemData.sellingprice;
+            console.log("Setting SP to:", itemData.sellingprice);
+        } else {
+            console.error("Could not find an HTML element with id='sale-sp'");
+        }
     }
 });
-
 window.addEventListener('DOMContentLoaded', loadInventory);
