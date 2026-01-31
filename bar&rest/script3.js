@@ -360,7 +360,7 @@ function populateSaleForm(sale) {
     const numberInput = document.getElementById('edit-sale-number');
     const bpInput     = document.getElementById('edit-sale-bp');
     const spInput     = document.getElementById('edit-sale-sp');
-
+    const date        = document.getElementById('edit-sale');
     if (!sale || typeof sale !== 'object') {
         console.error("Invalid or missing sale object passed.", sale);
         return;
@@ -374,7 +374,7 @@ function populateSaleForm(sale) {
     // Populate simple fields
     itemInput.value = sale.item;
     numberInput.value = sale.number;
-    
+     date.value=sale.date;
     // Populate price fields with safety checks (to prevent the toFixed error)
     // Your console log confirmed sale.bp and sale.sp exist.
     bpInput.value = sale.bp ? Number(sale.bp).toFixed(2) : '';
@@ -428,10 +428,12 @@ async function submitEditSaleForm(event) {
     const numberInput = document.getElementById('edit-sale-number');
     const bpInput = document.getElementById('edit-sale-bp');
     const spInput = document.getElementById('edit-sale-sp');
+    const date = document.getElementById('edit-sale');
+
     const saveButton = document.getElementById('edit-sale-submit-btn');
 
     // 3. Basic check for element availability
-    if (!idInput || !itemInput || !numberInput || !bpInput || !spInput ) {
+    if (!idInput || !itemInput || !numberInput || !bpInput || !spInput || !date ) {
         showMessage('Edit form elements are missing. Cannot proceed with update.');
         return;
     }
@@ -442,6 +444,8 @@ async function submitEditSaleForm(event) {
     const number = parseInt(numberInput.value, 10);
     const bp = parseFloat(bpInput.value);
     const sp = parseFloat(spInput.value);
+    const date = date.value;
+
 
 
     // Check if numerical conversions were successful and values are positive
@@ -472,6 +476,7 @@ async function submitEditSaleForm(event) {
         number: number,
         bp: bp,
         sp: sp,
+        date,
         profit: parseFloat(profit.toFixed(2)), // Format to 2 decimal places for storage
         percentageProfit: parseFloat(percentageProfit.toFixed(2)),
     };
