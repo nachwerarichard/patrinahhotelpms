@@ -840,3 +840,25 @@ function closeModal(modalId) {
         modal.style.display = 'none';
     }
 }
+
+
+// This runs as soon as the HTML is loaded
+window.addEventListener('DOMContentLoaded', () => {
+    // 1. Check if we have a token saved in the browser
+    const savedToken = localStorage.getItem('authToken');
+
+    if (savedToken) {
+        // 2. Restore the token for our API calls
+        authToken = savedToken;
+        
+        // 3. Set the date inputs to "Today"
+        setDefaultDateRange(); 
+
+        // 4. Show the dashboard and load the data
+        dashboardContent.classList.remove('hidden');
+        loadDashboardData(); 
+    } else {
+        // 5. If no token, make sure they stay at the login screen
+        updateUI(false);
+    }
+});
