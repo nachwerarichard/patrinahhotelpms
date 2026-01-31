@@ -2318,37 +2318,15 @@ async function generateReports() {
         generateButton.disabled = true;
     }
 
-    // 1. Updated Department List to match your Schema and PMS structure
-    const departments = ['Bar', 'Restaurant', 'Kitchen', 'Conference', 'Gardens', 'Accommodation'];
-
-    // Keyword logic for Sales (since Sales might not have a hardcoded department field yet)
-    const salesKeywords = {
-        'bar': 'Bar',
-        'rest': 'Restaurant',
-        'kitc': 'Kitchen',
-        'conf': 'Conference',
-        'gard': 'Gardens',
-        'acco': 'Accommodation'
-    };
-
-    function getDepartmentFromSale(text) {
-        const lowerText = text.toLowerCase();
-        for (const prefix in salesKeywords) {
-            if (lowerText.includes(prefix)) return salesKeywords[prefix];
-        }
-        return 'Other';
-    }
-
     const startDateInput = document.getElementById('report-start-date');
     const endDateInput = document.getElementById('report-end-date');
 
-    if (!startDateInput || !endDateInput || !startDateInput.value || !endDateInput.value) {
+    if (!startDateInput.value || !endDateInput.value) {
         showMessage('Please select both start and end dates.');
         if (generateButton) { generateButton.innerHTML = originalButtonHtml; generateButton.disabled = false; }
         return;
     }
 
-    // Date Normalization
     const startDate = new Date(startDateInput.value);
     const endDate = new Date(endDateInput.value);
     startDate.setUTCHours(0, 0, 0, 0);
@@ -2358,91 +2336,87 @@ async function generateReports() {
     if (tbody) tbody.innerHTML = ''; 
 
     try {
-        let allSales = [];
-        let allExpenses = [];
+        // 1. FETCH INVENTORY ITEMS (To map Item Name -> Department)
+        // We fetch a large limit to ensure we get all items in your stock
+        const itemResp = await authenticatedFetch(`${API_BASE_URL}/inventory?limit=2000`);
+        const itemResult = await itemResp.json();
+        
+        const itemToDeptMap = {};
+        if (itemResult && itemResult.data) {
+            itemResult.data.forEach(inv => {
+                // Mapping the item name to its department from your inventory schema
+                itemToDeptMap[inv.item] = inv.department || 'Other';
+            });
+        }
 
-        // 2. Fetch Sales (Paginated)
-        let page = 1;
-        let salesResponse;
+        // 2. FETCH ALL SALES & EXPENSES (Using do-while for pagination)
+        let allSales = [], allExpenses = [], page = 1, res;
+
+        // Fetch Sales
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/sales?page=${page}`);
-            salesResponse = await resp.json();
-            if (salesResponse && Array.isArray(salesResponse.data)) {
-                allSales = allSales.concat(salesResponse.data);
-                page++;
-            } else { salesResponse = null; }
-        } while (salesResponse && salesResponse.data.length > 0);
+            res = await resp.json();
+            if (res.data) { allSales = allSales.concat(res.data); page++; }
+        } while (res && res.data && res.data.length > 0);
 
-        // 3. Fetch Expenses (Paginated)
+        // Fetch Expenses
         page = 1;
-        let expResponse;
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/expenses?page=${page}`);
-            expResponse = await resp.json();
-            if (expResponse && Array.isArray(expResponse.data)) {
-                allExpenses = allExpenses.concat(expResponse.data);
-                page++;
-            } else { expResponse = null; }
-        } while (expResponse && expResponse.data.length > 0);
+            res = await resp.json();
+            if (res.data) { allExpenses = allExpenses.concat(res.data); page++; }
+        } while (res && res.data && res.data.length > 0);
 
-        // 4. Filtering by Date
-        const filteredSales = allSales.filter(s => {
-            const d = new Date(s.date);
-            return d >= startDate && d <= endDate;
-        });
-
-        const filteredExpenses = allExpenses.filter(e => {
-            const d = new Date(e.date);
-            return d >= startDate && d <= endDate;
-        });
-
-        // 5. Aggregation
+        // 3. AGGREGATE DATA
         const report = {};
-        departments.concat(['Other']).forEach(dept => {
-            report[dept] = { sales: 0, expenses: 0 };
-        });
 
-        filteredSales.forEach(sale => {
-            const dept = getDepartmentFromSale(sale.item);
-            report[dept].sales += (sale.number * sale.sp);
-        });
+        // Process Sales: filter by date, then group by department from the map
+        allSales.filter(s => new Date(s.date) >= startDate && new Date(s.date) <= endDate)
+            .forEach(sale => {
+                const dept = itemToDeptMap[sale.item] || 'Other';
+                if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
+                report[dept].sales += (sale.number * sale.sp);
+            });
 
-        filteredExpenses.forEach(exp => {
-            // Priority: Use the 'department' field from Schema, fallback to keyword search
-            const dept = exp.department || getDepartmentFromSale(exp.description);
-            if (report[dept]) {
+        // Process Expenses: filter by date, then group by the department field in expense
+        allExpenses.filter(e => new Date(e.date) >= startDate && new Date(e.date) <= endDate)
+            .forEach(exp => {
+                const dept = exp.department || 'Other';
+                if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
                 report[dept].expenses += exp.amount;
-            } else {
-                report['Other'].expenses += exp.amount;
-            }
-        });
+            });
 
-        // 6. Rendering UI
+        // 4. RENDER TO TABLE
         let totalS = 0, totalE = 0;
-        Object.keys(report).sort().forEach(dept => {
-            const { sales, expenses } = report[dept];
-            if (sales === 0 && expenses === 0) return; // Skip empty rows
+        const sortedDepts = Object.keys(report).sort();
 
-            totalS += sales; totalE += expenses;
-            const balance = sales - expenses;
+        if (sortedDepts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">No data found for this period.</td></tr>';
+        } else {
+            sortedDepts.forEach(dept => {
+                const { sales, expenses } = report[dept];
+                totalS += sales; totalE += expenses;
+                const balance = sales - expenses;
 
-            const row = tbody.insertRow();
-            row.insertCell().textContent = dept;
-            row.insertCell().textContent = sales.toLocaleString();
-            row.insertCell().textContent = expenses.toLocaleString();
-            const bCell = row.insertCell();
-            bCell.textContent = balance.toLocaleString();
-            bCell.className = balance >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
-        });
+                const row = tbody.insertRow();
+                row.insertCell().textContent = dept;
+                row.insertCell().textContent = sales.toLocaleString(undefined, { minimumFractionDigits: 2 });
+                row.insertCell().textContent = expenses.toLocaleString(undefined, { minimumFractionDigits: 2 });
+                const bCell = row.insertCell();
+                bCell.textContent = balance.toLocaleString(undefined, { minimumFractionDigits: 2 });
+                bCell.className = balance >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+            });
+        }
 
-        // Update Summary Cards
+        // 5. UPDATE SUMMARY CARDS
         document.getElementById('overall-sales').textContent = totalS.toLocaleString();
         document.getElementById('overall-expenses').textContent = totalE.toLocaleString();
-        const bal = totalS - totalE;
+        const overallBal = totalS - totalE;
         const balEl = document.getElementById('overall-balance');
-        balEl.textContent = bal.toLocaleString();
-        balEl.className = bal >= 0 ? 'text-green-600' : 'text-red-600';
+        balEl.textContent = overallBal.toLocaleString();
+        balEl.className = overallBal >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
 
+        // Reset Button
         if (generateButton) {
             generateButton.innerHTML = '<i class="fas fa-check"></i> Done';
             setTimeout(() => { generateButton.innerHTML = originalButtonHtml; generateButton.disabled = false; }, 2000);
@@ -2450,6 +2424,7 @@ async function generateReports() {
 
     } catch (error) {
         console.error('Report Error:', error);
+        showMessage('Error: ' + error.message);
         if (generateButton) { generateButton.innerHTML = originalButtonHtml; generateButton.disabled = false; }
     }
 }
