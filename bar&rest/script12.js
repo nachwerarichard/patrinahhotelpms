@@ -876,9 +876,24 @@ function renderInventoryTable(inventory) {
         // Actions Cell (simplified for clarity, keeping your logic)
         const actionsCell = row.insertCell();
         actionsCell.className = 'actions px-6 py-4 whitespace-nowrap text-sm font-medium';
+        actionsCell.className = 'actions relative py-3 px-4'; // Add relative for positioning
+
         const adminRoles = ['admin'];
 
         if (adminRoles.includes(currentUserRole) && item._id) {
+                // 1. Create Container for the dropdown
+    const dropdown = document.createElement('div');
+    dropdown.className = 'dropdown-container relative inline-block';
+
+    // 2. Create the Three Dots Button
+    const dotsBtn = document.createElement('button');
+    dotsBtn.innerHTML = '<i class="fas fa-ellipsis-v"></i>'; // FontAwesome dots
+    dotsBtn.className = 'dots-menu-btn p-2 hover:bg-gray-100 rounded-full focus:outline-none';
+    
+    // 3. Create the Action Menu (Hidden by default)
+    const menu = document.createElement('div');
+    menu.className = 'action-menu hidden absolute right-0 bottom-full mb-2 w-32 bg-white border border-gray-200 rounded shadow-lg z-50 flex flex-col p-1';
+
             const editButton = document.createElement('button');
             editButton.textContent = 'Edit';
             editButton.className = 'text-indigo-600 hover:text-indigo-900 mr-3';
@@ -896,6 +911,23 @@ function renderInventoryTable(inventory) {
             deleteButton.className = 'text-red-600 hover:text-red-900';
             deleteButton.onclick = () => showDeleteModal(item._id);
             actionsCell.appendChild(deleteButton);
+
+            menu.appendChild(editButton);
+    menu.appendChild(adjustButton);
+    menu.appendChild(deleteButton);
+    dropdown.appendChild(dotsBtn);
+    dropdown.appendChild(menu);
+    actionsCell.appendChild(dropdown);
+    // Toggle Logic
+    dotsBtn.onclick = (e) => {
+        e.stopPropagation();
+        // Close all other open menus first
+        document.querySelectorAll('.action-menu').forEach(m => {
+            if (m !== menu) m.classList.add('hidden');
+        });
+        menu.classList.toggle('hidden');
+    };
+
         } else {
             actionsCell.textContent = 'View Only';
             actionsCell.className = 'text-gray-400 italic text-xs';
