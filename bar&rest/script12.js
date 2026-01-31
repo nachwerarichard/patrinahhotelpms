@@ -2336,27 +2336,14 @@ async function generateReports() {
     if (tbody) tbody.innerHTML = ''; 
 
     try {
-        // 1. FETCH INVENTORY ITEMS (To map Item Name -> Department)
-        // We fetch a large limit to ensure we get all items in your stock
-        const itemResp = await authenticatedFetch(`${API_BASE_URL}/inventory?limit=2000`);
-        const itemResult = await itemResp.json();
-        
-        const itemToDeptMap = {};
-        if (itemResult && itemResult.data) {
-            itemResult.data.forEach(inv => {
-                // Mapping the item name to its department from your inventory schema
-                itemToDeptMap[inv.item] = inv.department || 'Other';
-            });
-        }
-
-        // 2. FETCH ALL SALES & EXPENSES (Using do-while for pagination)
+        // 1. FETCH ALL SALES & EXPENSES (Paginated)
         let allSales = [], allExpenses = [], page = 1, res;
 
         // Fetch Sales
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/sales?page=${page}`);
             res = await resp.json();
-            if (res.data) { allSales = allSales.concat(res.data); page++; }
+            if (res && res.data) { allSales = allSales.concat(res.data); page++; }
         } while (res && res.data && res.data.length > 0);
 
         // Fetch Expenses
@@ -2364,29 +2351,33 @@ async function generateReports() {
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/expenses?page=${page}`);
             res = await resp.json();
-            if (res.data) { allExpenses = allExpenses.concat(res.data); page++; }
+            if (res && res.data) { allExpenses = allExpenses.concat(res.data); page++; }
         } while (res && res.data && res.data.length > 0);
 
-        // 3. AGGREGATE DATA
+        // 2. AGGREGATE DATA
         const report = {};
 
-        // Process Sales: filter by date, then group by department from the map
-        allSales.filter(s => new Date(s.date) >= startDate && new Date(s.date) <= endDate)
-            .forEach(sale => {
-                const dept = itemToDeptMap[sale.item] || 'Other';
-                if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
-                report[dept].sales += (sale.number * sale.sp);
-            });
+        // Process Sales: Use the 'department' field defined in your Sale Schema
+        allSales.filter(s => {
+            const d = new Date(s.date);
+            return d >= startDate && d <= endDate;
+        }).forEach(sale => {
+            const dept = sale.department || 'Other';
+            if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
+            report[dept].sales += (sale.number * sale.sp);
+        });
 
-        // Process Expenses: filter by date, then group by the department field in expense
-        allExpenses.filter(e => new Date(e.date) >= startDate && new Date(e.date) <= endDate)
-            .forEach(exp => {
-                const dept = exp.department || 'Other';
-                if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
-                report[dept].expenses += exp.amount;
-            });
+        // Process Expenses: Use the 'department' field defined in your Expense Schema
+        allExpenses.filter(e => {
+            const d = new Date(e.date);
+            return d >= startDate && d <= endDate;
+        }).forEach(exp => {
+            const dept = exp.department || 'Other';
+            if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
+            report[dept].expenses += exp.amount || 0;
+        });
 
-        // 4. RENDER TO TABLE
+        // 3. RENDER TO TABLE
         let totalS = 0, totalE = 0;
         const sortedDepts = Object.keys(report).sort();
 
@@ -2408,15 +2399,21 @@ async function generateReports() {
             });
         }
 
-        // 5. UPDATE SUMMARY CARDS
-        document.getElementById('overall-sales').textContent = totalS.toLocaleString();
-        document.getElementById('overall-expenses').textContent = totalE.toLocaleString();
-        const overallBal = totalS - totalE;
-        const balEl = document.getElementById('overall-balance');
-        balEl.textContent = overallBal.toLocaleString();
-        balEl.className = overallBal >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+        // 4. UPDATE SUMMARY CARDS
+        const overallSalesEl = document.getElementById('overall-sales');
+        const overallExpensesEl = document.getElementById('overall-expenses');
+        const overallBalanceEl = document.getElementById('overall-balance');
 
-        // Reset Button
+        if (overallSalesEl) overallSalesEl.textContent = totalS.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        if (overallExpensesEl) overallExpensesEl.textContent = totalE.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        
+        const overallBal = totalS - totalE;
+        if (overallBalanceEl) {
+            overallBalanceEl.textContent = overallBal.toLocaleString(undefined, { minimumFractionDigits: 2 });
+            overallBalanceEl.className = overallBal >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+        }
+
+        // Reset Button State
         if (generateButton) {
             generateButton.innerHTML = '<i class="fas fa-check"></i> Done';
             setTimeout(() => { generateButton.innerHTML = originalButtonHtml; generateButton.disabled = false; }, 2000);
@@ -2424,7 +2421,7 @@ async function generateReports() {
 
     } catch (error) {
         console.error('Report Error:', error);
-        showMessage('Error: ' + error.message);
+        showMessage('Error generating report: ' + error.message);
         if (generateButton) { generateButton.innerHTML = originalButtonHtml; generateButton.disabled = false; }
     }
 }
