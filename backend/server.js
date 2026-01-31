@@ -3031,8 +3031,16 @@ const report = await Promise.all(itemNames.map(async (singleItem) => {
         date: { $lt: utcStart }
     }).sort({ date: -1 });
 
-    const result = lastRecord || { item: singleItem, opening: 0, closing: 0, purchases: 0, sales: 0, trackInventory: true };
-    
+// Get the actual tracking status from your Products/Items collection if possible, 
+// or ensure your fallback matches the intended behavior.
+const result = lastRecord ? lastRecord.toObject() : { 
+    item: singleItem, 
+    opening: 0, 
+    closing: 0, 
+    purchases: 0, 
+    sales: 0, 
+    trackInventory: false // Default to false to avoid negatives for unknown items
+};    
     // Force zero if not tracked
     if (result.trackInventory === false) result.closing = 0;
     return result;
@@ -3047,18 +3055,31 @@ const report = await Promise.all(itemNames.map(async (singleItem) => {
 
         const skip = (pageNum - 1) * limitNum;
 
-        const aggregatePipeline = [
-            { $match: filter }, 
-            { $sort: { date: -1 } }, 
-            {
-                $group: {
-                    _id: "$item", 
-                    latestRecord: { $first: "$$ROOT" } 
+       const aggregatePipeline = [
+    { $match: filter }, 
+    { $sort: { date: -1 } }, 
+    {
+        $group: {
+            _id: "$item", 
+            latestRecord: { $first: "$$ROOT" } 
+        }
+    },
+    { $replaceRoot: { newRoot: "$latestRecord" } },
+    // --- NEW STAGE TO FIX NEGATIVES ---
+    {
+        $addFields: {
+            closing: {
+                $cond: {
+                    if: { $eq: ["$trackInventory", false] },
+                    then: 0,
+                    else: "$closing"
                 }
-            },
-            { $replaceRoot: { newRoot: "$latestRecord" } },
-            { $sort: { item: 1 } }
-        ];
+            }
+        }
+    },
+    // ----------------------------------
+    { $sort: { item: 1 } }
+];
 
         const [docs, totalCountResult] = await Promise.all([
             Inventory.aggregate([...aggregatePipeline, { $skip: skip }, { $limit: limitNum }]),
