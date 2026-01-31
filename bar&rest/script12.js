@@ -539,21 +539,25 @@ async function logout() {
 
 
 async function fetchInventory() {
-    // 1. Change button text to 'Searching'
+    // 1. UI Loading State
     updateSearchButton('Searching', 'fas fa-spinner fa-spin'); 
 
     try {
         const itemFilterInput = document.getElementById('search-inventory-item');
         const dateFilterInput = document.getElementById('search-inventory-date');
         
-        const itemFilter = itemFilterInput ? itemFilterInput.value : '';
+        // This gets the item name from your search box
+        const itemFilter = itemFilterInput ? itemFilterInput.value.trim() : '';
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
 
         let url = `${API_BASE_URL}/inventory`;
         const params = new URLSearchParams();
+        
+        // 2. Attach the filters to the URL
         if (itemFilter) params.append('item', itemFilter);
         if (dateFilter) params.append('date', dateFilter); 
         
+        // Only paginate if we aren't looking at a specific full-day report
         if (!dateFilter) {
             params.append('page', currentPage);
             params.append('limit', itemsPerPage);
@@ -561,39 +565,36 @@ async function fetchInventory() {
 
         url += `?${params.toString()}`;
 
-        // Step 1: Execute fetch
         const response = await authenticatedFetch(url);
 
-        if (!response) {
+        if (!response || !response.ok) {
             updateSearchButton('Search', 'fas fa-search');
             return;
         }
 
-        // Check for .ok (Handles 401/403 forced logout)
-        if (response.ok === false) { 
-            console.log(`Inventory fetch aborted due to status: ${response.status}. Session handled.`);
-            updateSearchButton('Search', 'fas fa-search');
-            return; 
-        }
-        
-        // Step 2: Parse JSON
         const result = await response.json(); 
 
-        // Step 3: Handle Data Assignment
+        // 3. Handle Data Assignment
         let inventoryData; 
         if (dateFilter) {
-            inventoryData = result.report;
+            // When a date is picked, the backend sends 'report'
+            inventoryData = result.report || [];
             renderPagination(1, 1);
         } else {
-            inventoryData = result.data;
+            // When searching by item/global, the backend sends 'data'
+            inventoryData = result.data || [];
             renderPagination(result.page, result.pages);
         }
-        
-        // Render the table
+
+        // 4. Render the table (The backend already grouped these to prevent repetition)
         renderInventoryTable(inventoryData);
 
-        // 2. Success UI Updates
-        updateSearchButton('Done', 'fas fa-check');
+        // 5. Success UI Update
+        if (inventoryData.length === 0) {
+            updateSearchButton('No Results', 'fas fa-exclamation-circle');
+        } else {
+            updateSearchButton('Done', 'fas fa-check');
+        }
 
         setTimeout(() => {
             updateSearchButton('Search', 'fas fa-search');
