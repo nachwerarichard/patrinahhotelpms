@@ -869,40 +869,69 @@ function renderInventoryTable(inventory) {
         row.insertCell().textContent = buyingprice;
         row.insertCell().textContent = sellingprice;
 
+         const actionsCell = row.insertCell();
+actionsCell.className = 'actions relative py-3 px-4'; // Add relative for positioning
 
+if (adminRoles.includes(currentUserRole) && item._id) {
+    // 1. Create Container for the dropdown
+    const dropdown = document.createElement('div');
+    dropdown.className = 'dropdown-container relative inline-block';
 
-        const actionsCell = row.insertCell();
-        actionsCell.className = 'actions';
-        // ... (end of existing code) ...
+    // 2. Create the Three Dots Button
+    const dotsBtn = document.createElement('button');
+    dotsBtn.innerHTML = '<i class="fas fa-ellipsis-v"></i>'; // FontAwesome dots
+    dotsBtn.className = 'dots-menu-btn p-2 hover:bg-gray-100 rounded-full focus:outline-none';
+    
+    // 3. Create the Action Menu (Hidden by default)
+    const menu = document.createElement('div');
+    menu.className = 'action-menu hidden absolute right-0 bottom-full mb-2 w-32 bg-white border border-gray-200 rounded shadow-lg z-50 flex flex-col p-1';
+    
+    // 4. Create the Buttons
+    const editButton = document.createElement('button');
+    editButton.textContent = 'Edit';
+    editButton.className = 'text-left px-3 py-2 text-sm hover:bg-blue-50 text-blue-600 rounded';
+    editButton.onclick = (e) => { e.stopPropagation(); openEditModal(item); };
 
-        const adminRoles = ['admin'];
-
-        if (adminRoles.includes(currentUserRole) && item._id) {
-            const editButton = document.createElement('button');
-            editButton.textContent = 'Edit';
-            editButton.className = 'edit';
-            editButton.onclick = () => openEditModal(item);
-            actionsCell.appendChild(editButton);
-
-            // 2. NEW: Adjust Button (Opens a specific Adjustment Modal)
     const adjustButton = document.createElement('button');
     adjustButton.textContent = 'Adjust';
-    adjustButton.className = 'adjust bg-amber-500 hover:bg-amber-600 text-white px-2 py-1 rounded mr-1';
-    adjustButton.onclick = () => openAdjustModal(item); // New function below
-    actionsCell.appendChild(adjustButton);
+    adjustButton.className = 'text-left px-3 py-2 text-sm hover:bg-amber-50 text-amber-600 rounded';
+    adjustButton.onclick = (e) => { e.stopPropagation(); openAdjustModal(item); };
 
-            const deleteButton = document.createElement('button');
-            deleteButton.textContent = 'Delete';
-            deleteButton.className = 'delete';
-            // **CHANGE:** Call the new showDeleteModal function instead of deleting directly
-            deleteButton.onclick = () => showDeleteModal(item._id);
-            actionsCell.appendChild(deleteButton);
+    const deleteButton = document.createElement('button');
+    deleteButton.textContent = 'Delete';
+    deleteButton.className = 'text-left px-3 py-2 text-sm hover:bg-red-50 text-red-600 rounded';
+    deleteButton.onclick = (e) => { e.stopPropagation(); showDeleteModal(item._id); };
 
-        } else {
-            actionsCell.textContent = 'View Only';
-        }
+    // Assemble
+    menu.appendChild(editButton);
+    menu.appendChild(adjustButton);
+    menu.appendChild(deleteButton);
+    dropdown.appendChild(dotsBtn);
+    dropdown.appendChild(menu);
+    actionsCell.appendChild(dropdown);
+
+    // Toggle Logic
+    dotsBtn.onclick = (e) => {
+        e.stopPropagation();
+        // Close all other open menus first
+        document.querySelectorAll('.action-menu').forEach(m => {
+            if (m !== menu) m.classList.add('hidden');
+        });
+        menu.classList.toggle('hidden');
+    };
+
+} else {
+    actionsCell.textContent = 'View Only';
+}
+    
     });
 }
+// Close dropdowns when clicking outside
+window.addEventListener('click', () => {
+    document.querySelectorAll('.action-menu').forEach(menu => {
+        menu.classList.add('hidden');
+    });
+});
 
 // 5. deleteInventory function remains the same (it's the final action)
 async function deleteInventory(id) {
