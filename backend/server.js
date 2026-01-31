@@ -3216,6 +3216,7 @@ app.post('/expenses', auth,  async (req, res) => {
     const { description, amount, receiptId, source } = req.body;
     const exp = await Expense.create({
       description,
+      department,
       amount,
       receiptId,
       source,
