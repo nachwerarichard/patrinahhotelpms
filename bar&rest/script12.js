@@ -685,37 +685,107 @@ confirmDeleteBtn.addEventListener('click', () => {
 function openAdjustModal(item) {
     console.log("Opening Adjust Modal for:", item.item);
     
-    const modal = document.getElementById('inventory-form'); 
+    // 1. Target the correct Modal ID from your HTML
+    const modal = document.getElementById('edit-inventory-modal'); 
     if (!modal) {
-        console.error("Could not find element with ID: inventory-modal");
+        console.error("Could not find element with ID: edit-inventory-modal");
         return;
     }
 
-    // --- Fill fields (Keep your existing logic) ---
-    document.getElementById('inventory-id').value = item._id || '';
-    document.getElementById('item').value = item.item || '';
-    document.getElementById('item').readOnly = true; 
+    // 2. Populate fields using the 'edit-' prefix
+    document.getElementById('edit-inventory-id').value = item._id || '';
+    document.getElementById('edit-item').value = item.item || '';
     
-    document.getElementById('opening').value = item.opening || 0;
-    document.getElementById('purchases').value = item.purchases || 0;
-    document.getElementById('inventory-sales').value = item.sales || 0;
-    document.getElementById('spoilage').value = item.spoilage || 0;
-    document.getElementById('buyingprice').value = item.buyingprice || 0;
-    document.getElementById('sellingprice').value = item.sellingprice || 0;
+    // Make item name Read-Only so they don't change the product name by mistake
+    document.getElementById('edit-item').readOnly = true; 
+    document.getElementById('edit-item').classList.add('bg-gray-100', 'cursor-not-allowed');
+
+    document.getElementById('edit-opening').value = item.opening || 0;
+    document.getElementById('edit-purchases').value = item.purchases || 0;
+    document.getElementById('edit-inventory-sales').value = item.sales || 0;
+    document.getElementById('edit-spoilage').value = item.spoilage || 0;
+    document.getElementById('edit-buyingprice').value = item.buyingprice || 0;
+    document.getElementById('edit-sellingprice').value = item.sellingprice || 0;
     
-    const trackInput = document.getElementById('trackInventory');
+    const trackInput = document.getElementById('edit-trackInventory');
     if (trackInput) trackInput.checked = !!item.trackInventory;
 
-    // --- Update Title ---
+    // 3. Update the Modal Title to reflect "Adjustment"
     const title = modal.querySelector('h2');
     if (title) title.textContent = `Adjust Stock: ${item.item}`;
 
-    // --- SHOW MODAL: The Robust Way ---
-    modal.classList.remove('hidden'); 
-    modal.style.display = 'flex'; // Use 'flex' if it's a centered Tailwind modal, otherwise 'block'
-    
-    // Optional: Reset scroll to top of modal if it's long
-    modal.scrollTop = 0;
+    // 4. Show the Modal
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex'; 
+}
+
+// Ensure you have a matching close function
+function closeEditModal() {
+    const modal = document.getElementById('edit-inventory-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+        // Reset readOnly for future uses
+        const itemInput = document.getElementById('edit-item');
+        if(itemInput) {
+            itemInput.readOnly = false;
+            itemInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+        }
+    }
+}
+
+// Add this to your initialization code
+document.getElementById('edit-inventory-form').addEventListener('submit', handleUpdateSubmit);
+
+async function handleUpdateSubmit(event) {
+    event.preventDefault();
+
+    const id = document.getElementById('edit-inventory-id').value;
+    const submitBtn = document.getElementById('edit-inventory-submit-btn');
+    const defaultText = document.getElementById('edit-inventory-btn-default');
+    const loadingText = document.getElementById('edit-inventory-btn-loading');
+
+    // Gather Data
+    const inventoryData = {
+        item: document.getElementById('edit-item').value,
+        opening: parseInt(document.getElementById('edit-opening').value) || 0,
+        purchases: parseInt(document.getElementById('edit-purchases').value) || 0,
+        sales: parseInt(document.getElementById('edit-inventory-sales').value) || 0,
+        spoilage: parseInt(document.getElementById('edit-spoilage').value) || 0,
+        buyingprice: parseFloat(document.getElementById('edit-buyingprice').value) || 0,
+        sellingprice: parseFloat(document.getElementById('edit-sellingprice').value) || 0,
+        trackInventory: document.getElementById('edit-trackInventory').checked
+    };
+
+    try {
+        // UI Loading State
+        submitBtn.disabled = true;
+        defaultText.classList.add('hidden');
+        loadingText.classList.remove('hidden', 'flex'); 
+        loadingText.classList.add('flex');
+
+        const response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(inventoryData)
+        });
+
+        if (response.ok) {
+            showMessage('Inventory Updated Successfully! ✅');
+            closeEditModal();
+            fetchInventory(); // Refresh the table
+        } else {
+            const error = await response.json();
+            throw new Error(error.message || 'Update failed');
+        }
+    } catch (err) {
+        showMessage('Error: ' + err.message);
+    } finally {
+        // Reset Button
+        submitBtn.disabled = false;
+        defaultText.classList.remove('hidden');
+        loadingText.classList.add('hidden');
+    }
 }
 // 4. UPDATE renderInventoryTable to call showDeleteModal
 function renderInventoryTable(inventory) {
