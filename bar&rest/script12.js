@@ -685,7 +685,7 @@ confirmDeleteBtn.addEventListener('click', () => {
 function openAdjustModal(item) {
     console.log("Opening Adjust Modal for:", item.item);
     
-    const modal = document.getElementById('inventory-modal'); 
+    const modal = document.getElementById('inventory-form'); 
     if (!modal) {
         console.error("Could not find element with ID: inventory-modal");
         return;
