@@ -960,18 +960,24 @@ async function deleteInventory(id) {
     }
 }
 
-function setLoadingState (isLoading) {
-    const submitBtn = document.getElementById('inventor-save-button'); // or your Save button ID
+function setLoadingState(isLoading) {
+    // Target the button inside the form (using type="submit")
+    const submitBtn = document.querySelector('#inventory-form button[type="submit"]');
+    const btnText = document.getElementById('inventory-submit-text');
+    const icon = submitBtn?.querySelector('i');
+
     if (!submitBtn) return;
 
     if (isLoading) {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
         submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        if (btnText) btnText.textContent = 'Saving...';
+        if (icon) icon.className = 'fas fa-spinner fa-spin'; // Change save icon to spinner
     } else {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class=""></i> Save'; // Restore original state
         submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        if (btnText) btnText.textContent = 'Save Inventory';
+        if (icon) icon.className = 'fas fa-save'; // Restore original icon
     }
 }
 /**
