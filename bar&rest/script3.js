@@ -607,6 +607,7 @@ async function submitCashJournalForm(event) {
 
     const idInput = document.getElementById('cash-journal-id');
     const cashAtHandInput = document.getElementById('cash-at-hand');
+    const cashOnPhoneInput = document.getElementById('cash-on-phone');
     const cashBankedInput = document.getElementById('cash-banked');
     const bankReceiptIdInput = document.getElementById('bank-receipt-id');
     const cashDateInput = document.getElementById('cash-date');
@@ -619,6 +620,7 @@ async function submitCashJournalForm(event) {
     const id = idInput.value;
     const cashAtHand = parseFloat(cashAtHandInput.value);
     const cashBanked = parseFloat(cashBankedInput.value);
+    const cashOnPhone = parseFloat(cashOnPhoneInput.value);
     const bankReceiptId = bankReceiptIdInput.value;
     const date = cashDateInput.value;
     const recordedBy = currentUsername;
@@ -634,7 +636,7 @@ async function submitCashJournalForm(event) {
         return;
     }
 
-    const cashData = { cashAtHand, cashBanked, bankReceiptId, date, recordedBy };
+    const cashData = { cashAtHand, cashBanked, bankReceiptId, cashOnPhone,date, recordedBy };
 
     try {
         // 2. Change button to 'Processing...' ⏳
