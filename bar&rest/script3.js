@@ -375,7 +375,9 @@ function populateSaleForm(sale) {
     // Populate simple fields
     itemInput.value = sale.item;
     numberInput.value = sale.number;
-     saledate.value=sale.date;
+    if (saledate && sale.date) {
+        saledate.value = new Date(sale.date).toISOString().split('T')[0];
+    }
     departmentInput.value= sale.department
     // Populate price fields with safety checks (to prevent the toFixed error)
     // Your console log confirmed sale.bp and sale.sp exist.
