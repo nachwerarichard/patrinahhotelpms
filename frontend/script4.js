@@ -2172,7 +2172,7 @@ async function renderHousekeepingRooms() {
         <option value="under-maintenance" ${room.status === 'under-maintenance' ? 'selected' : ''}>Under Maintenance</option>
         
         <option value="blocked" ${room.status === 'blocked' ? 'selected ' : ''}>
-            ${room.status === 'blocked' ? 'Blocked (Reserved)' : 'Blocked'}
+            ${room.status === 'blocked' ? 'Occupied' : 'Blocked'}
         </option>
     </select>
 `;
