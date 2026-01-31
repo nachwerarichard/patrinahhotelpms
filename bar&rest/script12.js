@@ -683,55 +683,82 @@ confirmDeleteBtn.addEventListener('click', () => {
 });
 
 function openAdjustModal(item) {
-    console.log("Opening Adjust Modal for:", item.item);
-    
-    // 1. Target the correct Modal ID from your HTML
-    const modal = document.getElementById('edit-inventory-modal'); 
-    if (!modal) {
-        console.error("Could not find element with ID: edit-inventory-modal");
-        return;
-    }
+    const modal = document.getElementById('edit-inventory-modal');
+    if (!modal) return;
 
-    // 2. Populate fields using the 'edit-' prefix
+    // 1. Fill the data
     document.getElementById('edit-inventory-id').value = item._id || '';
     document.getElementById('edit-item').value = item.item || '';
-    
-    // Make item name Read-Only so they don't change the product name by mistake
-    document.getElementById('edit-item').readOnly = true; 
-    document.getElementById('edit-item').classList.add('bg-gray-100', 'cursor-not-allowed');
-
     document.getElementById('edit-opening').value = item.opening || 0;
     document.getElementById('edit-purchases').value = item.purchases || 0;
     document.getElementById('edit-inventory-sales').value = item.sales || 0;
     document.getElementById('edit-spoilage').value = item.spoilage || 0;
     document.getElementById('edit-buyingprice').value = item.buyingprice || 0;
     document.getElementById('edit-sellingprice').value = item.sellingprice || 0;
-    
-    const trackInput = document.getElementById('edit-trackInventory');
-    if (trackInput) trackInput.checked = !!item.trackInventory;
+    document.getElementById('edit-trackInventory').checked = !!item.trackInventory;
 
-    // 3. Update the Modal Title to reflect "Adjustment"
+    // 2. Set Read-Only logic
+    const allInputIds = [
+        'edit-item', 
+        'edit-opening', 
+        'edit-inventory-sales', 
+        'edit-buyingprice', 
+        'edit-sellingprice'
+    ];
+    
+    // Lock these fields and change their background to show they are disabled
+    allInputIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.readOnly = true;
+            el.classList.add('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+        }
+    });
+
+    // Disable the checkbox specifically
+    const trackCheckbox = document.getElementById('edit-trackInventory');
+    if (trackCheckbox) trackCheckbox.disabled = true;
+
+    // 3. Keep these EDITABLE
+    // Purchases and Spoilage remain white and interactive
+    document.getElementById('edit-purchases').focus(); 
+
+    // 4. Update UI
     const title = modal.querySelector('h2');
     if (title) title.textContent = `Adjust Stock: ${item.item}`;
-
-    // 4. Show the Modal
+    
     modal.classList.remove('hidden');
-    modal.style.display = 'flex'; 
+    modal.style.display = 'flex';
 }
 
-// Ensure you have a matching close function
 function closeEditModal() {
     const modal = document.getElementById('edit-inventory-modal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.style.display = 'none';
-        // Reset readOnly for future uses
-        const itemInput = document.getElementById('edit-item');
-        if(itemInput) {
-            itemInput.readOnly = false;
-            itemInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+    if (!modal) return;
+
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+
+    // UNLOCK all fields for the next time
+    const allInputIds = [
+        'edit-item', 
+        'edit-opening', 
+        'edit-purchases',
+        'edit-inventory-sales', 
+        'edit-spoilage',
+        'edit-buyingprice', 
+        'edit-sellingprice'
+    ];
+
+    allInputIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.readOnly = false;
+            el.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
         }
-    }
+    });
+
+    const trackCheckbox = document.getElementById('edit-trackInventory');
+    if (trackCheckbox) trackCheckbox.disabled = false;
 }
 
 // Add this to your initialization code
