@@ -513,7 +513,7 @@
         <select id="filterGuestSource" class="border p-2 rounded">
             <option value="">All Guest Source</option>
             <option value="Walk in">Walk In</option>
-            <option value="Web">Hotel Website</option>
+            <option value="Hotel Website">Hotel Website</option>
             <option value="Booking.com">Booking.com</option>
             <option value="Expedia">Expedia Group</option>
             <option value="Airbnd">Airbnd</option>
@@ -818,7 +818,7 @@ Add Guest Details            </h2>
                             <label for="guestsource" class="text-xs font-bold text-gray-500 uppercase mb-1">Booking Source</label>
                             <select id="guestsource" class="px-3 py-2 border border-gray-300 rounded-md bg-white">
                                  <option value="Walk in">Walk In</option>
-            <option value="Web">Hotel Website</option>
+            <option value="Hotel Website">Hotel Website</option>
             <option value="Booking.com">Booking.com</option>
             <option value="Expedia">Expedia Group</option>
             <option value="Airbnd">Airbnd</option>
@@ -1406,7 +1406,7 @@ function renderTable(bookings) {
                 </span>
             </td>
             <td class="p-3 border text-center">
-                <span class="px-2 py-1 rounded text-xs ${b.guestsource === 'walk in' ? 'bg-green-200' : 'bg-yellow-200'}">
+                <span class="px-2 py-1 rounded text-xs ${b.guestsource === 'Walk in' ? 'bg-green-200' : 'bg-yellow-200'}">
                     ${b.guestsource}
                 </span>
             </td>
@@ -1513,7 +1513,7 @@ const response = await fetch(`${API_BASE_URL}/bookings/all`);    const allBookin
 
     // 5. Aggregate Data for Charts
     const statusCounts = { 'confirmed': 0, 'cancelled': 0, 'no show': 0, 'checkedin' :0,'reserved' :0 };
-    const sourceCounts = { 'walk in': 0, 'OTA': 0, 'Direct': 0, 'PMS': 0 };
+    const sourceCounts = { 'Walk in': 0, 'Booking.com': 0, 'Expedia ': 0,'Trip': 0,'Hotel Website': 0, 'Airbnb': 0 };
 
     todayBookings.forEach(b => {
       statusCounts[b.gueststatus]++;
