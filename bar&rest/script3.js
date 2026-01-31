@@ -714,32 +714,38 @@ function populateDatalist(items) {
         .join('');
 }
 
-// Use the 'input' event for immediate population
 document.getElementById('sale-item').addEventListener('input', function(e) {
-    const selectedItemName = e.target.value.trim();
+    const selectedItemName = e.target.value.trim().toLowerCase();
     
-    // 1. Find the item in the cache
+    // 1. Search the cache carefully
     const itemData = inventoryCache.find(inv => 
-        inv.item && inv.item.toLowerCase() === selectedItemName.toLowerCase()
+        inv.item && inv.item.toLowerCase() === selectedItemName
     );
     
     if (itemData) {
-        // 2. Select the elements directly
+        console.log("Match Found:", itemData);
+
+        // 2. Select fields
         const bpField = document.getElementById('sale-bp');
         const spField = document.getElementById('sale-sp');
 
-        // 3. Force the values into the fields
-        if (bpField) {
+        // 3. Update BP (You said this already works)
+        if (bpField && itemData.buyingprice !== undefined) {
             bpField.value = itemData.buyingprice;
         }
 
+        // 4. Update SP (This is the one we are fixing)
         if (spField) {
-            // We use the exact key from your console log: 'sellingprice'
-            spField.value = itemData.sellingprice;
-            console.log("Setting SP to:", itemData.sellingprice);
-        } else {
-            console.error("Could not find an HTML element with id='sale-sp'");
+            // We use 'sellingprice' exactly as it appeared in your successful log
+            const price = itemData.sellingprice;
+            
+            // Force it to be a number and update
+            spField.value = parseFloat(price); 
+            
+            // Trigger a 'change' event manually just in case other scripts are watching
+            spField.dispatchEvent(new Event('change'));
+            
+            console.log("SP should now be:", price);
         }
     }
 });
-window.addEventListener('DOMContentLoaded', loadInventory);
