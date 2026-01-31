@@ -42,12 +42,16 @@ function getDateString(date) {
 
 function setDefaultDateRange() {
     const today = new Date();
-    const sevenDaysAgo = new Date();
-    // Go back 6 days to include today, making it 7 days total.
-    sevenDaysAgo.setDate(today.getDate() - 6);
+    const dateStr = getDateString(today);
 
-    endDateInput.value = getDateString(today);
-    startDateInput.value = getDateString(sevenDaysAgo);
+    // Set both inputs to today's date
+    endDateInput.value = dateStr;
+    startDateInput.value = dateStr;
+    
+    // Optional: Update the UI text to say "Today"
+    if (periodDisplay) {
+        periodDisplay.textContent = `Today (${dateStr})`;
+    }
 }
 
 
