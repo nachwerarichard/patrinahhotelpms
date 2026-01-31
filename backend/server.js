@@ -2989,31 +2989,41 @@ app.get('/inventory', async (req, res) => {
         }
 
         // --- SCENARIO 1: SPECIFIC DATE REPORT ---
-        if (date) {
-            const { utcStart, utcEnd, error } = getStartAndEndOfDayInUTC(date);
-            if (error) return res.status(400).json({ error });
+       if (date) {
+    const { utcStart, utcEnd, error } = getStartAndEndOfDayInUTC(date);
+    if (error) return res.status(400).json({ error });
 
-            const allItems = await Inventory.distinct('item');
-            const dailyRecords = await Inventory.find({
-                date: { $gte: utcStart, $lt: utcEnd }
-            });
+    // --- NEW: Handle both Date and Item name ---
+    let itemNames = [];
+    if (item) {
+        // Search for specific items matching the name
+        itemNames = await Inventory.distinct('item', { item: new RegExp(item, 'i') });
+    } else {
+        // Get all items if no name is provided
+        itemNames = await Inventory.distinct('item');
+    }
 
-            const recordsMap = new Map();
-            dailyRecords.forEach(record => recordsMap.set(record.item, record));
+    const dailyRecords = await Inventory.find({
+        date: { $gte: utcStart, $lt: utcEnd },
+        ...(item && { item: new RegExp(item, 'i') }) // Filter by item if name exists
+    });
 
-            const report = await Promise.all(allItems.map(async (singleItem) => {
-                const record = recordsMap.get(singleItem);
-                if (record) return record;
+    const recordsMap = new Map();
+    dailyRecords.forEach(record => recordsMap.set(record.item, record));
 
-                // Fallback to latest record before this date
-                return await Inventory.findOne({
-                    item: singleItem,
-                    date: { $lt: utcStart }
-                }).sort({ date: -1 }) || { item: singleItem, opening: 0, closing: 0 };
-            }));
-            
-            return res.json({ date, report });
-        }
+    const report = await Promise.all(itemNames.map(async (singleItem) => {
+        const record = recordsMap.get(singleItem);
+        if (record) return record;
+
+        // Fallback: What was the stock of this specific item before this date?
+        return await Inventory.findOne({
+            item: singleItem,
+            date: { $lt: utcStart }
+        }).sort({ date: -1 }) || { item: singleItem, opening: 0, closing: 0, purchases: 0, sales: 0 };
+    }));
+    
+    return res.json({ date, report });
+}
 
         // --- SCENARIO 2: GENERAL SEARCH / GLOBAL VIEW ---
         let filter = {};
