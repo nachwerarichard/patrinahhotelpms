@@ -884,7 +884,13 @@ function renderInventoryTable(inventory) {
             editButton.className = 'text-indigo-600 hover:text-indigo-900 mr-3';
             editButton.onclick = () => openEditModal(item);
             actionsCell.appendChild(editButton);
-
+            
+             const editButton = document.createElement('button');
+            editButton.textContent = 'Add New Purchase';
+            editButton.className = 'text-green-600 hover:text-green-900 mr-3';
+            editButton.onclick = () => opendal(item);
+            actionsCell.appendChild(editButton);
+            
             const deleteButton = document.createElement('button');
             deleteButton.textContent = 'Delete';
             deleteButton.className = 'text-red-600 hover:text-red-900';
