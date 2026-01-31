@@ -2297,8 +2297,8 @@ async function submitEditCashForm(event) {
 
         if (response.ok) { // Check if the response status is 200-299
             showMessage('Cash entry updated successfully! 🎉');
-            
-            // Close the modal after successful submission
+                 modal.classList.add('hidden');
+                        // Close the modal after successful submission
             if (modal) modal.classList.add('hidden');
             
             fetchCashJournal(); // Re-fetch to update table
