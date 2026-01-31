@@ -682,7 +682,29 @@ confirmDeleteBtn.addEventListener('click', () => {
     hideDeleteModal();
 });
 
+function openAdjustModal(item) {
+    const modal = document.getElementById('inventory-modal'); // Use your existing modal ID
+    if (!modal) return;
 
+    // Fill fields
+    document.getElementById('inventory-id').value = item._id;
+    document.getElementById('item').value = item.item;
+    document.getElementById('item').readOnly = true; // Prevent renaming during adjustment
+    
+    document.getElementById('opening').value = item.opening;
+    document.getElementById('purchases').value = item.purchases;
+    document.getElementById('inventory-sales').value = item.sales;
+    document.getElementById('spoilage').value = item.spoilage;
+    document.getElementById('buyingprice').value = item.buyingprice;
+    document.getElementById('sellingprice').value = item.sellingprice;
+    document.getElementById('trackInventory').checked = item.trackInventory;
+
+    // Update Modal Title
+    const title = modal.querySelector('h2');
+    if (title) title.textContent = `Adjust Stock: ${item.item}`;
+
+    modal.classList.remove('hidden'); // Show modal
+}
 // 4. UPDATE renderInventoryTable to call showDeleteModal
 function renderInventoryTable(inventory) {
     console.log('Current User Role:', currentUserRole);
@@ -752,6 +774,13 @@ function renderInventoryTable(inventory) {
             editButton.onclick = () => openEditModal(item);
             actionsCell.appendChild(editButton);
 
+            // 2. NEW: Adjust Button (Opens a specific Adjustment Modal)
+    const adjustButton = document.createElement('button');
+    adjustButton.textContent = 'Adjust';
+    adjustButton.className = 'adjust bg-amber-500 hover:bg-amber-600 text-white px-2 py-1 rounded mr-1';
+    adjustButton.onclick = () => openAdjustModal(item); // New function below
+    actionsCell.appendChild(adjustButton);
+
             const deleteButton = document.createElement('button');
             deleteButton.textContent = 'Delete';
             deleteButton.className = 'delete';
@@ -793,156 +822,83 @@ async function deleteInventory(id) {
 }
 
 
+/**
+ * HANDLER: Decides whether to Create or Update
+ */
 async function submitInventoryForm(event) {
     event.preventDefault();
+    const id = document.getElementById('inventory-id').value;
 
-    // 1. Get the submit button and save original text 💾
-    const submitButton = document.querySelector('#inventory-form button[type="submit"]');
-    // Get the span element within the button
-    const submitTextSpan = document.getElementById('inventory-submit-text');
-    const submitIcon = submitButton.querySelector('i.fas');
-    
-    // Store original icon class and text
-    const originalIconClass = submitIcon ? submitIcon.className : 'fas fa-save';
-    const originalButtonText = submitTextSpan ? submitTextSpan.textContent : 'Save Inventory';
-    
-    // Check for essential elements
-    if (!submitButton || !submitTextSpan) {
-        // Fallback for missing elements
-        showMessage('Submit button or text element is missing.');
-        return;
-    }
-
-    const idInput = document.getElementById('inventory-id');
-    const itemInput = document.getElementById('item');
-    const openingInput = document.getElementById('opening');
-    const purchasesInput = document.getElementById('purchases');
-    const inventorySalesInput = document.getElementById('inventory-sales');
-    const spoilageInput = document.getElementById('spoilage');
-    const buyingpriceInput = document.getElementById('buyingprice');
-    const sellingpriceInput = document.getElementById('sellingprice');
-    const trackInventoryInput = document.getElementById('trackInventory');
-
-
-
-    // ... (Basic check for form elements remains the same) ...
-
-    if (!idInput || !itemInput || !sellingpriceInput || !buyingpriceInput ) {
-        showMessage('Inventory form elements are missing.');
-        return;
-    }
-
-    const id = idInput.value;
-    const item = itemInput.value;
-    const opening = parseInt(openingInput.value);
-    const purchases = parseInt(purchasesInput.value);
-    const sales = parseInt(inventorySalesInput.value);
-    const spoilage = parseInt(spoilageInput.value);
-    const buyingprice = parseInt(buyingpriceInput.value);
-    const sellingprice = parseInt(sellingpriceInput.value);
-    const trackInventory = trackInventoryInput.checked;
-    // ... (Basic validation remains the same) ...
-
-    if (!item || isNaN(sellingprice)|| !trackInventoryInput) {
-        showMessage('Please fill in all inventory fields correctly with valid numbers.');
-        return;
-    }
-
-    const inventoryData = { item, opening, purchases, sales, spoilage,buyingprice,sellingprice,trackInventory };
-
-    try {
-        // 2. Change button text to 'Processing...' and disable it ⏳
-        // Use textContent for the span and change the icon
-        submitTextSpan.textContent = 'Processing...';
-        if (submitIcon) {
-            // Change icon to a spinner if available, otherwise just use text
-            submitIcon.className = 'fas fa-spinner fa-spin'; 
-        }
-        submitButton.disabled = true;
-
-        let response;
-        let successMessage;
-
-        // ... (API logic remains the same) ...
-
-        if (id && id !== '') {
-            // Edit operation (PUT)
-            const allowedToEditInventory = 'admin';
-            if (!allowedToEditInventory.includes(currentUserRole)) {
-                showMessage('Permission Denied: Only administrators can edit inventory.');
-                // 3a. Revert button and enable it immediately on permission failure
-                submitTextSpan.textContent = originalButtonText;
-                if (submitIcon) submitIcon.className = originalIconClass;
-                submitButton.disabled = false;
-                return;
-            }
-            response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
-                method: 'PUT',
-                body: JSON.stringify(inventoryData)
-            });
-            successMessage = 'Updated! ✅'; // Shortened for button display
-        } else {
-            // New item creation (POST)
-            const allowedToAddInventory = [ 'admin', 'manager','cashier', 'bar'];
-            if (!allowedToAddInventory.includes(currentUserRole)) {
-                showMessage('Permission Denied: You do not have permission to add inventory.');
-                // 3b. Revert button and enable it immediately on permission failure
-                submitTextSpan.textContent = originalButtonText;
-                if (submitIcon) submitIcon.className = originalIconClass;
-                submitButton.disabled = false;
-                return;
-            }
-            response = await authenticatedFetch(`${API_BASE_URL}/inventory`, {
-                method: 'POST',
-                body: JSON.stringify(inventoryData)
-            });
-            successMessage = 'Done! ✅'; // Shortened for button display
-        }
-
-        // Handle the response regardless of method
-        if (response.ok) {
-            await response.json(); // Consume the response body
-            
-            // --- 👇 THE KEY CHANGE IS HERE 👇 ---
-            // Display the success message on the button
-            submitTextSpan.textContent = successMessage;
-            if (submitIcon) submitIcon.className = 'fas fa-check'; // Change icon to a checkmark
-            
-            // Show the full message via your dedicated showMessage function
-            showMessage(id ? 'Inventory Updated! ✅' : 'Inventory Item Added! ✅');
-
-
-            // Wait for 2 seconds, then reset the form and button ⏱️
-            setTimeout(() => {
-                const inventoryForm = document.getElementById('inventory-form');
-                if (inventoryForm) inventoryForm.reset();
-                if (idInput) idInput.value = ''; // Ensure ID is cleared after submission
-
-                // Revert button text and icon
-                submitTextSpan.textContent = originalButtonText; 
-                if (submitIcon) submitIcon.className = originalIconClass;
-                
-                submitButton.disabled = false;      // Re-enable button
-                fetchInventory(); // Re-fetch data
-            }, 2000); // 2000 milliseconds = 2 seconds
-
-        } else {
-            // ... (Error handling remains the same) ...
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Server error occurred.');
-        }
-
-    } catch (error) {
-        console.error('Error saving inventory item:', error);
-        showMessage('Failed to save inventory item: ' + error.message);
-        
-        // 4. Revert button text and enable it on error ❌
-        submitTextSpan.textContent = originalButtonText;
-        if (submitIcon) submitIcon.className = originalIconClass;
-        submitButton.disabled = false;
+    if (id && id !== '') {
+        await updateExistingItem(id);
+    } else {
+        await createNewItem();
     }
 }
 
+/**
+ * LOGIC: Create New Item (POST)
+ */
+async function createNewItem() {
+    if (!['admin', 'manager', 'cashier', 'bar'].includes(currentUserRole)) {
+        return showMessage('Permission Denied to add inventory.');
+    }
+
+    const data = getInventoryFormData();
+    try {
+        setLoadingState(true);
+        const response = await authenticatedFetch(`${API_BASE_URL}/inventory`, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+        if (response.ok) {
+            handleSuccess('Item Added! ✅');
+        }
+    } catch (error) {
+        handleError(error);
+    } finally {
+        setLoadingState(false);
+    }
+}
+
+/**
+ * LOGIC: Update Existing Item (PUT)
+ */
+async function updateExistingItem(id) {
+    if (currentUserRole !== 'admin') {
+        return showMessage('Only administrators can edit inventory.');
+    }
+
+    const data = getInventoryFormData();
+    try {
+        setLoadingState(true);
+        const response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        });
+        if (response.ok) {
+            handleSuccess('Item Updated! ✅');
+        }
+    } catch (error) {
+        handleError(error);
+    } finally {
+        setLoadingState(false);
+    }
+}
+
+// Helper to gather form data
+function getInventoryFormData() {
+    return {
+        item: document.getElementById('item').value,
+        opening: parseInt(document.getElementById('opening').value) || 0,
+        purchases: parseInt(document.getElementById('purchases').value) || 0,
+        sales: parseInt(document.getElementById('inventory-sales').value) || 0,
+        spoilage: parseInt(document.getElementById('spoilage').value) || 0,
+        buyingprice: parseFloat(document.getElementById('buyingprice').value) || 0,
+        sellingprice: parseFloat(document.getElementById('sellingprice').value) || 0,
+        trackInventory: document.getElementById('trackInventory').checked
+    };
+}
 // --- Sales Functions ---
 // Helper function to update the sales search button text and icon
 
