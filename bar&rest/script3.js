@@ -428,7 +428,7 @@ async function submitEditSaleForm(event) {
     const numberInput = document.getElementById('edit-sale-number');
     const bpInput = document.getElementById('edit-sale-bp');
     const spInput = document.getElementById('edit-sale-sp');
-    const date = document.getElementById('edit-sale');
+    const dateInput = document.getElementById('edit-sale');
 
     const saveButton = document.getElementById('edit-sale-submit-btn');
 
@@ -444,7 +444,7 @@ async function submitEditSaleForm(event) {
     const number = parseInt(numberInput.value, 10);
     const bp = parseFloat(bpInput.value);
     const sp = parseFloat(spInput.value);
-    const date = date.value;
+    const date = dateInput.value;
 
 
 
