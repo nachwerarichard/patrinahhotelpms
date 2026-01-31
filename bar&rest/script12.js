@@ -2295,9 +2295,9 @@ async function submitEditCashForm(event) {
             body: JSON.stringify(cashData)
         });
 
-        if (response.ok) { // Check if the response status is 200-299
+        if (response.ok) { 
+            document.getElementById("edit-cash-modal").style.display="none";// Check if the response status is 200-299
             showMessage('Cash entry updated successfully! 🎉');
-                 modal.classList.add('hidden');
                         // Close the modal after successful submission
             if (modal) modal.classList.add('hidden');
             
