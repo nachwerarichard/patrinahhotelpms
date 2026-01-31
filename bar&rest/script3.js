@@ -360,7 +360,7 @@ function populateSaleForm(sale) {
     const numberInput = document.getElementById('edit-sale-number');
     const bpInput     = document.getElementById('edit-sale-bp');
     const spInput     = document.getElementById('edit-sale-sp');
-    const date        = document.getElementById('edit-sale');
+    const date        = document.getElementById('edit-sale-date');
     if (!sale || typeof sale !== 'object') {
         console.error("Invalid or missing sale object passed.", sale);
         return;
