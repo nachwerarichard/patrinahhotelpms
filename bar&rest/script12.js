@@ -2311,243 +2311,148 @@ function populateEditCashModal(record) {
 }
 // --- Reports Functions ---
 async function generateReports() {
-    // 1. Get the button and set it to 'searching' state
     const generateButton = document.getElementById('generate-report-btn');
     let originalButtonHtml = generateButton ? generateButton.innerHTML : '';
     if (generateButton) {
         generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
-        generateButton.disabled = true; // Disable button to prevent multiple clicks
+        generateButton.disabled = true;
     }
 
-    // Define the department prefixes and the logic to get the department.
-    // Use lowercase keys for consistency.
-    const departmentPrefixes = {
+    // 1. Updated Department List to match your Schema and PMS structure
+    const departments = ['Bar', 'Restaurant', 'Kitchen', 'Conference', 'Gardens', 'Accommodation'];
+
+    // Keyword logic for Sales (since Sales might not have a hardcoded department field yet)
+    const salesKeywords = {
         'bar': 'Bar',
         'rest': 'Restaurant',
+        'kitc': 'Kitchen',
         'conf': 'Conference',
-        'gardens': 'Gardens',
-        'accommodation': 'Accommodation'
+        'gard': 'Gardens',
+        'acco': 'Accommodation'
     };
 
-    // A function to get the department from the text.
-    function getDepartmentFromText(text) {
+    function getDepartmentFromSale(text) {
         const lowerText = text.toLowerCase();
-
-        // Check if the text includes any of our department prefixes
-        for (const prefix in departmentPrefixes) {
-            if (lowerText.includes(prefix)) {
-                return departmentPrefixes[prefix];
-            }
+        for (const prefix in salesKeywords) {
+            if (lowerText.includes(prefix)) return salesKeywords[prefix];
         }
-        
-        return 'Other'; // Default department if no match is found
+        return 'Other';
     }
 
     const startDateInput = document.getElementById('report-start-date');
     const endDateInput = document.getElementById('report-end-date');
 
-    if (!startDateInput || !endDateInput) {
-        showMessage('Report date inputs not found.');
-        
-        // 5. Revert button state on error/early exit
-        if (generateButton) {
-            generateButton.innerHTML = originalButtonHtml;
-            generateButton.disabled = false;
-        }
+    if (!startDateInput || !endDateInput || !startDateInput.value || !endDateInput.value) {
+        showMessage('Please select both start and end dates.');
+        if (generateButton) { generateButton.innerHTML = originalButtonHtml; generateButton.disabled = false; }
         return;
     }
 
-    const startDateString = startDateInput.value;
-    const endDateString = endDateInput.value;
-
-    if (!startDateString || !endDateString) {
-        showMessage('Please select both start and end dates for the report.');
-        
-        // 5. Revert button state on error/early exit
-        if (generateButton) {
-            generateButton.innerHTML = originalButtonHtml;
-            generateButton.disabled = false;
-        }
-        return;
-    }
-
-    const startDate = new Date(startDateString);
-    const endDate = new Date(endDateString);
-    
-    // Fix: Normalize dates to UTC to avoid timezone issues
-    // Set the start date to the beginning of the day (00:00:00) in UTC
-    startDate.setUTCHours(0, 0, 0, 0); 
-    // Set the end date to the end of the day (23:59:59) in UTC
+    // Date Normalization
+    const startDate = new Date(startDateInput.value);
+    const endDate = new Date(endDateInput.value);
+    startDate.setUTCHours(0, 0, 0, 0);
     endDate.setUTCHours(23, 59, 59, 999);
 
-    console.log('Report Start Date (UTC):', startDate.toUTCString());
-    console.log('Report End Date (UTC):', endDate.toUTCString());
-
-    let allExpenses = [];
-    let allSales = [];
-
     const tbody = document.getElementById('department-report-tbody');
-    if (!tbody) {
-        console.error('Department report tbody not found.');
-        
-        // 5. Revert button state on error/early exit
-        if (generateButton) {
-            generateButton.innerHTML = originalButtonHtml;
-            generateButton.disabled = false;
-        }
-        return;
-    }
-    tbody.innerHTML = ''; // Clear any existing rows
+    if (tbody) tbody.innerHTML = ''; 
 
     try {
-        // Fetch and filter sales and expenses data (existing logic remains)
-        // ... (sales fetch and filter logic)
+        let allSales = [];
+        let allExpenses = [];
+
+        // 2. Fetch Sales (Paginated)
         let page = 1;
-        let salesDataFetched;
+        let salesResponse;
         do {
-            const salesResponse = await authenticatedFetch(`${API_BASE_URL}/sales?page=${page}`);
-            salesDataFetched = await salesResponse.json();
-            if (salesDataFetched && Array.isArray(salesDataFetched.data)) {
-                console.log(`Fetched ${salesDataFetched.data.length} sales records from page ${page}`);
-                allSales = allSales.concat(salesDataFetched.data);
+            const resp = await authenticatedFetch(`${API_BASE_URL}/sales?page=${page}`);
+            salesResponse = await resp.json();
+            if (salesResponse && Array.isArray(salesResponse.data)) {
+                allSales = allSales.concat(salesResponse.data);
                 page++;
-            } else {
-                salesDataFetched = null; // Exit the loop if data is not an array or response is bad
-            }
-        } while (salesDataFetched && salesDataFetched.data.length > 0);
-        
-        console.log('Total sales fetched from all pages:', allSales.length);
+            } else { salesResponse = null; }
+        } while (salesResponse && salesResponse.data.length > 0);
 
-        // Filter sales by date after all data has been fetched
-        allSales = allSales.filter(s => {
-            const saleDate = new Date(s.date);
-            // Use getTime() for robust date comparison with UTC normalized dates
-            return saleDate.getTime() >= startDate.getTime() && saleDate.getTime() <= endDate.getTime();
-        });
-        console.log('Total sales after filtering:', allSales.length);
-
-        // Fetch all expenses data, handling pagination by incrementing a page number.
+        // 3. Fetch Expenses (Paginated)
         page = 1;
-        let expensesDataFetched;
+        let expResponse;
         do {
-            const expensesResponse = await authenticatedFetch(`${API_BASE_URL}/expenses?page=${page}`);
-            expensesDataFetched = await expensesResponse.json();
-            if (expensesDataFetched && Array.isArray(expensesDataFetched.data)) {
-                console.log(`Fetched ${expensesDataFetched.data.length} expense records from page ${page}`);
-                allExpenses = allExpenses.concat(expensesDataFetched.data);
+            const resp = await authenticatedFetch(`${API_BASE_URL}/expenses?page=${page}`);
+            expResponse = await resp.json();
+            if (expResponse && Array.isArray(expResponse.data)) {
+                allExpenses = allExpenses.concat(expResponse.data);
                 page++;
+            } else { expResponse = null; }
+        } while (expResponse && expResponse.data.length > 0);
+
+        // 4. Filtering by Date
+        const filteredSales = allSales.filter(s => {
+            const d = new Date(s.date);
+            return d >= startDate && d <= endDate;
+        });
+
+        const filteredExpenses = allExpenses.filter(e => {
+            const d = new Date(e.date);
+            return d >= startDate && d <= endDate;
+        });
+
+        // 5. Aggregation
+        const report = {};
+        departments.concat(['Other']).forEach(dept => {
+            report[dept] = { sales: 0, expenses: 0 };
+        });
+
+        filteredSales.forEach(sale => {
+            const dept = getDepartmentFromSale(sale.item);
+            report[dept].sales += (sale.number * sale.sp);
+        });
+
+        filteredExpenses.forEach(exp => {
+            // Priority: Use the 'department' field from Schema, fallback to keyword search
+            const dept = exp.department || getDepartmentFromSale(exp.description);
+            if (report[dept]) {
+                report[dept].expenses += exp.amount;
             } else {
-                expensesDataFetched = null; // Exit the loop if data is not an array or response is bad
+                report['Other'].expenses += exp.amount;
             }
-        } while (expensesDataFetched && expensesDataFetched.data.length > 0);
-
-        console.log('Total expenses fetched from all pages:', allExpenses.length);
-
-        // Filter expenses by date after all data has been fetched
-        allExpenses = allExpenses.filter(e => {
-            const expenseDate = new Date(e.date);
-            // Use getTime() for robust date comparison with UTC normalized dates
-            return expenseDate.getTime() >= startDate.getTime() && expenseDate.getTime() <= endDate.getTime();
-        });
-        console.log('Total expenses after filtering:', allExpenses.length);
-
-        // ... (department aggregation logic)
-        const departmentReports = {};
-            
-        // Initialize department reports with zero values to prevent 'undefined' issues
-        for (const prefix in departmentPrefixes) {
-            departmentReports[departmentPrefixes[prefix]] = { sales: 0, expenses: 0 };
-        }
-        departmentReports['Other'] = { sales: 0, expenses: 0 };
-
-        let overallSales = 0;
-        let overallExpenses = 0;
-
-        allSales.forEach(sale => {
-            const department = getDepartmentFromText(sale.item);
-            const saleAmount = sale.number * sale.sp;
-
-            overallSales += saleAmount;
-            if (!departmentReports[department]) {
-                departmentReports[department] = { sales: 0, expenses: 0 };
-            }
-            departmentReports[department].sales += saleAmount;
         });
 
-        allExpenses.forEach(expense => {
-            const department = getDepartmentFromText(expense.description + ' ' + (expense.source || ''));
+        // 6. Rendering UI
+        let totalS = 0, totalE = 0;
+        Object.keys(report).sort().forEach(dept => {
+            const { sales, expenses } = report[dept];
+            if (sales === 0 && expenses === 0) return; // Skip empty rows
 
-            overallExpenses += expense.amount;
-            if (!departmentReports[department]) {
-                departmentReports[department] = { sales: 0, expenses: 0 };
-            }
-            departmentReports[department].expenses += expense.amount;
-        });
+            totalS += sales; totalE += expenses;
+            const balance = sales - expenses;
 
-        // ... (overall summary display logic)
-        const overallSalesElement = document.getElementById('overall-sales');
-        const overallExpensesElement = document.getElementById('overall-expenses');
-        const overallBalanceElement = document.getElementById('overall-balance');
-
-        if (overallSalesElement) overallSalesElement.textContent = overallSales.toFixed(2);
-        if (overallExpensesElement) overallExpensesElement.textContent = overallExpenses.toFixed(2);
-        const overallBalance = overallSales - overallExpenses;
-        if (overallBalanceElement) {
-            overallBalanceElement.textContent = overallBalance.toFixed(2);
-            overallBalanceElement.className = overallBalance >= 0 ? 'positive' : 'negative';
-        }
-
-
-        // ... (table rendering logic)
-        const sortedDepartments = Object.keys(departmentReports).sort();
-        if (sortedDepartments.length === 0) {
             const row = tbody.insertRow();
-            const cell = row.insertCell();
-            cell.colSpan = 4;
-            cell.textContent = 'No data found for the selected period or departments.';
-            cell.className = 'text-center py-4 text-gray-500';
-        } else {
-            sortedDepartments.forEach(dept => {
-                const data = departmentReports[dept];
-                const deptSales = data.sales;
-                const deptExpenses = data.expenses;
-                const deptBalance = deptSales - deptExpenses;
+            row.insertCell().textContent = dept;
+            row.insertCell().textContent = sales.toLocaleString();
+            row.insertCell().textContent = expenses.toLocaleString();
+            const bCell = row.insertCell();
+            bCell.textContent = balance.toLocaleString();
+            bCell.className = balance >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+        });
 
-                const row = tbody.insertRow();
-                row.insertCell().textContent = dept;
-                row.insertCell().textContent = deptSales.toFixed(2);
-                row.insertCell().textContent = deptExpenses.toFixed(2);
-                const balanceCell = row.insertCell();
-                balanceCell.textContent = deptBalance.toFixed(2);
-                balanceCell.className = deptBalance >= 0 ? 'positive' : 'negative'; // Apply class based on balance
-            });
-        }
+        // Update Summary Cards
+        document.getElementById('overall-sales').textContent = totalS.toLocaleString();
+        document.getElementById('overall-expenses').textContent = totalE.toLocaleString();
+        const bal = totalS - totalE;
+        const balEl = document.getElementById('overall-balance');
+        balEl.textContent = bal.toLocaleString();
+        balEl.className = bal >= 0 ? 'text-green-600' : 'text-red-600';
 
-
-        // 2. Set button to 'done' state on success
         if (generateButton) {
             generateButton.innerHTML = '<i class="fas fa-check"></i> Done';
-            setTimeout(() => {
-                // 3. Revert button after a short delay
-                generateButton.innerHTML = originalButtonHtml;
-                generateButton.disabled = false;
-            }, 2000); // Revert after 2 seconds
+            setTimeout(() => { generateButton.innerHTML = originalButtonHtml; generateButton.disabled = false; }, 2000);
         }
 
     } catch (error) {
-        console.error('Error generating reports:', error);
-        showMessage('Failed to generate reports: ' + error.message);
-        
-        // 4. Revert button state on error
-        if (generateButton) {
-            generateButton.innerHTML = '<i class="fas fa-times"></i> Failed';
-            setTimeout(() => {
-                generateButton.innerHTML = originalButtonHtml;
-                generateButton.disabled = false;
-            }, 3000); // Keep 'Failed' for 3 seconds before reverting
-        }
+        console.error('Report Error:', error);
+        if (generateButton) { generateButton.innerHTML = originalButtonHtml; generateButton.disabled = false; }
     }
-} 
+}
 // --- Audit Logs Functions ---
 function debounce(func, delay) {
     let timeout;
