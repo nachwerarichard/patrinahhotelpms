@@ -1260,7 +1260,7 @@ async function submitSaleForm(event) {
     const numberInput = document.getElementById('sale-number');
     const bpInput = document.getElementById('sale-bp');
     const spInput = document.getElementById('sale-sp');
-    const salesDateFilterInput = document.getElementById('sales-date-filter');
+    const salesDateFilterInput = document.getElementById('sales-date');
 
     if (!idInput || !itemInput || !numberInput || !bpInput || !spInput || !salesDateFilterInput) {
         showMessage('Sales form elements are missing.');
