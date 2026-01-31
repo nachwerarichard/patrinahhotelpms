@@ -361,7 +361,7 @@ function populateSaleForm(sale) {
     const numberInput = document.getElementById('edit-sale-number');
     const bpInput     = document.getElementById('edit-sale-bp');
     const spInput     = document.getElementById('edit-sale-sp');
-    const date        = document.getElementById('edit-sale-date');
+    const saledate        = document.getElementById('edit-sale-date');
     if (!sale || typeof sale !== 'object') {
         console.error("Invalid or missing sale object passed.", sale);
         return;
@@ -375,7 +375,7 @@ function populateSaleForm(sale) {
     // Populate simple fields
     itemInput.value = sale.item;
     numberInput.value = sale.number;
-     date.value=sale.date;
+     saledate.value=sale.date;
     departmentInput.value= sale.department
     // Populate price fields with safety checks (to prevent the toFixed error)
     // Your console log confirmed sale.bp and sale.sp exist.
