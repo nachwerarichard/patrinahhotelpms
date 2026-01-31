@@ -599,7 +599,7 @@ async function submitCashJournalForm(event) {
     }
 
     // Permission check for adding new entries (adjust roles as needed)
-    const allowedToRecordCash = ['Nachwera Richard', 'Nelson', 'Florence', 'Martha', 'Mercy', 'Joshua'];
+    const allowedToRecordCash = ['admin'];
     if (!allowedToRecordCash.includes(currentUserRole)) {
         showMessage('Permission Denied: You do not have permission to record cash movements.');
         return;
