@@ -2579,12 +2579,12 @@ app.delete('/status-reports/:id', async (req, res) => {
 
 //BAR AND RESTAURANT
 const CashJournal = mongoose.model('CashJournal', new mongoose.Schema({
-  cashAtHand: Number,
-  cashBanked: Number,
-  cashOnPhone: Number,
-  bankReceiptId: String,
-  responsiblePerson: String,
-  date: { type: Date, default: Date.now }
+  cashAtHand: { type: Number, default: 0 },
+  cashBanked: { type: Number, default: 0 },
+  cashOnPhone: { type: Number, default: 0 },
+  bankReceiptId: String,
+  responsiblePerson: String,
+  date: { type: Date, default: Date.now }
 }));
 
 const Inventory = mongoose.model('Inventory', new mongoose.Schema({
