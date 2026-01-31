@@ -1367,7 +1367,7 @@ async function submitSaleForm(event) {
     const spInput = document.getElementById('sale-sp');
     const salesDateInput = document.getElementById('sales-date');
 
-    if (!idInput || !itemInput || !numberInput || !bpInput || !spInput || !salesDateInput) {
+    if (!idInput || !itemInput || !numberInput || !bpInput || !spInput) {
         showMessage('Sales form elements are missing.');
         return;
     }
@@ -1380,7 +1380,7 @@ async function submitSaleForm(event) {
     const sp = parseFloat(spInput.value);
     const date = salesDateInput.value;
 
-    if (!item || isNaN(number) || isNaN(bp) || isNaN(sp) || !date) {
+    if (!item || isNaN(number) || isNaN(bp) || isNaN(sp) ) {
         showMessage('Please fill in all sales fields correctly with valid numbers and date.');
         return;
     }
