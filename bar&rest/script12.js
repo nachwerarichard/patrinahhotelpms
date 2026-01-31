@@ -2141,11 +2141,6 @@ function renderCashJournalTable(records) {
         cell.style.textAlign = 'center';
         return;
     }
-// Inside your renderCashJournalTable loop
-const cashAtHand = Number(record.cashAtHand) || 0;
-const cashBanked = Number(record.cashBanked) || 0;
-const cashOnPhone = Number(record.cashOnPhone) || 0;
-
 
     records.forEach(record => {
         const row = tbody.insertRow();
