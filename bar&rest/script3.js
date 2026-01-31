@@ -726,32 +726,36 @@ function populateDatalist(items) {
 // Handle selection and price population
 document.getElementById('sale-item').addEventListener('input', function(e) {
     const val = e.target.value.trim();
+    
+    // Select fields
+    const bpField = document.getElementById('sale-bp');
+    const spField = document.getElementById('sale-sp');
+
+    // 1. Find the item
     const itemData = inventoryCache.find(inv => 
         inv.item && inv.item.toLowerCase() === val.toLowerCase()
     );
     
     if (itemData) {
-        const bpField = document.getElementById('sale-bp');
-        const spField = document.getElementById('sale-sp');
-
-        // Populate BP
+        // 2. Populate BP
         if (bpField) bpField.value = itemData.buyingprice;
 
-        // Populate SP with a "force-draw" delay
+        // 3. Populate SP with the forced delay that worked
         if (spField) {
             const price = itemData.sellingprice;
-            
-            // Set it immediately
             spField.value = price;
-            
-            // Set it again in 10ms to force the browser to update the UI
             setTimeout(() => {
                 spField.value = price;
-                console.log("Forced SP Update to:", spField.value);
             }, 10);
         }
+    } else {
+        // 4. CLEAR the fields if no match is found (e.g., user is deleting)
+        if (bpField) bpField.value = '';
+        if (spField) spField.value = '';
+        
+        // Optional: Also clear the "Number Sold" if you want a total reset
+        // const numField = document.getElementById('sale-number');
+        // if (numField) numField.value = '';
     }
-});   
-
-// Initialize
+});
 window.addEventListener('DOMContentLoaded', loadInventory);
