@@ -2620,8 +2620,13 @@ const Sale = mongoose.model('Sale', new mongoose.Schema({
 }));
 
 const Expense = mongoose.model('Expense', new mongoose.Schema({
-  department: String,
-  description: String,
+ department: { 
+    type: String, 
+    required: true,
+    enum: ['Bar', 'Restaurant', 'Kitchen'], // Strict list of allowed values
+    trim: true
+  },
+    description: String,
   amount: Number,
   receiptId: String,
   date: { type: Date, default: Date.now },
@@ -3211,23 +3216,34 @@ app.delete('/sales/:id', auth,  async (req, res) => {
 });
 
 // --- Expenses Endpoints ---
-app.post('/expenses', auth,  async (req, res) => {
-  try {
-    const { description, amount, receiptId, source } = req.body;
-    const exp = await Expense.create({
-      description,
-      department,
-      amount,
-      receiptId,
-      source,
-      recordedBy: req.user.username,
-      date: new Date()
-    });
-    await logAction('Expense Created', req.user.username, { expenseId: exp._id, description: exp.description, amount: exp.amount });
-    res.status(201).json(exp);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+app.post('/expenses', auth, async (req, res) => {
+  try {
+    // 1. Extract 'department' from the request body
+    const { department, description, amount, receiptId, source } = req.body;
+
+    // 2. Create the expense with the department variable
+    const exp = await Expense.create({
+      department, // This was causing the error because it wasn't defined
+      description,
+      amount,
+      receiptId,
+      source,
+      recordedBy: req.user.username,
+      date: new Date()
+    });
+
+    await logAction('Expense Created', req.user.username, { 
+        expenseId: exp._id, 
+        description: exp.description, 
+        amount: exp.amount 
+    });
+
+    res.status(201).json(exp);
+  } catch (err) {
+    // If department is missing or not 'Bar', 'Restaurant', or 'Kitchen', 
+    // this will now tell you exactly what is wrong.
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/expenses',  async (req, res) => {
