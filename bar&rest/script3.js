@@ -698,7 +698,7 @@ async function loadInventory() {
         if (!response.ok) throw new Error('Network response was not ok');
         
         inventoryCache = await response.json();
-        console.log("Inventory Loaded:", inventoryCache); // Check if sellingprice exists here
+        console.log("Inventory Loaded:", inventoryCache);
         
         populateDatalist(inventoryCache);
     } catch (err) {
@@ -709,43 +709,51 @@ async function loadInventory() {
 function populateDatalist(items) {
     const datalist = document.getElementById('item-suggestions');
     if (!datalist) return;
-    datalist.innerHTML = items
-        .map(inv => `<option value="${inv.item}">`)
-        .join('');
+
+    // Clear existing options
+    datalist.innerHTML = '';
+
+    items.forEach(inv => {
+        if (inv.item) {
+            const option = document.createElement('option');
+            option.value = inv.item; // This is what shows in the dropdown
+            datalist.appendChild(option);
+        }
+    });
+    console.log(`Datalist populated with ${items.length} items.`);
 }
 
+// Handle selection and price population
 document.getElementById('sale-item').addEventListener('input', function(e) {
-    const selectedItemName = e.target.value.trim().toLowerCase();
-    
-    // 1. Search the cache carefully
+    const val = e.target.value.trim();
+    if (!val) return;
+
+    // Find the item (case-insensitive)
     const itemData = inventoryCache.find(inv => 
-        inv.item && inv.item.toLowerCase() === selectedItemName
+        inv.item && inv.item.toLowerCase() === val.toLowerCase()
     );
     
     if (itemData) {
         console.log("Match Found:", itemData);
 
-        // 2. Select fields
         const bpField = document.getElementById('sale-bp');
         const spField = document.getElementById('sale-sp');
 
-        // 3. Update BP (You said this already works)
-        if (bpField && itemData.buyingprice !== undefined) {
-            bpField.value = itemData.buyingprice;
+        // Populate BP
+        if (bpField) {
+            bpField.value = itemData.buyingprice || 0;
         }
 
-        // 4. Update SP (This is the one we are fixing)
+        // Populate SP
         if (spField) {
-            // We use 'sellingprice' exactly as it appeared in your successful log
-            const price = itemData.sellingprice;
+            // Using parseFloat to ensure it treats the value as a number
+            const price = parseFloat(itemData.sellingprice);
+            spField.value = isNaN(price) ? 0 : price;
             
-            // Force it to be a number and update
-            spField.value = parseFloat(price); 
-            
-            // Trigger a 'change' event manually just in case other scripts are watching
-            spField.dispatchEvent(new Event('change'));
-            
-            console.log("SP should now be:", price);
+            console.log("SP set to:", spField.value);
         }
     }
 });
+
+// Initialize
+window.addEventListener('DOMContentLoaded', loadInventory);
