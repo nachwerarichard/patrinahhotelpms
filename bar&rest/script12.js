@@ -887,7 +887,7 @@ function renderInventoryTable(inventory) {
             
              const adjustButton = document.createElement('button');
             editButton.textContent = 'Add New Purchase';
-            editButton.className = 'text-green-600 hover:text-green-900 mr-3';
+            editButton.className = 'text-blue-600 hover:text-blue-900 mr-3';
             editButton.onclick = () => openAdjustModal(item);
             actionsCell.appendChild(editButton);
             
