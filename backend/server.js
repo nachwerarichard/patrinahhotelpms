@@ -3168,7 +3168,7 @@ app.post('/sales', auth, async (req, res) => {
       sp,
       profit,
       percentageprofit: percentageProfit,
-      date: new Date()
+      date: date || new Date()
     });
 
     await logAction('Sale Created', req.user.username, { saleId: sale._id, item, number });
@@ -3260,7 +3260,7 @@ app.post('/expenses', auth, async (req, res) => {
       receiptId,
       source,
       recordedBy: req.user.username,
-      date: new Date()
+      date: date || new Date()
     });
 
     await logAction('Expense Created', req.user.username, { 
