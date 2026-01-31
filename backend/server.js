@@ -2613,6 +2613,7 @@ const Sale = mongoose.model('Sale', new mongoose.Schema({
   number: { type: Number, required: true, min: 1 },
   bp: { type: Number, required: true, min: 0 },
   sp: { type: Number, required: true, min: 0 },
+  date: { type: Date, default: Date.now },
   profit: Number,
   percentageprofit: Number,
   date: { type: Date, default: Date.now }
@@ -3116,7 +3117,7 @@ app.delete('/inventory/:id', auth,  async (req, res) => {
 // --- Sales Endpoints (Corrected) ---
 app.post('/sales', auth, async (req, res) => {
   try {
-    const { item, department, number, bp, sp } = req.body;
+    const { item, department, number, bp, sp,date } = req.body;
 
     // 1. Basic Validation
     if (!item) return res.status(400).json({ error: 'Item name is required.' });
@@ -3249,7 +3250,7 @@ app.delete('/sales/:id', auth,  async (req, res) => {
 app.post('/expenses', auth, async (req, res) => {
   try {
     // 1. Extract 'department' from the request body
-    const { department, description, amount, receiptId, source } = req.body;
+    const { department, description, amount, receiptId, source,date } = req.body;
 
     // 2. Create the expense with the department variable
     const exp = await Expense.create({
