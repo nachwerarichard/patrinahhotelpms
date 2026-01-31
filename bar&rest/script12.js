@@ -894,23 +894,20 @@ function renderInventoryTable(inventory) {
     const menu = document.createElement('div');
     menu.className = 'action-menu hidden absolute right-0 bottom-full mb-2 w-32 bg-white border border-gray-200 rounded shadow-lg z-50 flex flex-col p-1';
 
-            const editButton = document.createElement('button');
-            editButton.textContent = 'Edit';
-            editButton.className = 'text-indigo-600 hover:text-indigo-900 mr-3';
-            editButton.onclick = () => openEditModal(item);
-            actionsCell.appendChild(editButton);
-            
-             const adjustButton = document.createElement('button');
-            adjustButton.textContent = 'Add';
-            adjustButton.className = 'text-blue-600 hover:text-blue-900 mr-3';
-            adjustButton.onclick = () => openAdjustModal(item);
-            actionsCell.appendChild(adjustButton);
-            
-            const deleteButton = document.createElement('button');
-            deleteButton.textContent = 'Delete';
-            deleteButton.className = 'text-red-600 hover:text-red-900';
-            deleteButton.onclick = () => showDeleteModal(item._id);
-            actionsCell.appendChild(deleteButton);
+             const editButton = document.createElement('button');
+    editButton.textContent = 'Edit';
+    editButton.className = 'text-left px-3 py-2 text-sm hover:bg-blue-50 text-blue-600 rounded';
+    editButton.onclick = (e) => { e.stopPropagation(); openEditModal(item); };
+
+    const adjustButton = document.createElement('button');
+    adjustButton.textContent = 'Add New Stock';
+    adjustButton.className = 'text-left px-3 py-2 text-sm hover:bg-amber-50 text-amber-600 rounded';
+    adjustButton.onclick = (e) => { e.stopPropagation(); openAdjustModal(item); };
+
+    const deleteButton = document.createElement('button');
+    deleteButton.textContent = 'Delete';
+    deleteButton.className = 'text-left px-3 py-2 text-sm hover:bg-red-50 text-red-600 rounded';
+    deleteButton.onclick = (e) => { e.stopPropagation(); showDeleteModal(item._id); };
 
             menu.appendChild(editButton);
     menu.appendChild(adjustButton);
