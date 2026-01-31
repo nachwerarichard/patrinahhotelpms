@@ -1004,10 +1004,10 @@ async function createNewItem() {
             body: JSON.stringify(data)
         });
         if (response.ok) {
-            handleSuccess('Item Added! ✅');
+            showMessage('Item Added! ✅');
         }
     } catch (error) {
-        handleError(error);
+        showMessage(error);
     } finally {
         setLoadingState(false);
     }
@@ -1029,10 +1029,10 @@ async function updateExistingItem(id) {
             body: JSON.stringify(data)
         });
         if (response.ok) {
-            handleSuccess('Item Updated! ✅');
+            showMessage('Item Updated! ✅');
         }
     } catch (error) {
-        handleError(error);
+        showMessage(error);
     } finally {
         setLoadingState(false);
     }
