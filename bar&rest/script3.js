@@ -355,6 +355,7 @@ function populateSaleForm(sale) {
     }
     
     // 🚨 CRITICAL FIX: Use the NEW unique IDs from the modal
+    const departmentInput     = document.getElementById('edit-sale-department');
     const idInput     = document.getElementById('edit-sale-id');
     const itemInput   = document.getElementById('edit-sale-item');
     const numberInput = document.getElementById('edit-sale-number');
@@ -375,6 +376,7 @@ function populateSaleForm(sale) {
     itemInput.value = sale.item;
     numberInput.value = sale.number;
      date.value=sale.date;
+    departmentInput.value= sale.department
     // Populate price fields with safety checks (to prevent the toFixed error)
     // Your console log confirmed sale.bp and sale.sp exist.
     bpInput.value = sale.bp ? Number(sale.bp).toFixed(2) : '';
