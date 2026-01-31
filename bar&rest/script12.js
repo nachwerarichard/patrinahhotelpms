@@ -1079,32 +1079,35 @@ function renderSalesTable(sales) {
         const row = tbody.insertRow();
         const cell = row.insertCell();
         cell.colSpan = 9;
-        cell.textContent = 'No sales records found for this date. Try adjusting the filter.';
+        cell.textContent = 'No sales records found for this date.';
         cell.style.textAlign = 'center';
         return;
     }
 
-    const hideProfitColumns = [ 'cashier','bar'].includes(currentUserRole);
-    // Initialize a variable to hold the total of all selling prices
+    const hideProfitColumns = ['cashier', 'bar'].includes(currentUserRole);
+    
+    // 1. Initialize Totals
     let totalSellingPriceSum = 0;
-    // Initialize an object to hold departmental totals
-    const departmentTotals = {
-        bar: 0,
-        rest: 0,
-        others: 0
-    };
+    const departmentTotals = {}; // Use a dynamic object to handle any department name
 
     sales.forEach(sale => {
-        if (sale.profit === undefined || sale.percentageprofit === undefined) {
-            const totalBuyingPrice = sale.bp * sale.number;
-            const totalSellingPrice = sale.sp * sale.number;
+        // Calculation Logic
+        const totalBuyingPrice = (sale.bp || 0) * (sale.number || 0);
+        const totalSellingPrice = (sale.sp || 0) * (sale.number || 0);
+        
+        if (sale.profit === undefined) {
             sale.profit = totalSellingPrice - totalBuyingPrice;
-            sale.percentageprofit = 0;
-            if (totalBuyingPrice !== 0) {
-                sale.percentageprofit = (sale.profit / totalBuyingPrice) * 100;
-            }
+            sale.percentageprofit = totalBuyingPrice !== 0 ? (sale.profit / totalBuyingPrice) * 100 : 0;
         }
 
+        // 2. Accumulate Totals
+        totalSellingPriceSum += totalSellingPrice;
+        
+        // Use the actual department field from the database
+        const dept = sale.department || 'Others';
+        departmentTotals[dept] = (departmentTotals[dept] || 0) + totalSellingPrice;
+
+        // 3. Render Table Rows
         const row = tbody.insertRow();
         row.insertCell().textContent = sale.department;
         row.insertCell().textContent = sale.item;
@@ -1112,95 +1115,64 @@ function renderSalesTable(sales) {
         row.insertCell().textContent = sale.bp;
         row.insertCell().textContent = sale.sp;
 
-        const totalSellingPrice = sale.sp * sale.number;
-        // Add the current sale's total selling price to the sum
-        totalSellingPriceSum += totalSellingPrice;
-
-        // Categorize and add to department totals
-        if (sale.item.toLowerCase().startsWith('bar')) {
-            departmentTotals.bar += totalSellingPrice;
-        } else if (sale.item.toLowerCase().startsWith('rest')) {
-            departmentTotals.rest += totalSellingPrice;
-        } else {
-            departmentTotals.others += totalSellingPrice;
-        }
-
         if (hideProfitColumns) {
             row.insertCell().textContent = 'N/A';
             row.insertCell().textContent = 'N/A';
         } else {
-            row.insertCell().textContent = Math.round(sale.profit);
+            row.insertCell().textContent = Math.round(sale.profit).toLocaleString();
             row.insertCell().textContent = Math.round(sale.percentageprofit) + '%';
         }
 
         row.insertCell().textContent = new Date(sale.date).toLocaleDateString();
+        
         const actionsCell = row.insertCell();
-        actionsCell.className = 'actions';
-
-        const adminRoles = [ 'admin'];
-        if (adminRoles.includes(currentUserRole)) {
-            const editButton = document.createElement('button');
-            editButton.textContent = 'Edit';
-            editButton.className = 'edit bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-xs'; // Added Tailwind classes for styling
-            // --- MODIFICATION HERE ---
-            editButton.onclick = () => {
-                populateSaleForm(sale); // Populate the form
-            };
-            // --- END MODIFICATION ---
-            actionsCell.appendChild(editButton);
-
-
+        if (['admin'].includes(currentUserRole)) {
+            const editBtn = document.createElement('button');
+            editBtn.textContent = 'Edit';
+            editBtn.className = 'bg-blue-500 text-white py-1 px-2 rounded text-xs';
+            editBtn.onclick = () => populateSaleForm(sale);
+            actionsCell.appendChild(editBtn);
         } else {
             actionsCell.textContent = 'View Only';
         }
     });
 
-    // Insert an empty row for spacing before the totals
-    tbody.insertRow();
+    // --- SUMMARY SECTION ---
+    
+    // Add a separator row
+    const separator = tbody.insertRow();
+    separator.innerHTML = `<td colspan="9" class="border-t-2 border-gray-300"></td>`;
 
-    // Create a new row for each departmental total
-    for (const department in departmentTotals) {
-        if (departmentTotals[department] > 0) {
-            const totalRow = tbody.insertRow();
-            const totalCell = totalRow.insertCell();
-            totalCell.colSpan = 4;
-            // --- MODIFICATION HERE ---
-            let departmentName;
-            if (department === 'rest') {
-                departmentName = 'Restaurant';
-            } else {
-                departmentName = department.charAt(0).toUpperCase() + department.slice(1);
-            }
-            // --- END MODIFICATION ---
-            totalCell.textContent = `${departmentName} Total Sales:`;
-            totalCell.style.fontWeight = 'bold';
-            totalCell.style.textAlign = 'right';
+    // 4. Render Department Totals
+    for (const [deptName, total] of Object.entries(departmentTotals)) {
+        const row = tbody.insertRow();
+        const labelCell = row.insertCell();
+        labelCell.colSpan = 4;
+        labelCell.style.textAlign = 'right';
+        labelCell.style.fontWeight = 'bold';
+        labelCell.textContent = `${deptName} Total:`;
 
-            const totalValueCell = totalRow.insertCell();
-            totalValueCell.textContent = departmentTotals[department].toFixed(2);
-            totalValueCell.style.fontWeight = 'bold';
-        }
+        const valCell = row.insertCell();
+        valCell.style.fontWeight = 'bold';
+        valCell.className = 'text-emerald-700';
+        valCell.textContent = total.toLocaleString();
     }
 
-    // Insert an empty row for spacing between departmental totals and the grand total
-    if (Object.values(departmentTotals).some(total => total > 0)) {
-        tbody.insertRow();
-    }
+    // 5. Render Grand Total
+    const grandRow = tbody.insertRow();
+    grandRow.className = 'bg-gray-100'; // Highlight the grand total row
+    const grandLabel = grandRow.insertCell();
+    grandLabel.colSpan = 4;
+    grandLabel.style.textAlign = 'right';
+    grandLabel.style.fontWeight = 'black';
+    grandLabel.style.fontSize = '1.1em';
+    grandLabel.textContent = 'GRAND TOTAL:';
 
-    // Create a new row for the grand total selling price at the bottom
-    const grandTotalRow = tbody.insertRow();
-    const grandTotalCell = grandTotalRow.insertCell();
-    grandTotalCell.colSpan = 4;
-    grandTotalCell.textContent = 'Grand Total Sales:';
-    grandTotalCell.style.fontWeight = 'bold';
-    grandTotalCell.style.textAlign = 'right';
-
-    const grandTotalValueCell = grandTotalRow.insertCell();
-    grandTotalValueCell.textContent = totalSellingPriceSum.toFixed(2);
-    grandTotalValueCell.style.fontWeight = 'bold';
+    const grandVal = grandRow.insertCell();
+    grandVal.style.fontWeight = 'black';
+    grandVal.style.fontSize = '1.1em';
+    grandVal.textContent = totalSellingPriceSum.toLocaleString();
 }
-
-
 
 function showConfirm(message, onConfirm, onCancel = null) {
     // For simplicity, using native confirm. For a custom UI, you'd implement a modal similar to showMessage.
