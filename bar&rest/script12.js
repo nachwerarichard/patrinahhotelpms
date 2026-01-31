@@ -1365,9 +1365,9 @@ async function submitSaleForm(event) {
     const numberInput = document.getElementById('sale-number');
     const bpInput = document.getElementById('sale-bp');
     const spInput = document.getElementById('sale-sp');
-    const salesDateFilterInput = document.getElementById('sales-date-filter');
+    const salesDateInput = document.getElementById('sales-date');
 
-    if (!idInput || !itemInput || !numberInput || !bpInput || !spInput || !salesDateFilterInput) {
+    if (!idInput || !itemInput || !numberInput || !bpInput || !spInput || !salesDateInput) {
         showMessage('Sales form elements are missing.');
         return;
     }
@@ -1378,7 +1378,7 @@ async function submitSaleForm(event) {
     const number = parseInt(numberInput.value);
     const bp = parseFloat(bpInput.value);
     const sp = parseFloat(spInput.value);
-    const date = salesDateFilterInput.value;
+    const date = salesDateInput.value;
 
     if (!item || isNaN(number) || isNaN(bp) || isNaN(sp) || !date) {
         showMessage('Please fill in all sales fields correctly with valid numbers and date.');
