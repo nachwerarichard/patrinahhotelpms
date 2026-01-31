@@ -726,34 +726,32 @@ function populateDatalist(items) {
 // Handle selection and price population
 document.getElementById('sale-item').addEventListener('input', function(e) {
     const val = e.target.value.trim();
-    if (!val) return;
-
-    // Find the item (case-insensitive)
     const itemData = inventoryCache.find(inv => 
         inv.item && inv.item.toLowerCase() === val.toLowerCase()
     );
     
     if (itemData) {
-        console.log("Match Found:", itemData);
-
         const bpField = document.getElementById('sale-bp');
         const spField = document.getElementById('sale-sp');
 
         // Populate BP
-        if (bpField) {
-            bpField.value = itemData.buyingprice || 0;
-        }
+        if (bpField) bpField.value = itemData.buyingprice;
 
-        // Populate SP
+        // Populate SP with a "force-draw" delay
         if (spField) {
-            // Using parseFloat to ensure it treats the value as a number
-            const price = parseFloat(itemData.sellingprice);
-            spField.value = isNaN(price) ? 0 : price;
+            const price = itemData.sellingprice;
             
-            console.log("SP set to:", spField.value);
+            // Set it immediately
+            spField.value = price;
+            
+            // Set it again in 10ms to force the browser to update the UI
+            setTimeout(() => {
+                spField.value = price;
+                console.log("Forced SP Update to:", spField.value);
+            }, 10);
         }
     }
-});
+});   
 
 // Initialize
 window.addEventListener('DOMContentLoaded', loadInventory);
