@@ -868,7 +868,7 @@ function renderInventoryTable(inventory) {
         }
         row.insertCell().textContent = buyingprice;
         row.insertCell().textContent = sellingprice;
-
+const adminRoles = ['admin', 'manager'];
          const actionsCell = row.insertCell();
 actionsCell.className = 'actions relative py-3 px-4'; // Add relative for positioning
 
