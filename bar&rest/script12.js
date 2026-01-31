@@ -960,7 +960,20 @@ async function deleteInventory(id) {
     }
 }
 
+function setLoadingState (isLoading) {
+    const submitBtn = document.getElementById('inventor-save-button'); // or your Save button ID
+    if (!submitBtn) return;
 
+    if (isLoading) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    } else {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class=""></i> Save'; // Restore original state
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+}
 /**
  * HANDLER: Decides whether to Create or Update
  */
