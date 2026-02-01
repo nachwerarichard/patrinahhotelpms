@@ -1404,7 +1404,7 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
             setTimeout(() => {
                 overlay.remove();
                 document.body.classList.remove('no-scroll');
-            }, 500);
+            }, 100);
         };
 
         // 4. Extraction & Execution
@@ -1441,9 +1441,9 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
                 setTimeout(() => {
                     liftCurtain();
                     clearInterval(watchdog);
-                }, 3000);
+                }, 500);
 
-            }, 500);
+            }, 100);
         } else {
             // Fields not found? Lift the curtain so the user can see the error
             liftCurtain();
