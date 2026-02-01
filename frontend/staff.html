@@ -32,30 +32,32 @@
 <body class="bg-slate-50 min-h-screen flex">
 
     <aside class="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col fixed h-full transition-all">
-         <div class="p-6 h-24 flex items-center">
-<img
-  src="/novuscloud.png"
-  alt="Patrinah Hotel Logo"
-  class="h-full w-auto object-contain scale-110"
-/>
-</div>
-        
-        <nav class="flex-1 px-4 space-y-1">
-            <a href="#" class="sidebar-item flex items-center gap-3 px-3 py-2 rounded-lg text-gray-600 transition group border-l-4 border-indigo-600 bg-indigo-50/50 text-indigo-600">
-                <i data-lucide="users" class="w-5 h-5"></i>
-                <span class="font-medium">Staff Management</span>
-            </a>
-            <div class="p-4 border-t border-gray-100">
-            <button onclick="handleLogout()" class="flex items-center gap-3 px-3 py-2 w-full text-red-500 hover:bg-red-50 rounded-lg transition">
-                <i data-lucide="log-out" class="w-5 h-5"></i>
-                <span class="font-medium">Logout</span>
-            </button>
-        </div>
-        </nav>
 
-       
-    </aside>
+  <!-- Logo area -->
+  <div class="h-24 px-6 flex items-center justify-center border-b border-gray-100">
+    <img
+      src="/novuscloud.png"
+      alt="Patrinah Hotel Logo"
+      class="h-full max-h-16 w-auto object-contain"
+    />
+  </div>
 
+  <!-- Navigation -->
+  <nav class="flex-1 px-4 space-y-1">
+    <a href="#" class="sidebar-item flex items-center gap-3 px-3 py-2 rounded-lg text-gray-600 transition group border-l-4 border-indigo-600 bg-indigo-50/50 text-indigo-600">
+      <i data-lucide="users" class="w-5 h-5"></i>
+      <span class="font-medium">Staff Management</span>
+    </a>
+
+    <div class="p-4 border-t border-gray-100 mt-auto">
+      <button onclick="handleLogout()" class="flex items-center gap-3 px-3 py-2 w-full text-red-500 hover:bg-red-50 rounded-lg transition">
+        <i data-lucide="log-out" class="w-5 h-5"></i>
+        <span class="font-medium">Logout</span>
+      </button>
+    </div>
+  </nav>
+
+</aside>
     <main class="flex-1 md:ml-64">
         <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8 sticky top-0 z-10">
             <div class="flex items-center gap-4">
