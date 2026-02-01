@@ -242,12 +242,7 @@
              // 1. Show the Dashboard by default
             showSubSection('dashboard', 'nav-dashboard');
 
-             // 2. Add an initial icon for the Dashboard if needed (as done in the main menu)
-             const navDashboard = document.getElementById('nav-dashboard');
-             if(navDashboard && !navDashboard.querySelector('.fa-tachometer-alt')) {
-                 navDashboard.querySelector('.tilt-content').insertAdjacentHTML('afterbegin', '<i class="fas fa-tachometer-alt w-5"></i>');
-             }
-
+             
         });
 
 
