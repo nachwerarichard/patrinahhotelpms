@@ -55,7 +55,7 @@
             const el = document.getElementById('auto-login-overlay');
             if (el) {
                 el.style.opacity = '0'; // Smooth fade out
-                setTimeout(() => el.remove(), 500); 
+                setTimeout(() => el.remove(), 100); 
             }
         };
 
@@ -87,16 +87,16 @@
                         removeOverlay();
                         clearInterval(checkFinished);
                     }
-                }, 500);
+                }, 100);
 
                 // Safety timeout: 5 seconds max
                 setTimeout(() => {
                     removeOverlay();
                     clearInterval(checkFinished);
-                }, 5000);
+                }, 1000);
                 // --- WATCHDOG END ---
 
-            }, 500);
+            }, 100);
         } else {
             removeOverlay(); // Remove if login fields aren't found
         }
