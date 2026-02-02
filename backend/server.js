@@ -1499,6 +1499,48 @@ app.put('/api/bookings/:id/no-show', async (req, res) => {
     }
 });
 
+app.put('/api/bookings/:id/Confirm', async (req, res) => {
+    const { id } = req.params;
+    const { username } = req.body;
+
+    try {
+        console.log("No confirmation for booking id:", id);
+
+        const booking = await Booking.findOne({ id });
+        if (!booking) {
+            console.log("Booking not found in DB");
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+        console.log("Booking found:", booking);
+
+        booking.gueststatus = 'confirmed';
+        await booking.save();
+        console.log("Booking status updated");
+
+        const room = await Room.findOne({ number: booking.room });
+        if (room) {
+            room.status = 'clean';
+            await room.save();
+            console.log("Room booked:", room.number);
+        } else {
+            console.log("Room not found, skipping release");
+        }
+
+        await addAuditLog('Booking Marked No Show', username || 'System', {
+            bookingId: booking.id,
+            guestName: booking.name,
+            roomNumber: booking.room
+        });
+        console.log("Audit log added");
+
+        res.json({ message: 'Booking confirmed successfully' });
+
+    } catch (error) {
+        console.error("Confirmation  Error:", error);
+        res.status(500).json({ message: 'Error confirming booking', error: error.message });
+    }
+});
+
 
 app.post('/api/bookings/:id/move', async (req, res) => {
     const { id } = req.params;
