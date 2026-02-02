@@ -734,12 +734,13 @@ ${booking.amountPaid > 0 ? `
     </button>
 ` : ''}
 
-   ${booking.gueststatus === 'checkedin' ? `
+   ${booking.gueststatus === 'checkedin' && booking.paymentStatus === 'Paid' && booking.balance === 0 ? `
     <button class="${baseBtn} bg-amber-500 hover:bg-amber-600 mt-1" 
             onclick="checkoutBooking('${booking.id}')">
-        Check-out
+        <i class="fa-solid fa-right-from-bracket mr-1"></i> Check-out
     </button>
 ` : ''}
+
 ${booking.gueststatus === 'reserved' ? `
                 <button class="${baseBtn} bg-gray-500 hover:bg-gray-600" onclick="Confirm('${booking.id}')">
                     Confirm
