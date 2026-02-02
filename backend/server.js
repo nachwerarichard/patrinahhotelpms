@@ -1588,7 +1588,7 @@ app.put('/api/bookings/:id/Confirm', async (req, res) => {
 
 app.post('/api/bookings/:id/move', async (req, res) => {
     const { id } = req.params;
-    const { newRoomNumber, username, overridePrice } = req.body; // Added overridePrice for bargaining
+    const { newRoomNumber, username, overridePrice } = req.body;
 
     try {
         const booking = await Booking.findOne({ id: id });
@@ -1596,26 +1596,34 @@ app.post('/api/bookings/:id/move', async (req, res) => {
 
         if (!booking || !newRoom) return res.status(404).json({ message: 'Data not found' });
 
-        // IMPORTANT: Save the old room number BEFORE you update the booking object
         const oldRoomNumber = booking.room;
 
         // 1. Calculate Remaining Nights
         const today = new Date();
-        today.setHours(0,0,0,0); // Normalize to avoid partial-day math errors
+        today.setHours(0, 0, 0, 0); 
+        
         const checkoutDate = new Date(booking.checkOut);
+        checkoutDate.setHours(0, 0, 0, 0); // Normalize checkout too
+        
         const timeDiff = checkoutDate.getTime() - today.getTime();
         const nightsRemaining = Math.max(0, Math.ceil(timeDiff / (1000 * 3600 * 24)));
 
-        // 2. Financial Consolidation (Supports Bargaining via overridePrice)
-        const oldRate = booking.amtPerNight;
-        const newRate = overridePrice !== undefined ? Number(overridePrice) : newRoom.basePrice;
-        
+        // 2. Financial Consolidation
+        const oldRate = Number(booking.amtPerNight || 0);
+        // If overridePrice is provided use it, otherwise use newRoom.basePrice
+        let newRate = (overridePrice !== undefined && overridePrice !== "") 
+                      ? Number(overridePrice) 
+                      : Number(newRoom.basePrice || 0);
+
+        // DEBUGGING: If your price isn't changing, check these logs in your terminal
+        console.log(`Nights Left: ${nightsRemaining}, Old Rate: ${oldRate}, New Rate: ${newRate}`);
+
         let priceAdjustmentMessage = "Price remained the same.";
 
         if (newRate !== oldRate && nightsRemaining > 0) {
             const extraCharge = (newRate - oldRate) * nightsRemaining;
             booking.amtPerNight = newRate;
-            booking.totalDue += extraCharge;
+            booking.totalDue = Number(booking.totalDue || 0) + extraCharge;
             booking.balance = Number(booking.totalDue) - Number(booking.amountPaid || 0);
             priceAdjustmentMessage = `Rate changed from ${oldRate} to ${newRate}. Total due adjusted by ${extraCharge}.`;
         }
@@ -1625,14 +1633,14 @@ app.post('/api/bookings/:id/move', async (req, res) => {
         newRoom.status = 'blocked'; 
         await newRoom.save();
 
-        // 4. Update Booking Room
+        // 4. Update Booking
         booking.room = newRoomNumber;
         await booking.save();
 
-        // 5. Audit Log (Uses oldRoomNumber variable)
+        // 5. Audit Log
         await addAuditLog('Guest Moved', username || 'System', {
             bookingId: id,
-            fromRoom: oldRoomNumber, // Now this will be correct
+            fromRoom: oldRoomNumber,
             toRoom: newRoomNumber,
             details: priceAdjustmentMessage
         });
@@ -1640,10 +1648,10 @@ app.post('/api/bookings/:id/move', async (req, res) => {
         res.json({ message: `Successfully moved from ${oldRoomNumber} to ${newRoomNumber}. ${priceAdjustmentMessage}` });
 
     } catch (error) {
+        console.error("MOVE ERROR:", error);
         res.status(500).json({ message: 'Error during move', error: error.message });
     }
 });
-
 // Get available rooms (optionally exclude rooms with conflicting bookings)
 app.get('/api/room/available', async (req, res) => {
     try {
