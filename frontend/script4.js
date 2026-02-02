@@ -2627,30 +2627,25 @@ async function renderAuditLogs() {
             tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No audit logs found.</td></tr>';
         } else {
 logs.forEach(log => {
-    // 1. Extract reason
-    const reason = (log.details && log.details.reason && log.details.reason !== 'N/A') ? log.details.reason : 'None';
+    const reason = (log.details && log.details.reason && log.details.reason !== '') ? log.details.reason : '';
     
-    // 2. Format JSON with indentation for readability
+    // Stringify on one line (no indentation)
     let detailsString = "{}";
     if (log.details) {
-        const { reason: _, ...rest } = log.details; // Remove reason from details object
-        // The '2' argument adds indentation/newlines
-        detailsString = JSON.stringify(rest, null, 2); 
+        const { reason: _, ...rest } = log.details;
+        detailsString = JSON.stringify(rest); 
     }
 
     const row = tableBody.insertRow();
-    // Removed any fixed height classes; using 'items-start' to align text to top
-    row.className = "border-b border-gray-200 hover:bg-gray-50 transition-colors";
+    row.className = "border-b border-gray-200 hover:bg-gray-50 whitespace-nowrap";
 
     row.innerHTML = `
-        <td class="py-4 px-6 text-left align-top whitespace-nowrap">${new Date(log.timestamp).toLocaleString()}</td>
-        <td class="py-4 px-6 text-left align-top">${log.user}</td>
-        <td class="py-4 px-6 text-left align-top font-semibold text-blue-600">${log.action}</td>
-        <td class="py-4 px-6 text-left align-top">
-            <div class="break-words whitespace-normal min-w-[150px]">${reason}</div>
-        </td>
-        <td class="py-4 px-6 text-left align-top">
-            <pre class="whitespace-pre-wrap break-all font-mono text-xs bg-gray-50 p-2 rounded border border-gray-100 max-w-xs">${detailsString}</pre>
+        <td class="py-3 px-6 text-left">${new Date(log.timestamp).toLocaleString()}</td>
+        <td class="py-3 px-6 text-left">${log.user}</td>
+        <td class="py-3 px-6 text-left font-medium">${log.action}</td>
+        <td class="py-3 px-6 text-left">${reason}</td>
+        <td class="py-3 px-6 text-left font-mono text-xs text-gray-500">
+            ${detailsString}
         </td>
     `;
 });
