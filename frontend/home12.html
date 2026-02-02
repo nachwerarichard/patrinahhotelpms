@@ -634,23 +634,23 @@
         </button>
     </div>
 
-    <div class="w-full overflow-hidden border border-gray-200 rounded-lg">
-        <div class="overflow-x-auto">
-            <table id="auditLogTable" class="table-auto min-w-full bg-white divide-y divide-gray-200">
-                <thead>
-                    <tr class="bg-gray-100 text-gray-600 uppercase text-xs leading-normal">
-                        <th class="py-3 px-6 text-left whitespace-nowrap">Timestamp</th>
-                        <th class="py-3 px-6 text-left whitespace-nowrap">User</th>
-                        <th class="py-3 px-6 text-left whitespace-nowrap">Action</th>
-                        <th class="py-3 px-6 text-left whitespace-nowrap">Reasons</th>
-                        <th class="py-3 px-6 text-left whitespace-nowrap">Details</th>
-                    </tr>
-                </thead>
-                <tbody class="text-gray-600 text-sm font-light">
-                    </tbody>
-            </table>
-        </div>
+   <div class="w-full border border-gray-200 rounded-lg overflow-hidden">
+    <div class="overflow-x-auto">
+        <table id="auditLogTable" class="table-fixed min-w-[1200px] w-full bg-white divide-y divide-gray-200">
+            <thead>
+                <tr class="bg-gray-100 text-gray-600 uppercase text-xs leading-normal">
+                    <th class="py-3 px-6 text-left w-48 whitespace-nowrap">Timestamp</th>
+                    <th class="py-3 px-6 text-left w-32 whitespace-nowrap">User</th>
+                    <th class="py-3 px-6 text-left w-48 whitespace-nowrap">Action</th>
+                    <th class="py-3 px-6 text-left w-64 whitespace-nowrap">Reasons</th>
+                    <th class="py-3 px-6 text-left w-auto min-w-[600px] whitespace-nowrap">Details</th>
+                </tr>
+            </thead>
+            <tbody class="text-gray-600 text-sm font-light">
+                </tbody>
+        </table>
     </div>
+</div>
 
     <div class="flex justify-between items-center mt-4 px-2">
         <button id="prevAuditPage" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg disabled:opacity-50 transition">
