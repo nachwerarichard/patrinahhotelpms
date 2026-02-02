@@ -2627,25 +2627,16 @@ async function renderAuditLogs() {
             tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No audit logs found.</td></tr>';
         } else {
 logs.forEach(log => {
-    const reason = (log.details && log.details.reason && log.details.reason !== '') ? log.details.reason : '';
-    
-    // Stringify on one line (no indentation)
-    let detailsString = "{}";
-    if (log.details) {
-        const { reason: _, ...rest } = log.details;
-        detailsString = JSON.stringify(rest); 
-    }
-
-    const row = tableBody.insertRow();
-    row.className = "border-b border-gray-200 hover:bg-gray-50 whitespace-nowrap";
-
-    row.innerHTML = `
-        <td class="py-3 px-6 text-left">${new Date(log.timestamp).toLocaleString()}</td>
-        <td class="py-3 px-6 text-left">${log.user}</td>
-        <td class="py-3 px-6 text-left font-medium">${log.action}</td>
-        <td class="py-3 px-6 text-left">${reason}</td>
-            `;
-});
+                const reason = (log.details && log.details.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
+                const row = tableBody.insertRow();
+                row.className = "border-b border-gray-200 hover:bg-gray-50"; // Optional styling
+                row.innerHTML = `
+                    <td class="py-3 px-6 text-left">${new Date(log.timestamp).toLocaleString()}</td>
+                    <td class="py-3 px-6 text-left">${log.user}</td>
+                    <td class="py-3 px-6 text-left">${log.action}</td>
+                    <td class="py-3 px-6 text-left">${reason}</td>
+                `;
+            });
         }
     } catch (error) {
         console.error('Error fetching audit logs:', error);
