@@ -747,9 +747,10 @@ ${booking.gueststatus === 'reserved' ? `
                 </button>
             ` : ''}
     <div class="border-t border-gray-100 my-1"></div>
-    ${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `
-    <button class="${baseBtn} bg-red-500" onclick="openCancelModal('${booking.id}')">
-        Cancel
+   ${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `
+    <button class="${baseBtn} bg-red-500 hover:bg-red-600" onclick="openCancelModal('${booking.id}')">
+        <i class="fa-solid ${booking.gueststatus === 'checkedin' ? 'fa-ban' : 'fa-xmark'} mr-1"></i>
+        ${booking.gueststatus === 'checkedin' ? 'Void Stay' : 'Cancel Booking'}
     </button>
 ` : ''}
     
