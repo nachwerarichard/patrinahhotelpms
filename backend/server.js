@@ -138,6 +138,7 @@ const bookingSchema = new mongoose.Schema({
     guestsource: { type: String, required: true, enum: ['Walk in', 'Booking.com','Airbnd','Trip','Hotel Website', 'Expedia','Web'], default: 'walk in' },
     gueststatus: { type: String, required: true, enum: ['confirmed', 'cancelled', 'no show', 'checkedin', 'reserved','checkedout'], default: 'confirmed' },
     cancellationReason: { type: String, default: '' },
+    voidReason: { type: String, default: '' },
     people: { type: Number, required: true },
     transactionid: { type: String },
     extraperson:{ type: String },
@@ -1663,6 +1664,32 @@ app.post('/api/bookings/:id/cancel', async (req, res) => {
         });
 
         res.json({ message: 'Booking cancelled successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error', error: error.message });
+    }
+});
+app.post('/api/bookings/:id/void', async (req, res) => {
+    const { id } = req.params;
+    const { reason, username } = req.body;
+
+    try {
+        const booking = await Booking.findOne({ id: id });
+        if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+        // Update booking fields
+        booking.gueststatus = 'void';
+        booking.voidReason = reason; // Ensure this field exists in your Schema
+        await booking.save();
+
+        // Update Room to vacant
+        await Room.findOneAndUpdate({ number: booking.room }, { status: 'clean' });
+
+        await addAuditLog('Booking Voided', username || 'System', {
+            bookingId: id,
+            reason: reason
+        });
+
+        res.json({ message: 'Booking voided successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Error', error: error.message });
     }
