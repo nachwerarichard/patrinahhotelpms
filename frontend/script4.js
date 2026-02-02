@@ -2626,18 +2626,29 @@ async function renderAuditLogs() {
         if (logs.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No audit logs found.</td></tr>';
         } else {
-            logs.forEach(log => {
-                const reason = (log.details && log.details.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
-                const row = tableBody.insertRow();
-                row.className = "border-b border-gray-200 hover:bg-gray-50"; // Optional styling
-                row.innerHTML = `
-                    <td class="py-3 px-6 text-left">${new Date(log.timestamp).toLocaleString()}</td>
-                    <td class="py-3 px-6 text-left">${log.user}</td>
-                    <td class="py-3 px-6 text-left">${log.action}</td>
-                    <td class="py-3 px-6 text-left">${reason}</td>
-                    <td class="py-3 px-6 text-left">${JSON.stringify(log.details)}</td>
-                `;
-            });
+logs.forEach(log => {
+    const reason = (log.details && log.details.reason && log.details.reason !== 'N/A') ? log.details.reason : 'None';
+    
+    // Create a clean string for details, excluding the reason since it has its own column
+    let detailsString = "";
+    if (log.details) {
+        const { reason, ...rest } = log.details; // Remove reason from details object
+        detailsString = JSON.stringify(rest);
+    }
+
+    const row = tableBody.insertRow();
+    row.className = "border-b border-gray-200 hover:bg-gray-50";
+
+    row.innerHTML = `
+        <td class="py-3 px-6 text-left">${new Date(log.timestamp).toLocaleString()}</td>
+        <td class="py-3 px-6 text-left">${log.user}</td>
+        <td class="py-3 px-6 text-left font-medium">${log.action}</td>
+        <td class="py-3 px-6 text-left break-words whitespace-normal">${reason}</td>
+        <td class="py-3 px-6 text-left break-words whitespace-normal font-mono text-xs bg-gray-50">
+            ${detailsString}
+        </td>
+    `;
+});
         }
     } catch (error) {
         console.error('Error fetching audit logs:', error);
