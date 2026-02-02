@@ -733,9 +733,11 @@ ${booking.gueststatus !== 'cancelled' ? `
                 </button>
             ` : ''}
     
+   ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
     <button class="${baseBtn} bg-yellow-500 hover:bg-yellow-600 mt-1" onclick="markNoShow('${booking.id}')">
-    <i class="fa-solid fa-user-slash mr-1"></i> No Show
-</button>
+        <i class="fa-solid fa-user-slash mr-1"></i> No Show
+    </button>
+` : ''}
 
     <button class="${baseBtn} bg-red-600 hover:bg-red-700 mt-1" onclick="confirmDeleteBooking('${booking.id}')">
         Delete 
