@@ -2635,8 +2635,7 @@ logs.forEach(log => {
                     <td class="py-3 px-6 text-left">${log.user}</td>
                     <td class="py-3 px-6 text-left">${log.action}</td>
                     <td class="py-3 px-6 text-left">${reason}</td>
-                    // Ensure this class is present in your JS row creation
-`<td class="py-3 px-6 text-left whitespace-nowrap font-mono text-xs text-gray-500">${JSON.stringify(log.details)}</td>
+                   <td class="py-3 px-6 text-left whitespace-nowrap font-mono text-xs text-gray-500">${JSON.stringify(log.details)}</td>
                 `;
             });
         }
