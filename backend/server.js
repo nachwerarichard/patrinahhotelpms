@@ -1588,7 +1588,7 @@ app.put('/api/bookings/:id/Confirm', async (req, res) => {
 
 app.post('/api/bookings/:id/move', async (req, res) => {
     const { id } = req.params;
-    const { newRoomNumber, username } = req.body;
+    const { newRoomNumber, username, overridePrice } = req.body; // Added overridePrice for bargaining
 
     try {
         const booking = await Booking.findOne({ id: id });
@@ -1596,31 +1596,32 @@ app.post('/api/bookings/:id/move', async (req, res) => {
 
         if (!booking || !newRoom) return res.status(404).json({ message: 'Data not found' });
 
+        // IMPORTANT: Save the old room number BEFORE you update the booking object
+        const oldRoomNumber = booking.room;
+
         // 1. Calculate Remaining Nights
-        // Using the existing checkOut date string
         const today = new Date();
+        today.setHours(0,0,0,0); // Normalize to avoid partial-day math errors
         const checkoutDate = new Date(booking.checkOut);
         const timeDiff = checkoutDate.getTime() - today.getTime();
         const nightsRemaining = Math.max(0, Math.ceil(timeDiff / (1000 * 3600 * 24)));
 
-        // 2. Financial Consolidation
+        // 2. Financial Consolidation (Supports Bargaining via overridePrice)
         const oldRate = booking.amtPerNight;
-        const newRate = newRoom.basePrice; // Pulling from the updated Room Schema
+        const newRate = overridePrice !== undefined ? Number(overridePrice) : newRoom.basePrice;
+        
         let priceAdjustmentMessage = "Price remained the same.";
 
         if (newRate !== oldRate && nightsRemaining > 0) {
             const extraCharge = (newRate - oldRate) * nightsRemaining;
-            
-            // Update the booking financials
             booking.amtPerNight = newRate;
             booking.totalDue += extraCharge;
-            booking.balance = booking.totalDue - (booking.amountPaid || 0);
-            
+            booking.balance = Number(booking.totalDue) - Number(booking.amountPaid || 0);
             priceAdjustmentMessage = `Rate changed from ${oldRate} to ${newRate}. Total due adjusted by ${extraCharge}.`;
         }
 
         // 3. Update Room Statuses
-        await Room.findOneAndUpdate({ number: booking.room }, { status: 'dirty' });
+        await Room.findOneAndUpdate({ number: oldRoomNumber }, { status: 'dirty' });
         newRoom.status = 'blocked'; 
         await newRoom.save();
 
@@ -1628,21 +1629,20 @@ app.post('/api/bookings/:id/move', async (req, res) => {
         booking.room = newRoomNumber;
         await booking.save();
 
-        // 5. Audit Log (Your existing logic)
+        // 5. Audit Log (Uses oldRoomNumber variable)
         await addAuditLog('Guest Moved', username || 'System', {
             bookingId: id,
-            fromRoom: booking.room,
+            fromRoom: oldRoomNumber, // Now this will be correct
             toRoom: newRoomNumber,
             details: priceAdjustmentMessage
         });
 
-        res.json({ message: `Successfully moved. ${priceAdjustmentMessage}` });
+        res.json({ message: `Successfully moved from ${oldRoomNumber} to ${newRoomNumber}. ${priceAdjustmentMessage}` });
 
     } catch (error) {
         res.status(500).json({ message: 'Error during move', error: error.message });
     }
 });
-
 
 // Get available rooms (optionally exclude rooms with conflicting bookings)
 app.get('/api/room/available', async (req, res) => {
