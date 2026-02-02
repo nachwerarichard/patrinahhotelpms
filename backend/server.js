@@ -996,47 +996,49 @@ app.post('/api/audit-log/action', async (req, res) => {
 
 const updateRoomPrices = async () => {
     try {
-        // 1. Fetch all rooms currently in the database
         const rooms = await Room.find({});
         console.log(`Found ${rooms.length} rooms. Starting price update...`);
 
         let updatedCount = 0;
 
-        // 2. Loop through each room and assign a price based on its Type
         for (let room of rooms) {
             let price = 0;
+            
+            // This line takes "Delux 1" and turns it into "delux 1" just for this check
+            const typeKey = room.type.trim().toLowerCase();
 
-            switch (room.type.toLowerCase()) {
-                case 'Delux 1':
+            switch (typeKey) {
+                case 'delux 1':
                     price = 80000; 
                     break;
-                case 'Delux 2':
+                case 'delux 2':
                     price = 120000;
                     break;
-                case 'Junior suit':
+                case 'junior suit':
                     price = 130000;
                     break;
-                case 'Delux suit':
+                case 'delux suit':
                     price = 160000;
                     break;
                 default:
-                    price = 80000; // Default price for unknown types
+                    // If the room type is "Standard" or something else, it goes here
+                    console.warn(`Room ${room.number} had an unexpected type: "${room.type}". Using default price.`);
+                    price = 80000; 
             }
 
-            // 3. Update the document with the new basePrice
             room.basePrice = price;
+            // This saves the price back to the database
             await room.save();
             updatedCount++;
         }
 
-        console.log(`Success! ${updatedCount} rooms have been updated with base prices.`);
+        console.log(`✅ Success! ${updatedCount} rooms updated.`);
     } catch (error) {
-        console.error('Migration failed:', error);
+        console.error('❌ Migration failed:', error);
     }
 };
-
 // To run it, just call:
-//updateRoomPrices();
+updateRoomPrices();
 
 // Get all rooms (accessible by admin and housekeeper)
 app.get('/api/rooms', async (req, res) => {
