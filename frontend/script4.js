@@ -893,6 +893,11 @@ function closeCancelModal() {
     document.getElementById('cancelBookingModal').classList.add('hidden');
 }
 
+function closeVoidModal() {
+    document.getElementById('voidBookingModal').classList.add('hidden');
+}
+
+
 document.getElementById('confirmCancelBtn').addEventListener('click', async () => {
     const reason = document.getElementById('cancelReasonInput').value;
     if (!reason) return alert("Please provide a reason.");
