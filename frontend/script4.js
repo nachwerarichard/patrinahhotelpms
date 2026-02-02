@@ -2737,7 +2737,7 @@ function markNoShow(bookingId) {
 function Confirm(bookingId) {
     if (!confirm("Are you sure you want to confirm  this booking ?")) return;
 
-    fetch(`${API_BASE_URL}/bookings/${bookingId}/confirm`, {
+    fetch(`${API_BASE_URL}/bookings/${bookingId}/Confirm`, {
         method: "PUT",
         headers: {
             "Content-Type": "application/json"
