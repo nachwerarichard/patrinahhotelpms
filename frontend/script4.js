@@ -721,7 +721,9 @@ actionButtonsHtml = `
             Check-out
         </button>
     ` : ''}
-
+<button class="${baseBtn} bg-green-500 hover:bg-green-600 mt-1" onclick="Confirm('${booking.id}')">
+     Confirm
+</button>
     <div class="border-t border-gray-100 my-1"></div>
 
     <button class="${baseBtn} bg-gray-500 hover:bg-gray-600" onclick="openCancelModal('${booking.id}')">
@@ -2724,9 +2726,35 @@ function markNoShow(bookingId) {
     .then(data => {
         showMessageBox("Success", data.message);
         generateReport(); // or refreshBookingsTable()
+        renderBookings(currentPage, currentSearchTerm);
     })
     .catch(err => {
         console.error(err);
         showMessageBox("Error", "Failed to mark No Show", true);
+    });
+}
+
+function Confirm(bookingId) {
+    if (!confirm("Are you sure you want to confirm  this booking ?")) return;
+
+    fetch(`${API_BASE_URL}/bookings/${bookingId}/confirm`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            username: currentUsername // or logged-in admin name
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        showMessageBox("Success", data.message);
+        generateReport(); // or refreshBookingsTable()
+        renderBookings(currentPage, currentSearchTerm);
+
+    })
+    .catch(err => {
+        console.error(err);
+        showMessageBox("Error", "Failed to confirm booking", true);
     });
 }
