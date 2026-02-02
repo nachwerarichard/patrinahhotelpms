@@ -703,7 +703,7 @@ actionButtonsHtml = `
     View 
 </button>
 
-${!['checkedout', 'cancelled'].includes(booking.gueststatus) ? `
+${!['checkedout', 'cancelled','void'].includes(booking.gueststatus) ? `
     <button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">
         Edit
     </button>
