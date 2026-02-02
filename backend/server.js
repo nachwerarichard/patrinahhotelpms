@@ -105,14 +105,14 @@ const walkInChargeSchema = new mongoose.Schema({
     }
 });
 const WalkInCharge = mongoose.model('WalkInCharge', walkInChargeSchema);
-
-// Room Schema
 const roomSchema = new mongoose.Schema({
-    id: { type: String, required: true, unique: true }, // Custom ID for the room (e.g., 'R101')
+    id: { type: String, required: true, unique: true },
     type: { type: String, required: true },
-    number: { type: String, required: true, unique: true }, // Room number (e.g., '101')
+    number: { type: String, required: true, unique: true },
+    basePrice: { type: Number, required: true, default: 0 }, 
     status: { type: String, required: true, enum: ['clean', 'dirty', 'under-maintenance', 'blocked'], default: 'clean' }
 });
+
 const Room = mongoose.model('Room', roomSchema);
 
 // Booking Schema
@@ -994,8 +994,49 @@ app.post('/api/audit-log/action', async (req, res) => {
     //}
 //});
 
+const updateRoomPrices = async () => {
+    try {
+        // 1. Fetch all rooms currently in the database
+        const rooms = await Room.find({});
+        console.log(`Found ${rooms.length} rooms. Starting price update...`);
 
+        let updatedCount = 0;
 
+        // 2. Loop through each room and assign a price based on its Type
+        for (let room of rooms) {
+            let price = 0;
+
+            switch (room.type.toLowerCase()) {
+                case 'Delux 1':
+                    price = 80000; 
+                    break;
+                case 'Delux 2':
+                    price = 120000;
+                    break;
+                case 'Junior suit':
+                    price = 130000;
+                    break;
+                case 'Delux suit':
+                    price = 160000;
+                    break;
+                default:
+                    price = 80000; // Default price for unknown types
+            }
+
+            // 3. Update the document with the new basePrice
+            room.basePrice = price;
+            await room.save();
+            updatedCount++;
+        }
+
+        console.log(`Success! ${updatedCount} rooms have been updated with base prices.`);
+    } catch (error) {
+        console.error('Migration failed:', error);
+    }
+};
+
+// To run it, just call:
+updateRoomPrices();
 
 // Get all rooms (accessible by admin and housekeeper)
 app.get('/api/rooms', async (req, res) => {
@@ -1548,67 +1589,56 @@ app.post('/api/bookings/:id/move', async (req, res) => {
     const { newRoomNumber, username } = req.body;
 
     try {
-        // 1. Find the booking
         const booking = await Booking.findOne({ id: id });
-        if (!booking) return res.status(404).json({ message: 'Booking not found' });
-
-        const oldRoomNumber = booking.room;
-       // Only check enums that can fail validation
-const validPaymentMethods = ['Cash', 'MTN Momo','Airtel Pay', 'Bank'];
-const validGuestSources = ['Walk in', 'Booking.com', 'Hotel Website', 'Expedia','Trip'];
-
-if (!validPaymentMethods.includes(booking.paymentMethod)) {
-    console.warn(`Invalid paymentMethod found: ${booking.paymentMethod}. Resetting to "Cash".`);
-    booking.paymentMethod = 'Cash';
-}
-
-if (!validGuestSources.includes(booking.guestsource)) {
-    console.warn(`Invalid guestsource found: ${booking.guestsource}. Resetting to "Walk in".`);
-    booking.guestsource = 'Walk in';
-}
-
-
-        // 2. Check if the NEW room is available
         const newRoom = await Room.findOne({ number: newRoomNumber });
-        if (!newRoom) {
-            return res.status(400).json({ message: 'Target room does not exist.' });
+
+        if (!booking || !newRoom) return res.status(404).json({ message: 'Data not found' });
+
+        // 1. Calculate Remaining Nights
+        // Using the existing checkOut date string
+        const today = new Date();
+        const checkoutDate = new Date(booking.checkOut);
+        const timeDiff = checkoutDate.getTime() - today.getTime();
+        const nightsRemaining = Math.max(0, Math.ceil(timeDiff / (1000 * 3600 * 24)));
+
+        // 2. Financial Consolidation
+        const oldRate = booking.amtPerNight;
+        const newRate = newRoom.basePrice; // Pulling from the updated Room Schema
+        let priceAdjustmentMessage = "Price remained the same.";
+
+        if (newRate !== oldRate && nightsRemaining > 0) {
+            const extraCharge = (newRate - oldRate) * nightsRemaining;
+            
+            // Update the booking financials
+            booking.amtPerNight = newRate;
+            booking.totalDue += extraCharge;
+            booking.balance = booking.totalDue - (booking.amountPaid || 0);
+            
+            priceAdjustmentMessage = `Rate changed from ${oldRate} to ${newRate}. Total due adjusted by ${extraCharge}.`;
         }
 
-        if (!['vacant', 'clean'].includes(newRoom.status)) {
-            return res.status(400).json({ 
-                message: `Room ${newRoomNumber} is currently ${newRoom.status} and cannot be assigned.` 
-            });
-        }
-
-        // 3. Update the Old Room to 'dirty'
-        await Room.findOneAndUpdate({ number: oldRoomNumber }, { status: 'dirty' });
-
-        // 4. Update the New Room to 'occupied'
-        newRoom.status = 'blocked';
+        // 3. Update Room Statuses
+        await Room.findOneAndUpdate({ number: booking.room }, { status: 'dirty' });
+        newRoom.status = 'blocked'; 
         await newRoom.save();
 
-        // 5. Update the Booking
+        // 4. Update Booking Room
         booking.room = newRoomNumber;
         await booking.save();
 
-        // 6. Audit Log
+        // 5. Audit Log (Your existing logic)
         await addAuditLog('Guest Moved', username || 'System', {
             bookingId: id,
-            fromRoom: oldRoomNumber,
-            toRoom: newRoomNumber
+            fromRoom: booking.room,
+            toRoom: newRoomNumber,
+            details: priceAdjustmentMessage
         });
 
-        res.json({ message: `Successfully moved guest to Room ${newRoomNumber}.` });
+        res.json({ message: `Successfully moved. ${priceAdjustmentMessage}` });
 
     } catch (error) {
-    console.error('Move Booking Error FULL:', error);
-    res.status(500).json({
-        message: 'Error during room move',
-        error: error.message,
-        stack: error.stack
-    });
-}
-
+        res.status(500).json({ message: 'Error during move', error: error.message });
+    }
 });
 
 
