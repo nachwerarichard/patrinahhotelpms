@@ -747,10 +747,15 @@ ${booking.gueststatus === 'reserved' ? `
                 </button>
             ` : ''}
     <div class="border-t border-gray-100 my-1"></div>
-   ${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `
+  ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
     <button class="${baseBtn} bg-red-500 hover:bg-red-600" onclick="openCancelModal('${booking.id}')">
-        <i class="fa-solid ${booking.gueststatus === 'checkedin' ? 'fa-ban' : 'fa-xmark'} mr-1"></i>
-        ${booking.gueststatus === 'checkedin' ? 'Void Stay' : 'Cancel Booking'}
+        <i class="fa-solid fa-xmark mr-1"></i> Cancel Booking
+    </button>
+` : ''}
+
+${booking.gueststatus === 'checkedin' ? `
+    <button class="${baseBtn} bg-orange-600 hover:bg-orange-700" onclick="openCancelModal('${booking.id}')">
+        <i class="fa-solid fa-ban mr-1"></i> Void Stay
     </button>
 ` : ''}
     
@@ -870,11 +875,18 @@ function closeViewModal() {
 }
 
 let bookingToCancel = null;
+let bookingToVoid = null;
+
 
 function openCancelModal(id) {
     bookingToCancel = id;
     document.getElementById('cancelReasonInput').value = ''; // Clear previous input
     document.getElementById('cancelBookingModal').classList.remove('hidden');
+}
+function openVoidModal(id) {
+    bookingToVoid = id;
+    document.getElementById('voidReasonInput').value = ''; // Clear previous input
+    document.getElementById('voidBookingModal').classList.remove('hidden');
 }
 
 function closeCancelModal() {
@@ -907,6 +919,33 @@ document.getElementById('confirmCancelBtn').addEventListener('click', async () =
         showMessageBox('Error', error.message, true);
     }
 });
+document.getElementById('confirmCancelBtn').addEventListener('click', async () => {
+    const reason = document.getElementById('voidReasonInput').value;
+    if (!reason) return alert("Please provide a reason.");
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings/${bookingToVoid}/void`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                reason: reason,
+                username: currentUsername 
+            })
+        });
+
+        if (!response.ok) throw new Error('Failed to void booking');
+
+        const data = await response.json();
+        closeVoidModal();
+        showMessageBox('Voided', data.message);
+        
+        // Refresh the table to see the status change
+        renderBookings(currentPage, currentSearchTerm);
+    } catch (error) {
+        showMessageBox('Error', error.message, true);
+    }
+});
+
 
 let selectedBookingId = null; // Track which booking we are moving
 
