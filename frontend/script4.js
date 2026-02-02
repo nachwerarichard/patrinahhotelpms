@@ -2627,25 +2627,30 @@ async function renderAuditLogs() {
             tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No audit logs found.</td></tr>';
         } else {
 logs.forEach(log => {
+    // 1. Extract reason
     const reason = (log.details && log.details.reason && log.details.reason !== 'N/A') ? log.details.reason : 'None';
     
-    // Create a clean string for details, excluding the reason since it has its own column
-    let detailsString = "";
+    // 2. Format JSON with indentation for readability
+    let detailsString = "{}";
     if (log.details) {
-        const { reason, ...rest } = log.details; // Remove reason from details object
-        detailsString = JSON.stringify(rest);
+        const { reason: _, ...rest } = log.details; // Remove reason from details object
+        // The '2' argument adds indentation/newlines
+        detailsString = JSON.stringify(rest, null, 2); 
     }
 
     const row = tableBody.insertRow();
-    row.className = "border-b border-gray-200 hover:bg-gray-50";
+    // Removed any fixed height classes; using 'items-start' to align text to top
+    row.className = "border-b border-gray-200 hover:bg-gray-50 transition-colors";
 
     row.innerHTML = `
-        <td class="py-3 px-6 text-left">${new Date(log.timestamp).toLocaleString()}</td>
-        <td class="py-3 px-6 text-left">${log.user}</td>
-        <td class="py-3 px-6 text-left font-medium">${log.action}</td>
-        <td class="py-3 px-6 text-left break-words whitespace-normal">${reason}</td>
-        <td class="py-3 px-6 text-left break-words whitespace-normal font-mono text-xs bg-gray-50">
-            ${detailsString}
+        <td class="py-4 px-6 text-left align-top whitespace-nowrap">${new Date(log.timestamp).toLocaleString()}</td>
+        <td class="py-4 px-6 text-left align-top">${log.user}</td>
+        <td class="py-4 px-6 text-left align-top font-semibold text-blue-600">${log.action}</td>
+        <td class="py-4 px-6 text-left align-top">
+            <div class="break-words whitespace-normal min-w-[150px]">${reason}</div>
+        </td>
+        <td class="py-4 px-6 text-left align-top">
+            <pre class="whitespace-pre-wrap break-all font-mono text-xs bg-gray-50 p-2 rounded border border-gray-100 max-w-xs">${detailsString}</pre>
         </td>
     `;
 });
