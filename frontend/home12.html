@@ -1339,6 +1339,7 @@ function submitPayment() {
         showMessageBox("Success", "Payment added successfully");
         closePaymentModal();
          updateDashboard();
+         renderBookings(currentPage, currentSearchTerm);
     })
     .catch(err => {
         console.error(err);
