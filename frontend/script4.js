@@ -2644,7 +2644,6 @@ logs.forEach(log => {
         <td class="py-3 px-6 text-left">${log.user}</td>
         <td class="py-3 px-6 text-left font-medium">${log.action}</td>
         <td class="py-3 px-6 text-left">${reason}</td>
-        <td class="py-3 px-6 text-left whitespace-nowrap font-mono text-xs">${JSON.stringify(log.details)}</td>    `;
 });
         }
     } catch (error) {
