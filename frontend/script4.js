@@ -2634,7 +2634,7 @@ async function renderAuditLogs() {
                     <td class="py-3 px-6 text-left">${new Date(log.timestamp).toLocaleString()}</td>
                     <td class="py-3 px-6 text-left">${log.user}</td>
                     <td class="py-3 px-6 text-left">${log.action}</td>
-                     <td class="py-3 px-6 text-left">${log.details}</td>
+                    <td class="py-3 px-6 text-left">${JSON.stringify(log.details)}</td>
                     <td class="py-3 px-6 text-left">${reason}</td>
                 `;
             });
