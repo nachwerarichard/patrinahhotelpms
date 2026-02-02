@@ -1563,8 +1563,8 @@ if (!validPaymentMethods.includes(booking.paymentMethod)) {
 }
 
 if (!validGuestSources.includes(booking.guestsource)) {
-    console.warn(`Invalid guestsource found: ${booking.guestsource}. Resetting to "walk in".`);
-    booking.guestsource = 'walk in';
+    console.warn(`Invalid guestsource found: ${booking.guestsource}. Resetting to "Walk in".`);
+    booking.guestsource = 'Walk in';
 }
 
 
