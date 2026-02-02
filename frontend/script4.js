@@ -699,28 +699,47 @@ if (currentUserRole === 'admin') {
       // --- UI for Active Bookings ---
 actionButtonsHtml = `
 
-    <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="viewBooking('${booking.id}')">
-        View 
+   <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="viewBooking('${booking.id}')">
+    View 
+</button>
+
+${!['checkedout', 'cancelled'].includes(booking.gueststatus) ? `
+    <button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">
+        Edit
     </button>
-    ${!booking.checkedIn ? 
-        `<button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">Check In</button>` : 
-        `<button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')">Move/Assign Room</button>`
-    }
-    
-    <button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">Edit</button>
+` : ''}
 
+${(booking.gueststatus === 'confirmed' || booking.gueststatus === 'reserved') ? `
+    <button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">
+        Check In
+    </button>
+` : ''}
+
+${booking.gueststatus === 'checkedin' ? `
+    <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')">
+        Move/Assign Room
+    </button>
+` : ''}
+
+${booking.balance > 0 && booking.gueststatus !== 'cancelled' ? `
     <button class="${baseBtn} bg-green-600 hover:bg-green-700 mt-1" 
-        onclick="openAddPaymentModal('${booking.id}', ${booking.balance})">
-    <i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment
-   </button>
-                            <button class=" ${baseBtn} bg-orange-500 btn btn-info" onclick="printReceipt('${booking.id}')"><i class="fas fa-print"></i> Receipt</button>
+            onclick="openAddPaymentModal('${booking.id}', ${booking.balance})">
+        <i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment
+    </button>
+` : ''}
 
-    ${booking.checkedIn ? `
-        <button class="${baseBtn} bg-amber-500 hover:bg-amber-600 ${isCheckedOut ? 'opacity-50 cursor-not-allowed' : ''}" 
-            onclick="checkoutBooking('${booking.id}')" ${isCheckedOut ? 'disabled' : ''}>
-            Check-out
-        </button>
-    ` : ''}
+${booking.amountPaid > 0 ? `
+    <button class="${baseBtn} bg-orange-500 hover:bg-orange-600 mt-1" onclick="printReceipt('${booking.id}')">
+        <i class="fas fa-print mr-1"></i> Receipt
+    </button>
+` : ''}
+
+   ${booking.gueststatus === 'checkedin' ? `
+    <button class="${baseBtn} bg-amber-500 hover:bg-amber-600 mt-1" 
+            onclick="checkoutBooking('${booking.id}')">
+        Check-out
+    </button>
+` : ''}
 ${booking.gueststatus === 'reserved' ? `
                 <button class="${baseBtn} bg-gray-500 hover:bg-gray-600" onclick="Confirm('${booking.id}')">
                     Confirm
