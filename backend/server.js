@@ -1555,7 +1555,7 @@ app.post('/api/bookings/:id/move', async (req, res) => {
         const oldRoomNumber = booking.room;
        // Only check enums that can fail validation
 const validPaymentMethods = ['Cash', 'MTN Momo','Airtel Pay', 'Bank'];
-const validGuestSources = ['walk in', 'OTA', 'Direct', 'PMS'];
+const validGuestSources = ['Walk in', 'Booking.com', 'Hotel Website', 'Expedia','Trip'];
 
 if (!validPaymentMethods.includes(booking.paymentMethod)) {
     console.warn(`Invalid paymentMethod found: ${booking.paymentMethod}. Resetting to "Cash".`);
@@ -1648,11 +1648,14 @@ app.post('/api/bookings/:id/cancel', async (req, res) => {
 
     try {
         const booking = await Booking.findOne({ id: id });
-        if (!booking) return res.status(404).json({ message: 'Booking not found' });
+        if (!booking) {
+            console.warn(`[Cancel Warning]: Booking ID ${id} not found.`);
+            return res.status(404).json({ message: 'Booking not found' });
+        }
 
         // Update booking fields
         booking.gueststatus = 'cancelled';
-        booking.cancellationReason = reason; // Ensure this field exists in your Schema
+        booking.cancellationReason = reason;
         await booking.save();
 
         // Update Room to vacant
@@ -1665,20 +1668,26 @@ app.post('/api/bookings/:id/cancel', async (req, res) => {
 
         res.json({ message: 'Booking cancelled successfully' });
     } catch (error) {
-        res.status(500).json({ message: 'Error', error: error.message });
+        // Log the full error to the backend console
+        console.error(`[Cancel Error] for ID ${id}:`, error);
+        res.status(500).json({ message: 'Internal Server Error', error: error.message });
     }
 });
+
 app.post('/api/bookings/:id/void', async (req, res) => {
     const { id } = req.params;
     const { reason, username } = req.body;
 
     try {
         const booking = await Booking.findOne({ id: id });
-        if (!booking) return res.status(404).json({ message: 'Booking not found' });
+        if (!booking) {
+            console.warn(`[Void Warning]: Booking ID ${id} not found.`);
+            return res.status(404).json({ message: 'Booking not found' });
+        }
 
         // Update booking fields
         booking.gueststatus = 'void';
-        booking.voidReason = reason; // Ensure this field exists in your Schema
+        booking.voidReason = reason;
         await booking.save();
 
         // Update Room to vacant
@@ -1691,10 +1700,11 @@ app.post('/api/bookings/:id/void', async (req, res) => {
 
         res.json({ message: 'Booking voided successfully' });
     } catch (error) {
-        res.status(500).json({ message: 'Error', error: error.message });
+        // Log the full error to the backend console
+        console.error(`[Void Error] for ID ${id}:`, error);
+        res.status(500).json({ message: 'Internal Server Error', error: error.message });
     }
 });
-
 app.post('/api/bookings/:id/checkin', async (req, res) => {
     const { id } = req.params;
     const { username } = req.body;
