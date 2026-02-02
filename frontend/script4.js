@@ -972,7 +972,7 @@ async function moveBooking(id) {
 
         // Populate dropdown with prices shown in brackets
         select.innerHTML = availableRoomsForMove
-            .map(r => `<option value="${r.number}">Room ${r.number} (${r.type} - $${r.basePrice})</option>`)
+            .map(r => `<option value="${r.number}">Room ${r.number} (${r.type} - UGX ${r.basePrice})</option>`)
             .join('');
 
         // Set the initial price display
@@ -991,7 +991,7 @@ function updateMovePricePreview() {
     const room = availableRoomsForMove.find(r => r.number === selectedNumber);
     
     if (room) {
-        document.getElementById('moveRoomBasePriceDisplay').innerText = `$${room.basePrice}`;
+        document.getElementById('moveRoomBasePriceDisplay').innerText = `UGX ${room.basePrice}`;
         document.getElementById('moveRoomNegotiatedPrice').value = room.basePrice; // Set default
     }
 }
