@@ -1036,7 +1036,7 @@ const updateRoomPrices = async () => {
 };
 
 // To run it, just call:
-updateRoomPrices();
+//updateRoomPrices();
 
 // Get all rooms (accessible by admin and housekeeper)
 app.get('/api/rooms', async (req, res) => {
