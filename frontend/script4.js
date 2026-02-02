@@ -758,9 +758,12 @@ ${booking.gueststatus === 'reserved' ? `
     </button>
 ` : ''}
 
-    <button class="${baseBtn} bg-red-600 hover:bg-red-700 mt-1" onclick="confirmDeleteBooking('${booking.id}')">
-        Delete 
+    ${['reserved', 'confirmed', 'cancelled'].includes(booking.gueststatus) ? `
+    <button class="${baseBtn} bg-red-600 hover:bg-red-700 mt-1" 
+            onclick="confirmDeleteBooking('${booking.id}')">
+        <i class="fa-solid fa-trash-can mr-1"></i> Delete
     </button>
+` : ''}
 `;
     }
 } else if (currentUserRole === 'bar') {
