@@ -2513,28 +2513,58 @@ function debounce(func, delay) {
 // Function to fetch audit logs (modified)
 async function fetchAuditLogs() {
     try {
+        const auditTableBody = document.querySelector('#auditLogTable tbody');
+        // Optional: show a loading state in the table while typing
+        if (auditTableBody) {
+            // Only show loader if table is empty or on the first page of search
+            if (currentAuditPage === 1) auditTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Searching...</td></tr>';
+        }
+
         const params = new URLSearchParams();
         params.append('page', currentAuditPage);
         params.append('limit', auditLogsPerPage);
 
         const auditSearchInput = document.getElementById('audit-search-input');
         const searchQuery = auditSearchInput ? auditSearchInput.value.trim() : '';
+        
         if (searchQuery) {
-            params.append('search', searchQuery); // Add search query parameter
+            params.append('search', searchQuery);
         }
 
         const response = await authenticatedFetch(`${API_BASE_URL}/audit-logs?${params.toString()}`);
         if (!response) return;
 
         const result = await response.json();
+        
+        // Handle case where no results are found
+        if (result.data.length === 0 && searchQuery) {
+             auditTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">No logs match your search.</td></tr>';
+             renderAuditPagination(1, 1);
+             return;
+        }
+
         renderAuditLogsTable(result.data);
         renderAuditPagination(result.page, result.pages);
     } catch (error) {
         console.error('Error fetching audit logs:', error);
-        showMessage('Failed to fetch audit logs: ' + error.message);
     }
 }
+// Attach to the search input
+const auditSearchInput = document.getElementById('audit-search-input');
 
+if (auditSearchInput) {
+    auditSearchInput.addEventListener('input', debounce(() => {
+        currentAuditPage = 1; // Reset to page 1 on new search
+        fetchAuditLogs();
+    }, 500)); // 500ms delay
+}
+function debounce(func, delay) {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), delay);
+    };
+}
 // Function to render pagination (no change needed here)
 function renderAuditPagination(current, totalPages) {
     const container = document.getElementById('audit-pagination');
