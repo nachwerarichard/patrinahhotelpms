@@ -2635,6 +2635,7 @@ logs.forEach(log => {
                     <td class="py-3 px-6 text-left">${log.user}</td>
                     <td class="py-3 px-6 text-left">${log.action}</td>
                     <td class="py-3 px-6 text-left">${reason}</td>
+                    <td class="py-3 px-6 text-left">${JSON.stringify(log.details)}</td>
                 `;
             });
         }
