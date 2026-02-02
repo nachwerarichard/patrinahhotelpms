@@ -952,7 +952,7 @@ document.getElementById('confirmVoidBtn').addEventListener('click', async () => 
 });
 
 
-let selectedBookingId = null; // Track which booking we are moving
+let availableRoomsForMove = []; // Global variable to store price data
 
 async function moveBooking(id) {
     selectedBookingId = id;
@@ -960,41 +960,41 @@ async function moveBooking(id) {
     const select = document.getElementById('availableRoomsSelect');
 
     try {
-        // 1. Get the current booking to know checkIn/checkOut
         const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${id}`);
-        if (!bookingResponse.ok) throw new Error('Failed to fetch current booking');
         const booking = await bookingResponse.json();
 
-        // 2. Fetch available rooms, excluding conflicting ones
-        const response = await fetch(
-            `${API_BASE_URL}/room/available?checkIn=${booking.checkIn}&checkOut=${booking.checkOut}`
-        );
+        const response = await fetch(`${API_BASE_URL}/rooms/available?checkIn=${booking.checkIn}&checkOut=${booking.checkOut}`);
+        availableRoomsForMove = await response.json(); // Store full objects (including basePrice)
 
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-        }
-
-        const rooms = await response.json();
-
-        if (rooms.length === 0) {
+        if (availableRoomsForMove.length === 0) {
             return showMessageBox('No Rooms', 'No vacant rooms available for move.', true);
         }
 
-        // 3. Populate select dropdown
-        select.innerHTML = rooms
-            .map(r => `<option value="${r.number}">Room ${r.number} (${r.type || 'Standard'})</option>`)
+        // Populate dropdown with prices shown in brackets
+        select.innerHTML = availableRoomsForMove
+            .map(r => `<option value="${r.number}">Room ${r.number} (${r.type} - $${r.basePrice})</option>`)
             .join('');
 
-        // 4. Show modal
-        modal.classList.remove('hidden');
-        modal.classList.add('flex'); // Center it if using flex layout
+        // Set the initial price display
+        updateMovePricePreview();
 
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
     } catch (error) {
-        console.error('Move Booking Error:', error);
         showMessageBox('Error', 'Could not load available rooms.', true);
     }
 }
 
+// Helper to update the price input when the dropdown changes
+function updateMovePricePreview() {
+    const selectedNumber = document.getElementById('availableRoomsSelect').value;
+    const room = availableRoomsForMove.find(r => r.number === selectedNumber);
+    
+    if (room) {
+        document.getElementById('moveRoomBasePriceDisplay').innerText = `$${room.basePrice}`;
+        document.getElementById('moveRoomNegotiatedPrice').value = room.basePrice; // Set default
+    }
+}
 // Handle Modal Actions
 document.getElementById('cancelMoveBtn').addEventListener('click', () => {
     document.getElementById('moveRoomModal').classList.add('hidden');
@@ -1002,11 +1002,12 @@ document.getElementById('cancelMoveBtn').addEventListener('click', () => {
 
 document.getElementById('confirmMoveBtn').addEventListener('click', async () => {
     const newRoomNumber = document.getElementById('availableRoomsSelect').value;
+    const negotiatedPrice = document.getElementById('moveRoomNegotiatedPrice').value;
     const modal = document.getElementById('moveRoomModal');
 
     try {
         if (!selectedBookingId || !newRoomNumber) {
-            return showMessageBox('Error', 'Please select a room to move to.', true);
+            return showMessageBox('Error', 'Please select a room.', true);
         }
 
         const response = await fetch(`${API_BASE_URL}/bookings/${selectedBookingId}/move`, {
@@ -1014,32 +1015,27 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 newRoomNumber, 
+                overridePrice: negotiatedPrice, // Send the bargained rate
                 username: currentUsername 
             })
         });
 
         const data = await response.json();
 
-        if (!response.ok) {
-            // Handles both 400 and 500 responses from backend
-            throw new Error(data.message || 'Unknown error occurred during room move.');
-        }
+        if (!response.ok) throw new Error(data.message || 'Move failed');
 
-        // Success: close modal and show message
         modal.classList.add('hidden');
         showMessageBox('Success', data.message);
 
-        // Refresh global UI
+        // Refresh UI
         renderBookings(currentPage, currentSearchTerm);
         renderHousekeepingRooms();
         renderCalendar();
 
     } catch (error) {
-        console.error('Move Booking Frontend Error:', error); // Logs error for debugging
         showMessageBox('Move Failed', error.message, true);
     }
 });
-
 
 function closeBookingModal() {
     bookingModal.style.display = 'none';
