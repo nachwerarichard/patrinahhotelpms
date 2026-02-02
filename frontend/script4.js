@@ -924,7 +924,7 @@ document.getElementById('confirmCancelBtn').addEventListener('click', async () =
         showMessageBox('Error', error.message, true);
     }
 });
-document.getElementById('confirmCancelBtn').addEventListener('click', async () => {
+document.getElementById('confirmVoidBtn').addEventListener('click', async () => {
     const reason = document.getElementById('voidReasonInput').value;
     if (!reason) return alert("Please provide a reason.");
 
