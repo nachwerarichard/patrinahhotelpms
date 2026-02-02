@@ -754,7 +754,7 @@ ${booking.gueststatus === 'reserved' ? `
 ` : ''}
 
 ${booking.gueststatus === 'checkedin' ? `
-    <button class="${baseBtn} bg-orange-600 hover:bg-orange-700" onclick="openCancelModal('${booking.id}')">
+    <button class="${baseBtn} bg-orange-600 hover:bg-orange-700" onclick="openVoidModal('${booking.id}')">
         <i class="fa-solid fa-ban mr-1"></i> Void Stay
     </button>
 ` : ''}
