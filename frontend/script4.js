@@ -721,14 +721,18 @@ actionButtonsHtml = `
             Check-out
         </button>
     ` : ''}
-<button class="${baseBtn} bg-green-500 hover:bg-green-600 mt-1" onclick="Confirm('${booking.id}')">
-     Confirm
-</button>
+${booking.gueststatus === 'reserved' ? `
+                <button class="${baseBtn} bg-gray-500 hover:bg-gray-600" onclick="Confirm('${booking.id}')">
+                    Confirm
+                </button>
+            ` : ''}
     <div class="border-t border-gray-100 my-1"></div>
-
-    <button class="${baseBtn} bg-gray-500 hover:bg-gray-600" onclick="openCancelModal('${booking.id}')">
-        Cancel 
-    </button>
+${booking.gueststatus !== 'cancelled' ? `
+                <button class="${baseBtn} bg-red-500 hover:bg-red-600" onclick="openCancelModal('${booking.id}')">
+                    Cancel
+                </button>
+            ` : ''}
+    
     <button class="${baseBtn} bg-yellow-500 hover:bg-yellow-600 mt-1" onclick="markNoShow('${booking.id}')">
     <i class="fa-solid fa-user-slash mr-1"></i> No Show
 </button>
