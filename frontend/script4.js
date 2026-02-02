@@ -727,11 +727,11 @@ ${booking.gueststatus === 'reserved' ? `
                 </button>
             ` : ''}
     <div class="border-t border-gray-100 my-1"></div>
-${booking.gueststatus !== 'cancelled' ? `
-                <button class="${baseBtn} bg-red-500 hover:bg-red-600" onclick="openCancelModal('${booking.id}')">
-                    Cancel
-                </button>
-            ` : ''}
+    ${['confirmed', 'reserved', 'no show'].includes(booking.gueststatus) ? `
+    <button class="${baseBtn} bg-red-500 hover:bg-red-600 mt-1" onclick="openCancelModal('${booking.id}')">
+        <i class="fa-solid fa-xmark mr-1"></i> Cancel
+    </button>
+` : ''}
     
    ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
     <button class="${baseBtn} bg-yellow-500 hover:bg-yellow-600 mt-1" onclick="markNoShow('${booking.id}')">
