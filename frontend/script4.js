@@ -715,12 +715,12 @@ ${(booking.gueststatus === 'confirmed' || booking.gueststatus === 'reserved') ? 
     </button>
 ` : ''}
 
-${booking.gueststatus === 'checkedin' ? `
+${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `
     <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')">
-        Move/Assign Room
+        <i class="fa-solid ${booking.gueststatus === 'checkedin' ? 'fa-arrows-rotate' : 'fa-door-open'} mr-1"></i>
+        ${booking.gueststatus === 'checkedin' ? 'Move Room' : 'Assign Room'}
     </button>
 ` : ''}
-
 ${booking.balance > 0 && booking.gueststatus !== 'cancelled' ? `
     <button class="${baseBtn} bg-green-600 hover:bg-green-700 mt-1" 
             onclick="openAddPaymentModal('${booking.id}', ${booking.balance})">
