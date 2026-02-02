@@ -2523,7 +2523,7 @@ async function fetchAuditLogs() {
             params.append('search', searchQuery); // Add search query parameter
         }
 
-        const response = await authenticatedFetch(`${API_BASE_URL}/audit-logs?${params.toString()}`);
+        const response = await authenticatedFetch(`${API_BASE_URL}/api/audit-logs?${params.toString()}`);
         if (!response) return;
 
         const result = await response.json();
