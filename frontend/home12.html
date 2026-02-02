@@ -1036,6 +1036,22 @@ Add Guest Details            </h2>
         </div>
     </div>
 </div>
+
+    <div id="voidBookingModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <h3 class="text-lg leading-6 font-medium text-red-600">Void Booking</h3>
+            <div class="mt-4 px-7 py-3">
+                <p class="text-sm text-gray-500 mb-2">Please provide a reason for voiding the booking:</p>
+                <textarea id="cancelReasonInput" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500" rows="3" placeholder="e.g., Guest changed plans"></textarea>
+            </div>
+            <div class="items-center px-4 py-3 space-x-3 flex justify-center">
+                <button onclick="closeVoidModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Back</button>
+                <button id="confirmVoidBtn" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 shadow-sm">Confirm Void</button>
+            </div>
+        </div>
+    </div>
+</div>
     
     
 <div class="fixed bottom-12 left-[20%] z-50 flex items-center justify-center w-16 h-16">
