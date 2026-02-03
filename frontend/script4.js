@@ -1003,6 +1003,8 @@ document.getElementById('cancelMoveBtn').addEventListener('click', () => {
 document.getElementById('confirmMoveBtn').addEventListener('click', async () => {
     const newRoomNumber = document.getElementById('availableRoomsSelect').value;
     const negotiatedPrice = document.getElementById('moveRoomNegotiatedPrice').value;
+    // Get the reason value
+    const moveReason = document.getElementById('moveRoomReason').value.trim(); 
     const modal = document.getElementById('moveRoomModal');
 
     try {
@@ -1010,12 +1012,18 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
             return showMessageBox('Error', 'Please select a room.', true);
         }
 
+        // Optional: Ensure a reason is provided
+        if (!moveReason) {
+            return showMessageBox('Error', 'Please provide a reason for the room move.', true);
+        }
+
         const response = await fetch(`${API_BASE_URL}/bookings/${selectedBookingId}/move`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 newRoomNumber, 
-                overridePrice: negotiatedPrice, // Send the bargained rate
+                overridePrice: negotiatedPrice, 
+                reason: moveReason, // Added the reason to the payload
                 username: currentUsername 
             })
         });
@@ -1024,6 +1032,9 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
 
         if (!response.ok) throw new Error(data.message || 'Move failed');
 
+        // Clear the reason field after a successful move so it's empty for the next use
+        document.getElementById('moveRoomReason').value = '';
+        
         modal.classList.add('hidden');
         showMessageBox('Success', data.message);
 
