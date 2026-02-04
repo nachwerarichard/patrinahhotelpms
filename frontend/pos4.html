@@ -567,17 +567,35 @@ addChargeForm.onsubmit = e => {
         let inventoryData = []; // To store items locally
 
 // 1. Fetch items from your backend on load
+// 1. Fetch the unique items and prices from your specialized lookup endpoint
 async function loadInventory() {
-    const res = await fetch('https://patrinahhotelpms.onrender.com/api/inventory'); 
-    inventoryData = await res.json();
-    const list = document.getElementById('inventoryItems');
-    
-    // Filter by department if you have a category field, otherwise show all
-    inventoryData.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item.item;
-        list.appendChild(option);
-    });
+    try {
+        const res = await fetch('https://patrinahhotelpms.onrender.com/inventory/lookup'); 
+        
+        if (!res.ok) throw new Error('Failed to load inventory lookup');
+        
+        // This will now be the clean, grouped list from your aggregate query
+        inventoryData = await res.json();
+        
+        const list = document.getElementById('inventoryItems');
+        list.innerHTML = ''; // Clear existing options to prevent duplicates on refresh
+
+        inventoryData.forEach(itemRecord => {
+            const option = document.createElement('option');
+            // The 'value' is what the user sees/searches
+            option.value = itemRecord.item; 
+            
+            // Optional: You can add the price to the label so the user sees it in the dropdown
+            option.label = `$${itemRecord.sellingprice.toFixed(2)}`;
+            
+            list.appendChild(option);
+        });
+        
+        console.log("Inventory lookup loaded:", inventoryData);
+    } catch (err) {
+        console.error("Error loading inventory:", err);
+        displayMessage("Could not load item list", "error");
+    }
 }
 
 // 2. Auto-fill BP and SP when item is picked
@@ -592,6 +610,10 @@ function autoFillPrices(selectedItemName) {
         document.getElementById('itemDesc').dataset.sp = item.sellingprice;
     }
 }
+        document.addEventListener('DOMContentLoaded', () => {
+    loadInventory(); // Initialize the dropdown items
+    // ... rest of your code ...
+});
     </script>
 </body>
 </html>
