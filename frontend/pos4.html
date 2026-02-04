@@ -348,17 +348,28 @@
                     document.getElementById('reportTotalRevenue').textContent = data.totalRevenue.toFixed(2);
                     reportTableBody.innerHTML = '';
 
-                    data.transactions.forEach(t => {
-                        const row = document.createElement('tr');
-                        row.className = 'hover:bg-slate-50 transition-colors';
-                        row.innerHTML = `
-                            <td class="px-8 py-4 font-medium text-slate-900">${t.guestName} <span class="text-[10px] text-slate-400 ml-1">#${t.roomNumber}</span></td>
-                            <td class="px-8 py-4">${t.description}</td>
-                            <td class="px-8 py-4 text-center"><span class="px-2 py-1 bg-slate-100 rounded text-[10px] font-bold uppercase">${t.source}</span></td>
-                            <td class="px-8 py-4 text-right font-bold text-slate-900">$${t.amount.toFixed(2)}</td>
-                        `;
-                        reportTableBody.appendChild(row);
-                    });
+                  data.transactions.forEach(t => {
+    const row = document.createElement('tr');
+    row.className = 'hover:bg-slate-50 transition-colors';
+    
+    // Use a fallback for amount to prevent .toFixed(2) errors
+    const safeAmount = (Number(t.amount) || 0).toFixed(2);
+    const safeDescription = t.description || 'No description';
+    const safeRoom = t.roomNumber || 'N/A';
+
+    row.innerHTML = `
+        <td class="px-8 py-4 font-medium text-slate-900">
+            ${t.guestName} 
+            <span class="text-[10px] text-slate-400 ml-1">#${safeRoom}</span>
+        </td>
+        <td class="px-8 py-4">${safeDescription}</td>
+        <td class="px-8 py-4 text-center">
+            <span class="px-2 py-1 bg-slate-100 rounded text-[10px] font-bold uppercase">${t.source}</span>
+        </td>
+        <td class="px-8 py-4 text-right font-bold text-slate-900">$${safeAmount}</td>
+    `;
+    reportTableBody.appendChild(row);
+});
 
                     activeAccountSection.classList.add('hidden');
                     emptyState.classList.add('hidden');
