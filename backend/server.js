@@ -238,10 +238,12 @@ const incidentalChargeSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    date: {
+date: {
         type: Date,
         default: Date.now
-    },
+    }
+}, { timestamps: true });
+    
     isPaid: { // To track if this specific charge has been paid
         type: Boolean,
         default: false
@@ -371,49 +373,45 @@ app.get('/api/rooms/report-daily', async (req, res) => {
 });
 
 app.get('/api/pos/reports/daily', async (req, res) => {
-    const { date } = req.query; // e.g., "2026-02-04"
+    const { date } = req.query; // Expects "YYYY-MM-DD"
     
     try {
-        // 1. Define your timezone offset (UTC +3)
+        if (!date) return res.status(400).json({ message: 'Date is required' });
+
         const TZ_OFFSET = 3; 
+        
+        // Split string to avoid JS "Auto-UTC" interpretation
+        const [year, month, day] = date.split('-').map(Number);
 
-        // 2. Create the Start of Day (00:00:00) in your local time
-        // Robust way to get the full 24h window for a date string "YYYY-MM-DD"
-const startOfDay = new Date(date);
-startOfDay.setUTCHours(0, 0, 0, 0); 
-// Adjust by your offset if you want to align "Business Day" vs "Calendar Day"
-startOfDay.setHours(startOfDay.getHours() - TZ_OFFSET);
+        // 1. Create start of day in local context
+        const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+        // 2. Create end of day in local context
+        const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
 
-const endOfDay = new Date(date);
-endOfDay.setUTCHours(23, 59, 59, 999);
-endOfDay.setHours(endOfDay.getHours() - TZ_OFFSET);
+        // --- Console Logs for Debugging ---
+        console.log(`--- Report for ${date} ---`);
+        console.log(`Searching between: ${startOfDay.toISOString()} and ${endOfDay.toISOString()}`);
 
-        // --- RENDER LOGS (Check these in your dashboard) ---
-        console.log(`--- Report for ${date} (UTC+3) ---`);
-        console.log(`Database Search Range: ${startOfDay.toISOString()} to ${endOfDay.toISOString()}`);
+const [roomCharges, walkinCharges] = await Promise.all([
+    // Changed 'createdAt' to 'date' to match your schema
+    IncidentalCharge.find({ date: { $gte: startOfDay, $lte: endOfDay } }), 
+    WalkInCharge.find({ date: { $gte: startOfDay, $lte: endOfDay } })
+]);
 
-        const [roomCharges, walkinCharges] = await Promise.all([
-            IncidentalCharge.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }),
-            WalkInCharge.find({ date: { $gte: startOfDay, $lte: endOfDay } })
-        ]);
-
-        console.log(`Found: ${roomCharges.length} Room, ${walkinCharges.length} Walk-in`);
-
-        // 4. Formatting logic
         const allTransactions = [
-            ...roomCharges.map(c => ({
-                guestName: c.guestName,
-                roomNumber: c.roomNumber || 'N/A', // Added
-        description: c.description || 'Room Charge', // Added
-                amount: Number(c.amount),
-                source: 'Room Charge',
-                time: c.createdAt // This is stored in UTC
-            })),
+...roomCharges.map(c => ({
+        guestName: c.guestName,
+        roomNumber: c.roomNumber || 'N/A',
+        description: c.description || 'Room Charge',
+        amount: Number(c.amount) || 0,
+        source: 'Room Charge',
+        time: c.date // Changed from c.createdAt
+    })),
             ...walkinCharges.map(c => ({
                 guestName: c.guestName,
-                amount: Number(c.amount),
-                roomNumber: 'Walk-in', // Added
-        description: c.description || 'Walk-in Sale', // Added
+                roomNumber: 'Walk-In',
+                description: c.description || 'Walk-in Sale',
+                amount: Number(c.amount) || 0,
                 source: 'Walk-In',
                 time: c.date
             }))
@@ -423,7 +421,6 @@ endOfDay.setHours(endOfDay.getHours() - TZ_OFFSET);
 
         res.status(200).json({
             reportDate: date,
-            timezone: "UTC+3",
             totalRevenue,
             transactionCount: allTransactions.length,
             transactions: allTransactions
