@@ -1,0 +1,47 @@
+<html>
+  <body> 
+  <div class="p-6 bg-gray-100 min-h-screen">
+    <h1 class="text-2xl font-bold mb-6 text-gray-800">Kitchen Display (KDS)</h1>
+    <div id="kitchenOrders" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        </div>
+</div>
+
+<script>
+async function loadOrders() {
+    const res = await fetch('https://patrinahhotelpms.onrender.com/api/kitchen/pending', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    const orders = await res.json();
+    
+    const container = document.getElementById('kitchenOrders');
+    container.innerHTML = orders.map(order => `
+        <div class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-orange-500">
+            <div class="flex justify-between items-start">
+                <h2 class="text-xl font-black">${order.item}</h2>
+                <span class="text-xs bg-gray-100 p-1 rounded font-mono">T: ${order.tableNumber}</span>
+            </div>
+            <p class="text-3xl font-bold my-2">QTY: ${order.number}</p>
+            <p class="text-sm text-gray-400 mb-4">Waiter: ${order.waiter || 'Unknown'}</p>
+            
+            <button onclick="completeOrder('${order._id}')" 
+                class="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition">
+                MARK AS READY
+            </button>
+        </div>
+    `).join('');
+}
+
+async function completeOrder(id) {
+    const res = await fetch(\`https://patrinahhotelpms.onrender.com/api/kitchen/order/\${id}/ready\`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    if(res.ok) loadOrders(); // Refresh the list
+}
+
+// Refresh every 30 seconds
+setInterval(loadOrders, 30000);
+loadOrders();
+</script>
+  </body>
+</html>
