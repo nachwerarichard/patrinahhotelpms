@@ -345,11 +345,12 @@ const addCharge = async (description, quantity, department) => {
     
     // Fallback logic: if department isn't passed, get it from your hidden input
     const selectedDept = department || document.getElementById('deptSelect').value;
+    const Quantity = document.getElementById('itemQty').value;
 
     const saleData = {
         item: description,
         department: selectedDept, // MUST be 'Bar', 'Restaurant', or 'Kitchen'
-        number: parseFloat(quantity),
+        quantity: parseFloat(Quantity),
         bp: parseFloat(itemInfo.bp || 0),
         sp: parseFloat(itemInfo.sp || 0),
         date: new Date()
