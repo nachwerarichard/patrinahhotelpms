@@ -2715,7 +2715,18 @@ app.delete('/status-reports/:id', async (req, res) => {
 
    
 
-
+const KitchenOrder = mongoose.model('KitchenOrder', new mongoose.Schema({
+  item: String,
+  quantity: Number,
+  department: { type: String, default: 'Restaurant' },
+  status: { type: String, enum: ['Pending', 'Ready', 'Served'], default: 'Pending' },
+  waiter: String,
+  tableNumber: String,
+  accountId: mongoose.Schema.Types.ObjectId, // Link to Folio
+  bp: Number,
+  sp: Number,
+  createdAt: { type: Date, default: Date.now }
+}));
 //BAR AND RESTAURANT
 const CashJournal = mongoose.model('CashJournal', new mongoose.Schema({
   cashAtHand: { type: Number, default: 0 },
@@ -2970,6 +2981,38 @@ app.post('/logout', auth, async (req, res) => {
   res.status(200).json({ message: 'Logged out successfully' });
 });
 
+
+app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
+    const order = await KitchenOrder.findById(req.params.id);
+    
+    if (order.status === 'Ready') return res.status(400).send("Already processed");
+
+    // 1. DEDUCT INVENTORY (Call your Sales logic)
+    const saleData = {
+        item: order.item,
+        number: order.quantity,
+        department: order.department,
+        bp: order.bp,
+        sp: order.sp
+    };
+    
+    // You can import and call your internal recordSale function here
+    await recordSale(saleData); 
+
+    // 2. POST TO FOLIO
+    if (order.accountId) {
+        await postChargeToFolio(order.accountId, {
+            description: order.item,
+            amount: order.sp * order.quantity
+        });
+    }
+
+    // 3. UPDATE STATUS
+    order.status = 'Ready';
+    await order.save();
+
+    res.json({ message: "Order ready, inventory deducted and guest charged." });
+});
 // --- Inventory Endpoints (Corrected) ---
 
 // Specific endpoint for the sales form dropdown
