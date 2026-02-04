@@ -3255,7 +3255,7 @@ app.delete('/inventory/:id', auth,  async (req, res) => {
 });
 
 // --- Sales Endpoints (Corrected) ---
-app.post('/sales', auth, async (req, res) => {
+app.post('/sales',async (req, res) => {
   try {
     const { item, department, number, bp, sp,date } = req.body;
 
