@@ -344,7 +344,7 @@
                     const data = await res.json();
                     if (!res.ok) throw new Error('Report failed');
 
-                    document.getElementById('reportDateDisplay').textContent = data.date;
+                    document.getElementById('reportDateDisplay').textContent = data.reportDate;
                     document.getElementById('reportTotalRevenue').textContent = data.totalRevenue.toFixed(2);
                     reportTableBody.innerHTML = '';
 
