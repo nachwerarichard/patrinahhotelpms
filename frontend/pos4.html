@@ -727,6 +727,20 @@ async function markAsReady(orderId) {
         alert("Order completed & charged!");
     }
 }
+
+        const resetForm = () => {
+    // Clear the visible inputs
+    document.getElementById('itemDesc').value = '';
+    document.getElementById('itemQty').value = '1';
+    
+    // Clear the hidden dataset values (BP and SP)
+    const itemDescInput = document.getElementById('itemDesc');
+    itemDescInput.dataset.bp = '0';
+    itemDescInput.dataset.sp = '0';
+    
+    // Optional: Focus back on the item description for the next entry
+    itemDescInput.focus();
+};
 </script>
 </body>
 </html>
