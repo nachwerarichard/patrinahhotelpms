@@ -530,20 +530,36 @@ app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
             console.log(`[Settlement Success] Posted charges for ${accountId} to room ${account.roomNumber}`);
             return res.status(200).json({ message: 'Charges successfully posted to room account.' });
 
-        } else if (paymentMethod) {
-            const receipt = {
-                guestName: account.guestName,
-                total: account.totalCharges,
-                items: account.charges,
-                paymentMethod: paymentMethod,
-                date: new Date()
-            };
+        } // ... inside the if (paymentMethod) block ...
+else if (paymentMethod) {
+    
+    // 1. Prepare the charges to be saved permanently
+    const walkInChargesToSave = account.charges.map(charge => ({
+        guestName: account.guestName,
+        description: charge.description,
+        amount: charge.amount,
+        date: new Date(), // This ensures it hits TODAY'S report
+        paymentMethod: paymentMethod, // e.g., "Cash"
+        source: 'POS Walk-In'
+    }));
 
-            account.isClosed = true;
-            await account.save();
-            
-            console.log(`[Settlement Success] Direct payment for ${accountId} via ${paymentMethod}`);
-            return res.status(200).json({ message: 'Account settled successfully.', receipt });
+    // 2. Save them to the WalkInCharge collection
+    if (walkInChargesToSave.length > 0) {
+        await WalkInCharge.insertMany(walkInChargesToSave);
+    }
+
+    // 3. Now close the temporary account
+    account.isClosed = true;
+    await account.save();
+
+    console.log(`[Settlement Success] Recorded ${walkInChargesToSave.length} walk-in charges.`);
+    
+    return res.status(200).json({ 
+        message: 'Account settled and recorded successfully.', 
+        receipt: { guestName: account.guestName, total: account.totalCharges } 
+    });
+}
+
         } else {
             return res.status(400).json({ message: 'Invalid settlement method.' });
         }
