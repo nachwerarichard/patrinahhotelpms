@@ -215,7 +215,27 @@
 
             </div>
         </div>
+        
     </main>
+    <div id="receipt-printout" class="hidden">
+    <div style="text-align: center; font-family: monospace; width: 300px; padding: 10px; border: 1px solid #000;">
+        <h3>PATRINAH HOTEL</h3>
+        <p>Cash Sale Receipt</p>
+        <hr>
+        <div id="receipt-details" style="text-align: left;"></div>
+        <hr>
+        <p>Thank you for your visit!</p>
+        <p id="receipt-date"></p>
+    </div>
+</div>
+
+<style>
+@media print {
+    body * { visibility: hidden; }
+    #receipt-printout, #receipt-printout * { visibility: visible; }
+    #receipt-printout { position: absolute; left: 0; top: 0; width: 100%; }
+}
+</style>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -391,6 +411,10 @@ const addCharge = async (description, quantity, department) => {
         // 3. SUCCESS
         updateActiveAccountUI(updatedAccount); 
         displayMessage("Sale recorded & Guest charged!", "success");
+        // Ask if they want a receipt
+            //if (confirm("Would you like to print a receipt for this cash sale?")) {
+               // printReceipt(description, quantity, saleData.sp);
+           // }
         
     } catch (err) {
         console.error("Transaction failed:", err);
@@ -626,6 +650,24 @@ function autoFillPrices(selectedItemName) {
     loadInventory(); // Initialize the dropdown items
     // ... rest of your code ...
 });
+        const printReceipt = (item, qty, price) => {
+    const details = document.getElementById('receipt-details');
+    const dateField = document.getElementById('receipt-date');
+    
+    const total = (qty * price).toFixed(2);
+    
+    details.innerHTML = `
+        <p>Item: ${item}</p>
+        <p>Qty: ${qty}</p>
+        <p>Price: $${price.toFixed(2)}</p>
+        <strong>Total: $${total}</strong>
+    `;
+    
+    dateField.innerText = new Date().toLocaleString();
+
+    // Trigger Print
+    window.print();
+};
     </script>
 </body>
 </html>
