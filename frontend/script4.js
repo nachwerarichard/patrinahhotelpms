@@ -708,6 +708,11 @@ ${!['checkedout', 'cancelled','void'].includes(booking.gueststatus) ? `
         Edit
     </button>
 ` : ''}
+${!['checkedout', 'cancelled','void'].includes(booking.gueststatus) ? `
+    <button class="${baseBtn} bg-blue-700 hover:bg-green-800" onclick="viewCharges('${booking.id}')">
+        View Charges
+    </button>
+` : ''}
 
 ${(booking.gueststatus === 'confirmed' || booking.gueststatus === 'reserved') ? `
     <button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">
