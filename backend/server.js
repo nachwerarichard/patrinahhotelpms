@@ -378,12 +378,15 @@ app.get('/api/pos/reports/daily', async (req, res) => {
         const TZ_OFFSET = 3; 
 
         // 2. Create the Start of Day (00:00:00) in your local time
-        const startOfDay = new Date(`${date}T00:00:00Z`);
-        startOfDay.setHours(startOfDay.getHours() - TZ_OFFSET);
+        // Robust way to get the full 24h window for a date string "YYYY-MM-DD"
+const startOfDay = new Date(date);
+startOfDay.setUTCHours(0, 0, 0, 0); 
+// Adjust by your offset if you want to align "Business Day" vs "Calendar Day"
+startOfDay.setHours(startOfDay.getHours() - TZ_OFFSET);
 
-        // 3. Create the End of Day (23:59:59) in your local time
-        const endOfDay = new Date(`${date}T23:59:59.999Z`);
-        endOfDay.setHours(endOfDay.getHours() - TZ_OFFSET);
+const endOfDay = new Date(date);
+endOfDay.setUTCHours(23, 59, 59, 999);
+endOfDay.setHours(endOfDay.getHours() - TZ_OFFSET);
 
         // --- RENDER LOGS (Check these in your dashboard) ---
         console.log(`--- Report for ${date} (UTC+3) ---`);
@@ -400,6 +403,8 @@ app.get('/api/pos/reports/daily', async (req, res) => {
         const allTransactions = [
             ...roomCharges.map(c => ({
                 guestName: c.guestName,
+                roomNumber: c.roomNumber || 'N/A', // Added
+        description: c.description || 'Room Charge', // Added
                 amount: Number(c.amount),
                 source: 'Room Charge',
                 time: c.createdAt // This is stored in UTC
@@ -407,6 +412,8 @@ app.get('/api/pos/reports/daily', async (req, res) => {
             ...walkinCharges.map(c => ({
                 guestName: c.guestName,
                 amount: Number(c.amount),
+                roomNumber: 'Walk-in', // Added
+        description: c.description || 'Walk-in Sale', // Added
                 source: 'Walk-In',
                 time: c.date
             }))
