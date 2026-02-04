@@ -517,7 +517,8 @@ app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
                 roomNumber: booking.room,
                 type: charge.type || 'Other',
                 description: charge.description,
-                amount: charge.amount
+                amount: charge.amount,
+                date: new Date()
             }));
 
             if (newCharges.length > 0) {
@@ -530,55 +531,45 @@ app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
             console.log(`[Settlement Success] Posted charges for ${accountId} to room ${account.roomNumber}`);
             return res.status(200).json({ message: 'Charges successfully posted to room account.' });
 
-        } // ... inside the if (paymentMethod) block ...
-else if (paymentMethod) {
-    
-    // 1. Prepare the charges to be saved permanently
-    const walkInChargesToSave = account.charges.map(charge => ({
-        guestName: account.guestName,
-        description: charge.description,
-        amount: charge.amount,
-        date: new Date(), // This ensures it hits TODAY'S report
-        paymentMethod: paymentMethod, // e.g., "Cash"
-        source: 'POS Walk-In'
-    }));
+        } else if (paymentMethod) {
+            // Prepare the charges to be saved permanently for Walk-Ins
+            const walkInChargesToSave = account.charges.map(charge => ({
+                guestName: account.guestName,
+                description: charge.description,
+                amount: charge.amount,
+                date: new Date(), 
+                paymentMethod: paymentMethod,
+                source: 'POS Walk-In'
+            }));
 
-    // 2. Save them to the WalkInCharge collection
-    if (walkInChargesToSave.length > 0) {
-        await WalkInCharge.insertMany(walkInChargesToSave);
-    }
+            if (walkInChargesToSave.length > 0) {
+                await WalkInCharge.insertMany(walkInChargesToSave);
+            }
 
-    // 3. Now close the temporary account
-    account.isClosed = true;
-    await account.save();
+            account.isClosed = true;
+            await account.save();
 
-    console.log(`[Settlement Success] Recorded ${walkInChargesToSave.length} walk-in charges.`);
-    
-    return res.status(200).json({ 
-        message: 'Account settled and recorded successfully.', 
-        receipt: { guestName: account.guestName, total: account.totalCharges } 
-    });
-}
+            console.log(`[Settlement Success] Recorded ${walkInChargesToSave.length} walk-in charges.`);
+            
+            return res.status(200).json({ 
+                message: 'Account settled and recorded successfully.', 
+                receipt: { guestName: account.guestName, total: account.totalCharges } 
+            });
 
         } else {
             return res.status(400).json({ message: 'Invalid settlement method.' });
         }
 
     } catch (error) {
-        // --- LOGGING TO RENDER CONSOLE ---
         console.error(`--- SETTLEMENT ERROR | ${new Date().toISOString()} ---`);
         console.error(`Account ID: ${accountId}`);
         console.error(`Stack Trace:`, error); 
-        // ---------------------------------
-
         res.status(500).json({ 
             message: 'Error settling account.', 
             error: error.message 
         });
     }
 });
-
-
 // Audit Log Schema
 const auditLogSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now },
