@@ -3014,6 +3014,18 @@ app.post('/api/kitchen/order',  async (req, res) => {
     }
 });
 
+// GET /api/kitchen/pending
+app.get('/api/kitchen/Pending', auth, async (req, res) => {
+    try {
+        // Find orders that are still being prepared
+        const orders = await KitchenOrder.find({ status: 'Preparing' }).sort({ date: 1 });
+        console.log(`Kitchen requested orders. Found: ${orders.length}`);
+        res.json(orders);
+    } catch (err) {
+        console.error("Error fetching kitchen orders:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
     const order = await KitchenOrder.findById(req.params.id);
