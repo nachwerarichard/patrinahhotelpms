@@ -371,31 +371,25 @@ app.get('/api/rooms/report-daily', async (req, res) => {
 });
 
 app.get('/api/pos/reports/daily', async (req, res) => {
-    const { date } = req.query; // Expects "YYYY-MM-DD"
+    const { date } = req.query; // "2026-02-04"
     
     try {
-        if (!date) return res.status(400).json({ message: 'Date is required' });
+        // Create boundaries based on the string to avoid timezone shifting
+        const start = new Date(`${date}T00:00:00.000Z`);
+        const end = new Date(`${date}T23:59:59.999Z`);
 
-        const TZ_OFFSET = 3; 
-        
-        // Split string to avoid JS "Auto-UTC" interpretation
-        const [year, month, day] = date.split('-').map(Number);
+        console.log("Searching from:", start.toISOString());
+        console.log("Searching to:", end.toISOString());
 
-        // 1. Create start of day in local context
-        const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
-        // 2. Create end of day in local context
-        const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+        const [roomCharges, walkinCharges] = await Promise.all([
+            // Match the field name 'date' from your schema!
+            IncidentalCharge.find({ date: { $gte: start, $lte: end } }),
+            WalkInCharge.find({ date: { $gte: start, $lte: end } })
+        ]);
 
-        // --- Console Logs for Debugging ---
-        console.log(`--- Report for ${date} ---`);
-        console.log(`Searching between: ${startOfDay.toISOString()} and ${endOfDay.toISOString()}`);
+        console.log(`Found ${roomCharges.length} room charges and ${walkinCharges.length} walkins`);
 
-const [roomCharges, walkinCharges] = await Promise.all([
-    // Changed 'createdAt' to 'date' to match your schema
-    IncidentalCharge.find({ date: { $gte: startOfDay, $lte: endOfDay } }), 
-    WalkInCharge.find({ date: { $gte: startOfDay, $lte: endOfDay } })
-]);
-
+        // ... rest of your mapping logic ...
         const allTransactions = [
 ...roomCharges.map(c => ({
         guestName: c.guestName,
