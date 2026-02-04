@@ -490,38 +490,35 @@ app.post('/api/pos/client/account/:accountId/charge', async (req, res) => {
 
 app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
     const { accountId } = req.params;
-    const { paymentMethod, roomPost } = req.body; // paymentMethod (e.g., 'Cash', 'Card') or roomPost (boolean)
+    const { paymentMethod, roomPost } = req.body;
+
     try {
         const account = await ClientAccount.findById(accountId);
         if (!account) {
+            console.warn(`[Settlement Warning] Account not found: ${accountId}`);
             return res.status(404).json({ message: 'Client account not found.' });
         }
         
-        // This is a crucial check to prevent a client account from being settled twice
         if (account.isClosed) {
+            console.warn(`[Settlement Warning] Attempt to settle already closed account: ${accountId}`);
             return res.status(400).json({ message: 'This client account has already been settled.' });
         }
 
         if (roomPost && account.roomNumber) {
-            // New logic to find the latest booking for the room and verify the guest name
-            // Sorts by check-in date descending to find the most recent booking
             const booking = await Booking.findOne({
                 room: account.roomNumber
             }).sort({ checkIn: -1 });
 
             if (!booking) {
+                console.warn(`[Settlement Warning] No booking for room: ${account.roomNumber}`);
                 return res.status(404).json({ message: 'No active booking found for this room number.' });
             }
 
-            // Confirm that the guest name on the client account matches the booking name
             if (account.guestName !== booking.name) {
+                console.warn(`[Settlement Warning] Name mismatch. Account: ${account.guestName}, Booking: ${booking.name}`);
                 return res.status(400).json({ message: 'Guest name on account does not match the active booking for this room.' });
             }
 
-            // Logic to post charges to the guest's room account
-            console.log(`Posting charges from client account ${accountId} to room ${account.roomNumber}.`);
-
-            // Loop through each charge in the client account and create a new IncidentalCharge
             const newCharges = account.charges.map(charge => ({
                 bookingId: booking._id,
                 bookingCustomId: booking.id,
@@ -532,19 +529,17 @@ app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
                 amount: charge.amount
             }));
 
-            // Save all new incidental charges at once
             if (newCharges.length > 0) {
                 await IncidentalCharge.insertMany(newCharges);
             }
 
-            // Mark the account as closed and save
             account.isClosed = true;
             await account.save();
 
-            // Send a success response for room posting
+            console.log(`[Settlement Success] Posted charges for ${accountId} to room ${account.roomNumber}`);
             return res.status(200).json({ message: 'Charges successfully posted to room account.' });
+
         } else if (paymentMethod) {
-            // Logic to generate a final receipt and process payment
             const receipt = {
                 guestName: account.guestName,
                 total: account.totalCharges,
@@ -552,21 +547,27 @@ app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
                 paymentMethod: paymentMethod,
                 date: new Date()
             };
-            // Mark the account as closed and save
+
             account.isClosed = true;
             await account.save();
             
-            // Send success response with receipt
-            console.log('Generating receipt:', receipt);
+            console.log(`[Settlement Success] Direct payment for ${accountId} via ${paymentMethod}`);
             return res.status(200).json({ message: 'Account settled successfully.', receipt });
         } else {
             return res.status(400).json({ message: 'Invalid settlement method.' });
         }
 
     } catch (error) {
-        // The catch block will now only be for unexpected errors, not logic flow
-        console.error('Error settling account:', error);
-        res.status(500).json({ message: 'Error settling account.', error: error.message });
+        // --- LOGGING TO RENDER CONSOLE ---
+        console.error(`--- SETTLEMENT ERROR | ${new Date().toISOString()} ---`);
+        console.error(`Account ID: ${accountId}`);
+        console.error(`Stack Trace:`, error); 
+        // ---------------------------------
+
+        res.status(500).json({ 
+            message: 'Error settling account.', 
+            error: error.message 
+        });
     }
 });
 
