@@ -370,68 +370,63 @@ app.get('/api/rooms/report-daily', async (req, res) => {
     }
 });
 
-// NEW: Get daily report
 app.get('/api/pos/reports/daily', async (req, res) => {
-    const { date } = req.query;
-    try {
-        const startOfDay = new Date(date);
-        startOfDay.setHours(0, 0, 0, 0);
+    const { date } = req.query; // e.g., "2026-02-04"
+    
+    try {
+        // 1. Define your timezone offset (UTC +3)
+        const TZ_OFFSET = 3; 
 
-        const endOfDay = new Date(date);
-        endOfDay.setHours(23, 59, 59, 999);
+        // 2. Create the Start of Day (00:00:00) in your local time
+        const startOfDay = new Date(`${date}T00:00:00Z`);
+        startOfDay.setHours(startOfDay.getHours() - TZ_OFFSET);
 
-        // Fetch incidental charges for the day
-        const roomCharges = await IncidentalCharge.find({
-            createdAt: {
-                $gte: startOfDay,
-                $lte: endOfDay
-            }
-        }).select('guestName roomNumber type description amount createdAt');
+        // 3. Create the End of Day (23:59:59) in your local time
+        const endOfDay = new Date(`${date}T23:59:59.999Z`);
+        endOfDay.setHours(endOfDay.getHours() - TZ_OFFSET);
 
-        // Fetch walk-in charges for the day
-        const walkinCharges = await WalkInCharge.find({
-            date: {
-                $gte: startOfDay,
-                $lte: endOfDay
-            }
-        }).select('guestName receiptId type description amount date');
+        // --- RENDER LOGS (Check these in your dashboard) ---
+        console.log(`--- Report for ${date} (UTC+3) ---`);
+        console.log(`Database Search Range: ${startOfDay.toISOString()} to ${endOfDay.toISOString()}`);
 
-        // Format data for the report
-        const allTransactions = [
-            ...roomCharges.map(charge => ({
-                transactionId: charge._id,
-                guestName: charge.guestName,
-                roomNumber: charge.roomNumber,
-                type: charge.type,
-                description: charge.description,
-                amount: charge.amount,
-                date: formatDate(charge.createdAt),
-                source: 'Room Charge'
-            })),
-            ...walkinCharges.map(charge => ({
-                transactionId: charge._id,
-                guestName: charge.guestName,
-                roomNumber: 'Walk-In',
-                type: charge.type,
-                description: charge.description,
-                amount: charge.amount,
-                date: formatDate(charge.date),
-                source: 'Walk-In'
-            }))
-        ];
+        const [roomCharges, walkinCharges] = await Promise.all([
+            IncidentalCharge.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }),
+            WalkInCharge.find({ date: { $gte: startOfDay, $lte: endOfDay } })
+        ]);
 
-        const totalRevenue = allTransactions.reduce((sum, t) => sum + t.amount, 0);
+        console.log(`Found: ${roomCharges.length} Room, ${walkinCharges.length} Walk-in`);
 
-        res.status(200).json({
-            date: formatDate(startOfDay),
-            totalRevenue,
-            transactions: allTransactions
-        });
-    } catch (error) {
-        res.status(500).json({ message: 'Error generating daily report', error: error.message });
-    }
+        // 4. Formatting logic
+        const allTransactions = [
+            ...roomCharges.map(c => ({
+                guestName: c.guestName,
+                amount: Number(c.amount),
+                source: 'Room Charge',
+                time: c.createdAt // This is stored in UTC
+            })),
+            ...walkinCharges.map(c => ({
+                guestName: c.guestName,
+                amount: Number(c.amount),
+                source: 'Walk-In',
+                time: c.date
+            }))
+        ];
+
+        const totalRevenue = allTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+        res.status(200).json({
+            reportDate: date,
+            timezone: "UTC+3",
+            totalRevenue,
+            transactionCount: allTransactions.length,
+            transactions: allTransactions
+        });
+
+    } catch (error) {
+        console.error('REPORT ERROR:', error);
+        res.status(500).json({ message: 'Error generating report', error: error.message });
+    }
 });
-
 // TEMPORARY: Add this new route to delete all rooms
 app.post('/api/rooms/clear-all', async (req, res) => {
   try {
