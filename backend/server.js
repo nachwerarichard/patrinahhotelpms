@@ -532,14 +532,17 @@ app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
             return res.status(200).json({ message: 'Charges successfully posted to room account.' });
 
         } else if (paymentMethod) {
-            // Prepare the charges to be saved permanently for Walk-Ins
+            // Prepare the charges with ALL required fields for the WalkInCharge model
             const walkInChargesToSave = account.charges.map(charge => ({
+                receiptId: `POS-${Date.now()}-${Math.floor(Math.random() * 1000)}`, // Generate the required ID
                 guestName: account.guestName,
+                type: charge.type || 'Service', // Provide the required type
                 description: charge.description,
                 amount: charge.amount,
                 date: new Date(), 
                 paymentMethod: paymentMethod,
-                source: 'POS Walk-In'
+                source: 'POS Walk-In',
+                isPaid: true // Usually required for walk-ins
             }));
 
             if (walkInChargesToSave.length > 0) {
