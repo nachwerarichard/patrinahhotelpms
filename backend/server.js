@@ -219,15 +219,15 @@ const incidentalChargeSchema = new mongoose.Schema({
         ref: 'Booking',
         required: true
     },
-    bookingCustomId: { type: String, required: true }, // Custom booking ID (e.g., BKG001) for easier frontend lookup
+    bookingCustomId: { type: String, required: true }, 
     guestName: {
         type: String,
         required: true
     },
-    roomNumber: { // Added for easier filtering/display
+    roomNumber: { 
         type: String,
     },
-    type: { // e.g., 'Room Service', 'Spa', 'Restaurant', 'Bar', 'Laundry', 'Other'
+    type: { 
         type: String,
         required: true
     },
@@ -238,17 +238,15 @@ const incidentalChargeSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-date: {
+    date: {
         type: Date,
         default: Date.now
-    }
-}, { timestamps: true });
-    
-    isPaid: { // To track if this specific charge has been paid
+    },
+    isPaid: { // Moved inside the schema object
         type: Boolean,
         default: false
     }
-});
+}, { timestamps: true }); // Properly closed here
 const IncidentalCharge = mongoose.model('IncidentalCharge', incidentalChargeSchema);
 
 // --- Define Mongoose Schemas and Models (cont.) ---
