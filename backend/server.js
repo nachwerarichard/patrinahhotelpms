@@ -3297,11 +3297,11 @@ const { accountId } = req.body; // Pass this from frontend
 
 if (accountId) {
     const GuestAccount = mongoose.model('POSClientAccount'); // Ensure model is imported
-    const chargeAmount = sp * quantity;
+    const chargeAmount = sp * number;
     
     await GuestAccount.findByIdAndUpdate(accountId, {
         $push: { charges: { 
-            description: `${item} (x${quantity})`, 
+            description: `${item} (x${number})`, 
             amount: chargeAmount, 
             type: department,
             date: new Date() 
