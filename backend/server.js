@@ -460,6 +460,7 @@ app.post('/api/pos/client/account', async (req, res) => {
 app.post('/api/pos/client/account/:accountId/charge', async (req, res) => {
     const { accountId } = req.params;
     const { description, amount } = req.body;
+
     try {
         const account = await ClientAccount.findById(accountId);
         if (!account) {
@@ -475,7 +476,13 @@ app.post('/api/pos/client/account/:accountId/charge', async (req, res) => {
         await account.save();
         res.status(200).json(account);
     } catch (error) {
-        res.status(500).json({ message: 'Error adding charge.', error: error.message });
+        // --- THIS LINE LOGS TO RENDER CONSOLE ---
+        console.error(`Error charging account ${accountId}:`, error); 
+        
+        res.status(500).json({ 
+            message: 'Error adding charge.', 
+            error: error.message 
+        });
     }
 });
 
