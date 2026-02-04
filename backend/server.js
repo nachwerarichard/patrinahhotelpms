@@ -3292,7 +3292,23 @@ app.post('/sales', auth, async (req, res) => {
     if (todayInventory.trackInventory && todayInventory.closing < Number(process.env.LOW_STOCK_THRESHOLD)) {
       notifyLowStock(item, todayInventory.closing);
     }
+// NEW LOGIC TO LINK TO GUEST FOLIO
+const { accountId } = req.body; // Pass this from frontend
 
+if (accountId) {
+    const GuestAccount = mongoose.model('POSClientAccount'); // Ensure model is imported
+    const chargeAmount = sp * number;
+    
+    await GuestAccount.findByIdAndUpdate(accountId, {
+        $push: { charges: { 
+            description: `${item} (x${number})`, 
+            amount: chargeAmount, 
+            type: department,
+            date: new Date() 
+        }},
+        $inc: { totalCharges: chargeAmount }
+    });
+}
     // 6. Financial Calculations
     const totalBuyingPrice = bp * number;
     const totalSellingPrice = sp * number;
