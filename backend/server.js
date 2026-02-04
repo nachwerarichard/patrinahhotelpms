@@ -226,7 +226,6 @@ const incidentalChargeSchema = new mongoose.Schema({
     },
     roomNumber: { // Added for easier filtering/display
         type: String,
-        required: true
     },
     type: { // e.g., 'Room Service', 'Spa', 'Restaurant', 'Bar', 'Laundry', 'Other'
         type: String,
