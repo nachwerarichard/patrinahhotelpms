@@ -215,7 +215,10 @@
 
             </div>
         </div>
-        
+        <div id="kitchen-display" class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+    </div>
+
+
     </main>
     <div id="receipt-printout" class="hidden">
     <div style="text-align: center; font-family: monospace; width: 300px; padding: 10px; border: 1px solid #000;">
@@ -354,68 +357,86 @@
             };
 
 const addCharge = async (description, quantity, department) => {
+    // 1. Validation: Ensure a guest is selected
     if (!activeAccountId) {
         displayMessage("Please select a guest first!", "error");
         return;
     }
 
-    // 1. Get Token for Authorization
     const token = localStorage.getItem('token'); 
     const itemInfo = document.getElementById('itemDesc').dataset;
-    
-    // Fallback logic: if department isn't passed, get it from your hidden input
     const selectedDept = department || document.getElementById('deptSelect').value;
-    const Quantity = document.getElementById('itemQty').value;
+    const qtyValue = parseFloat(document.getElementById('itemQty').value) || 1;
 
-    const saleData = {
+    // Build the data object
+    const payload = {
         item: description,
-        department: selectedDept, // MUST be 'Bar', 'Restaurant', or 'Kitchen'
-        number: Quantity,
+        department: selectedDept,
+        number: qtyValue,
         bp: parseFloat(itemInfo.bp || 0),
         sp: parseFloat(itemInfo.sp || 0),
+        accountId: activeAccountId, // Link to folio
+        tableNumber: document.getElementById('tableNum')?.value || "N/A", // Optional table field
         date: new Date()
     };
 
     try {
-        // 1. RECORD THE SALE (Deduct Inventory)
-        const saleRes = await fetch(`${BASE_URL}/sales`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` // Fixes 401 Error
-            },
-            body: JSON.stringify(saleData)
-        });
-
-        const saleResult = await saleRes.json();
-        if (!saleRes.ok) throw new Error(saleResult.error);
-
-        // 2. ADD TO GUEST FOLIO
-        // Note: You should also add the Authorization header here if this route is protected
-        const folioRes = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` 
-            },
-            body: JSON.stringify({
-                description: `${description} (x${quantity})`,
-                amount: saleData.sp * saleData.number,
-                type: selectedDept
-            })
-        });
-
-        const updatedAccount = await folioRes.json();
-        if (!folioRes.ok) throw new Error(updatedAccount.message);
-
-        // 3. SUCCESS
-        updateActiveAccountUI(updatedAccount); 
-        displayMessage("Sale recorded & Guest charged!", "success");
-        // Ask if they want a receipt
-            //if (confirm("Would you like to print a receipt for this cash sale?")) {
-               // printReceipt(description, quantity, saleData.sp);
-           // }
+        // --- BRANCH LOGIC START ---
         
+        if (selectedDept === 'Restaurant') {
+            // STEP A: Send to Kitchen Order Queue (Does NOT deduct inventory yet)
+            const res = await fetch(`${BASE_URL}/api/kitchen/order`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) throw new Error("Failed to send order to kitchen");
+            
+            displayMessage("Order sent to Kitchen preparing list!", "success");
+            resetForm(); // Clear UI
+            
+        } else {
+            // STEP B: Standard Bar/Service Logic (Instant Sale & Folio Charge)
+            
+            // 1. Deduct Inventory
+            const saleRes = await fetch(`${BASE_URL}/sales`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify(payload)
+            });
+            const saleResult = await saleRes.json();
+            if (!saleRes.ok) throw new Error(saleResult.error);
+
+            // 2. Add to Guest Folio
+            const folioRes = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({
+                    description: `${description} (x${qtyValue})`,
+                    amount: payload.sp * payload.number,
+                    type: selectedDept
+                })
+            });
+            const updatedAccount = await folioRes.json();
+            if (!folioRes.ok) throw new Error(updatedAccount.message);
+
+            // 3. Update UI
+            updateActiveAccountUI(updatedAccount); 
+            displayMessage("Bar sale recorded & Guest charged!", "success");
+        }
+
+        // --- BRANCH LOGIC END ---
+
     } catch (err) {
         console.error("Transaction failed:", err);
         displayMessage(err.message, "error");
@@ -669,5 +690,43 @@ function autoFillPrices(selectedItemName) {
     window.print();
 };
     </script>
+    <script>
+async function loadKitchenOrders() {
+    const res = await fetch(`${BASE_URL}/api/kitchen/pending`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const orders = await res.json();
+    
+    const container = document.getElementById('kitchen-display');
+    container.innerHTML = orders.map(order => `
+        <div class="bg-white border-2 border-orange-200 rounded-2xl p-4 shadow-sm">
+            <div class="flex justify-between items-start">
+                <h3 class="text-lg font-bold">${order.item} (x${order.number})</h3>
+                <span class="bg-orange-100 text-orange-600 px-2 py-1 rounded text-xs font-bold">PREPARING</span>
+            </div>
+            <p class="text-sm text-gray-500">Table: ${order.tableNumber} | Waiter: ${order.waiter}</p>
+            
+            <button onclick="markAsReady('${order._id}')" 
+                    class="w-full mt-4 bg-green-500 text-white font-bold py-3 rounded-xl active:scale-95 transition-transform">
+                MARK AS READY
+            </button>
+        </div>
+    `).join('');
+}
+
+async function markAsReady(orderId) {
+    // 1. Tell backend order is ready
+    // 2. Backend will trigger /sales and /folio update automatically
+    const res = await fetch(`${BASE_URL}/api/kitchen/order/${orderId}/ready`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (res.ok) {
+        loadKitchenOrders(); // Refresh list
+        alert("Order completed & charged!");
+    }
+}
+</script>
 </body>
 </html>
