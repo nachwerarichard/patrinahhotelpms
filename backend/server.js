@@ -3327,8 +3327,11 @@ if (accountId) {
       date: date || new Date()
     });
 
-    await logAction('Sale Created', req.user.username, { saleId: sale._id, item, number });
-    res.status(201).json(sale);
+// This uses the logged-in name, or falls back to 'System/Unknown'
+const performer = req.user?.username || 'System/Unknown';
+
+await logAction('Sale Created', performer, { saleId: sale._id, item, number });
+res.status(201).json(sale);    
 
   } catch (err) {
     console.error('Sale error:', err);
