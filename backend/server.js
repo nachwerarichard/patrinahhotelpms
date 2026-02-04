@@ -2983,26 +2983,38 @@ app.post('/logout', auth, async (req, res) => {
 
 
 // POST /api/kitchen/order
-app.post('/api/kitchen/order', async (req, res) => {
+app.post('/api/kitchen/order', auth, async (req, res) => {
+    console.log("--- New Kitchen Order Incoming ---");
+    console.log("Request Body:", req.body);
+    console.log("User from Auth:", req.user ? req.user.username : "NO USER FOUND");
+
     try {
-        const { item, quantity, accountId, tableNumber, bp, sp } = req.body;
+        // Use 'number' if that is what your frontend 'payload' sends
+        const { item, number, accountId, tableNumber, bp, sp } = req.body;
         
+        // Log individual fields to check for undefined values
+        console.log(`Processing Order: ${item}, Qty: ${number}, Table: ${tableNumber}`);
+
         const newOrder = await KitchenOrder.create({
             item,
-            number: quantity,
+            number: parseFloat(number) || 1, // Ensure it's a number
             accountId,
-            tableNumber,
-            bp,
-            sp,
-            status: 'Preparing', // Starts here
-            waiter: req.user.username
+            tableNumber: tableNumber || "N/A",
+            bp: parseFloat(bp) || 0,
+            sp: parseFloat(sp) || 0,
+            status: 'Preparing',
+            waiter: req.user?.username || 'System'
         });
 
+        console.log("Order saved successfully ID:", newOrder._id);
         res.status(201).json(newOrder);
     } catch (err) {
+        console.error("KITCHEN ORDER ERROR:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
+
+
 app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
     const order = await KitchenOrder.findById(req.params.id);
     
