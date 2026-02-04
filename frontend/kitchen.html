@@ -18,39 +18,62 @@
 
 <script>
 async function loadOrders() {
-    const res = await fetch('https://patrinahhotelpms.onrender.com/api/kitchen/pending', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    const orders = await res.json();
-    
-    const container = document.getElementById('kitchenOrders');
-    container.innerHTML = orders.map(order => `
-        <div class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-orange-500">
-            <div class="flex justify-between items-start">
-                <h2 class="text-xl font-black">${order.item}</h2>
-                <span class="text-xs bg-gray-100 p-1 rounded font-mono">T: ${order.tableNumber}</span>
+    try {
+        const res = await fetch('https://patrinahhotelpms.onrender.com/api/kitchen/pending', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        
+        if (!res.ok) throw new Error("Could not fetch orders");
+        
+        const orders = await res.json();
+        console.log("Orders received:", orders); // Check your console!
+
+        const container = document.getElementById('kitchenOrders');
+        
+        if (orders.length === 0) {
+            container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">No pending orders. Take a break, Chef!</p>`;
+            return;
+        }
+
+        container.innerHTML = orders.map(order => `
+            <div class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-orange-500">
+                <div class="flex justify-between items-start">
+                    <h2 class="text-xl font-black">${order.item}</h2>
+                    <span class="text-xs bg-gray-100 p-1 rounded font-mono">T: ${order.tableNumber || 'N/A'}</span>
+                </div>
+                <p class="text-3xl font-bold my-2">QTY: ${order.number}</p>
+                <p class="text-sm text-gray-400 mb-4">Waiter: ${order.waiter || 'Unknown'}</p>
+                
+                <button onclick="completeOrder('${order._id}')" 
+                    class="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 active:scale-95 transition">
+                    MARK AS READY
+                </button>
             </div>
-            <p class="text-3xl font-bold my-2">QTY: ${order.number}</p>
-            <p class="text-sm text-gray-400 mb-4">Waiter: ${order.waiter || 'Unknown'}</p>
-            
-            <button onclick="completeOrder('${order._id}')" 
-                class="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition">
-                MARK AS READY
-            </button>
-        </div>
-    `).join('');
+        `).join('');
+    } catch (err) {
+        console.error("Kitchen Display Error:", err);
+    }
 }
 
 async function completeOrder(id) {
-    const res = await fetch(\`https://patrinahhotelpms.onrender.com/api/kitchen/order/\${id}/ready\`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    if(res.ok) loadOrders(); // Refresh the list
+    try {
+        // Fixed the backtick syntax here
+        const res = await fetch(`https://patrinahhotelpms.onrender.com/api/kitchen/order/${id}/ready`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (res.ok) {
+            loadOrders(); 
+        } else {
+            alert("Error marking order as ready");
+        }
+    } catch (err) {
+        console.error("Complete Order Error:", err);
+    }
 }
 
-// Refresh every 30 seconds
-setInterval(loadOrders, 30000);
+// Refresh every 10 seconds (faster for kitchen)
+setInterval(loadOrders, 10000);
 loadOrders();
 </script>
   </body>
