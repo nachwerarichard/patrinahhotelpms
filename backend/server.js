@@ -371,56 +371,25 @@ app.get('/api/rooms/report-daily', async (req, res) => {
 });
 
 app.get('/api/pos/reports/daily', async (req, res) => {
-    const { date } = req.query; // e.g., "2026-02-04"
+    const { date } = req.query; 
     
     try {
         if (!date) return res.status(400).json({ message: 'Date is required' });
 
-        // Parse the input date string into local day boundaries
-        const [year, month, day] = date.split('-').map(Number);
-        const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
-        const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+        // Force the search to be UTC-aligned to match how MongoDB stores ISODate
+        const startOfDay = new Date(`${date}T00:00:00.000Z`);
+        const endOfDay = new Date(`${date}T23:59:59.999Z`);
 
-        // We use 'date' because it's explicitly in your schemas
+        console.log(`DEBUG: Searching between ${startOfDay.toISOString()} and ${endOfDay.toISOString()}`);
+
         const [roomCharges, walkinCharges] = await Promise.all([
             IncidentalCharge.find({ date: { $gte: startOfDay, $lte: endOfDay } }),
             WalkInCharge.find({ date: { $gte: startOfDay, $lte: endOfDay } })
         ]);
 
-        const allTransactions = [
-            ...roomCharges.map(c => ({
-                guestName: c.guestName,
-                roomNumber: c.roomNumber || 'N/A',
-                description: c.description || 'Room Charge',
-                amount: Number(c.amount) || 0,
-                source: 'Room Charge',
-                time: c.date // Use .date from schema
-            })),
-            ...walkinCharges.map(c => ({
-                guestName: c.guestName,
-                roomNumber: 'Walk-In',
-                description: c.description || 'Walk-in Sale',
-                amount: Number(c.amount) || 0,
-                source: 'Walk-In',
-                time: c.date // Use .date from schema
-            }))
-        ];
+        console.log(`DEBUG: Found ${roomCharges.length} Room Charges and ${walkinCharges.length} Walk-ins`);
 
-        const totalRevenue = allTransactions.reduce((sum, t) => sum + t.amount, 0);
-
-        res.status(200).json({
-            reportDate: date,
-            totalRevenue,
-            transactionCount: allTransactions.length,
-            transactions: allTransactions
-        });
-
-    } catch (error) {
-        console.error('REPORT ERROR:', error);
-        res.status(500).json({ message: 'Error generating report', error: error.message });
-    }
-});
-// TEMPORARY: Add this new route to delete all rooms
+        // ... mapping logic stays the same ...
 app.post('/api/rooms/clear-all', async (req, res) => {
   try {
     await Room.deleteMany({}); // Deletes all documents in the 'rooms' collection
