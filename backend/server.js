@@ -2982,36 +2982,53 @@ app.post('/logout', auth, async (req, res) => {
 });
 
 
+// POST /api/kitchen/order
+app.post('/api/kitchen/order', auth, async (req, res) => {
+    try {
+        const { item, quantity, accountId, tableNumber, bp, sp } = req.body;
+        
+        const newOrder = await KitchenOrder.create({
+            item,
+            number: quantity,
+            accountId,
+            tableNumber,
+            bp,
+            sp,
+            status: 'Preparing', // Starts here
+            waiter: req.user.username
+        });
+
+        res.status(201).json(newOrder);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
     const order = await KitchenOrder.findById(req.params.id);
     
-    if (order.status === 'Ready') return res.status(400).send("Already processed");
-
-    // 1. DEDUCT INVENTORY (Call your Sales logic)
-    const saleData = {
+    // 1. Create the Sale (Deducts Inventory)
+    const sale = await Sale.create({
         item: order.item,
-        number: order.quantity,
-        department: order.department,
+        number: order.number,
+        department: 'Restaurant',
         bp: order.bp,
-        sp: order.sp
-    };
-    
-    // You can import and call your internal recordSale function here
-    await recordSale(saleData); 
+        sp: order.sp,
+        profit: (order.sp - order.bp) * order.number
+    });
 
-    // 2. POST TO FOLIO
+    // 2. Post to Folio if Guest is linked
     if (order.accountId) {
         await postChargeToFolio(order.accountId, {
-            description: order.item,
-            amount: order.sp * order.quantity
+            description: `${order.item} (Kitchen)`,
+            amount: order.sp * order.number,
+            type: 'Restaurant'
         });
     }
 
-    // 3. UPDATE STATUS
-    order.status = 'Ready';
-    await order.save();
-
-    res.json({ message: "Order ready, inventory deducted and guest charged." });
+    // 3. Delete or Update Order Status
+    await order.remove(); // Or status = 'Ready'
+    
+    res.json({ success: true });
 });
 // --- Inventory Endpoints (Corrected) ---
 
