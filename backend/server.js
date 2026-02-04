@@ -2983,7 +2983,7 @@ app.post('/logout', auth, async (req, res) => {
 
 
 // POST /api/kitchen/order
-app.post('/api/kitchen/order', auth, async (req, res) => {
+app.post('/api/kitchen/order', async (req, res) => {
     try {
         const { item, quantity, accountId, tableNumber, bp, sp } = req.body;
         
