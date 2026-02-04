@@ -339,12 +339,16 @@ const addCharge = async (description, quantity, department) => {
         return;
     }
 
+    // 1. Get Token for Authorization
+    const token = localStorage.getItem('token'); 
     const itemInfo = document.getElementById('itemDesc').dataset;
-    const totalAmount = parseFloat(itemInfo.sp || 0) * parseFloat(quantity);
     
+    // Fallback logic: if department isn't passed, get it from your hidden input
+    const selectedDept = department || document.getElementById('deptSelect').value;
+
     const saleData = {
         item: description,
-        department: department,
+        department: selectedDept, // MUST be 'Bar', 'Restaurant', or 'Kitchen'
         number: parseFloat(quantity),
         bp: parseFloat(itemInfo.bp || 0),
         sp: parseFloat(itemInfo.sp || 0),
@@ -352,39 +356,46 @@ const addCharge = async (description, quantity, department) => {
     };
 
     try {
-        // 1. RECORD THE SALE & DEDUCT INVENTORY
+        // 1. RECORD THE SALE (Deduct Inventory)
         const saleRes = await fetch(`${BASE_URL}/sales`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // Fixes 401 Error
+            },
             body: JSON.stringify(saleData)
         });
+
         const saleResult = await saleRes.json();
         if (!saleRes.ok) throw new Error(saleResult.error);
 
-        // 2. ADD TO GUEST FOLIO (The "Charge" part)
+        // 2. ADD TO GUEST FOLIO
+        // Note: You should also add the Authorization header here if this route is protected
         const folioRes = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` 
+            },
             body: JSON.stringify({
                 description: `${description} (x${quantity})`,
-                amount: totalAmount,
-                type: department // This tells the folio if it's Bar/Restaurant
+                amount: saleData.sp * saleData.number,
+                type: selectedDept
             })
         });
 
         const updatedAccount = await folioRes.json();
         if (!folioRes.ok) throw new Error(updatedAccount.message);
 
-        // 3. UPDATE UI
-        activeAccountData = updatedAccount;
-        updateActiveAccountUI(updatedAccount); // Updates the balance on screen
-        displayMessage("Inventory updated & Added to Folio!", "success");
+        // 3. SUCCESS
+        updateActiveAccountUI(updatedAccount); 
+        displayMessage("Sale recorded & Guest charged!", "success");
         
     } catch (err) {
+        console.error("Transaction failed:", err);
         displayMessage(err.message, "error");
     }
 };
-
             const settleAccount = async (method) => {
                 if (!activeAccountId) return;
                 let payload = method === 'room' ? { roomPost: true } : { paymentMethod: 'Cash' };
