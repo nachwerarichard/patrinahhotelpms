@@ -371,9 +371,19 @@
     reportTableBody.appendChild(row);
 });
 
-                    activeAccountSection.classList.add('hidden');
-                    emptyState.classList.add('hidden');
-                    reportResults.classList.remove('hidden');
+                    // ... after the loop that appends rows ...
+
+// Ensure the parent reports panel is visible
+document.getElementById('reportsPanel').classList.remove('hidden');
+
+// Manage visibility of specific result sections
+activeAccountSection.classList.add('hidden');
+emptyState.classList.add('hidden');
+reportResults.classList.remove('hidden');
+
+// Add this for a better user experience:
+displayMessage('Report Generated', 'success');
+                    
                 } catch (err) { displayMessage(err.message, 'error'); }
             };
 
