@@ -3002,7 +3002,7 @@ app.post('/api/kitchen/order',  async (req, res) => {
             tableNumber: tableNumber || "N/A",
             bp: parseFloat(bp) || 0,
             sp: parseFloat(sp) || 0,
-            status: 'Preparing',
+            status: 'Pending',
             waiter: req.user?.username || 'System'
         });
 
