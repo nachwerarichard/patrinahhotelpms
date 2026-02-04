@@ -371,41 +371,38 @@ app.get('/api/rooms/report-daily', async (req, res) => {
 });
 
 app.get('/api/pos/reports/daily', async (req, res) => {
-    const { date } = req.query; // "2026-02-04"
+    const { date } = req.query; // e.g., "2026-02-04"
     
     try {
-        // Create boundaries based on the string to avoid timezone shifting
-        const start = new Date(`${date}T00:00:00.000Z`);
-        const end = new Date(`${date}T23:59:59.999Z`);
+        if (!date) return res.status(400).json({ message: 'Date is required' });
 
-        console.log("Searching from:", start.toISOString());
-        console.log("Searching to:", end.toISOString());
+        // Parse the input date string into local day boundaries
+        const [year, month, day] = date.split('-').map(Number);
+        const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+        const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
 
+        // We use 'date' because it's explicitly in your schemas
         const [roomCharges, walkinCharges] = await Promise.all([
-            // Match the field name 'date' from your schema!
-            IncidentalCharge.find({ date: { $gte: start, $lte: end } }),
-            WalkInCharge.find({ date: { $gte: start, $lte: end } })
+            IncidentalCharge.find({ date: { $gte: startOfDay, $lte: endOfDay } }),
+            WalkInCharge.find({ date: { $gte: startOfDay, $lte: endOfDay } })
         ]);
 
-        console.log(`Found ${roomCharges.length} room charges and ${walkinCharges.length} walkins`);
-
-        // ... rest of your mapping logic ...
         const allTransactions = [
-...roomCharges.map(c => ({
-        guestName: c.guestName,
-        roomNumber: c.roomNumber || 'N/A',
-        description: c.description || 'Room Charge',
-        amount: Number(c.amount) || 0,
-        source: 'Room Charge',
-        time: c.date // Changed from c.createdAt
-    })),
+            ...roomCharges.map(c => ({
+                guestName: c.guestName,
+                roomNumber: c.roomNumber || 'N/A',
+                description: c.description || 'Room Charge',
+                amount: Number(c.amount) || 0,
+                source: 'Room Charge',
+                time: c.date // Use .date from schema
+            })),
             ...walkinCharges.map(c => ({
                 guestName: c.guestName,
                 roomNumber: 'Walk-In',
                 description: c.description || 'Walk-in Sale',
                 amount: Number(c.amount) || 0,
                 source: 'Walk-In',
-                time: c.date
+                time: c.date // Use .date from schema
             }))
         ];
 
