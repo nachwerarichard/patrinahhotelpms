@@ -390,6 +390,41 @@ app.get('/api/pos/reports/daily', async (req, res) => {
         console.log(`DEBUG: Found ${roomCharges.length} Room Charges and ${walkinCharges.length} Walk-ins`);
 
         // ... mapping logic stays the same ...
+
+        const allTransactions = [
+            ...roomCharges.map(c => ({
+                guestName: c.guestName,
+                roomNumber: c.roomNumber || 'N/A',
+                description: c.description || 'Room Charge',
+                amount: Number(c.amount) || 0,
+                source: 'Room Charge',
+                time: c.date // Use .date from schema
+            })),
+            ...walkinCharges.map(c => ({
+                guestName: c.guestName,
+                roomNumber: 'Walk-In',
+                description: c.description || 'Walk-in Sale',
+                amount: Number(c.amount) || 0,
+                source: 'Walk-In',
+                time: c.date // Use .date from schema
+            }))
+        ];
+
+        const totalRevenue = allTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+        res.status(200).json({
+            reportDate: date,
+            totalRevenue,
+            transactionCount: allTransactions.length,
+            transactions: allTransactions
+        });
+
+    } catch (error) {
+        console.error('REPORT ERROR:', error);
+        res.status(500).json({ message: 'Error generating report', error: error.message });
+    }
+});
+// TEMPORARY: Add this new route to delete all rooms
 app.post('/api/rooms/clear-all', async (req, res) => {
   try {
     await Room.deleteMany({}); // Deletes all documents in the 'rooms' collection
