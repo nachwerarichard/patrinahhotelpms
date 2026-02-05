@@ -31,14 +31,15 @@
     </header>
 
     <main class="max-w-7xl mx-auto p-4 md:p-8">
-        <div class="flex p-1 bg-slate-100 rounded-xl mb-4">
-    <button id="btnTab" onclick="setGuestMode('tab')" class="flex-1 py-2 rounded-lg text-sm font-bold bg-white shadow-sm text-indigo-600">
-        All-Day Tab
-    </button>
-    <button id="btnQuick" onclick="setGuestMode('quick')" class="flex-1 py-2 rounded-lg text-sm font-bold text-slate-500">
-        Quick Lunch (Pay Now)
-    </button>
-</div>
+<button onclick="startQuickSale()" class="flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-700 text-white w-full py-4 rounded-2xl shadow-lg transition-all active:scale-95 group">
+    <div class="bg-emerald-500 p-2 rounded-lg group-hover:bg-emerald-400">
+        <i class="fas fa-bolt text-lg"></i>
+    </div>
+    <div class="text-left">
+        <span class="block font-bold text-sm leading-none uppercase tracking-wide">Quick Sale</span>
+        <span class="text-xs text-emerald-100 opacity-80">Lunch / Transient Guest</span>
+    </div>
+</button>
         <div id="messageBox" class="fixed top-20 right-4 z-50 transition-all duration-300 transform translate-x-full"></div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -313,23 +314,37 @@
 }
 </style>
     <script>
-        let guestMode = 'tab'; // default
-
-function setGuestMode(mode) {
-    guestMode = mode;
-    const btnTab = document.getElementById('btnTab');
-    const btnQuick = document.getElementById('btnQuick');
+function startQuickSale() {
+    // 1. Identify the Section
+    const activeSection = document.getElementById('activeAccountSection');
     
-    if(mode === 'quick') {
-        btnQuick.className = "flex-1 py-2 rounded-lg text-sm font-bold bg-white shadow-sm text-orange-600";
-        btnTab.className = "flex-1 py-2 rounded-lg text-sm font-bold text-slate-500";
-        // Hide guest search because we don't need a name for a 20-min lunch
-        document.getElementById('guestSearchContainer').classList.add('hidden');
-    } else {
-        btnTab.className = "flex-1 py-2 rounded-lg text-sm font-bold bg-white shadow-sm text-indigo-600";
-        btnQuick.className = "flex-1 py-2 rounded-lg text-sm font-bold text-slate-500";
-        document.getElementById('guestSearchContainer').classList.remove('hidden');
+    // 2. Remove 'hidden' and trigger the animation
+    activeSection.classList.remove('hidden');
+    
+    // 3. Reset Global Variables (Important!)
+    // If your POS uses these variables to track who to charge:
+    selectedAccountId = null; // Clear any resident ID
+    currentOrderType = 'Direct'; // Flag this as a cash sale
+    
+    // 4. Reset UI Text
+    document.getElementById('currentGuestName').textContent = "Quick Lunch Guest";
+    document.getElementById('currentRoomNumber').textContent = "Direct Payment";
+    document.getElementById('totalCharges').textContent = "0.00";
+    
+    // 5. Clear the Itemized List
+    const chargesList = document.getElementById('chargesList');
+    if (chargesList) {
+        chargesList.innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center py-10 text-slate-400 italic">
+                    <i class="fas fa-plus-circle block text-2xl mb-2 opacity-20"></i>
+                    Select items from the menu to start
+                </td>
+            </tr>`;
     }
+
+    // 6. Scroll smoothly to the order section
+    activeSection.scrollIntoView({ behavior: 'smooth' });
 }
     </script>
     <script>
