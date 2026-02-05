@@ -3051,7 +3051,7 @@ app.patch('/api/kitchen/order/:id/ready', async (req, res) => {
         });
 
         if (accountId) {
-    const AccountModel = mongoose.model('POSClientAccount'); // Ensure model is imported
+    const AccountModel = mongoose.model('ClientAccount'); // Ensure model is imported
         // 2. Add to Folio
         //if (order.accountId) {
             // SAFE WAY to get the model even if order of definition is weird
@@ -3408,7 +3408,7 @@ app.post('/sales',async (req, res) => {
 const { accountId } = req.body; // Pass this from frontend
 
 if (accountId) {
-    const GuestAccount = mongoose.model('POSClientAccount'); // Ensure model is imported
+    const GuestAccount = mongoose.model('ClientAccount'); // Ensure model is imported
     const chargeAmount = sp * number;
     
     await GuestAccount.findByIdAndUpdate(accountId, {
