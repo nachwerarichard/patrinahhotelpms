@@ -250,31 +250,34 @@
     </div>
                 <div id="kitchen-display" class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
 
-        <div class="mt-8 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-    <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center">
+       <div class="mt-8 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+    <div class="bg-slate-800 px-6 py-4 flex justify-between items-center">
         <h3 class="text-white font-bold flex items-center gap-2">
-            <i class="fas fa-utensils"></i> My Order Tracker
+            <i class="fas fa-clipboard-list"></i> Live Kitchen Status
         </h3>
-        <button onclick="refreshOrderTracker()" class="text-indigo-100 hover:text-white transition">
-            <i class="fas fa-sync-alt"></i>
-        </button>
+        <div class="flex items-center gap-3">
+             <span class="flex items-center gap-1 text-xs text-slate-300">
+                <span class="w-2 h-2 bg-orange-500 rounded-full animate-ping"></span> Live
+            </span>
+            <button onclick="loadWaiterTracker()" class="text-slate-300 hover:text-white transition">
+                <i class="fas fa-redo-alt"></i>
+            </button>
+        </div>
     </div>
 
     <div class="overflow-x-auto">
         <table class="w-full text-left">
-            <thead class="bg-gray-50 text-xs uppercase text-gray-500 font-semibold">
+            <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-bold border-b">
                 <tr>
-                    <th class="px-6 py-3">Item</th>
-                    <th class="px-6 py-3">Qty</th>
-                    <th class="px-6 py-3">Table/Room</th>
-                    <th class="px-6 py-3">Status</th>
+                    <th class="px-6 py-4">Time</th>
+                    <th class="px-6 py-4">Item Description</th>
+                    <th class="px-6 py-4 text-center">Qty</th>
+                    <th class="px-6 py-4">Table/Room</th>
+                    <th class="px-6 py-4">Kitchen Status</th>
                 </tr>
             </thead>
-            <tbody id="waiterOrderTracker" class="divide-y divide-gray-100">
-                <tr>
-                    <td colspan="4" class="text-center py-10 text-gray-400">Loading orders...</td>
-                </tr>
-            </tbody>
+            <tbody id="waiterTrackerBody" class="divide-y divide-slate-100">
+                </tbody>
         </table>
     </div>
 </div>
@@ -302,49 +305,57 @@
 }
 </style>
     <script>
-        async function refreshOrderTracker() {
+        async function loadWaiterTracker() {
     try {
         const token = localStorage.getItem('token');
-        // Fetch pending orders from the kitchen
         const res = await fetch('https://patrinahhotelpms.onrender.com/api/kitchen/pending', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        const orders = await res.json();
-
-        const trackerBody = document.getElementById('waiterOrderTracker');
         
-        if (orders.length === 0) {
-            trackerBody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-400">No active kitchen orders</td></tr>`;
+        const orders = await res.json();
+        const tbody = document.getElementById('waiterTrackerBody');
+
+        if (!orders || orders.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400">No active kitchen orders found.</td></tr>`;
             return;
         }
 
-        trackerBody.innerHTML = orders.map(order => {
-            // Logic to determine status badge style
-            const isReady = order.status === 'Ready'; 
-            const statusClass = isReady 
-                ? 'bg-green-100 text-green-700' 
-                : 'bg-orange-100 text-orange-700 animate-pulse';
+        tbody.innerHTML = orders.map(order => {
+            let statusBadge = "";
+            const timeStr = new Date(order.date || order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            // Logic for status colors
+            switch(order.status) {
+                case 'Preparing':
+                    statusBadge = `<span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-black animate-pulse border border-amber-200">PREPARING</span>`;
+                    break;
+                case 'Ready':
+                    statusBadge = `<span class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-black shadow-sm">READY TO SERVE</span>`;
+                    break;
+                default:
+                    statusBadge = `<span class="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-xs font-bold border border-slate-200">PENDING</span>`;
+            }
 
             return `
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="px-6 py-4 font-medium text-gray-800">${order.item}</td>
-                    <td class="px-6 py-4 text-gray-600">${order.number || order.quantity}</td>
-                    <td class="px-6 py-4 text-gray-600">${order.tableNumber || 'N/A'}</td>
-                    <td class="px-6 py-4">
-                        <span class="px-3 py-1 rounded-full text-xs font-bold ${statusClass}">
-                            ${order.status.toUpperCase()}
-                        </span>
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="px-6 py-4 text-slate-500 text-sm">${timeStr}</td>
+                    <td class="px-6 py-4 font-bold text-slate-800">${order.item}</td>
+                    <td class="px-6 py-4 text-center text-slate-700 font-mono">${order.number || order.quantity}</td>
+                    <td class="px-6 py-4 text-slate-600">
+                        <span class="bg-slate-100 px-2 py-1 rounded text-xs font-medium">${order.tableNumber || 'N/A'}</span>
                     </td>
+                    <td class="px-6 py-4">${statusBadge}</td>
                 </tr>
             `;
         }).join('');
     } catch (err) {
-        console.error("Tracker Error:", err);
+        console.error("Waiter Tracker Error:", err);
     }
 }
 
-// Auto-refresh the tracker every 20 seconds
-setInterval(refreshOrderTracker, 20000);
+// Auto-refresh every 15 seconds to keep the waiter updated
+setInterval(loadWaiterTracker, 15000);
+loadWaiterTracker();
     </script>
 
     <script>
