@@ -3049,6 +3049,7 @@ app.patch('/api/kitchen/order/:id/ready', async (req, res) => {
             profit: (sellPrice - (order.bp || 0)) * finalQty,
             date: new Date()
         });
+     const { accountId } = req.body; // Pass this from frontend
 
         if (accountId) {
     const AccountModel = mongoose.model('ClientAccount'); // Ensure model is imported
