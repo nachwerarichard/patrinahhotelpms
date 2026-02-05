@@ -839,6 +839,15 @@
 
         <section id="reports-pos" class="section bg-white p-6 rounded-xl shadow-lg mb-6">
                     <h3 class="text-xl font-medium mb-3 border-b pb-2">POS Report</h3>
+          <div id="reportsPanel" class=" space-y-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        <h2 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Report Filters</h2>
+                        <form id="dailyReportForm" class="space-y-4">
+                            <input type="date" id="reportDate" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <button type="submit" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all">Generate Summary</button>
+                        </form>
+                    </div>
+                </div>
         </section>
         <!-- AUDIT LOGS (unchanged single item) -->
         <section id="audit-logs" class="section-content bg-white p-6 rounded-xl shadow-lg mb-6 hidden">
