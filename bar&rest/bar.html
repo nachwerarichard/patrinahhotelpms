@@ -849,7 +849,7 @@
                     </div>
                 </div>
 
-          div id="reportResults" class="hidden animate-in fade-in duration-500">
+          <div id="reportResults" class=" animate-in fade-in duration-500">
                     <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="px-8 py-6 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
                             <div>
@@ -1586,6 +1586,64 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
     </script>
+  <script>
+                const BASE_URL = 'https://patrinahhotelpms.onrender.com';
+
+      // Reports Elements
+            const dailyReportForm = document.getElementById('dailyReportForm');
+            const reportResults = document.getElementById('reportResults');
+            const reportTableBody = document.getElementById('reportTableBody');
+
+      // --- REPORTING ---
+            const generateDailyReport = async (date) => {
+                displayMessage('Loading report...', 'info');
+                try {
+                    const res = await fetch(`${BASE_URL}/api/pos/reports/daily?date=${date}`);
+                    const data = await res.json();
+                    if (!res.ok) throw new Error('Report failed');
+
+                    document.getElementById('reportDateDisplay').textContent = data.reportDate;
+                    document.getElementById('reportTotalRevenue').textContent = data.totalRevenue.toFixed(2);
+                    reportTableBody.innerHTML = '';
+
+                  data.transactions.forEach(t => {
+    const row = document.createElement('tr');
+    row.className = 'hover:bg-slate-50 transition-colors';
+    
+    // Use a fallback for amount to prevent .toFixed(2) errors
+    const safeAmount = (Number(t.amount) || 0).toFixed(2);
+    const safeDescription = t.description || 'No description';
+    const safeRoom = t.roomNumber || 'N/A';
+
+// Inside generateDailyReport, change the row.innerHTML:
+row.innerHTML = `
+    <td class="px-8 py-4 font-medium text-slate-900">
+        ${t.guestName} 
+        <span class="text-[10px] text-slate-400 ml-1">#${safeRoom}</span>
+    </td>
+    <td class="px-8 py-4">
+        <span class="text-[10px] block font-bold text-indigo-500 uppercase">${t.type || 'General'}</span>
+        ${safeDescription}
+    </td>
+    <td class="px-8 py-4 text-center">
+        <span class="px-2 py-1 bg-slate-100 rounded text-[10px] font-bold uppercase">${t.source}</span>
+    </td>
+    <td class="px-8 py-4 text-right font-bold text-slate-900">$${safeAmount}</td>
+`;
+    reportTableBody.appendChild(row);
+});
+
+                    // ... after the loop that appends rows ...
+
+
+
+// Add this for a better user experience:
+displayMessage('Report Generated', 'success');
+                    
+                } catch (err) { displayMessage(err.message, 'error'); }
+            };
+
+  </script>
  
 </body>
 </html>
