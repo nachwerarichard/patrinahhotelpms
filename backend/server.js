@@ -3031,7 +3031,7 @@ app.get('/api/kitchen/Pending', async (req, res) => {
     }
 });
 
-app.patch('/api/kitchen/order/ready', async (req, res) => {
+app.patch('/api/kitchen/order/:id/ready', async (req, res) => {
     try {
         const order = await KitchenOrder.findById(req.params.id);
         if (!order) return res.status(404).json({ error: "Order not found" });
@@ -3051,13 +3051,13 @@ app.patch('/api/kitchen/order/ready', async (req, res) => {
         });
      const { accountId } = req.body; // Pass this from frontend
 
-        if (accountId) {
-    const AccountModel = mongoose.model('ClientAccount'); // Ensure model is imported
+       // if (accountId) {
+    //const AccountModel = mongoose.model('ClientAccount'); // Ensure model is imported
         // 2. Add to Folio
-        //if (order.accountId) {
+        if (order.accountId) {
             // SAFE WAY to get the model even if order of definition is weird
-//const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');            
-            await AccountModel.findByIdAndUpdate(accountId, {
+const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');            
+            await AccountModel.findByIdAndUpdate(order.accountId, {
                 $push: {
                     charges: {
                         description: `${order.item} (x${finalQty})`,
@@ -3067,7 +3067,7 @@ app.patch('/api/kitchen/order/ready', async (req, res) => {
                     }
                 }
             });
-            console.log(`Charged Folio ${accountId} successfully.`);
+            console.log(`Charged Folio ${order.accountId} successfully.`);
         }
 
         // 3. Delete from Kitchen
@@ -3272,9 +3272,13 @@ const report = await Promise.all(itemNames.map(async (singleItem) => {
     
     // If the record exists and is NOT tracked, force closing to 0
     if (record) {
-        if (record.trackInventory === false) record.closing = 0; 
+        if (record.trackInventory === false) {record.closing = 0; 
+                                                  record.opening = 0;}
+
         return record;
     }
+
+
 
     // Fallback logic
     const lastRecord = await Inventory.findOne({
