@@ -1643,6 +1643,10 @@ displayMessage('Report Generated', 'success');
                 } catch (err) { displayMessage(err.message, 'error'); }
             };
 
+    dailyReportForm.onsubmit = e => {
+                e.preventDefault();
+                generatePOSDailyReport(document.getElementById('reportDate').value);
+            };
   </script>
  
 </body>
