@@ -31,7 +31,14 @@
     </header>
 
     <main class="max-w-7xl mx-auto p-4 md:p-8">
-        
+        <div class="flex p-1 bg-slate-100 rounded-xl mb-4">
+    <button id="btnTab" onclick="setGuestMode('tab')" class="flex-1 py-2 rounded-lg text-sm font-bold bg-white shadow-sm text-indigo-600">
+        All-Day Tab
+    </button>
+    <button id="btnQuick" onclick="setGuestMode('quick')" class="flex-1 py-2 rounded-lg text-sm font-bold text-slate-500">
+        Quick Lunch (Pay Now)
+    </button>
+</div>
         <div id="messageBox" class="fixed top-20 right-4 z-50 transition-all duration-300 transform translate-x-full"></div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -305,6 +312,26 @@
     #receipt-printout { position: absolute; left: 0; top: 0; width: 100%; }
 }
 </style>
+    <script>
+        let guestMode = 'tab'; // default
+
+function setGuestMode(mode) {
+    guestMode = mode;
+    const btnTab = document.getElementById('btnTab');
+    const btnQuick = document.getElementById('btnQuick');
+    
+    if(mode === 'quick') {
+        btnQuick.className = "flex-1 py-2 rounded-lg text-sm font-bold bg-white shadow-sm text-orange-600";
+        btnTab.className = "flex-1 py-2 rounded-lg text-sm font-bold text-slate-500";
+        // Hide guest search because we don't need a name for a 20-min lunch
+        document.getElementById('guestSearchContainer').classList.add('hidden');
+    } else {
+        btnTab.className = "flex-1 py-2 rounded-lg text-sm font-bold bg-white shadow-sm text-indigo-600";
+        btnQuick.className = "flex-1 py-2 rounded-lg text-sm font-bold text-slate-500";
+        document.getElementById('guestSearchContainer').classList.remove('hidden');
+    }
+}
+    </script>
     <script>
         async function loadWaiterTracker() {
     try {
