@@ -839,25 +839,25 @@
 
         <section id="reports-pos" class="section bg-white p-6 rounded-xl shadow-lg mb-6">
                     <h3 class="text-xl font-medium mb-3 border-b pb-2">POS Report</h3>
-          <div id="reportsPanel" class=" space-y-6">
+          <div id="posreportsPanel" class=" space-y-6">
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                         <h2 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Report Filters</h2>
-                        <form id="dailyReportForm" class="space-y-4">
+                        <form id="posdailyReportForm" class="space-y-4">
                             <input type="date" id="reportDate" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
                             <button type="submit" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all">Generate Summary</button>
                         </form>
                     </div>
                 </div>
 
-          <div id="reportResults" class=" animate-in fade-in duration-500">
+          <div id="posreportResults" class=" animate-in fade-in duration-500">
                     <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="px-8 py-6 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
                             <div>
-                                <h2 class="text-indigo-900 font-bold text-lg">Daily Summary: <span id="reportDateDisplay"></span></h2>
+                                <h2 class="text-indigo-900 font-bold text-lg">Daily Summary: <span id="posreportDateDisplay"></span></h2>
                                 <p class="text-indigo-600 text-sm">Revenue generated across all POS points</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-4xl font-black text-indigo-600">$<span id="reportTotalRevenue">0.00</span></p>
+                                <p class="text-4xl font-black text-indigo-600">$<span id="posreportTotalRevenue">0.00</span></p>
                             </div>
                         </div>
                         <div class="overflow-x-auto">
@@ -870,11 +870,11 @@
                                         <th class="px-8 py-4 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Amount</th>
                                     </tr>
                                 </thead>
-                                <tbody id="reportTableBody" class="divide-y divide-slate-100 text-sm text-slate-600"></tbody>
+                                <tbody id="posreportTableBody" class="divide-y divide-slate-100 text-sm text-slate-600"></tbody>
                             </table>
                         </div>
                         <div class="p-6 bg-slate-50 border-t border-slate-100">
-                            <button id="exportReportBtn" class="flex items-center justify-center space-x-2 w-full px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all">
+                            <button id="exportposReportBtn" class="flex items-center justify-center space-x-2 w-full px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                                 <span>Export Sheet (.csv)</span>
                             </button>
@@ -1590,9 +1590,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const BASE_URL = 'https://patrinahhotelpms.onrender.com';
 
       // Reports Elements
-            const dailyReportForm = document.getElementById('dailyReportForm');
-            const reportResults = document.getElementById('reportResults');
-            const reportTableBody = document.getElementById('reportTableBody');
+            const dailyReportForm = document.getElementById('posdailyReportForm');
+            const reportResults = document.getElementById('posreportResults');
+            const reportTableBody = document.getElementById('posreportTableBody');
 
       // --- REPORTING ---
             const generateDailyReport = async (date) => {
@@ -1602,8 +1602,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const data = await res.json();
                     if (!res.ok) throw new Error('Report failed');
 
-                    document.getElementById('reportDateDisplay').textContent = data.reportDate;
-                    document.getElementById('reportTotalRevenue').textContent = data.totalRevenue.toFixed(2);
+                    document.getElementById('posreportDateDisplay').textContent = data.reportDate;
+                    document.getElementById('posreportTotalRevenue').textContent = data.totalRevenue.toFixed(2);
                     reportTableBody.innerHTML = '';
 
                   data.transactions.forEach(t => {
