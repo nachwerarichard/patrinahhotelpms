@@ -3049,8 +3049,7 @@ app.patch('/api/kitchen/order/:id/ready', async (req, res) => {
         // 2. Add to Folio
         if (order.accountId) {
             // SAFE WAY to get the model even if order of definition is weird
-            const AccountModel = mongoose.models.POSClientAccount || mongoose.connection.model('POSClientAccount');
-            
+const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');            
             await AccountModel.findByIdAndUpdate(order.accountId, {
                 $push: {
                     charges: {
