@@ -3027,7 +3027,7 @@ app.get('/api/kitchen/Pending', async (req, res) => {
     }
 });
 
-app.patch('/api/kitchen/order/:id/ready',  async (req, res) => {
+app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
     try {
         const order = await KitchenOrder.findById(req.params.id);
         if (!order) return res.status(404).json({ error: "Order not found" });
@@ -3035,7 +3035,7 @@ app.patch('/api/kitchen/order/:id/ready',  async (req, res) => {
         const finalQty = Math.max(1, parseInt(order.number || order.quantity || 1));
         const sellPrice = Number(order.sp) || 0;
 
-        // 1. Create Sale
+        // 1. Create Sale (Using the Sale variable you defined elsewhere)
         await Sale.create({
             item: order.item,
             number: finalQty,
@@ -3046,10 +3046,10 @@ app.patch('/api/kitchen/order/:id/ready',  async (req, res) => {
             date: new Date()
         });
 
-        // 2. Add to Folio (Using the connection-safe method)
+        // 2. Add to Folio
         if (order.accountId) {
-            // Use mongoose.models to check if it exists, or just use your model variable
-            const AccountModel = mongoose.models.POSClientAccount || mongoose.model('POSClientAccount');
+            // SAFE WAY to get the model even if order of definition is weird
+            const AccountModel = mongoose.models.POSClientAccount || mongoose.connection.model('POSClientAccount');
             
             await AccountModel.findByIdAndUpdate(order.accountId, {
                 $push: {
@@ -3061,6 +3061,7 @@ app.patch('/api/kitchen/order/:id/ready',  async (req, res) => {
                     }
                 }
             });
+            console.log(`Charged Folio ${order.accountId} successfully.`);
         }
 
         // 3. Delete from Kitchen
@@ -3069,10 +3070,11 @@ app.patch('/api/kitchen/order/:id/ready',  async (req, res) => {
 
     } catch (err) {
         console.error("READY ERROR:", err);
+        // This log will tell us exactly what models Mongoose knows about
+        console.log("Registered Models:", Object.keys(mongoose.models));
         res.status(500).json({ error: err.message });
     }
 });
-
 // --- Inventory Endpoints (Corrected) ---
 
 // Specific endpoint for the sales form dropdown
