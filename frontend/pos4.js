@@ -245,7 +245,7 @@ loadWaiterTracker();
                 } catch (err) { displayMessage(err.message, 'error'); }
             };
 
-const addCharge = async (description, quantity, department) => {
+const addDirectCharge = async (description, quantity, department) => {
     // 1. Validation Logic: Check if it's a Quick Sale vs Resident Sale
     const isQuickSale = (document.getElementById('currentOrderType')?.value === 'Direct' || !activeAccountId);
 
