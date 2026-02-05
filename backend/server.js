@@ -376,21 +376,27 @@ app.get('/api/pos/reports/daily', async (req, res) => {
     try {
         if (!date) return res.status(400).json({ message: 'Date is required' });
 
-        // Force the search to be UTC-aligned to match how MongoDB stores ISODate
         const startOfDay = new Date(`${date}T00:00:00.000Z`);
         const endOfDay = new Date(`${date}T23:59:59.999Z`);
 
-        console.log(`DEBUG: Searching between ${startOfDay.toISOString()} and ${endOfDay.toISOString()}`);
-
-        const [roomCharges, walkinCharges] = await Promise.all([
+        // 1. Fetch from THREE sources now: Room Charges, Walk-ins, and Restaurant Sales
+        const [roomCharges, walkinCharges, restaurantSales] = await Promise.all([
             IncidentalCharge.find({ date: { $gte: startOfDay, $lte: endOfDay } }),
-            WalkInCharge.find({ date: { $gte: startOfDay, $lte: endOfDay } })
+            WalkInCharge.find({ date: { $gte: startOfDay, $lte: endOfDay } }),
+            Sale.find({ date: { $gte: startOfDay, $lte: endOfDay } }) // NEW
         ]);
 
-        console.log(`DEBUG: Found ${roomCharges.length} Room Charges and ${walkinCharges.length} Walk-ins`);
+        // 2. Map restaurant sales into the same format as other transactions
+        const formattedRestaurantSales = restaurantSales.map(s => ({
+            guestName: s.waiter || 'Restaurant Guest',
+            roomNumber: 'Restaurant',
+            description: `${s.item} (x${s.number})`,
+            amount: Number(s.sp * s.number) || 0, // Total price (Quantity * Unit Price)
+            source: 'Restaurant Sale',
+            time: s.date
+        }));
 
-        // ... mapping logic stays the same ...
-
+        // 3. Combine everything
         const allTransactions = [
             ...roomCharges.map(c => ({
                 guestName: c.guestName,
@@ -398,7 +404,7 @@ app.get('/api/pos/reports/daily', async (req, res) => {
                 description: c.description || 'Room Charge',
                 amount: Number(c.amount) || 0,
                 source: 'Room Charge',
-                time: c.date // Use .date from schema
+                time: c.date 
             })),
             ...walkinCharges.map(c => ({
                 guestName: c.guestName,
@@ -406,8 +412,9 @@ app.get('/api/pos/reports/daily', async (req, res) => {
                 description: c.description || 'Walk-in Sale',
                 amount: Number(c.amount) || 0,
                 source: 'Walk-In',
-                time: c.date // Use .date from schema
-            }))
+                time: c.date 
+            })),
+            ...formattedRestaurantSales // ADDED HERE
         ];
 
         const totalRevenue = allTransactions.reduce((sum, t) => sum + t.amount, 0);
@@ -416,7 +423,7 @@ app.get('/api/pos/reports/daily', async (req, res) => {
             reportDate: date,
             totalRevenue,
             transactionCount: allTransactions.length,
-            transactions: allTransactions
+            transactions: allTransactions.sort((a, b) => new Date(b.time) - new Date(a.time)) // Newest first
         });
 
     } catch (error) {
@@ -424,6 +431,7 @@ app.get('/api/pos/reports/daily', async (req, res) => {
         res.status(500).json({ message: 'Error generating report', error: error.message });
     }
 });
+
 // TEMPORARY: Add this new route to delete all rooms
 app.post('/api/rooms/clear-all', async (req, res) => {
   try {
@@ -3270,13 +3278,14 @@ const report = await Promise.all(itemNames.map(async (singleItem) => {
     const record = recordsMap.get(singleItem);
     
     // If the record exists and is NOT tracked, force closing to 0
-    if (record) {
-        if (record.trackInventory === false) {record.closing = 0; 
-                                                  record.opening = 0;}
-
-        return record;
+if (record) {
+    if (record.trackInventory === false) {
+        record.closing = 0;
+        record.opening = 0;
     }
 
+    return record;
+}
 
 
     // Fallback logic
