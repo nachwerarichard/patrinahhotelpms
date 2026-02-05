@@ -3027,18 +3027,28 @@ app.get('/api/kitchen/Pending', async (req, res) => {
     }
 });
 
-app.patch('/api/kitchen/order/:id/Ready', async (req, res) => {
-    const order = await KitchenOrder.findById(req.params.id);
-    
-    // 1. Create the Sale (Deducts Inventory)
-    const sale = await Sale.create({
-        item: order.item,
-        number: order.number,
-        department: 'Restaurant',
-        bp: order.bp,
-        sp: order.sp,
-        profit: (order.sp - order.bp) * order.number
-    });
+app.patch('/api/kitchen/order/:id/Ready', auth, async (req, res) => {
+    try {
+        const order = await KitchenOrder.findById(req.params.id);
+        if (!order) return res.status(404).json({ error: "Order not found" });
+
+        // Calculate profit safely
+        const quantity = Number(order.number) || 1;
+        const buyPrice = Number(order.bp) || 1;
+        const sellPrice = Number(order.sp) || 1;
+        const calculatedProfit = (sellPrice - buyPrice) * quantity;
+
+        // 1. Create the Sale (Deduct Inventory)
+        // Ensure field names match your Sale Schema (number vs quantity)
+        await Sale.create({
+            item: order.item,
+            number: quantity, // Mongoose expects 'number'
+            department: order.department || 'Restaurant',
+            bp: buyPrice,
+            sp: sellPrice,
+            profit: calculatedProfit,
+            date: new Date()
+        });
 
     // 2. Post to Folio if Guest is linked
     if (order.accountId) {
