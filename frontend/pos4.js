@@ -128,10 +128,7 @@ loadWaiterTracker();
             const postToRoomBtn = document.getElementById('postToRoomBtn');
             const issueReceiptBtn = document.getElementById('issueReceiptBtn');
 
-            // Reports Elements
-            const dailyReportForm = document.getElementById('dailyReportForm');
-            const reportResults = document.getElementById('reportResults');
-            const reportTableBody = document.getElementById('reportTableBody');
+            
 
             let activeAccountId = null;
             let activeAccountData = null;
@@ -140,9 +137,7 @@ loadWaiterTracker();
             window.switchTab = (tab) => {
                 const isNew = tab === 'new';
                 document.getElementById('managementPanel').classList.toggle('hidden', !isNew);
-                document.getElementById('reportsPanel').classList.toggle('hidden', isNew);
                 document.getElementById('tabNew').className = isNew ? 'pb-2 px-2 text-sm font-semibold tab-active transition-all' : 'pb-2 px-2 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-all';
-                document.getElementById('tabReports').className = !isNew ? 'pb-2 px-2 text-sm font-semibold tab-active transition-all' : 'pb-2 px-2 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-all';
                 
                 if (!isNew && !activeAccountId) {
                     emptyState.classList.remove('hidden');
@@ -362,60 +357,7 @@ const addCharge = async (description, quantity, department) => {
                 } catch (err) { displayMessage(err.message, 'error'); }
             };
 
-            // --- REPORTING ---
-            const generateDailyReport = async (date) => {
-                displayMessage('Loading report...', 'info');
-                try {
-                    const res = await fetch(`${BASE_URL}/api/pos/reports/daily?date=${date}`);
-                    const data = await res.json();
-                    if (!res.ok) throw new Error('Report failed');
 
-                    document.getElementById('reportDateDisplay').textContent = data.reportDate;
-                    document.getElementById('reportTotalRevenue').textContent = data.totalRevenue.toFixed(2);
-                    reportTableBody.innerHTML = '';
-
-                  data.transactions.forEach(t => {
-    const row = document.createElement('tr');
-    row.className = 'hover:bg-slate-50 transition-colors';
-    
-    // Use a fallback for amount to prevent .toFixed(2) errors
-    const safeAmount = (Number(t.amount) || 0).toFixed(2);
-    const safeDescription = t.description || 'No description';
-    const safeRoom = t.roomNumber || 'N/A';
-
-// Inside generateDailyReport, change the row.innerHTML:
-row.innerHTML = `
-    <td class="px-8 py-4 font-medium text-slate-900">
-        ${t.guestName} 
-        <span class="text-[10px] text-slate-400 ml-1">#${safeRoom}</span>
-    </td>
-    <td class="px-8 py-4">
-        <span class="text-[10px] block font-bold text-indigo-500 uppercase">${t.type || 'General'}</span>
-        ${safeDescription}
-    </td>
-    <td class="px-8 py-4 text-center">
-        <span class="px-2 py-1 bg-slate-100 rounded text-[10px] font-bold uppercase">${t.source}</span>
-    </td>
-    <td class="px-8 py-4 text-right font-bold text-slate-900">$${safeAmount}</td>
-`;
-    reportTableBody.appendChild(row);
-});
-
-                    // ... after the loop that appends rows ...
-
-// Ensure the parent reports panel is visible
-document.getElementById('reportsPanel').classList.remove('hidden');
-
-// Manage visibility of specific result sections
-activeAccountSection.classList.add('hidden');
-emptyState.classList.add('hidden');
-reportResults.classList.remove('hidden');
-
-// Add this for a better user experience:
-displayMessage('Report Generated', 'success');
-                    
-                } catch (err) { displayMessage(err.message, 'error'); }
-            };
 
             // Event Listeners
             createAccountForm.onsubmit = e => {
@@ -435,29 +377,12 @@ displayMessage('Report Generated', 'success');
                 addCharge(fd.get('description'), fd.get('amount'));
             };
 
-            dailyReportForm.onsubmit = e => {
-                e.preventDefault();
-                generateDailyReport(document.getElementById('reportDate').value);
-            };
+
 
             postToRoomBtn.onclick = () => settleAccount('room');
             issueReceiptBtn.onclick = () => settleAccount('receipt');
             
-            document.getElementById('exportReportBtn').onclick = () => {
-                // Simplified CSV export
-                let csv = "Guest,Description,Source,Amount\n";
-                reportTableBody.querySelectorAll('tr').forEach(tr => {
-                    const cols = tr.querySelectorAll('td');
-                    csv += `${cols[0].innerText},${cols[1].innerText},${cols[2].innerText},${cols[3].innerText}\n`;
-                });
-                const blob = new Blob([csv], { type: 'text/csv' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.setAttribute('href', url);
-                a.setAttribute('download', 'DailyReport.csv');
-                a.click();
-            };
-        });
+            
 
         const addCharge = async (description, amount, department) => {
     if (!activeAccountId) return;
