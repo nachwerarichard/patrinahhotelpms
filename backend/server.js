@@ -3057,7 +3057,7 @@ app.patch('/api/kitchen/order/ready', async (req, res) => {
         //if (order.accountId) {
             // SAFE WAY to get the model even if order of definition is weird
 //const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');            
-            await AccountModel.findByIdAndUpdate(order.accountId, {
+            await AccountModel.findByIdAndUpdate(accountId, {
                 $push: {
                     charges: {
                         description: `${order.item} (x${finalQty})`,
@@ -3067,7 +3067,7 @@ app.patch('/api/kitchen/order/ready', async (req, res) => {
                     }
                 }
             });
-            console.log(`Charged Folio ${order.accountId} successfully.`);
+            console.log(`Charged Folio ${accountId} successfully.`);
         }
 
         // 3. Delete from Kitchen
