@@ -3027,7 +3027,7 @@ app.get('/api/kitchen/Pending', async (req, res) => {
     }
 });
 
-app.patch('/api/kitchen/order/:id/Ready', auth, async (req, res) => {
+app.patch('/api/kitchen/order/:id/Ready', async (req, res) => {
     try {
         const order = await KitchenOrder.findById(req.params.id);
         if (!order) return res.status(404).json({ error: "Order not found" });
