@@ -3078,7 +3078,7 @@ const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAcco
         }
 
         // 3. Delete from Kitchen
-        await KitchenOrder.findByIdAndDelete(req.params.id);
+         await KitchenOrder.findByIdAndUpdate(req.params.id, { status: 'Ready' });
         res.json({ success: true });
 
     } catch (err) {
