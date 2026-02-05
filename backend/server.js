@@ -3088,6 +3088,16 @@ const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAcco
         res.status(500).json({ error: err.message });
     }
 });
+
+app.delete('/api/kitchen/order/:id/served', auth, async (req, res) => {
+    try {
+        await KitchenOrder.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: "Order cleared from tracker." });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // --- Inventory Endpoints (Corrected) ---
 
 // Specific endpoint for the sales form dropdown
