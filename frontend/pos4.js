@@ -1,3 +1,4 @@
+                const BASE_URL = 'https://patrinahhotelpms.onrender.com';
 
 function startQuickSale() {
     activeAccountId = null; // Reset the global variable
