@@ -3389,10 +3389,12 @@ app.post('/sales',async (req, res) => {
     
     // Safety: If not tracking inventory, don't let the closing stock look negative in reports
     todayInventory.closing = (!todayInventory.trackInventory && calculatedClosing < 0) ? 0 : calculatedClosing;
+    todayInventory.opening = (!todayInventory.trackInventory && todayInventory.opening  < 0) ? 0 : todayInventory.opening;
+
 
     await todayInventory.save();
 
-    // 5. Low Stock Notification (Only if tracked)
+    // 5. Low Stock Notification (Only if tracked)calculatedClosing
     if (todayInventory.trackInventory && todayInventory.closing < Number(process.env.LOW_STOCK_THRESHOLD)) {
       notifyLowStock(item, todayInventory.closing);
     }
