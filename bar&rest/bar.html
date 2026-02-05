@@ -1650,7 +1650,24 @@ showMessage('Report Generated', 'success');
     dailyReportForm.onsubmit = e => {
                 e.preventDefault();
                 generatePOSDailyReport(document.getElementById('reportDate').value);
+      
             };
+
+    document.getElementById('exportposReportBtn').onclick = () => {
+                // Simplified CSV export
+                let csv = "Guest,Description,Source,Amount\n";
+                reportTableBody.querySelectorAll('tr').forEach(tr => {
+                    const cols = tr.querySelectorAll('td');
+                    csv += `${cols[0].innerText},${cols[1].innerText},${cols[2].innerText},${cols[3].innerText}\n`;
+                });
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.setAttribute('href', url);
+                a.setAttribute('download', 'DailyReport.csv');
+                a.click();
+            };
+        });
   </script>
  
 </body>
