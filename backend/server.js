@@ -3032,41 +3032,44 @@ app.patch('/api/kitchen/order/:id/ready',  async (req, res) => {
         const order = await KitchenOrder.findById(req.params.id);
         if (!order) return res.status(404).json({ error: "Order not found" });
 
-        const quantity = Number(order.number) || 0;
+        // 1. FORCE QUANTITY TO BE AT LEAST 1
+        // We check both 'number' and 'quantity' just in case
+        const rawQty = order.number || order.quantity || 1;
+        const finalQty = Math.max(1, parseInt(rawQty)); 
+
+        const buyPrice = Number(order.bp) || 0;
         const sellPrice = Number(order.sp) || 0;
 
-        // 1. Create the Sale Record
+        // 2. Create the Sale Record
         await Sale.create({
             item: order.item,
-            number: quantity,
+            number: finalQty, // This is now guaranteed to be 1 or more
             department: 'Restaurant',
-            bp: order.bp,
+            bp: buyPrice,
             sp: sellPrice,
-            profit: (sellPrice - order.bp) * quantity,
+            profit: (sellPrice - buyPrice) * finalQty,
             date: new Date()
         });
 
-        // 2. ADD TO GUEST FOLIO (Fixes the "not defined" error)
+        // 3. Update Guest Folio
         if (order.accountId) {
-            // We use findByIdAndUpdate to push a new charge into the account's charges array
-            const POSClientAccount = mongoose.model('POSClientAccount'); // Ensure model is available
+            const POSClientAccount = mongoose.model('POSClientAccount');
             await POSClientAccount.findByIdAndUpdate(order.accountId, {
                 $push: {
                     charges: {
-                        description: `${order.item} (x${quantity})`,
-                        amount: sellPrice * quantity,
+                        description: `${order.item} (Kitchen)`,
+                        amount: sellPrice * finalQty,
                         type: 'Restaurant',
                         date: new Date()
                     }
                 }
             });
-            console.log(`Charged $${sellPrice * quantity} to Folio: ${order.accountId}`);
         }
 
-        // 3. Remove from Kitchen list
+        // 4. Delete the kitchen order
         await KitchenOrder.findByIdAndDelete(req.params.id);
 
-        res.json({ success: true, message: "Inventory deducted and guest charged." });
+        res.json({ success: true });
     } catch (err) {
         console.error("READY ERROR:", err);
         res.status(500).json({ error: err.message });
