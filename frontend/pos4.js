@@ -128,7 +128,7 @@ loadWaiterTracker();
             const postToRoomBtn = document.getElementById('postToRoomBtn');
             const issueReceiptBtn = document.getElementById('issueReceiptBtn');
 
-            
+            });
 
             let activeAccountId = null;
             let activeAccountData = null;
@@ -376,8 +376,6 @@ const addDirectCharge = async (description, quantity, department) => {
                 const fd = new FormData(addChargeForm);
                 addCharge(fd.get('description'), fd.get('amount'));
             };
-
-
 
             postToRoomBtn.onclick = () => settleAccount('room');
             issueReceiptBtn.onclick = () => settleAccount('receipt');
