@@ -3059,10 +3059,14 @@ app.patch('/api/kitchen/order/:id/Ready', auth, async (req, res) => {
         });
     }
 
-    // 3. Delete or Update Order Status
-    await order.remove(); // Or status = 'Ready'
-    
-    res.json({ success: true });
+   // 3. Mark as Ready or Delete
+        await KitchenOrder.findByIdAndDelete(req.params.id);
+
+        res.json({ success: true, message: "Sale recorded and order cleared" });
+    } catch (err) {
+        console.error("READY ERROR:", err);
+        res.status(500).json({ error: err.message });
+    }
 });
 // --- Inventory Endpoints (Corrected) ---
 
