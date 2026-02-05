@@ -3098,7 +3098,7 @@ app.get('/api/waiter/orders',  async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-app.delete('/api/kitchen/order/:id/served', auth, async (req, res) => {
+app.delete('/api/kitchen/order/:id/served', async (req, res) => {
     try {
         await KitchenOrder.findByIdAndDelete(req.params.id);
         res.json({ success: true, message: "Order cleared from tracker." });
