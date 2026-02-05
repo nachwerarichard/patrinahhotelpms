@@ -1595,7 +1595,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const reportTableBody = document.getElementById('posreportTableBody');
 
       // --- REPORTING ---
-            const generateDailyReport = async (date) => {
+            const generatePOSDailyReport = async (date) => {
                 displayMessage('Loading report...', 'info');
                 try {
                     const res = await fetch(`${BASE_URL}/api/pos/reports/daily?date=${date}`);
