@@ -289,16 +289,37 @@
                 messageBox.classList.remove('translate-x-full');
             };
 
-            const updateActiveAccountUI = (account) => {
-                document.getElementById('currentGuestName').textContent = account.guestName;
-                document.getElementById('currentRoomNumber').textContent = account.roomNumber ? `Room ${account.roomNumber}` : 'Walk-In Guest';
-                document.getElementById('totalCharges').textContent = account.totalCharges?.toFixed(2) || '0.00';
-                
-                postToRoomBtn.classList.toggle('hidden', !account.roomNumber);
-                emptyState.classList.add('hidden');
-                reportResults.classList.add('hidden');
-                activeAccountSection.classList.remove('hidden');
-            };
+         const updateActiveAccountUI = (account) => {
+    // 1. Calculate live total
+    const charges = account.charges || [];
+    const liveTotal = charges.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
+    // 2. Update Header Info
+    document.getElementById('currentGuestName').textContent = account.guestName;
+    document.getElementById('currentRoomNumber').textContent = account.roomNumber ? `Room ${account.roomNumber}` : 'Walk-In Guest';
+    document.getElementById('totalCharges').textContent = liveTotal.toLocaleString();
+
+    // 3. Render the Itemized List
+    const chargesListContainer = document.getElementById('chargesList');
+    if (chargesListContainer) {
+        if (charges.length === 0) {
+            chargesListContainer.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-gray-400">No charges yet</td></tr>`;
+        } else {
+            chargesListContainer.innerHTML = charges.map(item => `
+                <tr class="border-b border-gray-100 text-sm">
+                    <td class="py-2 text-gray-600">${new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                    <td class="py-2 font-medium text-gray-800">${item.description}</td>
+                    <td class="py-2 text-right font-bold text-orange-600">${Number(item.amount).toLocaleString()}</td>
+                </tr>
+            `).join('');
+        }
+    }
+
+    // 4. UI Visibility
+    postToRoomBtn.classList.toggle('hidden', !account.roomNumber);
+    emptyState.classList.add('hidden');
+    activeAccountSection.classList.remove('hidden');
+};
 
             const resetUI = () => {
                 createAccountForm.reset();
