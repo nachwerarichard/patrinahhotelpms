@@ -274,6 +274,7 @@
                     <th class="px-6 py-4 text-center">Qty</th>
                     <th class="px-6 py-4">Table/Room</th>
                     <th class="px-6 py-4">Kitchen Status</th>
+                    <th class="px-6 py-4 text-right">Action</th>
                 </tr>
             </thead>
             <tbody id="waiterTrackerBody" class="divide-y divide-slate-100">
@@ -336,17 +337,27 @@
                     statusBadge = `<span class="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-xs font-bold border border-slate-200">PENDING</span>`;
             }
 
-            return `
-                <tr class="hover:bg-slate-50 transition">
-                    <td class="px-6 py-4 text-slate-500 text-sm">${timeStr}</td>
-                    <td class="px-6 py-4 font-bold text-slate-800">${order.item}</td>
-                    <td class="px-6 py-4 text-center text-slate-700 font-mono">${order.number || order.quantity}</td>
-                    <td class="px-6 py-4 text-slate-600">
-                        <span class="bg-slate-100 px-2 py-1 rounded text-xs font-medium">${order.tableNumber || 'N/A'}</span>
-                    </td>
-                    <td class="px-6 py-4">${statusBadge}</td>
-                </tr>
-            `;
+// ... inside your tracker mapping logic ...
+return `
+    <tr class="hover:bg-slate-50 transition">
+        <td class="px-6 py-4 text-slate-500 text-sm">${timeStr}</td>
+        <td class="px-6 py-4 font-bold text-slate-800">${order.item}</td>
+        <td class="px-6 py-4 text-center text-slate-700 font-mono">${order.number || order.quantity}</td>
+        <td class="px-6 py-4 text-slate-600">
+            <span class="bg-slate-100 px-2 py-1 rounded text-xs">${order.tableNumber || 'N/A'}</span>
+        </td>
+        <td class="px-6 py-4">${statusBadge}</td>
+        <td class="px-6 py-4 text-right">
+            ${order.status === 'Ready' ? `
+                <button onclick="markAsServed('${order._id}')" 
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-4 py-2 rounded-lg shadow-sm transition transform active:scale-95">
+                    Mark Served
+                </button>
+            ` : '<span class="text-gray-300 text-xs italic">Awaiting Kitchen</span>'}
+        </td>
+    </tr>
+`;
+            
         }).join('');
     } catch (err) {
         console.error("Waiter Tracker Error:", err);
@@ -356,6 +367,24 @@
 // Auto-refresh every 15 seconds to keep the waiter updated
 setInterval(loadWaiterTracker, 15000);
 loadWaiterTracker();
+
+        async function markAsServed(orderId) {
+    if (!confirm("Confirm this order has been delivered to the table?")) return;
+
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`https://patrinahhotelpms.onrender.com/api/kitchen/order/${orderId}/served`, {
+            method: 'DELETE', // We delete it once it's actually served
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+            loadWaiterTracker(); // Refresh the list
+        }
+    } catch (err) {
+        alert("Failed to update status. Check connection.");
+    }
+}
     </script>
 
     <script>
@@ -830,43 +859,6 @@ function autoFillPrices(selectedItemName) {
 };
     </script>
     <script>
-async function loadKitchenOrders() {
-    const res = await fetch(`${BASE_URL}/api/kitchen/pending`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const orders = await res.json();
-    
-    const container = document.getElementById('kitchen-display');
-    container.innerHTML = orders.map(order => `
-        <div class="bg-white border-2 border-orange-200 rounded-2xl p-4 shadow-sm">
-            <div class="flex justify-between items-start">
-                <h3 class="text-lg font-bold">${order.item} (x${order.number})</h3>
-                <span class="bg-orange-100 text-orange-600 px-2 py-1 rounded text-xs font-bold">PREPARING</span>
-            </div>
-            <p class="text-sm text-gray-500">Table: ${order.tableNumber} | Waiter: ${order.waiter}</p>
-            
-            <button onclick="markAsReady('${order._id}')" 
-                    class="w-full mt-4 bg-green-500 text-white font-bold py-3 rounded-xl active:scale-95 transition-transform">
-                MARK AS READY
-            </button>
-        </div>
-    `).join('');
-}
-
-async function markAsReady(orderId) {
-    // 1. Tell backend order is ready
-    // 2. Backend will trigger /sales and /folio update automatically
-    const res = await fetch(`${BASE_URL}/api/kitchen/order/${orderId}/ready`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    if (res.ok) {
-        loadKitchenOrders(); // Refresh list
-        alert("Order completed & charged!");
-    }
-}
-
         const resetForm = () => {
     // Clear the visible inputs
     document.getElementById('itemDesc').value = '';
