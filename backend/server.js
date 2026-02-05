@@ -3027,42 +3027,46 @@ app.get('/api/kitchen/Pending', async (req, res) => {
     }
 });
 
-app.patch('/api/kitchen/order/:id/Ready', async (req, res) => {
+app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
     try {
         const order = await KitchenOrder.findById(req.params.id);
         if (!order) return res.status(404).json({ error: "Order not found" });
 
-        // Calculate profit safely
-        const quantity = Number(order.number) || 1;
-        const buyPrice = Number(order.bp) || 1;
-        const sellPrice = Number(order.sp) || 1;
-        const calculatedProfit = (sellPrice - buyPrice) * quantity;
+        const quantity = Number(order.number) || 0;
+        const sellPrice = Number(order.sp) || 0;
 
-        // 1. Create the Sale (Deduct Inventory)
-        // Ensure field names match your Sale Schema (number vs quantity)
+        // 1. Create the Sale Record
         await Sale.create({
             item: order.item,
-            number: quantity, // Mongoose expects 'number'
-            department: order.department || 'Restaurant',
-            bp: buyPrice,
+            number: quantity,
+            department: 'Restaurant',
+            bp: order.bp,
             sp: sellPrice,
-            profit: calculatedProfit,
+            profit: (sellPrice - order.bp) * quantity,
             date: new Date()
         });
 
-    // 2. Post to Folio if Guest is linked
-    if (order.accountId) {
-        await postChargeToFolio(order.accountId, {
-            description: `${order.item} (Kitchen)`,
-            amount: order.sp * order.number,
-            type: 'Restaurant'
-        });
-    }
+        // 2. ADD TO GUEST FOLIO (Fixes the "not defined" error)
+        if (order.accountId) {
+            // We use findByIdAndUpdate to push a new charge into the account's charges array
+            const POSClientAccount = mongoose.model('POSClientAccount'); // Ensure model is available
+            await POSClientAccount.findByIdAndUpdate(order.accountId, {
+                $push: {
+                    charges: {
+                        description: `${order.item} (x${quantity})`,
+                        amount: sellPrice * quantity,
+                        type: 'Restaurant',
+                        date: new Date()
+                    }
+                }
+            });
+            console.log(`Charged $${sellPrice * quantity} to Folio: ${order.accountId}`);
+        }
 
-   // 3. Mark as Ready or Delete
+        // 3. Remove from Kitchen list
         await KitchenOrder.findByIdAndDelete(req.params.id);
 
-        res.json({ success: true, message: "Sale recorded and order cleared" });
+        res.json({ success: true, message: "Inventory deducted and guest charged." });
     } catch (err) {
         console.error("READY ERROR:", err);
         res.status(500).json({ error: err.message });
