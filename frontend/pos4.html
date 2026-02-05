@@ -247,9 +247,39 @@
 
             </div>
         </div>
-        <div id="kitchen-display" class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+    </div>
+                <div id="kitchen-display" class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+
+        <div class="mt-8 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center">
+        <h3 class="text-white font-bold flex items-center gap-2">
+            <i class="fas fa-utensils"></i> My Order Tracker
+        </h3>
+        <button onclick="refreshOrderTracker()" class="text-indigo-100 hover:text-white transition">
+            <i class="fas fa-sync-alt"></i>
+        </button>
     </div>
 
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500 font-semibold">
+                <tr>
+                    <th class="px-6 py-3">Item</th>
+                    <th class="px-6 py-3">Qty</th>
+                    <th class="px-6 py-3">Table/Room</th>
+                    <th class="px-6 py-3">Status</th>
+                </tr>
+            </thead>
+            <tbody id="waiterOrderTracker" class="divide-y divide-gray-100">
+                <tr>
+                    <td colspan="4" class="text-center py-10 text-gray-400">Loading orders...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+        
 
     </main>
     <div id="receipt-printout" class="hidden">
@@ -271,6 +301,51 @@
     #receipt-printout { position: absolute; left: 0; top: 0; width: 100%; }
 }
 </style>
+    <script>
+        async function refreshOrderTracker() {
+    try {
+        const token = localStorage.getItem('token');
+        // Fetch pending orders from the kitchen
+        const res = await fetch('https://patrinahhotelpms.onrender.com/api/kitchen/pending', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const orders = await res.json();
+
+        const trackerBody = document.getElementById('waiterOrderTracker');
+        
+        if (orders.length === 0) {
+            trackerBody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-400">No active kitchen orders</td></tr>`;
+            return;
+        }
+
+        trackerBody.innerHTML = orders.map(order => {
+            // Logic to determine status badge style
+            const isReady = order.status === 'Ready'; 
+            const statusClass = isReady 
+                ? 'bg-green-100 text-green-700' 
+                : 'bg-orange-100 text-orange-700 animate-pulse';
+
+            return `
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-6 py-4 font-medium text-gray-800">${order.item}</td>
+                    <td class="px-6 py-4 text-gray-600">${order.number || order.quantity}</td>
+                    <td class="px-6 py-4 text-gray-600">${order.tableNumber || 'N/A'}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-3 py-1 rounded-full text-xs font-bold ${statusClass}">
+                            ${order.status.toUpperCase()}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (err) {
+        console.error("Tracker Error:", err);
+    }
+}
+
+// Auto-refresh the tracker every 20 seconds
+setInterval(refreshOrderTracker, 20000);
+    </script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
