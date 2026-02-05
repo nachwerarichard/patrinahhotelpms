@@ -3018,7 +3018,7 @@ app.post('/api/kitchen/order',  async (req, res) => {
 app.get('/api/kitchen/Pending', async (req, res) => {
     try {
         // Find orders that are still being prepared
-        const orders = await KitchenOrder.find({ status: 'Preparing' }).sort({ date: 1 });
+        const orders = await KitchenOrder.find({ status: 'Pending' }).sort({ date: 1 });
         console.log(`Kitchen requested orders. Found: ${orders.length}`);
         res.json(orders);
     } catch (err) {
