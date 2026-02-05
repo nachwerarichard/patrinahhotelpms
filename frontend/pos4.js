@@ -245,7 +245,7 @@ loadWaiterTracker();
                 } catch (err) { displayMessage(err.message, 'error'); }
             };
 
-const addDirectCharge = async (description, quantity, department) => {
+const addCharge = async (description, quantity, department) => {
     // 1. Validation Logic: Check if it's a Quick Sale vs Resident Sale
     const isQuickSale = (document.getElementById('currentOrderType')?.value === 'Direct' || !activeAccountId);
 
@@ -381,8 +381,8 @@ const addDirectCharge = async (description, quantity, department) => {
             issueReceiptBtn.onclick = () => settleAccount('receipt');
             
             
-
-        const addCharge = async (description, amount, department) => {
+///addcahrge old route
+        const addarge = async (description, amount, department) => {
     if (!activeAccountId) return;
     try {
         const res = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
