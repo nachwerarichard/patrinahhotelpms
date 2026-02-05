@@ -58,7 +58,7 @@ async function loadOrders() {
 async function completeOrder(id) {
     try {
         // Fixed the backtick syntax here
-        const res = await fetch(`https://patrinahhotelpms.onrender.com/api/kitchen/order/${id}/ready`, {
+        const res = await fetch(`https://patrinahhotelpms.onrender.com/api/kitchen/order/${id}/Ready`, {
             method: 'PATCH',
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
