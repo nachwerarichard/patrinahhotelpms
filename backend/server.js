@@ -3029,16 +3029,17 @@ app.post('/api/kitchen/order',  async (req, res) => {
 // GET /api/kitchen/pending
 app.get('/api/kitchen/Pending', async (req, res) => {
     try {
-        // Find orders that are still being prepared
-        const orders = await KitchenOrder.find({ status: 'Pending' }).sort({ date: 1 });
-        console.log(`Kitchen requested orders. Found: ${orders.length}`);
+        // Only fetch orders that are 'Pending' or 'Preparing'
+        // This hides the 'Ready' ones from the chef, but keeps them for the waiter tracker
+        const orders = await KitchenOrder.find({ 
+            status: { $in: ['Pending', 'Preparing'] } 
+        }).sort({ date: 1 });
+        
         res.json(orders);
     } catch (err) {
-        console.error("Error fetching kitchen orders:", err);
         res.status(500).json({ error: err.message });
     }
 });
-
 app.patch('/api/kitchen/order/:id/ready', async (req, res) => {
     try {
         const order = await KitchenOrder.findById(req.params.id);
@@ -3088,7 +3089,15 @@ const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAcco
         res.status(500).json({ error: err.message });
     }
 });
-
+app.get('/api/waiter/orders',  async (req, res) => {
+    try {
+        // Waiter sees everything that hasn't been 'Served' yet
+        const orders = await KitchenOrder.find().sort({ date: -1 });
+        res.json(orders);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 app.delete('/api/kitchen/order/:id/served', auth, async (req, res) => {
     try {
         await KitchenOrder.findByIdAndDelete(req.params.id);
