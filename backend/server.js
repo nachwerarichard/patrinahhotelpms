@@ -2739,11 +2739,15 @@ const CashJournal = mongoose.model('CashJournal', new mongoose.Schema({
 
 const Inventory = mongoose.model('Inventory', new mongoose.Schema({
   item: { type: String, required: true },
-  opening: { type: Number, default: 0 },
+  opening: { type: Number,min: [0, 'opening stock cannot be negative'],  default: 0 },
   purchases: { type: Number, default: 0 },
   sales: { type: Number, default: 0 },
   spoilage: { type: Number, default: 0 },
-  closing: { type: Number, default: 0 },
+    closing: {
+    type: Number,
+    min: [0, 'Closing stock cannot be negative'], // This triggers a 400 error
+    default: 0
+  }
   buyingprice: { type: Number, default: 0 },
   sellingprice: { type: Number, default: 0 },
   
@@ -3046,10 +3050,12 @@ app.patch('/api/kitchen/order/:id/ready', async (req, res) => {
             date: new Date()
         });
 
+        if (accountId) {
+    const AccountModel = mongoose.model('POSClientAccount'); // Ensure model is imported
         // 2. Add to Folio
-        if (order.accountId) {
+        //if (order.accountId) {
             // SAFE WAY to get the model even if order of definition is weird
-const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');            
+//const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');            
             await AccountModel.findByIdAndUpdate(order.accountId, {
                 $push: {
                     charges: {
