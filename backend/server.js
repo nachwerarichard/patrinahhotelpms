@@ -2747,7 +2747,7 @@ const Inventory = mongoose.model('Inventory', new mongoose.Schema({
     type: Number,
     min: [0, 'Closing stock cannot be negative'], // This triggers a 400 error
     default: 0
-  }
+  },
   buyingprice: { type: Number, default: 0 },
   sellingprice: { type: Number, default: 0 },
   
