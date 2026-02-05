@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Patrinah POS | Enterprise Management</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .category-card:hover { transform: translateY(-2px); transition: all 0.2s; }
         @media print {
             body * { visibility: hidden; }
             #receipt-printout, #receipt-printout * { visibility: visible; }
@@ -24,249 +25,289 @@
     <header class="bg-white border-b border-slate-200 px-8 py-3 sticky top-0 z-50 shadow-sm">
         <div class="max-w-[1600px] mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-3">
-                <div class="bg-indigo-600 p-2 rounded-xl shadow-indigo-200 shadow-lg">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                <div class="bg-indigo-600 p-2 rounded-xl">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
                 </div>
                 <div>
-                    <h1 class="text-lg font-bold text-slate-900 leading-tight">Patrinah Hotel</h1>
-                    <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Enterprise POS System</p>
+                    <h1 class="text-lg font-extrabold tracking-tight text-slate-900 leading-none">PATRINAH</h1>
+                    <span class="text-[10px] text-indigo-600 font-bold uppercase tracking-[0.2em]">Enterprise POS</span>
                 </div>
             </div>
-            <div id="statusIndicator" class="flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold border border-emerald-100">
-                <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> SYSTEM ONLINE
+            <div class="flex items-center gap-4">
+                <div id="statusIndicator" class="flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-100">
+                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> SYSTEM READY
+                </div>
             </div>
         </div>
     </header>
 
     <main class="max-w-[1600px] mx-auto p-6">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <div class="mb-8">
+            <button onclick="startQuickSale()" class="flex items-center justify-center gap-4 bg-white hover:bg-slate-50 text-slate-900 border-2 border-slate-200 px-6 py-4 rounded-2xl transition-all active:scale-[0.98] group shadow-sm">
+                <div class="bg-indigo-600 p-2 rounded-lg group-hover:bg-indigo-700 transition-colors">
+                    <i class="fas fa-bolt text-white"></i>
+                </div>
+                <div class="text-left">
+                    <span class="block font-bold text-sm uppercase tracking-wide">New Quick Sale</span>
+                    <span class="text-xs text-slate-500 italic">Direct walk-in / Transient Guest</span>
+                </div>
+            </button>
+        </div>
+
+        <div id="messageBox" class="fixed top-20 right-4 z-50 transition-all duration-300 transform translate-x-full"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            <div class="lg:col-span-3 space-y-4">
-                <button onclick="startQuickSale()" class="group w-full flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-emerald-500 transition-all">
-                    <div class="flex items-center gap-3">
-                        <div class="bg-emerald-100 text-emerald-600 p-3 rounded-xl group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                            <i class="fas fa-bolt"></i>
-                        </div>
-                        <div class="text-left">
-                            <span class="block font-bold text-slate-700">Quick Sale</span>
-                            <span class="text-[11px] text-slate-400 font-medium">Transient Guest / Walk-in</span>
-                        </div>
+            <div class="lg:col-span-3 space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-2 flex gap-1">
+                    <button onclick="switchTab('new')" id="tabNew" class="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all tab-active bg-indigo-50 text-indigo-700">Management</button>
+                    <button onclick="switchTab('reports')" id="tabReports" class="flex-1 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all">Analytics</button>
+                </div>
+
+                <div id="managementPanel" class="space-y-6">
+                    <div id="searchAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-3">Lookup Guest</label>
+                        <form id="searchAccountForm" class="relative">
+                            <input type="text" id="searchQuery" required placeholder="Guest name or room #..." 
+                                class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all text-sm">
+                            <button type="submit" class="absolute right-2 top-2 p-1.5 bg-indigo-600 text-white rounded-lg">
+                                <i class="fas fa-search text-sm"></i>
+                            </button>
+                        </form>
+                        <div id="searchResults" class="mt-4 space-y-2 max-h-48 overflow-y-auto custom-scroll"></div>
                     </div>
-                    <i class="fas fa-chevron-right text-slate-300"></i>
-                </button>
 
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="flex border-b border-slate-100">
-                        <button onclick="switchTab('new')" id="tabNew" class="flex-1 py-3 text-xs font-bold uppercase tracking-wider tab-active border-b-2 border-indigo-600 text-indigo-600">Accounts</button>
-                        <button onclick="switchTab('reports')" id="tabReports" class="flex-1 py-3 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600">Daily Reports</button>
+                    <div id="createAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Initialize New Visit</h2>
+                        <form id="createAccountForm" class="space-y-4">
+                            <div>
+                                <input type="text" name="guestName" required placeholder="Guest Full Name" 
+                                    class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                            <div>
+                                <input type="text" name="roomNumber" placeholder="Room Number (Optional)" 
+                                    class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                            <button type="submit" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl text-sm hover:shadow-lg transition-all active:scale-[0.98]">
+                                Open Account
+                            </button>
+                        </form>
                     </div>
+                </div>
 
-                    <div class="p-5 space-y-5">
-                        <div id="managementPanel" class="space-y-5">
-                            <div id="searchAccountSection">
-                                <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Find Transaction</label>
-                                <form id="searchAccountForm" class="relative">
-                                    <input type="text" id="searchQuery" required placeholder="Guest name or room..." class="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
-                                    <button type="submit" class="absolute right-2 top-2 p-1 text-slate-400 hover:text-indigo-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></button>
-                                </form>
-                                <div id="searchResults" class="mt-2 space-y-1 max-h-40 overflow-y-auto custom-scroll"></div>
-                            </div>
-
-                            <div id="createAccountSection" class="pt-4 border-t border-slate-100">
-                                <label class="text-[10px] font-bold text-slate-400 uppercase mb-3 block">Guest Check-In</label>
-                                <form id="createAccountForm" class="space-y-3">
-                                    <input type="text" name="guestName" required placeholder="Guest Full Name" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
-                                    <input type="text" name="roomNumber" placeholder="Room No. (Optional)" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
-                                    <button type="submit" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black shadow-lg transition-transform active:scale-95 text-xs uppercase tracking-widest">Initialize Folio</button>
-                                </form>
-                            </div>
-                        </div>
-
-                        <div id="reportsPanel" class="hidden">
-                            <form id="dailyReportForm" class="space-y-3">
-                                <input type="date" id="reportDate" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm">
-                                <button type="submit" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl text-xs uppercase tracking-widest">Generate Report</button>
-                            </form>
-                        </div>
+                <div id="reportsPanel" class="hidden">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                        <h2 class="text-xs font-bold text-slate-400 uppercase mb-4 text-center">Revenue Reports</h2>
+                        <form id="dailyReportForm" class="space-y-4">
+                            <input type="date" id="reportDate" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
+                            <button type="submit" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl text-sm">Generate Summary</button>
+                        </form>
                     </div>
                 </div>
             </div>
 
-            <div class="lg:col-span-6 space-y-6">
-                <div id="emptyState" class="h-64 flex flex-col items-center justify-center bg-white rounded-3xl border-2 border-dashed border-slate-200 text-slate-400">
-                    <div class="bg-slate-50 p-6 rounded-full mb-4"><i class="fas fa-receipt text-3xl opacity-20"></i></div>
-                    <p class="font-bold text-slate-500">No Transaction Selected</p>
-                    <p class="text-xs">Search a guest or check-in to start adding items.</p>
+            <div class="lg:col-span-9 space-y-6">
+                
+                <div id="emptyState" class="h-96 flex flex-col items-center justify-center bg-white border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400">
+                    <div class="bg-slate-50 p-6 rounded-full mb-4">
+                        <i class="fas fa-cash-register text-4xl text-slate-200"></i>
+                    </div>
+                    <p class="text-lg font-bold text-slate-500">Terminal Idle</p>
+                    <p class="text-sm">Please select an account to process charges.</p>
                 </div>
 
-                <div id="activeAccountSection" class="hidden space-y-6">
-                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-widest">Service Categories</h3>
-                            <div class="flex gap-2">
-                                <button type="button" onclick="setDepartment('Restaurant')" id="btnRes" class="px-4 py-2 text-[10px] font-bold rounded-full bg-indigo-600 text-white">RESTAURANT</button>
-                                <button type="button" onclick="setDepartment('Bar')" id="btnBar" class="px-4 py-2 text-[10px] font-bold rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all">BAR</button>
-                                <button type="button" onclick="setDepartment('Other')" id="btnOther" class="px-4 py-2 text-[10px] font-bold rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all">SERVICES</button>
+                <div id="activeAccountSection" class="hidden space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    
+                    <div class="bg-slate-900 rounded-[2rem] p-8 text-white flex flex-col md:flex-row justify-between items-center shadow-xl relative overflow-hidden">
+                        <div class="relative z-10">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="px-2 py-0.5 bg-emerald-500 text-[10px] font-black rounded uppercase">Active Folio</span>
+                                <span id="currentRoomNumber" class="text-indigo-300 text-sm font-bold tracking-widest"></span>
+                            </div>
+                            <h2 id="currentGuestName" class="text-3xl font-black">-</h2>
+                        </div>
+                        <div class="text-center md:text-right mt-6 md:mt-0 relative z-10">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-tighter mb-1">Unpaid Balance</p>
+                            <div class="flex items-baseline justify-center md:justify-end gap-1">
+                                <span class="text-slate-400 text-lg font-medium">UGX</span>
+                                <span id="totalCharges" class="text-5xl font-black text-white">0.00</span>
                             </div>
                         </div>
-
-                        <form id="addChargeForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Search Item</label>
-                                    <input list="inventoryItems" name="description" id="itemDesc" onchange="autoFillPrices(this.value)" class="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium" placeholder="Ex: Grilled Tilapia...">
-                                    <datalist id="inventoryItems"></datalist>
-                                </div>
-                                <div class="flex gap-4">
-                                    <div class="w-1/3">
-                                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Qty</label>
-                                        <input type="number" name="quantity" id="itemQty" value="1" min="1" class="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-bold text-center text-lg">
-                                    </div>
-                                    <div class="flex-1">
-                                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Price</label>
-                                        <input type="number" name="amount" id="itemPrice" class="w-full mt-1 px-4 py-3 bg-slate-100 border border-slate-200 rounded-2xl outline-none font-bold text-indigo-600 text-lg">
-                                    </div>
-                                </div>
-                                <button type="submit" class="w-full py-4 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all flex items-center justify-center gap-2">
-                                    <i class="fas fa-plus-circle"></i> ADD TO BILL
-                                </button>
-                            </div>
-
-                            <div class="bg-slate-50 rounded-2xl p-5 flex flex-col justify-between border border-slate-100">
-                                <div>
-                                    <h4 class="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-widest">Quick Actions</h4>
-                                    <div class="space-y-3">
-                                        <button id="postToRoomBtn" class="w-full flex items-center justify-between px-5 py-3 bg-white border border-slate-200 text-indigo-600 font-bold rounded-xl hover:border-indigo-600 transition-all text-sm">
-                                            <span>Post to Room Folio</span>
-                                            <i class="fas fa-bed"></i>
-                                        </button>
-                                        <button id="issueReceiptBtn" class="w-full flex items-center justify-between px-5 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition-all text-sm shadow-md">
-                                            <span>Settle & Print</span>
-                                            <i class="fas fa-print"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <button onclick="resetUI()" type="button" class="w-full text-[10px] font-bold text-slate-400 hover:text-red-500 uppercase tracking-widest pt-4">Cancel Current Transaction</button>
-                            </div>
-                        </form>
+                        <div class="absolute right-0 top-0 w-64 h-64 bg-indigo-500 opacity-10 rounded-full -mr-20 -mt-20"></div>
                     </div>
 
-                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div class="bg-slate-800 px-6 py-4 flex justify-between items-center">
-                            <h3 class="text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                                <i class="fas fa-utensils text-orange-400"></i> Active Kitchen Orders
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                        
+                        <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                            <h3 class="text-xs font-bold text-slate-400 uppercase mb-6 flex items-center gap-2">
+                                <i class="fas fa-plus-circle text-indigo-500"></i> Add Item/Service
                             </h3>
-                            <button onclick="loadWaiterTracker()" class="text-slate-400 hover:text-white transition text-xs font-bold">REFRESH</button>
+
+                            <div class="flex p-1 bg-slate-100 rounded-xl mb-6">
+                                <button type="button" onclick="setDepartment('Restaurant')" id="btnRes" class="flex-1 py-2 text-[10px] font-black rounded-lg transition-all bg-white shadow-sm text-indigo-600">RESTAURANT</button>
+                                <button type="button" onclick="setDepartment('Bar')" id="btnBar" class="flex-1 py-2 text-[10px] font-black rounded-lg transition-all text-slate-500">BAR</button>
+                                <button type="button" onclick="setDepartment('Other')" id="btnOther" class="flex-1 py-2 text-[10px] font-black rounded-lg transition-all text-slate-500">OTHER</button>
+                            </div>
+
+                            <form id="addChargeForm" class="space-y-5">
+                                <div class="hidden">
+                                    <select name="department" id="deptSelect" required class="w-full">
+                                        <option value="Restaurant">Restaurant</option>
+                                        <option value="Bar">Bar</option>
+                                        <option value="Laundry">Laundry</option>
+                                        <option value="Health Club">Health Club</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label id="descLabel" class="text-[10px] font-bold text-slate-500 uppercase ml-1">Search Inventory</label>
+                                    <input list="inventoryItems" name="description" id="itemDesc" onchange="autoFillPrices(this.value)" 
+                                           class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Type item name...">
+                                    <datalist id="inventoryItems"></datalist>
+                                </div>
+
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div class="col-span-1">
+                                        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Qty</label>
+                                        <input type="number" name="quantity" id="itemQty" value="1" min="1" 
+                                               class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
+                                    </div>
+                                    <div class="col-span-2">
+                                        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Unit Price</label>
+                                        <input type="number" name="amount" id="itemPrice" 
+                                               class="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl outline-none text-slate-600 font-bold">
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all uppercase tracking-widest text-sm">
+                                    Confirm Addition
+                                </button>
+                            </form>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left text-sm">
-                                <thead class="bg-slate-50 border-b border-slate-100">
-                                    <tr>
-                                        <th class="px-6 py-3 font-bold text-slate-400 uppercase text-[10px]">Description</th>
-                                        <th class="px-6 py-3 font-bold text-slate-400 uppercase text-[10px] text-center">Qty</th>
-                                        <th class="px-6 py-3 font-bold text-slate-400 uppercase text-[10px]">Status</th>
-                                        <th class="px-6 py-3 font-bold text-slate-400 uppercase text-[10px] text-right">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="waiterTrackerBody" class="divide-y divide-slate-50">
+
+                        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Live Folio</h3>
+                                <span class="text-[10px] font-bold text-indigo-500 px-2 py-0.5 bg-indigo-50 rounded">AUTO-SAVING</span>
+                            </div>
+                            
+                            <div class="flex-grow overflow-y-auto max-h-[250px] custom-scroll">
+                                <table class="w-full text-left">
+                                    <thead class="sticky top-0 bg-white shadow-sm">
+                                        <tr class="text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
+                                            <th class="px-6 py-3">Item</th>
+                                            <th class="px-6 py-3 text-right">Price</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="chargesList" class="divide-y divide-slate-50">
+                                        <tr>
+                                            <td colspan="2" class="px-6 py-10 text-center text-slate-400 italic text-sm">No items posted yet</td>
+                                        </tr>
                                     </tbody>
-                            </table>
+                                </table>
+                            </div>
+
+                            <div class="p-6 bg-slate-50 border-t border-slate-100 space-y-3">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button id="postToRoomBtn" class="flex flex-col items-center justify-center p-3 border-2 border-indigo-100 bg-white text-indigo-600 rounded-2xl hover:border-indigo-600 transition-all group">
+                                        <i class="fas fa-bed mb-1 group-hover:scale-110 transition-transform"></i>
+                                        <span class="text-[10px] font-extrabold uppercase">Post to Room</span>
+                                    </button>
+                                    <button id="issueReceiptBtn" class="flex flex-col items-center justify-center p-3 bg-slate-900 text-white rounded-2xl hover:bg-black transition-all group">
+                                        <i class="fas fa-print mb-1 group-hover:scale-110 transition-transform"></i>
+                                        <span class="text-[10px] font-extrabold uppercase">Settle Bill</span>
+                                    </button>
+                                </div>
+                                <button onclick="resetUI()" class="w-full py-2 text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors uppercase">Void Transaction</button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div id="reportResults" class="hidden animate-in fade-in duration-500">
-                    <div class="bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden">
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="px-8 py-6 bg-indigo-600 text-white flex justify-between items-center">
                             <div>
                                 <h2 class="font-bold text-lg">Daily Summary: <span id="reportDateDisplay"></span></h2>
-                                <p class="text-indigo-200 text-xs tracking-wide">Revenue Analysis</p>
+                                <p class="text-indigo-200 text-xs uppercase tracking-widest font-bold">Total Enterprise Revenue</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-3xl font-black">$<span id="reportTotalRevenue">0.00</span></p>
+                                <p class="text-4xl font-black text-white">$<span id="reportTotalRevenue">0.00</span></p>
                             </div>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-slate-100">
                                 <thead class="bg-slate-50">
                                     <tr>
-                                        <th class="px-8 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Guest</th>
-                                        <th class="px-8 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Description</th>
-                                        <th class="px-8 py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">Source</th>
-                                        <th class="px-8 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider">Amount</th>
+                                        <th class="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Guest / Room</th>
+                                        <th class="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Description</th>
+                                        <th class="px-8 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Source</th>
+                                        <th class="px-8 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider">Amount</th>
                                     </tr>
                                 </thead>
-                                <tbody id="reportTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                                <tbody id="reportTableBody" class="divide-y divide-slate-100 text-sm text-slate-600"></tbody>
                             </table>
                         </div>
-                        <div class="p-6">
-                            <button id="exportReportBtn" class="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all text-xs uppercase tracking-widest">
-                                <i class="fas fa-file-excel"></i> Export CSV
+                        <div class="p-6 bg-slate-50 border-t border-slate-100">
+                            <button id="exportReportBtn" class="flex items-center justify-center gap-2 w-full px-6 py-4 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100">
+                                <i class="fas fa-file-excel"></i>
+                                <span class="uppercase text-xs tracking-widest">Export Business Intelligence (.csv)</span>
                             </button>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="lg:col-span-3">
-                <div class="sticky top-24 space-y-4">
-                    <div id="folioHeader" class="bg-slate-900 rounded-2xl p-5 text-white shadow-xl">
-                        <div class="flex items-center gap-2 mb-4">
-                            <div class="w-2 h-2 bg-emerald-400 rounded-full"></div>
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Current Guest</span>
+                <div id="kitchen-display" class="pt-6">
+                    <div class="bg-white rounded-[2rem] shadow-lg border border-slate-200 overflow-hidden">
+                        <div class="bg-slate-800 px-8 py-5 flex justify-between items-center">
+                            <h3 class="text-white font-bold flex items-center gap-3 uppercase tracking-tighter text-sm">
+                                <span class="flex h-2 w-2 relative">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                                </span>
+                                Live Kitchen Display (KDS)
+                            </h3>
+                            <button onclick="loadWaiterTracker()" class="bg-slate-700 p-2 rounded-lg text-slate-300 hover:text-white transition">
+                                <i class="fas fa-sync-alt text-xs"></i>
+                            </button>
                         </div>
-                        <h2 id="currentGuestName" class="text-xl font-bold truncate">---</h2>
-                        <p id="currentRoomNumber" class="text-indigo-400 text-sm italic mb-4">No active session</p>
-                        
-                        <div class="border-t border-slate-800 pt-4">
-                            <span class="text-[10px] font-bold uppercase text-slate-500 block mb-1">Total Balance</span>
-                            <div class="flex items-baseline justify-between">
-                                <span class="text-3xl font-black text-white">$<span id="totalCharges">0.00</span></span>
-                                <span class="text-xs text-slate-500 font-bold">UGX Equivalent</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[500px]">
-                        <div class="bg-slate-50 px-5 py-3 border-b border-slate-200">
-                            <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Itemized Folio</h3>
-                        </div>
-                        <div class="flex-1 overflow-y-auto custom-scroll">
+                        <div class="overflow-x-auto">
                             <table class="w-full text-left">
-                                <tbody id="chargesList" class="divide-y divide-slate-50 text-xs">
+                                <thead class="bg-slate-50 text-[10px] uppercase text-slate-500 font-black border-b border-slate-100">
                                     <tr>
-                                        <td colspan="2" class="text-center py-20 text-slate-400 italic px-6">
-                                            Please select a transaction to view active charges.
-                                        </td>
+                                        <th class="px-8 py-4">Time</th>
+                                        <th class="px-8 py-4">Description</th>
+                                        <th class="px-8 py-4 text-center">Qty</th>
+                                        <th class="px-8 py-4">Location</th>
+                                        <th class="px-8 py-4">KDS Status</th>
+                                        <th class="px-8 py-4 text-right">Action</th>
                                     </tr>
-                                </tbody>
+                                </thead>
+                                <tbody id="waiterTrackerBody" class="divide-y divide-slate-100 text-sm">
+                                    </tbody>
                             </table>
-                        </div>
-                        <div class="p-4 bg-orange-50 border-t border-orange-100">
-                            <div class="flex justify-between items-center">
-                                <span class="text-[10px] font-bold text-orange-800 uppercase">Sub-Total</span>
-                                <span class="font-black text-orange-600 text-lg" id="totalChargesDisplay">0.00</span>
-                            </div>
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     </main>
 
     <div id="receipt-printout" class="hidden">
-        <div style="text-align: center; font-family: monospace; width: 300px; padding: 10px; border: 1px solid #000;">
-            <h3 style="margin:0">PATRINAH HOTEL</h3>
-            <p style="font-size: 12px">Official Cash Sale Receipt</p>
-            <hr>
-            <div id="receipt-details" style="text-align: left; font-size: 11px"></div>
-            <hr>
-            <p style="font-size: 11px">Thank you for choosing Patrinah!</p>
-            <p id="receipt-date" style="font-size: 10px"></p>
+        <div style="text-align: center; font-family: 'Courier New', Courier, monospace; width: 300px; padding: 20px; color: black;">
+            <h2 style="margin: 0;">PATRINAH HOTEL</h2>
+            <p style="margin: 5px 0;">Official Sales Receipt</p>
+            <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
+            <div id="receipt-details" style="text-align: left; font-size: 12px;"></div>
+            <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
+            <p style="font-weight: bold;">TOTAL REVENUE INCL. TAX</p>
+            <p style="font-size: 10px;">Thank you for your business!</p>
+            <p id="receipt-date" style="font-size: 10px;"></p>
         </div>
     </div>
-
-    <div id="messageBox" class="fixed bottom-6 right-6 z-[100] transition-all duration-300 transform translate-x-full"></div>
 
     <script src="pos4.js"></script>
 </body>
