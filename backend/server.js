@@ -3032,32 +3032,29 @@ app.patch('/api/kitchen/order/:id/ready',  async (req, res) => {
         const order = await KitchenOrder.findById(req.params.id);
         if (!order) return res.status(404).json({ error: "Order not found" });
 
-        // 1. FORCE QUANTITY TO BE AT LEAST 1
-        // We check both 'number' and 'quantity' just in case
-        const rawQty = order.number || order.quantity || 1;
-        const finalQty = Math.max(1, parseInt(rawQty)); 
-
-        const buyPrice = Number(order.bp) || 0;
+        const finalQty = Math.max(1, parseInt(order.number || order.quantity || 1));
         const sellPrice = Number(order.sp) || 0;
 
-        // 2. Create the Sale Record
+        // 1. Create Sale
         await Sale.create({
             item: order.item,
-            number: finalQty, // This is now guaranteed to be 1 or more
+            number: finalQty,
             department: 'Restaurant',
-            bp: buyPrice,
+            bp: order.bp || 0,
             sp: sellPrice,
-            profit: (sellPrice - buyPrice) * finalQty,
+            profit: (sellPrice - (order.bp || 0)) * finalQty,
             date: new Date()
         });
 
-        // 3. Update Guest Folio
+        // 2. Add to Folio (Using the connection-safe method)
         if (order.accountId) {
-            const POSClientAccount = mongoose.model('POSClientAccount');
-            await POSClientAccount.findByIdAndUpdate(order.accountId, {
+            // Use mongoose.models to check if it exists, or just use your model variable
+            const AccountModel = mongoose.models.POSClientAccount || mongoose.model('POSClientAccount');
+            
+            await AccountModel.findByIdAndUpdate(order.accountId, {
                 $push: {
                     charges: {
-                        description: `${order.item} (Kitchen)`,
+                        description: `${order.item} (x${finalQty})`,
                         amount: sellPrice * finalQty,
                         type: 'Restaurant',
                         date: new Date()
@@ -3066,15 +3063,16 @@ app.patch('/api/kitchen/order/:id/ready',  async (req, res) => {
             });
         }
 
-        // 4. Delete the kitchen order
+        // 3. Delete from Kitchen
         await KitchenOrder.findByIdAndDelete(req.params.id);
-
         res.json({ success: true });
+
     } catch (err) {
         console.error("READY ERROR:", err);
         res.status(500).json({ error: err.message });
     }
 });
+
 // --- Inventory Endpoints (Corrected) ---
 
 // Specific endpoint for the sales form dropdown
