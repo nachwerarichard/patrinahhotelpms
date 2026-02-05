@@ -43,17 +43,17 @@
 
     <main class="max-w-[1600px] mx-auto p-6">
         
-        <div class="mb-8">
-            <button onclick="startQuickSale()" class="flex items-center justify-center gap-4 bg-white hover:bg-slate-50 text-slate-900 border-2 border-slate-200 px-6 py-4 rounded-2xl transition-all active:scale-[0.98] group shadow-sm">
-                <div class="bg-indigo-600 p-2 rounded-lg group-hover:bg-indigo-700 transition-colors">
-                    <i class="fas fa-bolt text-white"></i>
-                </div>
-                <div class="text-left">
-                    <span class="block font-bold text-sm uppercase tracking-wide">New Quick Sale</span>
-                    <span class="text-xs text-slate-500 italic">Direct walk-in / Transient Guest</span>
-                </div>
-            </button>
+        <div class="mb-4 flex">
+    <button onclick="startQuickSale()" class="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-slate-900 border border-slate-200 px-4 py-2 rounded-xl transition-all active:scale-[0.98] group shadow-sm">
+        <div class="bg-indigo-600 p-1.5 rounded-md group-hover:bg-indigo-700 transition-colors">
+            <i class="fas fa-bolt text-white text-xs"></i>
         </div>
+        <div class="text-left">
+            <span class="block font-bold text-xs uppercase tracking-wide">Quick Sale</span>
+            <span class="block text-[10px] text-slate-400 leading-none">Transient Guest</span>
+        </div>
+    </button>
+</div>
 
         <div id="messageBox" class="fixed top-20 right-4 z-50 transition-all duration-300 transform translate-x-full"></div>
 
