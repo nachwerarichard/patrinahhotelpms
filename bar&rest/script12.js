@@ -298,7 +298,6 @@ function showSubSection(sectionId, parentNavId = null) {
         // ... (Your existing redirection/access denial logic)
         const fullAccessRoles = ['admin'];
         if (fullAccessRoles.includes(currentUserRole)) {
-            initSidebarState(); 
         } else if (currentUserRole === 'bar' ) {
             showSubSection('sales-new', 'nav-sales'); 
         }
