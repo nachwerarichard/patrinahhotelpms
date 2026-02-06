@@ -67,7 +67,7 @@ function startQuickSale() {
             };
 
             // --- UI HELPERS ---
-            const displayMessage = (message, type) => {
+            const showMessage = (message, type) => {
                 const bg = type === 'success' ? 'bg-emerald-600' : (type === 'error' ? 'bg-red-600' : 'bg-indigo-600');
                 messageBox.textContent = message;
                 messageBox.className = `fixed top-20 right-4 z-50 px-6 py-3 rounded-xl text-white font-bold shadow-2xl transition-all duration-300 transform ${bg}`;
@@ -123,7 +123,7 @@ function startQuickSale() {
 
             // --- CORE API FUNCTIONS ---
             const createAccount = async (guestName, roomNumber) => {
-                displayMessage('Initializing account...', 'info');
+                showMessage('Initializing account...', 'info');
                 try {
                     const res = await fetch(`${BASE_URL}/api/pos/client/account`, {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -134,8 +134,8 @@ function startQuickSale() {
                     activeAccountId = data._id;
                     activeAccountData = data;
                     updateActiveAccountUI(data);
-                    displayMessage(`Account active for ${data.guestName}`, 'success');
-                } catch (err) { displayMessage(err.message, 'error'); }
+                    showMessage(`Account active for ${data.guestName}`, 'success');
+                } catch (err) { showMessage(err.message, 'error'); }
             };
 
             const searchAccounts = async (query) => {
@@ -163,7 +163,7 @@ function startQuickSale() {
                         };
                         searchResults.appendChild(el);
                     });
-                } catch (err) { displayMessage(err.message, 'error'); }
+                } catch (err) { showMessage(err.message, 'error'); }
             };
 
 const addCharge = async (description, number, department) => {
@@ -172,7 +172,7 @@ const addCharge = async (description, number, department) => {
 
     // If it's NOT a quick sale AND no guest is selected, then we block it
     if (!activeAccountId && !isQuickSale) {
-        displayMessage("Please select a guest or start a Quick Sale first!", "error");
+        showMessage("Please select a guest or start a Quick Sale first!", "error");
         return;
     }
 
@@ -208,7 +208,7 @@ const addCharge = async (description, number, department) => {
 
             if (!res.ok) throw new Error("Failed to send order to kitchen");
             
-            displayMessage("Order sent to Kitchen preparing list!", "success");
+            showMessage("Order sent to Kitchen preparing list!", "success");
             resetForm(); 
             
         } else {
@@ -245,17 +245,17 @@ const addCharge = async (description, number, department) => {
 
                 // Update UI for Resident
                 updateActiveAccountUI(updatedAccount); 
-                displayMessage("Bar sale recorded & Guest charged!", "success");
+                showMessage("Bar sale recorded & Guest charged!", "success");
             } else {
                 // If Quick Sale (Bar/Drink), we just acknowledge the cash sale
-                displayMessage("Direct Cash sale recorded!", "success");
+                showMessage("Direct Cash sale recorded!", "success");
                 // Update a generic "Quick Sale" UI list here if needed
             }
         }
 
     } catch (err) {
         console.error("Transaction failed:", err);
-        displayMessage(err.message, "error");
+        showMessage(err.message, "error");
     }
 };
             const settleAccount = async (method) => {
@@ -270,12 +270,12 @@ const addCharge = async (description, number, department) => {
                     
                     if (method === 'receipt') {
                         // (Receipt Logic remains same as your original)
-                        displayMessage('Receipt issued. Closing...', 'success');
+                        showMessage('Receipt issued. Closing...', 'success');
                     } else {
-                        displayMessage('Posted to room successfully', 'success');
+                        showMessage('Posted to room successfully', 'success');
                     }
                     setTimeout(resetUI, 2000);
-                } catch (err) { displayMessage(err.message, 'error'); }
+                } catch (err) { showMessage(err.message, 'error'); }
             };
 
 
@@ -321,8 +321,8 @@ const addCharge = async (description, number, department) => {
         activeAccountData = data;
         updateActiveAccountUI(data);
         addChargeForm.reset();
-        displayMessage(`${department} charge added!`, 'success');
-    } catch (err) { displayMessage(err.message, 'error'); }
+        showMessage(`${department} charge added!`, 'success');
+    } catch (err) { showMessage(err.message, 'error'); }
 };
 
 addChargeForm.onsubmit = e => {
@@ -395,7 +395,7 @@ async function loadInventory() {
         console.log("Inventory lookup loaded:", inventoryData);
     } catch (err) {
         console.error("Error loading inventory:", err);
-        displayMessage("Could not load item list", "error");
+        showMessage("Could not load item list", "error");
     }
 }
 
