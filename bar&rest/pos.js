@@ -41,7 +41,6 @@ function startQuickSale() {
             // Elements
             const messageBox = document.getElementById('messageBox');
             const createAccountForm = document.getElementById('createAccountForm');
-            const searchAccountForm = document.getElementById('searchAccountForm');
             const activeAccountSection = document.getElementById('activeAccountSection');
             const emptyState = document.getElementById('emptyState');
             const addChargeForm = document.getElementById('addChargeForm');
