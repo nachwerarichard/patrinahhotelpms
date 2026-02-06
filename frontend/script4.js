@@ -1951,13 +1951,31 @@ async function printReceipt(bookingCustomId) {
         receiptAmtPerNightSpan.textContent = parseFloat(booking.amtPerNight).toFixed(2);
         receiptRoomTotalDueSpan.textContent = parseFloat(booking.totalDue).toFixed(2);
 
-        // Calculate and populate summary
+        // Populate incidental charges table
+        receiptIncidentalChargesTableBody.innerHTML = '';
+        let totalIncidentalChargesAmount = 0;
+        if (incidentalCharges.length === 0) {
+            receiptIncidentalChargesTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No incidental charges.</td></tr>';
+        } else {
+            incidentalCharges.forEach(charge => {
+                const row = receiptIncidentalChargesTableBody.insertRow();
+                row.innerHTML = `
+                    <td>${charge.type}</td>
+                    <td>${charge.description || '-'}</td>
+                    <td>${parseFloat(charge.amount).toFixed(2)}</td>
+                    <td>${new Date(charge.date).toLocaleDateString()}</td>
+                `;
+                totalIncidentalChargesAmount += charge.amount;
+            });
+        }
+ // Calculate and populate summary
         const roomSubtotal = parseFloat(booking.totalDue);
-        const totalBill = roomSubtotal;
+        const totalBill = roomSubtotal + totalIncidentalChargesAmount;
         const totalAmountPaid = parseFloat(booking.amountPaid); // This is room amount paid
         const finalBalanceDue = totalBill - totalAmountPaid;
 
         receiptSubtotalRoomSpan.textContent = roomSubtotal.toFixed(2);
+        receiptSubtotalIncidentalsSpan.textContent = totalIncidentalChargesAmount.toFixed(2);
         receiptTotalBillSpan.textContent = totalBill.toFixed(2);
         receiptAmountPaidSpan.textContent = totalAmountPaid.toFixed(2);
         receiptBalanceDueSpan.textContent = finalBalanceDue.toFixed(2);
