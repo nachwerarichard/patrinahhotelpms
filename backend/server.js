@@ -3047,7 +3047,12 @@ app.patch('/api/kitchen/order/:id/ready', async (req, res) => {
 
         const finalQty = Math.max(1, parseInt(order.number || order.quantity || 1));
         const sellPrice = Number(order.sp) || 0;
+        const buyPrice = Number(order.bp) || 0;
 
+    const totalBuyingPrice = buyPrice * finalQty;
+    const totalSellingPrice = sellPrice * finalQty;
+    const profit = totalSellingPrice - totalBuyingPrice;
+    const percentageProfit = totalBuyingPrice !== 0 ? (profit / totalBuyingPrice) * 100 : 0;
         // 1. Create Sale (Using the Sale variable you defined elsewhere)
         await Sale.create({
             item: order.item,
@@ -3056,6 +3061,7 @@ app.patch('/api/kitchen/order/:id/ready', async (req, res) => {
             bp: order.bp || 0,
             sp: sellPrice,
             profit: (sellPrice - (order.bp || 0)) * finalQty,
+            percentageprofit: percentageProfit,
             date: new Date()
         });
 
