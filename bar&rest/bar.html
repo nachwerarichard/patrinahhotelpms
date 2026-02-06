@@ -557,7 +557,10 @@
         <!-- SALES -->
         <section id="sales-new" class="section bg-white p-6 rounded-xl shadow-lg mb-6">
                     <h3 class="text-xl font-medium mb-3 border-b pb-2">Record New Sale</h3>        
-
+<button onclick="startNewTransaction()" class="w-full mb-4 py-3 bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold rounded-xl text-xs uppercase tracking-widest hover:bg-indigo-100 transition-all flex items-center justify-center gap-2">
+    <i class="fas fa-plus-circle"></i>
+    New Transaction
+</button>
         <div id="messageBox" class="fixed top-20 right-4 z-50 transition-all duration-300 transform translate-x-full"></div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -1935,6 +1938,41 @@ loadWaiterTracker();
     }
 }
     
+  </script>
+  <script>
+    function startNewTransaction() {
+    // 1. Reset all forms
+    document.getElementById('searchAccountForm').reset();
+    document.getElementById('createAccountForm').reset();
+    
+    // 2. Clear visual labels for the active guest
+    document.getElementById('currentGuestName').textContent = '-';
+    document.getElementById('currentRoomNumber').textContent = '';
+    document.getElementById('totalCharges').textContent = '0.00';
+    
+    // 3. Clear the Live Folio table
+    const chargesList = document.getElementById('chargesList');
+    if (chargesList) {
+        chargesList.innerHTML = `
+            <tr>
+                <td colspan="2" class="px-6 py-10 text-center text-slate-400 italic text-sm">No items posted yet</td>
+            </tr>
+        `;
+    }
+
+    // 4. Clear search results list
+    const searchResults = document.getElementById('searchResults');
+    if (searchResults) {
+        searchResults.innerHTML = '';
+    }
+
+    // 5. Optional: Show a confirmation message
+    if (typeof showMessage === 'function') {
+        showMessage('UI Reset for new transaction', 'info');
+    }
+    
+    console.log("UI Cleared for new transaction.");
+}
   </script>
  <script src="pos.js"></script>
 </body>
