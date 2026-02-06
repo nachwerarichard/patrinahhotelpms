@@ -1976,6 +1976,58 @@ loadWaiterTracker();
     console.log("UI Cleared for new transaction.");
 }
   </script>
+      <script>
+        const suggestInput = document.getElementById('suggestGuestName');
+const suggestionBox = document.getElementById('bookingSuggestions');
+const roomInput = document.querySelector('input[name="roomNumber"]');
+let suggestTimer;
+
+suggestInput.addEventListener('input', () => {
+    clearTimeout(suggestTimer);
+    const val = suggestInput.value.trim();
+
+    if (val.length < 2) {
+        suggestionBox.classList.add('hidden');
+        return;
+    }
+
+    suggestTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(`/api/pos/suggestions/bookings?name=${val}`);
+            const bookings = await res.json();
+
+            if (bookings.length > 0) {
+                suggestionBox.innerHTML = bookings.map(b => `
+                    <div class="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0"
+                         onclick="fillBooking('${b.name}', '${b.room}')">
+                        <p class="text-sm font-medium text-slate-700">${b.name}</p>
+                        <p class="text-xs text-slate-400">Room ${b.room}</p>
+                    </div>
+                `).join('');
+                suggestionBox.classList.remove('hidden');
+            } else {
+                suggestionBox.classList.add('hidden');
+            }
+        } catch (err) {
+            console.error('Suggestion fetch failed:', err);
+        }
+    }, 300);
+});
+
+// Function to auto-fill the form
+window.fillBooking = (name, room) => {
+    suggestInput.value = name;
+    roomInput.value = room;
+    suggestionBox.classList.add('hidden');
+};
+
+// Close suggestions if user clicks outside
+document.addEventListener('click', (e) => {
+    if (!suggestionBox.contains(e.target) && e.target !== suggestInput) {
+        suggestionBox.classList.add('hidden');
+    }
+});
+      </script>
  <script src="pos.js"></script>
 </body>
 </html>
