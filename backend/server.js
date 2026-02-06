@@ -885,6 +885,31 @@ app.get('/api/pos/client/search', async (req, res) => {
     }
 });
 
+
+app.get('/api/pos/search/in-house', async (req, res) => {
+    const { query } = req.query;
+
+    try {
+        if (!query || query.length < 2) return res.json([]); // Don't search for just 1 letter
+
+        // Create a case-insensitive regex (e.g., "jo" matches "John")
+        const searchRegex = new RegExp(query, 'i');
+
+        // Search for accounts that are NOT closed (in-house)
+        const accounts = await ClientAccount.find({
+            isClosed: false,
+            $or: [
+                { guestName: searchRegex },
+                { roomNumber: searchRegex }
+            ]
+        }).limit(5); // Limit to 5 results for speed
+
+        res.json(accounts);
+    } catch (error) {
+        console.error('SEARCH ERROR:', error);
+        res.status(500).json({ message: 'Error during search' });
+    }
+});
 // NEW: Get a guest's full bill (room charges + incidentals)
 app.get('/api/bookings/:bookingCustomId/bill', async (req, res) => {
     const { bookingCustomId } = req.params;
