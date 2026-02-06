@@ -2109,6 +2109,70 @@ async function fetchActiveAccounts() {
 // Load accounts when the page opens
 document.addEventListener('DOMContentLoaded', fetchActiveAccounts);
   </script>
+  <script>
+    let debounceTimer;
+const searchInput = document.getElementById('searchQuery'); // Change to your ID
+
+searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim();
+    
+    // Clear the previous timer
+    clearTimeout(debounceTimer);
+
+    // If input is empty, clear results and stop
+    if (query.length === 0) {
+        searchResults.innerHTML = '';
+        return;
+    }
+
+    // Wait 300ms after user stops typing to call API
+    debounceTimer = setTimeout(() => {
+        searchAccounts(query);
+    }, 300);
+});
+    const searchAccounts = async (query) => {
+    try {
+        // Show a small loader or clear previous results immediately
+        searchResults.innerHTML = '<div class="text-center py-4"><span class="animate-pulse text-xs text-slate-400">Searching...</span></div>';
+        
+        const res = await fetch(`${BASE_URL}/api/pos/client/search?query=${encodeURIComponent(query)}`);
+        const data = await res.json();
+
+        // Handle 404 or empty data
+        if (!res.ok || !data.length) {
+            searchResults.innerHTML = '<p class="text-xs text-center text-slate-400 py-4">No records found</p>';
+            return;
+        }
+
+        searchResults.innerHTML = ''; // Clear "Searching..."
+        
+        data.forEach(acc => {
+            const el = document.createElement('div');
+            el.className = 'p-3 mb-2 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-300 hover:bg-white transition-all group';
+            el.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-sm font-bold text-slate-700">${acc.guestName}</p>
+                        <p class="text-[10px] uppercase font-bold text-slate-400">Room: ${acc.roomNumber || 'Walk-In'}</p>
+                    </div>
+                    <span class="text-xs font-black text-indigo-600 opacity-0 group-hover:opacity-100">SELECT →</span>
+                </div>`;
+            
+            el.onclick = () => {
+                activeAccountId = acc._id;
+                activeAccountData = acc;
+                updateActiveAccountUI(acc);
+                searchResults.innerHTML = ''; // Clear results after selection
+                searchInput.value = acc.guestName; // Optional: fill input with selected name
+            };
+            searchResults.appendChild(el);
+        });
+    } catch (err) { 
+        searchResults.innerHTML = '';
+        showMessage(err.message, 'error'); 
+    }
+};
+  </script>
  <script src="pos.js"></script>
 </body>
 </html>
