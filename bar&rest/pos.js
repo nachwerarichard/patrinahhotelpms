@@ -209,8 +209,7 @@ const addCharge = async (description, number, department) => {
             if (!res.ok) throw new Error("Failed to send order to kitchen");
             
             showMessage("Order sent to Kitchen preparing list!", "success");
-            resetForm(); 
-            
+             startNewTransaction();            
         } else {
             // STEP B: Standard Bar/Service Logic
             
