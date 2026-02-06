@@ -1,80 +1,142 @@
+<!DOCTYPE html>
 <html>
-  <head>
+<head>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100">
 
-    <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  </head>
-  <body> 
-  <div class="p-6 bg-gray-100 min-h-screen">
-    <h1 class="text-2xl font-bold mb-6 text-gray-800">Kitchen Display (KDS)</h1>
-    <div id="kitchenOrders" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        </div>
-</div>
-
-<script>
-async function loadOrders() {
-    try {
-        const res = await fetch('https://patrinahhotelpms.onrender.com/api/kitchen/Pending', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
-        
-        if (!res.ok) throw new Error("Could not fetch orders");
-        
-        const orders = await res.json();
-        console.log("Orders received:", orders); // Check your console!
-
-        const container = document.getElementById('kitchenOrders');
-        
-        if (orders.length === 0) {
-            container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">No pending orders. Take a break, Chef!</p>`;
-            return;
-        }
-
-        container.innerHTML = orders.map(order => `
-            <div class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-orange-500">
-                <div class="flex justify-between items-start">
-                    <h2 class="text-xl font-black">${order.item}</h2>
-                    <span class="text-xs bg-gray-100 p-1 rounded font-mono">T: ${order.tableNumber || 'N/A'}</span>
+    <div id="loginOverlay" class="fixed inset-0 bg-gray-900 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-96">
+            <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Chef Login</h2>
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Username</label>
+                    <input type="text" id="username" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
                 </div>
-                <p class="text-3xl font-bold my-2">QTY: ${order.number}</p>
-                <p class="text-sm text-gray-400 mb-4">Waiter: ${order.waiter || 'Unknown'}</p>
-                
-                <button onclick="completeOrder('${order._id}')" 
-                    class="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 active:scale-95 transition">
-                    MARK AS READY
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="password" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                </div>
+                <button type="submit" class="w-full bg-orange-600 text-white py-2 rounded-lg font-bold hover:bg-orange-700 transition">
+                    Login to KDS
                 </button>
+                <p id="loginError" class="text-red-500 text-sm text-center hidden">Invalid credentials!</p>
+            </form>
+        </div>
+    </div>
+
+    <div id="mainContent" class="p-6 min-h-screen hidden">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Kitchen Display (KDS)</h1>
+            <button onclick="logout()" class="text-sm text-red-600 font-semibold hover:underline">Logout</button>
+        </div>
+        <div id="kitchenOrders" class="grid grid-cols-1 md:grid-cols-3 gap-6">
             </div>
-        `).join('');
-    } catch (err) {
-        console.error("Kitchen Display Error:", err);
-    }
-}
+    </div>
 
-async function completeOrder(id) {
-    try {
-        // Fixed the backtick syntax here
-        const res = await fetch(`https://patrinahhotelpms.onrender.com/api/kitchen/order/${id}/ready`, {
-            method: 'PATCH',
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
-        if (res.ok) {
-            loadOrders(); 
-        } else {
-            alert("Error marking order as ready");
+    <script>
+        const API_BASE = "https://patrinahhotelpms.onrender.com";
+
+        // 1. CHECK AUTH ON LOAD
+        window.onload = () => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                showKDS();
+            }
+        };
+
+        function showKDS() {
+            document.getElementById('loginOverlay').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+            loadOrders();
+            setInterval(loadOrders, 10000); // Set to 10 seconds
         }
-    } catch (err) {
-        console.error("Complete Order Error:", err);
-    }
-}
 
-// Refresh every 10 seconds (faster for kitchen)
-setInterval(loadOrders, 10000000000);
-loadOrders();
-</script>
-  </body>
+        // 2. LOGIN HANDLER
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('loginError');
+
+            try {
+                const res = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    localStorage.setItem('token', data.token); // Save Base64 token
+                    localStorage.setItem('username', data.username);
+                    showKDS();
+                } else {
+                    errorEl.innerText = data.error || "Login Failed";
+                    errorEl.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error("Login Error:", err);
+                alert("Connection failed");
+            }
+        });
+
+        // 3. LOAD ORDERS
+        async function loadOrders() {
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`${API_BASE}/api/kitchen/Pending`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.status === 401) logout(); // Boot user if token invalid
+                
+                const orders = await res.json();
+                const container = document.getElementById('kitchenOrders');
+
+                if (orders.length === 0) {
+                    container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">No pending orders. Take a break!</p>`;
+                    return;
+                }
+
+                container.innerHTML = orders.map(order => `
+                    <div class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-orange-500">
+                        <div class="flex justify-between items-start">
+                            <h2 class="text-xl font-black">${order.item}</h2>
+                            <span class="text-xs bg-gray-100 p-1 rounded font-mono">T: ${order.tableNumber || 'N/A'}</span>
+                        </div>
+                        <p class="text-3xl font-bold my-2">QTY: ${order.number}</p>
+                        <p class="text-sm text-gray-400 mb-4">Waiter: ${order.waiter || 'Unknown'}</p>
+                        <button onclick="completeOrder('${order._id}')" 
+                            class="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 active:scale-95 transition">
+                            MARK AS READY
+                        </button>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error("Fetch Error:", err);
+            }
+        }
+
+        async function completeOrder(id) {
+            try {
+                const res = await fetch(`${API_BASE}/api/kitchen/order/${id}/ready`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                if (res.ok) loadOrders();
+            } catch (err) {
+                console.error("Update Error:", err);
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+    </script>
+</body>
 </html>
