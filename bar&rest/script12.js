@@ -286,10 +286,10 @@ function showSubSection(sectionId, parentNavId = null) {
 
     // --- Role-based Access Check ---
     const allowedSections = {
-        'admin': ['inventory', 'sales', 'expenses', 'cash', 'reports', 'audit','dashboard','kds'],
-        'manager': ['inventory', 'sales', 'expenses', 'cash', 'reports', 'audit','kds'],
-        'cashier': ['inventory', 'sales', 'expenses', 'cash','kds'],
-        'bar': ['inventory', 'sales','kds']
+        'admin': ['inventory', 'sales', 'expenses', 'cash', 'reports', 'audit','dashboard','kds','postransactions'],
+        'manager': ['inventory', 'sales', 'expenses', 'cash', 'reports', 'audit','kds','postransactions'],
+        'cashier': ['inventory', 'sales', 'expenses', 'cash','kds''postransactions'],
+        'bar': ['inventory', 'sales','kds','postransactions']
     };
 
     const checkSectionId = mainSectionId.startsWith('cash') ? 'cash' : (mainSectionId === 'audit' ? 'audit' : mainSectionId);
