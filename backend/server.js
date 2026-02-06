@@ -443,6 +443,28 @@ app.post('/api/rooms/clear-all', async (req, res) => {
   }
 });
 
+
+app.get('/api/pos/suggestions/bookings', async (req, res) => {
+    const { name } = req.query;
+    try {
+        if (!name || name.length < 2) return res.json([]);
+
+        // Find bookings where name matches and status is likely 'Checked-In'
+        // Adjust the 'status' filter based on your specific Booking model fields
+        const suggestions = await Booking.find({
+            name: new RegExp(name, 'i'),
+            // status: 'Checked-In' // Optional: only show guests currently in the hotel
+        })
+        .select('name room')
+        .limit(5);
+
+        res.json(suggestions);
+    } catch (error) {
+        console.error('Suggestion Error:', error);
+        res.status(500).json({ message: 'Error fetching suggestions' });
+    }
+});
+
 // POST /api/pos/client/account
 app.post('/api/pos/client/account', async (req, res) => {
     const { guestName, roomNumber } = req.body;
