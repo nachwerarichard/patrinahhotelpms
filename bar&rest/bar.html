@@ -405,7 +405,6 @@
                 <li><button class="sub-item block w-full text-left p-3 rounded-md hover:bg-[#452829] hover:text-[#F3E8DF]" data-show="sales-new" onclick="showSubSection('sales-new','nav-sales')">Record New Sale</button></li>
                 <li><button class="sub-item block w-full text-left p-3 rounded-md hover:bg-[#452829] hover:text-[#F3E8DF]" data-show="sales-records" onclick="showSubSection('sales-records','nav-sales')">Sales Records</button></li>
                 <li><button class="sub-item block w-full text-left p-3 rounded-md hover:bg-[#452829] hover:text-[#F3E8DF]" data-show="kds" onclick="showSubSection('kds','nav-sales')">KDS Status</button></li>
-                            <li><button class="sub-item block w-full text-left p-3 rounded-md hover:bg-[#452829] hover:text-[#F3E8DF]" data-show="postransactions" onclick="showSubSection('postransactions','nav-sales')">POS Transactions</button></li>
             </ul>
         </div>
 
@@ -834,40 +833,7 @@
                 </div>
 
         </section>
-                <section id="postransactions" class="section bg-white p-6 rounded-xl shadow-lg mb-6">
-                    <h3 class="text-xl font-medium mb-3 border-b pb-2">POS transactions</h3>
-                  <div id="activeAccountsSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h2 class="text-lg font-bold text-slate-800">In-House Accounts</h2>
-            <p class="text-xs text-slate-400 uppercase font-semibold tracking-wider">Currently Active POS Sessions</p>
-        </div>
-        <button onclick="fetchActiveAccounts()" class="p-2 hover:bg-slate-100 rounded-full transition-all">
-            <i class="fas fa-sync-alt text-slate-400 text-sm"></i>
-        </button>
-    </div>
-
-    <div class="overflow-x-auto">
-        <table class="w-full text-left">
-            <thead>
-                <tr class="border-b border-slate-100">
-                    <th class="pb-3 text-xs font-bold text-slate-400 uppercase">Guest / Room</th>
-                    <th class="pb-3 text-xs font-bold text-slate-400 uppercase">Total Charges</th>
-                    <th class="pb-3 text-xs font-bold text-slate-400 uppercase">Last Updated</th>
-                    <th class="pb-3 text-xs font-bold text-slate-400 uppercase text-right">Action</th>
-                </tr>
-            </thead>
-            <tbody id="activeAccountsTableBody" class="divide-y divide-slate-50">
-                </tbody>
-        </table>
-        <div id="noAccountsMessage" class="hidden py-10 text-center text-slate-400 text-sm">
-            No active in-house accounts found.
-        </div>
-    </div>
-</div>
-        </section>
-
-
+                
         <section id="sales-records" class="section bg-white p-6 rounded-xl shadow-lg mb-6">
                     <h3 class="text-xl font-medium mb-3 border-b pb-2">Sales Records</h3>
 
