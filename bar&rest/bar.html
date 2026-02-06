@@ -2089,9 +2089,10 @@ async function fetchActiveAccounts() {
                 <td class="py-4 font-mono text-sm text-slate-600">
                     $${Number(acc.totalCharges).toFixed(2)}
                 </td>
-                <td class="py-4 text-xs text-slate-400">
-                    ${new Date(acc.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                </td>
+               // Inside your fetchActiveAccounts map function:
+<td class="py-4 text-xs text-slate-400">
+    ${acc.lastUpdated ? new Date(acc.lastUpdated).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Just now'}
+</td>
                 <td class="py-4 text-right">
                     <button onclick="viewAccountDetails('${acc._id}')" 
                         class="text-xs bg-slate-100 hover:bg-indigo-600 hover:text-white px-3 py-1.5 rounded-lg font-bold transition-all">
