@@ -67,7 +67,7 @@ function startQuickSale() {
             };
 
             // --- UI HELPERS ---
-            const showMessage = (message, type) => {
+            const showsage = (message, type) => {
                 const bg = type === 'success' ? 'bg-emerald-600' : (type === 'error' ? 'bg-red-600' : 'bg-indigo-600');
                 messageBox.textContent = message;
                 messageBox.className = `fixed top-20 right-4 z-50 px-6 py-3 rounded-xl text-white font-bold shadow-2xl transition-all duration-300 transform ${bg}`;
