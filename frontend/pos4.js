@@ -246,7 +246,7 @@ loadWaiterTracker();
                 } catch (err) { displayMessage(err.message, 'error'); }
             };
 
-const addCharge = async (description, quantity, department) => {
+const addCharge = async (description, number, department) => {
     // 1. Validation Logic: Check if it's a Quick Sale vs Resident Sale
     const isQuickSale = (document.getElementById('currentOrderType')?.value === 'Direct' || !activeAccountId);
 
@@ -375,7 +375,7 @@ const addCharge = async (description, quantity, department) => {
             addChargeForm.onsubmit = e => {
                 e.preventDefault();
                 const fd = new FormData(addChargeForm);
-                addCharge(fd.get('description'), fd.get('amount'));
+                addCharge(fd.get('description'), fd.get('number'),fd.get('amount'));
             };
 
             postToRoomBtn.onclick = () => settleAccount('room');
@@ -413,13 +413,13 @@ addChargeForm.onsubmit = e => {
     const description = fd.get('description'); 
     
     // 2. Get the quantity (how many they bought)
-    const quantity = fd.get('quantity'); 
+    const number = fd.get('number'); 
     
     // 3. Get the department (selected via the BAR/RES buttons)
     const department = document.getElementById('deptSelect').value;
 
     // Call the updated function that handles both Inventory and Folio
-    addCharge(description, quantity, department);
+    addCharge(description, number, department);
 };
         window.setDepartment = (dept) => {
     // 1. Update the hidden select value
