@@ -2725,7 +2725,7 @@ app.delete('/status-reports/:id', async (req, res) => {
 
 const KitchenOrder = mongoose.model('KitchenOrder', new mongoose.Schema({
   item: String,
-  quantity: Number,
+  number: Number,
   department: { type: String, default: 'Restaurant' },
   status: { type: String, enum: ['Pending', 'Ready', 'Served'], default: 'Pending' },
   waiter: String,
