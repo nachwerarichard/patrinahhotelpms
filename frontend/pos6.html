@@ -43,25 +43,27 @@
 
     <main class="max-w-[1600px] mx-auto p-6">
         
-<div class="mb-4 inline-flex">
-    <button onclick="startQuickSale()" class="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-slate-900 border border-slate-200 px-4 py-2 rounded-xl transition-all active:scale-[0.98] group shadow-sm">
-        <div class="bg-indigo-600 p-1.5 rounded-md group-hover:bg-indigo-700 transition-colors">
-            <i class="fas fa-bolt text-white text-xs"></i>
+        <div class="mb-8">
+            <button onclick="startQuickSale()" class="flex items-center justify-center gap-4 bg-white hover:bg-slate-50 text-slate-900 border-2 border-slate-200 px-6 py-4 rounded-2xl transition-all active:scale-[0.98] group shadow-sm">
+                <div class="bg-indigo-600 p-2 rounded-lg group-hover:bg-indigo-700 transition-colors">
+                    <i class="fas fa-bolt text-white"></i>
+                </div>
+                <div class="text-left">
+                    <span class="block font-bold text-sm uppercase tracking-wide">New Quick Sale</span>
+                    <span class="text-xs text-slate-500 italic">Direct walk-in / Transient Guest</span>
+                </div>
+            </button>
         </div>
-        <div class="text-left">
-            <span class="block font-bold text-xs uppercase tracking-wide">Quick Sale</span>
-            <span class="block text-[10px] text-slate-400 leading-none">Transient Guest</span>
-        </div>
-    </button>
-</div>
-        
 
-
-        <div id="messageBox" class="fixed center z-50 transition-all duration-300 transform translate-x-full"></div>
+        <div id="messageBox" class="fixed top-20 right-4 z-50 transition-all duration-300 transform translate-x-full"></div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
             <div class="lg:col-span-3 space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-2 flex gap-1">
+                    <button onclick="switchTab('new')" id="tabNew" class="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all tab-active bg-indigo-50 text-indigo-700">Management</button>
+                </div>
+
                 <div id="managementPanel" class="space-y-6">
                     <div id="searchAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
                         <label class="block text-xs font-bold text-slate-400 uppercase mb-3">Lookup Guest</label>
@@ -92,11 +94,20 @@
                         </form>
                     </div>
                 </div>
+
                
             </div>
 
             <div class="lg:col-span-9 space-y-6">
                 
+                <div id="emptyState" class="h-96 flex flex-col items-center justify-center bg-white border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400">
+                    <div class="bg-slate-50 p-6 rounded-full mb-4">
+                        <i class="fas fa-cash-register text-4xl text-slate-200"></i>
+                    </div>
+                    <p class="text-lg font-bold text-slate-500">Terminal Idle</p>
+                    <p class="text-sm">Please select an account to process charges.</p>
+                </div>
+
                 <div id="activeAccountSection" class="hidden space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     
                     <div class="bg-slate-900 rounded-[2rem] p-8 text-white flex flex-col md:flex-row justify-between items-center shadow-xl relative overflow-hidden">
@@ -151,7 +162,7 @@
                                 <div class="grid grid-cols-3 gap-4">
                                     <div class="col-span-1">
                                         <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Qty</label>
-                                        <input type="number" name="number" id="number" value="1" min="1" 
+                                        <input type="number" name="quantity" id="itemQty" value="1" min="1" 
                                                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
                                     </div>
                                     <div class="col-span-2">
@@ -162,17 +173,11 @@
                                 </div>
 
                                 <button type="submit" class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all uppercase tracking-widest text-sm">
-                                    Confirm sale
+                                    Confirm Addition
                                 </button>
                             </form>
                         </div>
-<div id="emptyState" class="h-96 flex flex-col items-center justify-center bg-white border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400">
-                    <div class="bg-slate-50 p-6 rounded-full mb-4">
-                        <i class="fas fa-cash-register text-4xl text-slate-200"></i>
-                    </div>
-                    <p class="text-lg font-bold text-slate-500">Terminal Idle</p>
-                    <p class="text-sm">Please select an account to process charges.</p>
-                </div>
+
                         <div class="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
                             <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Live Folio</h3>
@@ -214,7 +219,8 @@
 
 
 
-               
+                
+
             </div>
         </div>
     </main>
