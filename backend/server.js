@@ -252,7 +252,7 @@ const IncidentalCharge = mongoose.model('IncidentalCharge', incidentalChargeSche
 // --- Define Mongoose Schemas and Models (cont.) ---
 const clientAccountSchema = new mongoose.Schema({
     guestName: { type: String, required: true },
-    roomNumber: { type: String }, // Optional, as some accounts may not be tied to a room
+    roomNumber: { type: String },
     charges: [{
         description: { type: String, required: true },
         amount: { type: Number, required: true },
@@ -260,7 +260,7 @@ const clientAccountSchema = new mongoose.Schema({
     }],
     totalCharges: { type: Number, default: 0 },
     isClosed: { type: Boolean, default: false }
-});
+}, { timestamps: true }); // <--- ADD THIS LINE
 
 const ClientAccount = mongoose.model('ClientAccount', clientAccountSchema);
 
@@ -467,16 +467,31 @@ app.get('/api/pos/suggestions/bookings', async (req, res) => {
 
 app.get('/api/pos/accounts/active', async (req, res) => {
     try {
-        console.log("[Fetch] Getting all active in-house accounts...");
-        
-        const activeAccounts = await ClientAccount.find({ isClosed: false })
-            .sort({ updatedAt: -1 }); // Show most recently active first
+        const activeAccounts = await ClientAccount.find({ isClosed: false });
 
-        console.log(`[Success] Found ${activeAccounts.length} active accounts.`);
-        res.json(activeAccounts);
+        const validatedAccounts = activeAccounts.map(acc => {
+            // Recalculate total just in case the stored number is wrong
+            const actualTotal = acc.charges.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+            
+            // Use updatedAt if it exists, otherwise use the date of the last charge, 
+            // otherwise use a fallback date.
+            const lastUpdated = acc.updatedAt || 
+                              (acc.charges.length > 0 ? acc.charges[acc.charges.length - 1].date : new Date());
+
+            return {
+                ...acc._doc,
+                totalCharges: actualTotal,
+                lastUpdated: lastUpdated
+            };
+        });
+
+        // Sort by date manually since we handled the fallbacks
+        validatedAccounts.sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated));
+
+        res.json(validatedAccounts);
     } catch (error) {
-        console.error('ERROR FETCHING ACTIVE ACCOUNTS:', error);
-        res.status(500).json({ message: 'Server error fetching accounts' });
+        console.error('FETCH ERROR:', error);
+        res.status(500).json({ message: 'Error fetching accounts' });
     }
 });
 // POST /api/pos/client/account
