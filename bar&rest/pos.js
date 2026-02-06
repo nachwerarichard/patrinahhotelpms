@@ -446,3 +446,50 @@ function autoFillPrices(selectedItemName) {
     // Optional: Focus back on the item description for the next entry
     itemDescInput.focus();
 };
+
+const searchInput = document.getElementById('searchQuery');
+const resultsDiv = document.getElementById('searchResults');
+let debounceTimer;
+
+searchInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    const query = searchInput.value.trim();
+
+    if (query.length < 2) {
+        resultsDiv.innerHTML = ''; // Clear results if query is too short
+        return;
+    }
+
+    // Wait 300ms after the user stops typing before calling the database
+    debounceTimer = setTimeout(async () => {
+        try {
+            const response = await fetch(`/api/pos/search/in-house?query=${query}`);
+            const data = await response.json();
+
+            // Clear and render new results
+            resultsDiv.innerHTML = data.map(acc => `
+                <div onclick="selectAccount('${acc._id}')" 
+                     class="p-3 bg-slate-50 border border-slate-100 rounded-lg cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-all">
+                    <div class="flex justify-between items-center">
+                        <span class="font-semibold text-slate-700">${acc.guestName}</span>
+                        <span class="text-xs bg-indigo-100 text-indigo-600 px-2 py-1 rounded">Room ${acc.roomNumber}</span>
+                    </div>
+                    <div class="text-xs text-slate-400 mt-1">ID: ${acc._id.slice(-6).toUpperCase()}</div>
+                </div>
+            `).join('');
+
+            if (data.length === 0) {
+                resultsDiv.innerHTML = '<div class="text-xs text-slate-400 p-2">No results found.</div>';
+            }
+
+        } catch (err) {
+            console.error('Search fetch failed:', err);
+        }
+    }, 300); 
+});
+
+// Example function to handle selection
+function selectAccount(id) {
+    console.log("Selected Account ID:", id);
+    // You can redirect the user or fill a form with this ID
+}
