@@ -463,8 +463,13 @@ searchInput.addEventListener('input', () => {
     // Wait 300ms after the user stops typing before calling the database
     debounceTimer = setTimeout(async () => {
         try {
-            const response = await fetch(`/api/pos/search/in-house?query=${query}`);
-            const data = await response.json();
+            const response = await fetch(`${API_BASE_URL}/api/pos/search/in-house?query=${query}`);
+        
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+
+        const data = await response.json();
 
             // Clear and render new results
             resultsDiv.innerHTML = data.map(acc => `
