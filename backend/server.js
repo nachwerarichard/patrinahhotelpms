@@ -465,6 +465,20 @@ app.get('/api/pos/suggestions/bookings', async (req, res) => {
     }
 });
 
+app.get('/api/pos/accounts/active', async (req, res) => {
+    try {
+        console.log("[Fetch] Getting all active in-house accounts...");
+        
+        const activeAccounts = await ClientAccount.find({ isClosed: false })
+            .sort({ updatedAt: -1 }); // Show most recently active first
+
+        console.log(`[Success] Found ${activeAccounts.length} active accounts.`);
+        res.json(activeAccounts);
+    } catch (error) {
+        console.error('ERROR FETCHING ACTIVE ACCOUNTS:', error);
+        res.status(500).json({ message: 'Server error fetching accounts' });
+    }
+});
 // POST /api/pos/client/account
 app.post('/api/pos/client/account', async (req, res) => {
     const { guestName, roomNumber } = req.body;
