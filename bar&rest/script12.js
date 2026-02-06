@@ -2838,26 +2838,25 @@ document.addEventListener('DOMContentLoaded', () => {
  * @param {string} sectionId - The ID of the section element to show (e.g., 'inventory', 'sales').
  */
 function showSection(sectionId) {
-    // 1. Get all the sections that can be opened/closed.
-    //    ***IMPORTANT: You must adjust the selector below (e.g., '.section-content')
-    //    to match the actual class or element type of your collapsible sections.***
-    const allSections = document.querySelectorAll('.section-content');
+    // 1. Target '.section' to match your HTML class
+    const allSections = document.querySelectorAll('.section');
 
     // 2. Loop through all sections and hide them.
     allSections.forEach(section => {
         section.style.display = 'none';
+        // Also remove Tailwind 'hidden' if it's being used elsewhere
+        section.classList.add('hidden'); 
     });
 
-
-
-    
-    
     // 3. Find the requested section and show it.
     const targetSection = document.getElementById(sectionId);
 
     if (targetSection) {
         // Show the target section
-        targetSection.style.display = 'block'; // Use 'block', 'flex', or 'grid' based on your CSS
+        targetSection.style.display = 'block'; 
+        targetSection.classList.remove('hidden'); // Ensure Tailwind doesn't hide it
+        
+        console.log(`Successfully showing section: ${sectionId}`);
     } else {
         console.error(`Section with ID '${sectionId}' not found.`);
     }
