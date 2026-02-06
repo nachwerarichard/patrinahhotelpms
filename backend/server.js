@@ -892,36 +892,27 @@ app.post('/api/pos/charge/walkin', async (req, res) => {
 // GET /api/pos/client/search
 // This endpoint will find an active (not closed) client account by guest name or room number.
 app.get('/api/pos/client/search', async (req, res) => {
-    const { query } = req.query; // The search term
+    const { query } = req.query;
     
-    // Validate the query
     if (!query) {
-        return res.status(400).json({ message: 'Search query parameter is required.' });
+        return res.status(200).json([]); // Return empty array if no query
     }
 
     try {
-        const searchCriteria = {
+        const foundAccounts = await ClientAccount.find({
             isClosed: false,
             $or: [
-                { guestName: { $regex: query, $options: 'i' } }, // Case-insensitive search on guestName
-                { roomNumber: { $regex: query, $options: 'i' } } // Case-insensitive search on roomNumber
+                { guestName: { $regex: query, $options: 'i' } },
+                { roomNumber: { $regex: query, $options: 'i' } }
             ]
-        };
-
-        const foundAccounts = await ClientAccount.find(searchCriteria);
+        }).limit(10); // Limit results for faster performance
         
-        if (foundAccounts.length === 0) {
-            return res.status(404).json({ message: 'No active accounts found matching your search.' });
-        }
-
+        // Return results (will be an empty array [] if none found)
         res.status(200).json(foundAccounts);
     } catch (error) {
-        console.error('Error searching for client accounts:', error);
-        res.status(500).json({ message: 'Error searching for client accounts.', error: error.message });
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
-
-
 app.get('/api/pos/search/in-house', async (req, res) => {
     const { query } = req.query;
 
