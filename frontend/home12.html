@@ -990,15 +990,29 @@ Add Guest Details            </h2>
                             </tr>
                         </tbody>
                     </table>
-                </div>        
+                </div>      
+                 <h4 class="text-xl font-bold mt-8 mb-4 text-gray-800">Incidental Charges</h4>
+                <div class="overflow-x-auto">
+                    <table id="receiptIncidentalChargesTable" class="w-full text-left table-auto border-collapse border border-gray-200">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-600 text-sm uppercase">
+                                <th class="py-2 px-4 border border-gray-200">Type</th>
+                                <th class="py-2 px-4 border border-gray-200">Description</th>
+                                <th class="py-2 px-4 border border-gray-200">Amount</th>
+                                <th class="py-2 px-4 border border-gray-200">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-600 text-sm"></tbody>
+                    </table>
+                </div>
                 <div class="flex flex-col items-end text-lg font-bold mt-8 space-y-2">
                     <p class="w-full text-right">Subtotal (Room): <span id="receiptSubtotalRoom" class="text-blue-600">0.00</span></p>
+                    <p class="w-full text-right">Subtotal (Incidentals): <span id="receiptSubtotalIncidentals" class="text-blue-600">0.00</span></p>
                     <p class="w-full text-right">Total Bill: <span id="receiptTotalBill" class="text-green-600">0.00</span></p>
                     <p class="w-full text-right">Amount Paid: <span id="receiptAmountPaid" class="text-green-600">0.00</span></p>
                     <p class="w-full text-right">Balance Due: <span id="receiptBalanceDue" class="text-red-600">0.00</span></p>
-                    <p class="w-full text-right">Payment Status: <span id="receiptPaymentStatus" class="font-normal text-gray-700"></span></p>
-                </div>
-                <div class="flex justify-center space-x-4 mt-8 print:hidden">
+                    <p class="w-full text-right">Payment Status: <span id="receiptPaymentStatus" class="font-normal text-gray-700"></span></p>                </div>
+                    <div class="flex justify-center space-x-4 mt-8 print:hidden">
                     <button class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300" onclick="window.print()"><i class="fas fa-print"></i> Print Receipt</button>
                     <button class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 transition duration-300" onclick="closeReceiptModal()">Close</button>
                 </div>
