@@ -130,15 +130,33 @@
                     return;
                 }
 
-                container.innerHTML = orders.map(order => `
-    <div class="group bg-white rounded-3xl shadow-sm hover:shadow-2xl transition-all duration-300 border border-slate-200 overflow-hidden flex flex-col">
+       // Helper function to calculate minutes elapsed
+function getTimeElapsed(timestamp) {
+    if (!timestamp) return '0m';
+    const start = new Date(timestamp);
+    const now = new Date();
+    const diffInMs = now - start;
+    const diffInMins = Math.floor(diffInMs / 60000);
+    return `${diffInMins}m`;
+}
+
+// Updated mapping inside loadOrders()
+container.innerHTML = orders.map(order => {
+    const minutes = Math.floor((new Date() - new Date(order.createdAt)) / 60000); // Assumes 'createdAt' field exists
+    const isLate = minutes >= 15; // Highlight if older than 15 mins
+
+    return `
+    <div class="group bg-white rounded-3xl shadow-sm hover:shadow-2xl transition-all duration-300 border border-slate-200 overflow-hidden flex flex-col ${isLate ? 'ring-2 ring-red-500' : ''}">
         <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
             <span class="bg-slate-900 text-white text-xs font-black px-3 py-1 rounded-full">
                 TABLE ${order.tableNumber || '??'}
             </span>
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter italic">
-                ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-            </span>
+            <div class="flex items-center gap-1 ${isLate ? 'text-red-600' : 'text-slate-400'}">
+                <i class="fas fa-clock text-[10px]"></i>
+                <span class="text-[10px] font-bold uppercase tracking-tighter">
+                    ${minutes} MINS AGO
+                </span>
+            </div>
         </div>
 
         <div class="p-6 flex-grow">
@@ -164,7 +182,8 @@
             </button>
         </div>
     </div>
-`).join('');
+    `;
+}).join('');
             } catch (err) {
                 console.error("Fetch Error:", err);
             }
