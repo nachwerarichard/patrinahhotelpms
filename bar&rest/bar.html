@@ -2087,14 +2087,23 @@ async function fetchActiveAccounts() {
                     <div class="text-xs text-indigo-500 font-medium">Room ${acc.roomNumber || 'N/A'}</div>
                 </td>
                 <td class="py-4 font-mono text-sm text-slate-600">
-                    $${Number(acc.totalCharges).toFixed(2)}
+                    UGX ${Number(acc.totalCharges).toFixed(2)}
                 </td>
 <td class="py-4 text-xs text-slate-400">
     <div class="font-medium text-slate-500">
-        ${acc.lastUpdated ? new Date(acc.lastUpdated).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}
+        ${acc.lastUpdated ? 
+            new Date(acc.lastUpdated).toLocaleDateString([], { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            }) : 'No Date'}
     </div>
     <div class="text-[10px] opacity-75">
-        ${acc.lastUpdated ? new Date(acc.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+        ${acc.lastUpdated ? 
+            new Date(acc.lastUpdated).toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            }) : 'Just now'}
     </div>
 </td>
                 <td class="py-4 text-right">
