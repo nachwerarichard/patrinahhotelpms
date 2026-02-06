@@ -787,7 +787,6 @@
                                         <th class="px-8 py-4">Time</th>
                                         <th class="px-8 py-4">Description</th>
                                         <th class="px-8 py-4 text-center">Qty</th>
-                                        <th class="px-8 py-4">Location</th>
                                         <th class="px-8 py-4">KDS Status</th>
                                         <th class="px-8 py-4 text-right">Action</th>
                                     </tr>
@@ -1896,9 +1895,6 @@ return `
         <td class="px-6 py-4 text-slate-500 text-sm">${timeStr}</td>
         <td class="px-6 py-4 font-bold text-slate-800">${order.item}</td>
         <td class="px-6 py-4 text-center text-slate-700 font-mono">${order.number || order.quantity}</td>
-        <td class="px-6 py-4 text-slate-600">
-            <span class="bg-slate-100 px-2 py-1 rounded text-xs">${order.tableNumber || 'N/A'}</span>
-        </td>
         <td class="px-6 py-4">${statusBadge}</td>
         <td class="px-6 py-4 text-right">
             ${order.status === 'Ready' ? `
