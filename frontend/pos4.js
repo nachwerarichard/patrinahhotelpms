@@ -259,7 +259,7 @@ const addCharge = async (description, number, department) => {
     const token = localStorage.getItem('token'); 
     const itemInfo = document.getElementById('itemDesc').dataset;
     const selectedDept = department || document.getElementById('deptSelect').value;
-    const qtyValue = parseFloat(document.getElementById('itemQty').value) || 1;
+    const qtyValue = parseFloat(document.getElementById('number').value) || 1;
 
     // 2. Build the data object
     const payload = {
@@ -517,7 +517,7 @@ function autoFillPrices(selectedItemName) {
         const resetForm = () => {
     // Clear the visible inputs
     document.getElementById('itemDesc').value = '';
-    document.getElementById('itemQty').value = '1';
+    document.getElementById('number').value = '';
     
     // Clear the hidden dataset values (BP and SP)
     const itemDescInput = document.getElementById('itemDesc');
