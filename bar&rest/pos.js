@@ -136,7 +136,7 @@ function startQuickSale() {
                 } catch (err) { showMessage(err.message, 'error'); }
             };
 
-            const searchAccounts = async (query) => {
+            const searchccounts = async (query) => {
                 try {
                     const res = await fetch(`${BASE_URL}/api/pos/client/search?query=${encodeURIComponent(query)}`);
                     const data = await res.json();
