@@ -2090,7 +2090,12 @@ async function fetchActiveAccounts() {
                     $${Number(acc.totalCharges).toFixed(2)}
                 </td>
 <td class="py-4 text-xs text-slate-400">
-    ${acc.lastUpdated ? new Date(acc.lastUpdated).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Just now'}
+    <div class="font-medium text-slate-500">
+        ${acc.lastUpdated ? new Date(acc.lastUpdated).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}
+    </div>
+    <div class="text-[10px] opacity-75">
+        ${acc.lastUpdated ? new Date(acc.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+    </div>
 </td>
                 <td class="py-4 text-right">
                     <button onclick="viewAccountDetails('${acc._id}')" 
