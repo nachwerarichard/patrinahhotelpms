@@ -562,48 +562,8 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            <div class="lg:col-span-3 space-y-6">
-               
-
-                <div id="managementPanel" class="space-y-6">
-                    <div id="searchAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-                        <label class="block text-xs font-bold text-slate-400 uppercase mb-3">Lookup Guest</label>
-                        <form id="searchAccountForm" class="relative">
-                            <input type="text" id="searchQuery" required placeholder="Guest name or room #..." 
-                                class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all text-sm">
-                            <button type="submit" class="absolute right-2 top-2 p-1.5 bg-indigo-600 text-white rounded-lg">
-                                <i class="fas fa-search text-sm"></i>
-                            </button>
-                        </form>
-                        <div id="searchResults" class="mt-4 space-y-2 max-h-48 overflow-y-auto custom-scroll"></div>
-                    </div>
-
-                    <div id="createAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-                        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Initialize New Visit</h2>
-                        <form id="createAccountForm" class="space-y-4">
-                            <div>
-                                <input type="text" name="guestName" required placeholder="Guest Full Name" 
-                                    class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                            </div>
-                            <div>
-                                <input type="text" name="roomNumber" placeholder="Room Number (Optional)" 
-                                    class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                            </div>
-                            <button type="submit" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl text-sm hover:shadow-lg transition-all active:scale-[0.98]">
-                                Open Account
-                            </button>
-                        </form>
-                    </div>
-                </div>
-
-               
-            </div>
-
             <div class="lg:col-span-9 space-y-6">
-                
-    
-                <div id="activeAccountSection" class=" space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    
+                <div id="activeAccountSection" class=" space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300"> 
                     <div class="bg-slate-900 rounded-[2rem] p-8 text-white flex flex-col md:flex-row justify-between items-center shadow-xl relative overflow-hidden">
                         <div class="relative z-10">
                             <div class="flex items-center gap-2 mb-2">
@@ -621,14 +581,11 @@
                         </div>
                         <div class="absolute right-0 top-0 w-64 h-64 bg-indigo-500 opacity-10 rounded-full -mr-20 -mt-20"></div>
                     </div>
-
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                        
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6"> 
                         <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
                             <h3 class="text-xs font-bold text-slate-400 uppercase mb-6 flex items-center gap-2">
                                 <i class="fas fa-plus-circle text-indigo-500"></i> Add Item/Service
                             </h3>
-
                             <div class="flex p-1 bg-slate-100 rounded-xl mb-6">
                                 <button type="button" onclick="setDepartment('Restaurant')" id="btnRes" class="flex-1 py-2 text-[10px] font-black rounded-lg transition-all bg-white shadow-sm text-indigo-600">RESTAURANT</button>
                                 <button type="button" onclick="setDepartment('Bar')" id="btnBar" class="flex-1 py-2 text-[10px] font-black rounded-lg transition-all text-slate-500">BAR</button>
@@ -716,6 +673,40 @@
                 
 
             </div>
+
+          <div class="lg:col-span-3 space-y-6">
+                <div id="managementPanel" class="space-y-6">
+                    <div id="searchAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-3">Lookup Guest</label>
+                        <form id="searchAccountForm" class="relative">
+                            <input type="text" id="searchQuery" required placeholder="Guest name or room #..." 
+                                class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all text-sm">
+                            <button type="submit" class="absolute right-2 top-2 p-1.5 bg-indigo-600 text-white rounded-lg">
+                                <i class="fas fa-search text-sm"></i>
+                            </button>
+                        </form>
+                        <div id="searchResults" class="mt-4 space-y-2 max-h-48 overflow-y-auto custom-scroll"></div>
+                    </div>
+                    <div id="createAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Initialize New Visit</h2>
+                        <form id="createAccountForm" class="space-y-4">
+                            <div>
+                                <input type="text" name="guestName" required placeholder="Guest Full Name" 
+                                    class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                            <div>
+                                <input type="text" name="roomNumber" placeholder="Room Number (Optional)" 
+                                    class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                            <button type="submit" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl text-sm hover:shadow-lg transition-all active:scale-[0.98]">
+                                Open Account
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+          
         </div>
     
           
