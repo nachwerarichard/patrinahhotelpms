@@ -288,7 +288,7 @@ function showSubSection(sectionId, parentNavId = null) {
     const allowedSections = {
         'admin': ['inventory', 'sales', 'expenses', 'cash', 'reports', 'audit','dashboard','kds','postransactions'],
         'manager': ['inventory', 'sales', 'expenses', 'cash', 'reports', 'audit','kds','postransactions'],
-        'cashier': ['inventory', 'sales', 'expenses', 'cash','kds''postransactions'],
+        'cashier': ['inventory', 'sales', 'expenses', 'cash','kds','postransactions'],
         'bar': ['inventory', 'sales','kds','postransactions']
     };
 
