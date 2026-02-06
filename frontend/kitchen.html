@@ -27,16 +27,42 @@
         </div>
     </div>
 
-    <div id="mainContent" class="p-6 min-h-screen hidden">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">Kitchen Display (KDS)</h1>
-                        <h3 class="text-2xl font-bold text-gray-800">Current Orders)</h3>
-
-            <button onclick="logout()" class="text-sm text-red-600 font-semibold hover:underline">Logout</button>
+<div id="mainContent" class="min-h-screen bg-slate-50 hidden">
+    <nav class="bg-slate-900 text-white px-8 py-4 shadow-xl flex justify-between items-center border-b-4 border-orange-500">
+        <div class="flex items-center gap-4">
+            <div class="bg-orange-500 p-2 rounded-lg">
+                <i class="fas fa-utensils text-white text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-black tracking-tight uppercase">Kitchen Display <span class="text-orange-400">System</span></h1>
+                <p class="text-xs text-slate-400 font-mono" id="liveClock">LIVE UPDATES ACTIVE</p>
+            </div>
         </div>
-        <div id="kitchenOrders" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <div class="flex items-center gap-8">
+            <div class="hidden md:flex flex-col items-end">
+                <span class="text-xs text-slate-400 uppercase font-bold tracking-widest">Current Status</span>
+                <h3 class="text-lg font-bold text-green-400 flex items-center gap-2">
+                    <span class="relative flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                    </span>
+                    Active Orders
+                </h3>
+            </div>
+            
+            <button onclick="logout()" class="group flex items-center gap-2 bg-slate-800 hover:bg-red-900/40 px-4 py-2 rounded-full transition-all duration-300 border border-slate-700">
+                <span class="text-sm font-bold group-hover:text-red-400">LOGOUT</span>
+                <i class="fas fa-sign-out-alt text-slate-400 group-hover:text-red-400"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-8">
+        <div id="kitchenOrders" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             </div>
     </div>
+</div>
 
     <script>
         const API_BASE = "https://patrinahhotelpms.onrender.com";
@@ -105,19 +131,40 @@
                 }
 
                 container.innerHTML = orders.map(order => `
-                    <div class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-orange-500">
-                        <div class="flex justify-between items-start">
-                            <h2 class="text-xl font-black">${order.item}</h2>
-                            <span class="text-xs bg-gray-100 p-1 rounded font-mono">T: ${order.tableNumber || 'N/A'}</span>
-                        </div>
-                        <p class="text-3xl font-bold my-2">QTY: ${order.number}</p>
-                        <p class="text-sm text-gray-400 mb-4">Waiter: ${order.waiter || 'Unknown'}</p>
-                        <button onclick="completeOrder('${order._id}')" 
-                            class="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 active:scale-95 transition">
-                            MARK AS READY
-                        </button>
-                    </div>
-                `).join('');
+    <div class="group bg-white rounded-3xl shadow-sm hover:shadow-2xl transition-all duration-300 border border-slate-200 overflow-hidden flex flex-col">
+        <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+            <span class="bg-slate-900 text-white text-xs font-black px-3 py-1 rounded-full">
+                TABLE ${order.tableNumber || '??'}
+            </span>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter italic">
+                ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            </span>
+        </div>
+
+        <div class="p-6 flex-grow">
+            <h2 class="text-2xl font-black text-slate-800 leading-tight mb-1 group-hover:text-orange-600 transition-colors">
+                ${order.item}
+            </h2>
+            <div class="flex items-baseline gap-2 mb-4">
+                <span class="text-4xl font-black text-slate-900">x${order.number}</span>
+                <span class="text-sm font-bold text-slate-400 uppercase tracking-widest">Quantity</span>
+            </div>
+            
+            <div class="flex items-center gap-2 text-slate-500 bg-slate-50 p-2 rounded-xl">
+                <i class="fas fa-user-circle"></i>
+                <span class="text-xs font-bold uppercase">${order.waiter || 'Staff'}</span>
+            </div>
+        </div>
+
+        <div class="p-4 bg-white">
+            <button onclick="completeOrder('${order._id}')" 
+                class="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-2xl font-black text-lg shadow-lg shadow-emerald-200 active:scale-95 transition-all flex items-center justify-center gap-3">
+                <i class="fas fa-check-circle"></i>
+                READY TO SERVE
+            </button>
+        </div>
+    </div>
+`).join('');
             } catch (err) {
                 console.error("Fetch Error:", err);
             }
