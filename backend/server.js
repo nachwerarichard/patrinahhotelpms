@@ -2147,8 +2147,7 @@ app.post('/api/public/bookings', async (req, res) => {
 const allRoomsOfType = await Room.find({ type: request.type });
 console.log(`Found ${allRoomsOfType.length} total rooms for type: ${request.type}`);
 
-const busyRoomNumbers = busyBookings.map(b => b.room);
-console.log(`Busy rooms for these dates:`, busyRoomNumbers);
+
 
 const availableRooms = roomNumbers.filter(num => !busyRoomNumbers.includes(num));
 console.log(`Final Available List:`, availableRooms);
@@ -2163,6 +2162,8 @@ const busyBookings = await Booking.find({
         { checkIn: { $lt: dCheckOut }, checkOut: { $gt: dCheckIn } }
     ]
 });
+            const busyRoomNumbers = busyBookings.map(b => b.room);
+console.log(`Busy rooms for these dates:`, busyRoomNumbers);
 
             
 
