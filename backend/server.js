@@ -2164,8 +2164,7 @@ const busyBookings = await Booking.find({
     ]
 });
 
-            // 3. Filter to get truly available rooms
-            const availableRooms = roomNumbers.filter(num => !busyRoomNumbers.includes(num));
+            
 
             if (availableRooms.length === 0) {
                 return res.status(400).json({ message: `No more ${request.type} rooms available for these dates.` });
