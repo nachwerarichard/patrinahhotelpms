@@ -2130,47 +2130,69 @@ app.get('/api/public/rooms/available', async (req, res) => {
 
 // Public endpoint to add a new booking (from external website)
 app.post('/api/public/bookings', async (req, res) => {
-    const { name, guestEmail,  checkIn, checkOut, people, phoneNo } = req.body;
+    // roomsRequested is now an array: [{ type: 'Deluxe', people: 2 }, ...]
+    const { name, guestEmail, checkIn, checkOut, phoneNo, roomsRequested } = req.body;
 
-    // Basic validation
-    if (!name || !checkIn || !checkOut ) {
+    if (!name || !checkIn || !checkOut || !roomsRequested || roomsRequested.length === 0) {
         return res.status(400).json({ message: 'Missing required booking fields.' });
     }
 
     try {
-        // Generate a unique ID for the new booking
-        const newBookingId = `WEB${Math.floor(Math.random() * 90000) + 10000}`; // Example: WEB12345
+        const confirmedBookings = [];
 
-        // Re-check for conflicting bookings across ALL rooms for the chosen dates
-const conflictingBooking = await Booking.findOne({
-    $or: [
-        { checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } }
-    ]
-});
+        for (const request of roomsRequested) {
+            // 1. Find all rooms of this type
+            // (Assumes you have a Room model with 'type' and 'roomNumber')
+            const allRoomsOfType = await Room.find({ type: request.type });
+            const roomNumbers = allRoomsOfType.map(r => r.roomNumber);
 
-        if (conflictingBooking) {
-            return res.status(400).json({ message: `Room ${room} is no longer available for the selected period.` });
+            // 2. Find which of these rooms are ALREADY booked for these dates
+            const busyBookings = await Booking.find({
+                room: { $in: roomNumbers },
+                $or: [{ checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } }]
+            });
+            const busyRoomNumbers = busyBookings.map(b => b.room);
+
+            // 3. Filter to get truly available rooms
+            const availableRooms = roomNumbers.filter(num => !busyRoomNumbers.includes(num));
+
+            if (availableRooms.length === 0) {
+                return res.status(400).json({ message: `No more ${request.type} rooms available for these dates.` });
+            }
+
+            // 4. Pick a RANDOM room from the available list
+            const randomRoom = availableRooms[Math.floor(Math.random() * availableRooms.length)];
+
+            // 5. Create the booking object
+            const newBookingId = `WEB${Math.floor(Math.random() * 90000) + 10000}`;
+            const newBooking = new Booking({
+                id: newBookingId,
+                name,
+                guestEmail,
+                checkIn,
+                checkOut,
+                people: request.people,
+                phoneNo,
+                roomNumber: randomRoom, // Assigned randomly
+                roomType: request.type,
+                gueststatus: 'reserved',
+                guestsource: 'Web'
+            });
+
+            await newBooking.save();
+            confirmedBookings.push(newBooking);
+
+            // Audit Log
+            await addAuditLog('Public Booking Created', 'Public User', {
+                bookingId: newBooking.id,
+                roomNumber: randomRoom
+            });
         }
 
-        
-
-        const newBooking = new Booking({
-            id: newBookingId,
-            name,guestEmail,  checkIn, checkOut , people, phoneNo, gueststatus: 'reserved',
-            guestsource: 'Web'
+        res.status(201).json({ 
+            message: 'Bookings confirmed successfully!', 
+            bookings: confirmedBookings 
         });
-        await newBooking.save();
-
-        // Audit Log for public booking
-        await addAuditLog('Public Booking Created', 'Public User', {
-            bookingId: newBooking.id,
-            guestName: newBooking.name,
-            roomNumber: newBooking.room,
-            checkIn: newBooking.checkIn,
-            checkOut: newBooking.checkOut
-        });
-
-        res.status(201).json({ message: 'Booking confirmed successfully!', booking: newBooking });
     } catch (error) {
         console.error('Error adding public booking:', error);
         res.status(500).json({ message: 'Error confirming booking', error: error.message });
