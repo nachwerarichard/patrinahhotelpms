@@ -2138,58 +2138,56 @@ app.post('/api/public/bookings', async (req, res) => {
 
     try {
         const confirmedBookings = [];
-        // Keep track of rooms assigned during this specific loop iteration
         const assignedInThisSession = [];
 
         for (const request of roomsRequested) {
-            // 1. Get all potential rooms of this type
+            // 1. Get rooms of this type
             const allRoomsOfType = await Room.find({ type: request.type });
-            const roomNumbers = allRoomsOfType.map(r => r.roomNumber);
-            console.log(`Found ${roomNumbers.length} total rooms for type: ${request.type}`);
+            
+            // FIX: Changed r.roomNumber to r.room to match your schema
+            const roomNumbers = allRoomsOfType.map(r => r.room || r.roomNumber); 
+            console.log(`Found ${roomNumbers.length} rooms for type: ${request.type}`);
 
-            // 2. Format dates for MongoDB comparison
             const dCheckIn = new Date(checkIn);
             const dCheckOut = new Date(checkOut);
 
-            // 3. Find which of these rooms are already occupied
+            // 2. Find busy bookings
             const busyBookings = await Booking.find({
-                roomNumber: { $in: roomNumbers }, // Ensure this matches your Schema field name
+                room: { $in: roomNumbers }, // FIX: Changed roomNumber to room
                 $or: [
-                    { checkIn: { $lt: dCheckOut }, checkOut: { $gt: dCheckIn } }
+                    { checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } }
                 ]
             });
 
-            const busyRoomNumbers = busyBookings.map(b => b.roomNumber);
-            console.log(`Busy rooms for these dates:`, busyRoomNumbers);
+            // FIX: Changed b.roomNumber to b.room
+            const busyRoomNumbers = busyBookings.map(b => b.room);
+            console.log(`Busy rooms:`, busyRoomNumbers);
 
-            // 4. Calculate final availability
-            // We exclude rooms that are busy in DB OR already assigned in this loop
+            // 3. Filter available
             const availableRooms = roomNumbers.filter(num => 
-                !busyRoomNumbers.includes(num) && !assignedInThisSession.includes(num)
+                num !== undefined && !busyRoomNumbers.includes(num) && !assignedInThisSession.includes(num)
             );
-            
-            console.log(`Final Available List for ${request.type}:`, availableRooms);
 
             if (availableRooms.length === 0) {
-                return res.status(400).json({ message: `No more ${request.type} rooms available for these dates.` });
+                return res.status(400).json({ message: `No more ${request.type} rooms available.` });
             }
 
-            // 5. Pick a RANDOM room from the available list
+            // 4. Pick room
             const randomRoom = availableRooms[Math.floor(Math.random() * availableRooms.length)];
-            assignedInThisSession.push(randomRoom); 
+            assignedInThisSession.push(randomRoom);
 
-            // 6. Generate ID and Save
             const newBookingId = `WEB${Math.floor(Math.random() * 90000) + 10000}`;
+            
+            // 5. Create Booking (Matched to your Schema)
             const newBooking = new Booking({
                 id: newBookingId,
                 name,
                 guestEmail,
-                checkIn: dCheckIn,
-                checkOut: dCheckOut,
+                checkIn, // Your schema expects String, so we keep the original string
+                checkOut,
                 people: request.people,
                 phoneNo,
-                roomNumber: randomRoom,
-                roomType: request.type,
+                room: randomRoom, // FIX: Changed roomNumber to room
                 gueststatus: 'reserved',
                 guestsource: 'Web'
             });
@@ -2197,10 +2195,9 @@ app.post('/api/public/bookings', async (req, res) => {
             await newBooking.save();
             confirmedBookings.push(newBooking);
 
-            // Audit Log
             await addAuditLog('Public Booking Created', 'Public User', {
                 bookingId: newBooking.id,
-                roomNumber: randomRoom
+                room: randomRoom
             });
         }
 
