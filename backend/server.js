@@ -3148,14 +3148,11 @@ app.post('/login', async (req, res) => {
     }
 });
 
-app.post('/logout', auth, async (req, res) => {
-  await logAction('Logout', req.user.username);
-  res.status(200).json({ message: 'Logged out successfully' });
-});
+
 
 
 // POST /api/kitchen/order
-app.post('/api/kitchen/order',  async (req, res) => {
+app.post('/api/kitchen/order', auth, async (req, res) => {
     console.log("--- New Kitchen Order Incoming ---");
     console.log("Request Body:", req.body);
     console.log("User from Auth:", req.user ? req.user.username : "NO USER FOUND");
