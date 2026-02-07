@@ -203,6 +203,14 @@ container.innerHTML = orders.map(order => {
         </div>
 
         <div class="p-4 bg-slate-50/50">
+        <div class="p-4 bg-slate-50/50">
+    <button onclick="markAsPreparing('${order._id}')"
+        class="w-full bg-white hover:bg-amber-500 text-amber-600 hover:text-white py-3 rounded-xl font-black text-sm border-2 border-amber-500 transition-all duration-300 flex items-center justify-center gap-3 active:scale-95 shadow-sm">
+        <i class="fas fa-fire"></i>
+        MARK AS PREPARING
+    </button>
+</div>
+
             <button onclick="completeOrder('${order._id}')" 
                 class="w-full bg-white hover:bg-emerald-500 text-emerald-600 hover:text-white py-3 rounded-xl font-black text-sm border-2 border-emerald-500 transition-all duration-300 flex items-center justify-center gap-3 active:scale-95 shadow-sm">
                 <i class="fas fa-check"></i>
@@ -443,6 +451,20 @@ document.addEventListener('DOMContentLoaded', () => {
         // e.g., performLogin(u, p);
     }
 });
+
+        function markAsPreparing(orderId) {
+    fetch(`${API_BASE}/api/orders/${orderId}/preparing`, {
+        method: 'PATCH'
+    })
+    .then(res => res.json())
+    .then(data => {
+        console.log(data);
+        // refresh orders or update UI
+        loadOrders();
+    })
+    .catch(err => console.error(err));
+}
+
 
     </script>
 </body>
