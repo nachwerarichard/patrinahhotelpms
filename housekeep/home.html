@@ -591,12 +591,12 @@
   
     <script src="script3.js"></script>
     <script>
-    const SYSTEM_LINKS = {
-    systemA: { label: '🍺', full: 'Bar', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html' },
-    systemB: { label: '🏨', full: 'Front', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html' },
-    staff: { label: '👥', full: 'Staff', url: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html' }
+ const SYSTEM_LINKS = {
+    SystemA: { label: '💰', full: 'Point of Sale', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html' },
+    SystemB: { label: '🏨', full: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html' },
+    staff: { label: '👥', full: 'Staff', url: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html' },
+    KDS: { label: '🍳', full: 'Kitchen Display', url: 'https://elegant-pasca-cea136.netlify.app/frontend/kds.html' }
 };
-
 function toggleSwitchMenu() {
     const container = document.getElementById('available-modules');
     const icon = document.getElementById('menu-icon');
@@ -623,7 +623,7 @@ function renderRadialOptions() {
 
     let modulesToShow = [];
     if (role === 'admin') {
-        modulesToShow = [SYSTEM_LINKS.systemA, SYSTEM_LINKS.systemB, SYSTEM_LINKS.staff];
+        modulesToShow = [SYSTEM_LINKS.systemA, SYSTEM_LINKS.systemB,SYSTEM_LINKS.KDS, SYSTEM_LINKS.staff];
     } else if (['bar', 'cashier'].includes(role)) {
         modulesToShow = [SYSTEM_LINKS.systemA];
     } else if (['housekeeping', 'reception'].includes(role)) {
