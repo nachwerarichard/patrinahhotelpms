@@ -2141,64 +2141,68 @@ app.post('/api/public/bookings', async (req, res) => {
         const assignedInThisSession = [];
 
         for (const request of roomsRequested) {
-    // 1. Get all rooms of this type
-    const allRoomsOfType = await Room.find({ type: request.type });
-    
-    // Use 'r.number' because that is what is in your Room Schema
-    const roomNumbers = allRoomsOfType.map(r => r.number); 
-    console.log(`Found ${roomNumbers.length} rooms for type: ${request.type}`);
+            // 1. Get all rooms of this type
+            const allRoomsOfType = await Room.find({ type: request.type });
+            const roomNumbers = allRoomsOfType.map(r => r.number); 
+            
+            // 2. Check for busy bookings
+            const busyBookings = await Booking.find({
+                room: { $in: roomNumbers }, 
+                $or: [
+                    { checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } }
+                ]
+            });
 
-    // 2. Check for busy bookings
-    // Use 'room' because that is what is in your Booking Schema
-    const busyBookings = await Booking.find({
-        room: { $in: roomNumbers }, 
-        $or: [
-            { checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } }
-        ]
-    });
+            const busyRoomNumbers = busyBookings.map(b => b.room);
 
-    const busyRoomNumbers = busyBookings.map(b => b.room);
-    console.log(`Busy rooms for these dates:`, busyRoomNumbers);
+            // 3. Filter for truly available rooms
+            const availableRooms = roomNumbers.filter(num => 
+                !busyRoomNumbers.includes(num) && !assignedInThisSession.includes(num)
+            );
 
-    // 3. Filter for truly available rooms
-    const availableRooms = roomNumbers.filter(num => 
-        !busyRoomNumbers.includes(num) && !assignedInThisSession.includes(num)
-    );
+            if (availableRooms.length === 0) {
+                return res.status(400).json({ message: `No more ${request.type} rooms available.` });
+            }
 
-    console.log(`Final Available List for ${request.type}:`, availableRooms);
+            // 4. Pick a room and track it
+            const randomRoom = availableRooms[Math.floor(Math.random() * availableRooms.length)];
+            assignedInThisSession.push(randomRoom); 
 
-    if (availableRooms.length === 0) {
-        return res.status(400).json({ message: `No more ${request.type} rooms available.` });
+            // 5. Create the booking
+            const newBookingId = `WEB${Math.floor(Math.random() * 90000) + 10000}`;
+            const newBooking = new Booking({
+                id: newBookingId,
+                name,
+                guestEmail,
+                checkIn,
+                checkOut,
+                people: request.people,
+                phoneNo,
+                room: randomRoom,
+                gueststatus: 'reserved',
+                guestsource: 'Web'
+            });
+
+            await newBooking.save();
+            confirmedBookings.push(newBooking);
+            
+            await addAuditLog('Public Booking Created', 'Public User', {
+                bookingId: newBookingId,
+                room: randomRoom
+            });
+        } // End of for loop
+
+        // 6. Send the final response
+        res.status(201).json({ 
+            message: 'Bookings confirmed successfully!', 
+            bookings: confirmedBookings 
+        });
+
+    } catch (error) {
+        console.error('Error adding public booking:', error);
+        res.status(500).json({ message: 'Error confirming booking', error: error.message });
     }
-
-    // 4. Pick a room and track it
-    const randomRoom = availableRooms[Math.floor(Math.random() * availableRooms.length)];
-    assignedInThisSession.push(randomRoom); 
-
-    // 5. Create the booking using your Schema fields
-    const newBookingId = `WEB${Math.floor(Math.random() * 90000) + 10000}`;
-    const newBooking = new Booking({
-        id: newBookingId,
-        name,
-        guestEmail,
-        checkIn,   // Stored as String per your schema
-        checkOut,  // Stored as String per your schema
-        people: request.people,
-        phoneNo,
-        room: randomRoom, // Matches 'room' in Booking Schema
-        gueststatus: 'reserved',
-        guestsource: 'Web'
-    });
-
-    await newBooking.save();
-    confirmedBookings.push(newBooking);
-    
-    // Audit Log
-    await addAuditLog('Public Booking Created', 'Public User', {
-        bookingId: newBookingId,
-        room: randomRoom
-    });
-}
+}); // End of app.post
 // Nodemailer  Setup
 // IMPORTANT: Use environment variables for sensitive information like email and password.
 // Create a .env file in your backend directory with:
