@@ -69,7 +69,8 @@ const API_B_URL = 'https://patrinahhotelpms.onrender.com/api';
 const SYSTEM_LINKS = {
     systemA: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html',
     systemB: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html',
-    staff: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html',
+    systemC: 'https://elegant-pasca-cea136.netlify.app/frontend/kitchen.html',
+    systemD: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html',
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -127,8 +128,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch { return null; }
             };
 
-            const [resA, resB] = await Promise.all([loginReq(API_A_URL), loginReq(API_B_URL)]);
-            const userData = resA || resB;
+            const [resA, resB,resC,resD] = await Promise.all([loginReq(API_A_URL), loginReq(API_B_URL)]);
+            const userData = resA || resB ||resC ||resD ;
 
             if (userData) {
                 // Determine the role and save it to our global sessionRole variable
@@ -143,7 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (sessionRole === 'admin') {
                     systemOptions.appendChild(createBtn('Bar & Restaurant', 'bg-green-600 hover:bg-green-700', () => finalizeLogin(resA || userData, 'systemA')));
                     systemOptions.appendChild(createBtn('Front Office & Housekeeping', 'bg-blue-600 hover:bg-blue-700', () => finalizeLogin(resB || userData, 'systemB')));
-                    systemOptions.appendChild(createBtn('Staff Management', 'bg-purple-600 hover:bg-purple-700', () => finalizeLogin(userData, 'staff')));
+                    systemOptions.appendChild(createBtn('Kitchen Display System', 'bg-orange-600 hover:bg-orange-700', () => finalizeLogin(resC || userData, 'systemC')));
+                    systemOptions.appendChild(createBtn('Staff Management', 'bg-purple-600 hover:bg-purple-700', () => finalizeLogin(userData ||userData, 'systemD')));
                 } 
                 else if (sessionRole === 'bar' || sessionRole === 'cashier') {
                     systemOptions.appendChild(createBtn('Bar & Restaurant', 'bg-green-600 hover:bg-green-700', () => finalizeLogin(resA || userData, 'systemA')));
