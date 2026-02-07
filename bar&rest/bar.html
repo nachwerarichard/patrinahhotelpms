@@ -1220,7 +1220,15 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
         </section>
 
         
-
+<div class="fixed bottom-12 left-[20%] z-50 flex items-center justify-center w-16 h-16">
+    
+    <button onclick="toggleSwitchMenu()" id="main-switch-btn" class="relative z-50 bg-indigo-600 hover:bg-indigo-700 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all transform active:scale-95">
+        <span class="text-2xl transition-transform duration-300" id="menu-icon">🔄</span>
+    </button>
+    
+    <div id="available-modules" class="absolute inset-0 flex items-center justify-center">
+        </div>
+</div>
         
 <section id="dashboard" class="section-content bg-gray-100 p-6 rounded-xl shadow-lg mb-6 hidden">
     <h2 class="text-2xl font-bold mb-4 text-gray-800">Dashboard</h2>
@@ -1582,15 +1590,7 @@ Try asking: "Show me a business summary" or "Which items need restocking?"</div>
 </div>
     </form>
   </div>
-  <div class="fixed bottom-12 left-[20%] z-50 flex items-center justify-center w-16 h-16">
-    
-    <button onclick="toggleSwitchMenu()" id="main-switch-btn" class="relative z-50 bg-indigo-600 hover:bg-indigo-700 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all transform active:scale-95">
-        <span class="text-2xl transition-transform duration-300" id="menu-icon">🔄</span>
-    </button>
-    
-    <div id="available-modules" class="absolute inset-0 flex items-center justify-center">
-        </div>
-</div>
+  
 </div>
 
 
