@@ -591,13 +591,7 @@
   
     <script src="script3.js"></script>
     <script>
- const SYSTEM_LINKS = {
-    SystemA: { label: '💰', full: 'Point of Sale', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html' },
-    SystemB: { label: '🏨', full: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html' },
-    staff: { label: '👥', full: 'Staff', url: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html' },
-    KDS: { label: '🍳', full: 'Kitchen Display', url: 'https://elegant-pasca-cea136.netlify.app/frontend/kds.html' }
-};
-function toggleSwitchMenu() {
+ function toggleSwitchMenu() {
     const container = document.getElementById('available-modules');
     const icon = document.getElementById('menu-icon');
     
@@ -615,6 +609,14 @@ function toggleSwitchMenu() {
     }
 }
 
+const SYSTEM_LINKS = {
+    // Keys match exactly what is called in the function below
+    systemA: { label: '💰', full: 'Point of Sale', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html' },
+    systemB: { label: '🏨', full: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html' },
+    staff: { label: '👥', full: 'Staff', url: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html' },
+    KDS: { label: '🍳', full: 'Kitchen Display', url: 'https://elegant-pasca-cea136.netlify.app/frontend/kitchen.html' }
+};
+
 function renderRadialOptions() {
     const container = document.getElementById('available-modules');
     const role = (localStorage.getItem('userRole') || '').toLowerCase();
@@ -623,28 +625,32 @@ function renderRadialOptions() {
 
     let modulesToShow = [];
     if (role === 'admin') {
-        modulesToShow = [SYSTEM_LINKS.systemA, SYSTEM_LINKS.systemB,SYSTEM_LINKS.KDS, SYSTEM_LINKS.staff];
+        // These keys now match the SYSTEM_LINKS object exactly
+        modulesToShow = [SYSTEM_LINKS.systemA, SYSTEM_LINKS.systemB, SYSTEM_LINKS.KDS, SYSTEM_LINKS.staff];
     } else if (['bar', 'cashier'].includes(role)) {
         modulesToShow = [SYSTEM_LINKS.systemA];
     } else if (['housekeeping', 'reception'].includes(role)) {
         modulesToShow = [SYSTEM_LINKS.systemB];
     }
 
-    // NEW POSITIONS: Moving RIGHT and UP
+    // ADDED a 4th position (Diagonal Top-Left) so the 4th button isn't stuck at 0,0
     const positions = [
         { x: '90px',  y: '0px' },    // Directly Right
         { x: '70px',  y: '-70px' },  // Diagonal Top-Right
-        { x: '0px',   y: '-90px' }   // Directly Above
+        { x: '0px',   y: '-90px' },  // Directly Above
+        { x: '-70px', y: '-70px' }   // Diagonal Top-Left
     ];
 
     modulesToShow.forEach((mod, index) => {
+        // Defensive check: skip if the module is missing for some reason
+        if (!mod) return;
+
         const btn = document.createElement('button');
-        // Added a tooltip label for better UX since they are icons
         btn.className = "radial-btn bg-white hover:bg-indigo-600 hover:text-white text-indigo-600 w-12 h-12 rounded-full shadow-lg flex flex-col items-center justify-center border border-gray-200 group";
         
         btn.innerHTML = `
             <span class="text-xl">${mod.label}</span>
-            <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all bg-gray-800 text-white text-[10px] px-2 py-1 rounded shadow-xl">
+            <span class="absolute -bottom-8 scale-0 group-hover:scale-100 transition-all bg-gray-800 text-white text-[10px] px-2 py-1 rounded shadow-xl whitespace-nowrap z-50">
                 ${mod.full}
             </span>
         `;
@@ -666,7 +672,6 @@ function renderRadialOptions() {
         });
     });
 }
-    
 </script>
     <script>
         // Add this to the TOP of your scripts on the destination pages
