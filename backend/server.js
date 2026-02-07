@@ -135,7 +135,7 @@ const bookingSchema = new mongoose.Schema({
     balance: { type: Number, default: 0 }, // This is ROOM balance
     paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Partially Paid'], default: 'Pending' },
     paymentMethod: { type: String, enum: ['Cash', 'MTN Momo', 'Airtel Pay','Bank'], default: 'Cash' },
-    guestsource: { type: String, required: true, enum: ['Walk in', 'Booking.com','Airbnd','Trip','Hotel Website', 'Expedia','Web'], default: 'Walk in' },
+    guestsource: { type: String, required: true, enum: ['Walk in','Booking Engine', 'Expedia', 'Booking.com','Airbnd','Trip'], default: 'Walk in' },
     gueststatus: { type: String, required: true, enum: ['confirmed', 'cancelled', 'no show', 'checkedin', 'reserved','checkedout','void'], default: 'confirmed' },
     cancellationReason: { type: String, default: '' },
     voidReason: { type: String, default: '' },
@@ -2127,10 +2127,22 @@ app.get('/api/public/rooms/available', async (req, res) => {
         res.status(500).json({ message: 'Error checking public room availability', error: error.message });
     }
 });
+function calculateNights(checkIn, checkOut) {
+    const start = new Date(checkIn);
+    const end = new Date(checkOut);
+    const diffTime = end - start;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
 
-// Public endpoint to add a new booking (from external website)
 app.post('/api/public/bookings', async (req, res) => {
-    const { name, guestEmail, checkIn, checkOut, phoneNo, roomsRequested } = req.body;
+    const { 
+        name, 
+        guestEmail, 
+        checkIn, 
+        checkOut, 
+        phoneNo, 
+        roomsRequested 
+    } = req.body;
 
     if (!name || !checkIn || !checkOut || !roomsRequested || roomsRequested.length === 0) {
         return res.status(400).json({ message: 'Missing required booking fields.' });
@@ -2140,14 +2152,26 @@ app.post('/api/public/bookings', async (req, res) => {
         const confirmedBookings = [];
         const assignedInThisSession = [];
 
+        const nights = calculateNights(checkIn, checkOut);
+
+        if (nights <= 0) {
+            return res.status(400).json({ message: 'Invalid check-in or check-out dates.' });
+        }
+
         for (const request of roomsRequested) {
-            // 1. Get all rooms of this type
+
+            /* 1️⃣ Get rooms of this type */
             const allRoomsOfType = await Room.find({ type: request.type });
-            const roomNumbers = allRoomsOfType.map(r => r.number); 
-            
-            // 2. Check for busy bookings
+
+            if (allRoomsOfType.length === 0) {
+                return res.status(400).json({ message: `Room type ${request.type} does not exist.` });
+            }
+
+            const roomNumbers = allRoomsOfType.map(r => r.number);
+
+            /* 2️⃣ Find busy rooms */
             const busyBookings = await Booking.find({
-                room: { $in: roomNumbers }, 
+                room: { $in: roomNumbers },
                 $or: [
                     { checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } }
                 ]
@@ -2155,54 +2179,80 @@ app.post('/api/public/bookings', async (req, res) => {
 
             const busyRoomNumbers = busyBookings.map(b => b.room);
 
-            // 3. Filter for truly available rooms
-            const availableRooms = roomNumbers.filter(num => 
-                !busyRoomNumbers.includes(num) && !assignedInThisSession.includes(num)
+            /* 3️⃣ Available rooms */
+            const availableRooms = allRoomsOfType.filter(room =>
+                !busyRoomNumbers.includes(room.number) &&
+                !assignedInThisSession.includes(room.number)
             );
 
             if (availableRooms.length === 0) {
-                return res.status(400).json({ message: `No more ${request.type} rooms available.` });
+                return res.status(400).json({ 
+                    message: `No available ${request.type} rooms.` 
+                });
             }
 
-            // 4. Pick a room and track it
-            const randomRoom = availableRooms[Math.floor(Math.random() * availableRooms.length)];
-            assignedInThisSession.push(randomRoom); 
+            /* 4️⃣ Assign room */
+            const selectedRoom = availableRooms[Math.floor(Math.random() * availableRooms.length)];
+            assignedInThisSession.push(selectedRoom.number);
 
-            // 5. Create the booking
+            /* 5️⃣ Pricing calculations */
+            const amtPerNight = selectedRoom.basePrice;
+            const totalDue = amtPerNight * nights;
+            const amountPaid = 0;
+            const balance = totalDue;
+
+            /* 6️⃣ Create booking */
             const newBookingId = `WEB${Math.floor(Math.random() * 90000) + 10000}`;
+            
+
             const newBooking = new Booking({
                 id: newBookingId,
                 name,
                 guestEmail,
+                phoneNo,
+                room: selectedRoom.number,
+                people: request.people,
                 checkIn,
                 checkOut,
-                people: request.people,
-                phoneNo,
-                room: randomRoom,
+                nights,
+                amtPerNight,
+                totalDue,
+                amountPaid,
+                balance,
+                paymentStatus: 'Pending',
+                paymentMethod: 'Cash',
                 gueststatus: 'reserved',
-                guestsource: 'Web'
+                guestsource: 'Booking Engine'
             });
 
             await newBooking.save();
             confirmedBookings.push(newBooking);
-            
+
             await addAuditLog('Public Booking Created', 'Public User', {
                 bookingId: newBookingId,
-                room: randomRoom
+                room: selectedRoom.number,
+                totalDue
             });
-        } // End of for loop
+        }
 
-        // 6. Send the final response
-        res.status(201).json({ 
-            message: 'Bookings confirmed successfully!', 
-            bookings: confirmedBookings 
+        /* 7️⃣ Final response */
+        res.status(201).json({
+            message: 'Bookings confirmed successfully!',
+            totalBookings: confirmedBookings.length,
+            bookings: confirmedBookings
         });
 
     } catch (error) {
         console.error('Error adding public booking:', error);
-        res.status(500).json({ message: 'Error confirming booking', error: error.message });
+        res.status(500).json({ 
+            message: 'Error confirming booking', 
+            error: error.message 
+        });
     }
-}); // End of app.post
+});
+
+// Public endpoint to add a new booking (from external website)
+/ End of app.post
 // Nodemailer  Setup
 // IMPORTANT: Use environment variables for sensitive information like email and password.
 // Create a .env file in your backend directory with:
