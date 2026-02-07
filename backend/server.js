@@ -2865,18 +2865,39 @@ app.delete('/status-reports/:id', async (req, res) => {
 
    
 
-const KitchenOrder = mongoose.model('KitchenOrder', new mongoose.Schema({
-  item: String,
-  number: Number,
-  department: { type: String, default: 'Restaurant' },
-  status: { type: String, enum: ['Pending', 'Ready', 'Served'], default: 'Pending' },
-  waiter: String,
-  tableNumber: String,
-  accountId: mongoose.Schema.Types.ObjectId, // Link to Folio
-  bp: Number,
-  sp: Number,
-  createdAt: { type: Date, default: Date.now }
-}));
+const KitchenOrderSchema = new mongoose.Schema({
+    item: String,
+    number: Number,
+
+    department: { 
+        type: String, 
+        default: 'Restaurant' 
+    },
+
+    status: { 
+        type: String, 
+        enum: ['Pending', 'Preparing', 'Ready', 'Served'], 
+        default: 'Pending' 
+    },
+
+    waiter: String,
+    tableNumber: String,
+
+    accountId: mongoose.Schema.Types.ObjectId, // Link to Folio
+
+    bp: Number,
+    sp: Number,
+
+    // ⏱️ Status timestamps
+    pendingAt: { type: Date, default: Date.now },
+    preparingAt: { type: Date },
+    readyAt: { type: Date },
+    servedAt: { type: Date }
+
+}, { timestamps: true }); // adds createdAt & updatedAt automatically
+
+const KitchenOrder = mongoose.model('KitchenOrder', KitchenOrderSchema);
+
 //BAR AND RESTAURANT
 const CashJournal = mongoose.model('CashJournal', new mongoose.Schema({
   cashAtHand: { type: Number, default: 0 },
@@ -3179,6 +3200,29 @@ app.get('/api/kitchen/Pending', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// Mark order as PREPARING
+app.patch('/api/orders/:id/preparing', async (req, res) => {
+    try {
+        const order = await KitchenOrder.findByIdAndUpdate(
+            req.params.id,
+            { status: 'Preparing' },
+            { new: true }
+        );
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        res.json({
+            message: 'Order marked as preparing',
+            order
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 app.patch('/api/kitchen/order/:id/ready', async (req, res) => {
     try {
         const order = await KitchenOrder.findById(req.params.id);
