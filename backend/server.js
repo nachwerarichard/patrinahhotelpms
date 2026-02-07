@@ -2143,14 +2143,26 @@ app.post('/api/public/bookings', async (req, res) => {
         for (const request of roomsRequested) {
             // 1. Find all rooms of this type
             // (Assumes you have a Room model with 'type' and 'roomNumber')
-            const allRoomsOfType = await Room.find({ type: request.type });
+            // Inside your loop in the backend
+const allRoomsOfType = await Room.find({ type: request.type });
+console.log(`Found ${allRoomsOfType.length} total rooms for type: ${request.type}`);
+
+const busyRoomNumbers = busyBookings.map(b => b.room);
+console.log(`Busy rooms for these dates:`, busyRoomNumbers);
+
+const availableRooms = roomNumbers.filter(num => !busyRoomNumbers.includes(num));
+console.log(`Final Available List:`, availableRooms);
             const roomNumbers = allRoomsOfType.map(r => r.roomNumber);
 
-            // 2. Find which of these rooms are ALREADY booked for these dates
-            const busyBookings = await Booking.find({
-                room: { $in: roomNumbers },
-                $or: [{ checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } }]
-            });
+            const dCheckIn = new Date(checkIn);
+const dCheckOut = new Date(checkOut);
+
+const busyBookings = await Booking.find({
+    room: { $in: roomNumbers },
+    $or: [
+        { checkIn: { $lt: dCheckOut }, checkOut: { $gt: dCheckIn } }
+    ]
+});
             const busyRoomNumbers = busyBookings.map(b => b.room);
 
             // 3. Filter to get truly available rooms
