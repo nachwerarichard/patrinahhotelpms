@@ -4,6 +4,20 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+    .radial-btn {
+        position: absolute;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        opacity: 0;
+        transform: translate(0, 0) scale(0.5);
+        pointer-events: none;
+    }
+    .radial-btn.show {
+        opacity: 1;
+        transform: translate(var(--tw-translate-x), var(--tw-translate-y)) scale(1);
+        pointer-events: auto;
+    }
+</style>
 </head>
 <body class="bg-gray-100">
 
@@ -66,8 +80,7 @@
         <span class="text-2xl transition-transform duration-300" id="menu-icon">🔄</span>
     </button>
     
-    <div id="available-modules" class="absolute inset-0 flex items-center justify-center">
-        </div>
+    <div id="available-modules" class="absolute inset-0 flex items-center justify-center pointer-events-none"></div>
 </div>
         <div id="kitchenOrders" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             </div>
@@ -151,45 +164,49 @@ function getTimeElapsed(timestamp) {
     return `${diffInMins}m`;
 }
 
-// Updated mapping inside loadOrders()
 container.innerHTML = orders.map(order => {
-    const minutes = Math.floor((new Date() - new Date(order.createdAt)) / 60000); // Assumes 'createdAt' field exists
-    const isLate = minutes >= 15; // Highlight if older than 15 mins
+    const minutes = Math.floor((new Date() - new Date(order.createdAt)) / 60000);
+    const isLate = minutes >= 15;
 
     return `
-    <div class="group bg-white rounded-3xl shadow-sm hover:shadow-2xl transition-all duration-300 border border-slate-200 overflow-hidden flex flex-col ${isLate ? 'ring-2 ring-red-500' : ''}">
-        <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-            <span class="bg-slate-900 text-white text-xs font-black px-3 py-1 rounded-full">
-                TABLE ${order.tableNumber || '??'}
+    <div class="relative group bg-white rounded-3xl shadow-md hover:shadow-2xl transition-all duration-500 border border-slate-200 overflow-hidden flex flex-col ${isLate ? 'ring-2 ring-red-500' : ''}">
+        <div class="${isLate ? 'bg-red-50' : 'bg-slate-50'} px-6 py-3 border-b border-slate-100 flex justify-between items-center">
+            <span class="bg-slate-900 text-white text-[10px] font-black px-3 py-1 rounded-md tracking-widest uppercase">
+                T-${order.tableNumber || '??'}
             </span>
-            <div class="flex items-center gap-1 ${isLate ? 'text-red-600' : 'text-slate-400'}">
-                <i class="fas fa-clock text-[10px]"></i>
-                <span class="text-[10px] font-bold uppercase tracking-tighter">
-                    ${minutes} MINS AGO
+            <div class="flex items-center gap-2 ${isLate ? 'text-red-600' : 'text-slate-400'}">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full ${isLate ? 'bg-red-400' : 'bg-orange-400'} opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 ${isLate ? 'bg-red-500' : 'bg-orange-500'}"></span>
                 </span>
+                <span class="text-[10px] font-bold uppercase tracking-widest">${minutes}m ago</span>
             </div>
         </div>
 
         <div class="p-6 flex-grow">
-            <h2 class="text-2xl font-black text-slate-800 leading-tight mb-1 group-hover:text-orange-600 transition-colors">
-                ${order.item}
-            </h2>
-            <div class="flex items-baseline gap-2 mb-4">
-                <span class="text-4xl font-black text-slate-900">x${order.number}</span>
-                <span class="text-sm font-bold text-slate-400 uppercase tracking-widest">Quantity</span>
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-2xl font-black text-slate-800 leading-tight group-hover:text-indigo-600 transition-colors capitalize">
+                    ${order.item}
+                </h2>
+                <div class="bg-indigo-50 text-indigo-700 px-3 py-2 rounded-2xl flex flex-col items-center">
+                    <span class="text-xs font-bold leading-none">QTY</span>
+                    <span class="text-xl font-black">${order.number}</span>
+                </div>
             </div>
             
-            <div class="flex items-center gap-2 text-slate-500 bg-slate-50 p-2 rounded-xl">
-                <i class="fas fa-user-circle"></i>
-                <span class="text-xs font-bold uppercase">${order.waiter || 'Staff'}</span>
+            <div class="flex items-center gap-2 text-slate-400">
+                <div class="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center">
+                    <i class="fas fa-user text-xs"></i>
+                </div>
+                <span class="text-xs font-bold uppercase tracking-wider">${order.waiter || 'Staff'}</span>
             </div>
         </div>
 
-        <div class="p-4 bg-white">
+        <div class="p-4 bg-slate-50/50">
             <button onclick="completeOrder('${order._id}')" 
-                class="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-2xl font-black text-lg shadow-lg shadow-emerald-200 active:scale-95 transition-all flex items-center justify-center gap-3">
-                <i class="fas fa-check-circle"></i>
-                READY TO SERVE
+                class="w-full bg-white hover:bg-emerald-500 text-emerald-600 hover:text-white py-3 rounded-xl font-black text-sm border-2 border-emerald-500 transition-all duration-300 flex items-center justify-center gap-3 active:scale-95 shadow-sm">
+                <i class="fas fa-check"></i>
+                MARK AS READY
             </button>
         </div>
     </div>
