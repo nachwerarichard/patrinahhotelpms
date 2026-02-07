@@ -82,6 +82,8 @@
     
     <div id="available-modules" class="absolute inset-0 flex items-center justify-center pointer-events-none"></div>
 </div>
+        <audio id="orderDing" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+        <div id="kdsSummary"></div>
         <div id="kitchenOrders" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             </div>
     </div>
@@ -137,93 +139,114 @@
         });
 
         // 3. LOAD ORDERS
-        async function loadOrders() {
-            try {
-                const token = localStorage.getItem('token');
-                const res = await fetch(`${API_BASE}/api/kitchen/Pending`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+        let lastOrderCount = 0; // TRACKS COUNT FOR SOUND ALERT
 
-                if (res.status === 401) logout(); // Boot user if token invalid
-                
-                const orders = await res.json();
-                const container = document.getElementById('kitchenOrders');
+async function loadOrders() {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE}/api/kitchen/Pending`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
 
-                if (orders.length === 0) {
-                    container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">No pending orders. Take a break!</p>`;
-                    return;
-                }
+        if (res.status === 401) logout(); 
+        
+        const orders = await res.json();
+        const container = document.getElementById('kitchenOrders');
 
-       // Helper function to calculate minutes elapsed
-function getTimeElapsed(timestamp) {
-    if (!timestamp) return '0m';
-    const start = new Date(timestamp);
-    const now = new Date();
-    const diffInMs = now - start;
-    const diffInMins = Math.floor(diffInMs / 60000);
-    return `${diffInMins}m`;
-}
-
-container.innerHTML = orders.map(order => {
-    const minutes = Math.floor((new Date() - new Date(order.createdAt)) / 60000);
-    const isLate = minutes >= 15;
-
-    return `
-    <div class="relative group bg-white rounded-3xl shadow-md hover:shadow-2xl transition-all duration-500 border border-slate-200 overflow-hidden flex flex-col ${isLate ? 'ring-2 ring-red-500' : ''}">
-        <div class="${isLate ? 'bg-red-50' : 'bg-slate-50'} px-6 py-3 border-b border-slate-100 flex justify-between items-center">
-            <span class="bg-slate-900 text-white text-[10px] font-black px-3 py-1 rounded-md tracking-widest uppercase">
-                T-${order.tableNumber || '??'}
-            </span>
-            <div class="flex items-center gap-2 ${isLate ? 'text-red-600' : 'text-slate-400'}">
-                <span class="relative flex h-2 w-2">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full ${isLate ? 'bg-red-400' : 'bg-orange-400'} opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 ${isLate ? 'bg-red-500' : 'bg-orange-500'}"></span>
-                </span>
-                <span class="text-[10px] font-bold uppercase tracking-widest">${minutes}m ago</span>
-            </div>
-        </div>
-
-        <div class="p-6 flex-grow">
-            <div class="flex justify-between items-start mb-4">
-                <h2 class="text-2xl font-black text-slate-800 leading-tight group-hover:text-indigo-600 transition-colors capitalize">
-                    ${order.item}
-                </h2>
-                <div class="bg-indigo-50 text-indigo-700 px-3 py-2 rounded-2xl flex flex-col items-center">
-                    <span class="text-xs font-bold leading-none">QTY</span>
-                    <span class="text-xl font-black">${order.number}</span>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-2 text-slate-400">
-                <div class="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center">
-                    <i class="fas fa-user text-xs"></i>
-                </div>
-                <span class="text-xs font-bold uppercase tracking-wider">${order.waiter || 'Staff'}</span>
-            </div>
-        </div>
-
-        <div class="p-4 bg-slate-50/50">
-        <div class="p-4 bg-slate-50/50">
-    <button onclick="markAsPreparing('${order._id}')"
-        class="w-full bg-white hover:bg-amber-500 text-amber-600 hover:text-white py-3 rounded-xl font-black text-sm border-2 border-amber-500 transition-all duration-300 flex items-center justify-center gap-3 active:scale-95 shadow-sm">
-        <i class="fas fa-fire"></i>
-        MARK AS PREPARING
-    </button>
-</div>
-
-            <button onclick="completeOrder('${order._id}')" 
-                class="w-full bg-white hover:bg-emerald-500 text-emerald-600 hover:text-white py-3 rounded-xl font-black text-sm border-2 border-emerald-500 transition-all duration-300 flex items-center justify-center gap-3 active:scale-95 shadow-sm">
-                <i class="fas fa-check"></i>
-                MARK AS READY
-            </button>
-        </div>
-    </div>
-    `;
-}).join('');
-            } catch (err) {
-                console.error("Fetch Error:", err);
+        // --- 1. NOTIFICATION LOGIC ---
+        if (orders.length > lastOrderCount) {
+            const sound = document.getElementById('orderDing');
+            if (sound) {
+                sound.play().catch(e => console.log("Audio play blocked until interaction."));
             }
         }
+        lastOrderCount = orders.length;
+
+        // --- 2. KITCHEN SUMMARY LOGIC ---
+        // This calculates the total items (sum of all quantities)
+        const totalItems = orders.reduce((sum, order) => sum + (Number(order.number) || 0), 0);
+        
+        // Update a summary element (Make sure you have an element with ID 'kdsSummary')
+        const summaryEl = document.getElementById('kdsSummary');
+        if (summaryEl) {
+            summaryEl.innerHTML = `
+                <div class="flex gap-4 mb-6">
+                    <div class="bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-lg flex items-center gap-3">
+                        <span class="text-xs font-bold uppercase tracking-widest opacity-80">Pending Tickets:</span>
+                        <span class="text-2xl font-black">${orders.length}</span>
+                    </div>
+                    <div class="bg-white border border-slate-200 px-6 py-3 rounded-2xl shadow-sm flex items-center gap-3">
+                        <span class="text-xs font-bold uppercase tracking-widest text-slate-400">Total Items to Cook:</span>
+                        <span class="text-2xl font-black text-slate-800">${totalItems}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (orders.length === 0) {
+            container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">No pending orders. Take a break!</p>`;
+            return;
+        }
+
+        // --- 3. THE CARD MAPPING ---
+        container.innerHTML = orders.map(order => {
+            const minutes = Math.floor((new Date() - new Date(order.createdAt)) / 60000);
+            const isLate = minutes >= 15;
+
+            return `
+            <div class="relative group bg-white rounded-3xl shadow-md hover:shadow-2xl transition-all duration-500 border border-slate-200 overflow-hidden flex flex-col ${isLate ? 'ring-2 ring-red-500' : ''}">
+                <div class="${isLate ? 'bg-red-50' : 'bg-slate-50'} px-6 py-3 border-b border-slate-100 flex justify-between items-center">
+                    <span class="bg-slate-900 text-white text-[10px] font-black px-3 py-1 rounded-md tracking-widest uppercase">
+                        T-${order.tableNumber || '??'}
+                    </span>
+                    <div class="flex items-center gap-2 ${isLate ? 'text-red-600' : 'text-slate-400'}">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full ${isLate ? 'bg-red-400' : 'bg-orange-400'} opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 ${isLate ? 'bg-red-500' : 'bg-orange-500'}"></span>
+                        </span>
+                        <span class="text-[10px] font-bold uppercase tracking-widest">${minutes}m ago</span>
+                    </div>
+                </div>
+
+                <div class="p-6 flex-grow">
+                    <div class="flex justify-between items-start mb-4">
+                        <h2 class="text-2xl font-black text-slate-800 leading-tight group-hover:text-indigo-600 transition-colors capitalize">
+                            ${order.item}
+                        </h2>
+                        <div class="bg-indigo-50 text-indigo-700 px-3 py-2 rounded-2xl flex flex-col items-center">
+                            <span class="text-xs font-bold leading-none">QTY</span>
+                            <span class="text-xl font-black">${order.number}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 text-slate-400">
+                        <div class="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center">
+                            <i class="fas fa-user text-xs"></i>
+                        </div>
+                        <span class="text-xs font-bold uppercase tracking-wider">${order.waiter || 'Staff'}</span>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-slate-50/50 flex flex-col gap-2">
+                    <button onclick="markAsPreparing('${order._id}')"
+                        class="w-full bg-white hover:bg-amber-500 text-amber-600 hover:text-white py-3 rounded-xl font-black text-sm border-2 border-amber-500 transition-all duration-300 flex items-center justify-center gap-3 active:scale-95 shadow-sm">
+                        <i class="fas fa-fire"></i>
+                        MARK AS PREPARING
+                    </button>
+
+                    <button onclick="completeOrder('${order._id}')" 
+                        class="w-full bg-white hover:bg-emerald-500 text-emerald-600 hover:text-white py-3 rounded-xl font-black text-sm border-2 border-emerald-500 transition-all duration-300 flex items-center justify-center gap-3 active:scale-95 shadow-sm">
+                        <i class="fas fa-check"></i>
+                        MARK AS READY
+                    </button>
+                </div>
+            </div>
+            `;
+        }).join('');
+    } catch (err) {
+        console.error("Fetch Error:", err);
+    }
+}
 
         async function completeOrder(id) {
             try {
