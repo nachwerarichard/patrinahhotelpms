@@ -2252,7 +2252,7 @@ app.post('/api/public/bookings', async (req, res) => {
 });
 
 // Public endpoint to add a new booking (from external website)
-/ End of app.post
+//End of app.post
 // Nodemailer  Setup
 // IMPORTANT: Use environment variables for sensitive information like email and password.
 // Create a .env file in your backend directory with:
