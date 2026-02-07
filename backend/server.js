@@ -3187,7 +3187,7 @@ app.post('/api/kitchen/order',  async (req, res) => {
 });
 
 // GET /api/kitchen/pending
-app.get('/api/kitchen/Pending', async (req, res) => {
+app.get('/api/kitchen/Pending',auth, async (req, res) => {
     try {
         // Only fetch orders that are 'Pending' or 'Preparing'
         // This hides the 'Ready' ones from the chef, but keeps them for the waiter tracker
@@ -3223,7 +3223,7 @@ app.patch('/api/orders/:id/preparing', async (req, res) => {
     }
 });
 
-app.patch('/api/kitchen/order/:id/ready', async (req, res) => {
+app.patch('/api/kitchen/order/:id/ready',auth, async (req, res) => {
     try {
         const order = await KitchenOrder.findById(req.params.id);
         if (!order) return res.status(404).json({ error: "Order not found" });
@@ -3586,7 +3586,7 @@ app.delete('/inventory/:id', auth,  async (req, res) => {
 });
 
 // --- Sales Endpoints (Corrected) ---
-app.post('/sales',async (req, res) => {
+app.post('/sales',auth,async (req, res) => {
   try {
     const { item, department, number, bp, sp,date } = req.body;
 
@@ -3674,7 +3674,7 @@ res.status(201).json(sale);
 
 
 
-app.get('/sales',  async (req, res) => {
+app.get('/sales', auth, async (req, res) => {
   try {
     const { date, page = 1, limit = 5 } = req.query;
 
