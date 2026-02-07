@@ -3030,10 +3030,7 @@ async function getTodayInventory(itemName, initialOpening = 0) {
 
 // --- 2. Mock logAction Function (Needed to prevent errors) ---
 // Replace this with your actual implementation if it logs to a database/file.
-async function logAction(action, user, details = {}) {
-    // console.log(`[AUDIT LOG] Action: ${action}, User: ${user}, Details:`, details);
-    return Promise.resolve();
-}
+
 
 // --- 3. THE MODIFIED /login ROUTE ---
 
