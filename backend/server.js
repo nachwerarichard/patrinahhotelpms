@@ -2163,7 +2163,6 @@ const busyBookings = await Booking.find({
         { checkIn: { $lt: dCheckOut }, checkOut: { $gt: dCheckIn } }
     ]
 });
-            const busyRoomNumbers = busyBookings.map(b => b.room);
 
             // 3. Filter to get truly available rooms
             const availableRooms = roomNumbers.filter(num => !busyRoomNumbers.includes(num));
