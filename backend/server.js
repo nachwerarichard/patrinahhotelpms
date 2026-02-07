@@ -2130,7 +2130,6 @@ app.get('/api/public/rooms/available', async (req, res) => {
 
 // Public endpoint to add a new booking (from external website)
 app.post('/api/public/bookings', async (req, res) => {
-    // roomsRequested is now an array: [{ type: 'Deluxe', people: 2 }, ...]
     const { name, guestEmail, checkIn, checkOut, phoneNo, roomsRequested } = req.body;
 
     if (!name || !checkIn || !checkOut || !roomsRequested || roomsRequested.length === 0) {
@@ -2139,52 +2138,57 @@ app.post('/api/public/bookings', async (req, res) => {
 
     try {
         const confirmedBookings = [];
+        // Keep track of rooms assigned during this specific loop iteration
+        const assignedInThisSession = [];
 
         for (const request of roomsRequested) {
-            // 1. Find all rooms of this type
-            // (Assumes you have a Room model with 'type' and 'roomNumber')
-            // Inside your loop in the backend
-const allRoomsOfType = await Room.find({ type: request.type });
-console.log(`Found ${allRoomsOfType.length} total rooms for type: ${request.type}`);
-
-
-
-const availableRooms = roomNumbers.filter(num => !busyRoomNumbers.includes(num));
-console.log(`Final Available List:`, availableRooms);
+            // 1. Get all potential rooms of this type
+            const allRoomsOfType = await Room.find({ type: request.type });
             const roomNumbers = allRoomsOfType.map(r => r.roomNumber);
+            console.log(`Found ${roomNumbers.length} total rooms for type: ${request.type}`);
 
+            // 2. Format dates for MongoDB comparison
             const dCheckIn = new Date(checkIn);
-const dCheckOut = new Date(checkOut);
+            const dCheckOut = new Date(checkOut);
 
-const busyBookings = await Booking.find({
-    room: { $in: roomNumbers },
-    $or: [
-        { checkIn: { $lt: dCheckOut }, checkOut: { $gt: dCheckIn } }
-    ]
-});
-            const busyRoomNumbers = busyBookings.map(b => b.room);
-console.log(`Busy rooms for these dates:`, busyRoomNumbers);
+            // 3. Find which of these rooms are already occupied
+            const busyBookings = await Booking.find({
+                roomNumber: { $in: roomNumbers }, // Ensure this matches your Schema field name
+                $or: [
+                    { checkIn: { $lt: dCheckOut }, checkOut: { $gt: dCheckIn } }
+                ]
+            });
 
+            const busyRoomNumbers = busyBookings.map(b => b.roomNumber);
+            console.log(`Busy rooms for these dates:`, busyRoomNumbers);
+
+            // 4. Calculate final availability
+            // We exclude rooms that are busy in DB OR already assigned in this loop
+            const availableRooms = roomNumbers.filter(num => 
+                !busyRoomNumbers.includes(num) && !assignedInThisSession.includes(num)
+            );
             
+            console.log(`Final Available List for ${request.type}:`, availableRooms);
 
             if (availableRooms.length === 0) {
                 return res.status(400).json({ message: `No more ${request.type} rooms available for these dates.` });
             }
 
-            // 4. Pick a RANDOM room from the available list
+            // 5. Pick a RANDOM room from the available list
             const randomRoom = availableRooms[Math.floor(Math.random() * availableRooms.length)];
+            assignedInThisSession.push(randomRoom); 
 
-            // 5. Create the booking object
+            // 6. Generate ID and Save
             const newBookingId = `WEB${Math.floor(Math.random() * 90000) + 10000}`;
             const newBooking = new Booking({
                 id: newBookingId,
                 name,
                 guestEmail,
-                checkIn,
-                checkOut,
+                checkIn: dCheckIn,
+                checkOut: dCheckOut,
                 people: request.people,
                 phoneNo,
-                roomNumber: randomRoom, // Assigned randomly
+                roomNumber: randomRoom,
                 roomType: request.type,
                 gueststatus: 'reserved',
                 guestsource: 'Web'
@@ -2204,12 +2208,12 @@ console.log(`Busy rooms for these dates:`, busyRoomNumbers);
             message: 'Bookings confirmed successfully!', 
             bookings: confirmedBookings 
         });
+
     } catch (error) {
         console.error('Error adding public booking:', error);
         res.status(500).json({ message: 'Error confirming booking', error: error.message });
     }
 });
-
 
 // Nodemailer  Setup
 // IMPORTANT: Use environment variables for sensitive information like email and password.
