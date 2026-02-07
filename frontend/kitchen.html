@@ -317,5 +317,133 @@ function renderRadialOptions() {
     });
 }
     </script>
+    <script>
+        (function autoLoginHook() {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    if (urlParams.get('autoLogin') === 'true') {
+        // 1. Inject CSS for the Blur and your Custom Preloader
+        const style = document.createElement('style');
+        style.id = 'auto-login-styles';
+        style.innerHTML = `
+            #auto-login-blocker {
+                position: fixed;
+                top: 0; left: 0;
+                width: 100vw; height: 100vh;
+                background: rgba(255, 255, 255, 0.7);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 2147483647;
+                transition: opacity 0.5s ease;
+            }
+
+            /* Your Custom Preloader */
+            .loader {
+                --d: 22px;
+                width: 4px;
+                height: 4px;
+                border-radius: 50%;
+                color: #25b09b;
+                box-shadow: 
+                    calc(1 * var(--d))     calc(0 * var(--d))     0 0,
+                    calc(0.707 * var(--d)) calc(0.707 * var(--d)) 0 1px,
+                    calc(0 * var(--d))     calc(1 * var(--d))     0 2px,
+                    calc(-0.707 * var(--d)) calc(0.707 * var(--d)) 0 3px,
+                    calc(-1 * var(--d))    calc(0 * var(--d))     0 4px,
+                    calc(-0.707 * var(--d)) calc(-0.707 * var(--d)) 0 5px,
+                    calc(0 * var(--d))     calc(-1 * var(--d))    0 6px;
+                animation: l27 1s infinite steps(8);
+            }
+
+            @keyframes l27 {
+                100% { transform: rotate(1turn); }
+            }
+
+            .no-scroll { overflow: hidden !important; }
+        `;
+        document.head.appendChild(style);
+
+        // 2. Create the Overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'auto-login-blocker';
+        overlay.innerHTML = '<div class="loader"></div>';
+        document.body.appendChild(overlay);
+        document.body.classList.add('no-scroll');
+
+        // 3. Cleanup Function
+        const liftCurtain = () => {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+                document.body.classList.remove('no-scroll');
+            }, 100);
+        };
+
+        // 4. Extraction & Execution
+        const user = urlParams.get('u');
+        const pass = urlParams.get('p');
+
+        
+
+        const userField = document.querySelector('input[type="text"]') || document.getElementById('username');
+        const passField = document.querySelector('input[type="password"]') || document.getElementById('password');
+        const loginBtn = document.querySelector('button[type="submit"]') || document.getElementById('login-button');
+
+        if (userField && passField && loginBtn) {
+            userField.value = user;
+            passField.value = pass;
+
+            // Clean the URL bar
+            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+
+            setTimeout(() => {
+                loginBtn.click();
+
+                // 5. THE WATCHDOG: Detects when the login is complete
+                const watchdog = setInterval(() => {
+                    // Check if login form elements are gone (indicates a page/state change)
+                    if (!document.contains(loginBtn) || !document.contains(passField)) {
+                        liftCurtain();
+                        clearInterval(watchdog);
+                    }
+                }, 100);
+
+                // Safety Kill-switch (6 seconds)
+                setTimeout(() => {
+                    liftCurtain();
+                    clearInterval(watchdog);
+                }, 500);
+
+            }, 100);
+        } else {
+            // Fields not found? Lift the curtain so the user can see the error
+            liftCurtain();
+        }
+    }
+})();
+
+
+                // Add this to the TOP of your scripts on the destination pages
+document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('autoLogin') === 'true') {
+        const u = params.get('u');
+        const p = params.get('p');
+        
+        // Save these to the local domain's storage so the session persists
+        localStorage.setItem('username', u);
+        localStorage.setItem('userPassword', p);
+        localStorage.setItem('userRole', params.get('r'));
+
+        // Perform your existing login fetch/request here automatically
+        // e.g., performLogin(u, p);
+    }
+});
+
+    </script>
 </body>
 </html>
