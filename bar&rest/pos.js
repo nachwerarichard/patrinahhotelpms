@@ -354,21 +354,47 @@ const resetSaleForm = () => {
     } catch (err) { showMessage(err.message, 'error'); }
 };
 
-addChargeForm.onsubmit = e => {
+addChargeForm.onsubmit = async (e) => {
     e.preventDefault();
     const fd = new FormData(addChargeForm);
     
-    // 1. Get the item name from the description field
+    // 1. Extract values
     const description = fd.get('description'); 
-    
-    // 2. Get the quantity (how many they bought)
     const number = fd.get('number'); 
-    
-    // 3. Get the department (selected via the BAR/RES buttons)
     const department = document.getElementById('deptSelect').value;
 
-    // Call the updated function that handles both Inventory and Folio
-    addCharge(description, number, department);
+    // 2. Strict Validation: Ensure all fields are present
+    if (!description || description.trim() === "") {
+        showMessage("Please select or enter an item description.", "error");
+        return;
+    }
+
+    if (!number || parseFloat(number) <= 0) {
+        showMessage("Please enter a valid quantity.", "error");
+        return;
+    }
+
+    // Checks if department is unselected or the default placeholder
+    if (!department || department === "" || department === "Select Department") {
+        showMessage("Please select a department  before proceeding.", "error");
+        return;
+    }
+
+    // 3. Call the charge function
+    // We 'await' it so we know it finished successfully before resetting the form
+    try {
+        await addCharge(description, number, department);
+        
+        // 4. Reset the form upon successful submission
+        addChargeForm.reset();
+        
+        // Optional: If you use a custom dropdown or specific UI labels, reset them manually
+        document.getElementById('deptSelect').value = ""; 
+        
+    } catch (err) {
+        // Errors are usually handled inside addCharge, but this is a safety net
+        console.error("Submission error:", err);
+    }
 };
         window.setDepartment = (dept) => {
     // 1. Update the hidden select value
