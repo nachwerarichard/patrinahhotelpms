@@ -511,6 +511,8 @@ app.post('/api/pos/client/account', async (req, res) => {
 app.post('/api/pos/client/account/:accountId/charge', async (req, res) => {
     const { accountId } = req.params;
     const { description, amount } = req.body;
+    const { description, amount, type } = req.body;
+
 
     try {
         const account = await ClientAccount.findById(accountId);
@@ -519,7 +521,13 @@ app.post('/api/pos/client/account/:accountId/charge', async (req, res) => {
         }
 
         // Add the new charge to the array
-        account.charges.push({ description, amount });
+account.charges.push({
+  description,
+  amount,
+  type
+});
+
+account.totalCharges += amount;
 
         // Update the total charges
         account.totalCharges += amount;
