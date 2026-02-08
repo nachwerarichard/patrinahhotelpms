@@ -320,8 +320,8 @@ const resetSaleForm = () => {
                 e.preventDefault();
                 searchAccounts(document.getElementById('searchQuery').value);
             };
-
-            addChargeForm.onsubmit = e => {
+//old addcharge function 
+            addChareForm.onsubmit = e => {
                 e.preventDefault();
                 const fd = new FormData(addChargeForm);
                 addCharge(fd.get('description'), fd.get('number'),fd.get('amount'));
