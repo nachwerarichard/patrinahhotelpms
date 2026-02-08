@@ -321,18 +321,18 @@ const resetSaleForm = () => {
                 searchAccounts(document.getElementById('searchQuery').value);
             };
 //old addcharge function 
-            addChareForm.onsubmit = e => {
-                e.preventDefault();
-                const fd = new FormData(addChargeForm);
-                addCharge(fd.get('description'), fd.get('number'),fd.get('amount'));
-            };
+           // addChareForm.onsubmit = e => {
+              //  e.preventDefault();
+              //  const fd = new FormData(addChargeForm);
+              //  addCharge(fd.get('description'), fd.get('number'),fd.get('amount'));
+            //};
 
-            postToRoomBtn.onclick = () => settleAccount('room');
-            issueReceiptBtn.onclick = () => settleAccount('receipt');
+           // postToRoomBtn.onclick = () => settleAccount('room');
+           // issueReceiptBtn.onclick = () => settleAccount('receipt');
             
             
 ///addcahrge old route
-        const addarge = async (description, amount, department) => {
+     /*   const addarge = async (description, amount, department) => {
     if (!activeAccountId) return;
     try {
         const res = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
@@ -352,7 +352,7 @@ const resetSaleForm = () => {
         addChargeForm.reset();
         showMessage(`${department} charge added!`, 'success');
     } catch (err) { showMessage(err.message, 'error'); }
-};
+};*/
 
 addChargeForm.onsubmit = async (e) => {
     e.preventDefault();
