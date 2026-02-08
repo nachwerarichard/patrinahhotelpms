@@ -1364,7 +1364,7 @@ bookingForm.addEventListener('submit', async function(event) {
         username: currentUsername // Pass username for audit log
     };
 
-    const submitBtn = document.getElementById('bookingsubmit');
+    const submitBtn = document.getElementById('saveBookingBtn');
 
 try {
     // 1. Disable and add Spinner
