@@ -392,7 +392,7 @@ loginForm.addEventListener('submit', async function(event) {
     }
 });
 
-logoutBtn.addEventListener('click', async () => {
+/*logoutBtn.addEventListener('click', async () => {
     // Log logout action before clearing user data
     if (currentUsername) {
         try {
@@ -417,7 +417,7 @@ logoutBtn.addEventListener('click', async () => {
     // Reset active state for navigation links and sections
     navLinks.forEach(link => link.classList.remove('active'));
     sections.forEach(section => section.classList.remove('active'));
-});
+});*/
 
 /**
  * Handles navigation clicks, showing/hiding sections and re-rendering content.
