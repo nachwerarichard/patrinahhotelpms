@@ -1610,7 +1610,9 @@ async function checkoutBooking(id) {
 
         // 2. Process successful response
         const data = await response.json();
-        showMessageBox('Success', data.message);
+        //showMessageBox('Success', data.message);
+                showMessageBox('Success', 'Guest checkedout');
+
 
         // 3. UI Updates
         renderBookings(currentPage, currentSearchTerm);
