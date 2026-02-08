@@ -1364,18 +1364,17 @@ bookingForm.addEventListener('submit', async function(event) {
         username: currentUsername // Pass username for audit log
     };
 
-    const submitBtn = document.getElementById('bookingSubmitBtn');
-const originalText = submitBtn.textContent;
-
-submitBtn.textContent = 'Processing...';
-submitBtn.disabled = true;
+    const submitBtn = document.getElementById('bookingsubmit');
 
 try {
+    // 1. Disable and add Spinner
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<span class="spinner"></span> Processing...`;
+
     let response;
     let message;
-
+    
     if (id) {
-        // Edit existing booking
         response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -1383,7 +1382,6 @@ try {
         });
         message = 'Booking updated successfully!';
     } else {
-        // Add new booking
         response = await fetch(`${API_BASE_URL}/bookings`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1406,13 +1404,12 @@ try {
 } catch (error) {
     console.error('Error saving booking:', error);
     showMessageBox('Error', `Failed to save booking: ${error.message}`, true);
-
 } finally {
-    // Always restore button state
-    submitBtn.textContent = originalText;
+    // 2. Restore Button
     submitBtn.disabled = false;
+    // Remove the spinner and reset the text based on the mode
+    submitBtn.innerHTML = id ? 'Update Booking' : 'Add Booking';
 }
-
 });
 
 /**
