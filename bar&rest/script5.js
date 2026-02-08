@@ -136,11 +136,6 @@ async function handleLogin() {
     }
 }
 
-function handleLogout() {
-    authToken = null;
-    localStorage.removeItem('authToken');
-    updateUI(false);
-}
 
 // --- Dashboard Rendering ---
 
