@@ -1891,31 +1891,44 @@ app.post('/api/bookings/:id/checkin', async (req, res) => {
 });
 
 
-// --- Incidental Charges API ---
-app.patch('/:id/mark-paid', async (req, res) => {
-  try {
-    const charge = await IncidentalCharge.findById(req.params.id);
+app.patch('/api/incidental-charges/:chargeId/pay', async (req, res) => {
+    const { chargeId } = req.params;
+    const { username } = req.body;
 
-    if (!charge) {
-      return res.status(404).json({ message: 'Incidental charge not found' });
+    try {
+        if (!mongoose.Types.ObjectId.isValid(chargeId)) {
+            return res.status(400).json({ message: 'Invalid charge ID format.' });
+        }
+
+        const updatedCharge = await IncidentalCharge.findByIdAndUpdate(
+            chargeId,
+            { isPaid: true },
+            { new: true } // return updated document
+        );
+
+        if (!updatedCharge) {
+            return res.status(404).json({ message: 'Incidental charge not found.' });
+        }
+
+        // Audit log
+        await addAuditLog('Incidental Charge Paid', username || 'System', {
+            chargeId: updatedCharge._id,
+            bookingId: updatedCharge.bookingCustomId,
+            amount: updatedCharge.amount
+        });
+
+        res.json({
+            message: 'Incidental charge marked as paid.',
+            charge: updatedCharge
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: 'Error updating incidental charge',
+            error: error.message
+        });
     }
-
-    if (charge.isPaid) {
-      return res.status(400).json({ message: 'Charge is already paid' });
-    }
-
-    charge.isPaid = true;
-    await charge.save();
-
-    res.status(200).json({
-      message: 'Incidental charge marked as paid',
-      charge
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
 });
+
 // Add a new incidental charge (admin only)
 app.post('/api/incidental-charges', async (req, res) => {
     const { bookingId, bookingCustomId, guestName, roomNumber, type, description, amount, username } = req.body; // Extract username
