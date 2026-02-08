@@ -1620,7 +1620,7 @@ async function checkoutBooking(id) {
 
 
         // 4. Send email
-        await sendConfirmationEmail(id);
+       // await sendConfirmationEmail(id);
 
     } catch (error) {
         console.error('Error during checkout:', error);
