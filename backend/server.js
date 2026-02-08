@@ -3112,6 +3112,13 @@ async function getTodayInventory(itemName, initialOpening = 0) {
 // Assuming 'app' is your Express instance
 
 // --- ROUTES ---
+
+app.post('/logout', auth, async (req, res) => {
+  await logAction('Logout', req.user.username);
+  res.status(200).json({ message: 'Logged out successfully' });
+});
+
+
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
