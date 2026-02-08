@@ -285,11 +285,11 @@ const addCharge = async (description, number, department) => {
                 searchAccounts(document.getElementById('searchQuery').value);
             };
 
-            addChargeForm.onsubmit = e => {
+            /*addChargeForm.onsubmit = e => {
                 e.preventDefault();
                 const fd = new FormData(addChargeForm);
                 addCharge(fd.get('description'), fd.get('number'),fd.get('amount'));
-            };
+            };*/
 
             postToRoomBtn.onclick = () => settleAccount('room');
             issueReceiptBtn.onclick = () => settleAccount('receipt');
