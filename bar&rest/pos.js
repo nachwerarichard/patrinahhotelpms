@@ -112,8 +112,14 @@ function startQuickSale() {
                 searchResults.innerHTML = '';
                 activeAccountId = null;
                 activeAccountData = null;
-                chargesList.innerHTML = '';
-    
+const chargesList = document.getElementById('chargesList');
+    if (chargesList) {
+        chargesList.innerHTML = `
+            <tr>
+                <td colspan="2" class="px-6 py-10 text-center text-slate-400 italic text-sm">No items posted yet</td>
+            </tr>
+        `;
+    }    
 
             };
 
