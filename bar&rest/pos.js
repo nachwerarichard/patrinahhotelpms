@@ -165,18 +165,23 @@ function startQuickSale() {
             };
 
 const addCharge = async (description, number, department) => {
-    // 1. Validation Logic: Check if it's a Quick Sale vs Resident Sale
+    // 1. Validation Logic: Guest vs Quick Sale
     const isQuickSale = (document.getElementById('currentOrderType')?.value === 'Direct' || !activeAccountId);
 
-    // If it's NOT a quick sale AND no guest is selected, then we block it
     if (!activeAccountId && !isQuickSale) {
         showMessage("Please select a guest or start a Quick Sale first!", "error");
         return;
     }
 
+    // --- NEW: Department Validation ---
+    const selectedDept = department || document.getElementById('deptSelect')?.value;
+    if (!selectedDept || selectedDept === "" || selectedDept === "Select Department") {
+        showMessage("Please select a department before proceeding!", "error");
+        return;
+    }
+
     const token = localStorage.getItem('token'); 
     const itemInfo = document.getElementById('itemDesc').dataset;
-    const selectedDept = department || document.getElementById('deptSelect').value;
     const qtyValue = parseFloat(document.getElementById('number').value) || 1;
 
     // 2. Build the data object
@@ -186,15 +191,14 @@ const addCharge = async (description, number, department) => {
         number: qtyValue,
         bp: parseFloat(itemInfo.bp || 0),
         sp: parseFloat(itemInfo.sp || 0),
-        accountId: activeAccountId || null, // null for Quick Sales
+        accountId: activeAccountId || null,
         tableNumber: document.getElementById('tableNum')?.value || "N/A",
-        isQuickSale: isQuickSale, // Extra flag for backend clarity
+        isQuickSale: isQuickSale,
         date: new Date()
     };
 
     try {
         if (selectedDept === 'Restaurant') {
-            // STEP A: Send to Kitchen Order Queue
             const res = await fetch(`${BASE_URL}/api/kitchen/order`, {
                 method: 'POST',
                 headers: { 
@@ -207,11 +211,9 @@ const addCharge = async (description, number, department) => {
             if (!res.ok) throw new Error("Failed to send order to kitchen");
             
             showMessage("Order sent to Kitchen preparing list!", "success");
-             startNewTransaction();            
-        } else {
-            // STEP B: Standard Bar/Service Logic
             
-            // 1. Deduct Inventory (Always happens regardless of guest type)
+        } else {
+            // Standard Bar/Service Logic
             const saleRes = await fetch(`${BASE_URL}/sales`, {
                 method: 'POST',
                 headers: { 
@@ -223,7 +225,6 @@ const addCharge = async (description, number, department) => {
             const saleResult = await saleRes.json();
             if (!saleRes.ok) throw new Error(saleResult.error);
 
-            // 2. Conditional Folio Charge: ONLY if we have an activeAccountId
             if (activeAccountId) {
                 const folioRes = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
                     method: 'POST',
@@ -240,19 +241,44 @@ const addCharge = async (description, number, department) => {
                 const updatedAccount = await folioRes.json();
                 if (!folioRes.ok) throw new Error(updatedAccount.message);
 
-                // Update UI for Resident
                 updateActiveAccountUI(updatedAccount); 
                 showMessage("Bar sale recorded & Guest charged!", "success");
             } else {
-                // If Quick Sale (Bar/Drink), we just acknowledge the cash sale
                 showMessage("Direct Cash sale recorded!", "success");
-                // Update a generic "Quick Sale" UI list here if needed
             }
         }
+
+        // --- NEW: Reset Form Upon Success ---
+        resetSaleForm();
 
     } catch (err) {
         console.error("Transaction failed:", err);
         showMessage(err.message, "error");
+    }
+};
+
+/**
+ * Helper function to clear the form inputs
+ */
+const resetSaleForm = () => {
+    // If using a standard HTML form tag:
+    // document.getElementById('yourFormId')?.reset();
+
+    // Manual clear for specific POS fields:
+    document.getElementById('number').value = 1;
+    document.getElementById('deptSelect').value = ""; // Resets dropdown
+    
+    // Clear any temporary item description labels if they exist
+    const itemLabel = document.getElementById('itemDesc');
+    if (itemLabel) {
+        itemLabel.textContent = "No item selected";
+        itemLabel.dataset.bp = "0";
+        itemLabel.dataset.sp = "0";
+    }
+
+    // Optional: If you want to trigger your existing global reset
+    if (typeof startNewTransaction === "function") {
+        startNewTransaction();
     }
 };
             const settleAccount = async (method) => {
