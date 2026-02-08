@@ -482,7 +482,6 @@ function autoFillPrices(selectedItemName) {
     
         const resetForm = () => {
     // Clear the visible inputs
-    document.getElementById('itemDesc').value = '';
     document.getElementById('number').value = '';
     
     // Clear the hidden dataset values (BP and SP)
@@ -491,6 +490,5 @@ function autoFillPrices(selectedItemName) {
     itemDescInput.dataset.sp = '0';
     
     // Optional: Focus back on the item description for the next entry
-    itemDescInput.focus();
 };
 
