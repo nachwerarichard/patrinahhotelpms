@@ -1,9 +1,3 @@
-    // Login/logout placeholders
-
-    function logout() {
-      document.getElementById('main-container').classList.add('hidden');
-      document.getElementById('login-section').classList.remove('hidden');
-    }
 
     // Mobile menu toggle
 
