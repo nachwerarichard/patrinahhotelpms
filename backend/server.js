@@ -229,6 +229,7 @@ const incidentalChargeSchema = new mongoose.Schema({
     },
     type: { 
         type: String,
+        enum: ['Bar', 'Restaurant', 'Other'],
         required: true
     },
     description: {
@@ -1891,7 +1892,30 @@ app.post('/api/bookings/:id/checkin', async (req, res) => {
 
 
 // --- Incidental Charges API ---
+app.patch('/:id/mark-paid', async (req, res) => {
+  try {
+    const charge = await IncidentalCharge.findById(req.params.id);
 
+    if (!charge) {
+      return res.status(404).json({ message: 'Incidental charge not found' });
+    }
+
+    if (charge.isPaid) {
+      return res.status(400).json({ message: 'Charge is already paid' });
+    }
+
+    charge.isPaid = true;
+    await charge.save();
+
+    res.status(200).json({
+      message: 'Incidental charge marked as paid',
+      charge
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 // Add a new incidental charge (admin only)
 app.post('/api/incidental-charges', async (req, res) => {
     const { bookingId, bookingCustomId, guestName, roomNumber, type, description, amount, username } = req.body; // Extract username
