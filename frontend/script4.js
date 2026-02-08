@@ -1854,12 +1854,12 @@ async function viewCharges(bookingCustomId) {
               onclick="confirmDeleteIncidentalCharge('${charge._id}', '${bookingCustomId}')">
               Delete
             </button>
-
-            <button
-              class="mark-paid-btn ${charge.isPaid ? 'paid' : ''}"
-              data-id="${charge._id}"
+    <button class="btn btn-danger btn-sm"
+              ${charge.isPaid ? 'paid' : ''}
+              onclick="confirmPayIncidentalCharge('${charge._id}', '${bookingCustomId}')"               data-id="${charge._id}"
               ${charge.isPaid ? 'disabled' : ''}>
-              ${charge.isPaid ? 'Paid' : 'Mark as Paid'}
+              ${charge.isPaid ? 'Paid' : 'Mark as Paid'}>
+              Mark Paid
             </button>
           </td>
         `;
@@ -1995,6 +1995,35 @@ function confirmDeleteIncidentalCharge(chargeId, bookingCustomId) {
             showMessageBox('Error', `Failed to delete charge: ${error.message}`, true);
         }
     });
+}
+
+async function confirmPayIncidentalCharge(chargeId, bookingCustomId) {
+    try {
+        const response = await fetch(
+    `${API_BASE_URL}/incidental-charges/${chargeId}/pay`,
+    {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            username: currentUsername
+        })
+    }
+);
+
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
+        showMessageBox('Success', 'Incidental charge paid successfully!');
+        viewCharges(bookingCustomId); // Re-render charges for the current booking
+        renderAuditLogs(); // Update audit logs
+
+    } catch (error) {
+        console.error('Error paying incidental charge:', error);
+        showMessageBox('Error', `Failed to pay charge: ${error.message}`, true);
+    }
 }
 
 /**
