@@ -1799,95 +1799,103 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
  * @param {string} bookingCustomId - The custom ID of the booking.
  */
 async function viewCharges(bookingCustomId) {
-    incidentalChargesTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Loading charges...</td></tr>';
-    totalIncidentalChargesSpan.textContent = '0.00';
+  incidentalChargesTableBody.innerHTML =
+    '<tr><td colspan="6" style="text-align:center;">Loading charges...</td></tr>';
+  totalIncidentalChargesSpan.textContent = '0.00';
 
-    try {
-        // First, get the MongoDB _id for the booking using the custom ID
-        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}`); // Fetch specific booking by ID
-        if (!bookingResponse.ok) throw new Error(`HTTP error! status: ${bookingResponse.status}`);
-        const booking = await bookingResponse.json();
+  try {
+    const bookingResponse = await fetch(
+      `${API_BASE_URL}/bookings/id/${bookingCustomId}`
+    );
+    if (!bookingResponse.ok) throw new Error('Booking fetch failed');
 
-        if (!booking) {
-            showMessageBox('Error', 'Booking not found for viewing charges.', true);
-            closeViewChargesModal();
-            return;
-        }
-
-        viewChargesGuestNameSpan.textContent = booking.name;
-        viewChargesRoomNumberSpan.textContent = booking.room;
-
-        const response = await fetch(`${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const charges = await response.json();
-
-        incidentalChargesTableBody.innerHTML = ''; // Clear loading message
-
-        let totalChargesAmount = 0;
-        if (charges.length === 0) {
-            incidentalChargesTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No incidental charges for this booking.</td></tr>';
-        } else {
-            charges.forEach(charge => {
-                const row = incidentalChargesTableBody.insertRow();
-                row.innerHTML = `
-                    <td>${charge.type}</td>
-                    <td>${charge.description || '-'}</td>
-                    <td>${parseFloat(charge.amount).toFixed(2)}</td>
-                    <td>${new Date(charge.date).toLocaleDateString()}</td>
-                    <td>
-                        <button class="btn btn-danger btn-sm" onclick="confirmDeleteIncidentalCharge('${charge._id}', '${bookingCustomId}')">Delete</button>
-                        <button 
-  class="mark-paid-btn" 
-  data-id="INCIDENTAL_CHARGE_ID"
->
-  Mark as Paid
-</button>
-
-                    </td>
-                `;
-                totalChargesAmount += charge.amount;
-            });
-        }
-        totalIncidentalChargesSpan.textContent = totalChargesAmount.toFixed(2);
-        viewChargesModal.style.display = 'flex';
-    } catch (error) {
-        console.error('Error fetching incidental charges:', error);
-        showMessageBox('Error', `Failed to load charges: ${error.message}`, true);
-        incidentalChargesTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Error loading charges.</td></tr>';
+    const booking = await bookingResponse.json();
+    if (!booking) {
+      showMessageBox('Error', 'Booking not found.', true);
+      closeViewChargesModal();
+      return;
     }
-}
 
+    viewChargesGuestNameSpan.textContent = booking.name;
+    viewChargesRoomNumberSpan.textContent = booking.room;
+
+    const response = await fetch(
+      `${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`
+    );
+    if (!response.ok) throw new Error('Charges fetch failed');
+
+    const charges = await response.json();
+    incidentalChargesTableBody.innerHTML = '';
+
+    let totalChargesAmount = 0;
+
+    if (charges.length === 0) {
+      incidentalChargesTableBody.innerHTML =
+        '<tr><td colspan="6" style="text-align:center;">No incidental charges.</td></tr>';
+    } else {
+      charges.forEach(charge => {
+        const row = incidentalChargesTableBody.insertRow();
+
+        row.innerHTML = `
+          <td>${charge.type}</td>
+          <td>${charge.description || '-'}</td>
+          <td>${Number(charge.amount).toFixed(2)}</td>
+          <td>${new Date(charge.date).toLocaleDateString()}</td>
+          <td>
+            <button class="btn btn-danger btn-sm"
+              onclick="confirmDeleteIncidentalCharge('${charge._id}', '${bookingCustomId}')">
+              Delete
+            </button>
+
+            <button
+              class="mark-paid-btn ${charge.paid ? 'paid' : ''}"
+              data-id="${charge._id}"
+              ${charge.paid ? 'disabled' : ''}>
+              ${charge.paid ? 'Paid' : 'Mark as Paid'}
+            </button>
+          </td>
+        `;
+
+        totalChargesAmount += Number(charge.amount);
+      });
+    }
+
+    totalIncidentalChargesSpan.textContent = totalChargesAmount.toFixed(2);
+    viewChargesModal.style.display = 'flex';
+
+  } catch (error) {
+    console.error(error);
+    showMessageBox('Error', error.message, true);
+    incidentalChargesTableBody.innerHTML =
+      '<tr><td colspan="6" style="text-align:center;color:red;">Error loading charges.</td></tr>';
+  }
+}
 document.addEventListener('click', async (e) => {
   if (!e.target.classList.contains('mark-paid-btn')) return;
 
   const chargeId = e.target.dataset.id;
+  if (!chargeId) return alert('Invalid charge ID');
 
   if (!confirm('Mark this charge as paid?')) return;
 
   try {
     const response = await fetch(
       `${API_BASE_URL}/incidental-charges/${chargeId}/mark-paid`,
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
+      { method: 'PATCH' }
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      alert(data.message || 'Something went wrong');
+      alert(data.message || 'Failed to mark as paid');
       return;
     }
-
-    alert('Charge marked as paid');
 
     // UI update
     e.target.disabled = true;
     e.target.innerText = 'Paid';
     e.target.classList.add('paid');
+
   } catch (err) {
     console.error(err);
     alert('Server error');
