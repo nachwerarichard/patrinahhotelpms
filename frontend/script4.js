@@ -1364,7 +1364,7 @@ bookingForm.addEventListener('submit', async function(event) {
         username: currentUsername // Pass username for audit log
     };
 
-    const submitBtn = document.getElementById('saveBookingBtn');
+    const saveBtn = document.getElementById('saveBookingBtn');
 
 try {
     // Disable and inject spinner + text
@@ -1415,9 +1415,9 @@ try {
     showMessageBox('Error', `Failed to save booking: ${error.message}`, true);
 } finally {
     // 2. Restore Button
-    submitBtn.disabled = false;
+    saveBtn.disabled = false;
     // Remove the spinner and reset the text based on the mode
-    submitBtn.innerHTML = id ? 'Update Booking' : 'Add Booking';
+    saveBtn.innerHTML = id ? 'Update Booking' : 'Add Booking';
 }
 });
 
