@@ -1854,12 +1854,13 @@ async function viewCharges(bookingCustomId) {
               onclick="confirmDeleteIncidentalCharge('${charge._id}', '${bookingCustomId}')">
               Delete
             </button>
-    <button class="btn btn-danger btn-sm"
+            
+              <button class="btn btn-danger btn-sm"
               ${charge.isPaid ? 'paid' : ''}
               onclick="confirmPayIncidentalCharge('${charge._id}', '${bookingCustomId}')"               data-id="${charge._id}"
               ${charge.isPaid ? 'disabled' : ''}>
-              ${charge.isPaid ? 'Paid' : 'Mark as Paid'}>
-              Mark Paid
+              ${charge.isPaid ? 'Paid' : 'Pay'}>
+              
             </button>
           </td>
         `;
