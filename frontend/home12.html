@@ -1758,5 +1758,39 @@ updateDashboard();
 // Initialize
 updateroomDashboard();
     </script>
+    <script>
+        async function logout() {
+    try {
+        // 1. Notify backend (using the token before we wipe it)
+        if (authToken) {
+            await fetch(`${API_BASE_URL}/logout`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Basic ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+        }
+    } catch (error) {
+        // Log the error but continue with local logout anyway
+        console.warn('Backend logout failed or endpoint missing:', error);
+    }
+
+    // 2. Wipe local in-memory state
+    authToken = '';
+    currentUsername = '';
+    currentUserRole = '';
+
+    // 3. Clear all stored data (Tokens, Roles, Flags)
+    localStorage.clear();
+
+    // 4. Secure Redirect
+    // Using .replace() removes the current page from history so 
+    // the user cannot click "Back" to see the dashboard.
+    console.log("Logout successful. Redirecting...");
+    window.location.replace('https://elegant-pasca-cea136.netlify.app/frontend/login.html');
+}
+
+    </script>
 </body>
 </html>
