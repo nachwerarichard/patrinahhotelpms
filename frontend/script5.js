@@ -229,20 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
            showSection('channel-manager');
        });
     }});
-
-function logout() {
-    // 1. Clear session data
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('user'); // Clear everything else too
-   localStorage.removeItem('hotel_username');
-    // 2. Log for debugging
-    console.log("Session cleared. Redirecting...");
-
-    // 3. Replace current history entry with the login page
-    // This makes it impossible to "go back" to the dashboard
-    window.location.replace('https://elegant-pasca-cea136.netlify.app/frontend/login.html');
-}
     
     function showMessageBox(title, content) {
     document.getElementById('messageBoxTitle').textContent = title;
