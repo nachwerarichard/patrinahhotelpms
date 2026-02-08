@@ -336,7 +336,7 @@ addChargeForm.onsubmit = e => {
     // Call the updated function that handles both Inventory and Folio
     addCharge(description, number, department);
 };
-        window.setDepartment = (dept) => {
+    /*    window.setDepartment = (dept) => {
     // 1. Update the hidden select value
     const select = document.getElementById('deptSelect');
     select.value = dept;
@@ -344,9 +344,9 @@ addChargeForm.onsubmit = e => {
     // 2. Update the input label to guide the user
     document.getElementById('descLabel').textContent = `${dept} Item Description`;
     document.getElementById('itemDesc').placeholder = dept === 'Bar' ? 'e.g. Nile Special' : 'e.g. Dinner Buffet';
-
+*/
     // 3. Update Button Styles (Visual Feedback)
-    const buttons = {
+    /*const buttons = {
         'Restaurant': document.getElementById('btnRes'),
         'Bar': document.getElementById('btnBar'),
         'Other': document.getElementById('btnOther')
@@ -359,7 +359,7 @@ addChargeForm.onsubmit = e => {
             buttons[key].className = "flex-1 py-2 text-xs font-bold rounded-lg border-2 border-slate-200 text-slate-500 hover:border-indigo-600 transition-all";
         }
     });
-};
+};*/
         let inventoryData = []; // To store items locally
 
 // 1. Fetch items from your backend on load
