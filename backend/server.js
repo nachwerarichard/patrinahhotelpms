@@ -135,7 +135,7 @@ const bookingSchema = new mongoose.Schema({
     balance: { type: Number, default: 0 }, // This is ROOM balance
     paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Partially Paid'], default: 'Pending' },
     paymentMethod: { type: String, enum: ['Cash', 'MTN Momo', 'Airtel Pay','Bank'], default: 'Cash' },
-    guestsource: { type: String, required: true, enum: ['Walk in','Booking Engine', 'Expedia', 'Booking.com','Airbnd','Trip'], default: 'Walk in' },
+    guestsource: { type: String, required: true, enum: ['Walk in','Hotel Website', 'Expedia', 'Booking.com','Airbnd','Trip'], default: 'Walk in' },
     gueststatus: { type: String, required: true, enum: ['confirmed', 'cancelled', 'no show', 'checkedin', 'reserved','checkedout','void'], default: 'confirmed' },
     cancellationReason: { type: String, default: '' },
     voidReason: { type: String, default: '' },
@@ -2222,7 +2222,7 @@ app.post('/api/public/bookings', async (req, res) => {
                 paymentStatus: 'Pending',
                 paymentMethod: 'Cash',
                 gueststatus: 'reserved',
-                guestsource: 'Booking Engine'
+                guestsource: 'Hotel Website'
             });
 
             await newBooking.save();
