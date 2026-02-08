@@ -98,7 +98,7 @@ function showMessage(message, callback = null) {
     const modal = document.getElementById('message-modal');
     const messageText = document.getElementById('message-text');
     const closeButton = document.getElementById('message-close-button');
-
+    callback=null;
     if (!modal || !messageText || !closeButton) {
         console.error("Message modal elements not found.");
         console.log("Message:", message);
