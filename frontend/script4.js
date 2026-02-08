@@ -1364,42 +1364,54 @@ bookingForm.addEventListener('submit', async function(event) {
         username: currentUsername // Pass username for audit log
     };
 
-    try {
-        let response;
-        let message;
-        if (id) {
-            // Edit existing booking
-            response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(bookingData)
-            });
-            message = 'Booking updated successfully!';
-        } else {
-            // Add new booking
-            response = await fetch(`${API_BASE_URL}/bookings`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(bookingData)
-            });
-            message = 'New booking added successfully!';
-        }
+    const submitBtn = document.getElementById('bookingSubmitBtn');
+const originalText = submitBtn.textContent;
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
+submitBtn.textContent = 'Processing...';
+submitBtn.disabled = true;
 
-        showMessageBox('Success', message);
-        renderBookings(currentPage, currentSearchTerm); // Re-render to show updated list
-        renderHousekeepingRooms(); // Update housekeeping view as room status might change
-        renderCalendar(); // Update calendar view
-        renderAuditLogs(); // Update audit logs
-    } catch (error) {
+try {
+    let response;
+    let message;
+
+    if (id) {
+        // Edit existing booking
+        response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bookingData)
+        });
+        message = 'Booking updated successfully!';
+    } else {
+        // Add new booking
+        response = await fetch(`${API_BASE_URL}/bookings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bookingData)
+        });
+        message = 'New booking added successfully!';
+    }
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    showMessageBox('Success', message);
+    renderBookings(currentPage, currentSearchTerm);
+    renderHousekeepingRooms();
+    renderCalendar();
+    renderAuditLogs();
+
+} catch (error) {
     console.error('Error saving booking:', error);
     showMessageBox('Error', `Failed to save booking: ${error.message}`, true);
-}
 
+} finally {
+    // Always restore button state
+    submitBtn.textContent = originalText;
+    submitBtn.disabled = false;
+}
 
 });
 
