@@ -174,7 +174,7 @@ const addCharge = async (description, number, department) => {
     }
 
     // --- NEW: Department Validation ---
-    const selectedDept = department || document.getElementById('deptSelect')?.value;
+    const selectedDept = document.getElementById('deptSelect')?.value;
     if (!selectedDept || selectedDept === "" || selectedDept === "Select Department") {
         showMessage("Please select a department before proceeding!", "error");
         return;
@@ -211,6 +211,8 @@ const addCharge = async (description, number, department) => {
             if (!res.ok) throw new Error("Failed to send order to kitchen");
             
             showMessage("Order sent to Kitchen preparing list!", "success");
+                  addChargeForm.reset();
+
             
         } else {
             // Standard Bar/Service Logic
@@ -243,8 +245,12 @@ const addCharge = async (description, number, department) => {
 
                 updateActiveAccountUI(updatedAccount); 
                 showMessage("Bar sale recorded & Guest charged!", "success");
+                      addChargeForm.reset();
+
             } else {
                 showMessage("Direct Cash sale recorded!", "success");
+                      addChargeForm.reset();
+
             }
         }
 
