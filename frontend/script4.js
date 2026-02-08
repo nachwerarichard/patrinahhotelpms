@@ -1900,7 +1900,7 @@ document.getElementById('payAllChargesBtn').addEventListener('click', async () =
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: currentUser?.username || 'FrontDesk'
+          username: currentUsername?.username || 'FrontDesk'
         })
       }
     );
