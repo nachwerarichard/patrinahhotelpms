@@ -304,7 +304,7 @@ const addCharge = async (description, number, department) => {
             
             
 ///addcahrge old route
-        const addarge = async (description, amount, department) => {
+       /* const addarge = async (description, amount, department) => {
     if (!activeAccountId) return;
     try {
         const res = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
@@ -324,7 +324,7 @@ const addCharge = async (description, number, department) => {
         addChargeForm.reset();
         showMessage(`${department} charge added!`, 'success');
     } catch (err) { showMessage(err.message, 'error'); }
-};
+};*/
 
 addChargeForm.onsubmit = e => {
     e.preventDefault();
