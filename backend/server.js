@@ -510,7 +510,6 @@ app.post('/api/pos/client/account', async (req, res) => {
 // POST /api/pos/client/account/:accountId/charge
 app.post('/api/pos/client/account/:accountId/charge', async (req, res) => {
     const { accountId } = req.params;
-    const { description, amount } = req.body;
     const { description, amount, type } = req.body;
 
 
