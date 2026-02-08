@@ -6,6 +6,7 @@ let bookings = []; // This will now hold the currently displayed page's bookings
 let currentPage = 1;
 const recordsPerPage = 5; // Maximum 5 booking records per page
 let currentSearchTerm = ''; // New: To keep track of the active search term for pagination
+let currentBookingObjectId = null;
 
 // Calendar state
 let currentCalendarDate = new Date(); // Stores the month/year currently displayed in the calendar
@@ -1816,6 +1817,9 @@ async function viewCharges(bookingCustomId) {
       return;
     }
 
+    // 🔑 store Mongo ObjectId
+    currentBookingObjectId = booking._id;
+
     viewChargesGuestNameSpan.textContent = booking.name;
     viewChargesRoomNumberSpan.textContent = booking.room;
 
@@ -1828,12 +1832,15 @@ async function viewCharges(bookingCustomId) {
     incidentalChargesTableBody.innerHTML = '';
 
     let totalChargesAmount = 0;
+    let hasUnpaidCharges = false;
 
     if (charges.length === 0) {
       incidentalChargesTableBody.innerHTML =
         '<tr><td colspan="6" style="text-align:center;">No incidental charges.</td></tr>';
     } else {
       charges.forEach(charge => {
+        if (!charge.isPaid) hasUnpaidCharges = true;
+
         const row = incidentalChargesTableBody.insertRow();
 
         row.innerHTML = `
@@ -1843,15 +1850,16 @@ async function viewCharges(bookingCustomId) {
           <td>${new Date(charge.date).toLocaleDateString()}</td>
           <td>
             <button class="btn btn-danger btn-sm"
+              ${charge.isPaid ? 'disabled' : ''}
               onclick="confirmDeleteIncidentalCharge('${charge._id}', '${bookingCustomId}')">
               Delete
             </button>
 
             <button
-              class="mark-paid-btn ${charge.paid ? 'paid' : ''}"
+              class="mark-paid-btn ${charge.isPaid ? 'paid' : ''}"
               data-id="${charge._id}"
-              ${charge.paid ? 'disabled' : ''}>
-              ${charge.paid ? 'Paid' : 'Mark as Paid'}
+              ${charge.isPaid ? 'disabled' : ''}>
+              ${charge.isPaid ? 'Paid' : 'Mark as Paid'}
             </button>
           </td>
         `;
@@ -1861,6 +1869,13 @@ async function viewCharges(bookingCustomId) {
     }
 
     totalIncidentalChargesSpan.textContent = totalChargesAmount.toFixed(2);
+
+    // 🔒 Disable Pay All if nothing to pay
+    const payAllBtn = document.getElementById('payAllChargesBtn');
+    if (payAllBtn) {
+      payAllBtn.disabled = !hasUnpaidCharges;
+    }
+
     viewChargesModal.style.display = 'flex';
 
   } catch (error) {
@@ -1870,6 +1885,50 @@ async function viewCharges(bookingCustomId) {
       '<tr><td colspan="6" style="text-align:center;color:red;">Error loading charges.</td></tr>';
   }
 }
+document.getElementById('payAllChargesBtn').addEventListener('click', async () => {
+  if (!currentBookingObjectId) {
+    alert('Booking ID not found');
+    return;
+  }
+
+  if (!confirm('Mark ALL unpaid incidental charges as paid?')) return;
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/incidental-charges/pay-all/${currentBookingObjectId}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: currentUser?.username || 'FrontDesk'
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message || 'Failed to pay charges');
+      return;
+    }
+
+    alert(data.message);
+
+    // 🔁 Update UI
+    document.querySelectorAll('.mark-paid-btn').forEach(btn => {
+      btn.disabled = true;
+      btn.innerText = 'Paid';
+      btn.classList.add('paid');
+    });
+
+    document.getElementById('payAllChargesBtn').disabled = true;
+
+  } catch (err) {
+    console.error(err);
+    alert('Server error while paying charges');
+  }
+});
+
 document.addEventListener('click', async (e) => {
   if (!e.target.classList.contains('mark-paid-btn')) return;
 
