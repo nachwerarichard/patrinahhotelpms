@@ -165,25 +165,30 @@ function startQuickSale() {
             };
 
 const addCharge = async (description, number, department) => {
+    // Target the submit button
+    const submitBtn = document.querySelector('#addChargeForm button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+
     // 1. DATA GATHERING
-    const selectedDept = department || document.getElementById('deptSelect')?.value;
+    const deptDropdown = document.getElementById('deptSelect');
+    const selectedDept = (department || deptDropdown?.value || "").trim();
+    
+    // 2. STRICT VALIDATION
+    if (!selectedDept || selectedDept === "" || selectedDept === "Select Department") {
+        showMessage("STOP: Please select a department!", "error");
+        return; 
+    }
+
     const isQuickSale = (document.getElementById('currentOrderType')?.value === 'Direct' || !activeAccountId);
     const token = localStorage.getItem('token'); 
     const itemInfo = document.getElementById('itemDesc').dataset;
     const qtyValue = parseFloat(document.getElementById('number').value) || 1;
-
-    // 2. STRICT VALIDATION (Stop early if data is missing)
-    if (!selectedDept || selectedDept === "" || selectedDept === "Select Department") {
-        showMessage("Please select a department before proceeding!", "error");
-        return;
-    }
 
     if (!activeAccountId && !isQuickSale) {
         showMessage("Please select a guest or start a Quick Sale first!", "error");
         return;
     }
 
-    // 3. BUILD PAYLOAD
     const payload = {
         item: description,
         department: selectedDept,
@@ -197,8 +202,12 @@ const addCharge = async (description, number, department) => {
     };
 
     try {
+        // --- START PROCESSING STATE ---
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Processing...`;
+        submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+
         if (selectedDept === 'Restaurant') {
-            // STEP A: Kitchen Order
             const res = await fetch(`${BASE_URL}/api/kitchen/order`, {
                 method: 'POST',
                 headers: { 
@@ -209,10 +218,10 @@ const addCharge = async (description, number, department) => {
             });
 
             if (!res.ok) throw new Error("Failed to send order to kitchen");
-            showMessage("Order sent to Kitchen preparing list!", "success");
+            showMessage("Order sent to Kitchen!", "success");
             
-        } else {
-            // STEP B: Standard Bar/Service Logic
+        } else { 
+            // Handles Bar, Laundry, Health Club, etc.
             const saleRes = await fetch(`${BASE_URL}/sales`, {
                 method: 'POST',
                 headers: { 
@@ -222,46 +231,41 @@ const addCharge = async (description, number, department) => {
                 body: JSON.stringify(payload)
             });
             
-            const saleResult = await saleRes.json();
-            if (!saleRes.ok) throw new Error(saleResult.error);
+            if (!saleRes.ok) throw new Error("Sale deduction failed");
 
             if (activeAccountId) {
-                // Resident Charge
                 const folioRes = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}` 
-                    },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({
                         description: `${description} (x${qtyValue})`,
                         amount: payload.sp * payload.number,
                         type: selectedDept
                     })
                 });
-                
                 const updatedAccount = await folioRes.json();
-                if (!folioRes.ok) throw new Error(updatedAccount.message);
-
                 updateActiveAccountUI(updatedAccount); 
-                showMessage("Bar sale recorded & Guest charged!", "success");
+                showMessage("Sale recorded & Guest charged!", "success");
             } else {
-                // Quick Sale
                 showMessage("Direct Cash sale recorded!", "success");
             }
         }
 
-        // 4. RESET FORM UPON SUCCESS
-        // Clear the actual HTML form and any UI variables
+        // 4. RESET FORM
         addChargeForm.reset(); 
         if (typeof startNewTransaction === "function") startNewTransaction();
 
     } catch (err) {
         console.error("Transaction failed:", err);
         showMessage(err.message, "error");
+    } finally {
+        // --- RESTORE BUTTON STATE ---
+        // Runs whether the try succeeded or failed
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+        submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
     }
 };
-
 /**
  * Helper function to clear the form inputs
  */
