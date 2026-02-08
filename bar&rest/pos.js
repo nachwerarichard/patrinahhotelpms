@@ -42,6 +42,7 @@ function startQuickSale() {
             const messageBox = document.getElementById('messageBox');
             const createAccountForm = document.getElementById('createAccountForm');
             const activeAccountSection = document.getElementById('activeAccountSection');
+            const emptyState = document.getElementById('emptyState');
             const addChargeForm = document.getElementById('addChargeForm');
             const postToRoomBtn = document.getElementById('postToRoomBtn');
             const issueReceiptBtn = document.getElementById('issueReceiptBtn');
@@ -52,7 +53,16 @@ function startQuickSale() {
             let activeAccountData = null;
 
             // --- TAB LOGIC ---
-
+            window.switchTab = (tab) => {
+                const isNew = tab === 'new';
+                document.getElementById('managementPanel').classList.toggle('hidden', !isNew);
+                document.getElementById('tabNew').className = isNew ? 'pb-2 px-2 text-sm font-semibold tab-active transition-all' : 'pb-2 px-2 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-all';
+                
+                if (!isNew && !activeAccountId) {
+                    emptyState.classList.remove('hidden');
+                    activeAccountSection.classList.add('hidden');
+                }
+            };
 
             // --- UI HELPERS ---
             const showsage = (message, type) => {
@@ -94,6 +104,7 @@ function startQuickSale() {
 
     // 4. UI Visibility
     postToRoomBtn.classList.toggle('hidden', !account.roomNumber);
+    emptyState.classList.add('hidden');
     activeAccountSection.classList.remove('hidden');
 };
 
@@ -103,6 +114,7 @@ function startQuickSale() {
                 searchAccountForm.reset();
                 searchResults.innerHTML = '';
                 activeAccountSection.classList.add('hidden');
+                emptyState.classList.remove('hidden');
                 activeAccountId = null;
                 activeAccountData = null;
             };
@@ -153,49 +165,36 @@ function startQuickSale() {
             };
 
 const addCharge = async (description, number, department) => {
-    // Target the submit button
-    const submitBtn = document.querySelector('#addChargeForm button[type="submit"]');
-    const originalBtnText = submitBtn.innerHTML;
-
-    // 1. DATA GATHERING
-    const deptDropdown = document.getElementById('deptSelect');
-    const selectedDept = (department || deptDropdown?.value || "").trim();
-    
-    // 2. STRICT VALIDATION
-    if (!selectedDept || selectedDept === "" || selectedDept === "Select Department") {
-        showMessage("STOP: Please select a department!", "error");
-        return; 
-    }
-
+    // 1. Validation Logic: Check if it's a Quick Sale vs Resident Sale
     const isQuickSale = (document.getElementById('currentOrderType')?.value === 'Direct' || !activeAccountId);
-    const token = localStorage.getItem('token'); 
-    const itemInfo = document.getElementById('itemDesc').dataset;
-    const qtyValue = parseFloat(document.getElementById('number').value) || 1;
 
+    // If it's NOT a quick sale AND no guest is selected, then we block it
     if (!activeAccountId && !isQuickSale) {
         showMessage("Please select a guest or start a Quick Sale first!", "error");
         return;
     }
 
+    const token = localStorage.getItem('token'); 
+    const itemInfo = document.getElementById('itemDesc').dataset;
+    const selectedDept = department || document.getElementById('deptSelect').value;
+    const qtyValue = parseFloat(document.getElementById('number').value) || 1;
+
+    // 2. Build the data object
     const payload = {
         item: description,
         department: selectedDept,
         number: qtyValue,
         bp: parseFloat(itemInfo.bp || 0),
         sp: parseFloat(itemInfo.sp || 0),
-        accountId: activeAccountId || null,
+        accountId: activeAccountId || null, // null for Quick Sales
         tableNumber: document.getElementById('tableNum')?.value || "N/A",
-        isQuickSale: isQuickSale,
+        isQuickSale: isQuickSale, // Extra flag for backend clarity
         date: new Date()
     };
 
     try {
-        // --- START PROCESSING STATE ---
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Processing...`;
-        submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
-
         if (selectedDept === 'Restaurant') {
+            // STEP A: Send to Kitchen Order Queue
             const res = await fetch(`${BASE_URL}/api/kitchen/order`, {
                 method: 'POST',
                 headers: { 
@@ -206,10 +205,13 @@ const addCharge = async (description, number, department) => {
             });
 
             if (!res.ok) throw new Error("Failed to send order to kitchen");
-            showMessage("Order sent to Kitchen!", "success");
             
-        } else { 
-            // Handles Bar, Laundry, Health Club, etc.
+            showMessage("Order sent to Kitchen preparing list!", "success");
+             startNewTransaction();            
+        } else {
+            // STEP B: Standard Bar/Service Logic
+            
+            // 1. Deduct Inventory (Always happens regardless of guest type)
             const saleRes = await fetch(`${BASE_URL}/sales`, {
                 method: 'POST',
                 headers: { 
@@ -218,13 +220,17 @@ const addCharge = async (description, number, department) => {
                 },
                 body: JSON.stringify(payload)
             });
-            
-            if (!saleRes.ok) throw new Error("Sale deduction failed");
+            const saleResult = await saleRes.json();
+            if (!saleRes.ok) throw new Error(saleResult.error);
 
+            // 2. Conditional Folio Charge: ONLY if we have an activeAccountId
             if (activeAccountId) {
                 const folioRes = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
                     body: JSON.stringify({
                         description: `${description} (x${qtyValue})`,
                         amount: payload.sp * payload.number,
@@ -232,50 +238,21 @@ const addCharge = async (description, number, department) => {
                     })
                 });
                 const updatedAccount = await folioRes.json();
+                if (!folioRes.ok) throw new Error(updatedAccount.message);
+
+                // Update UI for Resident
                 updateActiveAccountUI(updatedAccount); 
-                showMessage("Sale recorded & Guest charged!", "success");
+                showMessage("Bar sale recorded & Guest charged!", "success");
             } else {
+                // If Quick Sale (Bar/Drink), we just acknowledge the cash sale
                 showMessage("Direct Cash sale recorded!", "success");
+                // Update a generic "Quick Sale" UI list here if needed
             }
         }
-
-        // 4. RESET FORM
-        addChargeForm.reset(); 
-        if (typeof startNewTransaction === "function") startNewTransaction();
 
     } catch (err) {
         console.error("Transaction failed:", err);
         showMessage(err.message, "error");
-    } finally {
-        // --- RESTORE BUTTON STATE ---
-        // Runs whether the try succeeded or failed
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalBtnText;
-        submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
-    }
-};
-/**
- * Helper function to clear the form inputs
- */
-const resetSaleForm = () => {
-    // If using a standard HTML form tag:
-    // document.getElementById('yourFormId')?.reset();
-
-    // Manual clear for specific POS fields:
-    document.getElementById('number').value = 1;
-    document.getElementById('deptSelect').value = ""; // Resets dropdown
-    
-    // Clear any temporary item description labels if they exist
-    const itemLabel = document.getElementById('itemDesc');
-    if (itemLabel) {
-        itemLabel.textContent = "No item selected";
-        itemLabel.dataset.bp = "0";
-        itemLabel.dataset.sp = "0";
-    }
-
-    // Optional: If you want to trigger your existing global reset
-    if (typeof startNewTransaction === "function") {
-        startNewTransaction();
     }
 };
             const settleAccount = async (method) => {
@@ -311,19 +288,19 @@ const resetSaleForm = () => {
                 e.preventDefault();
                 searchAccounts(document.getElementById('searchQuery').value);
             };
-//old addcharge function 
-           // addChareForm.onsubmit = e => {
-              //  e.preventDefault();
-              //  const fd = new FormData(addChargeForm);
-              //  addCharge(fd.get('description'), fd.get('number'),fd.get('amount'));
-            //};
 
-           // postToRoomBtn.onclick = () => settleAccount('room');
-           // issueReceiptBtn.onclick = () => settleAccount('receipt');
+            addChargeForm.onsubmit = e => {
+                e.preventDefault();
+                const fd = new FormData(addChargeForm);
+                addCharge(fd.get('description'), fd.get('number'),fd.get('amount'));
+            };
+
+            postToRoomBtn.onclick = () => settleAccount('room');
+            issueReceiptBtn.onclick = () => settleAccount('receipt');
             
             
 ///addcahrge old route
-     /*   const addarge = async (description, amount, department) => {
+        const addarge = async (description, amount, department) => {
     if (!activeAccountId) return;
     try {
         const res = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
@@ -343,49 +320,23 @@ const resetSaleForm = () => {
         addChargeForm.reset();
         showMessage(`${department} charge added!`, 'success');
     } catch (err) { showMessage(err.message, 'error'); }
-};*/
+};
 
-addChargeForm.onsubmit = async (e) => {
+addChargeForm.onsubmit = e => {
     e.preventDefault();
     const fd = new FormData(addChargeForm);
     
-    // 1. Extract values
+    // 1. Get the item name from the description field
     const description = fd.get('description'); 
+    
+    // 2. Get the quantity (how many they bought)
     const number = fd.get('number'); 
+    
+    // 3. Get the department (selected via the BAR/RES buttons)
     const department = document.getElementById('deptSelect').value;
 
-    // 2. Strict Validation: Ensure all fields are present
-    if (!description || description.trim() === "") {
-        showMessage("Please select or enter an item description.", "error");
-        return;
-    }
-
-    if (!number || parseFloat(number) <= 0) {
-        showMessage("Please enter a valid quantity.", "error");
-        return;
-    }
-
-    // Checks if department is unselected or the default placeholder
-    if (!department || department === "" || department === "Select Department") {
-        showMessage("Please select a department  before proceeding.", "error");
-        return;
-    }
-
-    // 3. Call the charge function
-    // We 'await' it so we know it finished successfully before resetting the form
-    try {
-        await addCharge(description, number, department);
-        
-        // 4. Reset the form upon successful submission
-        addChargeForm.reset();
-        
-        // Optional: If you use a custom dropdown or specific UI labels, reset them manually
-        document.getElementById('deptSelect').value = ""; 
-        
-    } catch (err) {
-        // Errors are usually handled inside addCharge, but this is a safety net
-        console.error("Submission error:", err);
-    }
+    // Call the updated function that handles both Inventory and Folio
+    addCharge(description, number, department);
 };
         window.setDepartment = (dept) => {
     // 1. Update the hidden select value
@@ -482,6 +433,7 @@ function autoFillPrices(selectedItemName) {
     
         const resetForm = () => {
     // Clear the visible inputs
+    document.getElementById('itemDesc').value = '';
     document.getElementById('number').value = '';
     
     // Clear the hidden dataset values (BP and SP)
@@ -490,5 +442,5 @@ function autoFillPrices(selectedItemName) {
     itemDescInput.dataset.sp = '0';
     
     // Optional: Focus back on the item description for the next entry
+    itemDescInput.focus();
 };
-
