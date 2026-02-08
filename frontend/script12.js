@@ -89,10 +89,6 @@ async function login() {
     }
 }
 
-app.post('/logout', auth, async (req, res) => {
-  await logAction('Logout', req.user.username);
-  res.status(200).json({ message: 'Logged out successfully' });
-});
 
 
 /**
