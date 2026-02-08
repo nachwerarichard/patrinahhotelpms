@@ -2054,7 +2054,6 @@ async function markAllChargesPaid() {
  */
 async function printReceipt(bookingCustomId) {
     try {
-        // Fetch booking details
         const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}`);
         if (!bookingResponse.ok) throw new Error(`HTTP error! status: ${bookingResponse.status}`);
         const booking = await bookingResponse.json();
@@ -2064,55 +2063,77 @@ async function printReceipt(bookingCustomId) {
             return;
         }
 
-        // Fetch incidental charges for this booking
-        const chargesResponse = await fetch(`${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`);
+        const chargesResponse = await fetch(
+            `${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`
+        );
         if (!chargesResponse.ok) throw new Error(`HTTP error! status: ${chargesResponse.status}`);
         const incidentalCharges = await chargesResponse.json();
 
-        // Populate receipt header
+        /* ---------- HEADER ---------- */
         receiptGuestNameSpan.textContent = booking.name;
         receiptRoomNumberSpan.textContent = booking.room;
         receiptBookingIdSpan.textContent = booking.id;
         receiptCheckInSpan.textContent = booking.checkIn;
         receiptCheckOutSpan.textContent = booking.checkOut;
-        receiptPrintDateSpan.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        receiptPrintDateSpan.textContent = new Date().toLocaleDateString(
+            'en-US',
+            { year: 'numeric', month: 'long', day: 'numeric' }
+        );
 
-        // Populate room charges
+        /* ---------- ROOM ---------- */
         receiptNightsSpan.textContent = booking.nights;
         receiptAmtPerNightSpan.textContent = parseFloat(booking.amtPerNight).toFixed(2);
         receiptRoomTotalDueSpan.textContent = parseFloat(booking.totalDue).toFixed(2);
 
-        // Populate incidental charges table
+        /* ---------- INCIDENTALS ---------- */
         receiptIncidentalChargesTableBody.innerHTML = '';
+
         let totalIncidentalChargesAmount = 0;
+
         if (incidentalCharges.length === 0) {
-            receiptIncidentalChargesTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No incidental charges.</td></tr>';
+            receiptIncidentalChargesTableBody.innerHTML =
+                '<tr><td colspan="4" style="text-align:center;">No incidental charges.</td></tr>';
         } else {
             incidentalCharges.forEach(charge => {
                 const row = receiptIncidentalChargesTableBody.insertRow();
+
                 row.innerHTML = `
                     <td>${charge.type}</td>
                     <td>${charge.description || '-'}</td>
                     <td>${new Date(charge.date).toLocaleDateString()}</td>
                     <td>${parseFloat(charge.amount).toFixed(2)}</td>
                 `;
-                totalIncidentalChargesAmount += charge.amount;
+
+                // 🔥 ONLY count unpaid incidental charges
+                if (!charge.isPaid) {
+                    totalIncidentalChargesAmount += charge.amount;
+                }
             });
         }
- // Calculate and populate summary
+
+        /* ---------- SUMMARY ---------- */
         const roomSubtotal = parseFloat(booking.totalDue);
+        const totalAmountPaid = parseFloat(booking.amountPaid);
+
         const totalBill = roomSubtotal + totalIncidentalChargesAmount;
-        const totalAmountPaid = parseFloat(booking.amountPaid); // This is room amount paid
-        const finalBalanceDue = totalBill - totalAmountPaid;
+        let finalBalanceDue = totalBill - totalAmountPaid;
+
+        // 🔥 Prevent showing negative or cleared balance
+        if (finalBalanceDue <= 0) {
+            finalBalanceDue = 0;
+            receiptPaymentStatusSpan.textContent = 'Paid';
+        } else {
+            receiptPaymentStatusSpan.textContent = booking.paymentStatus;
+        }
 
         receiptSubtotalRoomSpan.textContent = roomSubtotal.toFixed(2);
         receiptSubtotalIncidentalsSpan.textContent = totalIncidentalChargesAmount.toFixed(2);
         receiptTotalBillSpan.textContent = totalBill.toFixed(2);
         receiptAmountPaidSpan.textContent = totalAmountPaid.toFixed(2);
         receiptBalanceDueSpan.textContent = finalBalanceDue.toFixed(2);
-        receiptPaymentStatusSpan.textContent = booking.paymentStatus; // This status is for room only
 
         receiptModal.style.display = 'flex';
+
     } catch (error) {
         console.error('Error generating receipt:', error);
         showMessageBox('Error', `Failed to generate receipt: ${error.message}`, true);
