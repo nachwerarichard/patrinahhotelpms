@@ -166,6 +166,13 @@ function startQuickSale() {
 
 const addCharge = async (description, number, department) => {
     // 1. Validation Logic: Guest vs Quick Sale
+    // --- NEW: Department Validation ---
+    const selectedDept = document.getElementById('deptSelect')?.value;
+    if (!selectedDept || selectedDept === "" || selectedDept === "Select Department") {
+        showMessage("Please select a department before proceeding!", "error");
+        return;
+    }
+  
     const isQuickSale = (document.getElementById('currentOrderType')?.value === 'Direct' || !activeAccountId);
 
     if (!activeAccountId && !isQuickSale) {
@@ -173,12 +180,6 @@ const addCharge = async (description, number, department) => {
         return;
     }
 
-    // --- NEW: Department Validation ---
-    const selectedDept = document.getElementById('deptSelect')?.value;
-    if (!selectedDept || selectedDept === "" || selectedDept === "Select Department") {
-        showMessage("Please select a department before proceeding!", "error");
-        return;
-    }
 
     const token = localStorage.getItem('token'); 
     const itemInfo = document.getElementById('itemDesc').dataset;
