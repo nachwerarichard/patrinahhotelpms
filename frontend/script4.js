@@ -1866,7 +1866,7 @@ document.addEventListener('click', async (e) => {
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/api/incidental-charges/${chargeId}/mark-paid`,
+      `${API_BASE_URL}/incidental-charges/${chargeId}/mark-paid`,
       {
         method: 'PATCH',
         headers: {
