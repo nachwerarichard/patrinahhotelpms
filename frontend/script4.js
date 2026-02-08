@@ -1836,6 +1836,13 @@ async function viewCharges(bookingCustomId) {
                     <td>${new Date(charge.date).toLocaleDateString()}</td>
                     <td>
                         <button class="btn btn-danger btn-sm" onclick="confirmDeleteIncidentalCharge('${charge._id}', '${bookingCustomId}')">Delete</button>
+                        <button 
+  class="mark-paid-btn" 
+  data-id="INCIDENTAL_CHARGE_ID"
+>
+  Mark as Paid
+</button>
+
                     </td>
                 `;
                 totalChargesAmount += charge.amount;
@@ -1849,6 +1856,43 @@ async function viewCharges(bookingCustomId) {
         incidentalChargesTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Error loading charges.</td></tr>';
     }
 }
+
+document.addEventListener('click', async (e) => {
+  if (!e.target.classList.contains('mark-paid-btn')) return;
+
+  const chargeId = e.target.dataset.id;
+
+  if (!confirm('Mark this charge as paid?')) return;
+
+  try {
+    const response = await fetch(
+      `/api/incidental-charges/${chargeId}/mark-paid`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message || 'Something went wrong');
+      return;
+    }
+
+    alert('Charge marked as paid');
+
+    // UI update
+    e.target.disabled = true;
+    e.target.innerText = 'Paid';
+    e.target.classList.add('paid');
+  } catch (err) {
+    console.error(err);
+    alert('Server error');
+  }
+});
 
 /**
  * Closes the view charges modal.
