@@ -326,23 +326,33 @@
             color: #2980b9;
         }
 
+        .sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* Ensures the sidebar takes full screen height */
+    padding-bottom: 20px; /* Optional: adds breathing room at the bottom */
+}
+
+/* This is the magic trick */
+.logout-item {
+    margin-top: auto; 
+}
+
             /* Positions logout at the bottom and gives it a distinct hover color */
 
     </style>
 </head>
 <body>
-   <div class="sidebar">
+ <div class="sidebar">
     <div class="flex items-center space-x-3 h-12">
-        
         <img
             src="/novuscloud.png"
             alt="Patrinah Hotel Logo"
             class="h-full w-auto object-contain"
         />
-          
-
     </div>
-       <h2></h2>
+
+    <h2></h2>
 
     <div class="nav-item" onclick="toggleMenu('checklistSubmenu', this)">
         <span>Room Checklist</span>
@@ -359,11 +369,12 @@
         <i class="fa-solid fa-chevron-down"></i>
     </div>
     <div id="reportsSubmenu" class="submenu">
-        <button onclick="showSection('reportForm')"><i class="fa-solid fa-clipboard-list"></i>  Report Form</button>
-        <button onclick="showSection('reportsTable')"><i class="fa-solid fa-chart-simple"></i>  Reports Table</button>
+        <button onclick="showSection('reportForm')"><i class="fa-solid fa-clipboard-list"></i> Report Form</button>
+        <button onclick="showSection('reportsTable')"><i class="fa-solid fa-chart-simple"></i> Reports Table</button>
     </div>
 
-    <div class="hidden nav-item logout-item" onclick="window.location.href='https://elegant-pasca-cea136.netlify.app/frontend/login.html'">
+    <div class="nav-item logout-item mt-auto" onclick="window.location.href='https://elegant-pasca-cea136.netlify.app/frontend/login.html'">
+        <i class="fa-solid fa-right-from-bracket"></i>
         <span>Logout</span>
     </div>
 </div>
