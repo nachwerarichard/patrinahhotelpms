@@ -88,6 +88,13 @@ async function login() {
         hidePreloader();
     }
 }
+
+app.post('/logout', auth, async (req, res) => {
+  await logAction('Logout', req.user.username);
+  res.status(200).json({ message: 'Logged out successfully' });
+});
+
+
 /**
  * Displays a custom alert message to the user.
  * (Requires #message-modal, #message-text, #message-close-button in HTML)
