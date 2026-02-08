@@ -165,27 +165,25 @@ function startQuickSale() {
             };
 
 const addCharge = async (description, number, department) => {
-    // 1. Validation Logic: Guest vs Quick Sale
-    // --- NEW: Department Validation ---
-    const selectedDept = document.getElementById('deptSelect')?.value;
+    // 1. DATA GATHERING
+    const selectedDept = department || document.getElementById('deptSelect')?.value;
+    const isQuickSale = (document.getElementById('currentOrderType')?.value === 'Direct' || !activeAccountId);
+    const token = localStorage.getItem('token'); 
+    const itemInfo = document.getElementById('itemDesc').dataset;
+    const qtyValue = parseFloat(document.getElementById('number').value) || 1;
+
+    // 2. STRICT VALIDATION (Stop early if data is missing)
     if (!selectedDept || selectedDept === "" || selectedDept === "Select Department") {
         showMessage("Please select a department before proceeding!", "error");
         return;
     }
-  
-    const isQuickSale = (document.getElementById('currentOrderType')?.value === 'Direct' || !activeAccountId);
 
     if (!activeAccountId && !isQuickSale) {
         showMessage("Please select a guest or start a Quick Sale first!", "error");
         return;
     }
 
-
-    const token = localStorage.getItem('token'); 
-    const itemInfo = document.getElementById('itemDesc').dataset;
-    const qtyValue = parseFloat(document.getElementById('number').value) || 1;
-
-    // 2. Build the data object
+    // 3. BUILD PAYLOAD
     const payload = {
         item: description,
         department: selectedDept,
@@ -200,6 +198,7 @@ const addCharge = async (description, number, department) => {
 
     try {
         if (selectedDept === 'Restaurant') {
+            // STEP A: Kitchen Order
             const res = await fetch(`${BASE_URL}/api/kitchen/order`, {
                 method: 'POST',
                 headers: { 
@@ -210,13 +209,10 @@ const addCharge = async (description, number, department) => {
             });
 
             if (!res.ok) throw new Error("Failed to send order to kitchen");
-            
             showMessage("Order sent to Kitchen preparing list!", "success");
-                  addChargeForm.reset();
-
             
         } else {
-            // Standard Bar/Service Logic
+            // STEP B: Standard Bar/Service Logic
             const saleRes = await fetch(`${BASE_URL}/sales`, {
                 method: 'POST',
                 headers: { 
@@ -225,10 +221,12 @@ const addCharge = async (description, number, department) => {
                 },
                 body: JSON.stringify(payload)
             });
+            
             const saleResult = await saleRes.json();
             if (!saleRes.ok) throw new Error(saleResult.error);
 
             if (activeAccountId) {
+                // Resident Charge
                 const folioRes = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
                     method: 'POST',
                     headers: { 
@@ -241,22 +239,22 @@ const addCharge = async (description, number, department) => {
                         type: selectedDept
                     })
                 });
+                
                 const updatedAccount = await folioRes.json();
                 if (!folioRes.ok) throw new Error(updatedAccount.message);
 
                 updateActiveAccountUI(updatedAccount); 
                 showMessage("Bar sale recorded & Guest charged!", "success");
-                      addChargeForm.reset();
-
             } else {
+                // Quick Sale
                 showMessage("Direct Cash sale recorded!", "success");
-                      addChargeForm.reset();
-
             }
         }
 
-        // --- NEW: Reset Form Upon Success ---
-        resetSaleForm();
+        // 4. RESET FORM UPON SUCCESS
+        // Clear the actual HTML form and any UI variables
+        addChargeForm.reset(); 
+        if (typeof startNewTransaction === "function") startNewTransaction();
 
     } catch (err) {
         console.error("Transaction failed:", err);
