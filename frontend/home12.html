@@ -229,7 +229,7 @@
             </li>
             <li id="nav-reports">
                 <a href="#" class="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-700 transition duration-200">
-                    <span>Reports</span>
+                    <span>Front Office Reports</span>
                 </a>
             </li>
             <li id="nav-calendar" class="hidden">
@@ -518,13 +518,13 @@
     <button onclick="setDateFilter('month')" class="bg-gray-200 px-3 py-1 rounded text-sm hover:bg-gray-300">This Month</button>
 </div>
         <input type="text" id="filterSearch" placeholder="Search Guest/Room..." class="border p-2 rounded">
-        <select id="filterPaymentStatus" class="border p-2 rounded">
+        <select id="filterPaymentStatus"placeholder="Payment Status" class="border p-2 rounded">
             <option value="">All Payment Status</option>
             <option value="Paid">Paid</option>
             <option value="Pending">Pending</option>
             <option value="Partially Paid">Partially Paid</option>
         </select>
-        <select id="filterGuestStatus" class="border p-2 rounded">
+        <select id="filterGuestStatus" placeholder="Guest Status"class="border p-2 rounded">
             <option value="">All Guest Status</option>
             <option value="confirmed">Confirmed</option>
             <option value="checkedin">Checked In</option>
@@ -533,7 +533,7 @@
             <option value="no show">No Show</option>
             <option value="cancelled">Cancelled</option>
         </select>
-        <select id="filterGuestSource" class="border p-2 rounded">
+        <select id="filterGuestSource" placeholder="Guest Source"class="border p-2 rounded">
             <option value="">All Guest Source</option>
             <option value="Walk in">Walk In</option>
             <option value="Hotel Website">Hotel Website</option>
@@ -542,15 +542,15 @@
             <option value="Airbnd">Airbnd</option>
              <option value="Trip">Trip</option>
         </select>
-        <select id="filterPaymentMethod" class="border p-2 rounded">
+        <select id="filterPaymentMethod" placeholder="Payment Method" class="border p-2 rounded">
             <option value="">Payment  Method</option>
             <option value="Cash">Cash</option>
             <option value="MTN Momo">MTN Momo</option>
             <option value="Airtel Pay">Airtel Pay</option>
             <option value="Bank">Bank</option>
         </select>
-        <input type="date" id="filterDate" class="border p-2 rounded">
-        <input type="date" id="endDate" class="border p-2 rounded">
+        <input type="date" id="filterDate" placeholder="Check In"class="border p-2 rounded">
+        <input type="date" id="endDate" placeholder="Check Out"class="border p-2 rounded">
 
         
         <div class="md:col-span-4 flex gap-2">
