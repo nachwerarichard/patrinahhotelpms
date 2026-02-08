@@ -112,13 +112,7 @@ function startQuickSale() {
                 searchResults.innerHTML = '';
                 activeAccountId = null;
                 activeAccountData = null;
-        chargesList.innerHTML = `
-            <tr>
-                <td colspan="3" class="text-center py-10 text-slate-400 italic">
-                    <i class="fas fa-plus-circle block text-2xl mb-2 opacity-20"></i>
-                    Select items from the menu to start
-                </td>
-            </tr>`;
+                chargesList.innerHTML = '';
     
 
             };
