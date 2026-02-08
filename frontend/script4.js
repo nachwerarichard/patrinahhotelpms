@@ -1982,8 +1982,8 @@ async function printReceipt(bookingCustomId) {
                 row.innerHTML = `
                     <td>${charge.type}</td>
                     <td>${charge.description || '-'}</td>
-                    <td>${parseFloat(charge.amount).toFixed(2)}</td>
                     <td>${new Date(charge.date).toLocaleDateString()}</td>
+                    <td>${parseFloat(charge.amount).toFixed(2)}</td>
                 `;
                 totalIncidentalChargesAmount += charge.amount;
             });
