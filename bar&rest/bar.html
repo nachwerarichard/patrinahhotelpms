@@ -586,14 +586,15 @@
                                 <i class="fas fa-plus-circle text-indigo-500"></i> Add Item/Service
                             </h3>
                             <div class="flex p-1 bg-slate-100 rounded-xl mb-6">
-                                <button type="button" onclick="setDepartment('Restaurant')" id="btnRes" class="flex-1 py-2 text-[10px] font-black rounded-lg transition-all bg-white shadow-sm text-indigo-600">RESTAURANT</button>
+                                <button type="button" onclick="setDepartment('Restaurant')" id="btnRes"  class="flex-1 py-2 text-[10px] font-black rounded-lg transition-all bg-white shadow-sm text-indigo-600">RESTAURANT</button>
                                 <button type="button" onclick="setDepartment('Bar')" id="btnBar" class="flex-1 py-2 text-[10px] font-black rounded-lg transition-all text-slate-500">BAR</button>
                                 <button type="button" onclick="setDepartment('Other')" id="btnOther" class="flex-1 py-2 text-[10px] font-black rounded-lg transition-all text-slate-500">OTHER</button>
                             </div>
 
                             <form id="addChargeForm" class="space-y-5">
-                                <div class="hidden">
+                                <div class="">
                                     <select name="department" id="deptSelect" required class="w-full">
+                                      <option value="">Select Department</option>
                                         <option value="Restaurant">Restaurant</option>
                                         <option value="Bar">Bar</option>
                                         <option value="Laundry">Laundry</option>
