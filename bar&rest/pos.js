@@ -110,7 +110,6 @@ function startQuickSale() {
                 addChargeForm.reset();
                 searchAccountForm.reset();
                 searchResults.innerHTML = '';
-                activeAccountSection.classList.add('hidden');
                 activeAccountId = null;
                 activeAccountData = null;
             };
