@@ -42,7 +42,6 @@ function startQuickSale() {
             const messageBox = document.getElementById('messageBox');
             const createAccountForm = document.getElementById('createAccountForm');
             const activeAccountSection = document.getElementById('activeAccountSection');
-            const emptyState = document.getElementById('emptyState');
             const addChargeForm = document.getElementById('addChargeForm');
             const postToRoomBtn = document.getElementById('postToRoomBtn');
             const issueReceiptBtn = document.getElementById('issueReceiptBtn');
@@ -53,16 +52,7 @@ function startQuickSale() {
             let activeAccountData = null;
 
             // --- TAB LOGIC ---
-            window.switchTab = (tab) => {
-                const isNew = tab === 'new';
-                document.getElementById('managementPanel').classList.toggle('hidden', !isNew);
-                document.getElementById('tabNew').className = isNew ? 'pb-2 px-2 text-sm font-semibold tab-active transition-all' : 'pb-2 px-2 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-all';
-                
-                if (!isNew && !activeAccountId) {
-                    emptyState.classList.remove('hidden');
-                    activeAccountSection.classList.add('hidden');
-                }
-            };
+
 
             // --- UI HELPERS ---
             const showsage = (message, type) => {
@@ -104,7 +94,6 @@ function startQuickSale() {
 
     // 4. UI Visibility
     postToRoomBtn.classList.toggle('hidden', !account.roomNumber);
-    emptyState.classList.add('hidden');
     activeAccountSection.classList.remove('hidden');
 };
 
@@ -114,7 +103,6 @@ function startQuickSale() {
                 searchAccountForm.reset();
                 searchResults.innerHTML = '';
                 activeAccountSection.classList.add('hidden');
-                emptyState.classList.remove('hidden');
                 activeAccountId = null;
                 activeAccountData = null;
             };
