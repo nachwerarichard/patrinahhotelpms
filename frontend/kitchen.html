@@ -193,53 +193,63 @@ async function loadOrders() {
             const minutes = Math.floor((new Date() - new Date(order.createdAt)) / 60000);
             const isLate = minutes >= 15;
 
-            return `
-            <div class="relative group bg-white rounded-3xl shadow-md hover:shadow-2xl transition-all duration-500 border border-slate-200 overflow-hidden flex flex-col ${isLate ? 'ring-2 ring-red-500' : ''}">
-                <div class="${isLate ? 'bg-red-50' : 'bg-slate-50'} px-6 py-3 border-b border-slate-100 flex justify-between items-center">
-                
-                    <div class="flex items-center gap-2 ${isLate ? 'text-red-600' : 'text-slate-400'}">
-                        <span class="relative flex h-2 w-2">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full ${isLate ? 'bg-red-400' : 'bg-orange-400'} opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2 w-2 ${isLate ? 'bg-red-500' : 'bg-orange-500'}"></span>
-                        </span>
-                        <span class="text-[10px] font-bold uppercase tracking-widest">${minutes}m ago</span>
-                    </div>
-                </div>
+            return 
+           `<div class="relative group bg-white rounded-[2rem] shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-200 overflow-hidden flex flex-col ${isLate ? 'ring-4 ring-red-500/20 border-red-200' : 'hover:border-indigo-300'}">
+    
+    <div class="${isLate ? 'bg-red-50/80' : 'bg-slate-50/50'} px-6 py-4 border-b border-slate-100 flex justify-between items-center backdrop-blur-sm">
+        <div class="flex items-center gap-3">
+            <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full ${isLate ? 'bg-red-400' : 'bg-emerald-400'} opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 ${isLate ? 'bg-red-500' : 'bg-emerald-500'}"></span>
+            </span>
+            <span class="${isLate ? 'text-red-700' : 'text-slate-500'} text-[11px] font-black uppercase tracking-[0.2em]">
+                ${isLate ? 'Priority Alert' : 'In Queue'} • ${minutes}m
+            </span>
+        </div>
+        <div class="text-[10px] font-bold text-slate-400">#${order._id.slice(-4).toUpperCase()}</div>
+    </div>
 
-                <div class="p-6 flex-grow">
-                    <div class="flex justify-between items-start mb-4">
-                        <h2 class="text-2xl font-black text-slate-800 leading-tight group-hover:text-indigo-600 transition-colors capitalize">
-                            ${order.item}
-                        </h2>
-                        <div class="bg-indigo-50 text-indigo-700 px-3 py-2 rounded-2xl flex flex-col items-center">
-                            <span class="text-xs font-bold leading-none">QTY</span>
-                            <span class="text-xl font-black">${order.number}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-center gap-2 text-slate-400">
-                        <div class="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center">
-                            <i class="fas fa-user text-xs"></i>
-                        </div>
-                        <span class="text-xs font-bold uppercase tracking-wider">${order.waiter || 'Staff'}</span>
-                    </div>
-                </div>
-
-                <div class="p-4 bg-slate-50/50 flex flex-col gap-2">
-                    <button onclick="markAsPreparing('${order._id}')"
-                        class="w-full bg-white hover:bg-amber-500 text-amber-600 hover:text-white py-3 rounded-xl font-black text-sm border-2 border-amber-500 transition-all duration-300 flex items-center justify-center gap-3 active:scale-95 shadow-sm">
-                        <i class="fas fa-fire"></i>
-                        MARK AS PREPARING
-                    </button>
-
-                    <button onclick="completeOrder('${order._id}')" 
-                        class="w-full bg-white hover:bg-emerald-500 text-emerald-600 hover:text-white py-3 rounded-xl font-black text-sm border-2 border-emerald-500 transition-all duration-300 flex items-center justify-center gap-3 active:scale-95 shadow-sm">
-                        <i class="fas fa-check"></i>
-                        MARK AS READY
-                    </button>
-                </div>
+    <div class="p-8 flex-grow">
+        <div class="flex justify-between items-start gap-4 mb-6">
+            <div class="space-y-1">
+                <h2 class="text-3xl font-black text-slate-900 leading-tight tracking-tight group-hover:text-indigo-600 transition-colors capitalize">
+                    ${order.item}
+                </h2>
+                <p class="text-xs text-slate-400 font-medium">Standard Preparation</p>
             </div>
-            `;
+            
+            <div class="bg-slate-900 text-white px-4 py-3 rounded-2xl flex flex-col items-center min-w-[60px] shadow-lg shadow-slate-200">
+                <span class="text-[10px] font-bold text-slate-400 leading-none mb-1 uppercase">Qty</span>
+                <span class="text-2xl font-black">${order.number}</span>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center border border-indigo-100">
+                <i class="fas fa-utensils text-indigo-500 text-sm"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ordered By</p>
+                <p class="text-sm font-bold text-slate-700">${order.waiter || 'Service Staff'}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="p-6 bg-slate-50/80 border-t border-slate-100 grid grid-cols-1 gap-3">
+        <button onclick="markAsPreparing('${order._id}')"
+            class="w-full bg-white hover:bg-amber-500 text-amber-600 hover:text-white py-4 rounded-2xl font-bold text-xs border border-amber-200 hover:border-amber-500 transition-all duration-300 flex items-center justify-center gap-3 active:scale-95 shadow-sm uppercase tracking-widest">
+            <i class="fas fa-fire-alt"></i>
+            Begin Preparation
+        </button>
+
+        <button onclick="completeOrder('${order._id}')" 
+            class="w-full bg-slate-900 hover:bg-emerald-600 text-white py-4 rounded-2xl font-bold text-xs transition-all duration-300 flex items-center justify-center gap-3 active:scale-95 shadow-xl shadow-slate-200 uppercase tracking-widest">
+            <i class="fas fa-check-double"></i>
+            Order Ready
+        </button>
+    </div>
+</div>`
+            ;
         }).join('');
     } catch (err) {
         console.error("Fetch Error:", err);
