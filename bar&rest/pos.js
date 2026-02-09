@@ -271,6 +271,8 @@ const addCharge = async (description, number, department) => {
                     if (!res.ok) throw new Error('Failed to settle');
                     
                     if (method === 'receipt') {
+                                  printReceiptFromAccount(data.receipt);
+
                         // (Receipt Logic remains same as your original)
                         showMessage('Receipt issued. Closing...', 'success');
                     } else {
@@ -368,25 +370,34 @@ function autoFillPrices(selectedItemName) {
     loadInventory(); // Initialize the dropdown items
     // ... rest of your code ...
 });
-        const printReceipt = (item, qty, price) => {
+    const printReceiptFromAccount = (receipt) => {
     const details = document.getElementById('receipt-details');
     const dateField = document.getElementById('receipt-date');
-    
-    const total = (qty * price).toFixed(2);
-    
-    details.innerHTML = `
-        <p>Item: ${item}</p>
-        <p>Qty: ${qty}</p>
-        <p>Price: $${price.toFixed(2)}</p>
-        <strong>Total: $${total}</strong>
-    `;
-    
-    dateField.innerText = new Date().toLocaleString();
 
-    // Trigger Print
+    const itemsHtml = receipt.charges.map(c => `
+        <div class="flex justify-between">
+            <span>${c.description}</span>
+            <span>${Number(c.amount).toLocaleString()}</span>
+        </div>
+    `).join('');
+
+    details.innerHTML = `
+        <p><strong>${receipt.guestName || 'Walk-in Guest'}</strong></p>
+        ${receipt.roomNumber ? `<p>Room: ${receipt.roomNumber}</p>` : ''}
+        <hr class="my-2"/>
+        ${itemsHtml}
+        <hr class="my-2"/>
+        <div class="flex justify-between font-bold">
+            <span>Total</span>
+            <span>${Number(receipt.total).toLocaleString()}</span>
+        </div>
+    `;
+
+    dateField.innerText = new Date(receipt.settledAt).toLocaleString();
+
     window.print();
 };
-    
+
         const resetForm = () => {
     // Clear the visible inputs
     document.getElementById('itemDesc').value = '';
