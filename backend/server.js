@@ -625,14 +625,19 @@ app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
             await account.save();
 
             console.log(`[Settlement Success] Recorded ${walkInChargesToSave.length} walk-in charges.`);
-            
-            return res.status(200).json({ 
-    message: 'Account settled and recorded successfully.', 
-    receipt: {
-        guestName: account.guestName,
-        charges: account.charges,        // all line items
-        settledAt: new Date()            // for the receipt timestamp
-    } 
+            const total = account.charges.reduce(
+  (sum, charge) => sum + Number(charge.amount),
+  0
+);
+
+return res.status(200).json({
+  message: 'Account settled and recorded successfully.',
+  receipt: {
+    guestName: account.guestName,
+    charges: account.charges,
+    total,                 // ✅ correct total
+    settledAt: new Date()
+  }
 });
 
 
