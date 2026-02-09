@@ -17,6 +17,24 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
       @media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #receipt-print,
+  #receipt-print * {
+    visibility: visible;
+  }
+
+  #receipt-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}
+
+      @media print {
   @page {
     size: 80mm auto; /* or 58mm */
     margin: 0;
