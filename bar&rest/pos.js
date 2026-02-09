@@ -296,8 +296,8 @@ const settleAccount = async (method) => {
     const data = await res.json(); // ✅ THIS WAS MISSING
 
     if (method === 'receipt') {
-      showMessage('Receipt issued. Closing...', 'success');
       printReceiptFromAccount(data.receipt);
+      showMessage('Receipt issued. Closing...', 'success');
 
       setTimeout(() => resetUI(), 2000);
     } else {
