@@ -82,23 +82,15 @@
 
 </aside>
     <main class="flex-1 md:ml-64">
-        <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8 sticky top-0 z-10">
-            <div class="flex items-center gap-4">
-                <h2 class="font-semibold text-slate-700">Staff Control Panel</h2>
-                <div id="connectionStatus" class="text-[10px] font-bold uppercase tracking-wider bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
-                    Checking...
-                </div>
-            </div>
-            <div class="flex items-center gap-4">
+        
+
+        <div class="p-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <button onclick="openModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition shadow-sm">
                     <i data-lucide="plus" class="w-4 h-4"></i>
                     Add Staff Member
                 </button>
-            </div>
-        </header>
 
-        <div class="p-8">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
                     <p class="text-sm text-gray-500 mb-1">Total Staff</p>
                     <h3 id="totalStaffCount" class="text-2xl font-bold text-slate-800">0</h3>
