@@ -254,6 +254,7 @@ const addCharge = async (description, number, department) => {
             } else {
                 showMessage("Direct Cash sale recorded!", "success");
             }
+          restUI();
         }
 
     } catch (err) {
