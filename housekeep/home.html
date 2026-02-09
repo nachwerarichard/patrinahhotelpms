@@ -9,12 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!--<link rel="stylesheet" href="styles.css"> -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css"> 
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .glass-morphism { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
-    
 
          .radial-btn {
         position: absolute;
@@ -40,42 +36,82 @@
     background-color: #f4f7f9; 
     color: #333; 
 }
-/*       /* Styling for the overall sidebar header */
+            /* Styling for the overall sidebar header */
+.sidebar h2 {
+    /* 1. Use Flexbox for alignment */
+    display: flex; 
+    /* 2. Vertically align the logo and text in the center */
+    align-items: center; 
+    /* 3. Add necessary padding and a separator */
+    padding: 15px;
+    border-bottom: 1px solid #ddd; /* Light separator line */
+    margin-top: 0;
+    margin-bottom: 0;
+    color: #333; /* Dark text color */
+}
 
 /* Styling for the logo image itself */
+.logo-icon {
+    /* 1. Set a fixed size for the logo */
+    width: 32px; 
+    height: 32px; 
+    /* 2. Add space between the logo and the "Patrinah Hotel" text */
+    margin-right: 10px; 
+    /* 3. Ensure the image scales correctly within its box */
+    object-fit: contain; 
+}
+            
+        /* Sidebar - Brighter, modern dark blue */
+        .sidebar {
+            width: 260px; /* Slightly wider */
+            background: #1e3d59; /* Deeper, more sophisticated blue */
+            color: white;
+            height: 100vh;
+            overflow-y: auto;
+            padding-top: 20px;
+            border-radius: 0; 
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+        }
 
+        .sidebar h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #ffc300; /* Pop color for the title */
+        }
 
-        /*.nav-item {
+        .nav-item {
             padding: 15px 25px; /* More padding */
-          /*  cursor: pointer;
+            cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: center;
             transition: background 0.3s, padding-left 0.3s;
-            font-weight: 400;*/
-        }*/
+            font-weight: 400;
+        }
 
-       /* .nav-item:hover, .nav-nav-item.active {
+        .nav-item:hover, .nav-nav-item.active {
             background: #2a5275; /* Lighter hover color */
-            /*padding-left: 30px;*/
-        }*/
+            padding-left: 30px;
+        }
         
         /* Navigation Icons */
-      /*  .nav-item i {
+        .nav-item i {
             font-size: 0.9em;
             transition: transform 0.3s;
-        }*/
+        }
 
         /* Submenu */
-       /* .submenu {
+        .submenu {
             display: none;
             flex-direction: column;
             background: #2a5275; /* Slightly lighter submenu background */
-         /*   padding-left: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);*/
-        }*/
-/*
-       /* .submenu button {
+            padding-left: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .submenu button {
             padding: 10px 20px;
             border: none;
             background: none;
@@ -85,10 +121,10 @@
             transition: background 0.3s;
             font-family: 'Poppins', sans-serif;
         }
-*/
-      /*  .submenu button:hover {
+
+        .submenu button:hover {
             background: #3e6a91;
-        }*/
+        }
 
         /* Content Area */
         .content {
@@ -290,95 +326,56 @@
             color: #2980b9;
         }
 
-      /*  .sidebar {
+        .sidebar {
     display: flex;
     flex-direction: column;
     height: 100vh; /* Ensures the sidebar takes full screen height */
-   /* padding-bottom: 20px;*/ /* Optional: adds breathing room at the bottom */
-}*/
-*/
+    padding-bottom: 20px; /* Optional: adds breathing room at the bottom */
+}
+
 /* This is the magic trick */
-/*.logout-item {
+.logout-item {
     margin-top: auto; 
-} */
+}
+
             /* Positions logout at the bottom and gives it a distinct hover color */
 
     </style>
 </head>
 <body>
-<aside class="sidebar w-72 bg-slate-900 text-slate-300 shadow-2xl flex flex-col min-h-screen border-r border-slate-800">
-    
-    <div class="p-6 border-b border-slate-800/50">
-        <div class="flex items-center space-x-3 h-10 mb-4">
-            <img
-                src="/novuscloud.png"
-                alt="Patrinah Hotel Logo"
-                class="h-full w-auto object-contain"
-            />
-        </div>
-        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-400">Department</div>
-        <h2 class="text-xl font-light text-white tracking-tight">House<span class="font-semibold text-indigo-500">Keeping</span></h2>
+ <div class="sidebar">
+    <div class="flex items-center space-x-3 h-12">
+        <img
+            src="/novuscloud.png"
+            alt="Patrinah Hotel Logo"
+            class="h-full w-auto object-contain"
+        />
     </div>
 
-    <div class="flex-grow p-4 space-y-2 overflow-y-auto">
-        
-        <div class="space-y-1">
-            <div class="nav-item group flex items-center justify-between p-4 rounded-xl cursor-pointer hover:bg-slate-800 transition-all duration-200" 
-                 onclick="toggleMenu('checklistSubmenu', this)">
-                <div class="flex items-center">
-                    <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                        <i class="fa-solid fa-list-check text-slate-400 group-hover:text-white text-sm"></i>
-                    </div>
-                    <span class="ml-4 font-medium text-[15px] group-hover:text-white">Room Checklist</span>
-                </div>
-                <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-300"></i>
-            </div>
-            
-            <div id="checklistSubmenu" class="submenu hidden flex flex-col ml-12 space-y-1 border-l border-slate-800">
-                <button onclick="showSection('checklistForm')" class="w-full text-left py-3 px-4 text-sm hover:text-indigo-400 transition-colors flex items-center">
-                    <i class="fa-solid fa-plus-circle mr-3 opacity-50"></i> Checklist Form
-                </button>
-                <button onclick="showSection('checklistsTable')" class="w-full text-left py-3 px-4 text-sm hover:text-indigo-400 transition-colors flex items-center">
-                    <i class="fa-solid fa-table mr-3 opacity-50"></i> Checklists Table
-                </button>
-                <button onclick="showSection('missingSummary')" class="w-full text-left py-3 px-4 text-sm hover:text-red-400 transition-colors flex items-center text-red-400/80">
-                    <i class="fa-solid fa-triangle-exclamation mr-3 opacity-50"></i> Missing Items
-                </button>
-            </div>
-        </div>
+    <h2></h2>
 
-        <div class="space-y-1">
-            <div class="nav-item group flex items-center justify-between p-4 rounded-xl cursor-pointer hover:bg-slate-800 transition-all duration-200" 
-                 onclick="toggleMenu('reportsSubmenu', this)">
-                <div class="flex items-center">
-                    <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                        <i class="fa-solid fa-chart-line text-slate-400 group-hover:text-white text-sm"></i>
-                    </div>
-                    <span class="ml-4 font-medium text-[15px] group-hover:text-white">Reports</span>
-                </div>
-                <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-300"></i>
-            </div>
-            
-            <div id="reportsSubmenu" class="submenu hidden flex flex-col ml-12 space-y-1 border-l border-slate-800">
-                <button onclick="showSection('reportForm')" class="w-full text-left py-3 px-4 text-sm hover:text-indigo-400 transition-colors flex items-center">
-                    <i class="fa-solid fa-clipboard-list mr-3 opacity-50"></i> Report Form
-                </button>
-                <button onclick="showSection('reportsTable')" class="w-full text-left py-3 px-4 text-sm hover:text-indigo-400 transition-colors flex items-center">
-                    <i class="fa-solid fa-chart-simple mr-3 opacity-50"></i> Reports Table
-                </button>
-            </div>
-        </div>
-
+    <div class="nav-item" onclick="toggleMenu('checklistSubmenu', this)">
+        <span>Room Checklist</span>
+        <i class="fa-solid fa-chevron-down"></i>
+    </div>
+    <div id="checklistSubmenu" class="submenu">
+        <button onclick="showSection('checklistForm')"><i class="fa-solid fa-list-check"></i> Checklist Form</button>
+        <button onclick="showSection('checklistsTable')"><i class="fa-solid fa-table"></i> Checklists Table</button>
+        <button onclick="showSection('missingSummary')"><i class="fa-solid fa-triangle-exclamation"></i> Missing Items Summary</button>
     </div>
 
-    <div class="p-4 border-t border-slate-800 bg-slate-900/50">
-        <div class="nav-item logout-item group flex items-center justify-center p-4 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white transition-all duration-300 cursor-pointer" 
-             onclick="window.location.href='https://elegant-pasca-cea136.netlify.app/frontend/login.html'">
-            <i class="fa-solid fa-arrow-right-from-bracket transition-transform group-hover:translate-x-1"></i>
-            <span class="ml-3 font-bold text-sm uppercase tracking-widest">Logout</span>
-        </div>
+    <div class="nav-item" onclick="toggleMenu('reportsSubmenu', this)">
+        <span>Housekeeping Reports</span>
+        <i class="fa-solid fa-chevron-down"></i>
     </div>
-</aside>
+    <div id="reportsSubmenu" class="submenu">
+        <button onclick="showSection('reportForm')"><i class="fa-solid fa-clipboard-list"></i> Report Form</button>
+        <button onclick="showSection('reportsTable')"><i class="fa-solid fa-chart-simple"></i> Reports Table</button>
+    </div>
+    <div class="nav-item  logout-item mt-auto" onclick="window.location.href='https://elegant-pasca-cea136.netlify.app/frontend/login.html'">
+        <span>Logout</span>
+    </div>
+</div>
 
     <div class="content">
 
