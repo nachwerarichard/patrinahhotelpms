@@ -404,7 +404,7 @@ function autoFillPrices(selectedItemName) {
     const itemsHtml = receipt.charges.map(c => `
         <div class="flex justify-between">
             <span>${c.description}</span>
-            <span>${Number(c.amount).toLocaleString()}</span>
+            <span>UGX ${Number(c.amount).toLocaleString()}</span>
         </div>
     `).join('');
 
@@ -416,7 +416,7 @@ function autoFillPrices(selectedItemName) {
         <hr class="my-2"/>
         <div class="flex justify-between font-bold">
             <span>Total</span>
-            <span>${Number(receipt.total).toLocaleString()}</span>
+            <span>UGX ${Number(receipt.total).toLocaleString()}</span>
         </div>
     `;
 
