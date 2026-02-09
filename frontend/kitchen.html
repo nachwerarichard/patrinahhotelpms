@@ -180,9 +180,7 @@ async function loadOrders() {
                             <span class="text-3xl font-light">${totalItems}</span>
                         </div>
                     </div>
-                    <div class="bg-white/60 backdrop-blur-md border border-slate-200 px-8 py-4 rounded-3xl shadow-sm flex items-center">
-                        <span class="text-xs font-bold uppercase tracking-widest text-slate-500">Kitchen Status: <span class="text-emerald-500 ml-2 animate-pulse">● Operational</span></span>
-                    </div>
+                    
                 </div>
             `;
         }
@@ -190,8 +188,7 @@ async function loadOrders() {
         if (orders.length === 0) {
             container.innerHTML = `
                 <div class="col-span-full flex flex-col items-center justify-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-200">
-                    <div class="text-slate-300 mb-4 text-6xl">👨‍🍳</div>
-                    <p class="text-slate-500 font-medium tracking-wide text-lg">All stations clear. No pending orders.</p>
+                    <p class="text-slate-500 font-medium tracking-wide text-lg"> No pending orders.</p>
                 </div>`;
             return;
         }
