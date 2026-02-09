@@ -518,24 +518,7 @@ function renderRadialOptions() {
 }
     
 </script>
-    <script>
-        // Add this to the TOP of your scripts on the destination pages
-document.addEventListener('DOMContentLoaded', () => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('autoLogin') === 'true') {
-        const u = params.get('u');
-        const p = params.get('p');
-        
-        // Save these to the local domain's storage so the session persists
-        localStorage.setItem('username', u);
-        localStorage.setItem('userPassword', p);
-        localStorage.setItem('userRole', params.get('r'));
-
-        // Perform your existing login fetch/request here automatically
-        // e.g., performLogin(u, p);
-    }
-});
-    </script>
+  
 
     
 </body>
