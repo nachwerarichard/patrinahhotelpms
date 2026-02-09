@@ -107,6 +107,9 @@ function startQuickSale() {
 };
 
             const resetUI = () => {
+              document.getElementById('currentGuestName').textContent = 'New Sale';
+    document.getElementById('currentRoomNumber').textContent = '';
+    document.getElementById('totalCharges').textContent = 'UGX  0';
                 createAccountForm.reset();
                 addChargeForm.reset();
                 searchAccountForm.reset();
