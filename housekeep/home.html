@@ -40,7 +40,267 @@
     background-color: #f4f7f9; 
     color: #333; 
 }
+/*       /* Styling for the overall sidebar header */
 
+/* Styling for the logo image itself */
+
+
+        /*.nav-item {
+            padding: 15px 25px; /* More padding */
+          /*  cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s, padding-left 0.3s;
+            font-weight: 400;*/
+        }*/
+
+       /* .nav-item:hover, .nav-nav-item.active {
+            background: #2a5275; /* Lighter hover color */
+            /*padding-left: 30px;*/
+        }*/
+        
+        /* Navigation Icons */
+      /*  .nav-item i {
+            font-size: 0.9em;
+            transition: transform 0.3s;
+        }*/
+
+        /* Submenu */
+       /* .submenu {
+            display: none;
+            flex-direction: column;
+            background: #2a5275; /* Slightly lighter submenu background */
+         /*   padding-left: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);*/
+        }*/
+/*
+       /* .submenu button {
+            padding: 10px 20px;
+            border: none;
+            background: none;
+            color: white;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-family: 'Poppins', sans-serif;
+        }
+*/
+      /*  .submenu button:hover {
+            background: #3e6a91;
+        }*/
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .content h1 {
+            color: #1e3d59;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        /* Content Boxes/Tabs - Card-like appearance */
+        .tab-content {
+            display: none;
+            background: #ffffff; /* White background for the content box */
+            border-radius: 10px; /* Rounded corners */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* Soft, noticeable shadow */
+            padding: 30px;
+            margin-bottom: 30px;
+            transition: opacity 0.3s;
+        }
+
+        .tab-content h2 {
+            margin-top: 0;
+            color: #1e3d59;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffc300; /* Accent line */
+            padding-left: 10px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Form Styling */
+        .form-container > div {
+            margin-bottom: 15px;
+        }
+        
+        form label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600; /* Bolder labels */
+            color: #444;
+            font-size: 0.95em;
+        }
+
+        form input[type="text"],
+        form input[type="number"],
+        form input[type="date"],
+        form input[type="datetime-local"],
+        form select,
+        form textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        form input:focus, form select:focus, form textarea:focus {
+            border-color: #ffc300;
+            box-shadow: 0 0 5px rgba(255, 195, 0, 0.3);
+            outline: none;
+        }
+
+        /* Radio/Checkbox Alignment */
+        label.radio-label {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 25px; /* Increased spacing */
+        }
+        label.radio-label input[type="radio"] {
+            width: auto;
+            margin-right: 8px;
+            transform: scale(1.1); /* Slightly larger radio buttons */
+        }
+        
+        /* Button Styling */
+        button, .content-box button {
+            padding: 10px 20px;
+            color: white;
+            border: none;
+            border-radius: 6px; /* Slightly more rounded buttons */
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s, transform 0.1s;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        button:active, .content-box button:active {
+            transform: translateY(1px);
+        }
+
+        /* Specific Button Colors (Brighter palette) */
+        #hotelChecklistForm button[type="submit"] {
+            background-color: #2ecc71; /* Emerald Green */
+        }
+        #hotelChecklistForm button[type="submit"]:hover {
+            background-color: #27ae60;
+        }
+
+        #statusReportForm button[type="submit"] {
+            background-color: #3498db; /* Peter River Blue */
+        }
+        #statusReportForm button[type="submit"]:hover {
+            background-color: #2980b9;
+        }
+        
+        /* Table Actions Buttons */
+        #checklistsTable button, #reportsTable button {
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+        .table-wrapper {
+            overflow-x: auto; /* Makes table scrollable on small screens */
+            border: 1px solid #eee;
+            border-radius: 6px;
+        }
+
+        /* Table styling */
+        table {
+            width: 100%;
+            border-collapse: separate; /* Use 'separate' for rounded corners on cells/borders */
+            border-spacing: 0;
+            margin-top: 0;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #e9ecef; /* Light header background */
+            color: #1e3d59;
+            font-weight: 600;
+            position: sticky; /* Keep headers visible on vertical scroll */
+            top: 0;
+            z-index: 10;
+        }
+        
+        tbody tr:hover {
+            background-color: #f8f9fa; /* Subtle row hover effect */
+        }
+        
+        /* Pagination/Filter/Search styling */
+        #searchInput, #missingItemsDateFilter, #filterDate {
+            padding: 10px 12px;
+            border-radius: 6px;
+            width: calc(100% - 24px); /* Account for padding */
+        }
+        
+        /* Missing Items Summary Styling */
+        #missingItemsSummary {
+            padding: 15px;
+            background-color: #fff3cd; /* Light warning yellow */
+            border: 1px solid #ffeeba;
+            border-radius: 6px;
+            color: #856404;
+        }
+        
+        /* Utility styles for the dashboard context */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .status-arrival { background-color: #e9e0ff; color: #6f42c1; } /* Purple */
+        .status-occupied { background-color: #ffeded; color: #dc3545; } /* Red */
+        .status-departure { background-color: #fffbe6; color: #ffc107; } /* Yellow */
+        .status-vacant_ready { background-color: #edfff4; color: #28a745; } /* Green */
+        .status-vacant_not_ready { background-color: #e6f7ff; color: #007bff; } /* Blue */
+        .status-out_of_order, .status-out_of_service { background-color: #f8d7da; color: #dc3545; } /* Danger Red */
+
+        .action-btn {
+            background: none;
+            color: #3498db;
+            padding: 5px;
+            margin: 0 2px;
+            font-size: 1.1em;
+            transition: color 0.2s;
+        }
+        
+        .action-btn:hover {
+            color: #2980b9;
+        }
+
+      /*  .sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* Ensures the sidebar takes full screen height */
+   /* padding-bottom: 20px;*/ /* Optional: adds breathing room at the bottom */
+}*/
+*/
+/* This is the magic trick */
+/*.logout-item {
+    margin-top: auto; 
+} */
             /* Positions logout at the bottom and gives it a distinct hover color */
 
     </style>
