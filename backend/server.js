@@ -631,7 +631,6 @@ app.post('/api/pos/client/account/:accountId/settle', async (req, res) => {
     receipt: {
         guestName: account.guestName,
         charges: account.charges,        // all line items
-        total: account.totalCharges,
         settledAt: new Date()            // for the receipt timestamp
     } 
 });
