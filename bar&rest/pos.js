@@ -219,7 +219,7 @@ const addCharge = async (description, number, department) => {
 
             if (!res.ok) throw new Error("Failed to send order to kitchen");
             showMessage("Order sent to Kitchen preparing list!", "success");
-            startNewTransaction();            
+            resetForm();            
         } else {
             // Standard Bar/Service Logic
             const saleRes = await fetch(`${BASE_URL}/sales`, {
@@ -251,8 +251,12 @@ const addCharge = async (description, number, department) => {
 
                 updateActiveAccountUI(updatedAccount); 
                 showMessage("Bar sale recorded & Guest charged!", "success");
+                        resetForm();
+
             } else {
                 showMessage("Direct Cash sale recorded!", "success");
+                        resetForm();
+
             }
           resetForm();
         }
