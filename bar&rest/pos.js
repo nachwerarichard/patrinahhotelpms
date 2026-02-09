@@ -420,7 +420,7 @@ function autoFillPrices(selectedItemName) {
     itemDescInput.dataset.sp = '0';
     
     // Optional: Focus back on the item description for the next entry
-              const deptSelect = document.getElementById('deptSelect');
+              const deptSelectInput = document.getElementById('deptSelect');
 
     deptSelectInput.focus();
 };
