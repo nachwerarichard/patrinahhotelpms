@@ -239,7 +239,7 @@ const addCharge = async (description, number, department) => {
                     body: JSON.stringify({
                         description: `${description} (x${qtyValue})`,
                         amount: payload.sp * payload.number,
-                        type: selectedDept
+                        type: payload.department
                     })
                 });
                 const updatedAccount = await folioRes.json();
