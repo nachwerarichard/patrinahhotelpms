@@ -3676,7 +3676,7 @@ app.post('/sales',auth,async (req, res) => {
 // NEW LOGIC TO LINK TO GUEST FOLIO
 const { accountId } = req.body; // Pass this from frontend
 
-if (accountId) {
+/*if (accountId) {
     const GuestAccount = mongoose.model('ClientAccount'); // Ensure model is imported
     const chargeAmount = sp * number;
     
@@ -3689,7 +3689,7 @@ if (accountId) {
         }},
         $inc: { totalCharges: chargeAmount }
     });
-}
+}*/
     // 6. Financial Calculations
     const totalBuyingPrice = bp * number;
     const totalSellingPrice = sp * number;
