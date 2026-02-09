@@ -365,116 +365,115 @@
       <!-- SIDEBAR -->
 
 
-   <nav id="sidebar" class="w-72 bg-[#1a1c1e] text-slate-300 flex-shrink-0 overflow-y-auto transition-transform duration-300 transform -translate-x-full lg:translate-x-0 absolute lg:relative h-full z-20 shadow-[10px_0_30px_rgba(0,0,0,0.5)] border-r border-slate-800">
+<nav id="sidebar" class="w-72 bg-slate-900 text-slate-300 flex-shrink-0 overflow-y-auto transition-transform duration-300 transform -translate-x-full lg:translate-x-0 absolute lg:relative h-screen z-30 shadow-2xl border-r border-slate-800">
     
     <div class="lg:hidden flex justify-end p-4">
-        <button id="close-sidebar" class="text-white bg-slate-800 hover:bg-slate-700 p-3 rounded-full focus:ring-2 focus:ring-indigo-500 transition shadow-lg">
-            <i class="fas fa-times text-2xl"></i>
-        </button>
+      <button id="close-sidebar" class="text-white bg-slate-800 hover:bg-indigo-600 p-3 rounded-full focus:outline-none transition-colors">
+        <i class="fas fa-times text-xl"></i>
+      </button>
     </div>
 
-    <div class="px-6 py-10 border-b border-slate-800/50 mb-6">
-        <div class="text-xs uppercase tracking-[0.3em] text-indigo-400 font-bold mb-1">Premium POS</div>
-        <div class="text-2xl font-light text-white tracking-tight">Management <span class="text-indigo-500 font-semibold">.</span></div>
+    <div class="px-6 py-8">
+        <div class="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-indigo-400">Management</div>
+        <div class="text-2xl font-light text-white tracking-tight">Luxury<span class="font-semibold text-indigo-500">POS</span></div>
     </div>
 
-    <div class="px-4 pb-32 space-y-2"> 
+    <div class="px-4 pb-24 space-y-2"> 
         
         <div class="group">
-            <button id="nav-dashboard" class="w-full text-left p-4 rounded-xl hover:bg-slate-800 hover:text-white flex items-center transition-all duration-200" onclick="showSubSection('dashboard','nav-dashboard')">
-                <i class="fas fa-th-large w-6 text-indigo-400 group-hover:text-indigo-300 text-lg"></i>
-                <span class="ml-4 font-medium tracking-wide text-[15px]">Dashboard</span>
+            <button id="nav-dashboard" class="nav-main w-full text-left p-4 rounded-xl hover:bg-slate-800 hover:text-white flex items-center transition-all duration-200" onclick="showSubSection('dashboard','nav-dashboard')">
+                <i class="fas fa-th-large w-6 text-lg text-slate-500 group-hover:text-indigo-400"></i>
+                <span class="ml-4 font-medium text-[15px]">Dashboard</span>
             </button>
         </div>
 
-        <div class="space-y-1">
-            <button id="nav-inventory" class="w-full text-left p-4 rounded-xl hover:bg-slate-800 hover:text-white flex items-center justify-between transition-all duration-200" data-target="inventory-submenu" onclick="toggleSubmenu('inventory-submenu','nav-inventory')">
+        <div>
+            <button id="nav-inventory" class="nav-main w-full text-left p-4 rounded-xl hover:bg-slate-800 hover:text-white flex items-center justify-between transition-all group" data-target="inventory-submenu" onclick="toggleSubmenu('inventory-submenu','nav-inventory')">
                 <div class="flex items-center">
-                    <i class="fas fa-boxes w-6 text-indigo-400 text-lg"></i>
-                    <span class="ml-4 font-medium tracking-wide text-[15px]">Inventory</span>
+                    <i class="fas fa-box w-6 text-lg text-slate-500 group-hover:text-indigo-400"></i>
+                    <span class="ml-4 font-medium text-[15px]">Inventory</span>
                 </div>
-                <i class="fas fa-chevron-down text-xs opacity-50 arrow-icon transition-transform"></i> 
+                <i class="fas fa-chevron-down text-xs transition-transform duration-300 arrow-icon"></i> 
             </button>
-            <ul id="inventory-submenu" class="sidebar-sublist hidden space-y-1 ml-10 mr-2 py-2 border-l border-slate-800">
-                <li><button class="sub-item block w-full text-left p-3 rounded-lg hover:bg-slate-800 hover:text-indigo-400 text-sm font-medium" data-show="inventory-add" onclick="showSubSection('inventory-add','nav-inventory')">Add Inventory</button></li>
-                <li><button class="sub-item block w-full text-left p-3 rounded-lg hover:bg-slate-800 hover:text-indigo-400 text-sm font-medium" data-show="inventory-records" onclick="showSubSection('inventory-records','nav-inventory')">Inventory Records</button></li>
+            <ul id="inventory-submenu" class="submenu hidden mt-1 ml-6 space-y-1 border-l-2 border-slate-800">
+                <li><button class="sub-item block w-full text-left py-3 px-6 rounded-r-lg text-sm hover:bg-slate-800 hover:text-indigo-400 transition-colors" data-show="inventory-add" onclick="showSubSection('inventory-add','nav-inventory')">Add New Stock</button></li>
+                <li><button class="sub-item block w-full text-left py-3 px-6 rounded-r-lg text-sm hover:bg-slate-800 hover:text-indigo-400 transition-colors" data-show="inventory-records" onclick="showSubSection('inventory-records','nav-inventory')">Stock Records</button></li>
+            </ul>
+        </div>
+      
+        <div>
+            <button id="nav-sales" class="nav-main w-full text-left p-4 rounded-xl hover:bg-slate-800 hover:text-white flex items-center justify-between transition-all group" data-target="sales-submenu" onclick="toggleSubmenu('sales-submenu','nav-sales')">
+                <div class="flex items-center">
+                    <i class="fas fa-shopping-cart w-6 text-lg text-slate-500 group-hover:text-indigo-400"></i>
+                    <span class="ml-4 font-medium text-[15px]">Sales</span>
+                </div>
+                <i class="fas fa-chevron-down text-xs arrow-icon"></i>
+            </button>
+            <ul id="sales-submenu" class="submenu hidden mt-1 ml-6 space-y-1 border-l-2 border-slate-800">
+                <li><button class="sub-item block w-full text-left py-3 px-6 rounded-r-lg text-sm hover:bg-slate-800 hover:text-indigo-400" data-show="sales-new" onclick="showSubSection('sales-new','nav-sales')">Create New Sale</button></li>
+                <li><button class="sub-item block w-full text-left py-3 px-6 rounded-r-lg text-sm hover:bg-slate-800 hover:text-indigo-400" data-show="sales-records" onclick="showSubSection('sales-records','nav-sales')">Sales History</button></li>
+                <li><button class="sub-item block w-full text-left py-3 px-6 rounded-r-lg text-sm hover:bg-slate-800 hover:text-indigo-400" data-show="kds" onclick="showSubSection('kds','nav-sales')">KDS Monitor</button></li>
             </ul>
         </div>
 
-        <div class="space-y-1">
-            <button id="nav-sales" class="w-full text-left p-4 rounded-xl hover:bg-slate-800 hover:text-white flex items-center justify-between transition-all duration-200" data-target="sales-submenu" onclick="toggleSubmenu('sales-submenu','nav-sales')">
+        <div>
+            <button id="nav-expenses" class="nav-main w-full text-left p-4 rounded-xl hover:bg-slate-800 hover:text-white flex items-center justify-between transition-all group" data-target="expenses-submenu" onclick="toggleSubmenu('expenses-submenu','nav-expenses')">
                 <div class="flex items-center">
-                    <i class="fas fa-cash-register w-6 text-indigo-400 text-lg"></i>
-                    <span class="ml-4 font-medium tracking-wide text-[15px]">Sales</span>
+                    <i class="fas fa-wallet w-6 text-lg text-slate-500 group-hover:text-indigo-400"></i>
+                    <span class="ml-4 font-medium text-[15px]">Expenses</span>
                 </div>
-                <i class="fas fa-chevron-down text-xs opacity-50 arrow-icon transition-transform"></i>
+                <i class="fas fa-chevron-down text-xs arrow-icon"></i>
             </button>
-            <ul id="sales-submenu" class="sidebar-sublist hidden space-y-1 ml-10 mr-2 py-2 border-l border-slate-800">
-                <li><button class="sub-item block w-full text-left p-3 rounded-lg hover:bg-slate-800 hover:text-indigo-400 text-sm font-medium" data-show="sales-new" onclick="showSubSection('sales-new','nav-sales')">Record Sale</button></li>
-                <li><button class="sub-item block w-full text-left p-3 rounded-lg hover:bg-slate-800 hover:text-indigo-400 text-sm font-medium" data-show="sales-records" onclick="showSubSection('sales-records','nav-sales')">Sales Records</button></li>
-                <li><button class="sub-item block w-full text-left p-3 rounded-lg hover:bg-slate-800 hover:text-indigo-400 text-sm font-medium" data-show="kds" onclick="showSubSection('kds','nav-sales')">KDS Status</button></li>
+            <ul id="expenses-submenu" class="submenu hidden mt-1 ml-6 space-y-1 border-l-2 border-slate-800">
+                <li><button class="sub-item block w-full text-left py-3 px-6 rounded-r-lg text-sm hover:bg-slate-800 hover:text-indigo-400" data-show="expenses-add" onclick="showSubSection('expenses-add','nav-expenses')">Record Expense</button></li>
+                <li><button class="sub-item block w-full text-left py-3 px-6 rounded-r-lg text-sm hover:bg-slate-800 hover:text-indigo-400" data-show="expenses-records" onclick="showSubSection('expenses-records','nav-expenses')">Expense Ledger</button></li>
             </ul>
         </div>
 
-        <div class="space-y-1">
-            <button id="nav-expenses" class="w-full text-left p-4 rounded-xl hover:bg-slate-800 hover:text-white flex items-center justify-between transition-all duration-200" data-target="expenses-submenu" onclick="toggleSubmenu('expenses-submenu','nav-expenses')">
+        <div>
+            <button id="nav-cash-management" class="nav-main w-full text-left p-4 rounded-xl hover:bg-slate-800 hover:text-white flex items-center justify-between transition-all group" data-target="cash-submenu" onclick="toggleSubmenu('cash-submenu','nav-cash-management')">
                 <div class="flex items-center">
-                    <i class="fas fa-wallet w-6 text-indigo-400 text-lg"></i>
-                    <span class="ml-4 font-medium tracking-wide text-[15px]">Expenses</span>
+                    <i class="fas fa-university w-6 text-lg text-slate-500 group-hover:text-indigo-400"></i>
+                    <span class="ml-4 font-medium text-[15px]">Cash Management</span>
                 </div>
-                <i class="fas fa-chevron-down text-xs opacity-50 arrow-icon transition-transform"></i>
+                <i class="fas fa-chevron-down text-xs arrow-icon"></i>
             </button>
-            <ul id="expenses-submenu" class="sidebar-sublist hidden space-y-1 ml-10 mr-2 py-2 border-l border-slate-800">
-                <li><button class="sub-item block w-full text-left p-3 rounded-lg hover:bg-slate-800 hover:text-indigo-400 text-sm font-medium" data-show="expenses-add" onclick="showSubSection('expenses-add','nav-expenses')">Record Expense</button></li>
-                <li><button class="sub-item block w-full text-left p-3 rounded-lg hover:bg-slate-800 hover:text-indigo-400 text-sm font-medium" data-show="expenses-records" onclick="showSubSection('expenses-records','nav-expenses')">Expense Records</button></li>
+            <ul id="cash-submenu" class="submenu hidden mt-1 ml-6 space-y-1 border-l-2 border-slate-800">
+                <li><button class="sub-item block w-full text-left py-3 px-6 rounded-r-lg text-sm hover:bg-slate-800 hover:text-indigo-400" data-show="cash-record" onclick="showSubSection('cash-record','nav-cash-management')">Cash Movement</button></li>
+                <li><button class="sub-item block w-full text-left py-3 px-6 rounded-r-lg text-sm hover:bg-slate-800 hover:text-indigo-400" data-show="cash-records" onclick="showSubSection('cash-records','nav-cash-management')">Transaction Logs</button></li>
             </ul>
         </div>
 
-        <div class="space-y-1">
-            <button id="nav-cash-management" class="w-full text-left p-4 rounded-xl hover:bg-slate-800 hover:text-white flex items-center justify-between transition-all duration-200" data-target="cash-submenu" onclick="toggleSubmenu('cash-submenu','nav-cash-management')">
+        <div>
+            <button id="nav-reports" class="nav-main w-full text-left p-4 rounded-xl hover:bg-slate-800 hover:text-white flex items-center justify-between transition-all group" data-target="reports-submenu" onclick="toggleSubmenu('reports-submenu','nav-reports')">
                 <div class="flex items-center">
-                    <i class="fas fa-coins w-6 text-indigo-400 text-lg"></i>
-                    <span class="ml-4 font-medium tracking-wide text-[15px]">Cash Hub</span>
+                    <i class="fas fa-chart-line w-6 text-lg text-slate-500 group-hover:text-indigo-400"></i>
+                    <span class="ml-4 font-medium text-[15px]">Analytics</span>
                 </div>
-                <i class="fas fa-chevron-down text-xs opacity-50 arrow-icon transition-transform"></i>
+                <i class="fas fa-chevron-down text-xs arrow-icon"></i>
             </button>
-            <ul id="cash-submenu" class="sidebar-sublist hidden space-y-1 ml-10 mr-2 py-2 border-l border-slate-800">
-                <li><button class="sub-item block w-full text-left p-3 rounded-lg hover:bg-slate-800 hover:text-indigo-400 text-sm font-medium" data-show="cash-record" onclick="showSubSection('cash-record','nav-cash-management')">Record Movement</button></li>
-                <li><button class="sub-item block w-full text-left p-3 rounded-lg hover:bg-slate-800 hover:text-indigo-400 text-sm font-medium" data-show="cash-records" onclick="showSubSection('cash-records','nav-cash-management')">Cash Records</button></li>
-            </ul>
-        </div>
-
-        <div class="space-y-1">
-            <button id="nav-reports" class="w-full text-left p-4 rounded-xl hover:bg-slate-800 hover:text-white flex items-center justify-between transition-all duration-200" data-target="reports-submenu" onclick="toggleSubmenu('reports-submenu','nav-reports')">
-                <div class="flex items-center">
-                    <i class="fas fa-chart-line w-6 text-indigo-400 text-lg"></i>
-                    <span class="ml-4 font-medium tracking-wide text-[15px]">Reports</span>
-                </div>
-                <i class="fas fa-chevron-down text-xs opacity-50 arrow-icon transition-transform"></i>
-            </button>
-            <ul id="reports-submenu" class="sidebar-sublist hidden space-y-1 ml-10 mr-2 py-2 border-l border-slate-800">
-                <li><button class="sub-item block w-full text-left p-3 rounded-lg hover:bg-slate-800 hover:text-indigo-400 text-sm font-medium" data-show="reports-department" onclick="showSubSection('reports-department','nav-reports')">Department Totals</button></li>
-                <li><button class="sub-item block w-full text-left p-3 rounded-lg hover:bg-slate-800 hover:text-indigo-400 text-sm font-medium" data-show="reports-overall" onclick="showSubSection('reports-overall','nav-reports')">Overall Summary</button></li>
-                <li><button class="sub-item block w-full text-left p-3 rounded-lg hover:bg-slate-800 hover:text-indigo-400 text-sm font-medium" data-show="reports-pos" onclick="showSubSection('reports-pos','nav-reports')">Point Of Sale</button></li>
+            <ul id="reports-submenu" class="submenu hidden mt-1 ml-6 space-y-1 border-l-2 border-slate-800">
+                <li><button class="sub-item block w-full text-left py-3 px-6 rounded-r-lg text-sm hover:bg-slate-800 hover:text-indigo-400" data-show="reports-department" onclick="showSubSection('reports-department','nav-reports')">Department Totals</button></li>
+                <li><button class="sub-item block w-full text-left py-3 px-6 rounded-r-lg text-sm hover:bg-slate-800 hover:text-indigo-400" data-show="reports-overall" onclick="showSubSection('reports-overall','nav-reports')">Executive Summary</button></li>
+                <li><button class="sub-item block w-full text-left py-3 px-6 rounded-r-lg text-sm hover:bg-slate-800 hover:text-indigo-400" data-show="reports-pos" onclick="showSubSection('reports-pos','nav-reports')">POS Performance</button></li>
             </ul>
         </div>
 
         <div class="group">
-            <button id="nav-audit-logs" class="w-full text-left p-4 rounded-xl hover:bg-slate-800 hover:text-white flex items-center transition-all duration-200" onclick="showSubSection('audit-logs','nav-audit-logs')">
-                <i class="fas fa-history w-6 text-indigo-400 text-lg"></i>
-                <span class="ml-4 font-medium tracking-wide text-[15px]">Audit Logs</span>
+            <button id="nav-audit-logs" class="nav-main w-full text-left p-4 rounded-xl hover:bg-slate-800 hover:text-white flex items-center transition-all" onclick="showSubSection('audit-logs','nav-audit-logs')">
+                <i class="fas fa-shield-alt w-6 text-lg text-slate-500 group-hover:text-indigo-400"></i>
+                <span class="ml-4 font-medium text-[15px]">Audit Logs</span>
             </button>
         </div>
     </div>
     
-    <div class="absolute bottom-0 left-0 right-0 p-6 bg-[#1a1c1e] border-t border-slate-800/50">
-        <button id="logout-button" onclick="logout()" class="w-full group bg-slate-800 hover:bg-red-950 hover:border-red-900 border border-slate-700 text-slate-300 hover:text-red-400 font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-3">
-            <span class="tracking-wide">Logout</span>
+    <div class="absolute bottom-0 left-0 right-0 p-4 bg-slate-900 border-t border-slate-800">
+        <button id="logout-button" onclick="logout()" class="w-full bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-semibold py-4 px-3 rounded-xl transition-all duration-300 flex items-center justify-center space-x-3 group">
+            <span class="text-[15px]">Exit Session</span>
             <i class="fas fa-sign-out-alt transition-transform group-hover:translate-x-1"></i>
         </button>
     </div>
 </nav>
-      <!-- MAIN CONTENT -->
       <main id="main-content" class="flex-1 p-6 overflow-y-auto">
 
         <!-- INVENTORY - split into two sub sections -->
