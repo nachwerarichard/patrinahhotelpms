@@ -273,30 +273,42 @@ const addCharge = async (description, number, department) => {
     }
 };
 
-            const settleAccount = async (method) => {
-                if (!activeAccountId) return;
-                let payload = method === 'room' ? { roomPost: true } : { paymentMethod: 'Cash' };
-                try {
-                    const res = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/settle`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    if (!res.ok) throw new Error('Failed to settle');
-                    
-                    if (method === 'receipt') {
-                                   showMessage('Receipt issued. Closing...', 'success');
-                                  printReceiptFromAccount(data.receipt);
-                                 resetUI();
-                        // (Receipt Logic remains same as your original)
-                    } else {
-                        showMessage('Posted to room successfully', 'success');
-                      resetUI();
-                    }
-                    setTimeout(resetUI, 2000);
-                } catch (err) { showMessage(err.message, 'error'); }
-              resetUI();
-            };
+const settleAccount = async (method) => {
+  if (!activeAccountId) return;
 
+  const payload =
+    method === 'room'
+      ? { roomPost: true }
+      : { paymentMethod: 'Cash' };
+
+  try {
+    const res = await fetch(
+      `${BASE_URL}/api/pos/client/account/${activeAccountId}/settle`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    if (!res.ok) throw new Error('Failed to settle');
+
+    const data = await res.json(); // ✅ THIS WAS MISSING
+
+    if (method === 'receipt') {
+      showMessage('Receipt issued. Closing...', 'success');
+      printReceiptFromAccount(data.receipt);
+
+      setTimeout(() => resetUI(), 2000);
+    } else {
+      showMessage('Posted to room successfully', 'success');
+      resetUI();
+    }
+
+  } catch (err) {
+    showMessage(err.message, 'error');
+  }
+};
 
 
             // Event Listeners
