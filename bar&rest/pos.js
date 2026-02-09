@@ -284,15 +284,17 @@ const addCharge = async (description, number, department) => {
                     if (!res.ok) throw new Error('Failed to settle');
                     
                     if (method === 'receipt') {
+                                   showMessage('Receipt issued. Closing...', 'success');
                                   printReceiptFromAccount(data.receipt);
-
+                                 resetUI();
                         // (Receipt Logic remains same as your original)
-                        showMessage('Receipt issued. Closing...', 'success');
                     } else {
                         showMessage('Posted to room successfully', 'success');
+                      resetUI();
                     }
                     setTimeout(resetUI, 2000);
                 } catch (err) { showMessage(err.message, 'error'); }
+              resetUI();
             };
 
 
