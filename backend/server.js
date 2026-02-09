@@ -257,6 +257,11 @@ const clientAccountSchema = new mongoose.Schema({
     charges: [{
         description: { type: String, required: true },
         amount: { type: Number, required: true },
+        type: { 
+        type: String,
+        enum: ['Bar', 'Restaurant', 'Other'],
+        required: true
+    },
         date: { type: Date, default: Date.now }
     }],
     totalCharges: { type: Number, default: 0 },
