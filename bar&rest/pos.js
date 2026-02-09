@@ -109,7 +109,7 @@ function startQuickSale() {
             const resetUI = () => {
               document.getElementById('currentGuestName').textContent = 'New Sale';
     document.getElementById('currentRoomNumber').textContent = '';
-    document.getElementById('totalCharges').textContent = 'UGX  0';
+    document.getElementById('totalCharges').textContent = '0';
                 createAccountForm.reset();
                 addChargeForm.reset();
                 searchAccountForm.reset();
@@ -171,12 +171,12 @@ const chargesList = document.getElementById('chargesList');
                     });
                 } catch (err) { showMessage(err.message, 'error'); }
             };
-
 const addCharge = async (description, number, department) => {
-    // 1. Validation Logic: Check if it's a Quick Sale vs Resident Sale
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // 1. Validation Logic
     const isQuickSale = (document.getElementById('currentOrderType')?.value === 'Direct' || !activeAccountId);
 
-    // If it's NOT a quick sale AND no guest is selected, then we block it
     if (!activeAccountId && !isQuickSale) {
         showMessage("Please select a guest or start a Quick Sale first!", "error");
         return;
@@ -187,22 +187,27 @@ const addCharge = async (description, number, department) => {
     const selectedDept = department || document.getElementById('deptSelect').value;
     const qtyValue = parseFloat(document.getElementById('number').value) || 1;
 
-    // 2. Build the data object
     const payload = {
         item: description,
         department: selectedDept,
         number: qtyValue,
         bp: parseFloat(itemInfo.bp || 0),
         sp: parseFloat(itemInfo.sp || 0),
-        accountId: activeAccountId || null, // null for Quick Sales
+        accountId: activeAccountId || null,
         tableNumber: document.getElementById('tableNum')?.value || "N/A",
-        isQuickSale: isQuickSale, // Extra flag for backend clarity
+        isQuickSale: isQuickSale,
         date: new Date()
     };
 
     try {
+        // ✅ Show spinner & disable button
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing transaction...`;
+        }
+
         if (selectedDept === 'Restaurant') {
-            // STEP A: Send to Kitchen Order Queue
+            // Kitchen order
             const res = await fetch(`${BASE_URL}/api/kitchen/order`, {
                 method: 'POST',
                 headers: { 
@@ -213,13 +218,10 @@ const addCharge = async (description, number, department) => {
             });
 
             if (!res.ok) throw new Error("Failed to send order to kitchen");
-            
             showMessage("Order sent to Kitchen preparing list!", "success");
-             startNewTransaction();            
+            startNewTransaction();            
         } else {
-            // STEP B: Standard Bar/Service Logic
-            
-            // 1. Deduct Inventory (Always happens regardless of guest type)
+            // Standard Bar/Service Logic
             const saleRes = await fetch(`${BASE_URL}/sales`, {
                 method: 'POST',
                 headers: { 
@@ -231,7 +233,6 @@ const addCharge = async (description, number, department) => {
             const saleResult = await saleRes.json();
             if (!saleRes.ok) throw new Error(saleResult.error);
 
-            // 2. Conditional Folio Charge: ONLY if we have an activeAccountId
             if (activeAccountId) {
                 const folioRes = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
                     method: 'POST',
@@ -248,21 +249,25 @@ const addCharge = async (description, number, department) => {
                 const updatedAccount = await folioRes.json();
                 if (!folioRes.ok) throw new Error(updatedAccount.message);
 
-                // Update UI for Resident
                 updateActiveAccountUI(updatedAccount); 
                 showMessage("Bar sale recorded & Guest charged!", "success");
             } else {
-                // If Quick Sale (Bar/Drink), we just acknowledge the cash sale
                 showMessage("Direct Cash sale recorded!", "success");
-                // Update a generic "Quick Sale" UI list here if needed
             }
         }
 
     } catch (err) {
         console.error("Transaction failed:", err);
         showMessage(err.message, "error");
+    } finally {
+        // ✅ Restore button state
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Submit";
+        }
     }
 };
+
             const settleAccount = async (method) => {
                 if (!activeAccountId) return;
                 let payload = method === 'room' ? { roomPost: true } : { paymentMethod: 'Cash' };
