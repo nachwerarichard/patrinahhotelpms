@@ -294,38 +294,12 @@ const addCharge = async (description, number, department) => {
                 searchAccounts(document.getElementById('searchQuery').value);
             };
 
-            /*addChargeForm.onsubmit = e => {
-                e.preventDefault();
-                const fd = new FormData(addChargeForm);
-                addCharge(fd.get('description'), fd.get('number'),fd.get('amount'));
-            };*/
+            
 
             postToRoomBtn.onclick = () => settleAccount('room');
             issueReceiptBtn.onclick = () => settleAccount('receipt');
             
             
-///addcahrge old route
-       /* const addarge = async (description, amount, department) => {
-    if (!activeAccountId) return;
-    try {
-        const res = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                description, 
-                amount: parseFloat(amount),
-                type: department // We use 'type' to match your Mongoose schema's required field
-            })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
-        
-        activeAccountData = data;
-        updateActiveAccountUI(data);
-        addChargeForm.reset();
-        showMessage(`${department} charge added!`, 'success');
-    } catch (err) { showMessage(err.message, 'error'); }
-};*/
 
 addChargeForm.onsubmit = e => {
     e.preventDefault();
@@ -343,30 +317,7 @@ addChargeForm.onsubmit = e => {
     // Call the updated function that handles both Inventory and Folio
     addCharge(description, number, department);
 };
-    /*    window.setDepartment = (dept) => {
-    // 1. Update the hidden select value
-    const select = document.getElementById('deptSelect');
-    select.value = dept;
 
-    // 2. Update the input label to guide the user
-    document.getElementById('descLabel').textContent = `${dept} Item Description`;
-    document.getElementById('itemDesc').placeholder = dept === 'Bar' ? 'e.g. Nile Special' : 'e.g. Dinner Buffet';
-*/
-    // 3. Update Button Styles (Visual Feedback)
-    /*const buttons = {
-        'Restaurant': document.getElementById('btnRes'),
-        'Bar': document.getElementById('btnBar'),
-        'Other': document.getElementById('btnOther')
-    };
-
-    Object.keys(buttons).forEach(key => {
-        if (key === dept) {
-            buttons[key].className = "flex-1 py-2 text-xs font-bold rounded-lg border-2 border-indigo-600 bg-indigo-600 text-white transition-all";
-        } else {
-            buttons[key].className = "flex-1 py-2 text-xs font-bold rounded-lg border-2 border-slate-200 text-slate-500 hover:border-indigo-600 transition-all";
-        }
-    });
-};*/
         let inventoryData = []; // To store items locally
 
 // 1. Fetch items from your backend on load
