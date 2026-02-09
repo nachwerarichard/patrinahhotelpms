@@ -411,12 +411,14 @@ function autoFillPrices(selectedItemName) {
     // Clear the visible inputs
     document.getElementById('itemDesc').value = '';
     document.getElementById('number').value = '';
-    
+    document.getElementById('deptSelect').value = '';
+    document.getElementById('itemPrice').value = '';
+
     // Clear the hidden dataset values (BP and SP)
     const itemDescInput = document.getElementById('itemDesc');
     itemDescInput.dataset.bp = '0';
     itemDescInput.dataset.sp = '0';
     
     // Optional: Focus back on the item description for the next entry
-    itemDescInput.focus();
+    deptSelectInput.focus();
 };
