@@ -62,6 +62,39 @@
     </table>
   </div>
 </section>
+
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold text-gray-800">Edit Room Details</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        </div>
+        
+        <form id="editRoomForm" class="space-y-4">
+            <input type="hidden" id="editRoomId">
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Room Number</label>
+                <input type="text" id="editRoomNumber" class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Room Status</label>
+                <select id="editRoomStatus" class="w-full p-2 border rounded-lg outline-none">
+                    <option value="clean">Clean</option>
+                    <option value="dirty">Dirty</option>
+                    <option value="under-maintenance">Maintenance</option>
+                    <option value="blocked">Blocked</option>
+                </select>
+            </div>
+
+            <div class="flex gap-3 pt-4">
+                <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition">Cancel</button>
+                <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Update Room</button>
+            </div>
+        </form>
+    </div>
+</div>
   </div>
 </div>
 
@@ -199,8 +232,9 @@ async function loadRoomTypes() {
                     </span>
                 </td>
                 <td class="px-4 py-3 text-center space-x-2">
-                    <button onclick="editRoom('${room._id}', '${room.number}')" class="text-blue-600 hover:underline">Edit</button>
-                    <button onclick="deleteRoom('${room._id}')" class="text-red-600 hover:underline">Delete</button>
+<button onclick="editRoom('${room._id}', '${room.number}', '${room.status}')" class="text-blue-600 hover:underline">
+    Edit
+</button>                    <button onclick="deleteRoom('${room._id}')" class="text-red-600 hover:underline">Delete</button>
                 </td>
             </tr>
         `).join('');
@@ -219,21 +253,50 @@ async function deleteRoom(id) {
     }
 }
 
-async function editRoom(id, currentNumber) {
-    const newNumber = prompt("Enter new room number:", currentNumber);
-    if (!newNumber) return;
-
-    const res = await fetch(`${BASE_URL}/api/rooms/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ number: newNumber })
-    });
-
-    if (res.ok) {
-        fetchRooms();
-    }
+// 1. Open Modal and populate it with existing data
+async function editRoom(id, currentNumber, currentStatus) {
+    document.getElementById('editRoomId').value = id;
+    document.getElementById('editRoomNumber').value = currentNumber;
+    document.getElementById('editRoomStatus').value = currentStatus;
+    
+    // Show the modal
+    document.getElementById('editModal').classList.remove('hidden');
 }
 
+// 2. Close Modal
+function closeModal() {
+    document.getElementById('editModal').classList.add('hidden');
+}
+
+// 3. Handle Form Submission
+document.getElementById('editRoomForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const id = document.getElementById('editRoomId').value;
+    const updatedData = {
+        number: document.getElementById('editRoomNumber').value,
+        status: document.getElementById('editRoomStatus').value
+    };
+
+    try {
+        const res = await fetch(`${BASE_URL}/api/rooms/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedData)
+        });
+
+        if (res.ok) {
+            closeModal();
+            fetchRooms(); // Refresh the table
+        } else {
+            const err = await res.json();
+            alert("Update failed: " + err.error);
+        }
+    } catch (error) {
+        console.error("Error updating room:", error);
+    }
+});
+  
 // Ensure rooms load when page opens
 window.addEventListener('DOMContentLoaded', () => {
     loadRoomTypes();
