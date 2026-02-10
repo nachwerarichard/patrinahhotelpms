@@ -1,0 +1,72 @@
+<div class="p-8 bg-gray-50 min-h-screen font-sans">
+  <div class="max-w-4xl mx-auto space-y-8">
+    
+    <section class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">1. Define Room Type & Default Rate</h2>
+      <form id="typeForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <input type="text" id="typeName" placeholder="Type (e.g. Suite)" class="p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+        <input type="number" id="basePrice" placeholder="Base Price ($)" class="p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+        <button type="submit" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Save Type</button>
+      </form>
+    </section>
+
+    <section class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">2. Set Seasonal Pricing</h2>
+      <form id="seasonForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <select id="targetType" class="p-2 border rounded-lg"></select>
+        <input type="text" id="seasonName" placeholder="Season (e.g. Summer)" class="p-2 border rounded-lg">
+        <input type="date" id="startDate" class="p-2 border rounded-lg text-sm">
+        <input type="date" id="endDate" class="p-2 border rounded-lg text-sm">
+        <input type="number" id="seasonRate" placeholder="Seasonal Price ($)" class="p-2 border rounded-lg col-span-full md:col-span-1">
+        <button type="submit" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition col-span-full">Apply Seasonal Rate</button>
+      </form>
+    </section>
+
+    <section class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">3. Add Physical Room Number</h2>
+      <form id="roomForm" class="flex gap-4">
+        <input type="text" id="roomNumber" placeholder="Room # (e.g. 301)" class="p-2 border rounded-lg flex-1">
+        <select id="roomTypeSelect" class="p-2 border rounded-lg flex-1"></select>
+        <button type="submit" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 transition">Add Room</button>
+      </form>
+    </section>
+
+  </div>
+</div>
+
+<script>
+  // --- Logic for defining Room Types ---
+document.getElementById('typeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+        name: document.getElementById('typeName').value,
+        basePrice: document.getElementById('basePrice').value
+    };
+    
+    const res = await fetch('/api/room-types', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if(res.ok) alert("Room Type Created!");
+});
+
+// --- Logic for Seasonal Rates ---
+document.getElementById('seasonForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const typeId = document.getElementById('targetType').value;
+    const data = {
+        seasonName: document.getElementById('seasonName').value,
+        startDate: document.getElementById('startDate').value,
+        endDate: document.getElementById('endDate').value,
+        rate: document.getElementById('seasonRate').value
+    };
+
+    const res = await fetch(`/api/room-types/${typeId}/seasons`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if(res.ok) alert("Season Applied!");
+});
+</script>
