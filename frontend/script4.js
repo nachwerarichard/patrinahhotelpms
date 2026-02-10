@@ -537,8 +537,6 @@ event.preventDefault();
         renderBookings(currentPage, currentSearchTerm);
     } else if (targetId === 'housekeeping') {
         renderHousekeepingRooms();
-    } else if (targetId === 'reports') {
-        generateReport();
     } else if (targetId === 'calendar') {
         renderCalendar();
     } else if (targetId === 'service-reports') {
