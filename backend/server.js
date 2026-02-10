@@ -224,6 +224,20 @@ app.put('/api/rooms/:id', async (req, res) => {
     }
 });
 
+// Update Room Type Price
+app.put('/api/room-types/:id', async (req, res) => {
+    try {
+        const updatedType = await RoomType.findByIdAndUpdate(
+            req.params.id, 
+            { basePrice: req.body.basePrice }, 
+            { new: true }
+        );
+        res.json(updatedType);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Booking Schema
 const bookingSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true }, // Your custom booking ID (e.g., 'BKG001')
