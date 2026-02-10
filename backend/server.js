@@ -106,11 +106,11 @@ const walkInChargeSchema = new mongoose.Schema({
     }
 });
 const WalkInCharge = mongoose.model('WalkInCharge', walkInChargeSchema);
-
-// 1. RoomType Schema (The "Template")
 const roomTypeSchema = new mongoose.Schema({
-    name: { type: String, required: true, unique: true }, // e.g., "Deluxe"
+    name: { type: String, required: true, unique: true },
     basePrice: { type: Number, required: true },
+    imageUrl: { type: String, default: 'room_.jpg' }, // NEW
+    capacity: { type: Number, default: 2 }, // NEW: helps filter by 'people'
     seasonalRates: [{
         seasonName: String,
         startDate: Date,
@@ -118,6 +118,7 @@ const roomTypeSchema = new mongoose.Schema({
         rate: Number
     }]
 });
+
 const RoomType = mongoose.model('RoomType', roomTypeSchema);
 
 // 2. Room Schema (The actual physical rooms)
@@ -2296,51 +2297,41 @@ app.get('/api/public/room-types', async (req, res) => {
 app.get('/api/public/rooms/available', async (req, res) => {
     const { checkIn, checkOut, roomType, people } = req.query;
 
-    if (!checkIn || !checkOut) {
-        return res.status(400).json({ message: 'Check-in and check-out dates are required.' });
-    }
-
     try {
-        // 1. Find all bookings that overlap with the requested period
         const conflictingBookings = await Booking.find({
             checkIn: { $lt: checkOut },
             checkOut: { $gt: checkIn }
         });
 
-        // 2. Map conflicting room numbers
         const bookedRoomNumbers = conflictingBookings.map(booking => booking.room);
 
-        // 3. Setup the Room Query
-        // Only show rooms that aren't booked and aren't 'maintenance'
         let query = {
             status: { $nin: ['under-maintenance', 'blocked'] },
             number: { $nin: bookedRoomNumbers }
         };
 
-        // 4. Handle Type Filtering (Now using IDs)
         if (roomType && roomType !== 'Any') {
-            // First find the ID for this type name
             const typeDoc = await RoomType.findOne({ name: roomType });
-            if (typeDoc) {
-                query.roomTypeId = typeDoc._id;
-            }
+            if (typeDoc) query.roomTypeId = typeDoc._id;
         }
 
-        // 5. Fetch available rooms and populate their type details
         const availableRooms = await Room.find(query).populate('roomTypeId');
 
-        // 6. Group by room type name
         const availableRoomsByType = {};
         
         availableRooms.forEach(room => {
-            // Get the name from the populated roomTypeId object
-            const typeName = room.roomTypeId ? room.roomTypeId.name : 'Uncategorized';
+            const type = room.roomTypeId;
+            const typeName = type ? type.name : 'Uncategorized';
             
+            // Filter by capacity if 'people' is provided
+            if (people && type && type.capacity < parseInt(people)) return;
+
             if (!availableRoomsByType[typeName]) {
                 availableRoomsByType[typeName] = {
                     count: 0,
                     rooms: [],
-                    price: room.roomTypeId ? room.roomTypeId.basePrice : 0
+                    price: type ? type.basePrice : 0,
+                    imageUrl: type ? type.imageUrl : "multimedia/pics/room_1_a.jpg" // NEW
                 };
             }
             availableRoomsByType[typeName].rooms.push(room.number);
@@ -2349,10 +2340,10 @@ app.get('/api/public/rooms/available', async (req, res) => {
 
         res.json(availableRoomsByType);
     } catch (error) {
-        console.error('Public availability check error:', error);
         res.status(500).json({ message: 'Error checking availability', error: error.message });
     }
 });
+
 function calculateNights(checkIn, checkOut) {
     const start = new Date(checkIn);
     const end = new Date(checkOut);
