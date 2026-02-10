@@ -230,12 +230,21 @@ async function loadRoomTypes() {
                         ${room.status}
                     </span>
                 </td>
-                <td class="px-4 py-3 text-center space-x-2">
-<button onclick="editRoom('${room._id}', '${room.number}', '${room.status}')" class="text-blue-600 hover:underline">
-    Edit
-</button>                    <button onclick="deleteRoom('${room._id}')" class="text-red-600 hover:underline">Delete</button>
-                </td>
-            </tr>
+                // Inside your fetchRooms() function's .map()
+<td class="px-4 py-3 text-center space-x-2">
+    <button 
+        onclick="editRoom('${room._id}')" 
+        class="bg-blue-100 text-blue-600 px-3 py-1 rounded-md hover:bg-blue-200 transition font-medium"
+    >
+        Edit
+    </button>
+    <button 
+        onclick="deleteRoom('${room._id}')" 
+        class="bg-red-100 text-red-600 px-3 py-1 rounded-md hover:bg-red-200 transition font-medium"
+    >
+        Delete
+    </button>
+</td>
         `).join('');
     } catch (err) {
         console.error("Error fetching rooms:", err);
