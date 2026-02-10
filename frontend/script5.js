@@ -166,6 +166,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const navDashboard = document.getElementById('nav-dashboard');
 
     const navHousekeeping = document.getElementById('nav-housekeeping');
+        const navRates = document.getElementById('nav-rates');
+
     const navReports = document.getElementById('nav-reports');
     const navServiceReports = document.getElementById('nav-service-reports');
     const navCalendar = document.getElementById('nav-calendar');
@@ -190,6 +192,12 @@ document.addEventListener('DOMContentLoaded', () => {
         navReports.addEventListener('click', (e) => {
             e.preventDefault();
             showSection('reports');
+        });
+    }
+        if (navRates) {
+        navReports.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection('rates');
         });
     }
 
