@@ -105,72 +105,15 @@ const walkInChargeSchema = new mongoose.Schema({
     }
 });
 const WalkInCharge = mongoose.model('WalkInCharge', walkInChargeSchema);
-
-// 1. RoomType Schema (The "Template")
-const roomTypeSchema = new mongoose.Schema({
-    name: { type: String, required: true, unique: true }, // e.g., "Deluxe"
-    basePrice: { type: Number, required: true },
-    seasonalRates: [{
-        seasonName: String,
-        startDate: Date,
-        endDate: Date,
-        rate: Number
-    }]
-});
-const RoomType = mongoose.model('RoomType', roomTypeSchema);
-
-// 2. Room Schema (The actual physical rooms)
 const roomSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    type: { type: String, required: true },
     number: { type: String, required: true, unique: true },
-    roomTypeId: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType' },
-    status: { type: String, enum: ['clean', 'dirty', 'maintenance'], default: 'clean' }
+    basePrice: { type: Number, required: true, default: 0 }, 
+    status: { type: String, required: true, enum: ['clean', 'dirty', 'under-maintenance', 'blocked'], default: 'clean' }
 });
+
 const Room = mongoose.model('Room', roomSchema);
-// Create a Room Type (Set Base Price)
-app.post('/api/room-types', async (req, res) => {
-    const newType = new RoomType(req.body);
-    await newType.save();
-    res.status(201).json(newType);
-});
-
-// Add a seasonal rate to a Room Type
-app.post('/api/room-types/:id/seasons', async (req, res) => {
-    const roomType = await RoomType.findByIdAndUpdate(
-        req.params.id,
-        { $push: { seasonalRates: req.body } },
-        { new: true }
-    );
-    res.json(roomType);
-});
-
-// Create a physical Room
-app.post('/api/rooms', async (req, res) => {
-    const room = new Room(req.body);
-    await room.save();
-    res.status(201).json(room);
-});
-
-// Get all room types (for the dropdowns)
-app.get('/api/room-types', async (req, res) => {
-    try {
-        const types = await RoomType.find();
-        res.json(types);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Create a new room linked to a type
-app.post('/api/rooms', async (req, res) => {
-    try {
-        const { number, roomTypeId, status } = req.body;
-        const newRoom = new Room({ number, roomTypeId, status });
-        await newRoom.save();
-        res.status(201).json(newRoom);
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
-});
 
 // Booking Schema
 const bookingSchema = new mongoose.Schema({
