@@ -107,13 +107,50 @@ const walkInChargeSchema = new mongoose.Schema({
 const WalkInCharge = mongoose.model('WalkInCharge', walkInChargeSchema);
 const roomSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true },
-    type: { type: String, required: true },
+    type: { type: String, required: true }, // e.g., 'Deluxe', 'Suite'
     number: { type: String, required: true, unique: true },
-    basePrice: { type: Number, required: true, default: 0 }, 
+    basePrice: { type: Number, required: true, default: 0 },
+    // New field for dynamic pricing
+    seasonalRates: [{
+        seasonName: String,
+        startDate: Date,
+        endDate: Date,
+        rate: Number
+    }],
     status: { type: String, required: true, enum: ['clean', 'dirty', 'under-maintenance', 'blocked'], default: 'clean' }
 });
 
 const Room = mongoose.model('Room', roomSchema);
+
+// POST Route to create a room or room type
+app.post('/api/rooms', async (req, res) => {
+    try {
+        const newRoom = new Room(req.body);
+        await newRoom.save();
+        res.status(201).json({ message: "Room created successfully", room: newRoom });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// PATCH Route to update seasonal rates for a specific room type
+app.patch('/api/rooms/rates', async (req, res) => {
+    const { roomType, seasonName, startDate, endDate, rate } = req.body;
+    try {
+        // Updates all rooms of a certain type (e.g., all 'Deluxe' rooms)
+        await Room.updateMany(
+            { type: roomType },
+            { 
+                $push: { 
+                    seasonalRates: { seasonName, startDate, endDate, rate } 
+                } 
+            }
+        );
+        res.json({ message: `Rates updated for all ${roomType} rooms.` });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // Booking Schema
 const bookingSchema = new mongoose.Schema({
