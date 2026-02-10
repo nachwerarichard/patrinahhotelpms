@@ -2217,19 +2217,16 @@ app.post('/api/channel-manager/sync', async (req, res) => {
 });
 
 
-// --- NEW: Public Booking Widget API Endpoints ---
-
-// Get all unique room types
 app.get('/api/public/room-types', async (req, res) => {
     try {
-        const roomTypes = await Room.distinct('type');
+        // Fetch from the RoomType collection instead of distinct Room field
+        const roomTypes = await RoomType.find({}, 'name basePrice'); 
         res.json(roomTypes);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching room types', error: error.message });
     }
 });
 
-// Get available rooms by type for a specific date range
 app.get('/api/public/rooms/available', async (req, res) => {
     const { checkIn, checkOut, roomType, people } = req.query;
 
@@ -2238,43 +2235,56 @@ app.get('/api/public/rooms/available', async (req, res) => {
     }
 
     try {
-        // Find all bookings that overlap with the requested period
+        // 1. Find all bookings that overlap with the requested period
         const conflictingBookings = await Booking.find({
             checkIn: { $lt: checkOut },
             checkOut: { $gt: checkIn }
         });
 
-        // Get the room numbers of the conflicting bookings
+        // 2. Map conflicting room numbers
         const bookedRoomNumbers = conflictingBookings.map(booking => booking.room);
 
+        // 3. Setup the Room Query
+        // Only show rooms that aren't booked and aren't 'maintenance'
         let query = {
-            status: 'clean', // Only consider clean rooms initially
-            number: { $nin: bookedRoomNumbers } // Exclude already booked rooms
+            status: { $nin: ['under-maintenance', 'blocked'] },
+            number: { $nin: bookedRoomNumbers }
         };
 
-        if (roomType && roomType !== 'Any') { // 'Any' type means no specific type filter
-            query.type = roomType;
+        // 4. Handle Type Filtering (Now using IDs)
+        if (roomType && roomType !== 'Any') {
+            // First find the ID for this type name
+            const typeDoc = await RoomType.findOne({ name: roomType });
+            if (typeDoc) {
+                query.roomTypeId = typeDoc._id;
+            }
         }
 
-        // Note: For 'people' capacity, you'd typically have a 'capacity' field in your Room schema
-        // For now, we'll just return rooms that match type and availability.
-        // If 'people' was a hard requirement, you'd add:
-        // query.capacity = { $gte: parseInt(people) }; (assuming 'capacity' field in Room schema)
+        // 5. Fetch available rooms and populate their type details
+        const availableRooms = await Room.find(query).populate('roomTypeId');
 
-        const availableRooms = await Room.find(query);
-
-        // Group by room type and return room numbers
+        // 6. Group by room type name
         const availableRoomsByType = {};
+        
         availableRooms.forEach(room => {
-            if (!availableRoomsByType[room.type]) {
-                availableRoomsByType[room.type] = [];
+            // Get the name from the populated roomTypeId object
+            const typeName = room.roomTypeId ? room.roomTypeId.name : 'Uncategorized';
+            
+            if (!availableRoomsByType[typeName]) {
+                availableRoomsByType[typeName] = {
+                    count: 0,
+                    rooms: [],
+                    price: room.roomTypeId ? room.roomTypeId.basePrice : 0
+                };
             }
-            availableRoomsByType[room.type].push(room.number);
+            availableRoomsByType[typeName].rooms.push(room.number);
+            availableRoomsByType[typeName].count++;
         });
 
         res.json(availableRoomsByType);
     } catch (error) {
-        res.status(500).json({ message: 'Error checking public room availability', error: error.message });
+        console.error('Public availability check error:', error);
+        res.status(500).json({ message: 'Error checking availability', error: error.message });
     }
 });
 function calculateNights(checkIn, checkOut) {
