@@ -117,6 +117,7 @@ const roomTypeSchema = new mongoose.Schema({
         rate: Number
     }]
 });
+const RoomType = mongoose.model('RoomType', roomTypeSchema);
 
 // 2. Room Schema (The actual physical rooms)
 const roomSchema = new mongoose.Schema({
@@ -124,7 +125,7 @@ const roomSchema = new mongoose.Schema({
     roomTypeId: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType' },
     status: { type: String, enum: ['clean', 'dirty', 'maintenance'], default: 'clean' }
 });
-
+const Room = mongoose.model('Room', roomSchema);
 // Create a Room Type (Set Base Price)
 app.post('/api/room-types', async (req, res) => {
     const newType = new RoomType(req.body);
