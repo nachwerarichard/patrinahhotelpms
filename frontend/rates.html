@@ -103,23 +103,37 @@ document.getElementById('seasonForm').addEventListener('submit', async (e) => {
 document.getElementById('roomForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    const roomNumber = document.getElementById('roomNumber').value;
+    const roomTypeId = document.getElementById('roomTypeSelect').value;
+
+    // Client-side validation
+    if (!roomTypeId) {
+        alert("Please select a Room Type from the dropdown first.");
+        return;
+    }
+
     const roomData = {
-        number: document.getElementById('roomNumber').value,
-        roomTypeId: document.getElementById('roomTypeSelect').value // Sending the ID, not the name
+        number: roomNumber,
+        roomTypeId: roomTypeId 
     };
 
-    const res = await fetch(`${BASE_URL}/api/rooms`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(roomData)
-    });
+    try {
+        const res = await fetch(`${BASE_URL}/api/rooms`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(roomData)
+        });
 
-    if (res.ok) {
-        alert("Room added successfully!");
-        e.target.reset();
-    } else {
-        const error = await res.json();
-        alert("Error: " + error.error);
+        const result = await res.json();
+
+        if (res.ok) {
+            alert("Room added successfully!");
+            e.target.reset();
+        } else {
+            alert("Error: " + (result.error || "Failed to save room"));
+        }
+    } catch (err) {
+        alert("Network error: Could not connect to server.");
     }
 });
 
