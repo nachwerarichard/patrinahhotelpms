@@ -1,3 +1,4 @@
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors'); // Required for Cross-Origin Resource Sharing
@@ -105,15 +106,72 @@ const walkInChargeSchema = new mongoose.Schema({
     }
 });
 const WalkInCharge = mongoose.model('WalkInCharge', walkInChargeSchema);
+
+// 1. RoomType Schema (The "Template")
+const roomTypeSchema = new mongoose.Schema({
+    name: { type: String, required: true, unique: true }, // e.g., "Deluxe"
+    basePrice: { type: Number, required: true },
+    seasonalRates: [{
+        seasonName: String,
+        startDate: Date,
+        endDate: Date,
+        rate: Number
+    }]
+});
+const RoomType = mongoose.model('RoomType', roomTypeSchema);
+
+// 2. Room Schema (The actual physical rooms)
 const roomSchema = new mongoose.Schema({
-    id: { type: String, required: true, unique: true },
-    type: { type: String, required: true },
     number: { type: String, required: true, unique: true },
-    basePrice: { type: Number, required: true, default: 0 }, 
-    status: { type: String, required: true, enum: ['clean', 'dirty', 'under-maintenance', 'blocked'], default: 'clean' }
+    roomTypeId: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType' },
+    status: { type: String, enum: ['clean', 'dirty', 'maintenance'], default: 'clean' }
+});
+const Room = mongoose.model('Room', roomSchema);
+// Create a Room Type (Set Base Price)
+app.post('/api/room-types', async (req, res) => {
+    const newType = new RoomType(req.body);
+    await newType.save();
+    res.status(201).json(newType);
 });
 
-const Room = mongoose.model('Room', roomSchema);
+// Add a seasonal rate to a Room Type
+app.post('/api/room-types/:id/seasons', async (req, res) => {
+    const roomType = await RoomType.findByIdAndUpdate(
+        req.params.id,
+        { $push: { seasonalRates: req.body } },
+        { new: true }
+    );
+    res.json(roomType);
+});
+
+// Create a physical Room
+app.post('/api/rooms', async (req, res) => {
+    const room = new Room(req.body);
+    await room.save();
+    res.status(201).json(room);
+});
+
+// Get all room types (for the dropdowns)
+app.get('/api/room-types', async (req, res) => {
+    try {
+        const types = await RoomType.find();
+        res.json(types);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Create a new room linked to a type
+app.post('/api/rooms', async (req, res) => {
+    try {
+        const { number, roomTypeId, status } = req.body;
+        const newRoom = new Room({ number, roomTypeId, status });
+        await newRoom.save();
+        res.status(201).json(newRoom);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
 
 // Booking Schema
 const bookingSchema = new mongoose.Schema({
@@ -273,11 +331,11 @@ const ClientAccount = mongoose.model('ClientAccount', clientAccountSchema);
 
 // Function to format date to YYYY-MM-DD
 const formatDate = (date) => {
-    const d = new Date(date);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 };
 
 // New API endpoint to generate a combined report for a specific date
@@ -440,13 +498,13 @@ app.get('/api/pos/reports/daily', async (req, res) => {
 
 // TEMPORARY: Add this new route to delete all rooms
 app.post('/api/rooms/clear-all', async (req, res) => {
-  try {
-    await Room.deleteMany({}); // Deletes all documents in the 'rooms' collection
-    console.log('All rooms deleted successfully.');
-    res.status(200).json({ message: 'All room data has been cleared.' });
-  } catch (error) {
-    res.status(500).json({ message: 'Error clearing rooms', error: error.message });
-  }
+  try {
+    await Room.deleteMany({}); // Deletes all documents in the 'rooms' collection
+    console.log('All rooms deleted successfully.');
+    res.status(200).json({ message: 'All room data has been cleared.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error clearing rooms', error: error.message });
+  }
 });
 
 
@@ -839,62 +897,62 @@ app.post('/api/pos/charge/room', async (req, res) => {
 });
 
 app.get('/api/reports/services', async (req, res) => {
-    try {
-        const { startDate, endDate } = req.query;
+    try {
+        const { startDate, endDate } = req.query;
 
-        const query = {};
-        if (startDate && endDate) {
-            query.date = {
-                $gte: new Date(startDate),
-                $lte: new Date(endDate)
-            };
-        }
+        const query = {};
+        if (startDate && endDate) {
+            query.date = {
+                $gte: new Date(startDate),
+                $lte: new Date(endDate)
+            };
+        }
 
-        const serviceReports = await IncidentalCharge.aggregate([
-            { $match: query },
-            {
-                $group: {
-                    // First grouping: Group by both service type and guest name
-                    _id: {
-                        serviceType: '$type', 
-                        guestName: '$guestName' 
-                    },
-                    totalAmount: { $sum: '$amount' },
-                    count: { $sum: 1 }
-                }
-            },
-            {
-                $group: {
-                    // Second grouping: Group by service type only to get the total for that service
-                    _id: '$_id.serviceType',
-                    totalAmount: { $sum: '$totalAmount' },
-                    count: { $sum: '$count' },
-                    // Pushing the individual guest charges into a `bookings` array
-                    bookings: {
-                        $push: {
-                            // This now correctly uses the guestName from the first group
-                            name: '$_id.guestName', 
-                            amount: '$totalAmount',
-                            count: '$count'
-                        }
-                    }
-                }
-            },
-            {
-                $project: {
-                    _id: 0,
-                    serviceType: '$_id',
-                    totalAmount: { $round: ['$totalAmount', 2] },
-                    count: 1,
-                    bookings: 1
-                }
-            }
-        ]);
+        const serviceReports = await IncidentalCharge.aggregate([
+            { $match: query },
+            {
+                $group: {
+                    // First grouping: Group by both service type and guest name
+                    _id: {
+                        serviceType: '$type', 
+                        guestName: '$guestName' 
+                    },
+                    totalAmount: { $sum: '$amount' },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $group: {
+                    // Second grouping: Group by service type only to get the total for that service
+                    _id: '$_id.serviceType',
+                    totalAmount: { $sum: '$totalAmount' },
+                    count: { $sum: '$count' },
+                    // Pushing the individual guest charges into a `bookings` array
+                    bookings: {
+                        $push: {
+                            // This now correctly uses the guestName from the first group
+                            name: '$_id.guestName', 
+                            amount: '$totalAmount',
+                            count: '$count'
+                        }
+                    }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    serviceType: '$_id',
+                    totalAmount: { $round: ['$totalAmount', 2] },
+                    count: 1,
+                    bookings: 1
+                }
+            }
+        ]);
 
-        res.json(serviceReports);
-    } catch (error) {
-        res.status(500).json({ message: 'Error generating service report', error: error.message });
-    }
+        res.json(serviceReports);
+    } catch (error) {
+        res.status(500).json({ message: 'Error generating service report', error: error.message });
+    }
 });
 
 // NEW: Post a charge for a walk-in guest
@@ -3012,37 +3070,37 @@ const Expense = mongoose.model('Expense', new mongoose.Schema({
     trim: true
   },
     description: String,
-  amount: Number,
-  receiptId: String,
-  date: { type: Date, default: Date.now },
-  source: String,
-  recordedBy: String,
+  amount: Number,
+  receiptId: String,
+  date: { type: Date, default: Date.now },
+  source: String,
+  recordedBy: String,
 }));
 
 
 // --- Helper Functions ---
 async function logAction(action, user, details = {}) {
-  try {
-    await AuditLog.create({ action, user, details });
-  } catch (error) {
-    console.error('Error logging audit action:', error);
-  }
+  try {
+    await AuditLog.create({ action, user, details });
+  } catch (error) {
+    console.error('Error logging audit action:', error);
+  }
 }
 
 // Nodemailer setup
 
 async function notifyLowStock(item, current) {
-  try {
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: process.env.EMAIL_USER,
-      subject: `Low stock alert: ${item}`,
-      text: `Stock for ${item} is now ${current}, below threshold! Please reorder.`
-    });
-    console.log(`Low stock email sent for ${item}. Current stock: ${current}`);
-  } catch (err) {
-    console.error('Error sending low stock email:', err);
-  }
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: process.env.EMAIL_USER,
+      subject: `Low stock alert: ${item}`,
+      text: `Stock for ${item} is now ${current}, below threshold! Please reorder.`
+    });
+    console.log(`Low stock email sent for ${item}. Current stock: ${current}`);
+  } catch (err) {
+    console.error('Error sending low stock email:', err);
+  }
 }
 
 // --- Middleware ---
@@ -3079,39 +3137,39 @@ async function auth(req, res, next) {
 }
 
 function authorize(roles = []) {
-  if (typeof roles === 'string') {
-    roles = [roles];
-  }
+  if (typeof roles === 'string') {
+    roles = [roles];
+  }
 
-  return (req, res, next) => {
-    if (!req.user || (roles.length > 0 && !roles.includes(req.user.role))) {
-      return res.status(403).json({ error: 'Forbidden: You do not have the required permissions.' });
-    }
-    next();
-  };
+  return (req, res, next) => {
+    if (!req.user || (roles.length > 0 && !roles.includes(req.user.role))) {
+      return res.status(403).json({ error: 'Forbidden: You do not have the required permissions.' });
+    }
+    next();
+  };
 }
 
 // --- Date Helper Function (Corrected) ---
 // This function calculates the correct start and end of a day in UTC
 // for a given EAT date string ('YYYY-MM-DD').
 function getStartAndEndOfDayInUTC(dateString) {
-  const selectedDate = new Date(dateString);
-  if (isNaN(selectedDate.getTime())) {
-    return { error: 'Invalid date format. Use YYYY-MM-DD.' };
-  }
-  
-  // Set the date to midnight UTC (00:00:00.000) to create a consistent reference point.
-  selectedDate.setUTCHours(0, 0, 0, 0);
+  const selectedDate = new Date(dateString);
+  if (isNaN(selectedDate.getTime())) {
+    return { error: 'Invalid date format. Use YYYY-MM-DD.' };
+  }
+  
+  // Set the date to midnight UTC (00:00:00.000) to create a consistent reference point.
+  selectedDate.setUTCHours(0, 0, 0, 0);
 
-  // EAT is UTC+3. To find the start of the EAT day in UTC,
-  // we must subtract 3 hours from the UTC midnight time.
-  // For example, EAT 00:00 is UTC 21:00 of the previous day.
-  const utcStart = new Date(selectedDate.getTime() - 3 * 60 * 60 * 1000);
+  // EAT is UTC+3. To find the start of the EAT day in UTC,
+  // we must subtract 3 hours from the UTC midnight time.
+  // For example, EAT 00:00 is UTC 21:00 of the previous day.
+  const utcStart = new Date(selectedDate.getTime() - 3 * 60 * 60 * 1000);
 
-  // The end of the EAT day is exactly 24 hours after its start.
-  const utcEnd = new Date(utcStart.getTime() + 24 * 60 * 60 * 1000);
-  
-  return { utcStart, utcEnd };
+  // The end of the EAT day is exactly 24 hours after its start.
+  const utcEnd = new Date(utcStart.getTime() + 24 * 60 * 60 * 1000);
+  
+  return { utcStart, utcEnd };
 }
 
 
@@ -3173,8 +3231,8 @@ async function getTodayInventory(itemName, initialOpening = 0) {
 // --- ROUTES ---
 
 app.post('/logout', auth, async (req, res) => {
-  await logAction('Logout', req.user.username);
-  res.status(200).json({ message: 'Logged out successfully' });
+  await logAction('Logout', req.user.username);
+  res.status(200).json({ message: 'Logged out successfully' });
 });
 
 
@@ -3442,10 +3500,10 @@ app.post('/inventory', auth, async (req, res) => {
   }
 });
 /**
- * Handles PUT requests to update an existing inventory item.
- * This version of the route has the date check removed, allowing for
- * the modification of past inventory records.
- */
+ * Handles PUT requests to update an existing inventory item.
+ * This version of the route has the date check removed, allowing for
+ * the modification of past inventory records.
+ */
 app.put('/inventory/:id', auth, async (req, res) => {
     try {
         const record = await Inventory.findById(req.params.id);
@@ -3636,16 +3694,16 @@ const result = lastRecord ? lastRecord.toObject() : {
 
 
 app.delete('/inventory/:id', auth,  async (req, res) => {
-  try {
-    const deletedDoc = await Inventory.findByIdAndDelete(req.params.id);
-    if (!deletedDoc) {
-      return res.status(404).json({ error: 'Inventory item not found' });
-    }
-    await logAction('Inventory Deleted', req.user.username, { itemId: deletedDoc._id, item: deletedDoc.item });
-    res.sendStatus(204);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  try {
+    const deletedDoc = await Inventory.findByIdAndDelete(req.params.id);
+    if (!deletedDoc) {
+      return res.status(404).json({ error: 'Inventory item not found' });
+    }
+    await logAction('Inventory Deleted', req.user.username, { itemId: deletedDoc._id, item: deletedDoc.item });
+    res.sendStatus(204);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // --- Sales Endpoints (Corrected) ---
@@ -3738,67 +3796,67 @@ res.status(201).json(sale);
 
 
 app.get('/sales', auth, async (req, res) => {
-  try {
-    const { date, page = 1, limit = 5 } = req.query;
+  try {
+    const { date, page = 1, limit = 5 } = req.query;
 
-    // Validate numeric parameters
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
-    if (pageNum < 1 || limitNum < 1) {
-      return res.status(400).json({ error: 'Page and limit must be positive numbers.' });
-    }
-    
-    let query = {};
+    // Validate numeric parameters
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    if (pageNum < 1 || limitNum < 1) {
+      return res.status(400).json({ error: 'Page and limit must be positive numbers.' });
+    }
+    
+    let query = {};
 
-    if (date) {
-      const { utcStart, utcEnd, error } = getStartAndEndOfDayInUTC(date);
-      if (error) return res.status(400).json({ error });
-      query.date = { $gte: utcStart, $lt: utcEnd };
-    }
+    if (date) {
+      const { utcStart, utcEnd, error } = getStartAndEndOfDayInUTC(date);
+      if (error) return res.status(400).json({ error });
+      query.date = { $gte: utcStart, $lt: utcEnd };
+    }
 
-    const skip = (pageNum - 1) * limitNum;
-    const total = await Sale.countDocuments(query);
-    const sales = await Sale.find(query).sort({ date: -1 }).skip(skip).limit(limitNum);
+    const skip = (pageNum - 1) * limitNum;
+    const total = await Sale.countDocuments(query);
+    const sales = await Sale.find(query).sort({ date: -1 }).skip(skip).limit(limitNum);
 
-    res.json({
-      data: sales,
-      total,
-      page: pageNum,
-      pages: Math.ceil(total / limitNum)
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    res.json({
+      data: sales,
+      total,
+      page: pageNum,
+      pages: Math.ceil(total / limitNum)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.put('/sales/:id', auth,  async (req, res) => {
-  try {
-    // REPLACE THE ORIGINAL LINE HERE:
-    const updated = await Sale.findByIdAndUpdate(
-        req.params.id, 
-        req.body, 
-        { 
-            new: true, 
-            runValidators: true // <--- ADDED THIS OPTION
-        }
-    );
+  try {
+    // REPLACE THE ORIGINAL LINE HERE:
+    const updated = await Sale.findByIdAndUpdate(
+        req.params.id, 
+        req.body, 
+        { 
+            new: true, 
+            runValidators: true // <--- ADDED THIS OPTION
+        }
+    );
 
-    if (!updated) return res.status(404).json({ error: 'Sale not found' });
-    await logAction('Sale Updated', req.user.username, { saleId: updated._id, item: updated.item, newNumber: updated.number });
-    res.json(updated);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    if (!updated) return res.status(404).json({ error: 'Sale not found' });
+    await logAction('Sale Updated', req.user.username, { saleId: updated._id, item: updated.item, newNumber: updated.number });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 app.delete('/sales/:id', auth,  async (req, res) => {
-  try {
-    const deleted = await Sale.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ error: 'Sale not found' });
-    await logAction('Sale Deleted', req.user.username, { saleId: deleted._id, item: deleted.item });
-    res.sendStatus(204);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  try {
+    const deleted = await Sale.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Sale not found' });
+    await logAction('Sale Deleted', req.user.username, { saleId: deleted._id, item: deleted.item });
+    res.sendStatus(204);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // --- Expenses Endpoints ---
@@ -3833,104 +3891,104 @@ app.post('/expenses', auth, async (req, res) => {
 });
 
 app.get('/expenses',  async (req, res) => {
-  try {
-    const { date, page = 1, limit = 5 } = req.query;
-    
-    // Validate numeric parameters
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
-    if (pageNum < 1 || limitNum < 1) {
-      return res.status(400).json({ error: 'Page and limit must be positive numbers.' });
-    }
+  try {
+    const { date, page = 1, limit = 5 } = req.query;
+    
+    // Validate numeric parameters
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    if (pageNum < 1 || limitNum < 1) {
+      return res.status(400).json({ error: 'Page and limit must be positive numbers.' });
+    }
 
-    let query = {};
+    let query = {};
 
-    if (date) {
-      const { utcStart, utcEnd, error } = getStartAndEndOfDayInUTC(date);
-      if (error) return res.status(400).json({ error });
-      query.date = { $gte: utcStart, $lt: utcEnd };
-    }
+    if (date) {
+      const { utcStart, utcEnd, error } = getStartAndEndOfDayInUTC(date);
+      if (error) return res.status(400).json({ error });
+      query.date = { $gte: utcStart, $lt: utcEnd };
+    }
 
-    const skip = (pageNum - 1) * limitNum;
-    const total = await Expense.countDocuments(query);
-    const expenses = await Expense.find(query).sort({ date: -1 }).skip(skip).limit(limitNum);
+    const skip = (pageNum - 1) * limitNum;
+    const total = await Expense.countDocuments(query);
+    const expenses = await Expense.find(query).sort({ date: -1 }).skip(skip).limit(limitNum);
 
-    res.json({
-      data: expenses,
-      total,
-      page: pageNum,
-      pages: Math.ceil(total / limitNum)
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    res.json({
+      data: expenses,
+      total,
+      page: pageNum,
+      pages: Math.ceil(total / limitNum)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.put('/expenses/:id', auth, async (req, res) => {
-  try {
-    const updated = await Expense.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!updated) return res.status(404).json({ error: 'Expense not found' });
-    await logAction('Expense Updated', req.user.username, { expenseId: updated._id, description: updated.description, newAmount: updated.amount });
-    res.json(updated);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  try {
+    const updated = await Expense.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!updated) return res.status(404).json({ error: 'Expense not found' });
+    await logAction('Expense Updated', req.user.username, { expenseId: updated._id, description: updated.description, newAmount: updated.amount });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // --- Cash Management Endpoints ---
 app.post('/cash-journal', auth, async (req, res) => {
-  try {
-    const { cashAtHand, cashBanked, cashOnPhone,bankReceiptId, date } = req.body;
-    const newEntry = await CashJournal.create({
-      cashAtHand,
-      cashBanked,
+  try {
+    const { cashAtHand, cashBanked, cashOnPhone,bankReceiptId, date } = req.body;
+    const newEntry = await CashJournal.create({
+      cashAtHand,
+      cashBanked,
       cashOnPhone,
-      bankReceiptId,
-      responsiblePerson: req.user.username,
-      date: date ? new Date(date) : new Date()
-    });
-    await logAction('Cash Entry Created', req.user.username, { entryId: newEntry._id, cashAtHand: newEntry.cashAtHand,cashOnPhone: newEntry.cashOnPhone, cashBanked: newEntry.cashBanked });
-    res.status(201).json(newEntry);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+      bankReceiptId,
+      responsiblePerson: req.user.username,
+      date: date ? new Date(date) : new Date()
+    });
+    await logAction('Cash Entry Created', req.user.username, { entryId: newEntry._id, cashAtHand: newEntry.cashAtHand,cashOnPhone: newEntry.cashOnPhone, cashBanked: newEntry.cashBanked });
+    res.status(201).json(newEntry);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/cash-journal', auth,  async (req, res) => {
-  try {
-    const { date, responsiblePerson } = req.query;
-    const filter = {};
-    if (date) {
-      const { utcStart, utcEnd, error } = getStartAndEndOfDayInUTC(date);
-      if (error) return res.status(400).json({ error });
-      filter.date = { $gte: utcStart, $lt: utcEnd };
-    }
-    if (responsiblePerson) {
-      filter.responsiblePerson = new RegExp(responsiblePerson, 'i');
-    }
-    const records = await CashJournal.find(filter).sort({ date: -1 });
-    res.json(records);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  try {
+    const { date, responsiblePerson } = req.query;
+    const filter = {};
+    if (date) {
+      const { utcStart, utcEnd, error } = getStartAndEndOfDayInUTC(date);
+      if (error) return res.status(400).json({ error });
+      filter.date = { $gte: utcStart, $lt: utcEnd };
+    }
+    if (responsiblePerson) {
+      filter.responsiblePerson = new RegExp(responsiblePerson, 'i');
+    }
+    const records = await CashJournal.find(filter).sort({ date: -1 });
+    res.json(records);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.put('/cash-journal/:id', auth,  async (req, res) => {
-  try {
-    const { cashAtHand, cashBanked,cashOnPhone ,bankReceiptId, date } = req.body;
-    const updatedEntry = await CashJournal.findByIdAndUpdate(
-      req.params.id,
-      { cashAtHand, cashBanked, cashOnPhone,bankReceiptId, responsiblePerson: req.user.username, date: date ? new Date(date) : undefined },
-      { new: true }
-    );
-    if (!updatedEntry) {
-      return res.status(404).json({ error: 'Cash journal entry not found' });
-    }
-    await logAction('Cash Entry Updated', req.user.username, { entryId: updatedEntry._id, newCashAtHand: updatedEntry.cashAtHand });
-    res.json(updatedEntry);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  try {
+    const { cashAtHand, cashBanked,cashOnPhone ,bankReceiptId, date } = req.body;
+    const updatedEntry = await CashJournal.findByIdAndUpdate(
+      req.params.id,
+      { cashAtHand, cashBanked, cashOnPhone,bankReceiptId, responsiblePerson: req.user.username, date: date ? new Date(date) : undefined },
+      { new: true }
+    );
+    if (!updatedEntry) {
+      return res.status(404).json({ error: 'Cash journal entry not found' });
+    }
+    await logAction('Cash Entry Updated', req.user.username, { entryId: updatedEntry._id, newCashAtHand: updatedEntry.cashAtHand });
+    res.json(updatedEntry);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // --- Audit Log Endpoints ---
