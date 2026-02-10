@@ -150,6 +150,28 @@ app.post('/api/rooms', async (req, res) => {
     res.status(201).json(room);
 });
 
+// Get all room types (for the dropdowns)
+app.get('/api/room-types', async (req, res) => {
+    try {
+        const types = await RoomType.find();
+        res.json(types);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Create a new room linked to a type
+app.post('/api/rooms', async (req, res) => {
+    try {
+        const { number, roomTypeId, status } = req.body;
+        const newRoom = new Room({ number, roomTypeId, status });
+        await newRoom.save();
+        res.status(201).json(newRoom);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
 // Booking Schema
 const bookingSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true }, // Your custom booking ID (e.g., 'BKG001')
