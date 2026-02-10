@@ -44,6 +44,24 @@
     </button>
   </form>
 </section>
+    <section class="bg-white p-6 rounded-xl shadow-md border border-gray-200 mt-8">
+  <h2 class="text-xl font-bold text-gray-800 mb-4">Manage Rooms</h2>
+  <div class="overflow-x-auto">
+    <table class="min-w-full table-auto">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="px-4 py-2 text-left">Room #</th>
+          <th class="px-4 py-2 text-left">Type</th>
+          <th class="px-4 py-2 text-left">Base Price</th>
+          <th class="px-4 py-2 text-left">Status</th>
+          <th class="px-4 py-2 text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="roomTableBody">
+        </tbody>
+    </table>
+  </div>
+</section>
   </div>
 </div>
 
@@ -163,6 +181,64 @@ async function loadRoomTypes() {
         console.error("Error loading dropdowns:", error);
     }
 }
+
+  async function fetchRooms() {
+    try {
+        const res = await fetch(`${BASE_URL}/api/rooms`);
+        const rooms = await res.json();
+        const tbody = document.getElementById('roomTableBody');
+        
+        tbody.innerHTML = rooms.map(room => `
+            <tr class="border-b hover:bg-gray-50">
+                <td class="px-4 py-3 font-medium">${room.number}</td>
+                <td class="px-4 py-3">${room.roomTypeId ? room.roomTypeId.name : 'N/A'}</td>
+                <td class="px-4 py-3">$${room.roomTypeId ? room.roomTypeId.basePrice : 0}</td>
+                <td class="px-4 py-3">
+                    <span class="px-2 py-1 rounded text-xs ${room.status === 'clean' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">
+                        ${room.status}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-center space-x-2">
+                    <button onclick="editRoom('${room._id}', '${room.number}')" class="text-blue-600 hover:underline">Edit</button>
+                    <button onclick="deleteRoom('${room._id}')" class="text-red-600 hover:underline">Delete</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        console.error("Error fetching rooms:", err);
+    }
+}
+
+async function deleteRoom(id) {
+    if (!confirm("Are you sure you want to delete this room?")) return;
+    
+    const res = await fetch(`${BASE_URL}/api/rooms/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+        alert("Room deleted!");
+        fetchRooms(); // Refresh the table
+    }
+}
+
+async function editRoom(id, currentNumber) {
+    const newNumber = prompt("Enter new room number:", currentNumber);
+    if (!newNumber) return;
+
+    const res = await fetch(`${BASE_URL}/api/rooms/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number: newNumber })
+    });
+
+    if (res.ok) {
+        fetchRooms();
+    }
+}
+
+// Ensure rooms load when page opens
+window.addEventListener('DOMContentLoaded', () => {
+    loadRoomTypes();
+    fetchRooms();
+});
 
 // CRITICAL: Call this function as soon as the page loads!
 window.onload = loadRoomTypes;
