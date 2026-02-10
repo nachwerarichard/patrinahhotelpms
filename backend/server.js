@@ -122,6 +122,7 @@ const RoomType = mongoose.model('RoomType', roomTypeSchema);
 
 // 2. Room Schema (The actual physical rooms)
 const roomSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
     number: { type: String, required: true, unique: true },
     roomTypeId: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType' },
     status: { type: String, enum: ['clean', 'dirty', 'under-maintenance', 'blocked'], default: 'clean' }
@@ -1818,20 +1819,21 @@ app.put('/api/bookings/:id/Confirm', async (req, res) => {
 
 app.post('/api/bookings/:id/move', async (req, res) => {
     const { id } = req.params;
-    // Added 'reason' to the destructured body
     const { newRoomNumber, username, overridePrice, reason } = req.body;
-
-    console.log(`--- MOVE REQUEST START ---`);
-    console.log(`Booking ID: ${id}, Target Room: ${newRoomNumber}, User: ${username}`);
-    console.log(`Reason Provided: ${reason || 'No reason specified'}`);
 
     try {
         const booking = await Booking.findOne({ id: id });
-        const newRoom = await Room.findOne({ number: newRoomNumber });
+        
+        // CRITICAL: We use .populate('roomTypeId') to get the basePrice from the other collection
+        const newRoom = await Room.findOne({ number: newRoomNumber }).populate('roomTypeId');
 
         if (!booking || !newRoom) {
-            console.error(`Move Failed: Booking or Room not found.`);
             return res.status(404).json({ message: 'Data not found' });
+        }
+
+        // Logic check: if roomTypeId didn't populate for some reason
+        if (!newRoom.roomTypeId) {
+            return res.status(400).json({ message: 'Room configuration error: No Room Type assigned to target room.' });
         }
 
         const oldRoomNumber = booking.room;
@@ -1839,7 +1841,6 @@ app.post('/api/bookings/:id/move', async (req, res) => {
         // 1. Calculate Remaining Nights
         const today = new Date();
         today.setHours(0, 0, 0, 0); 
-        
         const checkoutDate = new Date(booking.checkOut);
         checkoutDate.setHours(0, 0, 0, 0); 
         
@@ -1848,11 +1849,11 @@ app.post('/api/bookings/:id/move', async (req, res) => {
 
         // 2. Financial Consolidation
         const oldRate = Number(booking.amtPerNight || 0);
+        
+        // FIXED: Accessing basePrice through the populated roomTypeId object
         let newRate = (overridePrice !== undefined && overridePrice !== "") 
                       ? Number(overridePrice) 
-                      : Number(newRoom.basePrice || 0);
-
-        console.log(`Financials -> Nights Remaining: ${nightsRemaining}, Old Rate: ${oldRate}, New Rate: ${newRate}`);
+                      : Number(newRoom.roomTypeId.basePrice || 0);
 
         let priceAdjustmentMessage = "Price remained the same.";
 
@@ -1862,64 +1863,31 @@ app.post('/api/bookings/:id/move', async (req, res) => {
             booking.totalDue = Number(booking.totalDue || 0) + extraCharge;
             booking.balance = Number(booking.totalDue) - Number(booking.amountPaid || 0);
             priceAdjustmentMessage = `Rate changed from ${oldRate} to ${newRate}. Total due adjusted by ${extraCharge}.`;
-            console.log(`Adjustment: ${priceAdjustmentMessage}`);
         }
 
         // 3. Update Room Statuses
         await Room.findOneAndUpdate({ number: oldRoomNumber }, { status: 'dirty' });
         newRoom.status = 'blocked'; 
         await newRoom.save();
-        console.log(`Room Status Update: Room ${oldRoomNumber} is now 'dirty', Room ${newRoomNumber} is 'blocked'.`);
 
         // 4. Update Booking
         booking.room = newRoomNumber;
         await booking.save();
 
-        // 5. Audit Log (Including the new Reason)
+        // 5. Audit Log
         await addAuditLog('Guest Moved', username || 'System', {
             bookingId: id,
             fromRoom: oldRoomNumber,
             toRoom: newRoomNumber,
-            reason: reason, // Log the specific reason
+            reason: reason,
             details: priceAdjustmentMessage
         });
 
-        console.log(`Success: Guest moved to ${newRoomNumber}. Reason recorded.`);
-        console.log(`--- MOVE REQUEST END ---`);
-
-        res.json({ message: `Successfully moved from ${oldRoomNumber} to ${newRoomNumber}. ${priceAdjustmentMessage}` });
+        res.json({ message: `Successfully moved to ${newRoomNumber}. ${priceAdjustmentMessage}` });
 
     } catch (error) {
         console.error("CRITICAL MOVE ERROR:", error);
         res.status(500).json({ message: 'Error during move', error: error.message });
-    }
-});
-// Get available rooms (optionally exclude rooms with conflicting bookings)
-app.get('/api/room/available', async (req, res) => {
-    try {
-        // Base query: rooms that are vacant or clean
-        let query = { status: { $in: ['vacant', 'clean'] } };
-
-        // Optional: filter by dates to exclude rooms with conflicting bookings
-        const { checkIn, checkOut } = req.query;
-
-        if (checkIn && checkOut) {
-            const conflictingBookings = await Booking.find({
-                $or: [
-                    { checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } }
-                ]
-            });
-
-            const bookedRoomNumbers = conflictingBookings.map(b => b.room);
-            query.number = { $nin: bookedRoomNumbers };
-        }
-
-        const availableRooms = await Room.find(query);
-        res.json(availableRooms);
-
-    } catch (error) {
-        console.error('Fetch available rooms error FULL:', error);
-        res.status(500).json({ message: 'Error fetching available rooms', error: error.message });
     }
 });
 
@@ -2333,7 +2301,6 @@ app.post('/api/public/bookings', async (req, res) => {
     try {
         const confirmedBookings = [];
         const assignedInThisSession = [];
-
         const nights = calculateNights(checkIn, checkOut);
 
         if (nights <= 0) {
@@ -2341,17 +2308,23 @@ app.post('/api/public/bookings', async (req, res) => {
         }
 
         for (const request of roomsRequested) {
+            /* 1️⃣ Get the RoomType document first to get the ID and basePrice */
+            const roomTypeDoc = await RoomType.findOne({ name: request.type });
 
-            /* 1️⃣ Get rooms of this type */
-            const allRoomsOfType = await Room.find({ type: request.type });
+            if (!roomTypeDoc) {
+                return res.status(400).json({ message: `Room category "${request.type}" not found.` });
+            }
+
+            /* 2️⃣ Find physical rooms linked to this Type ID */
+            const allRoomsOfType = await Room.find({ roomTypeId: roomTypeDoc._id });
 
             if (allRoomsOfType.length === 0) {
-                return res.status(400).json({ message: `Room type ${request.type} does not exist.` });
+                return res.status(400).json({ message: `No physical rooms configured for ${request.type}.` });
             }
 
             const roomNumbers = allRoomsOfType.map(r => r.number);
 
-            /* 2️⃣ Find busy rooms */
+            /* 3️⃣ Find conflicting bookings */
             const busyBookings = await Booking.find({
                 room: { $in: roomNumbers },
                 $or: [
@@ -2361,7 +2334,7 @@ app.post('/api/public/bookings', async (req, res) => {
 
             const busyRoomNumbers = busyBookings.map(b => b.room);
 
-            /* 3️⃣ Available rooms */
+            /* 4️⃣ Filter for truly available rooms */
             const availableRooms = allRoomsOfType.filter(room =>
                 !busyRoomNumbers.includes(room.number) &&
                 !assignedInThisSession.includes(room.number)
@@ -2369,23 +2342,22 @@ app.post('/api/public/bookings', async (req, res) => {
 
             if (availableRooms.length === 0) {
                 return res.status(400).json({ 
-                    message: `No available ${request.type} rooms.` 
+                    message: `Sold out: No available ${request.type} rooms for these dates.` 
                 });
             }
 
-            /* 4️⃣ Assign room */
+            /* 5️⃣ Assign room */
             const selectedRoom = availableRooms[Math.floor(Math.random() * availableRooms.length)];
             assignedInThisSession.push(selectedRoom.number);
 
-            /* 5️⃣ Pricing calculations */
-            const amtPerNight = selectedRoom.basePrice;
+            /* 6️⃣ Pricing calculations (Using the basePrice from the RoomType document) */
+            const amtPerNight = roomTypeDoc.basePrice;
             const totalDue = amtPerNight * nights;
             const amountPaid = 0;
             const balance = totalDue;
 
-            /* 6️⃣ Create booking */
+            /* 7️⃣ Create booking */
             const newBookingId = `WEB${Math.floor(Math.random() * 90000) + 10000}`;
-            
 
             const newBooking = new Booking({
                 id: newBookingId,
@@ -2417,7 +2389,6 @@ app.post('/api/public/bookings', async (req, res) => {
             });
         }
 
-        /* 7️⃣ Final response */
         res.status(201).json({
             message: 'Bookings confirmed successfully!',
             totalBookings: confirmedBookings.length,
@@ -2432,7 +2403,6 @@ app.post('/api/public/bookings', async (req, res) => {
         });
     }
 });
-
 // Public endpoint to add a new booking (from external website)
 //End of app.post
 // Nodemailer  Setup
