@@ -193,6 +193,37 @@ app.post('/api/rooms', async (req, res) => {
     }
 });
 
+// GET all rooms with their Type details populated
+app.get('/api/rooms', async (req, res) => {
+    try {
+        // .populate('roomTypeId') fetches the name/price from the RoomType collection
+        const rooms = await Room.find().populate('roomTypeId');
+        res.json(rooms);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// DELETE a room
+app.delete('/api/rooms/:id', async (req, res) => {
+    try {
+        await Room.findByIdAndDelete(req.params.id);
+        res.json({ message: "Room deleted successfully" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// UPDATE a room (Status or Number)
+app.put('/api/rooms/:id', async (req, res) => {
+    try {
+        const updatedRoom = await Room.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(updatedRoom);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Booking Schema
 const bookingSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true }, // Your custom booking ID (e.g., 'BKG001')
