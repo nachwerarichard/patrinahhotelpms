@@ -538,7 +538,6 @@ event.preventDefault();
     } else if (targetId === 'housekeeping') {
         renderHousekeepingRooms();
     } else if (targetId === 'reports') {
-        reportDateInput.valueAsDate = new Date();
         generateReport();
     } else if (targetId === 'calendar') {
         renderCalendar();
