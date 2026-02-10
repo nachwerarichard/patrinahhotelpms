@@ -2432,21 +2432,29 @@ async function renderHousekeepingRooms() {
         document.getElementById('stat-maintenance').textContent = counts.maintenance;
         document.getElementById('stat-occupied').textContent = counts.blocked;
     }
-
-   // --- 3. GROUP BY TYPE NAME ---
+// --- 3. GROUP BY TYPE NAME ---
 const groupedRooms = {};
 
 currentRooms.forEach(room => {
-    // 1. Look up the name using roomTypeId from your schema
-    // 2. Fallback to "Standard" or "Unassigned" if not found
-    const typeName = typeLookup[room.roomTypeId] || "Standard Room";
+    // Since you use .populate('roomTypeId'), the room object looks like:
+    // { number: '101', roomTypeId: { name: 'Deluxe', _id: '...' }, status: 'clean' }
+    
+    let typeName = "Unassigned Category";
+
+    if (room.roomTypeId && typeof room.roomTypeId === 'object') {
+        // This takes the name directly from the populated backend data
+        typeName = room.roomTypeId.name; 
+    } else if (room.roomTypeId && typeLookup[room.roomTypeId]) {
+        // Fallback if populate failed but the ID is present
+        typeName = typeLookup[room.roomTypeId];
+    }
 
     if (!groupedRooms[typeName]) {
         groupedRooms[typeName] = [];
     }
     groupedRooms[typeName].push(room);
 });
-    // --- 4. RENDER LUXURY INTERFACE ---
+    
     for (const typeName in groupedRooms) {
         // Luxury Type Header
         const sectionHeader = document.createElement('div');
