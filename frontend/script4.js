@@ -2384,33 +2384,41 @@ function exportReport() {
  * Renders the room cards for housekeeping, fetching data from the backend.
  */
 async function renderHousekeepingRooms() {
-    updateBookingStats()
-    housekeepingRoomGrid.innerHTML = ''; // Clear existing cards
+    updateBookingStats();
+    housekeepingRoomGrid.innerHTML = ''; 
 
     let currentRooms = [];
+    let roomTypesData = [];
+
     try {
-        const response = await fetch(`${API_BASE_URL}/rooms`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        currentRooms = await response.json();
-        rooms = currentRooms; // Update local rooms array
+        // Fetch both Rooms and Types simultaneously for better performance
+        const [roomsRes, typesRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/rooms`),
+            fetch(`${API_BASE_URL}/room-types`) // Assuming this is your endpoint for types
+        ]);
+
+        if (!roomsRes.ok || !typesRes.ok) throw new Error("Failed to fetch data");
+
+        currentRooms = await roomsRes.json();
+        roomTypesData = await typesRes.json();
+        
+        rooms = currentRooms; 
     } catch (error) {
-        console.error('Error fetching rooms for housekeeping:', error);
-        showMessageBox('Error', 'Failed to load rooms for housekeeping. Please check backend connection.', true);
-        housekeepingRoomGrid.innerHTML = '<p style="text-align: center; padding: 20px; color: red;">Failed to load rooms.</p>';
+        console.error('Housekeeping Load Error:', error);
+        housekeepingRoomGrid.innerHTML = `
+            <div class="col-span-full text-center py-10 bg-red-50 rounded-2xl border border-red-100">
+                <p class="text-red-600 font-bold">Failed to synchronize room data.</p>
+            </div>`;
         return;
     }
 
-    // --- NEW: COUNT THE STATUSES ---
-    const counts = {
-        clean: 0,
-        dirty: 0,
-        maintenance: 0,
-        blocked: 0
-    };
+    // --- 1. PREPARE DATA MAP ---
+    // Create a quick lookup for Type names using the Type ID
+    const typeLookup = {};
+    roomTypesData.forEach(t => { typeLookup[t._id] = t.name; });
 
-    
+    // --- 2. COUNT THE STATUSES ---
+    const counts = { clean: 0, dirty: 0, maintenance: 0, blocked: 0 };
     currentRooms.forEach(room => {
         if (room.status === 'clean') counts.clean++;
         if (room.status === 'dirty') counts.dirty++;
@@ -2418,64 +2426,84 @@ async function renderHousekeepingRooms() {
         if (room.status === 'blocked') counts.blocked++;
     });
 
-    // Update your HTML elements with these new counts
-    if(document.getElementById('stat-clean'))  {
+    if(document.getElementById('stat-clean')) {
         document.getElementById('stat-clean').textContent = counts.clean;
         document.getElementById('stat-dirty').textContent = counts.dirty;
         document.getElementById('stat-maintenance').textContent = counts.maintenance;
         document.getElementById('stat-occupied').textContent = counts.blocked;
-        // Occupied/Blocked can be mapped here too
     }
-    // Group rooms by type for better organization
-    const roomTypes = {};
+
+    // --- 3. GROUP BY TYPE NAME ---
+    const groupedRooms = {};
     currentRooms.forEach(room => {
-        if (!roomTypes[room.type]) {
-            roomTypes[room.type] = [];
-        }
-        roomTypes[room.type].push(room);
+        // Use the mapped name from our lookup, or fallback to the raw type ID
+        const typeName = typeLookup[room.type] || room.type || "Unassigned";
+        if (!groupedRooms[typeName]) groupedRooms[typeName] = [];
+        groupedRooms[typeName].push(room);
     });
 
-    for (const type in roomTypes) {
-        const typeHeader = document.createElement('h3');
-        typeHeader.textContent = `${type} Rooms`;
-        typeHeader.style.gridColumn = '1 / -1'; // Span full width
-        typeHeader.style.marginTop = '20px';
-        typeHeader.style.marginBottom = '10px';
-        typeHeader.style.color = '#2c3e50';
-        typeHeader.style.borderBottom = '1px solid #ccc';
-        typeHeader.style.paddingBottom = '5px';
-        housekeepingRoomGrid.appendChild(typeHeader);
+    // --- 4. RENDER LUXURY INTERFACE ---
+    for (const typeName in groupedRooms) {
+        // Luxury Type Header
+        const sectionHeader = document.createElement('div');
+        sectionHeader.className = "col-span-full mt-10 mb-6 flex items-center gap-4";
+        sectionHeader.innerHTML = `
+            <h3 class="text-sm font-black uppercase tracking-[0.3em] text-slate-400 whitespace-nowrap">${typeName}</h3>
+            <div class="h-px bg-slate-200 w-full"></div>
+            <span class="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-bold">${groupedRooms[typeName].length} Units</span>
+        `;
+        housekeepingRoomGrid.appendChild(sectionHeader);
 
-        roomTypes[type].sort((a, b) => parseInt(a.number) - parseInt(b.number)).forEach(room => {
-            const card = document.createElement('div');
-            card.classList.add('room-card');
-           card.innerHTML = `
-    <h4>Room ${room.number}</h4>
-    <p>Type: ${room.type}</p>
-    <p class="status status-${room.status}">${room.status.replace('-', ' ').toUpperCase()}</p>
-    <select onchange="updateRoomStatus('${room.id}', this.value)">
-        <option value="clean" ${room.status === 'clean' ? 'selected' : ''}>Clean</option>
-        <option value="dirty" ${room.status === 'dirty' ? 'selected' : ''}>Dirty</option>
-        <option value="under-maintenance" ${room.status === 'under-maintenance' ? 'selected' : ''}>Under Maintenance</option>
-        
-        <option value="blocked" ${room.status === 'blocked' ? 'selected ' : ''}>
-            ${room.status === 'blocked' ? 'Occupied' : 'Blocked'}
-        </option>
-    </select>
-`;
-            housekeepingRoomGrid.appendChild(card);
+        groupedRooms[typeName]
+            .sort((a, b) => parseInt(a.number) - parseInt(b.number))
+            .forEach(room => {
+                const card = document.createElement('div');
+                // Luxury Card Styles
+                card.className = "bg-white rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group";
+                
+                const isDirty = room.status === 'dirty';
+                const isMaint = room.status === 'under-maintenance';
+                const isOccupied = room.status === 'blocked';
 
-            // Disable dropdown if room is blocked
-            const selectElement = card.querySelector('select');
-            if (room.status === 'blocked') {
-                selectElement.disabled = false;
-            } else {
-                selectElement.disabled = false;
-            }
-        });
+                card.innerHTML = `
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-1">Room</p>
+                                <h4 class="text-3xl font-black text-slate-800">${room.number}</h4>
+                            </div>
+                            <div class="h-10 w-10 rounded-xl ${isDirty ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-500'} flex items-center justify-center">
+                                <i class="fa-solid ${isDirty ? 'fa-broom' : 'fa-check-circle'}"></i>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full ${isDirty ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}"></span>
+                                <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                                    ${room.status.replace('-', ' ')}
+                                </span>
+                            </div>
+                            
+                            <div class="relative group/select">
+                                <select onchange="updateRoomStatus('${room.id}', this.value)" 
+                                    class="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer transition-all">
+                                    <option value="clean" ${room.status === 'clean' ? 'selected' : ''}>SET AS CLEAN</option>
+                                    <option value="dirty" ${room.status === 'dirty' ? 'selected' : ''}>SET AS DIRTY</option>
+                                    <option value="under-maintenance" ${room.status === 'under-maintenance' ? 'selected' : ''}>MAINTENANCE</option>
+                                    <option value="blocked" ${room.status === 'blocked' ? 'selected' : ''}>
+                                        ${isOccupied ? 'OCCUPIED' : 'BLOCKED'}
+                                    </option>
+                                </select>
+                                <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                housekeepingRoomGrid.appendChild(card);
+            });
     }
 }
-
 /**
  * Updates room status via API.
  * @param {string} roomId - The custom ID of the room.
