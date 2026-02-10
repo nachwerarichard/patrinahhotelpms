@@ -122,6 +122,37 @@ document.getElementById('roomForm').addEventListener('submit', async (e) => {
         alert("Error: " + error.error);
     }
 });
+
+  // Add this to your existing <script> block
+async function loadRoomTypes() {
+    try {
+        const response = await fetch(`${BASE_URL}/api/room-types`);
+        if (!response.ok) throw new Error('Failed to fetch types');
+        
+        const types = await response.json();
+        
+        // Target both dropdown IDs
+        const seasonSelect = document.getElementById('targetType');
+        const roomSelect = document.getElementById('roomTypeSelect');
+
+        // Create the HTML options
+        const optionsHTML = types.map(t => 
+            `<option value="${t._id}">${t.name} (Base: $${t.basePrice})</option>`
+        ).join('');
+
+        // Inject into dropdowns
+        if (seasonSelect) seasonSelect.innerHTML = `<option value="">Select Room Type...</option>` + optionsHTML;
+        if (roomSelect) roomSelect.innerHTML = `<option value="">Select Room Type...</option>` + optionsHTML;
+        
+        console.log("Dropdowns updated with", types.length, "types");
+    } catch (error) {
+        console.error("Error loading dropdowns:", error);
+    }
+}
+
+// CRITICAL: Call this function as soon as the page loads!
+window.onload = loadRoomTypes;
+  
 </script>
   </body>
 </html>
