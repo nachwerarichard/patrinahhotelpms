@@ -146,11 +146,31 @@ app.post('/api/room-types/:id/seasons', async (req, res) => {
 
 // Create a physical Room
 app.post('/api/rooms', async (req, res) => {
-    const room = new Room(req.body);
-    await room.save();
-    res.status(201).json(room);
-});
+    try {
+        const { number, roomTypeId } = req.body;
 
+        // Validation: Ensure roomTypeId is a valid MongoDB ID string
+        if (!roomTypeId || roomTypeId === "") {
+            return res.status(400).json({ error: "Please select a valid Room Type." });
+        }
+
+        const room = new Room({
+            number,
+            roomTypeId,
+            status: 'clean' // Defaulting status
+        });
+
+        await room.save();
+        res.status(201).json(room);
+    } catch (err) {
+        console.error("Database Error:", err);
+        // If 'number' is a duplicate, Mongo throws code 11000
+        if (err.code === 11000) {
+            return res.status(400).json({ error: "Room number already exists!" });
+        }
+        res.status(500).json({ error: err.message });
+    }
+});
 // Get all room types (for the dropdowns)
 app.get('/api/room-types', async (req, res) => {
     try {
