@@ -109,7 +109,7 @@ const WalkInCharge = mongoose.model('WalkInCharge', walkInChargeSchema);
 const roomTypeSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
     basePrice: { type: Number, required: true },
-    imageUrl: { type: String, default: 'room_.jpg' }, // NEW
+    imageUrl: { type: String, default: 'room_.webp' }, // NEW
     capacity: { type: Number, default: 2 }, // NEW: helps filter by 'people'
     seasonalRates: [{
         seasonName: String,
