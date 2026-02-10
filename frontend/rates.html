@@ -30,14 +30,20 @@
     </section>
 
     <section class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-      <h2 class="text-xl font-bold text-gray-800 mb-4">3. Add Physical Room Number</h2>
-      <form id="roomForm" class="flex gap-4">
-        <input type="text" id="roomNumber" placeholder="Room # (e.g. 301)" class="p-2 border rounded-lg flex-1">
-        <select id="roomTypeSelect" class="p-2 border rounded-lg flex-1"></select>
-        <button type="submit" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 transition">Add Room</button>
-      </form>
-    </section>
-
+  <h2 class="text-xl font-bold text-gray-800 mb-4">Add Physical Room</h2>
+  <form id="roomForm" class="flex flex-col md:flex-row gap-4">
+    <input type="text" id="roomNumber" placeholder="Room # (e.g. 101)" 
+           class="p-2 border border-gray-300 rounded-lg flex-1 outline-none focus:ring-2 focus:ring-green-500">
+    
+    <select id="roomTypeSelect" class="p-2 border border-gray-300 rounded-lg flex-1 outline-none">
+      <option value="">Select Room Type...</option>
+    </select>
+    
+    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+      Add Room
+    </button>
+  </form>
+</section>
   </div>
 </div>
 
@@ -91,6 +97,30 @@ document.getElementById('seasonForm').addEventListener('submit', async (e) => {
         body: JSON.stringify(data)
     });
     if(res.ok) alert("Season Applied!");
+});
+
+// Function to handle adding a room
+document.getElementById('roomForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const roomData = {
+        number: document.getElementById('roomNumber').value,
+        roomTypeId: document.getElementById('roomTypeSelect').value // Sending the ID, not the name
+    };
+
+    const res = await fetch(`${BASE_URL}/api/rooms`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(roomData)
+    });
+
+    if (res.ok) {
+        alert("Room added successfully!");
+        e.target.reset();
+    } else {
+        const error = await res.json();
+        alert("Error: " + error.error);
+    }
 });
 </script>
   </body>
