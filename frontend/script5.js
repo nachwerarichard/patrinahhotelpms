@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
         if (navRates) {
-        navReports.addEventListener('click', (e) => {
+        navRates.addEventListener('click', (e) => {
             e.preventDefault();
             showSection('inventory');
         });
