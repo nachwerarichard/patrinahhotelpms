@@ -572,7 +572,7 @@ function applyRoleAccess(role) {
     document.getElementById('nav-booking').style.display = 'none';
     document.getElementById('nav-dashboard').style.display = 'none';
     document.getElementById('nav-housekeeping').style.display = 'none';
-        document.getElementById('nav-rates').style.display = 'none';
+        document.getElementById('nav-inventory').style.display = 'none';
 
     document.getElementById('nav-reports').style.display = 'none';
     document.getElementById('nav-calendar').style.display = 'none';
@@ -583,9 +583,8 @@ function applyRoleAccess(role) {
         case 'admin':
             // Admins see everything
             document.getElementById('nav-booking').style.display = 'list-item';
-                        document.getElementById('nav-dashboard').style.display = 'list-item';
-                        document.getElementById('nav-rates').style.display = 'list-item';
-
+            document.getElementById('nav-dashboard').style.display = 'list-item';
+            document.getElementById('nav-inventory').style.display = 'list-item';
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             document.getElementById('nav-reports').style.display = 'list-item';
             document.getElementById('nav-calendar').style.display = 'list-item';
