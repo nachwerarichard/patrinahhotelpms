@@ -1600,53 +1600,128 @@ app.put('/api/bookings/:id', async (req, res) => {
 
 // Delete a booking (admin only)
 app.delete('/api/bookings/:id', async (req, res) => {
-    const { id } = req.params;
-    const { reason, username } = req.body; // Expect reason and username for deletion
-    if (!reason) {
-        return res.status(400).json({ message: 'Deletion reason is required.' });
+  const { id } = req.params;
+  const { reason, username } = req.body;
+
+  // -------------------------------
+  // 1. Input Validation (400)
+  // -------------------------------
+  if (!id) {
+    return res.status(400).json({ message: 'Booking ID is required.' });
+  }
+
+  if (!reason || reason.trim().length < 3) {
+    return res.status(400).json({ message: 'Deletion reason is required.' });
+  }
+
+  try {
+    // -------------------------------
+    // 2. Fetch Booking
+    // -------------------------------
+    const bookingToDelete = await Booking.findOne({ id });
+
+    if (!bookingToDelete) {
+      return res.status(404).json({ message: 'Booking not found.' });
     }
+
+    // -------------------------------
+    // 3. Room Status Handling
+    // -------------------------------
+    let room;
 
     try {
-        const bookingToDelete = await Booking.findOne({ id: id });
-        if (!bookingToDelete) {
-            return res.status(404).json({ message: 'Booking not found' });
-        }
-
-        const room = await Room.findOne({ number: bookingToDelete.room });
-        if (room) {
-            // Check if the room is still blocked by other active bookings
-            const now = new Date();
-            now.setHours(0,0,0,0);
-            const otherActiveBookings = await Booking.exists({
-                room: room.number,
-                id: { $ne: bookingToDelete.id }, // Exclude the current booking being deleted
-                checkIn: { $lte: now.toISOString().split('T')[0] },
-                checkOut: { $gt: now.toISOString().split('T')[0] }
-            });
-
-            if (!otherActiveBookings) {
-                room.status = 'clean'; // Only unblock if no other active bookings
-                await room.save();
-            }
-        }
-
-        // Delete associated incidental charges using the MongoDB _id
-        await IncidentalCharge.deleteMany({ bookingId: bookingToDelete._id });
-
-        await Booking.deleteOne({ id: id });
-
-        // Audit Log
-        await addAuditLog('Booking Deleted', username || 'System', { // Use username from body
-            bookingId: bookingToDelete.id,
-            guestName: bookingToDelete.name,
-            roomNumber: bookingToDelete.room,
-            reason: reason
-        });
-
-        res.json({ message: 'Booking and associated charges deleted successfully!' });
-    } catch (error) {
-        res.status(500).json({ message: 'Error deleting booking', error: error.message });
+      room = await Room.findOne({ number: bookingToDelete.room });
+    } catch (err) {
+      console.error('Room lookup failed:', err);
+      return res.status(500).json({
+        message: 'Failed while checking room status.',
+        error: err.message
+      });
     }
+
+    if (room) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayISO = today.toISOString().split('T')[0];
+
+      const otherActiveBookings = await Booking.exists({
+        room: room.number,
+        id: { $ne: bookingToDelete.id },
+        checkIn: { $lte: todayISO },
+        checkOut: { $gt: todayISO }
+      });
+
+      if (!otherActiveBookings) {
+        room.status = 'clean';
+        await room.save();
+      }
+    }
+
+    // -------------------------------
+    // 4. Delete Incidental Charges
+    // -------------------------------
+    try {
+      await IncidentalCharge.deleteMany({
+        bookingId: bookingToDelete._id
+      });
+    } catch (err) {
+      console.error('Failed deleting incidental charges:', err);
+      return res.status(500).json({
+        message: 'Failed deleting incidental charges.',
+        error: err.message
+      });
+    }
+
+    // -------------------------------
+    // 5. Delete Booking
+    // -------------------------------
+    try {
+      await Booking.deleteOne({ id });
+    } catch (err) {
+      console.error('Booking delete failed:', err);
+      return res.status(500).json({
+        message: 'Failed deleting booking record.',
+        error: err.message
+      });
+    }
+
+    // -------------------------------
+    // 6. Audit Log (non-blocking)
+    // -------------------------------
+    addAuditLog(
+      'Booking Deleted',
+      username || 'System',
+      {
+        bookingId: bookingToDelete.id,
+        guestName: bookingToDelete.name,
+        roomNumber: bookingToDelete.room,
+        reason
+      }
+    ).catch(err => {
+      console.warn('Audit log failed:', err.message);
+    });
+
+    // -------------------------------
+    // 7. Success
+    // -------------------------------
+    res.status(200).json({
+      message: 'Booking and associated charges deleted successfully.'
+    });
+
+  } catch (error) {
+    // -------------------------------
+    // 8. Catch-All 500
+    // -------------------------------
+    console.error('DELETE /api/bookings/:id failed:', {
+      bookingId: id,
+      error: error.stack
+    });
+
+    res.status(500).json({
+      message: 'Internal server error while deleting booking.',
+      error: error.message
+    });
+  }
 });
 
 app.post('/api/bookings/:id/checkout', async (req, res) => {
