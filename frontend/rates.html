@@ -1,101 +1,161 @@
-
 <html>
-  <head>
-        <script src="https://cdn.tailwindcss.com"></script>
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900">
 
-  </head>
-<body>
-<div class="p-8 bg-gray-50 min-h-screen font-sans">
-  <div class="max-w-4xl mx-auto space-y-8">
-    
-    <section class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-      <h2 class="text-xl font-bold text-gray-800 mb-4">1. Define Room Type & Default Rate</h2>
-      <form id="typeForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <input type="text" id="typeName" placeholder="Type (e.g. Suite)" class="p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-        <input type="number" id="basePrice" placeholder="Base Price ($)" class="p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-        <button type="submit" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Save Type</button>
-      </form>
-    </section>
-
-    <section class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-      <h2 class="text-xl font-bold text-gray-800 mb-4">2. Set Seasonal Pricing</h2>
-      <form id="seasonForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <select id="targetType" class="p-2 border rounded-lg"></select>
-        <input type="text" id="seasonName" placeholder="Season (e.g. Summer)" class="p-2 border rounded-lg">
-        <input type="date" id="startDate" class="p-2 border rounded-lg text-sm">
-        <input type="date" id="endDate" class="p-2 border rounded-lg text-sm">
-        <input type="number" id="seasonRate" placeholder="Seasonal Price ($)" class="p-2 border rounded-lg col-span-full md:col-span-1">
-        <button type="submit" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition col-span-full">Apply Seasonal Rate</button>
-      </form>
-    </section>
-
-    <section class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-  <h2 class="text-xl font-bold text-gray-800 mb-4">Add Physical Room</h2>
-  <form id="roomForm" class="flex flex-col md:flex-row gap-4">
-    <input type="text" id="roomNumber" placeholder="Room # (e.g. 101)" 
-           class="p-2 border border-gray-300 rounded-lg flex-1 outline-none focus:ring-2 focus:ring-green-500">
-    
-    <select id="roomTypeSelect" class="p-2 border border-gray-300 rounded-lg flex-1 outline-none">
-      <option value="">Select Room Type...</option>
-    </select>
-    
-    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">
-      Add Room
-    </button>
-  </form>
-</section>
-    <section class="bg-white p-6 rounded-xl shadow-md border border-gray-200 mt-8">
-  <h2 class="text-xl font-bold text-gray-800 mb-4">Manage Rooms</h2>
-  <div class="overflow-x-auto">
-    <table class="min-w-full table-auto">
-      <thead class="bg-gray-100">
-        <tr>
-          <th class="px-4 py-2 text-left">Room #</th>
-          <th class="px-4 py-2 text-left">Type</th>
-          <th class="px-4 py-2 text-left">Base Price</th>
-          <th class="px-4 py-2 text-left">Status</th>
-          <th class="px-4 py-2 text-center">Actions</th>
-        </tr>
-      </thead>
-      <tbody id="roomTableBody">
-        </tbody>
-    </table>
-  </div>
-</section>
-
-    <div id="editModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">Edit Room Details</h2>
+<div class="p-4 md:p-12">
+    <div class="max-w-5xl mx-auto space-y-10">
         
-        <form id="editRoomForm" class="space-y-4">
-            <input type="hidden" id="editRoomId">
-            <input type="hidden" id="editTypeId">
+        <div class="border-b border-slate-200 pb-6">
+            <h1 class="text-3xl font-light text-slate-800 tracking-tight">Rate & Inventory <span class="font-bold text-indigo-600">Control</span></h1>
+            <p class="text-slate-500 text-sm mt-1">Configure room categories, seasonal pricing, and physical assets.</p>
+        </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Room Number</label>
-                <input type="text" id="editRoomNumber" class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-            </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <section class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 transition-all hover:shadow-md">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                        <i class="fa-solid fa-bed text-lg"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-800">1. Room Categories</h2>
+                </div>
+                <form id="typeForm" class="space-y-4">
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Category Name</label>
+                            <input type="text" id="typeName" placeholder="e.g. Presidential Suite" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all shadow-inner">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Standard Rate ($)</label>
+                            <input type="number" id="basePrice" placeholder="0.00" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all shadow-inner font-mono">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-slate-900 text-white font-bold py-4 px-4 rounded-2xl hover:bg-indigo-600 transition-all shadow-lg shadow-slate-200 active:scale-95 uppercase text-xs tracking-widest">
+                        Initialize Category
+                    </button>
+                </form>
+            </section>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Room Type Name</label>
-                <input type="text" id="editTypeName" class="w-full p-2 border rounded-lg bg-gray-50 outline-none">
-            </div>
+            <section class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 transition-all hover:shadow-md">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+                        <i class="fa-solid fa-calendar-day text-lg"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-800">2. Seasonal Rules</h2>
+                </div>
+                <form id="seasonForm" class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2 space-y-1">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Target Category</label>
+                        <select id="targetType" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 appearance-none font-medium"></select>
+                    </div>
+                    <div class="col-span-2 space-y-1">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Season Label</label>
+                        <input type="text" id="seasonName" placeholder="e.g. Peak Summer" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">From</label>
+                        <input type="date" id="startDate" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">To</label>
+                        <input type="date" id="endDate" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none">
+                    </div>
+                    <div class="col-span-2 space-y-1">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Adjusted Price ($)</label>
+                        <input type="number" id="seasonRate" placeholder="0.00" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-mono focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <button type="submit" class="col-span-2 bg-indigo-600 text-white font-bold py-4 px-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95 uppercase text-xs tracking-widest mt-2">
+                        Apply Market Rate
+                    </button>
+                </form>
+            </section>
+        </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Base Price ($)</label>
-                <input type="number" id="editBasePrice" class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-            </div>
+        <section class="bg-slate-900 p-8 rounded-[2rem] shadow-2xl border border-slate-800">
+            <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <span class="w-2 h-6 bg-indigo-500 rounded-full"></span>
+                Asset Registry
+            </h2>
+            <form id="roomForm" class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1 space-y-1">
+                    <input type="text" id="roomNumber" placeholder="Room # (e.g. 101)" 
+                           class="w-full p-4 bg-white/10 border border-white/10 text-white placeholder-slate-500 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 backdrop-blur-sm transition-all">
+                </div>
+                
+                <div class="flex-1">
+                    <select id="roomTypeSelect" class="w-full p-4 bg-white/10 border border-white/10 text-white rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 appearance-none transition-all">
+                        <option value="" class="text-slate-900">Select Room Type...</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="bg-white text-slate-900 hover:bg-indigo-500 hover:text-white font-black py-4 px-10 rounded-2xl transition-all active:scale-95 uppercase text-xs tracking-[0.15em]">
+                    Register Room
+                </button>
+            </form>
+        </section>
 
-            <div class="flex justify-end space-x-3 mt-6">
-                <button type="button" onclick="closeModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">Cancel</button>
-                <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">Save Changes</button>
+        <section class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                <h2 class="text-xl font-bold text-slate-800">Inventory Overview</h2>
+                <div class="flex gap-2">
+                    <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wider">Live View</span>
+                </div>
             </div>
-        </form>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-400 uppercase text-[10px] font-bold tracking-[0.2em]">
+                            <th class="px-8 py-5 text-left">Room Identifier</th>
+                            <th class="px-8 py-5 text-left">Classification</th>
+                            <th class="px-8 py-5 text-left">Base Rate</th>
+                            <th class="px-8 py-5 text-left">Status</th>
+                            <th class="px-8 py-5 text-center">Management</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roomTableBody" class="divide-y divide-slate-100">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+        <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center z-50">
+            <div class="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-md w-full mx-4 border border-white/20">
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Modify Asset</h2>
+                    <p class="text-slate-400 text-xs uppercase tracking-widest font-bold mt-1">Room Records Department</p>
+                </div>
+                
+                <form id="editRoomForm" class="space-y-6">
+                    <input type="hidden" id="editRoomId">
+                    <input type="hidden" id="editTypeId">
+
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Room Number</label>
+                        <input type="text" id="editRoomNumber" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Current Type (Immutable)</label>
+                        <input type="text" id="editTypeName" class="w-full p-4 bg-slate-100 border border-slate-100 rounded-2xl text-slate-400 outline-none cursor-not-allowed font-medium" readonly>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Override Base Price ($)</label>
+                        <input type="number" id="editBasePrice" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner font-mono">
+                    </div>
+
+                    <div class="flex gap-4 mt-10">
+                        <button type="button" onclick="closeModal()" class="flex-1 py-4 text-slate-400 hover:text-slate-600 font-bold uppercase text-[10px] tracking-widest transition-colors">Discard</button>
+                        <button type="submit" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all active:scale-95 uppercase text-[10px] tracking-widest">Update Record</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
-</div>
-  </div>
 </div>
 
 <script src="rates.js"></script>
-  </body>
+</body>
 </html>
