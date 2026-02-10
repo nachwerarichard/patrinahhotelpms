@@ -42,6 +42,8 @@
 </div>
 
 <script>
+                  const BASE_URL = 'https://patrinahhotelpms.onrender.com';
+
   // --- Logic for defining Room Types ---
 document.getElementById('typeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -50,7 +52,7 @@ document.getElementById('typeForm').addEventListener('submit', async (e) => {
         basePrice: document.getElementById('basePrice').value
     };
     
-    const res = await fetch('/api/room-types', {
+    const res = await fetch('${BASE_URL}/api/room-types', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -69,7 +71,7 @@ document.getElementById('seasonForm').addEventListener('submit', async (e) => {
         rate: document.getElementById('seasonRate').value
     };
 
-    const res = await fetch(`/api/room-types/${typeId}/seasons`, {
+    const res = await fetch(`${BASE_URL}/api/room-types/${typeId}/seasons`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
