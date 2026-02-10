@@ -2433,15 +2433,19 @@ async function renderHousekeepingRooms() {
         document.getElementById('stat-occupied').textContent = counts.blocked;
     }
 
-    // --- 3. GROUP BY TYPE NAME ---
-    const groupedRooms = {};
-    currentRooms.forEach(room => {
-        // Use the mapped name from our lookup, or fallback to the raw type ID
-        const typeName = typeLookup[room.type] || room.type || "Unassigned";
-        if (!groupedRooms[typeName]) groupedRooms[typeName] = [];
-        groupedRooms[typeName].push(room);
-    });
+   // --- 3. GROUP BY TYPE NAME ---
+const groupedRooms = {};
 
+currentRooms.forEach(room => {
+    // 1. Look up the name using roomTypeId from your schema
+    // 2. Fallback to "Standard" or "Unassigned" if not found
+    const typeName = typeLookup[room.roomTypeId] || "Standard Room";
+
+    if (!groupedRooms[typeName]) {
+        groupedRooms[typeName] = [];
+    }
+    groupedRooms[typeName].push(room);
+});
     // --- 4. RENDER LUXURY INTERFACE ---
     for (const typeName in groupedRooms) {
         // Luxury Type Header
