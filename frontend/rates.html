@@ -45,19 +45,33 @@
                   const BASE_URL = 'https://patrinahhotelpms.onrender.com';
 
   // --- Logic for defining Room Types ---
+// Ensure BASE_URL is defined at the top of your script
+
 document.getElementById('typeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    
     const data = {
         name: document.getElementById('typeName').value,
         basePrice: document.getElementById('basePrice').value
     };
     
-    const res = await fetch('${BASE_URL}/api/room-types', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    });
-    if(res.ok) alert("Room Type Created!");
+    // Note the backticks below!
+    try {
+        const res = await fetch(`${BASE_URL}/api/room-types`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if(res.ok) {
+            alert("Room Type Created!");
+            loadRoomTypes(); // Refresh your dropdowns
+        } else {
+            console.error("Server responded with an error");
+        }
+    } catch (error) {
+        console.error("Failed to connect to the server:", error);
+    }
 });
 
 // --- Logic for Seasonal Rates ---
