@@ -124,7 +124,7 @@ const RoomType = mongoose.model('RoomType', roomTypeSchema);
 const roomSchema = new mongoose.Schema({
     number: { type: String, required: true, unique: true },
     roomTypeId: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType' },
-    status: { type: String, enum: ['clean', 'dirty', 'maintenance'], default: 'clean' }
+    status: { type: String, enum: ['clean', 'dirty', 'under-maintenance', 'blocked'], default: 'clean' }
 });
 const Room = mongoose.model('Room', roomSchema);
 // Create a Room Type (Set Base Price)
