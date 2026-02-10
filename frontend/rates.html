@@ -63,34 +63,33 @@
   </div>
 </section>
 
-    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-    <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-bold text-gray-800">Edit Room Details</h3>
-            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-        </div>
+    <div id="editModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">Edit Room Details</h2>
         
         <form id="editRoomForm" class="space-y-4">
             <input type="hidden" id="editRoomId">
-            
+            <input type="hidden" id="editTypeId">
+
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Room Number</label>
+                <label class="block text-sm font-medium text-gray-700">Room Number</label>
                 <input type="text" id="editRoomNumber" class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Room Status</label>
-                <select id="editRoomStatus" class="w-full p-2 border rounded-lg outline-none">
-                    <option value="clean">Clean</option>
-                    <option value="dirty">Dirty</option>
-                    <option value="under-maintenance">Maintenance</option>
-                    <option value="blocked">Blocked</option>
-                </select>
+                <label class="block text-sm font-medium text-gray-700">Room Type Name</label>
+                <input type="text" id="editTypeName" class="w-full p-2 border rounded-lg bg-gray-50 outline-none" readonly>
+                <p class="text-xs text-gray-500 mt-1">Type name is managed in Type Settings.</p>
             </div>
 
-            <div class="flex gap-3 pt-4">
-                <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition">Cancel</button>
-                <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Update Room</button>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Base Price ($)</label>
+                <input type="number" id="editBasePrice" class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">Cancel</button>
+                <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">Save Changes</button>
             </div>
         </form>
     </div>
@@ -253,15 +252,72 @@ async function deleteRoom(id) {
     }
 }
 
-// 1. Open Modal and populate it with existing data
-async function editRoom(id, currentNumber, currentStatus) {
-    document.getElementById('editRoomId').value = id;
-    document.getElementById('editRoomNumber').value = currentNumber;
-    document.getElementById('editRoomStatus').value = currentStatus;
-    
-    // Show the modal
-    document.getElementById('editModal').classList.remove('hidden');
+// Function to open modal and fill data
+async function editRoom(roomId) {
+    try {
+        // 1. Fetch current room details (populated with type)
+        const res = await fetch(`${BASE_URL}/api/rooms`);
+        const rooms = await res.json();
+        const room = rooms.find(r => r._id === roomId);
+
+        if (!room) return alert("Room not found");
+
+        // 2. Fill the form
+        document.getElementById('editRoomId').value = room._id;
+        document.getElementById('editTypeId').value = room.roomTypeId._id;
+        document.getElementById('editRoomNumber').value = room.number;
+        document.getElementById('editTypeName').value = room.roomTypeId.name;
+        document.getElementById('editBasePrice').value = room.roomTypeId.basePrice;
+
+        // 3. Show Modal
+        const modal = document.getElementById('editModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    } catch (err) {
+        console.error("Error opening modal:", err);
+    }
 }
+
+function closeModal() {
+    const modal = document.getElementById('editModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+// Handle Modal Submission
+document.getElementById('editRoomForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const roomId = document.getElementById('editRoomId').value;
+    const typeId = document.getElementById('editTypeId').value;
+    
+    const updatedRoomNumber = document.getElementById('editRoomNumber').value;
+    const updatedPrice = document.getElementById('editBasePrice').value;
+
+    try {
+        // Update Room Number
+        const roomRes = await fetch(`${BASE_URL}/api/rooms/${roomId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ number: updatedRoomNumber })
+        });
+
+        // Update Room Type Price (Updates all rooms of this type)
+        const typeRes = await fetch(`${BASE_URL}/api/room-types/${typeId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ basePrice: updatedPrice })
+        });
+
+        if (roomRes.ok && typeRes.ok) {
+            alert("Updated successfully!");
+            closeModal();
+            fetchRooms(); // Refresh the table
+        }
+    } catch (err) {
+        alert("Update failed: " + err.message);
+    }
+});
 
 // 2. Close Modal
 function closeModal() {
