@@ -413,35 +413,42 @@ loginForm.addEventListener('submit', async function(event) {
         const data = await response.json();
 
         if (response.ok) {
-            // SAVE TO BROWSER MEMORY
+            // 1. SAVE TO BROWSER MEMORY (Added hotelId here)
             localStorage.setItem('loggedInUser', JSON.stringify({ 
                 username: data.user.username, 
                 role: data.user.role,
+                hotelId: data.user.hotelId || 'global', // Super-admin won't have a hotelId
                 token: data.token 
             }));
-         
 
-    // Update global variables for immediate use in the session
-    currentUsername = data.user.username;
-    currentUserRole = data.user.role;
+            // 2. CHECK ROLE FOR REDIRECTION
+            if (data.user.role === 'super-admin') {
+                // If they are a super-admin, send them to the Portfolio/Management page
+                window.location.href = 'super-admin-dashboard.html'; 
+                return; // Stop execution here for super-admins
+            }
 
-    // Update the text on the screen
-    const displayElement = document.getElementById('display-user-name');
-    if (displayElement) {
-        displayElement.textContent = currentUsername;
-    }
+            // --- STANDARD USER LOGIC CONTINUES BELOW ---
+            currentUsername = data.user.username;
+            currentUserRole = data.user.role;
 
-    
+            const displayElement = document.getElementById('display-user-name');
+            if (displayElement) {
+                displayElement.textContent = currentUsername;
+            }
 
-            // TRIGGER THE DASHBOARD
+            // TRIGGER THE STANDARD DASHBOARD
             await showDashboard(data.user.username, data.user.role);
 
-            // Run your background audit logs
-            //await fetch(`${API_BASE_URL}/rooms/init`, { method: 'POST' });
+            // AUDIT LOG
             await fetch(`${API_BASE_URL}/audit-log/action`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'User Logged In', user: data.user.username, details: { role: data.user.role } })
+                body: JSON.stringify({ 
+                    action: 'User Logged In', 
+                    user: data.user.username, 
+                    details: { role: data.user.role, hotelId: data.user.hotelId } 
+                })
             });
 
         } else {
@@ -451,8 +458,6 @@ loginForm.addEventListener('submit', async function(event) {
         console.error('Login error:', error);
     }
 });
-
-
 
 /**
  * Handles navigation clicks, showing/hiding sections and re-rendering content.
