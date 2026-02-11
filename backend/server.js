@@ -833,393 +833,255 @@ app.post('/api/admin/manage-user',  async (req, res) => {
  * @param {string} username - The username of the actor.
  * @param {object} [details={}] - Additional details to store.
  */
-async function addAuditLog(action, username, details = {}) {
+async function addAuditLog(action, username, hotelId, details = {}) {
     try {
         const log = new AuditLog({
             action,
             user: username,
+            hotelId: hotelId, // CRITICAL: Link log to the specific hotel
             details: details
         });
         await log.save();
-        console.log(`Audit Logged: ${action} by ${username}`);
+        console.log(`Audit Logged: ${action} by ${username} for Hotel ${hotelId}`);
     } catch (error) {
         console.error('Error adding audit log:', error);
     }
 }
-
-// --- 7. API Routes ---
-// Add these routes after your existing API routes
-
-// --- Point of Sale (POS) API ---
-
-// NEW: Find the active booking for a specific room number
-// This is the first step for a POS user to charge a room guest.
-
-app.get('/api/pos/room/:roomNumber/latest-booking', async (req, res) => {
+// GET: Find active booking for a room (Scoped to Hotel)
+app.get('/api/pos/room/:roomNumber/latest-booking', auth, async (req, res) => {
     const { roomNumber } = req.params;
+    const hotelId = req.user.hotelId; 
     try {
         const latestBooking = await Booking.findOne({
-            room: roomNumber
-        }).sort({ checkIn: -1 }); // Sort by check-in date in descending order
+            room: roomNumber,
+            hotelId: hotelId // Ensure we don't grab a booking from another hotel
+        }).sort({ checkIn: -1 });
 
         if (!latestBooking) {
-            return res.status(404).json({ message: 'No bookings found for this room.' });
+            return res.status(404).json({ message: 'No bookings found for this room in your hotel.' });
         }
-
         res.json(latestBooking);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching latest booking', error: error.message });
+        res.status(500).json({ message: 'Error fetching booking' });
     }
 });
-// NEW: Post a charge to a specific room guest's bill
-// This endpoint uses the existing IncidentalCharge model.
-app.post('/api/pos/charge/room', async (req, res) => {
-    const { bookingObjectId, type, description, amount, username } = req.body;
-    try {
-        if (!mongoose.Types.ObjectId.isValid(bookingObjectId)) {
-            return res.status(400).json({ message: 'Invalid booking ID provided.' });
-        }
 
-        const booking = await Booking.findById(bookingObjectId);
-        if (!booking) {
-            return res.status(404).json({ message: 'Associated booking not found.' });
-        }
+// POST: Post charge to room (Scoped to Hotel)
+app.post('/api/pos/charge/room', auth, async (req, res) => {
+    const { bookingObjectId, type, description, amount } = req.body;
+    const hotelId = req.user.hotelId;
+    try {
+        // Find booking verifying ownership
+        const booking = await Booking.findOne({ _id: bookingObjectId, hotelId });
+        if (!booking) return res.status(404).json({ message: 'Booking not found.' });
 
         const newCharge = new IncidentalCharge({
             bookingId: bookingObjectId,
             bookingCustomId: booking.id,
             guestName: booking.name,
             roomNumber: booking.room,
-            type,
-            description,
-            amount
+            hotelId, // Link charge to hotel
+            type, description, amount
         });
         await newCharge.save();
 
-        await addAuditLog('POS Charge Added (Room)', username || 'POS User', {
-            chargeId: newCharge._id,
-            bookingId: newCharge.bookingCustomId,
-            type: newCharge.type,
-            amount: newCharge.amount
+        // Pass hotelId to the log helper
+        await addAuditLog('POS Charge (Room)', req.user.username, hotelId, {
+            room: booking.room,
+            amount
         });
 
-        res.status(201).json({ message: 'Charge posted to room successfully!', charge: newCharge });
+        res.status(201).json(newCharge);
     } catch (error) {
-        res.status(500).json({ message: 'Error posting charge to room', error: error.message });
+        res.status(500).json({ message: 'Error posting charge' });
+    }
+});
+// POST: Walk-in Charge (Scoped to Hotel)
+app.post('/api/pos/charge/walkin', auth, async (req, res) => {
+    const { guestName, type, description, amount } = req.body;
+    const hotelId = req.user.hotelId;
+    try {
+        const receiptId = `REC-${hotelId.slice(-3)}-${Math.floor(Math.random() * 90000) + 10000}`;
+
+        const newWalkInCharge = new WalkInCharge({
+            receiptId, guestName, type, description, amount, hotelId
+        });
+        await newWalkInCharge.save();
+
+        await addAuditLog('POS Charge (Walk-In)', req.user.username, hotelId, { receiptId, amount });
+
+        res.status(201).json(newWalkInCharge);
+    } catch (error) {
+        res.status(500).json({ message: 'Error creating walk-in charge' });
     }
 });
 
-app.get('/api/reports/services', async (req, res) => {
+// GET: Search In-House accounts (Scoped to Hotel)
+app.get('/api/pos/search/in-house', auth, async (req, res) => {
+    const { query } = req.query;
+    const hotelId = req.user.hotelId;
+    try {
+        if (!query || query.length < 2) return res.json([]);
+
+        const accounts = await ClientAccount.find({
+            hotelId: hotelId, // Isolation
+            isClosed: false,
+            $or: [
+                { guestName: new RegExp(query, 'i') },
+                { roomNumber: new RegExp(query, 'i') }
+            ]
+        }).limit(5);
+
+        res.json(accounts);
+    } catch (error) {
+        res.status(500).json({ message: 'Error during search' });
+    }
+});
+app.get('/api/reports/services', auth, async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
+        const hotelId = req.user.hotelId;
 
-        const query = {};
+        const matchQuery = { hotelId: hotelId }; // Mandatory Filter
         if (startDate && endDate) {
-            query.date = {
-                $gte: new Date(startDate),
-                $lte: new Date(endDate)
-            };
+            matchQuery.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
         }
 
         const serviceReports = await IncidentalCharge.aggregate([
-            { $match: query },
+            { $match: matchQuery },
             {
                 $group: {
-                    // First grouping: Group by both service type and guest name
-                    _id: {
-                        serviceType: '$type', 
-                        guestName: '$guestName' 
-                    },
+                    _id: { serviceType: '$type', guestName: '$guestName' },
                     totalAmount: { $sum: '$amount' },
                     count: { $sum: 1 }
                 }
             },
             {
                 $group: {
-                    // Second grouping: Group by service type only to get the total for that service
                     _id: '$_id.serviceType',
                     totalAmount: { $sum: '$totalAmount' },
                     count: { $sum: '$count' },
-                    // Pushing the individual guest charges into a `bookings` array
                     bookings: {
-                        $push: {
-                            // This now correctly uses the guestName from the first group
-                            name: '$_id.guestName', 
-                            amount: '$totalAmount',
-                            count: '$count'
-                        }
+                        $push: { name: '$_id.guestName', amount: '$totalAmount', count: '$count' }
                     }
                 }
             },
-            {
-                $project: {
-                    _id: 0,
-                    serviceType: '$_id',
-                    totalAmount: { $round: ['$totalAmount', 2] },
-                    count: 1,
-                    bookings: 1
-                }
-            }
+            { $project: { _id: 0, serviceType: '$_id', totalAmount: { $round: ['$totalAmount', 2] }, count: 1, bookings: 1 } }
         ]);
 
         res.json(serviceReports);
     } catch (error) {
-        res.status(500).json({ message: 'Error generating service report', error: error.message });
-    }
-});
-
-// NEW: Post a charge for a walk-in guest
-// This endpoint uses the new WalkInCharge model.
-app.post('/api/pos/charge/walkin', async (req, res) => {
-    const { guestName, type, description, amount, username } = req.body;
-    try {
-        // Generate a unique receipt ID
-        const receiptId = `REC${Math.floor(Math.random() * 90000) + 10000}`;
-
-        const newWalkInCharge = new WalkInCharge({
-            receiptId,
-            guestName,
-            type,
-            description,
-            amount
-        });
-        await newWalkInCharge.save();
-
-        await addAuditLog('POS Charge Added (Walk-In)', username || 'POS User', {
-            receiptId: newWalkInCharge.receiptId,
-            guestName: newWalkInCharge.guestName,
-            type: newWalkInCharge.type,
-            amount: newWalkInCharge.amount
-        });
-
-        res.status(201).json({ message: 'Walk-in charge created successfully!', charge: newWalkInCharge });
-    } catch (error) {
-        res.status(500).json({ message: 'Error creating walk-in charge', error: error.message });
-    }
-});
-
-// GET /api/pos/client/search
-// This endpoint will find an active (not closed) client account by guest name or room number.
-app.get('/api/pos/client/search', async (req, res) => {
-    const { query } = req.query;
-    
-    if (!query) {
-        return res.status(200).json([]); // Return empty array if no query
-    }
-
-    try {
-        const foundAccounts = await ClientAccount.find({
-            isClosed: false,
-            $or: [
-                { guestName: { $regex: query, $options: 'i' } },
-                { roomNumber: { $regex: query, $options: 'i' } }
-            ]
-        }).limit(10); // Limit results for faster performance
-        
-        // Return results (will be an empty array [] if none found)
-        res.status(200).json(foundAccounts);
-    } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
-    }
-});
-app.get('/api/pos/search/in-house', async (req, res) => {
-    const { query } = req.query;
-
-    try {
-        if (!query || query.length < 2) return res.json([]); // Don't search for just 1 letter
-
-        // Create a case-insensitive regex (e.g., "jo" matches "John")
-        const searchRegex = new RegExp(query, 'i');
-
-        // Search for accounts that are NOT closed (in-house)
-        const accounts = await ClientAccount.find({
-            isClosed: false,
-            $or: [
-                { guestName: searchRegex },
-                { roomNumber: searchRegex }
-            ]
-        }).limit(5); // Limit to 5 results for speed
-
-        res.json(accounts);
-    } catch (error) {
-        console.error('SEARCH ERROR:', error);
-        res.status(500).json({ message: 'Error during search' });
-    }
-});
-// NEW: Get a guest's full bill (room charges + incidentals)
-app.get('/api/bookings/:bookingCustomId/bill', async (req, res) => {
-    const { bookingCustomId } = req.params;
-    try {
-        // 1. Find the main booking record
-        const booking = await Booking.findOne({ id: bookingCustomId });
-        if (!booking) {
-            return res.status(404).json({ message: 'Booking not found.' });
-        }
-
-        // 2. Find all incidental charges linked to this booking
-        const incidentalCharges = await IncidentalCharge.find({ bookingCustomId: bookingCustomId });
-
-        // 3. Calculate the total for all incidental charges
-        const totalIncidentalCharges = incidentalCharges.reduce((sum, charge) => sum + charge.amount, 0);
-
-        // 4. Calculate the grand total
-        const grandTotalDue = booking.totalDue + totalIncidentalCharges;
-
-        // 5. Send back a comprehensive bill object
-        res.json({
-            booking: booking,
-            incidentalCharges: incidentalCharges,
-            totalIncidentalCharges: totalIncidentalCharges,
-            grandTotalDue: grandTotalDue
-        });
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching guest bill', error: error.message });
-    }
-});
-
-
-// NEW: Get a walk-in charge and mark it as paid
-app.post('/api/pos/walkin/:receiptId/pay', async (req, res) => {
-    const { receiptId } = req.params;
-    const { username } = req.body;
-    try {
-        const charge = await WalkInCharge.findOne({ receiptId });
-        if (!charge) {
-            return res.status(404).json({ message: 'Receipt not found.' });
-        }
-
-        if (charge.isPaid) {
-            return res.status(400).json({ message: 'This bill has already been paid.' });
-        }
-
-        charge.isPaid = true;
-        await charge.save();
-
-        await addAuditLog('Walk-In Charge Paid', username || 'POS User', {
-            receiptId: charge.receiptId,
-            guestName: charge.guestName,
-            amount: charge.amount
-        });
-
-        res.json({ message: 'Walk-in charge paid successfully!', charge });
-    } catch (error) {
-        res.status(500).json({ message: 'Error processing payment', error: error.message });
+        res.status(500).json({ message: 'Error generating report' });
     }
 });
 // Authentication Route
 
 
 // New: General Audit Log Endpoint (for frontend to log actions like login/logout)
-app.post('/api/audit-log/action', async (req, res) => {
-    const { action, user, details } = req.body;
-    if (!action || !user) {
-        return res.status(400).json({ message: 'Action and user are required for audit logging.' });
+app.post('/api/audit-log/action', auth, async (req, res) => {
+    const { action, details } = req.body;
+    const hotelId = req.user.hotelId;
+    const username = req.user.username;
+
+    if (!action) {
+        return res.status(400).json({ message: 'Action is required.' });
     }
     try {
-        await addAuditLog(action, user, details);
+        // Use the helper we updated in the previous step
+        await addAuditLog(action, username, hotelId, details);
         res.status(201).json({ message: 'Audit log entry created.' });
     } catch (error) {
-        res.status(500).json({ message: 'Error creating audit log entry', error: error.message });
+        res.status(500).json({ message: 'Error creating audit log entry' });
     }
 });
-
-
-
-
-
-// Get all rooms (accessible by admin and housekeeper)
-app.get('/api/rooms', async (req, res) => {
-    try {
-        const rooms = await Room.find({});
-        res.json(rooms);
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching rooms', error: error.message });
-    }
-});
-
-// Get available rooms for a specific date range
-app.get('/api/rooms/available', async (req, res) => {
+app.get('/api/rooms/available', auth, async (req, res) => {
     const { checkIn, checkOut } = req.query;
+    const hotelId = req.user.hotelId;
 
     if (!checkIn || !checkOut) {
-        return res.status(400).json({ message: 'Check-in and check-out dates are required.' });
+        return res.status(400).json({ message: 'Dates are required.' });
     }
 
     try {
-        // Find all bookings that overlap with the requested period
-        // A booking conflicts if its checkIn is before the requested checkOut AND its checkOut is after the requested checkIn
+        // 1. Find conflicting bookings ONLY within this hotel
         const conflictingBookings = await Booking.find({
+            hotelId: hotelId,
             checkIn: { $lt: checkOut },
             checkOut: { $gt: checkIn }
         });
 
-        // Get the room numbers of the conflicting bookings
         const bookedRoomNumbers = conflictingBookings.map(booking => booking.room);
 
-        // Find all rooms that are 'clean' and not in the list of booked rooms
+        // 2. Find rooms in this hotel that are clean and not booked
         const availableRooms = await Room.find({
+            hotelId: hotelId, // CRITICAL: Only show this hotel's rooms
             status: 'clean',
-            number: { $nin: bookedRoomNumbers } // $nin means "not in"
+            number: { $nin: bookedRoomNumbers }
         });
 
         res.json(availableRooms);
     } catch (error) {
-        res.status(500).json({ message: 'Error checking room availability', error: error.message });
+        res.status(500).json({ message: 'Error checking availability' });
     }
 });
-
-
-// New API endpoint to generate a report of rooms by status
-app.get('/api/rooms/report', async (req, res) => {
+// Get all rooms for the logged-in hotel
+app.get('/api/rooms', auth, async (req, res) => {
     try {
-        const { status } = req.query; // Expects a status like 'clean' or 'dirty'
-        
-        if (!status) {
-            return res.status(400).json({ message: 'Room status is required for the report.' });
-        }
-
-        // Find rooms based on the provided status
-        // Case-insensitive search for robustness
-        const rooms = await Room.find({ status: { $regex: new RegExp(status, 'i') } });
-
+        const rooms = await Room.find({ hotelId: req.user.hotelId });
         res.json(rooms);
     } catch (error) {
-        res.status(500).json({ message: 'Error generating room report', error: error.message });
+        res.status(500).json({ message: 'Error fetching rooms' });
     }
 });
 
+// Update room status (Tenant Scoped)
+app.put('/api/rooms/:id', auth, async (req, res) => {
+    const { id } = req.params; // This is the custom ID or MongoDB _id
+    const { status, reason } = req.body; 
+    const hotelId = req.user.hotelId;
 
-// Update room status (accessible by admin and housekeeper)
-app.put('/api/rooms/:id', async (req, res) => {
-    const { id } = req.params;
-    const { status, reason, username } = req.body; 
     try {
-        const room = await Room.findOne({ id: id });
-        if (!room) return res.status(404).json({ message: 'Room not found' });
+        // Use findOne with hotelId to prevent updating rooms in other hotels
+        const room = await Room.findOne({ id: id, hotelId: hotelId });
+        
+        if (!room) return res.status(404).json({ message: 'Room not found in your hotel' });
 
         const oldStatus = room.status;
-
-        // --- I REMOVED THE isRoomCurrentlyBlocked CHECK HERE ---
-        // This allows you to change the status regardless of bookings.
-
         room.status = status;
         await room.save();
 
-        // Audit Log remains so you can still track who changed it
-        await addAuditLog('Room Status Updated', username || 'System', {
-            roomId: room.id,
+        // Log with tenant context
+        await addAuditLog('Room Status Updated', req.user.username, hotelId, {
             roomNumber: room.number,
             oldStatus: oldStatus,
             newStatus: status,
             reason: reason || 'N/A'
         });
 
-        res.json({ message: 'Room status updated successfully', room });
+        res.json({ message: 'Room status updated', room });
     } catch (error) {
-        res.status(500).json({ message: 'Error updating room status', error: error.message });
+        res.status(500).json({ message: 'Error updating status' });
     }
 });
 
+// Room Report by Status (Tenant Scoped)
+app.get('/api/rooms/report', auth, async (req, res) => {
+    try {
+        const { status } = req.query;
+        const hotelId = req.user.hotelId;
+
+        if (!status) return res.status(400).json({ message: 'Status required' });
+
+        const rooms = await Room.find({ 
+            hotelId: hotelId,
+            status: { $regex: new RegExp(status, 'i') } 
+        });
+
+        res.json(rooms);
+    } catch (error) {
+        res.status(500).json({ message: 'Error generating report' });
+    }
+});
 // --- Bookings API ---
 
 // NEW: Get single booking by custom ID
