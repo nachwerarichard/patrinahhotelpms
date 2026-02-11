@@ -1,8 +1,8 @@
-    (function autoLoginHook() {
+   (function autoLoginHook() {
     const urlParams = new URLSearchParams(window.location.search);
 
     if (urlParams.get('autoLogin') === 'true') {
-        // 1. Inject CSS with your custom preloader
+        // 1. Inject CSS for the multi-tenant preloader
         const style = document.createElement('style');
         style.id = 'auto-login-styles';
         style.innerHTML = `
@@ -10,59 +10,54 @@
                 position: fixed; 
                 top: 0; left: 0; 
                 width: 100%; height: 100%;
-                background: rgba(255, 255, 255, 0.8);
-                backdrop-filter: blur(20px); 
-                -webkit-backdrop-filter: blur(20px);
+                background: white;
                 display: flex; 
+                flex-direction: column;
                 justify-content: center; 
                 align-items: center;
                 z-index: 999999; 
-                transition: opacity 0.5s ease;
+                transition: opacity 0.4s ease;
             }
-
-            /* YOUR CUSTOM PRELOADER */
             .loader {
                 --d: 22px;
-                width: 4px;
-                height: 4px;
+                width: 4px; height: 4px;
                 border-radius: 50%;
-                color: #25b09b;
+                color: #4f46e5; /* Indigo-600 to match your luxury theme */
                 box-shadow: 
-                    calc(1 * var(--d))     calc(0 * var(--d))     0 0,
+                    calc(1 * var(--d))      calc(0 * var(--d))      0 0,
                     calc(0.707 * var(--d)) calc(0.707 * var(--d)) 0 1px,
-                    calc(0 * var(--d))     calc(1 * var(--d))     0 2px,
+                    calc(0 * var(--d))      calc(1 * var(--d))      0 2px,
                     calc(-0.707 * var(--d)) calc(0.707 * var(--d)) 0 3px,
-                    calc(-1 * var(--d))    calc(0 * var(--d))     0 4px,
+                    calc(-1 * var(--d))    calc(0 * var(--d))      0 4px,
                     calc(-0.707 * var(--d)) calc(-0.707 * var(--d)) 0 5px,
-                    calc(0 * var(--d))     calc(-1 * var(--d))    0 6px;
+                    calc(0 * var(--d))      calc(-1 * var(--d))     0 6px;
                 animation: l27 1s infinite steps(8);
             }
-
-            @keyframes l27 {
-                100% { transform: rotate(1turn); }
-            }
+            @keyframes l27 { 100% { transform: rotate(1turn); } }
+            .sync-text { margin-top: 2rem; font-family: sans-serif; font-size: 12px; color: #64748b; letter-spacing: 0.1em; font-weight: bold; }
         `;
         document.head.appendChild(style);
 
-        // 2. Create Overlay
+        // 2. Create Overlay with status text
         const overlay = document.createElement('div');
         overlay.id = 'auto-login-overlay';
-        overlay.innerHTML = '<div class="loader"></div>';
+        overlay.innerHTML = `
+            <div class="loader"></div>
+            <div class="sync-text">ESTABLISHING SECURE SESSION...</div>
+        `;
         document.body.appendChild(overlay);
 
-        // 3. Cleanup Logic
         const removeOverlay = () => {
             const el = document.getElementById('auto-login-overlay');
             if (el) {
-                el.style.opacity = '0'; // Smooth fade out
-                setTimeout(() => el.remove(), 100); 
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 400); 
             }
         };
 
-        // 4. Auto-Login Logic
+        // 3. Auto-Login Logic
         const user = urlParams.get('u');
         const pass = urlParams.get('p');
-        
         
         const userField = document.querySelector('input[type="text"]') || document.getElementById('username');
         const passField = document.querySelector('input[type="password"]') || document.getElementById('password');
@@ -72,57 +67,59 @@
             userField.value = user;
             passField.value = pass;
 
-            // Clear URL so credentials aren't leaked in history
-            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-            window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+            // Strip credentials from URL immediately
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, '', cleanUrl);
 
             setTimeout(() => {
                 loginBtn.click();
                 
-                // --- WATCHDOG START ---
+                // Watchdog: Remove overlay once the main app container appears
                 const checkFinished = setInterval(() => {
-                    const stillOnLoginPage = document.querySelector('input[type="password"]');
-                    // If password field is gone, we've moved to the dashboard
-                    if (!stillOnLoginPage) {
+                    const mainContentVisible = document.getElementById('main-content')?.style.display === 'flex';
+                    if (mainContentVisible) {
                         removeOverlay();
                         clearInterval(checkFinished);
                     }
-                }, 100);
+                }, 50);
 
-                // Safety timeout: 5 seconds max
+                // Safety timeout
                 setTimeout(() => {
                     removeOverlay();
                     clearInterval(checkFinished);
-                }, 1000);
-                // --- WATCHDOG END ---
-
-            }, 100);
+                }, 3000); 
+            }, 300);
         } else {
-            removeOverlay(); // Remove if login fields aren't found
+            removeOverlay();
         }
     }
 })();
-
-
 document.addEventListener('DOMContentLoaded', () => {
-    // Attempt to get the name from storage
-    const savedUsername = localStorage.getItem('hotel_username');
+    // 1. Retrieve the full user object (contains username and hotelName)
+    const savedUserData = localStorage.getItem('loggedInUser');
 
-    if (savedUsername) {
-        // Set the global variable so your other functions can use it
-        currentUsername = savedUsername; 
+    if (savedUserData) {
+        const user = JSON.parse(savedUserData);
+        
+        // Update global variables
+        currentUsername = user.username;
+        const hotelName = user.hotelName || "Hotel Management System";
 
-        // Update the display element
-        const displayElement = document.getElementById('display-user-name');
-        if (displayElement) {
-            displayElement.textContent = savedUsername;
+        // 2. Update Username Display
+        const userDisplay = document.getElementById('display-user-name');
+        if (userDisplay) {
+            userDisplay.textContent = user.username;
         }
-    } else {
-        // Optional: Redirect to login if no username is found
-        // window.location.href = 'login.html';
+
+        // 3. Update Hotel Name Display (The Branding)
+        const hotelDisplay = document.getElementById('hotel-name-display');
+        if (hotelDisplay) {
+            hotelDisplay.textContent = hotelName;
+            // Also update the document title so the browser tab shows the hotel name
+            document.title = `${hotelName} | PMS`;
+        }
     }
 });
-
 function closeSection(sectionId) {
   const element = document.getElementById(sectionId);
   
