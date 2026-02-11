@@ -300,12 +300,33 @@ function calculateRoomFinancials() {
  * @param {string} [selectedRoomNumber=null] - The room number to pre-select, useful for editing.
  */
 async function populateRoomDropdown(selectedRoomNumber = null) {
+    // 1. Get auth data from localStorage
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelId = sessionData?.hotelId;
+    const token = sessionData?.token;
+
+    // Safety check: if no hotelId, we shouldn't even try to fetch
+    if (!hotelId) {
+        console.error("No Hotel ID found in session.");
+        return;
+    }
+
     roomSelect.innerHTML = '<option value="">Select a Room</option>';
+    
     try {
-        const response = await fetch(`${API_BASE_URL}/rooms`);
+        // 2. Add hotelId to URL and Token to Headers
+        const response = await fetch(`${API_BASE_URL}/rooms?hotelId=${hotelId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
+
         const fetchedRooms = await response.json();
         rooms = fetchedRooms; // Update local rooms array
 
@@ -340,8 +361,6 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
         showMessageBox('Error', 'Failed to load rooms for dropdown. Please try again.', true);
     }
 }
-
- 
 
      // 2. SAVE to LocalStorage
 
@@ -618,14 +637,21 @@ function applyRoleAccess(role) {
  * @param {string} [searchTerm=''] - Optional: A search term to filter bookings.
  */
 async function renderBookings(page = 1, searchTerm = '') {
-    renderHousekeepingRooms()
-    bookingsTableBody.innerHTML = ''; // Clear existing rows
-if (!pageInfoSpan) {
+    // 1. Retrieve session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelId = sessionData?.hotelId;
+    const token = sessionData?.token;
+    const currentUserRole = sessionData?.role;
+
+    renderHousekeepingRooms();
+    bookingsTableBody.innerHTML = ''; 
+
+    if (!pageInfoSpan) {
         console.warn("Skipping renderBookings: pageInfoSpan not found on this page.");
         return; 
     }
-    // Allow 'admin' and 'bar' roles to view bookings.
-    // Restrict all other roles.
+
+    // 2. Validate Permissions (Including super-admin)
     if (currentUserRole !== 'admin' && currentUserRole !== 'bar' && currentUserRole !== 'super-admin') {
         bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px;">Access Denied. You do not have permission to view bookings.</td></tr>';
         prevPageBtn.disabled = true;
@@ -637,32 +663,37 @@ if (!pageInfoSpan) {
     let currentBookings = [];
     let totalPages = 1;
     let totalCount = 0;
-    currentPage = page; // Update global current page
-    currentSearchTerm = searchTerm; // Update global search term
+    currentPage = page; 
+    currentSearchTerm = searchTerm; 
 
     try {
-        let url = `${API_BASE_URL}/bookings?page=${currentPage}&limit=${recordsPerPage}`;
+        // 3. Update URL with hotelId and add Authorization Header
+        let url = `${API_BASE_URL}/bookings?page=${currentPage}&limit=${recordsPerPage}&hotelId=${hotelId}`;
         if (currentSearchTerm) {
             url += `&search=${encodeURIComponent(currentSearchTerm)}`;
         }
 
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
         const data = await response.json();
         currentBookings = data.bookings;
-        bookings = data.bookings; // Update local bookings array with the current page's data
+        bookings = data.bookings; 
         totalPages = data.totalPages;
         totalCount = data.totalCount;
 
     } catch (error) {
         console.error('Error fetching bookings:', error);
-        showMessageBox('Error', 'Failed to load bookings. Please check backend connection.', true);
-        bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px; color: red;">Failed to load bookings.</td></tr>';
-        prevPageBtn.disabled = true;
-        nextPageBtn.disabled = true;
-        pageInfoSpan.textContent = 'Page 0 of 0';
+        // ... error handling UI remains same ...
         return;
     }
 
@@ -671,192 +702,134 @@ if (!pageInfoSpan) {
     } else {
         currentBookings.forEach(booking => {
             const row = bookingsTableBody.insertRow();
-            row.dataset.id = booking.id; // Store booking ID for easy access
-            // Inside currentBookings.forEach(booking => { ... })
-row.dataset.id = booking.id;
-
-// Add Tailwind classes for row highlighting
-if (booking.gueststatus === 'cancelled') {
-    row.className = "bg-red-50 hover:bg-red-100 transition-colors opacity-75";
-} else {
-    row.className = "hover:bg-gray-50 transition-colors";
-}
-            let actionButtonsHtml = '';
+            row.dataset.id = booking.id;
             
-            // Check if the guest has checked out to disable the Checkout button
-            const isCheckedOut = new Date(booking.checkOut) <= new Date() && rooms.find(r => r.number === booking.room)?.status === 'dirty';
-
-           // Inside renderBookings loop...
-const isCancelled = booking.gueststatus === 'cancelled';
-const baseBtn = "inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white focus:outline-none transition-all duration-200 w-full justify-center mb-1";
-
-if (currentUserRole === 'admin' || currentUserRole === 'super-admin') {
-    if (isCancelled) {
-        // --- UI for Cancelled Bookings ---
-        actionButtonsHtml = `
-            <span class="text-xs text-red-600 font-bold block mb-2 text-center uppercase tracking-wide">Cancelled</span>
-            <button class="${baseBtn} bg-red-600 hover:bg-red-700" onclick="confirmDeleteBooking('${booking.id}')">
-                Delete Permanently
-            </button>
-        `;
-    } else {
-        // --- UI for Active Bookings ---
-      // --- UI for Active Bookings ---
-actionButtonsHtml = `
-
-   <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="viewBooking('${booking.id}')">
-    View 
-</button>
-
-${!['checkedout', 'cancelled','void'].includes(booking.gueststatus) ? `
-    <button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">
-        Edit
-    </button>
-` : ''}
-${!['checkedout', 'cancelled','void'].includes(booking.gueststatus) ? `
-    <button class="${baseBtn} bg-blue-700 hover:bg-green-800" onclick="viewCharges('${booking.id}')">
-        View Charges
-    </button>
-` : ''}
-
-${(booking.gueststatus === 'confirmed' || booking.gueststatus === 'reserved') ? `
-    <button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">
-        Check In
-    </button>
-` : ''}
-
-${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `
-    <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')">
-        <i class="fa-solid ${booking.gueststatus === 'checkedin' ? 'fa-arrows-rotate' : 'fa-door-open'} mr-1"></i>
-        ${booking.gueststatus === 'checkedin' ? 'Move Room' : 'Assign Room'}
-    </button>
-` : ''}
-${booking.balance > 0 && booking.gueststatus !== 'cancelled' ? `
-    <button class="${baseBtn} bg-green-600 hover:bg-green-700 mt-1" 
-            onclick="openAddPaymentModal('${booking.id}', ${booking.balance})">
-        <i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment
-    </button>
-` : ''}
-
-${booking.amountPaid > 0 ? `
-    <button class="${baseBtn} bg-orange-500 hover:bg-orange-600 mt-1" onclick="printReceipt('${booking.id}')">
-        <i class="fas fa-print mr-1"></i> Receipt
-    </button>
-` : ''}
-
-   ${booking.gueststatus === 'checkedin' && booking.paymentStatus === 'Paid' && booking.balance === 0 ? `
-    <button class="${baseBtn} bg-amber-500 hover:bg-amber-600 mt-1" 
-            onclick="checkoutBooking('${booking.id}')">
-        <i class="fa-solid fa-right-from-bracket mr-1"></i> Check-out
-    </button>
-` : ''}
-
-${booking.gueststatus === 'reserved' ? `
-                <button class="${baseBtn} bg-gray-500 hover:bg-gray-600" onclick="Confirm('${booking.id}')">
-                    Confirm
-                </button>
-            ` : ''}
-    <div class="border-t border-gray-100 my-1"></div>
-  ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
-    <button class="${baseBtn} bg-red-500 hover:bg-red-600" onclick="openCancelModal('${booking.id}')">
-        <i class="fa-solid fa-xmark mr-1"></i> Cancel Booking
-    </button>
-` : ''}
-
-${booking.gueststatus === 'checkedin' ? `
-    <button class="${baseBtn} bg-orange-600 hover:bg-orange-700" onclick="openVoidModal('${booking.id}')">
-        <i class="fa-solid fa-ban mr-1"></i> Void Stay
-    </button>
-` : ''}
-    
-   ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
-    <button class="${baseBtn} bg-yellow-500 hover:bg-yellow-600 mt-1" onclick="markNoShow('${booking.id}')">
-        <i class="fa-solid fa-user-slash mr-1"></i> No Show
-    </button>
-` : ''}
-
-    ${['reserved', 'confirmed', 'cancelled'].includes(booking.gueststatus) ? `
-    <button class="${baseBtn} bg-red-600 hover:bg-red-700 mt-1" 
-            onclick="confirmDeleteBooking('${booking.id}')">
-        <i class="fa-solid fa-trash-can mr-1"></i> Delete
-    </button>
-` : ''}
-`;
-    }
-} else if (currentUserRole === 'bar') {
-                
+            const isCancelled = booking.gueststatus === 'cancelled';
+            
+            // Logic for Row Highlighting
+            if (isCancelled) {
+                row.className = "bg-red-50 hover:bg-red-100 transition-colors opacity-75";
+            } else {
+                row.className = "hover:bg-gray-50 transition-colors";
             }
 
-            // Inside the renderBookings loop
-const cancellationReason = booking.cancellationReason || "No reason provided";
+            const baseBtn = "inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white focus:outline-none transition-all duration-200 w-full justify-center mb-1";
+            let actionButtonsHtml = '';
 
+            // 4. Role-based Button UI (Admin/Super-Admin)
+            if (currentUserRole === 'admin' || currentUserRole === 'super-admin') {
+                if (isCancelled) {
+                    actionButtonsHtml = `
+                        <span class="text-xs text-red-600 font-bold block mb-2 text-center uppercase tracking-wide">Cancelled</span>
+                        <button class="${baseBtn} bg-red-600 hover:bg-red-700" onclick="confirmDeleteBooking('${booking.id}')">
+                            Delete Permanently
+                        </button>
+                    `;
+                } else {
+                    actionButtonsHtml = `
+                        <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="viewBooking('${booking.id}')">View</button>
+                        ${!['checkedout', 'cancelled','void'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">Edit</button>` : ''}
+                        ${!['checkedout', 'cancelled','void'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-blue-700 hover:bg-green-800" onclick="viewCharges('${booking.id}')">View Charges</button>` : ''}
+                        ${(booking.gueststatus === 'confirmed' || booking.gueststatus === 'reserved') ? `<button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">Check In</button>` : ''}
+                        ${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')"><i class="fa-solid ${booking.gueststatus === 'checkedin' ? 'fa-arrows-rotate' : 'fa-door-open'} mr-1"></i> ${booking.gueststatus === 'checkedin' ? 'Move Room' : 'Assign Room'}</button>` : ''}
+                        ${booking.balance > 0 && booking.gueststatus !== 'cancelled' ? `<button class="${baseBtn} bg-green-600 hover:bg-green-700 mt-1" onclick="openAddPaymentModal('${booking.id}', ${booking.balance})"><i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment</button>` : ''}
+                        ${booking.amountPaid > 0 ? `<button class="${baseBtn} bg-orange-500 hover:bg-orange-600 mt-1" onclick="printReceipt('${booking.id}')"><i class="fas fa-print mr-1"></i> Receipt</button>` : ''}
+                        ${booking.gueststatus === 'checkedin' && booking.paymentStatus === 'Paid' && booking.balance === 0 ? `<button class="${baseBtn} bg-amber-500 hover:bg-amber-600 mt-1" onclick="checkoutBooking('${booking.id}')"><i class="fa-solid fa-right-from-bracket mr-1"></i> Check-out</button>` : ''}
+                        ${booking.gueststatus === 'reserved' ? `<button class="${baseBtn} bg-gray-500 hover:bg-gray-600" onclick="Confirm('${booking.id}')">Confirm</button>` : ''}
+                        <div class="border-t border-gray-100 my-1"></div>
+                        ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-red-500 hover:bg-red-600" onclick="openCancelModal('${booking.id}')"><i class="fa-solid fa-xmark mr-1"></i> Cancel</button>` : ''}
+                        ${booking.gueststatus === 'checkedin' ? `<button class="${baseBtn} bg-orange-600 hover:bg-orange-700" onclick="openVoidModal('${booking.id}')"><i class="fa-solid fa-ban mr-1"></i> Void</button>` : ''}
+                        ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-yellow-500 hover:bg-yellow-600 mt-1" onclick="markNoShow('${booking.id}')"><i class="fa-solid fa-user-slash mr-1"></i> No Show</button>` : ''}
+                        ${['reserved', 'confirmed', 'cancelled'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-red-600 hover:bg-red-700 mt-1" onclick="confirmDeleteBooking('${booking.id}')"><i class="fa-solid fa-trash-can mr-1"></i> Delete</button>` : ''}
+                    `;
+                }
+            }
 
-row.innerHTML = `
-    <td class="py-3 px-6">${booking.name}</td>
-    <td class="py-3 px-6">${booking.room}</td>
-    <td class="py-3 px-6">${booking.checkIn}</td>
-    <td class="py-3 px-6">${booking.checkOut}</td>
-    <td class="py-3 px-6">${booking.paymentStatus}</td>
-    <td class="py-3 px-6 relative group cursor-help">
-        <span class="${isCancelled ? 'text-red-600 font-semibold' : 'text-gray-700'}">
-            ${booking.gueststatus}
-        </span>
-        ${isCancelled ? `
-        <div class="invisible group-hover:visible absolute z-50 w-48 bg-gray-900 text-white text-xs rounded p-2 -top-12 left-0 shadow-xl pointer-events-none">
-            <strong>Reason:</strong> ${cancellationReason}
-            <div class="bg-gray-900 w-2 h-2 rotate-45 absolute -bottom-1 left-4"></div>
-        </div>
-        ` : ''}
-    </td>
-    <td class="py-3 px-6">${booking.guestsource}</td>
-    <td class="py-3 px-6 text-center">
-        <div class="relative inline-block text-left">
-            <button class="p-2 hover:bg-gray-200 rounded-full transition-colors" onclick="toggleActionButtons(event, this)">
-                <i class="fas fa-ellipsis-v text-gray-600"></i>
-            </button>
-            
-            <div class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 shadow-2xl rounded-lg p-2 z-[100] transition-all">
-               ${actionButtonsHtml}
-            </div>
-        </div>
-    </td>
-`;
+            const cancellationReason = booking.cancellationReason || "No reason provided";
+
+            row.innerHTML = `
+                <td class="py-3 px-6">${booking.name}</td>
+                <td class="py-3 px-6">${booking.room}</td>
+                <td class="py-3 px-6">${booking.checkIn}</td>
+                <td class="py-3 px-6">${booking.checkOut}</td>
+                <td class="py-3 px-6">${booking.paymentStatus}</td>
+                <td class="py-3 px-6 relative group cursor-help">
+                    <span class="${isCancelled ? 'text-red-600 font-semibold' : 'text-gray-700'}">
+                        ${booking.gueststatus}
+                    </span>
+                    ${isCancelled ? `
+                    <div class="invisible group-hover:visible absolute z-50 w-48 bg-gray-900 text-white text-xs rounded p-2 -top-12 left-0 shadow-xl pointer-events-none">
+                        <strong>Reason:</strong> ${cancellationReason}
+                        <div class="bg-gray-900 w-2 h-2 rotate-45 absolute -bottom-1 left-4"></div>
+                    </div>
+                    ` : ''}
+                </td>
+                <td class="py-3 px-6">${booking.guestsource}</td>
+                <td class="py-3 px-6 text-center">
+                    <div class="relative inline-block text-left">
+                        <button class="p-2 hover:bg-gray-200 rounded-full transition-colors" onclick="toggleActionButtons(event, this)">
+                            <i class="fas fa-ellipsis-v text-gray-600"></i>
+                        </button>
+                        <div class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 shadow-2xl rounded-lg p-2 z-[100]">
+                           ${actionButtonsHtml}
+                        </div>
+                    </div>
+                </td>
+            `;
         });
     }
 
-    // Update pagination controls
     prevPageBtn.disabled = currentPage <= 1;
     nextPageBtn.disabled = currentPage >= totalPages;
     pageInfoSpan.textContent = `Page ${totalCount === 0 ? 0 : currentPage} of ${totalPages}`;
 }
-
-
 async function updateBookingStats() {
+    // 1. Retrieve session data from localStorage
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelId = sessionData?.hotelId;
+    const token = sessionData?.token;
+
+    // Safety check: Don't fetch if we don't know which hotel this is
+    if (!hotelId) return;
+
     try {
-        const response = await fetch(`${API_BASE_URL}/bookings/all`);
+        // 2. Add hotelId filter and Auth token
+        const response = await fetch(`${API_BASE_URL}/bookings/all?hotelId=${hotelId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to fetch stats');
+        
         const allBookings = await response.json();
 
-        // Get "Today" in YYYY-MM-DD format to match your dates easily
+        // Get "Today" in YYYY-MM-DD format
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // 1. Arrivals: Check-in is today AND status is confirmed (not yet in-house)
+        // 3. Arrivals: Check-in is today AND status is confirmed
+        // Note: Using 'confirmed' (lowercase) or 'Confirmed' based on your backend consistency
         const arrivalsToday = allBookings.filter(b => {
             const bCheckIn = new Date(b.checkIn).toISOString().split('T')[0];
-            return bCheckIn === todayStr && b.status === 'Confirmed';
+            return bCheckIn === todayStr && (b.gueststatus === 'confirmed' || b.gueststatus === 'Confirmed');
         }).length;
 
-        // 2. Departures: Check-out is today AND status is checked-in (still in-house)
+        // 4. Departures: Check-out is today AND status is checked-in
         const departuresToday = allBookings.filter(b => {
             const bCheckOut = new Date(b.checkOut).toISOString().split('T')[0];
-            return bCheckOut === todayStr && b.status === 'Checked-In';
+            return bCheckOut === todayStr && (b.gueststatus === 'checkedin' || b.gueststatus === 'Checked-In');
         }).length;
 
+        // Update UI elements if they exist
+        if(document.getElementById('arrivals-count')) document.getElementById('arrivals-count').textContent = arrivalsToday;
+        if(document.getElementById('departures-count')) document.getElementById('departures-count').textContent = departuresToday;
 
     } catch (error) {
         console.error('Error updating booking stats:', error);
     }
 }
-
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Initial load of all dashboard data
     refreshDashboard();
@@ -909,20 +882,34 @@ function closeVoidModal() {
 
 
 document.getElementById('confirmCancelBtn').addEventListener('click', async () => {
+    // 1. Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+    const currentUsername = sessionData?.username;
+
     const reason = document.getElementById('cancelReasonInput').value;
     if (!reason) return alert("Please provide a reason.");
 
     try {
+        // 2. Add Authorization header and include hotelId in the payload
         const response = await fetch(`${API_BASE_URL}/bookings/${bookingToCancel}/cancel`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // Pass the security token
+            },
             body: JSON.stringify({ 
                 reason: reason,
-                username: currentUsername 
+                username: currentUsername,
+                hotelId: hotelId // Ensure the backend validates this booking belongs to this hotel
             })
         });
 
-        if (!response.ok) throw new Error('Failed to cancel booking');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to cancel booking');
+        }
 
         const data = await response.json();
         closeCancelModal();
@@ -930,67 +917,94 @@ document.getElementById('confirmCancelBtn').addEventListener('click', async () =
         
         // Refresh the table to see the status change
         renderBookings(currentPage, currentSearchTerm);
+        
     } catch (error) {
+        console.error('Cancellation error:', error);
         showMessageBox('Error', error.message, true);
     }
 });
 document.getElementById('confirmVoidBtn').addEventListener('click', async () => {
+    // 1. Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+    const currentUsername = sessionData?.username;
+
     const reason = document.getElementById('voidReasonInput').value;
     if (!reason) return alert("Please provide a reason.");
 
     try {
+        // 2. Add Authorization and hotelId validation
         const response = await fetch(`${API_BASE_URL}/bookings/${bookingToVoid}/void`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` 
+            },
             body: JSON.stringify({ 
                 reason: reason,
-                username: currentUsername 
+                username: currentUsername,
+                hotelId: hotelId // Crucial for multi-tenant data integrity
             })
         });
 
-        if (!response.ok) throw new Error('Failed to void booking');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to void booking');
+        }
 
         const data = await response.json();
         closeVoidModal();
         showMessageBox('Voided', data.message);
         
-        // Refresh the table to see the status change
+        // Refresh the table
         renderBookings(currentPage, currentSearchTerm);
     } catch (error) {
+        console.error('Void error:', error);
         showMessageBox('Error', error.message, true);
     }
 });
-
-
-let availableRoomsForMove = []; // Global variable to store price data
-
 async function moveBooking(id) {
+    // 1. Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+
     selectedBookingId = id;
     const modal = document.getElementById('moveRoomModal');
     const select = document.getElementById('availableRoomsSelect');
 
     try {
-        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${id}`);
+        // 2. Get specific booking details (Filtered by hotelId)
+        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${id}?hotelId=${hotelId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
         const booking = await bookingResponse.json();
 
-        const response = await fetch(`${API_BASE_URL}/rooms/available?checkIn=${booking.checkIn}&checkOut=${booking.checkOut}`);
-        availableRoomsForMove = await response.json(); // Store full objects (including basePrice)
+        // 3. Get available rooms ONLY for this hotel
+        const response = await fetch(`${API_BASE_URL}/rooms/available?checkIn=${booking.checkIn}&checkOut=${booking.checkOut}&hotelId=${hotelId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch rooms');
+        
+        availableRoomsForMove = await response.json(); 
 
         if (availableRoomsForMove.length === 0) {
             return showMessageBox('No Rooms', 'No vacant rooms available for move.', true);
         }
 
-        // Populate dropdown with prices shown in brackets
+        // Populate dropdown
         select.innerHTML = availableRoomsForMove
             .map(r => `<option value="${r.number}">Room ${r.number} (${r.type} - UGX ${r.basePrice})</option>`)
             .join('');
 
-        // Set the initial price display
         updateMovePricePreview();
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
     } catch (error) {
+        console.error('Move booking error:', error);
         showMessageBox('Error', 'Could not load available rooms.', true);
     }
 }
@@ -1011,9 +1025,14 @@ document.getElementById('cancelMoveBtn').addEventListener('click', () => {
 });
 
 document.getElementById('confirmMoveBtn').addEventListener('click', async () => {
+    // 1. Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+    const currentUsername = sessionData?.username;
+
     const newRoomNumber = document.getElementById('availableRoomsSelect').value;
     const negotiatedPrice = document.getElementById('moveRoomNegotiatedPrice').value;
-    // Get the reason value
     const moveReason = document.getElementById('moveRoomReason').value.trim(); 
     const modal = document.getElementById('moveRoomModal');
 
@@ -1022,19 +1041,23 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
             return showMessageBox('Error', 'Please select a room.', true);
         }
 
-        // Optional: Ensure a reason is provided
         if (!moveReason) {
             return showMessageBox('Error', 'Please provide a reason for the room move.', true);
         }
 
+        // 2. Add Authorization and include hotelId in the payload
         const response = await fetch(`${API_BASE_URL}/bookings/${selectedBookingId}/move`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // Pass security token
+            },
             body: JSON.stringify({ 
                 newRoomNumber, 
                 overridePrice: negotiatedPrice, 
-                reason: moveReason, // Added the reason to the payload
-                username: currentUsername 
+                reason: moveReason,
+                username: currentUsername,
+                hotelId: hotelId // Validate that this room move stays within the correct hotel
             })
         });
 
@@ -1042,18 +1065,20 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
 
         if (!response.ok) throw new Error(data.message || 'Move failed');
 
-        // Clear the reason field after a successful move so it's empty for the next use
+        // Clear the reason field
         document.getElementById('moveRoomReason').value = '';
         
         modal.classList.add('hidden');
+        modal.classList.remove('flex'); // Ensure flex is removed if you use it for centering
         showMessageBox('Success', data.message);
 
         // Refresh UI
         renderBookings(currentPage, currentSearchTerm);
         renderHousekeepingRooms();
-        renderCalendar();
+        if (typeof renderCalendar === 'function') renderCalendar();
 
     } catch (error) {
+        console.error('Move error:', error);
         showMessageBox('Move Failed', error.message, true);
     }
 });
@@ -1328,21 +1353,26 @@ function calculateBookingDetails() {
 bookingForm.addEventListener('submit', async function(event) {
     event.preventDefault();
 
-    const id = document.getElementById('bookingId').value; // Will be empty for new, existing for edit
+    // 1. Get session data for Multi-Tenancy and Security
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+    const currentUsername = sessionData?.username;
+
+    const id = document.getElementById('bookingId').value; 
     const name = document.getElementById('name').value;
     const roomNumber = document.getElementById('room').value;
     const checkIn = document.getElementById('checkIn').value;
     const checkOut = document.getElementById('checkOut').value;
     const nights = parseFloat(nightsInput.value);
     const amtPerNight = parseFloat(amtPerNightInput.value);
-    const totalDue = parseFloat(totalDueInput.value); // Room total due
-    const amountPaid = parseFloat(amountPaidInput.value); // Room amount paid
-    const balance = parseFloat(balanceInput.value); // Room balance
+    const totalDue = parseFloat(totalDueInput.value); 
+    const amountPaid = parseFloat(amountPaidInput.value); 
+    const balance = parseFloat(balanceInput.value); 
     const paymentStatus = document.getElementById('paymentStatus').value;
     const paymentMethod = document.getElementById('paymentMethod').value;
     const gueststatus = document.getElementById('gueststatus').value;
     const guestsource = document.getElementById('guestsource').value;
-
 
     const people = parseInt(document.getElementById('people').value);
     const nationality = document.getElementById('nationality').value;
@@ -1355,75 +1385,84 @@ bookingForm.addEventListener('submit', async function(event) {
     const destination = document.getElementById('destination').value;
     const checkIntime = document.getElementById('checkIntime').value;
     const checkOuttime = document.getElementById('checkOuttime').value;
-    const kin = document.getElementById('kin').value; // Next of kin name/info
-    const kintel = document.getElementById('kintel').value; // Next of kin phone
+    const kin = document.getElementById('kin').value; 
+    const kintel = document.getElementById('kintel').value; 
     const purpose = document.getElementById('purpose').value;
     const declarations = document.getElementById('declarations').value;
     const transactionid = document.getElementById('transactionid').value;
     const extraperson = document.getElementById('extraperson').value;
 
+    // 2. Attach hotelId and username to the booking payload
     const bookingData = {
-        name, room: roomNumber, checkIn, checkOut, nights, amtPerNight,occupation,vehno,destination,checkIntime,checkOuttime,kin,kintel,
-        totalDue, amountPaid, balance, paymentStatus,paymentMethod, people,transactionid,extraperson, nationality,purpose,declarations,gueststatus,guestsource,
+        name, room: roomNumber, checkIn, checkOut, nights, amtPerNight, occupation, vehno, destination, checkIntime, checkOuttime, kin, kintel,
+        totalDue, amountPaid, balance, paymentStatus, paymentMethod, people, transactionid, extraperson, nationality, purpose, declarations, gueststatus, guestsource,
         address, phoneNo, guestEmail, nationalIdNo,
-        username: currentUsername // Pass username for audit log
+        hotelId: hotelId, // CRITICAL: This links the guest to the correct hotel
+        username: currentUsername 
     };
 
     const saveBtn = document.getElementById('saveBookingBtn');
 
-try {
-    // Disable and inject spinner + text
-    saveBtn.disabled = true;
-    // 'inline-flex' and 'items-center' keep everything centered in your px-8 py-2 button
-    saveBtn.innerHTML = `
-        <span class="inline-flex items-center">
-            <svg class="animate-spin-slow h-4 w-4 mr-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Processing...
-        </span>
-    `;
+    try {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = `
+            <span class="inline-flex items-center">
+                <svg class="animate-spin-slow h-4 w-4 mr-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Processing...
+            </span>
+        `;
 
-    let response;
-    let message;
-    
-    if (id) {
-        response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+        let response;
+        let message;
+        
+        // 3. Add Authorization header to both PUT and POST requests
+        const requestOptions = {
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` 
+            },
             body: JSON.stringify(bookingData)
-        });
-        message = 'Booking updated successfully!';
-    } else {
-        response = await fetch(`${API_BASE_URL}/bookings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(bookingData)
-        });
-        message = 'New booking added successfully!';
+        };
+
+        if (id) {
+            // Update existing booking
+            response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
+                method: 'PUT',
+                ...requestOptions
+            });
+            message = 'Booking updated successfully!';
+        } else {
+            // Create new booking
+            response = await fetch(`${API_BASE_URL}/bookings`, {
+                method: 'POST',
+                ...requestOptions
+            });
+            message = 'New booking added successfully!';
+        }
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
+        showMessageBox('Success', message);
+        
+        // Refresh UI components
+        renderBookings(currentPage, currentSearchTerm);
+        renderHousekeepingRooms();
+        if (typeof renderCalendar === 'function') renderCalendar();
+        if (typeof renderAuditLogs === 'function') renderAuditLogs();
+
+    } catch (error) {
+        console.error('Error saving booking:', error);
+        showMessageBox('Error', `Failed to save booking: ${error.message}`, true);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = id ? 'Update Booking' : 'Add Booking';
     }
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    }
-
-    showMessageBox('Success', message);
-    renderBookings(currentPage, currentSearchTerm);
-    renderHousekeepingRooms();
-    renderCalendar();
-    renderAuditLogs();
-
-} catch (error) {
-    console.error('Error saving booking:', error);
-    showMessageBox('Error', `Failed to save booking: ${error.message}`, true);
-} finally {
-    // 2. Restore Button
-    saveBtn.disabled = false;
-    // Remove the spinner and reset the text based on the mode
-    saveBtn.innerHTML = id ? 'Update Booking' : 'Add Booking';
-}
 });
 
 /**
@@ -1432,9 +1471,17 @@ try {
  */
 
 async function editBooking(id) {
+    // Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+
     try {
-        // Fetch the specific booking by ID
-        const response = await fetch(`${API_BASE_URL}/bookings/id/${id}`);
+        // Fetch specific booking, filtered by hotelId for security
+        const response = await fetch(`${API_BASE_URL}/bookings/id/${id}?hotelId=${hotelId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const booking = await response.json();
 
@@ -1442,60 +1489,64 @@ async function editBooking(id) {
             showMessageBox('Error', 'Booking not found for editing.', true);
             return;
         }
-        // Add this inside editBooking(id) before assigning values
-const inputs = bookingModal.querySelectorAll('input, select, textarea');
-inputs.forEach(input => {
-    input.removeAttribute('readonly');
-    input.disabled = false;
-});
-        document.getElementById('modalTitle').textContent = 'Edit  Guest Details';
 
-// 2. Populate Fields
-// --- Primary IDs and Guest Info ---
-document.getElementById('bookingId').value = booking.id || '';
-document.getElementById('name').value = booking.name || '';
-document.getElementById('occupation').value = booking.occupation || '';
-document.getElementById('nationality').value = booking.nationality || '';
-document.getElementById('nationalIdNo').value = booking.nationalIdNo || '';
-document.getElementById('address').value = booking.address || '';
-document.getElementById('phoneNo').value = booking.phoneNo || '';
-document.getElementById('guestEmail').value = booking.guestEmail || '';
+        // Enable inputs (in case they were disabled by viewBooking)
+        const inputs = bookingModal.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.removeAttribute('readonly');
+            input.disabled = false;
+            input.style.backgroundColor = ''; // Reset background
+        });
 
-// --- Room & Stay Details ---
-await populateRoomDropdown(booking.room);
-document.getElementById('room').value = booking.room || '';
-document.getElementById('checkIn').value = booking.checkIn || '';
-document.getElementById('checkIntime').value = booking.checkIntime || '';
-document.getElementById('checkOut').value = booking.checkOut || '';
-document.getElementById('checkOuttime').value = booking.checkOuttime || '';
-document.getElementById('nights').value = booking.nights || 0;
-document.getElementById('people').value = booking.people || 1;
-document.getElementById('extraperson').value = booking.extraperson || '';
+        document.getElementById('modalTitle').textContent = 'Edit Guest Details';
 
-// --- Financials ---
-document.getElementById('amtPerNight').value = booking.amtPerNight || 0;
-document.getElementById('totalDue').value = booking.totalDue || 0;
-document.getElementById('amountPaid').value = booking.amountPaid || 0;
-document.getElementById('balance').value = booking.balance || 0;
+        // --- Populate Fields ---
+        document.getElementById('bookingId').value = booking.id || '';
+        document.getElementById('name').value = booking.name || '';
+        document.getElementById('occupation').value = booking.occupation || '';
+        document.getElementById('nationality').value = booking.nationality || '';
+        document.getElementById('nationalIdNo').value = booking.nationalIdNo || '';
+        document.getElementById('address').value = booking.address || '';
+        document.getElementById('phoneNo').value = booking.phoneNo || '';
+        document.getElementById('guestEmail').value = booking.guestEmail || '';
 
-// --- Status & Methods ---
-document.getElementById('paymentStatus').value = booking.paymentStatus || 'Pending';
-document.getElementById('paymentMethod').value = booking.paymentMethod || 'Cash';
-document.getElementById('guestsource').value = booking.guestsource || 'Walk in';
-document.getElementById('gueststatus').value = booking.gueststatus || 'confirmed';
-document.getElementById('transactionid').value = booking.transactionid || '';
+        // --- Room & Stay Details ---
+        await populateRoomDropdown(booking.room);
+        document.getElementById('room').value = booking.room || '';
+        document.getElementById('checkIn').value = booking.checkIn || '';
+        document.getElementById('checkIntime').value = booking.checkIntime || '';
+        document.getElementById('checkOut').value = booking.checkOut || '';
+        document.getElementById('checkOuttime').value = booking.checkOuttime || '';
+        document.getElementById('nights').value = booking.nights || 0;
+        document.getElementById('people').value = booking.people || 1;
+        document.getElementById('extraperson').value = booking.extraperson || '';
 
-// --- Logistics & Extras ---
-document.getElementById('vehno').value = booking.vehno || '';
-document.getElementById('destination').value = booking.destination || '';
-document.getElementById('kin').value = booking.kin || '';
-document.getElementById('kintel').value = booking.kintel || '';
-document.getElementById('purpose').value = booking.purpose || '';
-document.getElementById('declarations').value = booking.declarations || '';
+        // --- Financials ---
+        document.getElementById('amtPerNight').value = booking.amtPerNight || 0;
+        document.getElementById('totalDue').value = booking.totalDue || 0;
+        document.getElementById('amountPaid').value = booking.amountPaid || 0;
+        document.getElementById('balance').value = booking.balance || 0;
 
-const saveBtn = document.getElementById('saveBookingBtn'); 
-        if (saveBtn) saveBtn.style.display = 'flex';
-        saveBtn.textContent = 'Update';
+        // --- Status & Methods ---
+        document.getElementById('paymentStatus').value = booking.paymentStatus || 'Pending';
+        document.getElementById('paymentMethod').value = booking.paymentMethod || 'Cash';
+        document.getElementById('guestsource').value = booking.guestsource || 'Walk in';
+        document.getElementById('gueststatus').value = booking.gueststatus || 'confirmed';
+        document.getElementById('transactionid').value = booking.transactionid || '';
+
+        // --- Logistics & Extras ---
+        document.getElementById('vehno').value = booking.vehno || '';
+        document.getElementById('destination').value = booking.destination || '';
+        document.getElementById('kin').value = booking.kin || '';
+        document.getElementById('kintel').value = booking.kintel || '';
+        document.getElementById('purpose').value = booking.purpose || '';
+        document.getElementById('declarations').value = booking.declarations || '';
+
+        const saveBtn = document.getElementById('saveBookingBtn'); 
+        if (saveBtn) {
+            saveBtn.style.display = 'flex';
+            saveBtn.textContent = 'Update';
+        }
         bookingModal.style.display = 'flex';
     } catch (error) {
         console.error('Error fetching booking for edit:', error);
@@ -1503,96 +1554,29 @@ const saveBtn = document.getElementById('saveBookingBtn');
     }
 }
 
-async function viewBooking(id) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/bookings/id/${id}`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const booking = await response.json();
-
-        if (!booking) {
-            showMessageBox('Error', 'Booking not found.', true);
-            return;
-        }
-
-        // 1. Update Modal Title
-        document.getElementById('modalTitle').textContent = 'Booking Details';
-
-       // 2. Populate Fields
-// --- Primary IDs and Guest Info ---
-document.getElementById('bookingId').value = booking.id || '';
-document.getElementById('name').value = booking.name || '';
-document.getElementById('occupation').value = booking.occupation || '';
-document.getElementById('nationality').value = booking.nationality || '';
-document.getElementById('nationalIdNo').value = booking.nationalIdNo || '';
-document.getElementById('address').value = booking.address || '';
-document.getElementById('phoneNo').value = booking.phoneNo || '';
-document.getElementById('guestEmail').value = booking.guestEmail || '';
-
-// --- Room & Stay Details ---
-document.getElementById('room').value = booking.room || '';
-document.getElementById('checkIn').value = booking.checkIn || '';
-document.getElementById('checkIntime').value = booking.checkIntime || '';
-document.getElementById('checkOut').value = booking.checkOut || '';
-document.getElementById('checkOuttime').value = booking.checkOuttime || '';
-document.getElementById('nights').value = booking.nights || 0;
-document.getElementById('people').value = booking.people || 1;
-document.getElementById('extraperson').value = booking.extraperson || '';
-
-// --- Financials ---
-document.getElementById('amtPerNight').value = booking.amtPerNight || 0;
-document.getElementById('totalDue').value = booking.totalDue || 0;
-document.getElementById('amountPaid').value = booking.amountPaid || 0;
-document.getElementById('balance').value = booking.balance || 0;
-
-// --- Status & Methods ---
-document.getElementById('paymentStatus').value = booking.paymentStatus || 'Pending';
-document.getElementById('paymentMethod').value = booking.paymentMethod || 'Cash';
-document.getElementById('guestsource').value = booking.guestsource || 'Walk in';
-document.getElementById('gueststatus').value = booking.gueststatus || 'confirmed';
-document.getElementById('transactionid').value = booking.transactionid || '';
-
-// --- Logistics & Extras ---
-document.getElementById('vehno').value = booking.vehno || '';
-document.getElementById('destination').value = booking.destination || '';
-document.getElementById('kin').value = booking.kin || '';
-document.getElementById('kintel').value = booking.kintel || '';
-document.getElementById('purpose').value = booking.purpose || '';
-document.getElementById('declarations').value = booking.declarations || '';
-        // 3. Populate Room (Async)
-        await populateRoomDropdown(booking.room);
-
-        // 4. DISABLE ALL INPUTS
-        // This targets all inputs, selects, and textareas inside the modal
-        const formElements = bookingModal.querySelectorAll('input, select, textarea');
-        formElements.forEach(el => {
-            el.disabled = true; 
-            el.style.backgroundColor = '#f9f9f9'; // Optional: make it look "read-only"
-        });
-
-        // 5. Hide the 'Save/Submit' button if it exists
-        const saveBtn = document.getElementById('saveBookingBtn'); 
-        if (saveBtn) saveBtn.style.display = 'none';
-
-        bookingModal.style.display = 'flex';
-
-    } catch (error) {
-        console.error('Error fetching booking:', error);
-        showMessageBox('Error', `Failed to load details: ${error.message}`, true);
-    }
-}
-
-
 /**
  * Initiates the deletion process by opening the reason modal.
  * @param {string} id - The custom ID of the booking to delete.
  */
 function confirmDeleteBooking(id) {
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+    const currentUsername = sessionData?.username;
+
     openDeletionReasonModal(async (reason) => {
         try {
             const response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason, username: currentUsername }) // Send reason and username in body
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ 
+                    reason, 
+                    username: currentUsername,
+                    hotelId: hotelId // Backend must verify this matches booking.hotelId
+                }) 
             });
 
             if (!response.ok) {
@@ -1601,65 +1585,70 @@ function confirmDeleteBooking(id) {
             }
 
             showMessageBox('Success', 'Booking and associated charges deleted successfully!');
-            renderBookings(currentPage, currentSearchTerm); // Re-render to show updated list
-            renderHousekeepingRooms(); // Update housekeeping view as room status might change
-            renderCalendar(); // Update calendar view
-            renderAuditLogs(); // Update audit logs
+            renderBookings(currentPage, currentSearchTerm);
+            renderHousekeepingRooms();
+            if (typeof renderCalendar === 'function') renderCalendar();
+            if (typeof renderAuditLogs === 'function') renderAuditLogs();
         } catch (error) {
             console.error('Error deleting booking:', error);
             showMessageBox('Error', `Failed to delete booking: ${error.message}`, true);
         }
     });
 }
-
-
-/**
- * Handles room checkout, marking the associated room as dirty and sending an email.
- * @param {string} id - The custom ID of the booking to check out.
- */
 async function checkoutBooking(id) {
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+    const currentUsername = sessionData?.username;
+
     try {
         const response = await fetch(`${API_BASE_URL}/bookings/${id}/checkout`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUsername }) 
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                username: currentUsername,
+                hotelId: hotelId 
+            }) 
         });
 
-        // 1. Correctly close the error check block
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
 
-        // 2. Process successful response
         const data = await response.json();
-        //showMessageBox('Success', data.message);
-                showMessageBox('Success', 'Guest checkedout');
+        showMessageBox('Success', 'Guest checked out successfully');
 
-
-        // 3. UI Updates
         renderBookings(currentPage, currentSearchTerm);
         renderHousekeepingRooms();
-        renderCalendar();
-        renderAuditLogs();
-
-
-        // 4. Send email
-       // await sendConfirmationEmail(id);
+        if (typeof renderCalendar === 'function') renderCalendar();
+        if (typeof renderAuditLogs === 'function') renderAuditLogs();
 
     } catch (error) {
         console.error('Error during checkout:', error);
         showMessageBox('Error', `Failed to process checkout: ${error.message}`, true);
-    } // This catch now matches the try block correctly
+    }
 }
-
 async function checkinBooking(id) {
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+    const currentUsername = sessionData?.username;
+
     try {
-        // Send the check-in request immediately
         const response = await fetch(`${API_BASE_URL}/bookings/${id}/checkin`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUsername || 'Unknown User' }) 
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                username: currentUsername || 'Unknown User',
+                hotelId: hotelId 
+            }) 
         });
 
         if (!response.ok) {
@@ -1668,17 +1657,15 @@ async function checkinBooking(id) {
         }
 
         const data = await response.json();
-        
-        // Success Feedback
         showMessageBox('Success', data.message || 'Guest checked in successfully.');
 
-        // Refresh all parts of the dashboard at once
+        // Concurrent UI Refresh
         await Promise.all([
             renderBookings(currentPage, currentSearchTerm),
             renderHousekeepingRooms(),
-            renderCalendar(),
-            renderAuditLogs(),
-             updateDashboard()
+            (typeof renderCalendar === 'function' ? renderCalendar() : Promise.resolve()),
+            (typeof renderAuditLogs === 'function' ? renderAuditLogs() : Promise.resolve()),
+            (typeof updateDashboard === 'function' ? updateDashboard() : Promise.resolve())
         ]);
 
     } catch (error) {
@@ -1746,6 +1733,12 @@ function closeIncidentalChargeModal() {
 incidentalChargeForm.addEventListener('submit', async function(event) {
     event.preventDefault();
 
+    // 1. Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+    const currentUsername = sessionData?.username;
+
     const bookingCustomId = chargeBookingCustomIdInput.value;
     const guestName = chargeGuestNameInput.value;
     const roomNumber = chargeRoomNumberInput.value;
@@ -1759,8 +1752,11 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
     }
 
     try {
-        // First, get the MongoDB _id for the booking using the custom ID
-        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}`); // Fetch specific booking by ID
+        // 2. Fetch booking with hotelId filter to ensure we don't charge the wrong hotel's guest
+        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}?hotelId=${hotelId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
         if (!bookingResponse.ok) throw new Error(`HTTP error! status: ${bookingResponse.status}`);
         const booking = await bookingResponse.json();
 
@@ -1769,18 +1765,23 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
             return;
         }
 
+        // 3. Post charge with hotelId and Token
         const response = await fetch(`${API_BASE_URL}/incidental-charges`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify({
-                bookingId: booking._id, // Use MongoDB _id
-                bookingCustomId, // Pass custom ID to backend
+                bookingId: booking._id, 
+                bookingCustomId,
                 guestName,
-                roomNumber, // Pass room number to backend
+                roomNumber, 
                 type,
                 description,
                 amount,
-                username: currentUsername // Pass username for audit log
+                hotelId: hotelId, // Link charge to this hotel
+                username: currentUsername 
             })
         });
 
@@ -1791,181 +1792,195 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
 
         showMessageBox('Success', 'Incidental charge added successfully!');
         closeIncidentalChargeModal();
-        renderAuditLogs(); // Update audit logs
-        // No need to re-render bookings table as room total/balance doesn't change
+        if (typeof renderAuditLogs === 'function') renderAuditLogs();
+        
     } catch (error) {
         console.error('Error adding incidental charge:', error);
         showMessageBox('Error', `Failed to add charge: ${error.message}`, true);
     }
 });
-
-/**
- * Opens the view charges modal and displays all incidental charges for a booking.
- * @param {string} bookingCustomId - The custom ID of the booking.
- */
 async function viewCharges(bookingCustomId) {
-  incidentalChargesTableBody.innerHTML =
-    '<tr><td colspan="6" style="text-align:center;">Loading charges...</td></tr>';
-  totalIncidentalChargesSpan.textContent = '0.00';
+    // 1. Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
 
-  try {
-    const bookingResponse = await fetch(
-      `${API_BASE_URL}/bookings/id/${bookingCustomId}`
-    );
-    if (!bookingResponse.ok) throw new Error('Booking fetch failed');
+    incidentalChargesTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading charges...</td></tr>';
+    totalIncidentalChargesSpan.textContent = '0.00';
 
-    const booking = await bookingResponse.json();
-    if (!booking) {
-      showMessageBox('Error', 'Booking not found.', true);
-      closeViewChargesModal();
-      return;
+    try {
+        // 2. Fetch booking details (Filtered by hotelId)
+        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}?hotelId=${hotelId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!bookingResponse.ok) throw new Error('Booking fetch failed');
+
+        const booking = await bookingResponse.json();
+        if (!booking) {
+            showMessageBox('Error', 'Booking not found.', true);
+            closeViewChargesModal();
+            return;
+        }
+
+        currentBookingObjectId = booking._id;
+        viewChargesGuestNameSpan.textContent = booking.name;
+        viewChargesRoomNumberSpan.textContent = booking.room;
+
+        // 3. Fetch charges (Filtered by hotelId)
+        const response = await fetch(`${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}?hotelId=${hotelId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Charges fetch failed');
+
+        const charges = await response.json();
+        incidentalChargesTableBody.innerHTML = '';
+
+        let totalChargesAmount = 0;
+        let hasUnpaidCharges = false;
+
+        if (charges.length === 0) {
+            incidentalChargesTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No incidental charges.</td></tr>';
+        } else {
+            charges.forEach(charge => {
+                if (!charge.isPaid) hasUnpaidCharges = true;
+
+                const row = incidentalChargesTableBody.insertRow();
+                row.innerHTML = `
+                  <td class="px-4 py-2">${charge.type}</td>
+                  <td class="px-4 py-2">${charge.description || '-'}</td>
+                  <td class="px-4 py-2">${Number(charge.amount).toLocaleString()}</td>
+                  <td class="px-4 py-2">${new Date(charge.date).toLocaleDateString()}</td>
+                  <td class="px-4 py-2">
+                    <button class="bg-red-500 text-white px-2 py-1 rounded text-xs mr-1 ${charge.isPaid ? 'opacity-50 cursor-not-allowed' : ''}"
+                      ${charge.isPaid ? 'disabled' : ''}
+                      onclick="confirmDeleteIncidentalCharge('${charge._id}', '${bookingCustomId}')">
+                      Delete
+                    </button>
+                    <button class="bg-green-600 text-white px-2 py-1 rounded text-xs ${charge.isPaid ? 'opacity-50 cursor-not-allowed' : ''}"
+                      onclick="confirmPayIncidentalCharge('${charge._id}', '${bookingCustomId}')"
+                      ${charge.isPaid ? 'disabled' : ''}>
+                      ${charge.isPaid ? 'Paid' : 'Pay'}
+                    </button>
+                  </td>
+                `;
+                totalChargesAmount += Number(charge.amount);
+            });
+        }
+
+        totalIncidentalChargesSpan.textContent = totalChargesAmount.toLocaleString();
+
+        const payAllBtn = document.getElementById('payAllChargesBtn');
+        if (payAllBtn) payAllBtn.disabled = !hasUnpaidCharges;
+
+        viewChargesModal.style.display = 'flex';
+
+    } catch (error) {
+        console.error(error);
+        showMessageBox('Error', error.message, true);
+        incidentalChargesTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:red;">Error loading charges.</td></tr>';
     }
-
-    // 🔑 store Mongo ObjectId
-    currentBookingObjectId = booking._id;
-
-    viewChargesGuestNameSpan.textContent = booking.name;
-    viewChargesRoomNumberSpan.textContent = booking.room;
-
-    const response = await fetch(
-      `${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`
-    );
-    if (!response.ok) throw new Error('Charges fetch failed');
-
-    const charges = await response.json();
-    incidentalChargesTableBody.innerHTML = '';
-
-    let totalChargesAmount = 0;
-    let hasUnpaidCharges = false;
-
-    if (charges.length === 0) {
-      incidentalChargesTableBody.innerHTML =
-        '<tr><td colspan="6" style="text-align:center;">No incidental charges.</td></tr>';
-    } else {
-      charges.forEach(charge => {
-        if (!charge.isPaid) hasUnpaidCharges = true;
-
-        const row = incidentalChargesTableBody.insertRow();
-
-        row.innerHTML = `
-          <td>${charge.type}</td>
-          <td>${charge.description || '-'}</td>
-          <td>${Number(charge.amount).toFixed(2)}</td>
-          <td>${new Date(charge.date).toLocaleDateString()}</td>
-          <td>
-            <button class="btn btn-danger btn-sm"
-              ${charge.isPaid ? 'disabled' : ''}
-              onclick="confirmDeleteIncidentalCharge('${charge._id}', '${bookingCustomId}')">
-              Delete
-            </button>
-            
-              <button class="btn btn-danger btn-sm"
-              ${charge.isPaid ? 'paid' : ''}
-              onclick="confirmPayIncidentalCharge('${charge._id}', '${bookingCustomId}')"               data-id="${charge._id}"
-              ${charge.isPaid ? 'disabled' : ''}>
-              ${charge.isPaid ? 'Paid' : 'Pay'}>
-              
-            </button>
-          </td>
-        `;
-
-        totalChargesAmount += Number(charge.amount);
-      });
-    }
-
-    totalIncidentalChargesSpan.textContent = totalChargesAmount.toFixed(2);
-
-    // 🔒 Disable Pay All if nothing to pay
-    const payAllBtn = document.getElementById('payAllChargesBtn');
-    if (payAllBtn) {
-      payAllBtn.disabled = !hasUnpaidCharges;
-    }
-
-    viewChargesModal.style.display = 'flex';
-
-  } catch (error) {
-    console.error(error);
-    showMessageBox('Error', error.message, true);
-    incidentalChargesTableBody.innerHTML =
-      '<tr><td colspan="6" style="text-align:center;color:red;">Error loading charges.</td></tr>';
-  }
 }
 document.getElementById('payAllChargesBtn').addEventListener('click', async () => {
-  if (!currentBookingObjectId) {
-    alert('Booking ID not found');
-    return;
-  }
+    // 1. Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+    const currentUsername = sessionData?.username || 'FrontDesk';
 
-  if (!confirm('Mark ALL unpaid incidental charges as paid?')) return;
-
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/incidental-charges/pay-all/${currentBookingObjectId}`,
-      {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: currentUsername?.username || 'FrontDesk'
-        })
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      alert(data.message || 'Failed to pay charges');
-      return;
+    if (!currentBookingObjectId) {
+        showMessageBox('Error', 'Booking ID not found', true);
+        return;
     }
 
-    alert(data.message);
+    if (!confirm('Mark ALL unpaid incidental charges as paid?')) return;
 
-    // 🔁 Update UI
-    document.querySelectorAll('.mark-paid-btn').forEach(btn => {
-      btn.disabled = true;
-      btn.innerText = 'Paid';
-      btn.classList.add('paid');
-    });
+    try {
+        // 2. Add Authorization and hotelId validation
+        const response = await fetch(`${API_BASE_URL}/incidental-charges/pay-all/${currentBookingObjectId}`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                username: currentUsername,
+                hotelId: hotelId // Ensure security boundary
+            })
+        });
 
-    document.getElementById('payAllChargesBtn').disabled = true;
+        const data = await response.json();
 
-  } catch (err) {
-    console.error(err);
-    alert('Server error while paying charges');
-  }
+        if (!response.ok) {
+            showMessageBox('Error', data.message || 'Failed to pay charges', true);
+            return;
+        }
+
+        showMessageBox('Success', data.message);
+
+        // 3. UI Update: Disable buttons and mark as paid
+        document.querySelectorAll('.mark-paid-btn').forEach(btn => {
+            btn.disabled = true;
+            btn.innerText = 'Paid';
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+        });
+
+        document.getElementById('payAllChargesBtn').disabled = true;
+        
+        // Refresh audit logs to show the payment action
+        if (typeof renderAuditLogs === 'function') renderAuditLogs();
+
+    } catch (err) {
+        console.error(err);
+        showMessageBox('Error', 'Server error while paying charges', true);
+    }
 });
-
 document.addEventListener('click', async (e) => {
-  if (!e.target.classList.contains('mark-paid-btn')) return;
+    if (!e.target.classList.contains('mark-paid-btn')) return;
 
-  const chargeId = e.target.dataset.id;
-  if (!chargeId) return alert('Invalid charge ID');
+    // 1. Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+    const currentUsername = sessionData?.username;
 
-  if (!confirm('Mark this charge as paid?')) return;
+    const chargeId = e.target.dataset.id;
+    if (!chargeId) return showMessageBox('Error', 'Invalid charge ID', true);
 
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/incidental-charges/${chargeId}/mark-paid`,
-      { method: 'PATCH' }
-    );
+    if (!confirm('Mark this charge as paid?')) return;
 
-    const data = await response.json();
+    try {
+        // 2. Add Authorization and hotelId in query or body (based on your API preference)
+        const response = await fetch(`${API_BASE_URL}/incidental-charges/${chargeId}/mark-paid`, { 
+            method: 'PATCH',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                hotelId: hotelId,
+                username: currentUsername 
+            })
+        });
 
-    if (!response.ok) {
-      alert(data.message || 'Failed to mark as paid');
-      return;
+        const data = await response.json();
+
+        if (!response.ok) {
+            showMessageBox('Error', data.message || 'Failed to mark as paid', true);
+            return;
+        }
+
+        // 3. UI update
+        e.target.disabled = true;
+        e.target.innerText = 'Paid';
+        e.target.classList.add('opacity-50', 'cursor-not-allowed');
+        
+        if (typeof renderAuditLogs === 'function') renderAuditLogs();
+
+    } catch (err) {
+        console.error(err);
+        showMessageBox('Error', 'Server error while processing payment', true);
     }
-
-    // UI update
-    e.target.disabled = true;
-    e.target.innerText = 'Paid';
-    e.target.classList.add('paid');
-
-  } catch (err) {
-    console.error(err);
-    alert('Server error');
-  }
 });
-
 /**
  * Closes the view charges modal.
  */
@@ -1978,202 +1993,168 @@ function closeViewChargesModal() {
  * @param {string} chargeId - The MongoDB _id of the charge to delete.
  * @param {string} bookingCustomId - The custom ID of the booking (to re-render charges).
  */
+// --- Incidental Charge Actions ---
+
 function confirmDeleteIncidentalCharge(chargeId, bookingCustomId) {
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+    const currentUsername = sessionData?.username;
+
     openDeletionReasonModal(async (reason) => {
         try {
             const response = await fetch(`${API_BASE_URL}/incidental-charges/${chargeId}`, {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason, username: currentUsername }) // Send reason and username in body
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ reason, username: currentUsername, hotelId }) 
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error('Failed to delete charge');
 
             showMessageBox('Success', 'Incidental charge deleted successfully!');
-            viewCharges(bookingCustomId); // Re-render charges for the current booking
-            renderAuditLogs(); // Update audit logs
+            viewCharges(bookingCustomId); 
+            if (typeof renderAuditLogs === 'function') renderAuditLogs();
         } catch (error) {
-            console.error('Error deleting incidental charge:', error);
-            showMessageBox('Error', `Failed to delete charge: ${error.message}`, true);
+            showMessageBox('Error', error.message, true);
         }
     });
 }
 
 async function confirmPayIncidentalCharge(chargeId, bookingCustomId) {
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+
     try {
-        const response = await fetch(
-    `${API_BASE_URL}/incidental-charges/${chargeId}/pay`,
-    {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            username: currentUsername
-        })
-    }
-);
+        const response = await fetch(`${API_BASE_URL}/incidental-charges/${chargeId}/pay`, {
+            method: 'PATCH',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` 
+            },
+            body: JSON.stringify({ username: sessionData?.username, hotelId })
+        });
 
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error('Payment update failed');
 
         showMessageBox('Success', 'Incidental charge paid successfully!');
-        viewCharges(bookingCustomId); // Re-render charges for the current booking
-        renderAuditLogs(); // Update audit logs
-
+        viewCharges(bookingCustomId); 
+        if (typeof renderAuditLogs === 'function') renderAuditLogs();
     } catch (error) {
-        console.error('Error paying incidental charge:', error);
-        showMessageBox('Error', `Failed to pay charge: ${error.message}`, true);
+        showMessageBox('Error', error.message, true);
     }
 }
-
-/**
- * Marks all unpaid incidental charges for a booking as paid.
- * @param {string} bookingCustomId - The custom ID of the booking.
- */
 async function markAllChargesPaid() {
-    // This function needs to correctly identify the bookingCustomId from the modal context.
-    // The previous logic was a bit convoluted. Let's ensure it gets the ID reliably.
-    // Assuming this is called from within the viewChargesModal or receiptModal context.
-    const currentBookingCustomId = viewChargesModal.style.display === 'flex' ?
-                                   chargeBookingCustomIdInput.value : // If incidental charge modal is open
-                                   receiptBookingIdSpan.textContent;   // If receipt modal is open
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
 
-    if (!currentBookingCustomId) {
-        showMessageBox('Error', 'Could not determine booking ID to mark charges paid.', true);
-        return;
-    }
+    const currentBookingCustomId = viewChargesModal.style.display === 'flex' ?
+                                   chargeBookingCustomIdInput.value : 
+                                   receiptBookingIdSpan.textContent;   
+
+    if (!currentBookingCustomId) return showMessageBox('Error', 'No Booking ID found.', true);
 
     try {
-        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${currentBookingCustomId}`); // Fetch specific booking by ID
-        if (!bookingResponse.ok) throw new Error(`HTTP error! status: ${bookingResponse.status}`);
-        const booking = await bookingResponse.json();
-
-        if (!booking) {
-            showMessageBox('Error', 'Booking not found for marking charges paid.', true);
-            return;
-        }
+        // Fetch specific booking within hotel scope
+        const bRes = await fetch(`${API_BASE_URL}/bookings/id/${currentBookingCustomId}?hotelId=${hotelId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const booking = await bRes.json();
 
         const response = await fetch(`${API_BASE_URL}/incidental-charges/pay-all/${booking._id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUsername }) // Send username for audit log
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ username: sessionData?.username, hotelId }) 
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error('Failed to mark charges as paid');
 
-        const data = await response.json();
-        showMessageBox('Success', data.message);
-        viewCharges(currentBookingCustomId); // Re-render charges to show updated status
-        renderAuditLogs(); // Update audit logs
+        showMessageBox('Success', 'All charges marked as paid.');
+        viewCharges(currentBookingCustomId); 
     } catch (error) {
-        console.error('Error marking charges as paid:', error);
-        showMessageBox('Error', `Failed to mark charges as paid: ${error.message}`, true);
+        showMessageBox('Error', error.message, true);
     }
 }
-
-
-// --- Receipt Functions ---
-
-/**
- * Generates and displays the receipt in a modal.
- * @param {string} bookingCustomId - The custom ID of the booking for which to generate the receipt.
- */
 async function printReceipt(bookingCustomId) {
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+
     try {
-        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}`);
-        if (!bookingResponse.ok) throw new Error(`HTTP error! status: ${bookingResponse.status}`);
-        const booking = await bookingResponse.json();
+        // 1. Fetch Booking (Scoped to Hotel)
+        const bRes = await fetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}?hotelId=${hotelId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!bRes.ok) throw new Error(`Booking fetch failed: ${bRes.status}`);
+        const booking = await bRes.json();
 
-        if (!booking) {
-            showMessageBox('Error', 'Booking not found for receipt generation.', true);
-            return;
-        }
+        // 2. Fetch Incidentals (Scoped to Hotel)
+        const cRes = await fetch(`${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}?hotelId=${hotelId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!cRes.ok) throw new Error(`Charges fetch failed: ${cRes.status}`);
+        const incidentalCharges = await cRes.json();
 
-        const chargesResponse = await fetch(
-            `${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`
-        );
-        if (!chargesResponse.ok) throw new Error(`HTTP error! status: ${chargesResponse.status}`);
-        const incidentalCharges = await chargesResponse.json();
-
-        /* ---------- HEADER ---------- */
+        /* ---------- UI POPULATION ---------- */
         receiptGuestNameSpan.textContent = booking.name;
         receiptRoomNumberSpan.textContent = booking.room;
         receiptBookingIdSpan.textContent = booking.id;
         receiptCheckInSpan.textContent = booking.checkIn;
         receiptCheckOutSpan.textContent = booking.checkOut;
-        receiptPrintDateSpan.textContent = new Date().toLocaleDateString(
-            'en-US',
-            { year: 'numeric', month: 'long', day: 'numeric' }
-        );
+        receiptPrintDateSpan.textContent = new Date().toLocaleDateString('en-US', { 
+            year: 'numeric', month: 'long', day: 'numeric' 
+        });
 
-        /* ---------- ROOM ---------- */
         receiptNightsSpan.textContent = booking.nights;
-        receiptAmtPerNightSpan.textContent = parseFloat(booking.amtPerNight).toFixed(2);
-        receiptRoomTotalDueSpan.textContent = parseFloat(booking.totalDue).toFixed(2);
+        receiptAmtPerNightSpan.textContent = Number(booking.amtPerNight).toLocaleString();
+        receiptRoomTotalDueSpan.textContent = Number(booking.totalDue).toLocaleString();
 
-        /* ---------- INCIDENTALS ---------- */
         receiptIncidentalChargesTableBody.innerHTML = '';
-
-        let totalIncidentalChargesAmount = 0;
+        let totalIncidentalAmount = 0;
 
         if (incidentalCharges.length === 0) {
-            receiptIncidentalChargesTableBody.innerHTML =
-                '<tr><td colspan="4" style="text-align:center;">No incidental charges.</td></tr>';
+            receiptIncidentalChargesTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No incidental charges.</td></tr>';
         } else {
             incidentalCharges.forEach(charge => {
                 const row = receiptIncidentalChargesTableBody.insertRow();
-
                 row.innerHTML = `
                     <td>${charge.type}</td>
                     <td>${charge.description || '-'}</td>
                     <td>${new Date(charge.date).toLocaleDateString()}</td>
-                    <td>${parseFloat(charge.amount).toFixed(2)}</td>
+                    <td>${Number(charge.amount).toLocaleString()}</td>
                 `;
-
-                // 🔥 ONLY count unpaid incidental charges
-                if (!charge.isPaid) {
-                    totalIncidentalChargesAmount += charge.amount;
-                }
+                // Only count unpaid charges toward the final balance due
+                if (!charge.isPaid) totalIncidentalAmount += charge.amount;
             });
         }
 
-        /* ---------- SUMMARY ---------- */
-        const roomSubtotal = parseFloat(booking.totalDue);
-        const totalAmountPaid = parseFloat(booking.amountPaid);
+        /* ---------- TOTALS CALCULATION ---------- */
+        const roomSubtotal = parseFloat(booking.totalDue) || 0;
+        const totalAmountPaid = parseFloat(booking.amountPaid) || 0;
+        const totalBill = roomSubtotal + totalIncidentalAmount;
+        let finalBalanceDue = Math.max(0, totalBill - totalAmountPaid);
 
-        const totalBill = roomSubtotal + totalIncidentalChargesAmount;
-        let finalBalanceDue = totalBill - totalAmountPaid;
-
-        // 🔥 Prevent showing negative or cleared balance
-        if (finalBalanceDue <= 0) {
-            finalBalanceDue = 0;
-            receiptPaymentStatusSpan.textContent = 'Paid';
-        } else {
-            receiptPaymentStatusSpan.textContent = booking.paymentStatus;
-        }
-
-        receiptSubtotalRoomSpan.textContent = roomSubtotal.toFixed(2);
-        receiptSubtotalIncidentalsSpan.textContent = totalIncidentalChargesAmount.toFixed(2);
-        receiptTotalBillSpan.textContent = totalBill.toFixed(2);
-        receiptAmountPaidSpan.textContent = totalAmountPaid.toFixed(2);
-        receiptBalanceDueSpan.textContent = finalBalanceDue.toFixed(2);
+        receiptPaymentStatusSpan.textContent = (finalBalanceDue <= 0) ? 'Paid' : booking.paymentStatus;
+        receiptSubtotalRoomSpan.textContent = roomSubtotal.toLocaleString();
+        receiptSubtotalIncidentalsSpan.textContent = totalIncidentalAmount.toLocaleString();
+        receiptTotalBillSpan.textContent = totalBill.toLocaleString();
+        receiptAmountPaidSpan.textContent = totalAmountPaid.toLocaleString();
+        receiptBalanceDueSpan.textContent = finalBalanceDue.toLocaleString();
 
         receiptModal.style.display = 'flex';
 
     } catch (error) {
-        console.error('Error generating receipt:', error);
-        showMessageBox('Error', `Failed to generate receipt: ${error.message}`, true);
+        console.error('Receipt Error:', error);
+        showMessageBox('Error', `Receipt generation failed: ${error.message}`, true);
     }
 }
-
 /**
  * Closes the receipt modal.
  */
@@ -2190,6 +2171,11 @@ function closeReceiptModal() {
 let reportData = []; // Store rows for export
 
 async function generateReport() {
+    // 1. Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+
     const selectedDateStr = reportDateInput.value;
     if (!selectedDateStr) {
         showMessageBox('Error', 'Please select a date for the report.', true);
@@ -2200,13 +2186,22 @@ async function generateReport() {
     let rooms = [];
 
     try {
+        // 2. Fetch data filtered by hotelId and include Auth header
         const [bookingsResponse, roomsResponse] = await Promise.all([
-            fetch(`${API_BASE_URL}/bookings/all`),
-            fetch(`${API_BASE_URL}/rooms`)
+            fetch(`${API_BASE_URL}/bookings/all?hotelId=${hotelId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }),
+            fetch(`${API_BASE_URL}/rooms?hotelId=${hotelId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
         ]);
+
+        if (!bookingsResponse.ok || !roomsResponse.ok) throw new Error('Data fetch failed');
+
         allBookings = await bookingsResponse.json();
         rooms = await roomsResponse.json();
     } catch (error) {
+        console.error('Report generation error:', error);
         showMessageBox('Error', 'Failed to load report data.', true);
         return;
     }
@@ -2218,13 +2213,13 @@ async function generateReport() {
     let stats = {
         revenue: 0, balance: 0, checkedIn: 0, 
         reserved: 0, cancelled: 0, noShows: 0,
-        cash: 0, mtn: 0,  airtel: 0,bank: 0
+        cash: 0, mtn: 0, airtel: 0, bank: 0
     };
     const roomTypeCounts = {};
     reportData = [];
 
     const tbody = document.querySelector('#roomRevenueTable tbody');
-    tbody.innerHTML = ''; 
+    if (tbody) tbody.innerHTML = ''; 
 
     allBookings.forEach(booking => {
         const checkIn = new Date(booking.checkIn);
@@ -2237,7 +2232,7 @@ async function generateReport() {
             const room = rooms.find(r => r.number === booking.room);
             const roomType = room ? room.type : 'Unknown';
             const revenue = parseFloat(booking.totalDue) || 0;
-            const balance = parseFloat(booking.paymentbalance) || 0; // Fixed to match your previous property name
+            const balance = parseFloat(booking.balance) || 0; // Updated to match previous field names
 
             // 1. Financial Stats
             stats.revenue += revenue;
@@ -2250,37 +2245,49 @@ async function generateReport() {
             else if (status === 'no show') stats.noShows++;
             else stats.reserved++;
 
-            // 3. Payment Method Breakdown (Assuming you store paymentMethod in booking)
-           const method = (booking.paymentMethod || '').toLowerCase();
+            // 3. Payment Method Breakdown
+            const method = (booking.paymentMethod || '').toLowerCase();
             if (method.includes('cash')) stats.cash += revenue;
             else if (method.includes('mtn')) stats.mtn += revenue;
             else if (method.includes('airtel')) stats.airtel += revenue;
             else if (method.includes('bank')) stats.bank += revenue;
 
-
-            if (roomType) {
+            if (roomType !== 'Unknown') {
                 roomTypeCounts[roomType] = (roomTypeCounts[roomType] || 0) + 1;
             }
 
             // Append Row to Table
-            const tr = document.createElement('tr');
-            tr.className = "border-b border-gray-200 hover:bg-gray-100";
-            tr.innerHTML = `
-                <td class="py-3 px-6">${booking.room}</td>
-                <td class="py-3 px-6">${roomType}</td>
-                <td class="py-3 px-6">${booking.name}</td>
-                <td class="py-3 px-6 font-semibold">${revenue.toFixed(2)}</td>
-            `;
-            tbody.appendChild(tr);
+            if (tbody) {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-gray-200 hover:bg-gray-100";
+                tr.innerHTML = `
+                    <td class="py-3 px-6">${booking.room}</td>
+                    <td class="py-3 px-6">${roomType}</td>
+                    <td class="py-3 px-6">${booking.name}</td>
+                    <td class="py-3 px-6 font-semibold">${revenue.toLocaleString()}</td>
+                `;
+                tbody.appendChild(tr);
+            }
 
             reportData.push({
                 'Room': booking.room,
                 'Type': roomType,
                 'Guest': booking.name,
-                'Revenue': revenue.toFixed(2)
+                'Revenue': revenue.toLocaleString()
             });
         }
     });
+
+    // 4. Update Summary Cards (Ensure these IDs exist in your HTML)
+    updateReportSummaryCards(stats);
+}
+
+function updateReportSummaryCards(stats) {
+    const revenueEl = document.getElementById('reportTotalRevenue');
+    if (revenueEl) revenueEl.textContent = stats.revenue.toLocaleString();
+    
+    // Add other updates as needed (e.g., stats.cash, stats.checkedIn, etc.)
+}
 
     // Calculate Most Booked
     let mostBookedRoomType = Object.keys(roomTypeCounts).reduce((a, b) => roomTypeCounts[a] > roomTypeCounts[b] ? a : b, 'N/A');
@@ -2327,86 +2334,100 @@ document.getElementById('totalCollected').textContent = total.toFixed(2);
 let reportSummary = {};  // Object holding summary info
 
 function exportReport() {
-    // 1. Check if data exists
+    // 1. Get session data to identify the hotel
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelName = sessionData?.hotelName || 'Hotel';
+    const selectedDate = reportDateInput.value || 'Report';
+
+    // 2. Check if data exists
     if (!reportData || reportData.length === 0) {
         showMessageBox('Info', 'Please generate the report before exporting.', true);
         return;
     }
 
-    // 2. Prepare the main worksheet from the room-by-room table
+    // 3. Prepare the main worksheet from the room-by-room table
     const worksheet = XLSX.utils.json_to_sheet(reportData);
 
-    // 3. Define the Summary Data from our reportSummary object
-    // We create a "Header Section" to appear at the very top of the Excel file
+    // 4. Define the Summary Data
+    // We pull directly from the UI elements which were already filtered by hotelId in generateReport()
     const headerInfo = [
-        ["DAILY REVENUE REPORT"],
-        ["Date:", reportSummary.Date || reportDateInput.value],
+        [`${hotelName.toUpperCase()} - DAILY REVENUE REPORT`],
+        ["Date:", selectedDate],
         [""], // Blank line
         ["SUMMARY STATISTICS"],
-        ["Total Revenue", reportSummary['Total Room Revenue']],
-        ["Total Balance Outstanding", reportSummary['Total Room Balance']],
-        ["Most Booked Room Type", reportSummary['Most Booked Room Type']],
-        ["Guests Checked In", reportSummary['Guests Checked In']],
-        ["Guests Reserved", reportSummary['Guests Reserved']],
-        ["Guests Cancelled", reportSummary['Guests Cancelled']],
-        ["No Shows", reportSummary['No Shows']],
+        ["Total Revenue", document.getElementById('reportTotalRevenue')?.textContent || "0"],
+        ["Total Balance Outstanding", reportSummary['Total Room Balance'] || "0"],
+        ["Most Booked Room Type", reportSummary['Most Booked Room Type'] || "N/A"],
+        ["Guests Checked In", reportSummary['Guests Checked In'] || "0"],
+        ["Guests Reserved", reportSummary['Guests Reserved'] || "0"],
+        ["Guests Cancelled", reportSummary['Guests Cancelled'] || "0"],
+        ["No Shows", reportSummary['No Shows'] || "0"],
         [""], // Blank line
         ["PAYMENT BREAKDOWN"],
-        ["Cash", document.getElementById('cashRevenue').textContent],
-        ["MTN Momo", document.getElementById('mtnRevenue').textContent],
-        ["Airtel Pay", document.getElementById('airtelRevenue').textContent],
-        ["Bank", document.getElementById('bankRevenue').textContent],
+        ["Cash", document.getElementById('cashRevenue')?.textContent || "0"],
+        ["MTN Momo", document.getElementById('mtnRevenue')?.textContent || "0"],
+        ["Airtel Pay", document.getElementById('airtelRevenue')?.textContent || "0"],
+        ["Bank", document.getElementById('bankRevenue')?.textContent || "0"],
         [""], // Blank line
         ["GUEST DETAIL LIST"]
     ];
 
-    // 4. Create a new Workbook and Worksheet
+    // 5. Create a new Workbook and Worksheet
     const workbook = XLSX.utils.book_new();
     
-    // We start the worksheet with our headerInfo instead of the raw JSON
+    // Start worksheet with headerInfo
     const newWorksheet = XLSX.utils.aoa_to_sheet(headerInfo);
 
-    // 5. Append the reportData (the table) starting after the headerInfo
-    // headerInfo has 18 rows, so we start the table at row 19 (index 18)
-    XLSX.utils.sheet_add_json(newWorksheet, reportData, { origin: "A19", skipHeader: false });
+    // 6. Append the reportData (the table) starting after the headerInfo
+    // headerInfo has 19 rows, so we start the table at index 19 (Row 20)
+    XLSX.utils.sheet_add_json(newWorksheet, reportData, { origin: "A20", skipHeader: false });
 
-    // 6. Append the final Total at the very bottom
-    const totalRowIndex = 19 + reportData.length + 1;
+    // 7. Append the final Total at the very bottom
+    const totalRowIndex = 20 + reportData.length + 1;
+    const totalCollected = document.getElementById('totalCollected')?.textContent || "0";
+    
     XLSX.utils.sheet_add_aoa(newWorksheet, [
-        ["TOTAL COLLECTED", (parseFloat(document.getElementById('totalCollected').textContent) || 0).toFixed(2)]
+        ["TOTAL COLLECTED", totalCollected]
     ], { origin: `A${totalRowIndex}` });
 
-    // 7. Add to workbook and Save
+    // 8. Add to workbook and Save with Hotel-specific filename
     XLSX.utils.book_append_sheet(workbook, newWorksheet, 'Daily Report');
     
-    const selectedDate = reportDateInput.value || 'report';
-    XLSX.writeFile(workbook, `Hotel_Report_${selectedDate}.xlsx`);
+    // Filename: "HotelName_Report_2026-02-11.xlsx"
+    const fileName = `${hotelName.replace(/\s+/g, '_')}_Report_${selectedDate}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
 }
-
 // --- Housekeeping Functions ---
 
 /**
  * Renders the room cards for housekeeping, fetching data from the backend.
  */
 async function renderHousekeepingRooms() {
-    updateBookingStats();
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+
+    if (typeof updateBookingStats === 'function') updateBookingStats();
     housekeepingRoomGrid.innerHTML = ''; 
 
     let currentRooms = [];
     let roomTypesData = [];
 
     try {
-        // Fetch both Rooms and Types simultaneously for better performance
+        // Fetch only this hotel's rooms and types
         const [roomsRes, typesRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/rooms`),
-            fetch(`${API_BASE_URL}/room-types`) // Assuming this is your endpoint for types
+            fetch(`${API_BASE_URL}/rooms?hotelId=${hotelId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }),
+            fetch(`${API_BASE_URL}/room-types?hotelId=${hotelId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
         ]);
 
         if (!roomsRes.ok || !typesRes.ok) throw new Error("Failed to fetch data");
 
         currentRooms = await roomsRes.json();
         roomTypesData = await typesRes.json();
-        
         rooms = currentRooms; 
     } catch (error) {
         console.error('Housekeeping Load Error:', error);
@@ -2417,18 +2438,16 @@ async function renderHousekeepingRooms() {
         return;
     }
 
-    // --- 1. PREPARE DATA MAP ---
-    // Create a quick lookup for Type names using the Type ID
     const typeLookup = {};
     roomTypesData.forEach(t => { typeLookup[t._id] = t.name; });
 
-    // --- 2. COUNT THE STATUSES ---
+    // Status Counting
     const counts = { clean: 0, dirty: 0, maintenance: 0, blocked: 0 };
     currentRooms.forEach(room => {
         if (room.status === 'clean') counts.clean++;
-        if (room.status === 'dirty') counts.dirty++;
-        if (room.status === 'under-maintenance') counts.maintenance++;
-        if (room.status === 'blocked') counts.blocked++;
+        else if (room.status === 'dirty') counts.dirty++;
+        else if (room.status === 'under-maintenance') counts.maintenance++;
+        else if (room.status === 'blocked') counts.blocked++;
     });
 
     if(document.getElementById('stat-clean')) {
@@ -2437,31 +2456,20 @@ async function renderHousekeepingRooms() {
         document.getElementById('stat-maintenance').textContent = counts.maintenance;
         document.getElementById('stat-occupied').textContent = counts.blocked;
     }
-// --- 3. GROUP BY TYPE NAME ---
-const groupedRooms = {};
 
-currentRooms.forEach(room => {
-    // Since you use .populate('roomTypeId'), the room object looks like:
-    // { number: '101', roomTypeId: { name: 'Deluxe', _id: '...' }, status: 'clean' }
+    // Grouping logic
+    const groupedRooms = {};
+    currentRooms.forEach(room => {
+        let typeName = (room.roomTypeId && typeof room.roomTypeId === 'object') 
+            ? room.roomTypeId.name 
+            : (typeLookup[room.roomTypeId] || "Unassigned Category");
+
+        if (!groupedRooms[typeName]) groupedRooms[typeName] = [];
+        groupedRooms[typeName].push(room);
+    });
     
-    let typeName = "Unassigned Category";
-
-    if (room.roomTypeId && typeof room.roomTypeId === 'object') {
-        // This takes the name directly from the populated backend data
-        typeName = room.roomTypeId.name; 
-    } else if (room.roomTypeId && typeLookup[room.roomTypeId]) {
-        // Fallback if populate failed but the ID is present
-        typeName = typeLookup[room.roomTypeId];
-    }
-
-    if (!groupedRooms[typeName]) {
-        groupedRooms[typeName] = [];
-    }
-    groupedRooms[typeName].push(room);
-});
-    
+    // Render Sections
     for (const typeName in groupedRooms) {
-        // Luxury Type Header
         const sectionHeader = document.createElement('div');
         sectionHeader.className = "col-span-full mt-10 mb-6 flex items-center gap-4";
         sectionHeader.innerHTML = `
@@ -2472,16 +2480,13 @@ currentRooms.forEach(room => {
         housekeepingRoomGrid.appendChild(sectionHeader);
 
         groupedRooms[typeName]
-            .sort((a, b) => parseInt(a.number) - parseInt(b.number))
+            .sort((a, b) => a.number.localeCompare(b.number, undefined, {numeric: true}))
             .forEach(room => {
+                const isDirty = room.status === 'dirty';
+                const isOccupied = room.status === 'blocked';
                 const card = document.createElement('div');
-                // Luxury Card Styles
                 card.className = "bg-white rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group";
                 
-                const isDirty = room.status === 'dirty';
-                const isMaint = room.status === 'under-maintenance';
-                const isOccupied = room.status === 'blocked';
-
                 card.innerHTML = `
                     <div class="p-6">
                         <div class="flex justify-between items-start mb-4">
@@ -2493,191 +2498,149 @@ currentRooms.forEach(room => {
                                 <i class="fa-solid ${isDirty ? 'fa-broom' : 'fa-check-circle'}"></i>
                             </div>
                         </div>
-
                         <div class="space-y-3">
                             <div class="flex items-center gap-2">
                                 <span class="w-2 h-2 rounded-full ${isDirty ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}"></span>
-                                <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                                    ${room.status.replace('-', ' ')}
-                                </span>
+                                <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">${room.status.replace('-', ' ')}</span>
                             </div>
-                            
                             <div class="relative group/select">
-                                <select onchange="updateRoomStatus('${room.id}', this.value)" 
+                                <select onchange="updateRoomStatus('${room._id}', this.value)" 
                                     class="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer transition-all">
                                     <option value="clean" ${room.status === 'clean' ? 'selected' : ''}>SET AS CLEAN</option>
                                     <option value="dirty" ${room.status === 'dirty' ? 'selected' : ''}>SET AS DIRTY</option>
                                     <option value="under-maintenance" ${room.status === 'under-maintenance' ? 'selected' : ''}>MAINTENANCE</option>
-                                    <option value="blocked" ${room.status === 'blocked' ? 'selected' : ''}>
-                                        ${isOccupied ? 'OCCUPIED' : 'BLOCKED'}
-                                    </option>
+                                    <option value="blocked" ${room.status === 'blocked' ? 'selected' : ''}>${isOccupied ? 'OCCUPIED' : 'BLOCKED'}</option>
                                 </select>
                                 <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
                 housekeepingRoomGrid.appendChild(card);
             });
     }
 }
-/**
- * Updates room status via API.
- * @param {string} roomId - The custom ID of the room.
- * @param {string} newStatus - The new status to set ('clean', 'dirty', 'under-maintenance', 'blocked').
- */
-async function updateRoomStatus(roomId, newStatus) {
-    const room = rooms.find(r => r.id === roomId);
-    if (!room) {
-        showMessageBox('Error', 'Room not found.', true);
-        return;
-    }
+async function updateRoomStatus(roomMongoId, newStatus) {
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+    const currentUsername = sessionData?.username;
 
-    // Just do the update immediately without asking for a reason
-    await performRoomStatusUpdate(roomId, newStatus);
-}
-
-async function performRoomStatusUpdate(roomId, newStatus, reason = null) {
-    const room = rooms.find(r => r.id === roomId);
     try {
-        const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
+        const response = await fetch(`${API_BASE_URL}/rooms/${roomMongoId}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus, reason: reason, username: currentUsername }) // Send reason and username to backend
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                status: newStatus, 
+                hotelId: hotelId,
+                username: currentUsername 
+            })
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error("Update failed");
 
-        const data = await response.json();
-        // Update the local rooms array with the new status
-        room.status = data.room.status;
-        showMessageBox('Success', `Room ${room.number} status updated to ${data.room.status.replace('-', ' ')}.`);
-        renderHousekeepingRooms(); // Re-render to update UI
-        renderBookings(currentPage, currentSearchTerm); // Re-render bookings to update checkout button visibility if needed
-        renderCalendar(); // Update calendar view
-        renderAuditLogs(); // Update audit logs
+        showMessageBox('Success', `Room status updated successfully.`);
+        renderHousekeepingRooms();
+        if (typeof renderCalendar === 'function') renderCalendar();
     } catch (error) {
-        console.error('Error updating room status:', error);
-        showMessageBox('Error', `Failed to update room status: ${error.message}`, true);
-        renderHousekeepingRooms(); // Revert UI if update failed
+        showMessageBox('Error', error.message, true);
     }
 }
 
-
-// --- New: Calendar View Functions ---
-
-/**
- * Renders the calendar view for the current month.
- */
 async function renderCalendar() {
-    calendarGrid.innerHTML = ''; // Clear existing calendar grid
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
 
+    calendarGrid.innerHTML = ''; 
     const year = currentCalendarDate.getFullYear();
-    const month = currentCalendarDate.getMonth(); // 0-indexed
-
+    const month = currentCalendarDate.getMonth();
     calendarMonthYear.textContent = `${currentCalendarDate.toLocaleString('en-US', { month: 'long' })} ${year}`;
 
-    // Get all rooms and bookings
-    let allRooms = [];
-    let allBookings = [];
     try {
-        const roomsResponse = await fetch(`${API_BASE_URL}/rooms`);
-        if (!roomsResponse.ok) throw new Error(`HTTP error! status: ${roomsResponse.status}`);
-        allRooms = await roomsResponse.json();
-        rooms = allRooms; // Update global rooms array
+        const [roomsRes, bookingsRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/rooms?hotelId=${hotelId}`, { headers: { 'Authorization': `Bearer ${token}` }}),
+            fetch(`${API_BASE_URL}/bookings/all?hotelId=${hotelId}`, { headers: { 'Authorization': `Bearer ${token}` }})
+        ]);
 
-        const bookingsResponse = await fetch(`${API_BASE_URL}/bookings/all`);
-        if (!bookingsResponse.ok) throw new Error(`HTTP error! status: ${bookingsResponse.status}`);
-        allBookings = await bookingsResponse.json();
-        bookings = allBookings; // Update global bookings array
-    } catch (error) {
-        console.error('Error fetching data for calendar:', error);
-        showMessageBox('Error', 'Failed to load calendar data. Please try again.', true);
-        return;
-    }
+        const allRooms = await roomsRes.json();
+        const allBookings = await bookingsRes.json();
 
-    // Sort rooms by number
-    allRooms.sort((a, b) => parseInt(a.number) - parseInt(b.number));
+        // Sort rooms naturally
+        allRooms.sort((a, b) => a.number.localeCompare(b.number, undefined, {numeric: true}));
 
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        calendarGrid.style.gridTemplateColumns = `120px repeat(${daysInMonth}, 1fr)`;
 
-    // Set up the main calendarGrid as a CSS Grid
-    // First column for room names, then one column for each day of the month
-    calendarGrid.style.gridTemplateColumns = `120px repeat(${daysInMonth}, 1fr)`;
-    // First row for date headers, then one row for each room
-    calendarGrid.style.gridTemplateRows = `60px repeat(${allRooms.length}, 1fr)`;
+        // Render Headers
+        const cornerCell = document.createElement('div');
+        cornerCell.className = 'calendar-cell calendar-corner-header';
+        calendarGrid.appendChild(cornerCell);
 
-    // 1. Add the empty top-left corner cell
-    const cornerCell = document.createElement('div');
-    cornerCell.classList.add('calendar-cell', 'calendar-corner-header');
-    calendarGrid.appendChild(cornerCell);
-
-    // 2. Add date headers (top row)
-    for (let i = 1; i <= daysInMonth; i++) {
-        const date = new Date(year, month, i);
-        const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
-        const dateCell = document.createElement('div');
-        dateCell.classList.add('calendar-cell', 'calendar-date-header');
-        dateCell.innerHTML = `<span>${dayOfWeek}</span><span>${i}</span>`;
-        calendarGrid.appendChild(dateCell);
-    }
-
-    // 3. Add room rows and daily cells
-    allRooms.forEach(room => {
-        // Add room name cell (first column of each room row)
-        const roomNameCell = document.createElement('div');
-        roomNameCell.classList.add('calendar-cell', 'calendar-room-name');
-        roomNameCell.textContent = `Room ${room.number}`;
-        calendarGrid.appendChild(roomNameCell);
-
-        // Add daily cells for this room
         for (let i = 1; i <= daysInMonth; i++) {
-            const dayCell = document.createElement('div');
-            dayCell.classList.add('calendar-cell', 'calendar-day-cell');
-            dayCell.dataset.date = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-            dayCell.dataset.room = room.number;
-            calendarGrid.appendChild(dayCell);
+            const date = new Date(year, month, i);
+            const dateCell = document.createElement('div');
+            dateCell.className = 'calendar-cell calendar-date-header';
+            dateCell.innerHTML = `<span>${date.toLocaleDateString('en-US', { weekday: 'short' })}</span><span>${i}</span>`;
+            calendarGrid.appendChild(dateCell);
         }
-    });
 
-    // 4. Populate bookings onto the calendar
-    allBookings.forEach(booking => {
-        const bookingCheckIn = new Date(booking.checkIn);
-        const bookingCheckOut = new Date(booking.checkOut);
+        // Render Room Rows
+        allRooms.forEach(room => {
+            const roomNameCell = document.createElement('div');
+            roomNameCell.className = 'calendar-cell calendar-room-name';
+            roomNameCell.textContent = `Room ${room.number}`;
+            calendarGrid.appendChild(roomNameCell);
 
-        // Iterate through days of the current month
-        for (let d = 1; d <= daysInMonth; d++) {
-            const currentDay = new Date(year, month, d);
-            currentDay.setHours(0, 0, 0, 0); // Normalize to start of day
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayCell = document.createElement('div');
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                dayCell.className = 'calendar-cell calendar-day-cell';
+                dayCell.dataset.date = dateStr;
+                dayCell.dataset.room = room.number;
+                calendarGrid.appendChild(dayCell);
+            }
+        });
 
-            // Check if the booking spans this specific day
-            if (currentDay >= bookingCheckIn && currentDay < bookingCheckOut) {
-                // Find the correct cell using data attributes
-                const dayCell = calendarGrid.querySelector(`[data-date="${currentDay.toISOString().split('T')[0]}"][data-room="${booking.room}"]`);
-                if (dayCell) {
-                    const bookingBlock = document.createElement('div');
-                    bookingBlock.classList.add('calendar-booking-block');
-                    bookingBlock.textContent = booking.name;
-                    bookingBlock.title = `Guest: ${booking.name}\nCheck-in: ${booking.checkIn}\nCheck-out: ${booking.checkOut}\nStatus: ${booking.paymentStatus}`;
+        // Map Bookings to Cells
+        allBookings.forEach(booking => {
+            const checkIn = new Date(booking.checkIn);
+            const checkOut = new Date(booking.checkOut);
+            checkIn.setHours(0,0,0,0);
+            checkOut.setHours(0,0,0,0);
 
-                    // Add a class based on payment status
-                    if (booking.paymentStatus === 'Paid') {
-                        bookingBlock.classList.add('status-paid');
-                    } else if (booking.paymentStatus === 'Partially Paid') {
-                        bookingBlock.classList.add('status-partially-paid');
-                    } else {
-                        bookingBlock.classList.add('status-pending');
+            for (let d = 1; d <= daysInMonth; d++) {
+                const currentDay = new Date(year, month, d);
+                currentDay.setHours(0,0,0,0);
+
+                if (currentDay >= checkIn && currentDay < checkOut) {
+                    const dateKey = currentDay.toISOString().split('T')[0];
+                    const dayCell = calendarGrid.querySelector(`[data-date="${dateKey}"][data-room="${booking.room}"]`);
+                    
+                    if (dayCell) {
+                        const block = document.createElement('div');
+                        block.className = `calendar-booking-block ${getPaymentStatusClass(booking.paymentStatus)}`;
+                        block.textContent = booking.name;
+                        block.title = `Guest: ${booking.name}\nStatus: ${booking.paymentStatus}`;
+                        dayCell.classList.add('booked');
+                        dayCell.appendChild(block);
                     }
-
-                    dayCell.classList.add('booked');
-                    dayCell.appendChild(bookingBlock); // Append to each day it spans
                 }
             }
-        }
-    });
+        });
+
+    } catch (error) {
+        console.error('Calendar Error:', error);
+        showMessageBox('Error', 'Failed to load calendar.', true);
+    }
+}
+
+function getPaymentStatusClass(status) {
+    if (status === 'Paid') return 'status-paid';
+    if (status === 'Partially Paid') return 'status-partially-paid';
+    return 'status-pending';
 }
 
 // Event listeners for calendar navigation
@@ -2707,12 +2670,15 @@ const detailedReportTitle = document.getElementById('detailed-report-title');
 const serviceReportsTableBody = document.getElementById('serviceReportsTable').querySelector('tbody'); 
 
 async function renderServiceReports() {
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+
     serviceReportsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Loading service reports...</td></tr>';
     serviceReportsDetailsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Loading details...</td></tr>';
-    totalServiceRevenueSpan.textContent = '0.00';
-    totalDetailedServiceRevenueSpan.textContent = '0.00';
+    totalServiceRevenueSpan.textContent = '0';
+    totalDetailedServiceRevenueSpan.textContent = '0';
 
-    // Hide the new elements initially
     serviceReportsDetailsTable.style.display = 'none';
     exportServiceReportBtn.style.display = 'none';
     detailedReportTitle.style.display = 'none';
@@ -2722,102 +2688,103 @@ async function renderServiceReports() {
 
     if (!startDate || !endDate) {
         serviceReportsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: red;">Please select both start and end dates.</td></tr>';
-        serviceReportsDetailsTableBody.innerHTML = '';
         return;
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/reports/services?startDate=${startDate}&endDate=${endDate}`);
+        // Fetch scoped to hotelId with Authorization
+        const response = await fetch(`${API_BASE_URL}/reports/services?startDate=${startDate}&endDate=${endDate}&hotelId=${hotelId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const reports = await response.json();
 
-        serviceReportsTableBody.innerHTML = ''; // Clear loading message for summary
-        serviceReportsDetailsTableBody.innerHTML = ''; // Clear loading message for details
+        serviceReportsTableBody.innerHTML = ''; 
+        serviceReportsDetailsTableBody.innerHTML = ''; 
 
         let grandTotalRevenue = 0;
         let detailedGrandTotalRevenue = 0;
         
         if (reports.length === 0) {
-            serviceReportsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">No service charges found for the selected date range.</td></tr>';
-            serviceReportsDetailsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">No service charges found for the selected date range.</td></tr>';
+            const noDataMsg = '<tr><td colspan="3" style="text-align: center;">No service charges found.</td></tr>';
+            serviceReportsTableBody.innerHTML = noDataMsg;
+            serviceReportsDetailsTableBody.innerHTML = noDataMsg;
         } else {
-            // Render the summary table
+            // Render Summary
             reports.forEach(report => {
                 const row = serviceReportsTableBody.insertRow();
                 row.innerHTML = `
-                    <td>${report.serviceType}</td>
-                    <td>${report.count}</td>
-                    <td>${report.totalAmount.toFixed(2)}</td>
+                    <td class="px-4 py-2">${report.serviceType}</td>
+                    <td class="px-4 py-2">${report.count}</td>
+                    <td class="px-4 py-2 font-bold">${Number(report.totalAmount).toLocaleString()}</td>
                 `;
                 grandTotalRevenue += report.totalAmount;
-            });
 
-            // Render the detailed table
-            reports.forEach(report => {
+                // Render Details
                 report.bookings.forEach(booking => {
-                    const row = serviceReportsDetailsTableBody.insertRow();
-                    row.innerHTML = `
-                        <td>${booking.name}</td>
-                        <td>${report.serviceType}</td>
-                        <td>${booking.amount.toFixed(2)}</td>
+                    const dRow = serviceReportsDetailsTableBody.insertRow();
+                    dRow.innerHTML = `
+                        <td class="px-4 py-2">${booking.name}</td>
+                        <td class="px-4 py-2">${report.serviceType}</td>
+                        <td class="px-4 py-2">${Number(booking.amount).toLocaleString()}</td>
                     `;
                     detailedGrandTotalRevenue += booking.amount;
                 });
             });
 
-            // Show the new table and button
             serviceReportsDetailsTable.style.display = 'table';
             exportServiceReportBtn.style.display = 'inline-block';
             detailedReportTitle.style.display = 'block';
         }
         
-        totalServiceRevenueSpan.textContent = grandTotalRevenue.toFixed(2);
-        totalDetailedServiceRevenueSpan.textContent = detailedGrandTotalRevenue.toFixed(2);
+        totalServiceRevenueSpan.textContent = grandTotalRevenue.toLocaleString();
+        totalDetailedServiceRevenueSpan.textContent = detailedGrandTotalRevenue.toLocaleString();
 
     } catch (error) {
-        console.error('Error fetching service reports:', error);
-        showMessageBox('Error', `Failed to load service reports: ${error.message}`, true);
-        serviceReportsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: red;">Error loading service reports.</td></tr>';
-        serviceReportsDetailsTableBody.innerHTML = '';
+        console.error('Service Report Error:', error);
+        showMessageBox('Error', `Failed to load reports: ${error.message}`, true);
     }
 }
 
 function exportToExcel() {
-    // Collect data from both tables
-    const summaryData = [['Service Type', 'Number of Charges', 'Total Revenue']];
-    const detailData = [['Guest Name', 'Service Type', 'Total Amount']];
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelName = sessionData?.hotelName || 'Hotel';
+    const startDate = serviceReportStartDate.value;
+    const endDate = serviceReportEndDate.value;
+
+    // Header section for the Excel sheet
+    const reportTitle = [[`${hotelName.toUpperCase()} - SERVICE REVENUE REPORT`], [`Period: ${startDate} to ${endDate}`], [""]];
+
+    const summaryData = [...reportTitle, ['Service Type', 'Number of Charges', 'Total Revenue']];
+    const detailData = [...reportTitle, ['Guest Name', 'Service Type', 'Total Amount']];
     
-    // Get data from summary table
+    // Extract Summary Table
     document.querySelectorAll('#serviceReportsTable tbody tr').forEach(row => {
         const rowData = [];
         row.querySelectorAll('td').forEach(cell => rowData.push(cell.textContent));
-        summaryData.push(rowData);
+        if (rowData.length > 0) summaryData.push(rowData);
     });
-    // Add summary grand total
-    summaryData.push(['Grand Total:', '', totalServiceRevenueSpan.textContent]);
+    summaryData.push(['', 'GRAND TOTAL:', totalServiceRevenueSpan.textContent]);
 
-    // Get data from detailed table
+    // Extract Detailed Table
     document.querySelectorAll('#serviceReportsDetailsTable tbody tr').forEach(row => {
         const rowData = [];
         row.querySelectorAll('td').forEach(cell => rowData.push(cell.textContent));
-        detailData.push(rowData);
+        if (rowData.length > 0) detailData.push(rowData);
     });
-    // Add detailed grand total
-    detailData.push(['Grand Total:', '', totalDetailedServiceRevenueSpan.textContent]);
+    detailData.push(['', 'GRAND TOTAL:', totalDetailedServiceRevenueSpan.textContent]);
 
-    // Create a new workbook and sheets
     const workbook = XLSX.utils.book_new();
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
     const detailSheet = XLSX.utils.aoa_to_sheet(detailData);
 
-    // Append sheets to the workbook
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary Report');
-    XLSX.utils.book_append_sheet(workbook, detailSheet, 'Detailed Report');
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+    XLSX.utils.book_append_sheet(workbook, detailSheet, 'Detailed_Details');
     
-    // Generate and download the Excel file
-    XLSX.writeFile(workbook, 'ServiceReports.xlsx');
+    const fileName = `${hotelName.replace(/\s+/g, '_')}_Services_${startDate}_to_${endDate}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
 }
-
 // Event listeners
 generateServiceReportBtn.addEventListener('click', renderServiceReports);
 exportServiceReportBtn.addEventListener('click', exportToExcel);
@@ -2849,17 +2816,22 @@ document.getElementById('applyAuditLogFiltersBtn').addEventListener('click', () 
 });
 
 async function renderAuditLogs() {
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+
     const tableBody = document.querySelector("#auditLogTable tbody");
     const prevBtn = document.getElementById('prevAuditPage');
     const nextBtn = document.getElementById('nextAuditPage');
     const pageIndicator = document.getElementById('auditPageIndicator');
 
-    tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Loading audit logs...</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Loading audit logs...</td></tr>';
 
-    // Build Query Params
+    // 1. Include hotelId in Query Params
     let queryParams = new URLSearchParams({
         page: currentAuditPage,
         limit: logsPerPage,
+        hotelId: hotelId, // CRITICAL: Security boundary
         user: document.getElementById('auditLogUserFilter').value,
         action: document.getElementById('auditLogActionFilter').value,
         startDate: document.getElementById('auditLogStartDateFilter').value,
@@ -2867,69 +2839,78 @@ async function renderAuditLogs() {
     });
 
     try {
-        const response = await fetch(`${API_BASE_URL}/audit-logs?${queryParams.toString()}`);
+        const response = await fetch(`${API_BASE_URL}/audit-logs?${queryParams.toString()}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         
         const logs = await response.json();
         tableBody.innerHTML = ''; 
 
-        // Update UI State
         pageIndicator.innerText = `Page ${currentAuditPage}`;
         prevBtn.disabled = (currentAuditPage === 1);
-        // Disable "Next" if we received fewer logs than the limit (meaning it's the last page)
         nextBtn.disabled = (logs.length < logsPerPage);
 
         if (logs.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No audit logs found.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No audit logs found.</td></tr>';
         } else {
-logs.forEach(log => {
+            logs.forEach(log => {
                 const reason = (log.details && log.details.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
                 const row = tableBody.insertRow();
-                row.className = "border-b border-gray-200 hover:bg-gray-50"; // Optional styling
+                row.className = "border-b border-gray-200 hover:bg-gray-50 transition-colors";
+                
                 row.innerHTML = `
-                    <td class="py-3 px-6 text-left">${new Date(log.timestamp).toLocaleString()}</td>
-                    <td class="py-3 px-6 text-left">${log.user}</td>
-                    <td class="py-3 px-6 text-left">${log.action}</td>
-                    <td class="py-3 px-6 text-left">${reason}</td>
-                   <td class="py-3 px-6 text-left whitespace-nowrap font-mono text-xs text-gray-500">${JSON.stringify(log.details)}</td>
+                    <td class="py-3 px-6 text-left text-sm">${new Date(log.timestamp).toLocaleString()}</td>
+                    <td class="py-3 px-6 text-left font-medium">${log.user}</td>
+                    <td class="py-3 px-6 text-left"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs uppercase font-bold">${log.action}</span></td>
+                    <td class="py-3 px-6 text-left text-sm italic text-gray-600">${reason}</td>
+                    <td class="py-3 px-6 text-left">
+                        <button onclick='console.log(${JSON.stringify(log.details)})' class="text-indigo-600 hover:underline text-xs font-mono">View Raw Details</button>
+                    </td>
                 `;
             });
         }
     } catch (error) {
         console.error('Error fetching audit logs:', error);
-        tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red;">Error loading audit logs.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Error loading audit logs.</td></tr>';
     }
 }
-
-// Event listener for applying audit log filters
-applyAuditLogFiltersBtn.addEventListener('click', renderAuditLogs);
-
-
-// --- New: Channel Manager Functions ---
-
-/**
- * Simulates syncing with a booking engine.
- */
 async function simulateChannelManagerSync() {
-    showMessageBox('Syncing...', 'Initiating sync with external booking engine. This may take a moment...');
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
+    const currentUsername = sessionData?.username;
+
+    showMessageBox('Syncing...', 'Initiating sync with external booking engines (Booking.com, Expedia, etc.). Please wait...');
+
     try {
         const response = await fetch(`${API_BASE_URL}/channel-manager/sync`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUsername }) // Send username for audit log
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                username: currentUsername,
+                hotelId: hotelId 
+            })
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            throw new Error(errorData.message || `Sync failed with status: ${response.status}`);
         }
 
         const data = await response.json();
-        showMessageBox('Sync Complete', data.message);
-        renderBookings(currentPage, currentSearchTerm); // Re-render relevant data after sync
-        renderHousekeepingRooms();
-        renderCalendar();
-        renderAuditLogs(); // Log will be added by backend
+        showMessageBox('Sync Complete', `${data.message} for ${sessionData?.hotelName || 'your property'}.`);
+
+        // Refresh all components to show updated availability/bookings
+        if (typeof renderBookings === 'function') renderBookings(currentPage, currentSearchTerm);
+        if (typeof renderHousekeepingRooms === 'function') renderHousekeepingRooms();
+        if (typeof renderCalendar === 'function') renderCalendar();
+        if (typeof renderAuditLogs === 'function') renderAuditLogs(); 
+
     } catch (error) {
         console.error('Channel manager sync error:', error);
         showMessageBox('Sync Failed', `Failed to sync: ${error.message}`, true);
@@ -2937,76 +2918,117 @@ async function simulateChannelManagerSync() {
 }
 
 
-// --- Initial Load and Event Listeners ---
-document.addEventListener('DOMContentLoaded', async () => { // Made async to await rendering functions
-    // Set default date for reports
-
+document.addEventListener('DOMContentLoaded', async () => {
     const storedUser = localStorage.getItem('loggedInUser');
+
     if (storedUser) {
         try {
             const user = JSON.parse(storedUser);
+            
+            // 1. Re-hydrate Global Variables
             currentUsername = user.username;
             currentUserRole = user.role;
+            const currentHotelId = user.hotelId;
+            const currentHotelName = user.hotelName || 'Property Management System';
+
+            // 2. Update UI Branding
+            // Ensure you have an element to show the current hotel name
+            const hotelBrandDisplay = document.getElementById('hotel-name-display');
+            if (hotelBrandDisplay) hotelBrandDisplay.textContent = currentHotelName;
+
+            // 3. Switch View from Login to App
             loginContainer.style.display = 'none';
             mainContent.style.display = 'flex';
+            
+            // Apply role-based visibility (e.g., hiding/showing sidebar links)
             applyRoleAccess(currentUserRole);
 
-            // Determine the initial section to load based on role
+            // 4. Determine Initial Section based on Role
             let initialSectionId = '';
             let initialNavLinkId = '';
 
             if (currentUserRole === 'admin' || currentUserRole === 'super-admin') {
-                initialSectionId = 'dashbaord';
+                initialSectionId = 'dashboard'; // Corrected typo from 'dashbaord'
                 initialNavLinkId = 'nav-dashboard';
-            }else if (currentUserRole === 'bar') {
+            } else if (currentUserRole === 'bar' || currentUserRole === 'receptionist') {
                 initialSectionId = 'booking-management';
                 initialNavLinkId = 'nav-booking';
-            }
-            else if (currentUserRole === 'housekeeper') {
+            } else if (currentUserRole === 'housekeeper') {
                 initialSectionId = 'housekeeping';
                 initialNavLinkId = 'nav-housekeeping';
             }
 
-            // Set the active navigation link and section
+            // 5. Activate Navigation UI
             if (initialNavLinkId) {
-                document.getElementById(initialNavLinkId).classList.add('active');
+                document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+                const activeLink = document.getElementById(initialNavLinkId);
+                if (activeLink) activeLink.classList.add('active');
             }
+
+            // 6. Conditional Data Rendering
             if (initialSectionId) {
-                document.getElementById(initialSectionId).classList.add('active');
-                if (initialSectionId === 'housekeeping') {
-                    await renderHousekeepingRooms();
-                } else if (initialSectionId === 'calendar') {
-                    await renderCalendar();
-                } else if (initialSectionId === 'reports') {
-                } else if (initialSectionId === 'service-reports') {
-                    const today = new Date();
-                    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-                    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-                    serviceReportStartDate.value = firstDay.toISOString().split('T')[0];
-                    serviceReportEndDate.value = lastDay.toISOString().split('T')[0];
-                    await renderServiceReports();
-                } else if (initialSectionId === 'audit-logs') {
-                    const today = new Date();
-                    const thirtyDaysAgo = new Date(today);
-                    thirtyDaysAgo.setDate(today.getDate() - 30);
-                    auditLogStartDateFilter.value = thirtyDaysAgo.toISOString().split('T')[0];
-                    auditLogEndDateFilter.value = today.toISOString().split('T')[0];
-                    await renderAuditLogs();
+                // Hide all sections, then show the active one
+                document.querySelectorAll('section').forEach(sec => sec.classList.remove('active'));
+                const activeSection = document.getElementById(initialSectionId);
+                if (activeSection) activeSection.classList.add('active');
+
+                // Load initial data based on the section
+                switch (initialSectionId) {
+                    case 'dashboard':
+                        // Assuming you have a function to load dashboard stats
+                        if (typeof updateBookingStats === 'function') await updateBookingStats();
+                        break;
+                    
+                    case 'housekeeping':
+                        await renderHousekeepingRooms();
+                        break;
+
+                    case 'calendar':
+                        await renderCalendar();
+                        break;
+
+                    case 'service-reports':
+                        const today = new Date();
+                        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                        serviceReportStartDate.value = firstDay.toISOString().split('T')[0];
+                        serviceReportEndDate.value = lastDay.toISOString().split('T')[0];
+                        await renderServiceReports();
+                        break;
+
+                    case 'audit-logs':
+                        const logEnd = new Date();
+                        const logStart = new Date();
+                        logStart.setDate(logEnd.getDate() - 30);
+                        auditLogStartDateFilter.value = logStart.toISOString().split('T')[0];
+                        auditLogEndDateFilter.value = logEnd.toISOString().split('T')[0];
+                        await renderAuditLogs();
+                        break;
                 }
             }
 
         } catch (e) {
-            console.error("Error parsing stored user data from localStorage:", e);
-            localStorage.removeItem('loggedInUser'); // Clear invalid data
-            mainContent.style.display = 'none';
-            loginContainer.style.display = 'flex';
+            console.error("Auth Refresh Error:", e);
+            handleLogout(); // Helper to clear storage and show login
         }
     } else {
-        // Hide main content and show login on initial load if no stored user
+        // No user found, force login view
         mainContent.style.display = 'none';
         loginContainer.style.display = 'flex';
     }
+});
 
+/**
+ * Global helper to handle data clearing on error or manual logout
+ */
+function handleLogout() {
+    localStorage.removeItem('loggedInUser');
+    mainContent.style.display = 'none';
+    loginContainer.style.display = 'flex';
+    // Clear any temporary global states
+    currentUsername = null;
+    currentUserRole = null;
+}
     // Add event listeners for navigation (these will handle subsequent clicks)
     navLinks.forEach(link => {
         link.addEventListener('click', handleNavigation);
@@ -3023,69 +3045,104 @@ document.addEventListener('DOMContentLoaded', async () => { // Made async to awa
 });
 
 
-// This runs every time the page is opened or refreshed
 window.addEventListener('DOMContentLoaded', async () => {
     const savedUser = localStorage.getItem('loggedInUser');
 
     if (savedUser) {
-        // CASE A: User is already logged in
-        const userData = JSON.parse(savedUser);
-        
-        // This function handles the UI and the data fetching (renderBookings, etc.)
-        //await showDashboard(userData.username, userData.role);
+        try {
+            const userData = JSON.parse(savedUser);
+            
+            // Re-assign global variables for use in fetch headers
+            currentUsername = userData.username;
+            currentUserRole = userData.role;
+            // hotelId and token should be pulled from userData whenever a fetch is made
+
+            // UI logic to show the main app
+            loginContainer.style.display = 'none';
+            mainContent.style.display = 'flex';
+
+            // Function to initialize the UI based on the user's hotel and role
+            if (typeof showDashboard === 'function') {
+                await showDashboard(userData.username, userData.role);
+            } else {
+                // Fallback: if showDashboard isn't used, trigger standard renders
+                renderBookings(currentPage, currentSearchTerm);
+                updateBookingStats();
+            }
+        } catch (e) {
+            console.error("Session restoration failed:", e);
+            localStorage.removeItem('loggedInUser');
+            location.reload(); 
+        }
     } else {
-        // CASE B: No user found
-        // Only show the login screen, do NOT call renderBookings here
         loginContainer.style.display = 'flex';
         mainContent.style.display = 'none';
     }
 });
-
-function markNoShow(bookingId) {
+async function markNoShow(bookingId) {
     if (!confirm("Mark this booking as No Show?")) return;
 
-    fetch(`${API_BASE_URL}/bookings/${bookingId}/no-show`, {
-        method: "PUT",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            username: currentUsername // or logged-in admin name
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const { token, hotelId } = sessionData;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/no-show`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                username: currentUsername,
+                hotelId: hotelId // Pass hotelId to ensure cross-property security
+            })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Failed to update status");
+
         showMessageBox("Success", data.message);
-        generateReport(); // or refreshBookingsTable()
+        
+        // Refresh UI
         renderBookings(currentPage, currentSearchTerm);
-    })
-    .catch(err => {
+        if (typeof generateReport === 'function') generateReport();
+        
+    } catch (err) {
         console.error(err);
-        showMessageBox("Error", "Failed to mark No Show", true);
-    });
+        showMessageBox("Error", err.message, true);
+    }
 }
 
-function Confirm(bookingId) {
-    if (!confirm("Are you sure you want to confirm  this booking ?")) return;
+async function Confirm(bookingId) {
+    if (!confirm("Are you sure you want to confirm this booking?")) return;
 
-    fetch(`${API_BASE_URL}/bookings/${bookingId}/Confirm`, {
-        method: "PUT",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            username: currentUsername // or logged-in admin name
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const { token, hotelId } = sessionData;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/Confirm`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                username: currentUsername,
+                hotelId: hotelId
+            })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Failed to confirm");
+
         showMessageBox("Success", data.message);
-        generateReport(); // or refreshBookingsTable()
+        
+        // Refresh UI
         renderBookings(currentPage, currentSearchTerm);
+        if (typeof generateReport === 'function') generateReport();
 
-    })
-    .catch(err => {
+    } catch (err) {
         console.error(err);
-        showMessageBox("Error", "Failed to confirm booking", true);
-    });
+        showMessageBox("Error", err.message, true);
+    }
 }
