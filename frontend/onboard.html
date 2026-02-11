@@ -136,7 +136,7 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    statusMsg.innerText = `Success! New Hotel Admin: admin_${formData.name.toLowerCase().replace(/\s/g, '')}`;
+                    statusMsg.innerText = `Success! New Hotel Admin: admin ${formData.name.toLowerCase().replace(/\s/g, '')}`;
                     statusMsg.className = "p-4 rounded-md bg-green-100 text-green-800 block";
                     document.getElementById('onboardForm').reset();
                 } else {
