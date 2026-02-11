@@ -286,6 +286,7 @@ function showSubSection(sectionId, parentNavId = null) {
 
     // --- Role-based Access Check ---
     const allowedSections = {
+        'super-admin': ['inventory', 'sales', 'expenses', 'cash', 'reports', 'audit','dashboard','kds','postransactions'],
         'admin': ['inventory', 'sales', 'expenses', 'cash', 'reports', 'audit','dashboard','kds','postransactions'],
         'manager': ['inventory', 'sales', 'expenses', 'cash', 'reports', 'audit','kds','postransactions'],
         'cashier': ['inventory', 'sales', 'expenses', 'cash','kds','postransactions'],
@@ -296,7 +297,7 @@ function showSubSection(sectionId, parentNavId = null) {
 
     if (currentUserRole && !allowedSections[currentUserRole]?.includes(checkSectionId)) {
         // ... (Your existing redirection/access denial logic)
-        const fullAccessRoles = ['admin'];
+        const fullAccessRoles = ['admin','super-admin'];
         if (fullAccessRoles.includes(currentUserRole)) {
         } else if (currentUserRole === 'bar' ) {
             showSubSection('sales-new', 'nav-sales'); 
@@ -421,7 +422,7 @@ function initSidebarState() {
 function updateUIForUserRole() {
     // MAPPING FIX: Confirmed all 6 main nav items for full-access roles.
     const rolePermissions = {
-        'Nachwera Richard': ['nav-inventory', 'nav-sales', 'nav-expenses', 'nav-cash-management', 'nav-reports', 'nav-audit-logs','nav-dashboard'],
+        'super-admin': ['nav-inventory', 'nav-sales', 'nav-expenses', 'nav-cash-management', 'nav-reports', 'nav-audit-logs','nav-dashboard'],
         'admin': ['nav-inventory', 'nav-sales', 'nav-expenses', 'nav-cash-management', 'nav-reports', 'nav-audit-logs','nav-dashboard'],
         'Florence': ['nav-inventory', 'nav-sales', 'nav-expenses', 'nav-cash-management', 'nav-reports', 'nav-audit-logs'],
         'Martha': ['nav-inventory', 'nav-sales', 'nav-expenses', 'nav-cash-management'],
@@ -877,7 +878,7 @@ function renderInventoryTable(inventory) {
         actionsCell.className = 'actions px-6 py-4 whitespace-nowrap text-sm font-medium';
         actionsCell.className = 'actions relative py-3 px-4'; // Add relative for positioning
 
-        const adminRoles = ['admin'];
+        const adminRoles = ['admin','super-admin'];
 
         if (adminRoles.includes(currentUserRole) && item._id) {
                 // 1. Create Container for the dropdown
@@ -1002,7 +1003,7 @@ async function submitInventoryForm(event) {
  * LOGIC: Create New Item (POST)
  */
 async function createNewItem() {
-    if (!['admin', 'manager', 'cashier', 'bar'].includes(currentUserRole)) {
+    if (!['admin', 'manager','super-admin', 'cashier', 'bar'].includes(currentUserRole)) {
         return showMessage('Permission Denied', 'You do not have permission to add inventory.', true);
     }
 
@@ -1045,7 +1046,7 @@ async function createNewItem() {
  * LOGIC: Update Existing Item (PUT)
  */
 async function updateExistingItem(id) {
-    if (currentUserRole !== 'admin') {
+    if (currentUserRole !== 'admin' || currentUserRole !== 'super-admin') {
         return showMessage('Only administrators can edit inventory.');
     }
 
@@ -1262,7 +1263,7 @@ function renderSalesTable(sales) {
         row.insertCell().textContent = new Date(sale.date).toLocaleDateString();
         
         const actionsCell = row.insertCell();
-        if (['admin'].includes(currentUserRole)) {
+        if (['admin','super-admin'].includes(currentUserRole)) {
             const editBtn = document.createElement('button');
             editBtn.textContent = 'Edit';
             editBtn.className = 'bg-blue-500 text-white py-1 px-2 rounded text-xs';
@@ -1321,7 +1322,7 @@ function showConfirm(message, onConfirm, onCancel = null) {
 }
 
 async function deleteSale(id) {
-    const adminRoles = ['admin'];
+    const adminRoles = ['admin','super-admin'];
     if (!adminRoles.includes(currentUserRole)) {
         showMessage('Permission Denied: Only administrators can delete sales records.');
         return;
@@ -1352,7 +1353,7 @@ async function submitSaleForm(event) {
     const submitButton = document.querySelector('#sale-form button[type="submit"]');
     const originalButtonText = submitButton.innerHTML;
 
-    const allowedToRecordSales = ['cashier', 'manager', 'bar', 'admin'];
+    const allowedToRecordSales = ['cashier', 'manager', 'bar', super-admin','admin'];
     if (!allowedToRecordSales.includes(currentUserRole)) {
         showMessage('Permission Denied: You do not have permission to record sales.');
         return;
@@ -1415,7 +1416,7 @@ async function submitSaleForm(event) {
         let successMessage;
 
         if (id) {
-            const adminRoles = ['admin'];
+            const adminRoles = ['admin','super-admin'];
             if (!adminRoles.includes(currentUserRole)) {
                 showMessage('Permission Denied: Only administrators can edit sales.');
                 return;
@@ -1774,7 +1775,7 @@ function renderExpensesTable(expenses) {
         const actionsCell = row.insertCell();
         actionsCell.className = 'actions';
 
-        const adminRoles = [ 'admin'];
+        const adminRoles = [ 'admin','super-admin'];
         // Only administrators can edit expenses
         if (adminRoles.includes(currentUserRole)) {
             const editButton = document.createElement('button');
@@ -1919,7 +1920,7 @@ function setEditButtonLoading(isLoading) {
 async function submitEditExpenseForm(event) {
     event.preventDefault();
 
-    const adminRoles = ['admin'];
+    const adminRoles = ['admin','super-admin'];
     if (!adminRoles.includes(currentUserRole)) {
         showMessage('Permission Denied: Only administrators can edit expenses.');
         return;
@@ -1982,7 +1983,7 @@ async function submitExpenseForm(event) {
         return;
     }
 
-    const allowedToRecordExpenses = ['manager', 'cashier', 'admin', 'bar'];
+    const allowedToRecordExpenses = ['manager', 'cashier', 'admin','super-admin', 'bar'];
     if (!allowedToRecordExpenses.includes(currentUserRole)) {
         showMessage('Permission Denied: You do not have permission to record expenses.');
         return;
@@ -2029,7 +2030,7 @@ async function submitExpenseForm(event) {
 
         if (id) {
             // Edit operation (PUT)
-            const adminRoles = [ 'admin'];
+            const adminRoles = [ 'admin','super-admin'];
             if (!adminRoles.includes(currentUserRole)) {
                 showMessage('Permission Denied: Only administrators can edit expenses.');
                 // Revert button on permission fail
@@ -2234,7 +2235,7 @@ function updateCashSearchButton(text, iconClass) {
         const actionsCell = row.insertCell();
         actionsCell.className = 'actions';
 
-        const adminRoles = ['admin'];
+        const adminRoles = ['admin','super-admin'];
         if (adminRoles.includes(currentUserRole)) { 
             const editButton = document.createElement('button');
             editButton.textContent = 'Edit';
@@ -2279,7 +2280,7 @@ async function submitEditCashForm(event) {
     const modal = document.getElementById('edit-cash-modal');
     
     // The existing adminRoles check from your original submitCashJournalForm for editing
-    const adminRoles = ['admin'];
+    const adminRoles = ['admin','super-admin'];
     if (!adminRoles.includes(currentUserRole)) {
         showMessage('Permission Denied: Only administrators can edit cash entries.');
         return;
