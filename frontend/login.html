@@ -3,115 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hotel Systems Login</title>
+    <title>Hotel Systems Login | Patrinah</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .login-bg {
-            background-image: url('https://images.unsplash.com/photo-1549488349-e09b9f1d8c06?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
+            background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1549488349-e09b9f1d8c06?q=80&w=2670&auto=format&fit=crop');
             background-size: cover;
             background-position: center;
         }
     </style>
 </head>
-<body class="min-h-screen login-bg flex items-center justify-center p-4">
-    <div id="auth-container" class="w-full max-w-md bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-8 transition-all duration-500">
+<body class="min-h-screen login-bg flex items-center justify-center p-4 font-sans">
+    <div id="auth-container" class="w-full max-w-md bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 transition-all duration-500 border border-white/20">
     
     <div class="text-center mb-8">
-        <div class="mx-auto h-40 w-40 flex items-center justify-center mb-2">
-            <img
-                src="/novuscloud.png"
-                alt="Patrinah Hotel Logo"
-                class="h-auto max-h-32 w-auto object-contain transition-transform duration-300 hover:scale-105"
-            />
+        <div class="mx-auto h-32 w-32 flex items-center justify-center mb-4">
+            <img src="/novuscloud.png" alt="Logo" class="max-h-full w-auto object-contain transition-transform hover:scale-105" />
         </div>
-        
-        <h1 class="text-3xl font-extrabold text-gray-900">System Access</h1>
-        <p id="welcome-text" class="text-sm text-gray-600">Enter your credentials to continue</p>
+        <h1 class="text-2xl font-bold text-slate-800">Property Access</h1>
+        <p id="welcome-text" class="text-xs uppercase tracking-widest text-slate-500 mt-1">Managed Luxury Systems</p>
     </div>
 
-    <form id="login-form" class="space-y-6">
+    <form id="login-form" class="space-y-5">
         <div>
-            <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Username</label>
             <input type="text" id="username" required 
-                   class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
-                   placeholder="e.g., admin or Nelson">
+                   class="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition" 
+                   placeholder="e.g. grandplaza">
         </div>
 
         <div>
-            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Password</label>
             <input type="password" id="password" required 
-                   class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
+                   class="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition" 
                    placeholder="********">
         </div>
         
-        <div id="error-message" class="text-red-600 text-sm hidden font-medium"></div>
+        <div id="error-message" class="text-red-500 text-sm hidden text-center italic"></div>
 
         <button type="submit" id="login-button" 
-                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150">
-            Log In
+                class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 active:scale-95 transition duration-150">
+            Secure Entry
         </button>
     </form>
 
     <div id="system-selection" class="hidden text-center space-y-4">
-        <h2 class="text-xl font-bold text-gray-900 mb-4">Select Module</h2>
-        <div id="system-options" class="grid grid-cols-1 gap-4"></div>
+        <h2 class="text-xl font-bold text-slate-800 mb-2">Select Department</h2>
+        <p class="text-sm text-slate-500 mb-6" id="hotel-display-name"></p>
+        <div id="system-options" class="grid grid-cols-1 gap-3"></div>
         <button id="logout-button" 
-                class="mt-6 w-full py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition duration-150">
-            Log Out
+                class="mt-6 w-full py-2 text-xs font-bold text-slate-400 hover:text-red-500 transition">
+            Terminal Logout
         </button>
     </div>
 </div>
 
-    <script>
-        const API_A_URL = 'https://patrinahhotelmgtsys.onrender.com';
-const API_B_URL = 'https://patrinahhotelpms.onrender.com/api';
+<script>
+    const API_A_URL = 'https://patrinahhotelmgtsys.onrender.com';
+    const API_B_URL = 'https://patrinahhotelpms.onrender.com/api';
 
-const SYSTEM_LINKS = {
-    systemA: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html',
-    systemB: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html',
-    systemC: 'https://elegant-pasca-cea136.netlify.app/frontend/kitchen.html',
-    systemD: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html',
-};
+    const SYSTEM_LINKS = {
+        systemA: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html',
+        systemB: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html',
+        systemC: 'https://elegant-pasca-cea136.netlify.app/frontend/kitchen.html',
+        systemD: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html',
+    };
 
-document.addEventListener('DOMContentLoaded', () => {
-    const loginForm = document.getElementById('login-form');
-    const systemSelection = document.getElementById('system-selection');
-    const systemOptions = document.getElementById('system-options');
-    const errorMessage = document.getElementById('error-message');
-    const loginButton = document.getElementById('login-button');
-    const authContainer = document.getElementById('auth-container');
-
-    // This variable will hold the role globally within this script
-    let sessionRole = ""; 
+    let sessionRole = "";
+    let sessionHotelId = "";
 
     const finalizeLogin = (systemData, systemKey) => {
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
-    
-    // Save to LocalStorage
-    localStorage.setItem('authToken', systemData.token);
-    localStorage.setItem('userPassword', password);
-    localStorage.setItem('username', username);
-    localStorage.setItem('userRole', sessionRole); 
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+        
+        // Save Crucial Data for the subsystems
+        localStorage.setItem('authToken', systemData.token);
+        localStorage.setItem('username', username);
+        localStorage.setItem('userRole', sessionRole);
+        localStorage.setItem('hotelId', sessionHotelId);
 
-    const targetUrl = SYSTEM_LINKS[systemKey];
-    
-    // Added &r= parameter to pass the role to the first department
-    window.location.replace(`${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}&r=${encodeURIComponent(sessionRole)}`);
-};
+        const targetUrl = SYSTEM_LINKS[systemKey];
+        // Pass credentials and hotel context via URL
+        window.location.replace(`${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}&r=${encodeURIComponent(sessionRole)}&h=${encodeURIComponent(sessionHotelId)}`);
+    };
+
     const createBtn = (label, color, onClickAction) => {
         const btn = document.createElement('button');
-        btn.className = `w-full py-4 px-4 rounded-lg shadow-md text-white font-bold transition transform hover:scale-[1.02] ${color}`;
+        btn.className = `w-full py-4 rounded-xl shadow-md text-white font-bold transition transform hover:translate-y-[-2px] ${color}`;
         btn.textContent = label;
         btn.onclick = onClickAction;
         return btn;
     };
 
-    loginForm.addEventListener('submit', async (e) => {
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        loginButton.disabled = true;
-        loginButton.textContent = 'Verifying...';
-        errorMessage.classList.add('hidden');
+        const btn = document.getElementById('login-button');
+        const err = document.getElementById('error-message');
+        btn.disabled = true;
+        btn.textContent = 'Authenticating...';
+        err.classList.add('hidden');
 
         const username = document.getElementById('username').value.trim();
         const password = document.getElementById('password').value.trim();
@@ -122,52 +112,59 @@ document.addEventListener('DOMContentLoaded', () => {
                     const res = await fetch(`${url}/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username, password })
+                        // Now the backend finds the hotel based on the unique username!
+                        body: JSON.stringify({ username, password }) 
                     });
                     return res.ok ? await res.json() : null;
                 } catch { return null; }
             };
 
-            const [resA, resB,resC] = await Promise.all([loginReq(API_A_URL), loginReq(API_B_URL)]);
-            const userData = resA || resB ||resC  ;
+            // Checking both APIs for the user
+            const [resA, resB] = await Promise.all([loginReq(API_A_URL), loginReq(API_B_URL)]);
+            const userData = resA || resB;
 
             if (userData) {
-                // Determine the role and save it to our global sessionRole variable
-                sessionRole = (userData.role || (userData.user && userData.user.role) || '').toLowerCase();
+                // Handling different response structures from your two APIs
+                const user = userData.user || userData;
+                sessionRole = (user.role || '').toLowerCase();
+                sessionHotelId = user.hotelId || "";
+
+                document.getElementById('login-form').classList.add('hidden');
+                document.getElementById('system-selection').classList.remove('hidden');
+                document.getElementById('auth-container').classList.replace('max-w-md', 'max-w-lg');
+                document.getElementById('welcome-text').classList.add('hidden');
                 
-                loginForm.classList.add('hidden');
-                systemSelection.classList.remove('hidden');
-                authContainer.classList.replace('max-w-md', 'max-w-lg');
-                systemOptions.innerHTML = '';
-                document.getElementById('welcome-text').style.display = 'none';
-                // Generate buttons based on the sessionRole
+                const options = document.getElementById('system-options');
+                options.innerHTML = '';
+
+                // Role-based Module Access
                 if (sessionRole === 'admin') {
-                    systemOptions.appendChild(createBtn('Bar & Restaurant', 'bg-green-600 hover:bg-green-700', () => finalizeLogin(resA || userData, 'systemA')));
-                    systemOptions.appendChild(createBtn('Front Office & Housekeeping', 'bg-blue-600 hover:bg-blue-700', () => finalizeLogin(resB || userData, 'systemB')));
-                    systemOptions.appendChild(createBtn('Kitchen Display System', 'bg-orange-600 hover:bg-orange-700', () => finalizeLogin(resC || userData, 'systemC')));
-                    systemOptions.appendChild(createBtn('Staff Management', 'bg-purple-600 hover:bg-purple-700', () => finalizeLogin(userData , 'systemD')));
+                    options.appendChild(createBtn('Bar & Restaurant', 'bg-emerald-600', () => finalizeLogin(userData, 'systemA')));
+                    options.appendChild(createBtn('Front Office & Housekeeping', 'bg-indigo-600', () => finalizeLogin(userData, 'systemB')));
+                    options.appendChild(createBtn('Kitchen Display System', 'bg-amber-600', () => finalizeLogin(userData, 'systemC')));
+                    options.appendChild(createBtn('Staff Management', 'bg-slate-800', () => finalizeLogin(userData, 'systemD')));
                 } 
-                else if (sessionRole === 'bar' || sessionRole === 'cashier') {
-                    systemOptions.appendChild(createBtn('Bar & Restaurant', 'bg-green-600 hover:bg-green-700', () => finalizeLogin(resA || userData, 'systemA')));
+                else if (['bar', 'cashier', 'waiter'].includes(sessionRole)) {
+                    options.appendChild(createBtn('Bar & Restaurant', 'bg-emerald-600', () => finalizeLogin(userData, 'systemA')));
                 } 
-                else if (sessionRole === 'housekeeping' || sessionRole === 'reception') {
-                    systemOptions.appendChild(createBtn('Front Office & Housekeeping', 'bg-blue-600 hover:bg-blue-700', () => finalizeLogin(resB || userData, 'systemB')));
-                } 
+                else if (['housekeeping', 'reception', 'frontoffice'].includes(sessionRole)) {
+                    options.appendChild(createBtn('Front Office', 'bg-indigo-600', () => finalizeLogin(userData, 'systemB')));
+                }
                 else {
-                    errorMessage.textContent = 'Role (' + sessionRole + ') not recognized. Contact admin.';
-                    errorMessage.classList.remove('hidden');
+                    err.textContent = `Access restricted for role: ${sessionRole}`;
+                    err.classList.remove('hidden');
+                    setTimeout(() => location.reload(), 3000);
                 }
             } else {
-                errorMessage.textContent = 'Invalid credentials.';
-                errorMessage.classList.remove('hidden');
+                err.textContent = 'Invalid property credentials.';
+                err.classList.remove('hidden');
             }
-        } catch (err) {
-            console.error(err);
-            errorMessage.textContent = 'Connection error.';
-            errorMessage.classList.remove('hidden');
+        } catch (error) {
+            err.textContent = 'System offline. Please retry.';
+            err.classList.remove('hidden');
         } finally {
-            loginButton.disabled = false;
-            loginButton.textContent = 'Log In';
+            btn.disabled = false;
+            btn.textContent = 'Log In';
         }
     });
 
@@ -175,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.clear();
         location.reload();
     };
-});
-    </script>
+</script>
 </body>
 </html>
