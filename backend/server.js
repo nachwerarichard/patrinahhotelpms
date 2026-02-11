@@ -13,7 +13,6 @@ const app = express();
 // 2. Configure CORS middleware - IMPORTANT: place this BEFORE your routes
 
 // 1. npm install cors (run this in your backend terminal)
-const cors = require('cors');
 
 // 2. Add this BEFORE your routes
 app.use(cors({
