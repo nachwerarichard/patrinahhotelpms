@@ -571,39 +571,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 async function logout() {
+    const savedUserData = localStorage.getItem('loggedInUser');
+    let token = '';
+
+    if (savedUserData) {
+        const user = JSON.parse(savedUserData);
+        token = user.token;
+    }
+
     try {
-        // 1. Notify backend (using the token before we wipe it)
-        if (authToken) {
+        // 1. Notify backend with the current Bearer token
+        if (token) {
             await fetch(`${API_BASE_URL}/logout`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Basic ${authToken}`,
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
         }
     } catch (error) {
-        // Log the error but continue with local logout anyway
-        console.warn('Backend logout failed or endpoint missing:', error);
+        console.warn('Backend session could not be closed:', error);
     }
 
-    // 2. Wipe local in-memory state
+    // 2. Clear Global State
     authToken = '';
     currentUsername = '';
     currentUserRole = '';
 
-    // 3. Clear all stored data (Tokens, Roles, Flags)
-    localStorage.clear();
+    // 3. Clear Local Storage
+    localStorage.removeItem('loggedInUser');
+    // Clear legacy keys if they exist
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('username');
+    localStorage.removeItem('userRole');
 
     // 4. Secure Redirect
-    // Using .replace() removes the current page from history so 
-    // the user cannot click "Back" to see the dashboard.
-    console.log("Logout successful. Redirecting...");
+    console.log("Redirecting to login...");
     window.location.replace('https://elegant-pasca-cea136.netlify.app/frontend/login.html');
 }
-
-
 async function fetchInventory() {
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelId = sessionData?.hotelId;
+
+    if (!hotelId) {
+        showMessage('Error: No hotel context found. Please log in again.', true);
+        return;
+    }
+
     // 1. UI Loading State
     updateSearchButton('Searching', 'fas fa-spinner fa-spin'); 
 
@@ -611,25 +626,24 @@ async function fetchInventory() {
         const itemFilterInput = document.getElementById('search-inventory-item');
         const dateFilterInput = document.getElementById('search-inventory-date');
         
-        // This gets the item name from your search box
         const itemFilter = itemFilterInput ? itemFilterInput.value.trim() : '';
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
 
-        let url = `${API_BASE_URL}/inventory`;
+        // 2. Build Multi-Tenant Query Params
         const params = new URLSearchParams();
+        params.append('hotelId', hotelId); // CRITICAL: Only get stock for THIS hotel
         
-        // 2. Attach the filters to the URL
         if (itemFilter) params.append('item', itemFilter);
         if (dateFilter) params.append('date', dateFilter); 
         
-        // Only paginate if we aren't looking at a specific full-day report
         if (!dateFilter) {
             params.append('page', currentPage);
             params.append('limit', itemsPerPage);
         }
 
-        url += `?${params.toString()}`;
+        const url = `${API_BASE_URL}/inventory?${params.toString()}`;
 
+        // 3. Use your authenticatedFetch wrapper
         const response = await authenticatedFetch(url);
 
         if (!response || !response.ok) {
@@ -639,22 +653,20 @@ async function fetchInventory() {
 
         const result = await response.json(); 
 
-        // 3. Handle Data Assignment
-        let inventoryData; 
+        // 4. Data Assignment
+        let inventoryData = dateFilter ? (result.report || []) : (result.data || []);
+        
+        // Handle Pagination UI
         if (dateFilter) {
-            // When a date is picked, the backend sends 'report'
-            inventoryData = result.report || [];
             renderPagination(1, 1);
         } else {
-            // When searching by item/global, the backend sends 'data'
-            inventoryData = result.data || [];
             renderPagination(result.page, result.pages);
         }
 
-        // 4. Render the table (The backend already grouped these to prevent repetition)
+        // 5. Render Table
         renderInventoryTable(inventoryData);
 
-        // 5. Success UI Update
+        // 6. Final UI State
         if (inventoryData.length === 0) {
             updateSearchButton('No Results', 'fas fa-exclamation-circle');
         } else {
@@ -666,12 +678,11 @@ async function fetchInventory() {
         }, 2000); 
 
     } catch (error) {
-        console.error('Error fetching inventory:', error);
-        showMessage('Failed to fetch inventory: ' + error.message);
+        console.error('Inventory Fetch Error:', error);
+        showMessage('Error loading inventory: ' + error.message, true);
         updateSearchButton('Search', 'fas fa-search');
     }
 }
-
 function renderPagination(current, totalPages) {
     const container = document.getElementById('pagination');
     if (!container) return;
@@ -763,8 +774,8 @@ function openAdjustModal(item) {
     document.getElementById('edit-sellingprice').value = item.sellingprice || 0;
     document.getElementById('edit-trackInventory').checked = !!item.trackInventory;
 
-    // 2. Set Read-Only logic
-    const allInputIds = [
+    // 2. Set Read-Only logic for Adjustment mode
+    const lockedIds = [
         'edit-item', 
         'edit-opening', 
         'edit-inventory-sales', 
@@ -772,8 +783,7 @@ function openAdjustModal(item) {
         'edit-sellingprice'
     ];
     
-    // Lock these fields and change their background to show they are disabled
-    allInputIds.forEach(id => {
+    lockedIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.readOnly = true;
@@ -781,15 +791,18 @@ function openAdjustModal(item) {
         }
     });
 
-    // Disable the checkbox specifically
     const trackCheckbox = document.getElementById('edit-trackInventory');
     if (trackCheckbox) trackCheckbox.disabled = true;
 
-    // 3. Keep these EDITABLE
-    // Purchases and Spoilage remain white and interactive
-    document.getElementById('edit-purchases').focus(); 
+    // 3. Keep Purchases and Spoilage EDITABLE
+    const purchaseInput = document.getElementById('edit-purchases');
+    if (purchaseInput) {
+        purchaseInput.readOnly = false;
+        purchaseInput.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+        purchaseInput.focus();
+    }
 
-    // 4. Update UI
+    // 4. Update UI Title
     const title = modal.querySelector('h2');
     if (title) title.textContent = `Adjust Stock: ${item.item}`;
     
@@ -804,17 +817,8 @@ function closeEditModal() {
     modal.classList.add('hidden');
     modal.style.display = 'none';
 
-    // UNLOCK all fields for the next time
-    const allInputIds = [
-        'edit-item', 
-        'edit-opening', 
-        'edit-purchases',
-        'edit-inventory-sales', 
-        'edit-spoilage',
-        'edit-buyingprice', 
-        'edit-sellingprice'
-    ];
-
+    // UNLOCK all fields for the next standard "Edit" operation
+    const allInputIds = ['edit-item', 'edit-opening', 'edit-purchases', 'edit-inventory-sales', 'edit-spoilage', 'edit-buyingprice', 'edit-sellingprice'];
     allInputIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -826,20 +830,20 @@ function closeEditModal() {
     const trackCheckbox = document.getElementById('edit-trackInventory');
     if (trackCheckbox) trackCheckbox.disabled = false;
 }
-
-// Add this to your initialization code
-document.getElementById('edit-inventory-form').addEventListener('submit', handleUpdateSubmit);
-
 async function handleUpdateSubmit(event) {
     event.preventDefault();
 
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelId = sessionData?.hotelId;
     const id = document.getElementById('edit-inventory-id').value;
+    
     const submitBtn = document.getElementById('edit-inventory-submit-btn');
     const defaultText = document.getElementById('edit-inventory-btn-default');
     const loadingText = document.getElementById('edit-inventory-btn-loading');
 
-    // Gather Data
+    // Gather Data + Inject Hotel Identity
     const inventoryData = {
+        hotelId: hotelId, // CRITICAL: Identify which hotel this stock belongs to
         item: document.getElementById('edit-item').value,
         opening: parseInt(document.getElementById('edit-opening').value) || 0,
         purchases: parseInt(document.getElementById('edit-purchases').value) || 0,
@@ -851,10 +855,9 @@ async function handleUpdateSubmit(event) {
     };
 
     try {
-        // UI Loading State
         submitBtn.disabled = true;
         defaultText.classList.add('hidden');
-        loadingText.classList.remove('hidden', 'flex'); 
+        loadingText.classList.remove('hidden');
         loadingText.classList.add('flex');
 
         const response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
@@ -864,138 +867,106 @@ async function handleUpdateSubmit(event) {
         });
 
         if (response.ok) {
-            showMessage('Inventory Updated Successfully! ✅');
+            showMessageBox('Success', 'Stock levels updated successfully! ✅');
             closeEditModal();
-            fetchInventory(); // Refresh the table
+            fetchInventory(); // Refresh list
         } else {
             const error = await response.json();
             throw new Error(error.message || 'Update failed');
         }
     } catch (err) {
-        showMessage('Error: ' + err.message);
+        showMessageBox('Update Error', err.message, true);
     } finally {
-        // Reset Button
         submitBtn.disabled = false;
         defaultText.classList.remove('hidden');
         loadingText.classList.add('hidden');
     }
 }
-// 4. UPDATE renderInventoryTable to call showDeleteModal
 function renderInventoryTable(inventory) {
     const tbody = document.querySelector('#inventory-table tbody');
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    // --- NEW: DYNAMIC HEADER LOGIC ---
     const dateInput = document.getElementById('search-inventory-date');
     const tableHeaders = document.querySelectorAll('#inventory-table thead th');
-    
-    // Get today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0];
-    
-    // Check if selected date is today (or if no date is selected, assuming global view is 'Current')
     const isToday = !dateInput.value || dateInput.value === today;
 
-    if (tableHeaders[5]) { // The 6th column (index 5) is "Closing"
-        tableHeaders[5].textContent = isToday ? 'Current' : 'Closing';
+    if (tableHeaders[5]) { 
+        tableHeaders[5].textContent = isToday ? 'Current Stock' : 'Closing Stock';
     }
-    // --------------------------------
 
-    const filteredInventory = inventory.filter(item => item.item);
-
-    if (filteredInventory.length === 0) {
-        const row = tbody.insertRow();
-        const cell = row.insertCell();
-        cell.colSpan = 9; // Updated to match your 9 columns
-        cell.textContent = 'No inventory items found.';
-        cell.style.textAlign = 'center';
-        cell.className = "py-4 text-gray-500 italic";
+    if (inventory.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-gray-500 italic">No stock records found for this period.</td></tr>`;
         return;
     }
 
-    filteredInventory.forEach(item => {
+    inventory.forEach(item => {
         const row = tbody.insertRow();
-        row.insertCell().textContent = item.item;
-        row.insertCell().textContent = item.opening || 0;
-        row.insertCell().textContent = item.purchases || 0;
-        row.insertCell().textContent = item.sales || 0;
-        row.insertCell().textContent = item.spoilage || 0;
+        row.className = "hover:bg-gray-50 transition-colors border-b border-gray-100";
+        
+        row.innerHTML = `
+            <td class="px-4 py-3 font-medium text-gray-800">${item.item}</td>
+            <td class="px-4 py-3">${item.opening || 0}</td>
+            <td class="px-4 py-3 text-green-600">+${item.purchases || 0}</td>
+            <td class="px-4 py-3 text-blue-600">-${item.sales || 0}</td>
+            <td class="px-4 py-3 text-red-500">-${item.spoilage || 0}</td>
+            <td class="px-4 py-3 font-bold ${isToday ? 'text-indigo-600' : ''}">${item.closing ?? 'N/A'}</td>
+            <td class="px-4 py-3">${Number(item.buyingprice).toLocaleString()}</td>
+            <td class="px-4 py-3">${Number(item.sellingprice).toLocaleString()}</td>
+            <td class="px-4 py-3 text-right" id="actions-${item._id}"></td>
+        `;
 
-        const closingStockCell = row.insertCell();
-        const closing = item.closing;
-
-        if (closing === null) {
-            closingStockCell.textContent = 'N/A';
-            closingStockCell.className = "italic text-gray-400";
-        } else {
-            closingStockCell.textContent = closing;
-            // Optional: Add a subtle highlight if it's "Current" stock
-            if (isToday) {
-                closingStockCell.className = "font-semibold text-blue-600";
-            }
-        }
-
-        row.insertCell().textContent = item.buyingprice;
-        row.insertCell().textContent = item.sellingprice;
-
-        // Actions Cell (simplified for clarity, keeping your logic)
-        const actionsCell = row.insertCell();
-        actionsCell.className = 'actions px-6 py-4 whitespace-nowrap text-sm font-medium';
-        actionsCell.className = 'actions relative py-3 px-4'; // Add relative for positioning
-
-        const adminRoles = ['admin','super-admin'];
+        const actionsCell = row.querySelector(`#actions-${item._id}`);
+        const adminRoles = ['admin', 'super-admin'];
 
         if (adminRoles.includes(currentUserRole) && item._id) {
-                // 1. Create Container for the dropdown
-    const dropdown = document.createElement('div');
-    dropdown.className = 'dropdown-container relative inline-block';
+            const dropdown = document.createElement('div');
+            dropdown.className = 'relative inline-block text-left';
 
-    // 2. Create the Three Dots Button
-    const dotsBtn = document.createElement('button');
-    dotsBtn.innerHTML = '<i class="fas fa-ellipsis-v"></i>'; // FontAwesome dots
-    dotsBtn.className = 'dots-menu-btn p-2 hover:bg-gray-100 rounded-full focus:outline-none';
-    
-    // 3. Create the Action Menu (Hidden by default)
-    const menu = document.createElement('div');
-    menu.className = 'action-menu hidden absolute right-0 bottom-full mb-2 w-32 bg-white border border-gray-200 rounded shadow-lg z-50 flex flex-col p-1';
+            dropdown.innerHTML = `
+                <button class="dots-btn p-2 hover:bg-gray-200 rounded-full transition-all">
+                    <i class="fas fa-ellipsis-h"></i>
+                </button>
+                <div class="menu hidden absolute right-0 bottom-full mb-2 w-40 bg-white border border-gray-200 rounded-lg shadow-xl z-50 py-1">
+                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-indigo-50 text-indigo-700 flex items-center gap-2 edit-opt">
+                        <i class="fas fa-edit"></i> Edit Item
+                    </button>
+                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-amber-50 text-amber-700 flex items-center gap-2 adjust-opt">
+                        <i class="fas fa-plus-circle"></i> Add Stock
+                    </button>
+                    <div class="border-t border-gray-100 my-1"></div>
+                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600 flex items-center gap-2 delete-opt">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            `;
 
-             const editButton = document.createElement('button');
-    editButton.textContent = 'Edit';
-    editButton.className = 'text-left px-3 py-2 text-sm hover:bg-blue-50 text-blue-600 rounded';
-    editButton.onclick = (e) => { e.stopPropagation(); openEditModal(item); };
+            const btn = dropdown.querySelector('.dots-btn');
+            const menu = dropdown.querySelector('.menu');
 
-    const adjustButton = document.createElement('button');
-    adjustButton.textContent = 'Add New Stock';
-    adjustButton.className = 'text-left px-3 py-2 text-sm hover:bg-amber-50 text-amber-600 rounded';
-    adjustButton.onclick = (e) => { e.stopPropagation(); openAdjustModal(item); };
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                document.querySelectorAll('.menu').forEach(m => m !== menu && m.classList.add('hidden'));
+                menu.classList.toggle('hidden');
+            };
 
-    const deleteButton = document.createElement('button');
-    deleteButton.textContent = 'Delete';
-    deleteButton.className = 'text-left px-3 py-2 text-sm hover:bg-red-50 text-red-600 rounded';
-    deleteButton.onclick = (e) => { e.stopPropagation(); showDeleteModal(item._id); };
+            dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
+            dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
+            dropdown.querySelector('.delete-opt').onclick = () => showDeleteModal(item._id);
 
-            menu.appendChild(editButton);
-    menu.appendChild(adjustButton);
-    menu.appendChild(deleteButton);
-    dropdown.appendChild(dotsBtn);
-    dropdown.appendChild(menu);
-    actionsCell.appendChild(dropdown);
-    // Toggle Logic
-    dotsBtn.onclick = (e) => {
-        e.stopPropagation();
-        // Close all other open menus first
-        document.querySelectorAll('.action-menu').forEach(m => {
-            if (m !== menu) m.classList.add('hidden');
-        });
-        menu.classList.toggle('hidden');
-    };
-
+            actionsCell.appendChild(dropdown);
         } else {
-            actionsCell.textContent = 'View Only';
-            actionsCell.className = 'text-gray-400 italic text-xs';
+            actionsCell.innerHTML = `<span class="text-gray-400 text-xs italic">Locked</span>`;
         }
     });
 }
+
+// Global click listener to close dropdowns
+document.addEventListener('click', () => {
+    document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
+});
+
 // Close dropdowns when clicking outside
 window.addEventListener('click', () => {
     document.querySelectorAll('.action-menu').forEach(menu => {
@@ -1003,30 +974,48 @@ window.addEventListener('click', () => {
     });
 });
 
-// 5. deleteInventory function remains the same (it's the final action)
 async function deleteInventory(id) {
-    // This is the core logic that runs after the user confirms in the modal.
+    // 1. Validation
     if (!id || typeof id !== 'string' || id.trim() === '') {
-        showMessage('Error: Cannot delete item. A valid ID was not provided.');
-        console.error('Delete operation aborted: Invalid or missing ID.');
+        showMessageBox('Error', 'Cannot delete item. A valid ID was not provided.', true);
+        return;
+    }
+
+    // 2. Multi-Tenant Verification
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelId = sessionData?.hotelId;
+
+    if (!hotelId) {
+        showMessageBox('Security Error', 'Session context missing. Please log in again.', true);
         return;
     }
 
     try {
+        // 3. Authenticated DELETE Request
+        // We pass the hotelId to ensure the backend only deletes if the item matches the hotel
         const response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hotelId: hotelId }) 
         });
 
-        if (response && response.status === 204) {
-            showMessage('Inventory item deleted successfully!');
+        // 4. Handle Response
+        // Most APIs return 204 (No Content) or 200 (Success) for successful deletions
+        if (response && (response.status === 204 || response.status === 200)) {
+            showMessageBox('Deleted', 'Inventory item has been permanently removed. ✅');
+            
+            // Close the delete confirmation modal if it's open
+            if (typeof hideDeleteModal === 'function') hideDeleteModal();
+            
+            // Refresh the table to reflect changes
             fetchInventory();
         } else if (response) {
             const errorData = await response.json();
-            showMessage('Failed to delete inventory item: ' + errorData.error);
+            throw new Error(errorData.message || errorData.error || 'Unauthorized deletion attempt.');
         }
     } catch (error) {
-        console.error('Error deleting inventory item:', error);
-        showMessage('Failed to delete inventory item: ' + error.message);
+        console.error('Delete operation failed:', error);
+        showMessageBox('Delete Failed', error.message, true);
     }
 }
 
@@ -1050,26 +1039,22 @@ function setLoadingState(isLoading) {
         if (icon) icon.className = 'fas fa-save'; // Restore original icon
     }
 }
-/**
- * HANDLER: Decides whether to Create or Update
- */
 async function submitInventoryForm(event) {
     event.preventDefault();
     const id = document.getElementById('inventory-id').value;
 
-    if (id && id !== '') {
+    // Direct the request based on whether we are editing an old item or creating a new one
+    if (id && id.trim() !== '') {
         await updateExistingItem(id);
     } else {
         await createNewItem();
     }
 }
 
-/**
- * LOGIC: Create New Item (POST)
- */
 async function createNewItem() {
-    if (!['admin', 'manager','super-admin', 'cashier', 'bar'].includes(currentUserRole)) {
-        return showMessage('Permission Denied', 'You do not have permission to add inventory.', true);
+    const allowedRoles = ['admin', 'manager', 'super-admin', 'cashier', 'bar'];
+    if (!allowedRoles.includes(currentUserRole)) {
+        return showMessageBox('Permission Denied', 'You do not have permission to add inventory.', true);
     }
 
     const data = getInventoryFormData();
@@ -1079,21 +1064,17 @@ async function createNewItem() {
         setLoadingState(true);
         const response = await authenticatedFetch(`${API_BASE_URL}/inventory`, {
             method: 'POST',
-            body: JSON.stringify(data)
+            body: JSON.stringify(data) // hotelId is included via getInventoryFormData
         });
 
         if (response.ok) {
-            // 1. Clear the form fields
             if (inventoryForm) inventoryForm.reset();
 
-            // 2. Clear the hidden ID field (important for switching between edit/create)
+            // Clear the hidden ID to reset the form to "Create Mode"
             const idField = document.getElementById('inventory-id');
             if (idField) idField.value = '';
 
-            // 3. Show success message
-            showMessage('Success', 'Item Added successfully! ✅', false);
-
-            // 4. Refresh the table to show the new item
+            showMessageBox('Success', 'Item added to your hotel inventory! ✅');
             fetchInventory(); 
         } else {
             const errorData = await response.json();
@@ -1101,18 +1082,16 @@ async function createNewItem() {
         }
     } catch (error) {
         console.error('Create Error:', error);
-        showMessage('Error', error.message, true);
+        showMessageBox('Error', error.message, true);
     } finally {
         setLoadingState(false);
     }
 }
 
-/**
- * LOGIC: Update Existing Item (PUT)
- */
 async function updateExistingItem(id) {
-    if (currentUserRole !== 'admin' || currentUserRole !== 'super-admin') {
-        return showMessage('Only administrators can edit inventory.');
+    const adminRoles = ['admin', 'super-admin'];
+    if (!adminRoles.includes(currentUserRole)) {
+        return showMessageBox('Access Restricted', 'Only administrators can modify existing inventory records.', true);
     }
 
     const data = getInventoryFormData();
@@ -1122,20 +1101,30 @@ async function updateExistingItem(id) {
             method: 'PUT',
             body: JSON.stringify(data)
         });
+
         if (response.ok) {
-            showMessage('Item Updated! ✅');
+            showMessageBox('Success', 'Inventory record updated! ✅');
+            fetchInventory();
+        } else {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Update failed');
         }
     } catch (error) {
-        showMessage(error);
+        showMessageBox('Error', error.message, true);
     } finally {
         setLoadingState(false);
     }
 }
 
-// Helper to gather form data
 function getInventoryFormData() {
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    
     return {
-        item: document.getElementById('item').value,
+        // Multi-tenant context
+        hotelId: sessionData?.hotelId, 
+        
+        // Item details
+        item: document.getElementById('item').value.trim(),
         opening: parseInt(document.getElementById('opening').value) || 0,
         purchases: parseInt(document.getElementById('purchases').value) || 0,
         sales: parseInt(document.getElementById('inventory-sales').value) || 0,
@@ -1271,285 +1260,210 @@ function showModal(modalId) {
  * Populates the Edit Sale form with sale data and then displays the modal.
  */
 
-
 function renderSalesTable(sales) {
     const tbody = document.querySelector('#sales-table tbody');
     if (!tbody) return;
 
     tbody.innerHTML = '';
     if (sales.length === 0) {
-        const row = tbody.insertRow();
-        const cell = row.insertCell();
-        cell.colSpan = 9;
-        cell.textContent = 'No sales records found for this date.';
-        cell.style.textAlign = 'center';
+        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-gray-500 italic">No sales records found for this date.</td></tr>`;
         return;
     }
 
-    const hideProfitColumns = ['cashier', 'bar'].includes(currentUserRole);
+    // Role-based privacy: Cashiers/Bar staff should not see profit or buying prices
+    const hideSensitiveInfo = ['cashier', 'bar'].includes(currentUserRole);
     
-    // 1. Initialize Totals
     let totalSellingPriceSum = 0;
-    const departmentTotals = {}; // Use a dynamic object to handle any department name
+    const departmentTotals = {}; 
 
     sales.forEach(sale => {
-        // Calculation Logic
-        const totalBuyingPrice = (sale.bp || 0) * (sale.number || 0);
         const totalSellingPrice = (sale.sp || 0) * (sale.number || 0);
-        
-        if (sale.profit === undefined) {
-            sale.profit = totalSellingPrice - totalBuyingPrice;
-            sale.percentageprofit = totalBuyingPrice !== 0 ? (sale.profit / totalBuyingPrice) * 100 : 0;
-        }
-
-        // 2. Accumulate Totals
         totalSellingPriceSum += totalSellingPrice;
         
-        // Use the actual department field from the database
-        const dept = sale.department || 'Others';
+        const dept = sale.department || 'General';
         departmentTotals[dept] = (departmentTotals[dept] || 0) + totalSellingPrice;
 
-        // 3. Render Table Rows
         const row = tbody.insertRow();
+        row.className = "hover:bg-gray-50 border-b border-gray-100 transition-colors";
+
         row.insertCell().textContent = sale.department;
         row.insertCell().textContent = sale.item;
-        row.insertCell().textContent = sale.number;
-        row.insertCell().textContent = sale.bp;
-        row.insertCell().textContent = sale.sp;
+        row.insertCell().className = "font-semibold text-center";
+        row.cells[2].textContent = sale.number;
 
-        if (hideProfitColumns) {
-            row.insertCell().textContent = 'N/A';
-            row.insertCell().textContent = 'N/A';
+        // Buying Price (Sensitive)
+        const bpCell = row.insertCell();
+        bpCell.textContent = hideSensitiveInfo ? '***' : (sale.bp || 0).toLocaleString();
+
+        // Selling Price
+        row.insertCell().textContent = (sale.sp || 0).toLocaleString();
+
+        // Profit & Percentage (Sensitive)
+        if (hideSensitiveInfo) {
+            row.insertCell().textContent = '---';
+            row.insertCell().textContent = '---';
         } else {
-            row.insertCell().textContent = Math.round(sale.profit).toLocaleString();
-            row.insertCell().textContent = Math.round(sale.percentageprofit) + '%';
+            const profitCell = row.insertCell();
+            profitCell.textContent = Math.round(sale.profit || 0).toLocaleString();
+            profitCell.className = (sale.profit >= 0) ? 'text-green-600' : 'text-red-600';
+            
+            row.insertCell().textContent = Math.round(sale.percentageprofit || 0) + '%';
         }
 
         row.insertCell().textContent = new Date(sale.date).toLocaleDateString();
         
         const actionsCell = row.insertCell();
+        actionsCell.className = "px-4 py-2 text-right";
+
         if (['admin','super-admin'].includes(currentUserRole)) {
+            const btnGroup = document.createElement('div');
+            btnGroup.className = "flex gap-2 justify-end";
+
             const editBtn = document.createElement('button');
-            editBtn.textContent = 'Edit';
-            editBtn.className = 'bg-blue-500 text-white py-1 px-2 rounded text-xs';
+            editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+            editBtn.className = 'p-2 text-blue-600 hover:bg-blue-50 rounded';
             editBtn.onclick = () => populateSaleForm(sale);
-            actionsCell.appendChild(editBtn);
+
+            const delBtn = document.createElement('button');
+            delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+            delBtn.className = 'p-2 text-red-600 hover:bg-red-50 rounded';
+            delBtn.onclick = () => deleteSale(sale._id);
+
+            btnGroup.appendChild(editBtn);
+            btnGroup.appendChild(delBtn);
+            actionsCell.appendChild(btnGroup);
         } else {
-            actionsCell.textContent = 'View Only';
+            actionsCell.innerHTML = '<span class="text-xs text-gray-400 italic">View Only</span>';
         }
     });
 
     // --- SUMMARY SECTION ---
-    
-    // Add a separator row
-    const separator = tbody.insertRow();
-    separator.innerHTML = `<td colspan="9" class="border-t-2 border-gray-300"></td>`;
+    renderSalesSummary(tbody, departmentTotals, totalSellingPriceSum);
+}
 
-    // 4. Render Department Totals
-    for (const [deptName, total] of Object.entries(departmentTotals)) {
+function renderSalesSummary(tbody, departmentTotals, grandTotal) {
+    // Spacer
+    const spacer = tbody.insertRow();
+    spacer.innerHTML = `<td colspan="9" class="h-4"></td>`;
+
+    // Departmental Sub-totals
+    for (const [dept, total] of Object.entries(departmentTotals)) {
         const row = tbody.insertRow();
-        const labelCell = row.insertCell();
-        labelCell.colSpan = 4;
-        labelCell.style.textAlign = 'right';
-        labelCell.style.fontWeight = 'bold';
-        labelCell.textContent = `${deptName} Total:`;
-
-        const valCell = row.insertCell();
-        valCell.style.fontWeight = 'bold';
-        valCell.className = 'text-emerald-700';
-        valCell.textContent = total.toLocaleString();
+        row.className = "bg-gray-50/50 italic text-gray-600";
+        row.innerHTML = `
+            <td colspan="4" class="text-right py-2 pr-4 font-medium">${dept} Total:</td>
+            <td class="font-bold">${total.toLocaleString()}</td>
+            <td colspan="4"></td>
+        `;
     }
 
-    // 5. Render Grand Total
+    // Grand Total Row
     const grandRow = tbody.insertRow();
-    grandRow.className = 'bg-gray-100'; // Highlight the grand total row
-    const grandLabel = grandRow.insertCell();
-    grandLabel.colSpan = 4;
-    grandLabel.style.textAlign = 'right';
-    grandLabel.style.fontWeight = 'black';
-    grandLabel.style.fontSize = '1.1em';
-    grandLabel.textContent = 'GRAND TOTAL:';
-
-    const grandVal = grandRow.insertCell();
-    grandVal.style.fontWeight = 'black';
-    grandVal.style.fontSize = '1.1em';
-    grandVal.textContent = totalSellingPriceSum.toLocaleString();
-}
-
-function showConfirm(message, onConfirm, onCancel = null) {
-    // For simplicity, using native confirm. For a custom UI, you'd implement a modal similar to showMessage.
-    const userConfirmed = window.confirm(message);
-    if (userConfirmed) {
-        onConfirm();
-    } else if (onCancel) {
-        onCancel();
-    }
-}
-
-async function deleteSale(id) {
-    const adminRoles = ['admin','super-admin'];
-    if (!adminRoles.includes(currentUserRole)) {
-        showMessage('Permission Denied: Only administrators can delete sales records.');
-        return;
-    }
-
-    showConfirm('Are you sure you want to delete this sale record?', async () => {
-        try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/sales/${id}`, {
-                method: 'DELETE'
-            });
-            if (response && response.status === 204) {
-                showMessage('Sale record deleted successfully!');
-                fetchSales();
-            } else if (response) {
-                const errorData = await response.json();
-                showMessage('Failed to delete sale record: ' + errorData.error);
-            }
-        } catch (error) {
-            console.error('Error deleting sale record:', error);
-            showMessage('Failed to delete sale record: ' + error.message);
-        }
-    });
+    grandRow.className = 'bg-indigo-600 text-white font-bold';
+    grandRow.innerHTML = `
+        <td colspan="4" class="text-right py-3 pr-4 text-lg">GRAND TOTAL:</td>
+        <td class="py-3 text-lg">${grandTotal.toLocaleString()}</td>
+        <td colspan="4"></td>
+    `;
 }
 
 async function submitSaleForm(event) {
     event.preventDefault();
 
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelId = sessionData?.hotelId;
+
+    const allowedRoles = ['cashier', 'manager', 'bar', 'super-admin', 'admin'];
+    if (!allowedRoles.includes(currentUserRole)) {
+        return showMessageBox('Access Denied', 'You do not have permission to record sales.', true);
+    }
+
     const submitButton = document.querySelector('#sale-form button[type="submit"]');
-    const originalButtonText = submitButton.innerHTML;
+    const originalText = submitButton.innerHTML;
 
-    const allowedToRecordSales = ['cashier', 'manager', 'bar', super-admin','admin'];
-    if (!allowedToRecordSales.includes(currentUserRole)) {
-        showMessage('Permission Denied: You do not have permission to record sales.');
-        return;
+    // Gather Inputs
+    const id = document.getElementById('sale-id').value;
+    const item = document.getElementById('sale-item').value.trim();
+    const department = document.getElementById('department-item').value;
+    const number = parseInt(document.getElementById('sale-number').value);
+    const bp = parseFloat(document.getElementById('sale-bp').value);
+    const sp = parseFloat(document.getElementById('sale-sp').value);
+    const date = document.getElementById('sales-date').value;
+
+    if (!item || isNaN(number) || isNaN(bp) || isNaN(sp) || !date) {
+        return showMessageBox('Incomplete Form', 'Please fill all fields with valid data.', true);
     }
 
-    const idInput = document.getElementById('sale-id');
-    const itemInput = document.getElementById('sale-item');
-    const departmentInput = document.getElementById('department-item');
-    const numberInput = document.getElementById('sale-number');
-    const bpInput = document.getElementById('sale-bp');
-    const spInput = document.getElementById('sale-sp');
-    const salesDateInput = document.getElementById('sales-date');
-
-    if (!idInput || !itemInput || !numberInput || !bpInput || !spInput) {
-        showMessage('Sales form elements are missing.');
-        return;
-    }
-
-    const id = idInput.value;
-    const item = itemInput.value;
-    const department = departmentInput.value;
-    const number = parseInt(numberInput.value);
-    const bp = parseFloat(bpInput.value);
-    const sp = parseFloat(spInput.value);
-    const date = salesDateInput.value;
-
-    if (!item || isNaN(number) || isNaN(bp) || isNaN(sp) ) {
-        showMessage('Please fill in all sales fields correctly with valid numbers and date.');
-        return;
-    }
-    if (number <= 0 || bp <= 0 || sp <= 0) {
-        showMessage('Number, Buying Price, and Selling Price must be positive values.');
-        return;
-    }
-
+    // Calculations
     const totalBuyingPrice = bp * number;
     const totalSellingPrice = sp * number;
     const profit = totalSellingPrice - totalBuyingPrice;
-    let percentageProfit = 0;
-    if (totalBuyingPrice !== 0) {
-        percentageProfit = (profit / totalBuyingPrice) * 100;
-    }
+    const percentageProfit = totalBuyingPrice !== 0 ? (profit / totalBuyingPrice) * 100 : 0;
 
     const saleData = {
+        hotelId, // Multi-tenant context
         department,
         item,
         number,
         bp,
         sp,
-        profit: profit,
+        profit,
         percentageprofit: percentageProfit,
         date
     };
 
     try {
-        submitButton.innerHTML = 'Processing...';
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
         submitButton.disabled = true;
 
-        let response;
-        let successMessage;
+        const url = id ? `${API_BASE_URL}/sales/${id}` : `${API_BASE_URL}/sales`;
+        const method = id ? 'PUT' : 'POST';
 
-        if (id) {
-            const adminRoles = ['admin','super-admin'];
-            if (!adminRoles.includes(currentUserRole)) {
-                showMessage('Permission Denied: Only administrators can edit sales.');
-                return;
-            }
-            response = await authenticatedFetch(`${API_BASE_URL}/sales/${id}`, {
-                method: 'PUT',
-                body: JSON.stringify(saleData)
-            });
-            successMessage = 'Sales Updated! ✅';
-        } else {
-            response = await authenticatedFetch(`${API_BASE_URL}/sales`, {
-                method: 'POST',
-                body: JSON.stringify(saleData)
-            });
-            successMessage = 'Sale Recorded! ✅';
-        }
+        const response = await authenticatedFetch(url, {
+            method: method,
+            body: JSON.stringify(saleData)
+        });
 
         if (response.ok) {
-            await response.json();
-            showMessage(successMessage);
-            submitButton.innerHTML = successMessage;
-
-            // Wait for 2 seconds, then reset the form and button
-            setTimeout(() => {
-                const saleForm = document.getElementById('sale-form');
-                if (saleForm) saleForm.reset();
-                if (idInput) idInput.value = '';
-                const today = new Date();
-                const yyyy = today.getFullYear();
-                const mm = String(today.getMonth() + 1).padStart(2, '0');
-                const dd = String(today.getDate()).padStart(2, '0');
-                if (salesDateFilterInput) salesDateFilterInput.value = `${yyyy}-${mm}-${dd}`;
-                
-                submitButton.innerHTML = originalButtonText;
-                submitButton.disabled = false;
-                fetchSales(); // Re-fetch data after reset
-            }, 2000); // 2000 milliseconds = 2 seconds
-
+            showMessageBox('Success', id ? 'Sale updated!' : 'Sale recorded! ✅');
+            
+            // Cleanup UI
+            document.getElementById('sale-form').reset();
+            document.getElementById('sale-id').value = '';
+            
+            fetchSales(); // Refresh table
         } else {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Server error occurred.');
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to save sale.');
         }
-
     } catch (error) {
-        console.error('Error saving sale entry:', error);
-        showMessage('Failed to save sale entry: ' + error.message);
-        submitButton.innerHTML = originalButtonText;
+        showMessageBox('Error', error.message, true);
+    } finally {
+        submitButton.innerHTML = originalText;
         submitButton.disabled = false;
     }
 }
+async function deleteSale(id) {
+    if (!['admin', 'super-admin'].includes(currentUserRole)) {
+        return showMessageBox('Restricted', 'Only administrators can delete sales records.', true);
+    }
 
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelId = sessionData?.hotelId;
 
-/**
- * Automatically populates the buying price based on the selected item.
- */
-function populateBuyingPrice() {
-    const itemInput = document.getElementById('sale-item');
-    const bpInput = document.getElementById('sale-bp');
+    if (confirm('Permanently delete this sales record? This cannot be undone.')) {
+        try {
+            const response = await authenticatedFetch(`${API_BASE_URL}/sales/${id}`, {
+                method: 'DELETE',
+                body: JSON.stringify({ hotelId }) // Send hotelId to verify ownership
+            });
 
-    if (itemInput && bpInput) {
-        // No need to convert to lowercase for exact match from datalist
-        const item = itemInput.value.trim();
-        const buyingPrice = BUYING_PRICES[item];
-
-        if (buyingPrice !== undefined) {
-            bpInput.value = buyingPrice;
-        } else {
-            bpInput.value = '';
+            if (response && (response.status === 204 || response.status === 200)) {
+                showMessageBox('Deleted', 'Record removed successfully.');
+                fetchSales();
+            }
+        } catch (error) {
+            showMessageBox('Error', 'Deletion failed: ' + error.message, true);
         }
     }
 }
@@ -1578,154 +1492,70 @@ function populateBuyingPrice() {
    // }
 //});
 
-const SELLING_PRICES ={
-"rest greek salad": 15000,
-"rest potato salad": 15000,
-"rest mushroom soup": 15000,
-"rest tomato soup": 10000,
-"rest chicken clear soup": 15000,
-"rest chicken stew": 28000,
-"rest chicken stir fry": 27000,
-"rest chicken curry": 28000,
-"rest grilled whole chicken": 60000,
-"rest beef stew": 25000,
-"rest beef stir fry": 25000,
-"rest pan fried goat or beef or liver": 25000,
-"rest beef steak": 27000,
-"rest panfried pork": 27000,
-"rest pork ribs": 30000,
-"rest pork chops": 30000,
-"rest fish curry": 25000,
-"rest vegetable curry": 20000,
-"rest beef samosa": 5000,
-"rest chicken wing": 25000,
-"rest french fries": 10000,
-"rest chips masala": 13000,
-"rest pan fried fish fillet": 25000,
-"rest deep fried whole fish": 40000,
-"rest fish finger": 18000,
-"rest chicken burger patty": 25000,
-"rest beef burgar": 25000,
-"rest vegetable burgar": 25000,
-"rest beef sandwich": 20000,
-"rest chicken sandwich": 25000,
-"rest tomato sandwich": 20000,
-"rest vegetable sandwich": 25000,
-"rest club sandwich": 30000,
-"rest african tea": 8000,
-"rest african coffee": 8000,
-"rest english tea": 10000,
-"rest african spiced tea": 8000,
-"rest lemon tea": 8000,
-"rest milk plane": 7000,
-"rest black tea": 5000,
-"rest black coffee": 6000,
-"rest dhawa tea": 12000,
-"rest passion juice(l)": 7000,
-"rest pineapple juice": 7000,
-"rest water melon juice": 7000,
-"rest lemon juice": 7000,
-"rest cocotail juice": 10000,
-"rest fruit platter": 8000,
-"rest fruit salad": 12000,
-"rest spagetti napolitan": 18000,
-"rest spagetti bolognaise": 20000,
-"rest margarita pizza": 25000,
-"rest chicken pizza": 30000,
-"rest beef pizza": 30000,
-"rest hawaii pizza": 30000,
-    "bar mountain dew": 2000,
-    "bar mirinda fruity ": 2000,
-    "bar mirinda fanta": 2000,
-    "bar novida": 2000,
-    "bar pepsi": 2000,
-    "bar mirinda apple":2000,
-    "bar cocacola":2000,
-    "bar stoney":2000,
-    "bar fanta":2000,
-    "bar cocacola":2000,
-    "bar fanta":2000,
-    "bar nile":5000,
-    "bar club":5000,
-    "bar guiness":5000,
-    "bar uganda waragi":13000,
-    "bar gilbey's":15000,
-    "bar tusker lite":5000,
-    "bar tusker lager":5000,
-    "bar water":2000,
-    "bar castle lite":5000
-};
 
-/**
- * Automatically populates the selling price based on the selected item.
- */
-function populateSellingPrice() {
-    const itemInput = document.getElementById('sale-item');
-    const spInput = document.getElementById('sale-sp');
 
-    if (itemInput && spInput) {
-        const item = itemInput.value.toLowerCase().trim(); // Convert to lowercase and trim for case-insensitive matching
-        const sellingPrice = SELLING_PRICES[item];
 
-        if (sellingPrice !== undefined) {
-            spInput.value = sellingPrice;
-        } else {
-            // Optionally clear the BP field if the item doesn't have a predefined price
-            // Or you can leave it as is for manual entry
-            spInput.value = '';
-        }
-    }
-}
-
-// Add an event listener to the item input field
-document.addEventListener('DOMContentLoaded', () => {
-    const itemInput = document.getElementById('sale-item');
-    if (itemInput) {
-        itemInput.addEventListener('input', populateSellingPrice);
-    }
-});
 // --- Expenses Functions ---
 async function fetchExpenses() {
-    // 1. Change button text to 'Searching'
-    updateExpensesSearchButton('Searching', 'fas fa-spinner fa-spin'); // Spinning icon for loading
+    // 1. Get Hotel Context from session
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelId = sessionData?.hotelId;
+
+    if (!hotelId) {
+        showMessage('Error: No hotel context found. Please log in again.', true);
+        return;
+    }
+
+    // 2. UI Loading State
+    updateExpensesSearchButton('Searching', 'fas fa-spinner fa-spin'); 
 
     try {
         const dateFilterInput = document.getElementById('expenses-date-filter');
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
 
-        let url = `${API_BASE_URL}/expenses`;
+        // 3. Build Tenant-Aware Query Params
         const params = new URLSearchParams();
-        if (dateFilter) params.append('date', dateFilter);
+        params.append('hotelId', hotelId); // CRITICAL: Scopes expenses to this hotel
+        
+        if (dateFilter) {
+            params.append('date', dateFilter);
+        }
+
+        // Only paginate if we aren't looking at a specific full-day report
         params.append('page', currentExpensesPage);
         params.append('limit', expensesPerPage);
-        url += `?${params.toString()}`;
 
+        const url = `${API_BASE_URL}/expenses?${params.toString()}`;
+
+        // 4. Use Authenticated Wrapper
         const response = await authenticatedFetch(url);
-        if (!response) {
-            // Restore button on non-response
+        
+        if (!response || !response.ok) {
+            // Restore button on non-response or error status
             updateExpensesSearchButton('Search', 'fas fa-search');
             return;
         }
 
         const result = await response.json();
         
-        // Assuming renderExpensesTable and renderExpensesPagination are defined elsewhere
-        renderExpensesTable(result.data);
+        // 5. Render Data
+        // Ensure result.data is an array or fallback to empty
+        renderExpensesTable(result.data || []);
         renderExpensesPagination(result.page, result.pages);
 
-        // 2. Change button text to 'Done' after successful display
+        // 6. Success Feedback UI
         updateExpensesSearchButton('Done', 'fas fa-check');
 
-        // 3. Set a timeout to revert the button text back to 'Search' after 2 seconds
+        // Revert the button text back to 'Search' after 2 seconds
         setTimeout(() => {
             updateExpensesSearchButton('Search', 'fas fa-search');
-        }, 2000); // 2000 milliseconds = 2 seconds
+        }, 2000); 
 
     } catch (error) {
         console.error('Error fetching expenses:', error);
-        showMessage('Failed to fetch expenses: ' + error.message);
+        showMessage('Failed to fetch expenses: ' + error.message, true);
         
-        // Ensure the button is reverted to 'Search' on error
+        // Reset UI on failure
         updateExpensesSearchButton('Search', 'fas fa-search');
     }
 }
@@ -1985,13 +1815,15 @@ function setEditButtonLoading(isLoading) {
 async function submitEditExpenseForm(event) {
     event.preventDefault();
 
-    const adminRoles = ['admin','super-admin'];
-    if (!adminRoles.includes(currentUserRole)) {
-        showMessage('Permission Denied: Only administrators can edit expenses.');
+    if (!['admin', 'super-admin'].includes(currentUserRole)) {
+        showMessage('Permission Denied: Only administrators can edit expenses.', true);
         return;
     }
     
-    // 1. Get values from the EDIT modal form (omitted for brevity)
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelId = sessionData?.hotelId;
+
+    // 1. Get values from the EDIT modal form
     const id = document.getElementById('edit-expense-id').value;
     const department = document.getElementById('edit-expense-department').value;
     const description = document.getElementById('edit-expense-description').value;
@@ -2001,13 +1833,22 @@ async function submitEditExpenseForm(event) {
     const source = document.getElementById('edit-expense-source').value;
 
     if (!id || !description || isNaN(amount) || amount <= 0 || !receiptId || !date) {
-        showMessage('Please fill in all expense fields correctly.');
+        showMessage('Please fill in all expense fields correctly.', true);
         return;
     }
 
-    const expenseData = { description,department, amount, receiptId, source, date, recordedBy: currentUsername };
+    // Inject hotelId and recordedBy for audit trails
+    const expenseData = { 
+        hotelId, 
+        description, 
+        department, 
+        amount, 
+        receiptId, 
+        source, 
+        date, 
+        recordedBy: currentUsername 
+    };
 
-    // --- 1. SHOW PRELOADER & DISABLE BUTTON ---
     setEditButtonLoading(true);
 
     try {
@@ -2016,26 +1857,27 @@ async function submitEditExpenseForm(event) {
             body: JSON.stringify(expenseData)
         });
 
-        if (response) {
-            await response.json();
+        if (response && response.ok) {
             showMessage('Expense updated successfully! 🎉');
             closeModal('edit-expense-modal');
             fetchExpenses();
+        } else {
+            const error = await response.json();
+            throw new Error(error.message || 'Update failed');
         }
     } catch (error) {
         console.error('Error updating expense:', error);
-        showMessage('Failed to update expense: ' + error.message);
+        showMessage('Failed to update expense: ' + error.message, true);
     } finally {
-        // --- 2. HIDE PRELOADER & ENABLE BUTTON (Guaranteed to run) ---
         setEditButtonLoading(false);
     }
 }
-
-
 async function submitExpenseForm(event) {
     event.preventDefault();
 
-    // 1. Get the submit button, text span, and icon 
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelId = sessionData?.hotelId;
+
     const submitButton = document.querySelector('#expense-form button[type="submit"]');
     const submitTextSpan = document.getElementById('expense-submit-text');
     const submitIcon = submitButton ? submitButton.querySelector('i.fas') : null;
@@ -2043,102 +1885,68 @@ async function submitExpenseForm(event) {
     const originalIconClass = submitIcon ? submitIcon.className : 'fas fa-plus-circle';
     const originalButtonText = submitTextSpan ? submitTextSpan.textContent : 'Record Expense';
 
-    if (!submitButton || !submitTextSpan) {
-        showMessage('Submit button or text element is missing.');
+    const allowedRoles = ['manager', 'cashier', 'admin', 'super-admin', 'bar'];
+    if (!allowedRoles.includes(currentUserRole)) {
+        showMessage('Permission Denied: You cannot record expenses.', true);
         return;
     }
 
-    const allowedToRecordExpenses = ['manager', 'cashier', 'admin','super-admin', 'bar'];
-    if (!allowedToRecordExpenses.includes(currentUserRole)) {
-        showMessage('Permission Denied: You do not have permission to record expenses.');
+    // Gather Inputs
+    const id = document.getElementById('expense-id').value;
+    const amount = parseFloat(document.getElementById('expense-amount').value);
+    const description = document.getElementById('expense-description').value.trim();
+    const date = document.getElementById('expense-date').value;
+
+    if (!description || isNaN(amount) || amount <= 0 || !date) {
+        showMessage('Please ensure description, amount, and date are valid.', true);
         return;
     }
 
-    const idInput = document.getElementById('expense-id');
-    const departmentInput = document.getElementById('expense-department');
-    const descriptionInput = document.getElementById('expense-description');
-    const amountInput = document.getElementById('expense-amount');
-    const receiptIdInput = document.getElementById('expense-receiptId');
-    const sourceInput = document.getElementById('expense-source');
-    // FIX: Correctly accessing the date input from the form
-    const expenseDateInput = document.getElementById('expense-date'); 
-
-    if (!idInput || !descriptionInput || !amountInput || !receiptIdInput || !sourceInput || !expenseDateInput) {
-        showMessage('Expense form elements are missing.');
-        return;
-    }
-
-    const id = idInput.value;
-    const department = departmentInput.value;
-    const description = descriptionInput.value;
-    const amount = parseFloat(amountInput.value);
-    const receiptId = receiptIdInput.value;
-    const source = sourceInput.value;
-    const date = expenseDateInput.value;
-    const recordedBy = currentUsername; // Automatically record who made the entry
-
-    if (!description || isNaN(amount) || amount <= 0 || !receiptId || !date) {
-        showMessage('Please fill in all expense fields correctly.');
-        return;
-    }
-
-    const expenseData = { description, department,amount, receiptId, source, date, recordedBy };
+    const expenseData = {
+        hotelId,
+        department: document.getElementById('expense-department').value,
+        description: description,
+        amount: amount,
+        receiptId: document.getElementById('expense-receiptId').value,
+        source: document.getElementById('expense-source').value,
+        date: date,
+        recordedBy: currentUsername
+    };
 
     try {
-        // 2. Change button text to 'Processing...' and disable it ⏳
         submitTextSpan.textContent = 'Processing...';
         if (submitIcon) submitIcon.className = 'fas fa-spinner fa-spin'; 
         submitButton.disabled = true;
 
-        let response;
-        let successMessage;
+        const url = id ? `${API_BASE_URL}/expenses/${id}` : `${API_BASE_URL}/expenses`;
+        const method = id ? 'PUT' : 'POST';
 
-        if (id) {
-            // Edit operation (PUT)
-            const adminRoles = [ 'admin','super-admin'];
-            if (!adminRoles.includes(currentUserRole)) {
-                showMessage('Permission Denied: Only administrators can edit expenses.');
-                // Revert button on permission fail
-                submitTextSpan.textContent = originalButtonText;
-                if (submitIcon) submitIcon.className = originalIconClass;
-                submitButton.disabled = false;
-                return;
-            }
-            response = await authenticatedFetch(`${API_BASE_URL}/expenses/${id}`, {
-                method: 'PUT',
-                body: JSON.stringify(expenseData)
-            });
-            successMessage = 'Updated! ✅';
-        } else {
-            // New item creation (POST)
-            response = await authenticatedFetch(`${API_BASE_URL}/expenses`, {
-                method: 'POST',
-                body: JSON.stringify(expenseData)
-            });
-            successMessage = 'Done! ✅';
+        // Check admin permissions for edits
+        if (id && !['admin', 'super-admin'].includes(currentUserRole)) {
+            throw new Error('Only admins can edit existing expenses.');
         }
+
+        const response = await authenticatedFetch(url, {
+            method: method,
+            body: JSON.stringify(expenseData)
+        });
         
-        if (response.ok) { // Check if the response was successful
-            await response.json();
-
-            // Display the success message on the button
-            submitTextSpan.textContent = successMessage;
-            if (submitIcon) submitIcon.className = 'fas fa-check'; // Change icon to a checkmark
+        if (response.ok) {
+            submitTextSpan.textContent = 'Done! ✅';
+            if (submitIcon) submitIcon.className = 'fas fa-check'; 
             
-            // Show the full message via your dedicated showMessage function
-            showMessage(id ? 'Expense updated successfully! ✅' : 'Expense recorded successfully! ✅');
+            showMessage(id ? 'Expense updated! ✅' : 'Expense recorded! ✅');
 
-            // Wait for 2 seconds, then reset the form and button ⏱️
             setTimeout(() => {
-                const expenseForm = document.getElementById('expense-form');
-                if (expenseForm) expenseForm.reset();
-                if (idInput) idInput.value = '';
+                const form = document.getElementById('expense-form');
+                if (form) form.reset();
+                document.getElementById('expense-id').value = '';
 
-                // Reset the date input to today's date (assuming this is the desired behavior)
+                // Reset to today's date
                 const today = new Date().toISOString().split('T')[0];
-                if (expenseDateInput) expenseDateInput.value = today;
+                const dateInput = document.getElementById('expense-date');
+                if (dateInput) dateInput.value = today;
 
-                // Revert button text and icon
                 submitTextSpan.textContent = originalButtonText;
                 if (submitIcon) submitIcon.className = originalIconClass;
                 submitButton.disabled = false;
@@ -2147,14 +1955,11 @@ async function submitExpenseForm(event) {
 
         } else {
              const errorData = await response.json();
-             throw new Error(errorData.message || 'Server error occurred.');
+             throw new Error(errorData.message || 'Server error.');
         }
 
     } catch (error) {
-        console.error('Error saving expense:', error);
-        showMessage('Failed to save expense: ' + error.message);
-        
-        // 4. Revert button text and enable it on error ❌
+        showMessage('Error: ' + error.message, true);
         submitTextSpan.textContent = originalButtonText;
         if (submitIcon) submitIcon.className = originalIconClass;
         submitButton.disabled = false;
@@ -2344,14 +2149,23 @@ async function submitEditCashForm(event) {
     event.preventDefault();
     const modal = document.getElementById('edit-cash-modal');
     
-    // The existing adminRoles check from your original submitCashJournalForm for editing
-    const adminRoles = ['admin','super-admin'];
+    // 1. Role-Based Security
+    const adminRoles = ['admin', 'super-admin'];
     if (!adminRoles.includes(currentUserRole)) {
-        showMessage('Permission Denied: Only administrators can edit cash entries.');
+        showMessage('Permission Denied: Only administrators can edit cash entries.', true);
         return;
     }
 
-    // Target the new modal input IDs
+    // 2. Multi-Tenant Context
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelId = sessionData?.hotelId;
+
+    if (!hotelId) {
+        showMessage('Session Error: No hotel context found.', true);
+        return;
+    }
+
+    // 3. Form Input References
     const idInput = document.getElementById('edit-cash-id');
     const cashAtHandInput = document.getElementById('edit-cash-at-hand');
     const cashOnPhoneInput = document.getElementById('edit-cash-on-phone');
@@ -2364,54 +2178,63 @@ async function submitEditCashForm(event) {
         return;
     }
 
+    // 4. Data Extraction & Correction
     const id = idInput.value;
-    const cashAtHand = parseFloat(cashAtHandInput.value);
-    const cashBanked = parseFloat(cashOnPhoneInput.value);
-    const cashOnPhone = parseFloat(cashBankedInput.value);
-    const bankReceiptId = bankReceiptIdInput.value;
+    const cashAtHand = parseFloat(cashAtHandInput.value) || 0;
+    const cashOnPhone = parseFloat(cashOnPhoneInput.value) || 0; // Fixed assignment
+    const cashBanked = parseFloat(cashBankedInput.value) || 0;  // Fixed assignment
+    const bankReceiptId = bankReceiptIdInput.value.trim();
     const date = cashDateInput.value; 
 
-    // Basic validation
+    // 5. Validation
     if (!id || isNaN(cashAtHand) || isNaN(cashBanked) || !bankReceiptId || !date) {
-        showMessage('Please fill in all edit fields correctly and ensure a record ID exists.');
+        showMessage('Please fill in all edit fields correctly.', true);
         return;
     }
 
-    const cashData = { cashAtHand, cashBanked, bankReceiptId, date,cashOnPhone };
+    // Build Payload with Tenant ID
+    const cashData = { 
+        hotelId, // Multi-tenant scoping
+        cashAtHand, 
+        cashOnPhone, 
+        cashBanked, 
+        bankReceiptId, 
+        date,
+        updatedBy: currentUsername // Audit trail
+    };
 
-    // --- 1. START LOADING STATE ---
+    // --- START LOADING STATE ---
     setCashButtonLoading(true);
 
     try {
-        // Use PUT method for editing
         const response = await authenticatedFetch(`${API_BASE_URL}/cash-journal/${id}`, {
             method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(cashData)
         });
 
-        if (response.ok) { 
-            document.getElementById("edit-cash-modal").style.display="none";// Check if the response status is 200-299
+        if (response && response.ok) { 
             showMessage('Cash entry updated successfully! 🎉');
-                        // Close the modal after successful submission
-            if (modal) modal.classList.add('hidden');
             
-            fetchCashJournal(); // Re-fetch to update table
+            // UI Cleanup
+            if (modal) {
+                modal.style.display = "none";
+                modal.classList.add('hidden');
+            }
+            
+            fetchCashJournal(); // Refresh table to show correct totals
         } else {
-            // Handle server-side errors
             const errorData = await response.json();
-            showMessage(`Failed to update cash entry: ${errorData.message || 'Server error'}`);
+            throw new Error(errorData.message || 'Server error occurred during update.');
         }
     } catch (error) {
         console.error('Error updating cash entry:', error);
-        showMessage('Failed to update cash entry: ' + error.message);
+        showMessage('Update Failed: ' + error.message, true);
     } finally {
-        // --- 2. STOP LOADING STATE (Guaranteed to run) ---
+        // --- STOP LOADING STATE ---
         setCashButtonLoading(false);
     }
 }
-    
-
-
 // **You must add an event listener to your edit form when the page loads:**
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -2453,8 +2276,18 @@ function populateEditCashModal(record) {
 async function generateReports() {
     const generateButton = document.getElementById('generate-report-btn');
     let originalButtonHtml = generateButton ? generateButton.innerHTML : '';
+    
+    // 1. Multi-Tenant Context
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelId = sessionData?.hotelId;
+
+    if (!hotelId) {
+        showMessage('Session expired. Please log in again.', true);
+        return;
+    }
+
     if (generateButton) {
-        generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
+        generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
         generateButton.disabled = true;
     }
 
@@ -2463,107 +2296,118 @@ async function generateReports() {
 
     if (!startDateInput.value || !endDateInput.value) {
         showMessage('Please select both start and end dates.');
-        if (generateButton) { generateButton.innerHTML = originalButtonHtml; generateButton.disabled = false; }
+        if (generateButton) { 
+            generateButton.innerHTML = originalButtonHtml; 
+            generateButton.disabled = false; 
+        }
         return;
     }
-
-    const startDate = new Date(startDateInput.value);
-    const endDate = new Date(endDateInput.value);
-    startDate.setUTCHours(0, 0, 0, 0);
-    endDate.setUTCHours(23, 59, 59, 999);
 
     const tbody = document.getElementById('department-report-tbody');
     if (tbody) tbody.innerHTML = ''; 
 
     try {
-        // 1. FETCH ALL SALES & EXPENSES (Paginated)
+        // 2. FETCH DATA (Scoped to Hotel and Date Range)
+        // Optimization: Pass dates to the backend to reduce payload size
+        const queryParams = `hotelId=${hotelId}&startDate=${startDateInput.value}&endDate=${endDateInput.value}`;
+        
         let allSales = [], allExpenses = [], page = 1, res;
 
-        // Fetch Sales
+        // Fetch Sales for this Hotel
         do {
-            const resp = await authenticatedFetch(`${API_BASE_URL}/sales?page=${page}`);
+            const resp = await authenticatedFetch(`${API_BASE_URL}/sales?${queryParams}&page=${page}&limit=100`);
             res = await resp.json();
-            if (res && res.data) { allSales = allSales.concat(res.data); page++; }
-        } while (res && res.data && res.data.length > 0);
+            if (res && res.data) { 
+                allSales = allSales.concat(res.data); 
+                page++; 
+            }
+        } while (res && res.data && res.data.length > 0 && page <= (res.pages || 1));
 
-        // Fetch Expenses
+        // Fetch Expenses for this Hotel
         page = 1;
         do {
-            const resp = await authenticatedFetch(`${API_BASE_URL}/expenses?page=${page}`);
+            const resp = await authenticatedFetch(`${API_BASE_URL}/expenses?${queryParams}&page=${page}&limit=100`);
             res = await resp.json();
-            if (res && res.data) { allExpenses = allExpenses.concat(res.data); page++; }
-        } while (res && res.data && res.data.length > 0);
+            if (res && res.data) { 
+                allExpenses = allExpenses.concat(res.data); 
+                page++; 
+            }
+        } while (res && res.data && res.data.length > 0 && page <= (res.pages || 1));
 
-        // 2. AGGREGATE DATA
+        // 3. AGGREGATE DATA
         const report = {};
 
-        // Process Sales: Use the 'department' field defined in your Sale Schema
-        allSales.filter(s => {
-            const d = new Date(s.date);
-            return d >= startDate && d <= endDate;
-        }).forEach(sale => {
+        allSales.forEach(sale => {
             const dept = sale.department || 'Other';
             if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
             report[dept].sales += (sale.number * sale.sp);
         });
 
-        // Process Expenses: Use the 'department' field defined in your Expense Schema
-        allExpenses.filter(e => {
-            const d = new Date(e.date);
-            return d >= startDate && d <= endDate;
-        }).forEach(exp => {
+        allExpenses.forEach(exp => {
             const dept = exp.department || 'Other';
             if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
-            report[dept].expenses += exp.amount || 0;
+            report[dept].expenses += (exp.amount || 0);
         });
 
-        // 3. RENDER TO TABLE
+        // 4. RENDER TO TABLE
         let totalS = 0, totalE = 0;
         const sortedDepts = Object.keys(report).sort();
 
         if (sortedDepts.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">No data found for this period.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500 italic">No financial activity recorded for this period.</td></tr>';
         } else {
             sortedDepts.forEach(dept => {
                 const { sales, expenses } = report[dept];
-                totalS += sales; totalE += expenses;
+                totalS += sales; 
+                totalE += expenses;
                 const balance = sales - expenses;
 
                 const row = tbody.insertRow();
+                row.className = "border-b border-gray-100 hover:bg-gray-50";
                 row.insertCell().textContent = dept;
                 row.insertCell().textContent = sales.toLocaleString(undefined, { minimumFractionDigits: 2 });
                 row.insertCell().textContent = expenses.toLocaleString(undefined, { minimumFractionDigits: 2 });
+                
                 const bCell = row.insertCell();
                 bCell.textContent = balance.toLocaleString(undefined, { minimumFractionDigits: 2 });
-                bCell.className = balance >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+                bCell.className = `font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`;
             });
         }
 
-        // 4. UPDATE SUMMARY CARDS
-        const overallSalesEl = document.getElementById('overall-sales');
-        const overallExpensesEl = document.getElementById('overall-expenses');
-        const overallBalanceEl = document.getElementById('overall-balance');
-
-        if (overallSalesEl) overallSalesEl.textContent = totalS.toLocaleString(undefined, { minimumFractionDigits: 2 });
-        if (overallExpensesEl) overallExpensesEl.textContent = totalE.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        // 5. UPDATE SUMMARY CARDS
+        updateElementText('overall-sales', totalS);
+        updateElementText('overall-expenses', totalE);
         
         const overallBal = totalS - totalE;
-        if (overallBalanceEl) {
-            overallBalanceEl.textContent = overallBal.toLocaleString(undefined, { minimumFractionDigits: 2 });
-            overallBalanceEl.className = overallBal >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+        const balEl = document.getElementById('overall-balance');
+        if (balEl) {
+            balEl.textContent = overallBal.toLocaleString(undefined, { minimumFractionDigits: 2 });
+            balEl.className = `text-2xl font-bold ${overallBal >= 0 ? 'text-green-600' : 'text-red-600'}`;
         }
 
-        // Reset Button State
+        // Success State
         if (generateButton) {
-            generateButton.innerHTML = '<i class="fas fa-check"></i> Done';
-            setTimeout(() => { generateButton.innerHTML = originalButtonHtml; generateButton.disabled = false; }, 2000);
+            generateButton.innerHTML = '<i class="fas fa-check"></i> Report Generated';
+            setTimeout(() => { 
+                generateButton.innerHTML = originalButtonHtml; 
+                generateButton.disabled = false; 
+            }, 2000);
         }
 
     } catch (error) {
         console.error('Report Error:', error);
-        showMessage('Error generating report: ' + error.message);
-        if (generateButton) { generateButton.innerHTML = originalButtonHtml; generateButton.disabled = false; }
+        showMessage('Error: ' + error.message, true);
+        if (generateButton) { 
+            generateButton.innerHTML = originalButtonHtml; 
+            generateButton.disabled = false; 
+        }
     }
+}
+
+// Helper for cleaner code
+function updateElementText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value.toLocaleString(undefined, { minimumFractionDigits: 2 });
 }
 // --- Audit Logs Functions ---
 function debounce(func, delay) {
@@ -2577,15 +2421,32 @@ function debounce(func, delay) {
 
 // Function to fetch audit logs (modified)
 async function fetchAuditLogs() {
+    const auditTableBody = document.querySelector('#auditLogTable tbody');
+    
+    // 1. Multi-Tenant Context
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelId = sessionData?.hotelId;
+
+    if (!hotelId) {
+        console.error('Audit Log Error: No hotelId found in session.');
+        return;
+    }
+
     try {
-        const auditTableBody = document.querySelector('#auditLogTable tbody');
-        // Optional: show a loading state in the table while typing
-        if (auditTableBody) {
-            // Only show loader if table is empty or on the first page of search
-            if (currentAuditPage === 1) auditTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Searching...</td></tr>';
+        // 2. UI Loading State
+        if (auditTableBody && currentAuditPage === 1) {
+            auditTableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-10">
+                        <i class="fas fa-spinner fa-spin text-2xl text-blue-500"></i>
+                        <p class="mt-2 text-gray-500">Loading activity history...</p>
+                    </td>
+                </tr>`;
         }
 
+        // 3. Prepare Scoped Parameters
         const params = new URLSearchParams();
+        params.append('hotelId', hotelId); // Critical: Only fetch logs for this tenant
         params.append('page', currentAuditPage);
         params.append('limit', auditLogsPerPage);
 
@@ -2596,22 +2457,43 @@ async function fetchAuditLogs() {
             params.append('search', searchQuery);
         }
 
+        // 4. API Request
         const response = await authenticatedFetch(`${API_BASE_URL}/audit-logs?${params.toString()}`);
-        if (!response) return;
+        
+        if (!response || !response.ok) {
+            throw new Error('Failed to reach the audit server.');
+        }
 
         const result = await response.json();
+        const logs = result.data || [];
         
-        // Handle case where no results are found
-        if (result.data.length === 0 && searchQuery) {
-             auditTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">No logs match your search.</td></tr>';
+        // 5. Empty State Handling
+        if (logs.length === 0) {
+             auditTableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-10 text-gray-400">
+                        <i class="fas fa-history mb-3 text-3xl opacity-20"></i><br>
+                        ${searchQuery ? 'No logs match your search criteria.' : 'No activity recorded yet.'}
+                    </td>
+                </tr>`;
              renderAuditPagination(1, 1);
              return;
         }
 
-        renderAuditLogsTable(result.data);
+        // 6. Render Data
+        renderAuditLogsTable(logs);
         renderAuditPagination(result.page, result.pages);
+
     } catch (error) {
         console.error('Error fetching audit logs:', error);
+        if (auditTableBody) {
+            auditTableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-red-500">
+                        <i class="fas fa-exclamation-triangle mr-2"></i> Error loading logs: ${error.message}
+                    </td>
+                </tr>`;
+        }
     }
 }
 // Attach to the search input
