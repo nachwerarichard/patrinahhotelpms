@@ -763,18 +763,17 @@ app.post('/api/admin/onboard-hotel', auth, authorizeRole('super-admin'), async (
     try {
         const newHotel = new Hotel({ name, location, phoneNumber, email });
         const savedHotel = await newHotel.save();
-const defaultAdmin = new User({
-    hotelId: savedHotel._id,
-    // This makes the username unique to the hotel!
-    username: `admin ${name.toLowerCase().replace(/\s/g, '')}`, 
-    password: 'admin',
-    role: 'admin',
-    isInitial: true
-});
 
+        const defaultAdmin = new User({
+            hotelId: savedHotel._id,
+            username: `${name.toLowerCase().replace(/\s/g, '')}`, 
+            password: 'admin',
+            role: 'admin',
+            isInitial: true
+        });
 
         await defaultAdmin.save();
-        res.status(201).json({ message: "Hotel and Admin created", hotelId: savedHotel._id });
+        res.status(201).json({ message: "Asset Registry Complete" });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
