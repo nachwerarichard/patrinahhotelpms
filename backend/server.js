@@ -17,10 +17,14 @@ const app = express();
 // 2. Add this BEFORE your routes
 // Configure CORS
 app.use(cors({
-    origin: 'https://elegant-pasca-cea136.netlify.app',
+    origin: [
+        'https://elegant-pasca-cea136.netlify.app', 
+        'https://novouscloudpms.onrender.com' // Add your second origin here
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));// Apply it to all routes
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true // Helpful if you decide to use cookies later
+}));
 
 
 app.use(express.json()); // This should also be before your routes to parse JSON bodies
