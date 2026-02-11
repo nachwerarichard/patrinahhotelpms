@@ -17,7 +17,7 @@ const app = express();
 // 2. Add this BEFORE your routes
 app.use(cors({
     origin: 'https://elegant-pasca-cea136.netlify.app', // Your Netlify URL
-    methods: [GET,HEAD,PUT,PATCH,POST,DELETE'],
+    methods: ['GET,HEAD,PUT,PATCH,POST,DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
