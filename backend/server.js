@@ -11,28 +11,17 @@ const app = express();
 
 // Middleware setup
 // 2. Configure CORS middleware - IMPORTANT: place this BEFORE your routes
-const allowedOrigins = [
-    'https://rainbow-fox-3bad88.netlify.app', 
-    'https://elegant-pasca-cea136.netlify.app',
-    'https://harmonious-crumble-2ca9ba.netlify.app',
-    'https://stirring-pony-fe2347.netlify.app'// Your Netlify frontend URL
-    // 'http://localhost:3000', // Add your local development URL if you test locally
-    // 'http://127.0.0.1:5500' // Another common local server URL if applicable
-];
+
+// 1. npm install cors (run this in your backend terminal)
+const cors = require('cors');
+
+// 2. Add this BEFORE your routes
 app.use(cors({
-    origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        // or if the origin is in our allowed list
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Specify the HTTP methods your frontend uses
-    credentials: true, // If you're sending cookies or authorization headers
-    optionsSuccessStatus: 204 // Some older browsers require 204 for preflight OPTIONS
+    origin: 'https://elegant-pasca-cea136.netlify.app', // Your Netlify URL
+    methods: [GET,HEAD,PUT,PATCH,POST,DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 
 app.use(express.json()); // This should also be before your routes to parse JSON bodies
 
