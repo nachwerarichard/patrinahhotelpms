@@ -133,6 +133,27 @@ const roomSchema = new mongoose.Schema({
 });
 const Room = mongoose.model('Room', roomSchema);
 // Create a Room Type (Tied to the hotel)
+
+// DELETE THIS AFTER RUNNING IT ONCE
+app.get('/api/setup-master-admin', async (req, res) => {
+    try {
+        const existingAdmin = await User.findOne({ role: 'super-admin' });
+        if (existingAdmin) return res.send("Super-admin already exists.");
+
+        const master = new User({
+            username: 'admin',
+            password: 'admin', // Use a strong password
+            role: 'super-admin'
+            // hotelId is left empty because super-admins are global
+        });
+
+        await master.save();
+        res.send("Super-admin created successfully! Delete this route now.");
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
 app.post('/api/room-types', auth, async (req, res) => {
     try {
         // Automatically inject the hotelId from the logged-in user
