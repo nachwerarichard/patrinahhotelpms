@@ -17,15 +17,24 @@ const app = express();
 // 2. Add this BEFORE your routes
 // Configure CORS
 app.use(cors({
-    origin: [
-        'https://elegant-pasca-cea136.netlify.app', 
-        'https://novouscloudpms.onrender.com' // Add your second origin here
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    origin: function (origin, callback) {
+        const whitelist = [
+            'https://elegant-pasca-cea136.netlify.app',
+            'https://novouscloudpms.onrender.com'
+        ];
+        // Allow requests with no origin (like mobile apps or curl) 
+        // or if the origin is in our whitelist
+        if (!origin || whitelist.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS Luxury Policy'));
+        }
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH','DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true // Helpful if you decide to use cookies later
+    credentials: true,
+    optionsSuccessStatus: 200 // Some legacy browsers choke on 204
 }));
-
 
 app.use(express.json()); // This should also be before your routes to parse JSON bodies
 
