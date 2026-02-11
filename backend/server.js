@@ -135,7 +135,7 @@ const Room = mongoose.model('Room', roomSchema);
 // Create a Room Type (Tied to the hotel)
 
 // DELETE THIS AFTER RUNNING IT ONCE
-app.get('/api/setup-master-admin', async (req, res) => {
+/*app.get('/api/setup-master-admin', async (req, res) => {
     try {
         const existingAdmin = await User.findOne({ role: 'super-admin' });
         if (existingAdmin) return res.send("Super-admin already exists.");
@@ -152,7 +152,7 @@ app.get('/api/setup-master-admin', async (req, res) => {
     } catch (err) {
         res.status(500).send(err.message);
     }
-});
+});*/
 
 app.post('/api/room-types', auth, async (req, res) => {
     try {
@@ -755,14 +755,15 @@ app.post('/api/admin/onboard-hotel', auth, authorizeRole('super-admin'), async (
     try {
         const newHotel = new Hotel({ name, location, phoneNumber, email });
         const savedHotel = await newHotel.save();
+const defaultAdmin = new User({
+    hotelId: savedHotel._id,
+    // This makes the username unique to the hotel!
+    username: `admin ${name.toLowerCase().replace(/\s/g, '')}`, 
+    password: 'admin',
+    role: 'admin',
+    isInitial: true
+});
 
-        const defaultAdmin = new User({
-            hotelId: savedHotel._id,
-            username: 'admin',
-            password: 'admin',
-            role: 'admin',
-            isInitial: true // Flagging as default
-        });
 
         await defaultAdmin.save();
         res.status(201).json({ message: "Hotel and Admin created", hotelId: savedHotel._id });
