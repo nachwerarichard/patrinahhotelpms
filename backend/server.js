@@ -141,7 +141,7 @@ app.get('/api/setup-master-admin', async (req, res) => {
         if (existingAdmin) return res.send("Super-admin already exists.");
 
         const master = new User({
-            username: 'admin',
+            username: 'novuspms',
             password: 'admin', // Use a strong password
             role: 'super-admin'
             // hotelId is left empty because super-admins are global
