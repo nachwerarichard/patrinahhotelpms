@@ -3,15 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hotel Onboarding | Super Admin</title>
+    <title>Super Admin Portal | Hotel PMS</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center p-6">
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
 
-    <div class="max-w-2xl w-full bg-white rounded-xl shadow-lg overflow-hidden">
-        <div class="bg-indigo-600 p-6">
-            <h1 class="text-2xl font-bold text-white">Hotel Onboarding</h1>
-            <p class="text-indigo-100 text-sm">Register a new property and generate default admin credentials.</p>
+    <div id="loginSection" class="max-w-md w-full bg-white rounded-xl shadow-2xl p-8">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold text-indigo-600">Master Login</h1>
+            <p class="text-gray-500 mt-2">Access the Super Admin Onboarding Panel</p>
+        </div>
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Master Username</label>
+                <input type="text" id="loginUser" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Master Password</label>
+                <input type="password" id="loginPass" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div id="loginError" class="hidden text-red-500 text-sm italic"></div>
+            <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-2 rounded-md hover:bg-indigo-700 transition">Enter Portal</button>
+        </form>
+    </div>
+
+    <div id="onboardSection" class="hidden max-w-2xl w-full bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-indigo-600 p-6 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-white">Hotel Onboarding</h1>
+                <p class="text-indigo-100 text-sm">Create a new property and its admin account.</p>
+            </div>
+            <button onclick="logout()" class="text-xs bg-indigo-800 text-white px-3 py-1 rounded hover:bg-red-600">Logout</button>
         </div>
 
         <form id="onboardForm" class="p-8 space-y-6">
@@ -20,104 +42,129 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Hotel Name</label>
-                        <input type="text" id="name" required placeholder="Grand Plaza Hotel"
-                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <input type="text" id="name" required placeholder="Grand Plaza Hotel" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Location/Address</label>
-                        <input type="text" id="location" required placeholder="Nairobi, Kenya"
-                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <label class="block text-sm font-medium text-gray-700">Location</label>
+                        <input type="text" id="location" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Primary Email</label>
-                        <input type="email" id="email" required placeholder="contact@hotel.com"
-                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <input type="email" id="email" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Phone Number</label>
-                        <input type="tel" id="phoneNumber" required placeholder="+254..."
-                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <input type="tel" id="phoneNumber" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
                     </div>
                 </div>
             </div>
 
-            <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <h2 class="text-sm font-bold text-blue-800 uppercase tracking-wider">Default Admin Account</h2>
-                <p class="text-sm text-blue-600 mt-1">A default admin user will be created automatically:</p>
-                <div class="mt-2 text-sm font-mono bg-white p-2 rounded border border-blue-200">
-                    <div>Username: <span class="font-bold">admin</span></div>
-                    <div>Password: <span class="font-bold">admin</span></div>
-                </div>
-                <p class="text-xs text-blue-500 mt-2">Note: The hotel manager should change this password upon first login.</p>
+            <div class="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                <h2 class="text-sm font-bold text-amber-800 uppercase">Warning: Admin Duplicate Prevention</h2>
+                <p class="text-xs text-amber-700 mt-1">
+                    To avoid the <b>Duplicate Key Error</b>, the system will automatically create a unique admin username based on the hotel name (e.g., admin_grandplaza).
+                </p>
             </div>
 
             <div id="statusMsg" class="hidden p-4 rounded-md text-sm"></div>
 
-            <button type="submit" id="submitBtn"
-                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
-                Complete Onboarding
+            <button type="submit" id="submitBtn" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-md hover:bg-indigo-700 transition">
+                Register Hotel & Admin
             </button>
         </form>
     </div>
 
     <script>
-        const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api'; // Your Render backend URL
+        const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
 
-      document.getElementById('onboardForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
+        // --- LOGIN LOGIC ---
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUser').value;
+            const password = document.getElementById('loginPass').value;
+            const errorDiv = document.getElementById('loginError');
 
-    const submitBtn = document.getElementById('submitBtn');
-    const statusMsg = document.getElementById('statusMsg');
-    
-    // UI Loading State
-    submitBtn.disabled = true;
-    submitBtn.innerText = 'Creating Hotel & Admin...';
-    statusMsg.className = 'hidden';
+            try {
+                const response = await fetch(`${API_BASE_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }) // No hotelId = Super Admin check
+                });
 
-    // Collect Data
-    const formData = {
-        name: document.getElementById('name').value,
-        location: document.getElementById('location').value,
-        email: document.getElementById('email').value,
-        phoneNumber: document.getElementById('phoneNumber').value
-    };
+                const data = await response.json();
 
-    try {
-        // We assume the Super Admin's token is stored in localStorage
-        const token = localStorage.getItem('token'); 
-
-const response = await fetch(`${API_BASE_URL}/admin/onboard-hotel`, {
-    method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(formData)
+                if (response.ok && data.user.role === 'super-admin') {
+                    localStorage.setItem('token', data.token); // This is your Base64 string
+                    showOnboarding();
+                } else {
+                    errorDiv.innerText = data.message || "Unauthorized access.";
+                    errorDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorDiv.innerText = "Connection failed.";
+                errorDiv.classList.remove('hidden');
+            }
         });
 
-        const result = await response.json();
+        // --- ONBOARDING LOGIC ---
+        document.getElementById('onboardForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submitBtn');
+            const statusMsg = document.getElementById('statusMsg');
+            const token = localStorage.getItem('token');
 
-        if (response.ok) {
-            // Success State
-            statusMsg.innerText = "Success! Hotel onboarded. Temporary credentials: admin / admin";
-            statusMsg.className = "p-4 rounded-md text-sm bg-green-100 text-green-800 block";
-            document.getElementById('onboardForm').reset();
-            
-            // Optional: Redirect to a Dashboard or List view after 3 seconds
-            // setTimeout(() => { window.location.href = '/admin/hotels'; }, 3000);
-        } else {
-            // Error State
-            throw new Error(result.error || 'Failed to onboard hotel');
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Creating...';
+
+            const formData = {
+                name: document.getElementById('name').value,
+                location: document.getElementById('location').value,
+                email: document.getElementById('email').value,
+                phoneNumber: document.getElementById('phoneNumber').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/onboard-hotel`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    statusMsg.innerText = `Success! New Hotel Admin: admin_${formData.name.toLowerCase().replace(/\s/g, '')}`;
+                    statusMsg.className = "p-4 rounded-md bg-green-100 text-green-800 block";
+                    document.getElementById('onboardForm').reset();
+                } else {
+                    throw new Error(result.error || result.message);
+                }
+            } catch (err) {
+                statusMsg.innerText = "Error: " + err.message;
+                statusMsg.className = "p-4 rounded-md bg-red-100 text-red-800 block";
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Register Hotel & Admin';
+            }
+        });
+
+        function showOnboarding() {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('onboardSection').classList.remove('hidden');
         }
 
-    } catch (err) {
-        statusMsg.innerText = "Error: " + err.message;
-        statusMsg.className = "p-4 rounded-md text-sm bg-red-100 text-red-800 block";
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerText = 'Complete Onboarding';
-    }
-});
+        function logout() {
+            localStorage.removeItem('token');
+            location.reload();
+        }
+
+        // Check if already logged in
+        if (localStorage.getItem('token')) {
+            showOnboarding();
+        }
     </script>
 </body>
 </html>
