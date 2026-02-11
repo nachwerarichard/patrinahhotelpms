@@ -16,14 +16,11 @@ const app = express();
 
 // 2. Add this BEFORE your routes
 // Configure CORS
-const corsOptions = {
-    origin: 'https://elegant-pasca-cea136.netlify.app', // Allow your Netlify frontend
-    methods: 'GET,POST,PUT,DELETE,PATCH,OPTIONS',
-    allowedHeaders: 'Content-Type,Authorization',
-    credentials: true // Allow cookies/headers if needed
-};
-
-app.use(cors(corsOptions)); // Apply it to all routes
+app.use(cors({
+    origin: 'https://elegant-pasca-cea136.netlify.app',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));// Apply it to all routes
 
 
 app.use(express.json()); // This should also be before your routes to parse JSON bodies
