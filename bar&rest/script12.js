@@ -43,11 +43,19 @@ function hidePreloader() {
 // Call it immediately
 
 async function login() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+    const usernameField = document.getElementById('username');
+    const passwordField = document.getElementById('password');
     const loginMessage = document.getElementById('login-message');
     
-    // 1. Show preloader and clear previous message
+    const username = usernameField.value.trim();
+    const password = passwordField.value;
+
+    // 1. Validation & Preloader
+    if (!username || !password) {
+        loginMessage.textContent = 'Please enter both username and password.';
+        return;
+    }
+
     showPreloader();
     loginMessage.textContent = ''; 
 
@@ -60,31 +68,53 @@ async function login() {
 
         const data = await response.json();
 
-       if (response.ok) {
-    // 1. Capture the data from the backend response
-    authToken = data.token;
-    currentUsername = data.username; // Use backend data to ensure consistency
-    currentUserRole = data.role;     // Get the actual role from DB
+        if (response.ok) {
+            // 2. Capture Multi-Tenant Data
+            // The backend must return: token, username, role, hotelId, and hotelName
+            const userSession = {
+                token: data.token,
+                username: data.username,
+                role: data.role,
+                hotelId: data.hotelId,
+                hotelName: data.hotelName,
+                loginTime: new Date().getTime()
+            };
 
-    // 2. Persist to LocalStorage
-    localStorage.setItem('authToken', authToken);
-    localStorage.setItem('username', currentUsername);
-    localStorage.setItem('userRole', currentUserRole);
+            // 3. Persist as a single JSON object for easier management
+            localStorage.setItem('loggedInUser', JSON.stringify(userSession));
 
-    // 3. Update the UI immediately
-    updateUIForUserRole();
-    initSidebarState(); 
-    
-    // Optional: Redirect or hide login modal
-    console.log(`Logged in as: ${currentUsername} with role: ${currentUserRole}`);
-} else {
-            loginMessage.textContent = data.message || 'Login failed. Please check your credentials.';
+            // 4. Update Global State
+            currentUsername = data.username;
+            currentUserRole = data.role;
+
+            // 5. UI Transitions
+            loginContainer.style.display = 'none';
+            mainContent.style.display = 'flex';
+
+            // 6. Initialize the App for this specific Hotel
+            applyRoleAccess(data.role);
+            
+            // Update the UI with the Hotel's name immediately
+            const hotelBrand = document.getElementById('hotel-name-display');
+            if (hotelBrand) hotelBrand.textContent = data.hotelName;
+
+            // 7. Route to initial view
+            if (typeof renderBookings === 'function') {
+                renderBookings(1, ""); 
+            }
+            
+            console.log(`Authenticated: ${data.username} at ${data.hotelName}`);
+
+        } else {
+            // Specific error handling (e.g., account disabled or wrong password)
+            loginMessage.style.color = '#ef4444'; // Red-500
+            loginMessage.textContent = data.message || 'Invalid credentials.';
+            passwordField.value = ''; // Clear password on failure
         }
     } catch (error) {
-        console.error('Login request failed:', error);
-        loginMessage.textContent = 'Network error or service unavailable.';
+        console.error('Critical Login Error:', error);
+        loginMessage.textContent = 'Connection failed. Please check your internet.';
     } finally {
-        // 2. Hide preloader after the request finishes (success or failure)
         hidePreloader();
     }
 }
@@ -130,19 +160,36 @@ function showMessage(message, callback = null) {
 /**
  * Clears user state, local storage, and updates UI to show the login screen.
  */
+/**
+ * Safely terminates the user session and redirects to login.
+ * Includes history replacement to prevent back-button navigation.
+ */
 function logout() {
     // 1. Clear in-memory variables
     authToken = '';
     currentUsername = '';
     currentUserRole = '';
 
-    // 2. Wipe ALL stored data from the browser
-    localStorage.clear();
+    // 2. Targeted Data Removal
+    // We remove the specific auth key rather than clearing everything, 
+    // which allows us to keep non-sensitive settings if needed.
+    localStorage.removeItem('loggedInUser');
+    
+    // Fallback: If you previously used individual keys, clear them too
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('username');
+    localStorage.removeItem('userRole');
 
-    // 3. Prevent "Back" button access
-    // We use .replace() so the dashboard is removed from browser history
+    // 3. UI Reset
+    if (typeof mainContent !== 'undefined') mainContent.style.display = 'none';
+    if (typeof loginContainer !== 'undefined') loginContainer.style.display = 'flex';
+
+    // 4. Secure Redirection
     console.log("Session cleared. Redirecting to login...");
-    window.location.replace('https://elegant-pasca-cea136.netlify.app/frontend/login.html');
+    
+    // .replace ensures the dashboard page is replaced in the history stack
+    const loginUrl = 'https://elegant-pasca-cea136.netlify.app/frontend/login.html';
+    window.location.replace(loginUrl);
 }
 /**
  * Wrapper for fetch API to include authentication token and handle errors.
@@ -158,21 +205,31 @@ function logout() {
  * if the global authToken variable is stale.
  */
 async function authenticatedFetch(url, options = {}) {
-    // FIX: Retrieve the token just before the request
-    const currentToken = localStorage.getItem('authToken'); 
+    // 1. Retrieve the session data
+    const savedUserData = localStorage.getItem('loggedInUser');
+    let currentToken = null;
+    let currentHotelId = null;
 
+    if (savedUserData) {
+        const user = JSON.parse(savedUserData);
+        currentToken = user.token;
+        currentHotelId = user.hotelId;
+    }
+
+    // 2. Prepare headers
     const headers = {
         'Content-Type': 'application/json',
-        ...options.headers // Merge any existing headers
+        ...options.headers // Merge any existing headers provided by the caller
     };
 
     if (currentToken) {
-        // Attach the token retrieved from the successful login to the Authorization header
-        // Your server.js expects 'Bearer <Base64-encoded credentials>'
-        headers['Authorization'] = `Bearer ${currentToken}`; 
+        headers['Authorization'] = `Bearer ${currentToken}`;
+        
+        // Strategy: We can also inject the hotelId into the headers 
+        // if the backend is configured to look for it there.
+        headers['X-Hotel-ID'] = currentHotelId; 
     } else {
-        // This warning is helpful for debugging when a token is expected but missing
-        console.warn("Sending Authorization Header: Bearer undefined (Token is missing or has not been stored)"); 
+        console.warn("Unauthorized request attempt: No token found in localStorage.");
     }
 
     try {
@@ -181,19 +238,27 @@ async function authenticatedFetch(url, options = {}) {
             headers: headers
         });
 
-        // Centralized handling for 401/403 errors
+        // 3. Centralized handling for Auth failures (Expired/Invalid Token)
         if (response.status === 401 || response.status === 403) {
-            console.warn(`Authenticated fetch failed with status: ${response.status}.`);
-            // Show message and trigger logout handler
-            showMessage('Session expired or unauthorized access. Logging out.', logout);
+            console.error(`Auth failure (Status: ${response.status}). Cleaning up session.`);
+            
+            // If the UI has a showMessageBox function, use it
+            if (typeof showMessageBox === 'function') {
+                showMessageBox('Session Expired', 'Your session has timed out. Please login again.', true);
+            } else {
+                alert('Session expired. Logging out.');
+            }
+
+            // Trigger the logout function we just updated
+            setTimeout(() => logout(), 1500); 
             return null; 
         }
 
         return response;
 
     } catch (error) {
-        console.error('Network error during authenticated fetch:', error);
-        // Throw the error so the calling function can handle network issues
+        console.error('Network or CORS error during fetch:', error);
+        // We throw it so specific functions can catch it (e.g., to show a "Retry" button)
         throw error;
     }
 }
