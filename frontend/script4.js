@@ -370,7 +370,7 @@ if (displayElement) {
     let initialSectionId = '';
     let initialNavLinkId = '';
 
-    if (role === 'admin') {
+    if (role === 'admin' || role === 'super-admin' || role === 'manager') {
         initialSectionId = 'dashbaord';
         initialNavLinkId = 'nav-dashboard';
     } else if (role === 'housekeeper') {
@@ -510,7 +510,7 @@ event.preventDefault();
         console.error(`Error: Section with ID "${targetId}" not found.`);
         
         // Fallback to a default accessible section if targetId is invalid
-        if (currentUserRole === 'admin') {
+        if (currentUserRole === 'admin' || currentUserRole==='super-admin') {
             document.getElementById('dashbaord').classList.add('active');
             //renderBookings(currentPage, currentSearchTerm); // Ensure it renders if fallback
         } else if (currentUserRole === 'housekeeper') {
@@ -580,7 +580,7 @@ function applyRoleAccess(role) {
 
     // Show navigation links based on role
     switch (role) {
-        case 'admin':
+        case 'admin' || 'super-admin':
             // Admins see everything
             document.getElementById('nav-booking').style.display = 'list-item';
             document.getElementById('nav-dashboard').style.display = 'list-item';
@@ -621,7 +621,7 @@ if (!pageInfoSpan) {
     }
     // Allow 'admin' and 'bar' roles to view bookings.
     // Restrict all other roles.
-    if (currentUserRole !== 'admin' && currentUserRole !== 'bar') {
+    if (currentUserRole !== 'admin' && currentUserRole !== 'bar' && currentUserRole !== 'super-admin') {
         bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px;">Access Denied. You do not have permission to view bookings.</td></tr>';
         prevPageBtn.disabled = true;
         nextPageBtn.disabled = true;
@@ -685,7 +685,7 @@ if (booking.gueststatus === 'cancelled') {
 const isCancelled = booking.gueststatus === 'cancelled';
 const baseBtn = "inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white focus:outline-none transition-all duration-200 w-full justify-center mb-1";
 
-if (currentUserRole === 'admin') {
+if (currentUserRole === 'admin' || currentUserRole === 'super-admin') {
     if (isCancelled) {
         // --- UI for Cancelled Bookings ---
         actionButtonsHtml = `
@@ -2950,7 +2950,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Made async to awa
             let initialSectionId = '';
             let initialNavLinkId = '';
 
-            if (currentUserRole === 'admin') {
+            if (currentUserRole === 'admin' || currentUserRole === 'super-admin') {
                 initialSectionId = 'dashbaord';
                 initialNavLinkId = 'nav-dashboard';
             }else if (currentUserRole === 'bar') {
