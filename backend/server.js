@@ -702,7 +702,7 @@ const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 // --- 6. Hardcoded Users for Authentication (Highly Insecure for Production!) ---
 // --- Updated User Schema ---
 const userSchema = new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' },
     username: { type: String, required: true }, // Removed unique: true
     password: { type: String, required: true },
     role: { 
