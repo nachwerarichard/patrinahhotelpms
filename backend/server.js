@@ -765,13 +765,13 @@ app.post('/api/admin/onboard-hotel', auth, authorizeRole('super-admin'), async (
         const newHotel = new Hotel({ name, location, phoneNumber, email });
         const savedHotel = await newHotel.save();
 
-        const defaultAdmin = new User({
-            hotelId: savedHotel._id,
-            username: `${name.toLowerCase().replace(/\s/g, '')}`, 
-            password: 'admin',
-            role: 'admin',
-            isInitial: true
-        });
+       const defaultAdmin = new User({
+    hotelId: savedHotel._id,
+    username: 'novouscloudpms', 
+    password: 'admin',
+    role: 'admin',
+    isInitial: true
+});
 
         await defaultAdmin.save();
         res.status(201).json({ message: "Asset Registry Complete" });
