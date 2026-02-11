@@ -57,78 +57,79 @@ function setDefaultDateRange() {
 
 async function apiFetch(endpoint) {
     if (!authToken) {
-        showMessage('Authentication Error', 'You are not logged in.', true);
+        // Redirect to login if token is missing
+        updateUI(false); 
         return null;
     }
 
     try {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             headers: {
-                'Authorization': `Basic ${authToken}`,
+                'Authorization': `Bearer ${authToken}`, // Switched to Bearer for modern JWT standards
                 'Content-Type': 'application/json'
             }
         });
 
+        // Handle Session Expiry or Permission Issues
         if (response.status === 401 || response.status === 403) {
-            // Force logout on auth failure
             handleLogout();
-            showMessage('Session Expired', 'Your session has expired. Please log in again.', true);
+            showMessageBox('Session Expired', 'Please log in again to continue.', true);
             return null;
         }
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            throw new Error(errorData.error || `Error: ${response.status}`);
         }
 
-        return response.json();
+        return await response.json();
 
     } catch (error) {
         console.error('API Fetch Error:', error);
-        showMessage('Network Error', `Could not fetch data: ${error.message}. Check the backend server status or the date range.`, true);
+        // Avoid showing "Network Error" on every small glitch to prevent user fatigue
         return null;
     }
 }
-
-// --- Auth Logic ---
-
-function updateUI(isAuthenticated) {
-    if (isAuthenticated) {
-        dashboardContent.classList.remove('hidden');
-        dashboardContent.classList.add('block');
-        const username = atob(authToken).split(':')[0];
-        setDefaultDateRange(); // Set default range on login
-        loadDashboardData();
-    } else {
-        dashboardContent.classList.add('hidden');
-    }
-}
-
 async function handleLogin() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+    const usernameEl = document.getElementById('username');
+    const passwordEl = document.getElementById('password');
+    const authError = document.getElementById('auth-error');
+
     loginButton.disabled = true;
-    loginButton.textContent = 'Logging in...';
+    loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
 
     try {
         const response = await fetch(`${API_BASE_URL}/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ username: usernameEl.value, password: passwordEl.value })
         });
 
         const data = await response.json();
 
         if (response.ok) {
+            // Save complete user context
             authToken = data.token;
-            localStorage.setItem('authToken', authToken);
+            currentUserRole = data.role;
+            currentUsername = data.username;
+            
+            const userData = {
+                token: data.token,
+                role: data.role,
+                username: data.username,
+                hotelId: data.hotelId // The anchor for all hotel data
+            };
+
+            localStorage.setItem('loggedInUser', JSON.stringify(userData));
+            localStorage.setItem('authToken', data.token);
+            
             updateUI(true);
         } else {
-            authError.textContent = data.error || 'Login failed. Please check your credentials.';
+            authError.textContent = data.error || 'Invalid credentials.';
             authError.classList.remove('hidden');
         }
     } catch (error) {
-        authError.textContent = 'Could not connect to the server.';
+        authError.textContent = 'Server unreachable. Check your connection.';
         authError.classList.remove('hidden');
     } finally {
         loginButton.disabled = false;
@@ -136,112 +137,99 @@ async function handleLogin() {
     }
 }
 
+function updateUI(isAuthenticated) {
+    const loginSection = document.getElementById('login-section');
+    const dashboardContent = document.getElementById('dashboard-content');
 
-// --- Dashboard Rendering ---
-
-function renderFinancialChart(data) {
-    chartLoadingStatus.classList.add('hidden');
-
-    const labels = data.map(d => d._id);
-    const revenues = data.map(d => d.totalRevenue);
-    const profits = data.map(d => d.totalProfit);
-    const expenses = data.map(d => d.totalExpenses);
-
-    if (chartInstance) {
-        chartInstance.destroy();
+    if (isAuthenticated) {
+        loginSection.classList.add('hidden');
+        dashboardContent.classList.remove('hidden');
+        
+        // Setup initial view
+        setDefaultDateRange(); 
+        loadDashboardData();
+        
+        // Display personalized welcome
+        const welcomeEl = document.getElementById('user-welcome');
+        if (welcomeEl) welcomeEl.textContent = `Welcome, ${currentUsername}`;
+    } else {
+        loginSection.classList.remove('hidden');
+        dashboardContent.classList.add('hidden');
     }
-
+}
+function renderFinancialChart(data) {
     const ctx = document.getElementById('financialChart').getContext('2d');
+    
+    // Process Data
+    const labels = data.map(d => d._id); // Expected format: YYYY-MM-DD
+    const revenues = data.map(d => d.totalRevenue || 0);
+    const expenses = data.map(d => d.totalExpenses || 0);
+    const profits = data.map(d => (d.totalRevenue || 0) - (d.totalExpenses || 0));
+
+    if (chartInstance) chartInstance.destroy();
+
     chartInstance = new Chart(ctx, {
-        type: 'bar',
         data: {
             labels: labels,
             datasets: [
                 {
-                    // Gross Profit (Functional Green)
                     type: 'line',
-                    label: 'Gross Profit',
+                    label: 'Net Profit',
                     data: profits,
-                    backgroundColor: 'rgba(16, 185, 129, 0.7)', // green-500 rgba
-                    borderColor: 'rgb(16, 185, 129)',          // green-500
-                    pointRadius: 5,
-                    pointBackgroundColor: 'rgb(16, 185, 129)',
-                    tension: 0.4,
-                    fill: false,
+                    borderColor: '#10B981', // Emerald-500
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
                     borderWidth: 3,
-                    yAxisID: 'y'
+                    tension: 0.4,
+                    fill: true,
+                    pointStyle: 'circle',
+                    pointRadius: 4
                 },
                 {
-                    // Revenue (Primary Accent Indigo)
                     type: 'bar',
-                    label: 'Total Revenue',
+                    label: 'Revenue',
                     data: revenues,
-                    backgroundColor: 'rgba(79, 70, 229, 0.8)', // indigo-600 rgba
-                    borderColor: 'rgb(79, 70, 229)',          // indigo-600
-                    borderWidth: 1,
-                    yAxisID: 'y'
+                    backgroundColor: 'rgba(79, 70, 229, 0.8)', // Indigo-600
+                    borderRadius: 4
                 },
                 {
-                    // Expenses (Functional Red)
                     type: 'bar',
-                    label: 'Total Expenses',
+                    label: 'Expenses',
                     data: expenses,
-                    backgroundColor: 'rgba(239, 68, 68, 0.8)', // red-500 rgba (maintained)
-                    borderColor: 'rgb(239, 68, 68)',
-                    borderWidth: 1,
-                    yAxisID: 'y'
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)', // Red-500
+                    borderRadius: 4
                 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
             scales: {
                 x: {
-                    stacked: false,
-                    // Axis Title/Tick Color: Secondary/Primary Text for light theme
-                    title: { display: true, text: 'Date (EAT)', color: '#6B7280' },
-                    grid: { color: 'rgba(156, 163, 175, 0.2)' }, // Lighter grid lines
-                    ticks: { color: '#1F2937' }
+                    grid: { display: false },
+                    ticks: { color: '#6B7280' }
                 },
                 y: {
-                    stacked: false,
                     beginAtZero: true,
-                    // MODIFIED TEXT FOR UGX
-                    title: { display: true, text: 'Amount (UGX)', color: '#6B7280' },
-                    grid: { color: 'rgba(156, 163, 175, 0.2)' }, // Lighter grid lines
                     ticks: {
-                        color: '#1F2937',
-                        callback: function(value) {
-                            // Uses the updated formatCurrency function
-                            return formatCurrency(value);
-                        }
-                    }
+                        color: '#6B7280',
+                        callback: (val) => 'UGX ' + val.toLocaleString()
+                    },
+                    title: { display: true, text: 'Amount (Shillings)' }
                 }
             },
             plugins: {
-                // Legend Text Color: Primary Text for light theme
-                legend: { labels: { color: '#1F2937' } },
+                legend: { position: 'top', labels: { usePointStyle: true, padding: 20 } },
                 tooltip: {
+                    padding: 12,
                     callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                // Uses the updated formatCurrency function
-                                label += formatCurrency(context.parsed.y);
-                            }
-                            return label;
-                        }
+                        label: (ctx) => `${ctx.dataset.label}: UGX ${ctx.parsed.y.toLocaleString()}`
                     }
                 }
             }
         }
     });
 }
-
 /**
  * Renders the Key Performance Indicators (KPIs).
  * @param {object} financialSummary - The financial summary data.
