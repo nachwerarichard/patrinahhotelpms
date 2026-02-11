@@ -765,9 +765,9 @@ app.post('/api/admin/onboard-hotel', auth, authorizeRole('super-admin'), async (
         const newHotel = new Hotel({ name, location, phoneNumber, email });
         const savedHotel = await newHotel.save();
 
-       const defaultAdmin = new User({
+      const defaultAdmin = new User({
     hotelId: savedHotel._id,
-    username: 'novouscloudpms', 
+    username: `novous_${name}`, 
     password: 'admin',
     role: 'admin',
     isInitial: true
