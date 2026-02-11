@@ -16,7 +16,6 @@ const app = express();
 
 // 2. Add this BEFORE your routes
 // Configure CORS
-const cors = require('cors');
 
 // This is the "Open Door" policy
 app.use(cors({
