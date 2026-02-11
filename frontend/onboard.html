@@ -86,8 +86,8 @@
         // We assume the Super Admin's token is stored in localStorage
         const token = localStorage.getItem('token'); 
 
-        const response = await fetch('${API_BASE_URL}/admin/onboard-hotel', {
-            method: 'POST',
+const response = await fetch(`${API_BASE_URL}/admin/onboard-hotel`, {
+    method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
