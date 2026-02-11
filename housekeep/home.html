@@ -680,7 +680,7 @@ function renderRadialOptions() {
     container.innerHTML = ''; 
 
     let modulesToShow = [];
-    if (role === 'admin') {
+    if (role === 'admin'|| role==='super-admin') {
         // These keys now match the SYSTEM_LINKS object exactly
         modulesToShow = [SYSTEM_LINKS.systemA, SYSTEM_LINKS.systemB, SYSTEM_LINKS.KDS, SYSTEM_LINKS.staff];
     } else if (['bar', 'cashier'].includes(role)) {
