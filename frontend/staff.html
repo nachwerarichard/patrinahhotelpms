@@ -168,224 +168,252 @@
     <script>
         const API_BASE_URL = 'https://patrinahhotelpms.onrender.com'; 
         
-        const getAuthHeaders = () => {
-            const token = localStorage.getItem('token');
-            return {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            };
-        };
+        /**
+ * STAFF MANAGEMENT & MODULE SWITCHER
+ * Scoped for Hotel Admins
+ */
 
-        window.onload = () => {
-            lucide.createIcons();
-            fetchUsers();
-        };
+// 1. HELPER: Get Security Headers
+const getAuthHeaders = () => {
+    const token = localStorage.getItem('authToken'); // Changed to 'authToken' for consistency
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+};
 
-        // --- AUTH LOGIC ---
-       function handleLogout() {
-    localStorage.removeItem('token');
+// 2. HELPER: Get Hotel ID
+const getHotelId = () => {
+    const user = JSON.parse(localStorage.getItem('loggedInUser'));
+    return user ? user.hotelId : null;
+};
+
+window.onload = () => {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    fetchUsers();
+};
+
+// --- AUTH LOGIC ---
+function handleLogout() {
+    // Clear everything for security
+    localStorage.clear();
+    sessionStorage.clear();
     window.location.replace('https://elegant-pasca-cea136.netlify.app/frontend/login.html');
 }
 
-        // --- MODAL LOGIC ---
-        function openModal(editData = null) {
-            const modal = document.getElementById('userModal');
-            modal.classList.remove('hidden');
-            document.body.classList.add('modal-active');
-            
-            if(editData) {
-                document.getElementById('modalTitle').innerText = "Edit Staff Member";
-                document.getElementById('username').value = editData.name;
-                document.getElementById('role').value = editData.role;
-            } else {
-                resetForm();
-            }
-        }
-
-        function closeModal() {
-            document.getElementById('userModal').classList.add('hidden');
-            document.body.classList.remove('modal-active');
-        }
-
-        async function fetchUsers() {
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/admin/users`, {
-                    headers: getAuthHeaders()
-                });
-
-                if (!res.ok) throw new Error("Connection Failed");
-
-                const users = await res.json();
-                document.getElementById('totalStaffCount').innerText = users.length;
-                const tbody = document.getElementById('userTableBody');
-                
-                document.getElementById('connectionStatus').innerText = "Server Online";
-                document.getElementById('connectionStatus').className = "text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 px-2 py-0.5 rounded";
-
-                tbody.innerHTML = users.map(user => `
-                    <tr class="hover:bg-slate-50/80 transition group">
-                        <td class="px-6 py-4">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
-                                    ${user.username.charAt(0).toUpperCase()}
-                                </div>
-                                <span class="font-semibold text-slate-800">${user.username}</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-wider border ${getRoleClass(user.role)}">
-                                ${user.role.toUpperCase()}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <select onchange="updateRole('${user._id}', this.value)" class="text-sm bg-transparent border-b-2 border-transparent hover:border-indigo-300 outline-none cursor-pointer py-1 transition">
-                                <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
-                                <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
-                                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                                <option value="cashier" ${user.role === 'admin' ? 'selected' : ''}>Cashier</option>
-                               <option value="Front office" ${user.role === 'admin' ? 'selected' : ''}>Front Office</option>
-
-                            </select>
-                        </td>
-                        <td class="px-6 py-4 text-right">
-                            <div class="flex justify-end gap-1">
-                                <button onclick="fillEditForm('${user.username}', '${user.role}')" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition">
-                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
-                                </button>
-                                <button onclick="deleteUser('${user._id}')" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
-                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
-                lucide.createIcons();
-            } catch (err) {
-                document.getElementById('connectionStatus').innerText = "Offline";
-                document.getElementById('connectionStatus').className = "text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-700 px-2 py-0.5 rounded";
-            }
-        }
-
-        async function handleSaveUser() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const role = document.getElementById('role').value;
-
-            if(!username || !password) return alert("Please fill in credentials");
-
-            const res = await fetch(`${API_BASE_URL}/api/admin/manage-user`, {
-                method: 'POST',
-                headers: getAuthHeaders(),
-                body: JSON.stringify({ targetUsername: username, newPassword: password, newRole: role })
-            });
-
-            if(res.ok) {
-                closeModal();
-                fetchUsers();
-            } else {
-                alert('Error saving user.');
-            }
-        }
-
-        async function deleteUser(id) {
-            if(!confirm('Delete this account permanently?')) return;
-            const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}`, { 
-                method: 'DELETE',
-                headers: getAuthHeaders()
-            });
-            if(res.ok) fetchUsers();
-        }
-
-        async function updateRole(id, newRole) {
-            await fetch(`${API_BASE_URL}/api/admin/users/${id}`, {
-                method: 'PUT',
-                headers: getAuthHeaders(),
-                body: JSON.stringify({ role: newRole })
-            });
-            fetchUsers();
-        }
-
-        function fillEditForm(name, role) {
-            openModal({name, role});
-        }
-
-        function resetForm() {
-            document.getElementById('modalTitle').innerText = "Add New Staff";
-            document.getElementById('username').value = "";
-            document.getElementById('password').value = "";
-            document.getElementById('role').value = "housekeeper";
-        }
-
-        function getRoleClass(role) {
-            const classes = {
-                admin: 'bg-purple-50 text-purple-600 border-purple-100',
-                bar: 'bg-amber-50 text-amber-600 border-amber-100',
-                front_office: 'bg-blue-50 text-blue-600 border-blue-100',
-                housekeeper: 'bg-emerald-50 text-emerald-600 border-emerald-100'
-            };
-            return classes[role] || 'bg-gray-50 text-gray-600 border-gray-100';
-        }
-    </script>
-   <script>
-  
-  
-
-function toggleSwitchMenu() {
-    const container = document.getElementById('available-modules');
-    const icon = document.getElementById('menu-icon');
+// --- MODAL LOGIC ---
+function openModal(editData = null) {
+    const modal = document.getElementById('userModal');
+    modal.classList.remove('hidden');
+    document.body.classList.add('modal-active');
     
-    // Toggle active state
-    const isActive = container.classList.toggle('is-active');
-    icon.style.transform = isActive ? 'rotate(180deg)' : 'rotate(0deg)';
-
-    if (isActive) {
-        renderRadialOptions();
+    if(editData) {
+        document.getElementById('modalTitle').innerText = "Edit Staff Member";
+        document.getElementById('username').value = editData.name;
+        document.getElementById('role').value = editData.role;
+        // Password field usually stays blank on edit unless changing it
     } else {
-        const btns = container.querySelectorAll('.radial-btn');
-        btns.forEach(btn => btn.classList.remove('show'));
-        // Clean up after animation
-        setTimeout(() => { if(!container.classList.contains('is-active')) container.innerHTML = ''; }, 400);
+        resetForm();
     }
 }
 
+function closeModal() {
+    document.getElementById('userModal').classList.add('hidden');
+    document.body.classList.remove('modal-active');
+}
+
+// --- FETCH USERS (Scoped to Hotel) ---
+async function fetchUsers() {
+    const hotelId = getHotelId();
+    if (!hotelId) return;
+
+    try {
+        // We pass hotelId to ensure an Admin only sees their own staff
+        const res = await fetch(`${API_BASE_URL}/admin/users?hotelId=${hotelId}`, {
+            headers: getAuthHeaders()
+        });
+
+        if (!res.ok) throw new Error("Connection Failed");
+
+        const users = await res.json();
+        
+        // Update Stats
+        const staffCountEl = document.getElementById('totalStaffCount');
+        if (staffCountEl) staffCountEl.innerText = users.length;
+        
+        const statusEl = document.getElementById('connectionStatus');
+        if (statusEl) {
+            statusEl.innerText = "Server Online";
+            statusEl.className = "text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 px-2 py-0.5 rounded";
+        }
+
+        const tbody = document.getElementById('userTableBody');
+        tbody.innerHTML = users.map(user => `
+            <tr class="hover:bg-slate-50/80 transition group border-b border-slate-100">
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
+                            ${user.username.charAt(0).toUpperCase()}
+                        </div>
+                        <span class="font-semibold text-slate-800">${user.username}</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-wider border ${getRoleClass(user.role)}">
+                        ${user.role.toUpperCase()}
+                    </span>
+                </td>
+                <td class="px-6 py-4">
+                    <select onchange="updateRole('${user._id}', this.value)" class="text-sm bg-transparent border-b-2 border-transparent hover:border-indigo-300 outline-none cursor-pointer py-1 transition">
+                        <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
+                        <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
+                        <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
+                        <option value="reception" ${user.role === 'reception' ? 'selected' : ''}>Reception</option>
+                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                    </select>
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <div class="flex justify-end gap-1">
+                        <button onclick="fillEditForm('${user.username}', '${user.role}')" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition">
+                            <i data-lucide="edit-3" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="deleteUser('${user._id}')" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    } catch (err) {
+        console.error(err);
+        const statusEl = document.getElementById('connectionStatus');
+        if (statusEl) {
+            statusEl.innerText = "Offline";
+            statusEl.className = "text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-700 px-2 py-0.5 rounded";
+        }
+    }
+}
+
+async function handleSaveUser() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const role = document.getElementById('role').value;
+    const hotelId = getHotelId();
+
+    if(!username || !password) return alert("Please fill in credentials");
+
+    const res = await fetch(`${API_BASE_URL}/admin/manage-user`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ 
+            targetUsername: username, 
+            newPassword: password, 
+            newRole: role,
+            hotelId: hotelId // Ensure new staff is linked to this hotel
+        })
+    });
+
+    if(res.ok) {
+        closeModal();
+        fetchUsers();
+    } else {
+        alert('Error saving user. Username might be taken.');
+    }
+}
+
+async function deleteUser(id) {
+    if(!confirm('Delete this account permanently?')) return;
+    const res = await fetch(`${API_BASE_URL}/admin/users/${id}`, { 
+        method: 'DELETE',
+        headers: getAuthHeaders()
+    });
+    if(res.ok) fetchUsers();
+}
+
+async function updateRole(id, newRole) {
+    await fetch(`${API_BASE_URL}/admin/users/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ role: newRole })
+    });
+    fetchUsers();
+}
+
+function fillEditForm(name, role) {
+    openModal({name, role});
+}
+
+function resetForm() {
+    document.getElementById('modalTitle').innerText = "Add New Staff";
+    document.getElementById('username').value = "";
+    document.getElementById('password').value = "";
+    document.getElementById('role').value = "housekeeper";
+}
+
+function getRoleClass(role) {
+    const classes = {
+        admin: 'bg-purple-50 text-purple-600 border-purple-100',
+        bar: 'bg-amber-50 text-amber-600 border-amber-100',
+        reception: 'bg-blue-50 text-blue-600 border-blue-100',
+        cashier: 'bg-cyan-50 text-cyan-600 border-cyan-100',
+        housekeeper: 'bg-emerald-50 text-emerald-600 border-emerald-100'
+    };
+    return classes[role] || 'bg-gray-50 text-gray-600 border-gray-100';
+}
+
+// --- RADIAL MENU LOGIC ---
 const SYSTEM_LINKS = {
-    // Keys match exactly what is called in the function below
     systemA: { label: '💰', full: 'Point of Sale', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html' },
     systemB: { label: '🏨', full: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html' },
     staff: { label: '👥', full: 'Staff', url: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html' },
     KDS: { label: '🍳', full: 'Kitchen Display', url: 'https://elegant-pasca-cea136.netlify.app/frontend/kitchen.html' }
 };
 
+function toggleSwitchMenu() {
+    const container = document.getElementById('available-modules');
+    const icon = document.getElementById('menu-icon');
+    if (!container) return;
+
+    const isActive = container.classList.toggle('is-active');
+    if (icon) icon.style.transform = isActive ? 'rotate(180deg)' : 'rotate(0deg)';
+
+    if (isActive) {
+        renderRadialOptions();
+    } else {
+        const btns = container.querySelectorAll('.radial-btn');
+        btns.forEach(btn => btn.classList.remove('show'));
+        setTimeout(() => { if(!container.classList.contains('is-active')) container.innerHTML = ''; }, 400);
+    }
+}
+
 function renderRadialOptions() {
     const container = document.getElementById('available-modules');
     const role = (localStorage.getItem('userRole') || '').toLowerCase();
-    
     container.innerHTML = ''; 
 
     let modulesToShow = [];
-    if (role === 'admin' || role ==='super-admin') {
-        // These keys now match the SYSTEM_LINKS object exactly
+    if (role === 'admin') {
         modulesToShow = [SYSTEM_LINKS.systemA, SYSTEM_LINKS.systemB, SYSTEM_LINKS.KDS, SYSTEM_LINKS.staff];
     } else if (['bar', 'cashier'].includes(role)) {
         modulesToShow = [SYSTEM_LINKS.systemA];
-    } else if (['housekeeping', 'reception'].includes(role)) {
+    } else if (['housekeeper', 'reception'].includes(role)) {
         modulesToShow = [SYSTEM_LINKS.systemB];
     }
 
-    // ADDED a 4th position (Diagonal Top-Left) so the 4th button isn't stuck at 0,0
     const positions = [
-        { x: '90px',  y: '0px' },    // Directly Right
-        { x: '70px',  y: '-70px' },  // Diagonal Top-Right
-        { x: '0px',   y: '-90px' },  // Directly Above
-        { x: '-70px', y: '-70px' }   // Diagonal Top-Left
+        { x: '90px',  y: '0px' },
+        { x: '70px',  y: '-70px' },
+        { x: '0px',   y: '-90px' },
+        { x: '-70px', y: '-70px' }
     ];
 
     modulesToShow.forEach((mod, index) => {
-        // Defensive check: skip if the module is missing for some reason
         if (!mod) return;
-
         const btn = document.createElement('button');
-        btn.className = "radial-btn bg-white hover:bg-indigo-600 hover:text-white text-indigo-600 w-12 h-12 rounded-full shadow-lg flex flex-col items-center justify-center border border-gray-200 group";
+        btn.className = "radial-btn bg-white hover:bg-indigo-600 hover:text-white text-indigo-600 w-12 h-12 rounded-full shadow-lg flex flex-col items-center justify-center border border-gray-200 group transition-all duration-300";
         
         btn.innerHTML = `
             <span class="text-xl">${mod.label}</span>
@@ -398,23 +426,17 @@ function renderRadialOptions() {
         btn.style.setProperty('--tw-translate-x', pos.x);
         btn.style.setProperty('--tw-translate-y', pos.y);
 
+        // SECURE REDIRECT: We don't pass p (password) anymore.
+        // The destination module will check localStorage instead.
         btn.onclick = () => {
-            const u = localStorage.getItem('username');
-            const p = localStorage.getItem('userPassword');
-            window.location.href = `${mod.url}?autoLogin=true&u=${u}&p=${p}&r=${role}`;
+            window.location.href = mod.url;
         };
-
         container.appendChild(btn);
-        
         requestAnimationFrame(() => {
             setTimeout(() => btn.classList.add('show'), index * 50);
         });
     });
 }
-    
-</script>
-
-
-    
+</script>  
 </body>
 </html>
