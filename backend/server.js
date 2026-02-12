@@ -1153,17 +1153,17 @@ app.get('/api/bookings/id/:customId', auth, async (req, res) => {
 });
 
 // Example of what your auth middleware should do:
-const auth = (req, res, next) => {
+// SIMPLE AUTH (Non-JWT)
+const auth = async (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
-    if (!token) return res.status(401).send('Access Denied');
+    
+    // In a non-JWT system, you'd have to look up the token in a database
+    const user = await User.findOne({ sessionToken: token }); 
+    
+    if (!user) return res.status(401).send('Access Denied');
 
-    try {
-        const verified = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = verified; // This MUST include hotelId
-        next();
-    } catch (err) {
-        res.status(400).send('Invalid Token');
-    }
+    req.user = user; // Now req.user.hotelId exists because it's from the DB
+    next();
 };
 
 // Get all bookings with pagination (Secure)
