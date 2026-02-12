@@ -847,7 +847,7 @@ async function updateBookingStats() {
 
     try {
         // 2. Add hotelId filter and Auth token
-const response = await authenticatedFetch(`${API_BASE_URL}/bookings?limit=500`);
+        const response = await fetch(`${API_BASE_URL}/bookings/all?hotelId=${hotelId}`, {
         method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -3567,7 +3567,7 @@ async function fetchReport() {
         }
 
         // 6. Execute Request using authenticatedFetch
-        const response = await authenticatedFetch(`${API_BASE_URL}/bookings/all?${params}`);
+        const response = await authenticatedFetch(`${API_BASE_URL}/bookings ?${params}`);
         
         if (!response) throw new Error("No response from server");
         
