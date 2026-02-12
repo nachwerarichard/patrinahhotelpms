@@ -3192,7 +3192,6 @@ async function Confirm(bookingId) {
 
 
   
-  const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api'; // Your Render backend URL
 
 
 function toggleSwitchMenu() {
