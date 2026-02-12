@@ -114,6 +114,26 @@ const auditLogEndDateFilter = document.getElementById('auditLogEndDateFilter');
 const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn');
 
 
+async function authenticatedFetch(url, options = {}) {
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('loggedInUser'));
+    
+    if (!token) {
+        console.warn("No token found. Redirecting to login...");
+        window.location.replace('/frontend/login.html');
+        return null;
+    }
+
+    // Merge default headers with any custom headers
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+
+    return fetch(url, { ...options, headers });
+}
+
 
 // 1. Get the raw string from storage
 const userDataString = localStorage.getItem('loggedInUser');
