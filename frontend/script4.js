@@ -3428,7 +3428,6 @@ async function submitPayment() {
 }
 
    // 1. Standardize your URL configuration
-const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api'; 
 const API_URL = `${API_BASE_URL}/bookings`; // Keep for backward compatibility if needed
 
 // 2. Multi-Tenant Helper
