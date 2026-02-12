@@ -114,20 +114,21 @@ const auditLogEndDateFilter = document.getElementById('auditLogEndDateFilter');
 const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn');
 
 
+// IMPROVED FRONTEND FETCH
 async function authenticatedFetch(url, options = {}) {
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
     
     if (!token) {
-        console.warn("No token found. Redirecting to login...");
         window.location.replace('/frontend/login.html');
         return null;
     }
 
-    // Merge default headers with any custom headers
     const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        // By adding this, the backend always knows which hotel we are talking about
+        'x-hotel-id': user?.hotelId || '', 
         ...options.headers
     };
 
