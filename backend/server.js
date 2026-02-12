@@ -760,23 +760,58 @@ const User = mongoose.model('User', userSchema);
 
 
 app.post('/api/admin/onboard-hotel', auth, authorizeRole('super-admin'), async (req, res) => {
-    const { name, location, phoneNumber, email } = req.body;
+    const { name, location, phoneNumber, email, adminPassword } = req.body;
+
     try {
-        const newHotel = new Hotel({ name, location, phoneNumber, email });
+        // 1. Check if the admin user already exists globally by email
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ error: "A user with this email already exists." });
+        }
+
+        // 2. Create the Hotel Record first
+        const newHotel = new Hotel({ 
+            name, 
+            location, 
+            phoneNumber, 
+            email 
+        });
         const savedHotel = await newHotel.save();
 
+        // 3. Create the Admin Credentials for this specific Hotel
+        // Suggestion: Use email as username for better UX, or a prefix like 'admin_'
         const defaultAdmin = new User({
             hotelId: savedHotel._id,
-            username: savedHotel._id.toString(), // Uses the unique ID as the name
-            password: 'admin',
+            username: email, // Email is more memorable than a MongoDB ID
+            password: admin || 'admin', // Allow custom pass or default
             role: 'admin',
-            isInitial: true
+            isInitial: true,
+            status: 'active'
         });
 
+        // The User model's pre-save hook should handle the password hashing automatically
         await defaultAdmin.save();
-        res.status(201).json({ message: "Asset Registry Complete" });
+
+        // 4. Final Response
+        res.status(201).json({ 
+            message: "Hotel Onboarded Successfully ✅",
+            hotelId: savedHotel._id,
+            credentials: {
+                username: email,
+                role: 'admin'
+            }
+        });
+
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error("Onboarding Error:", err);
+        
+        // Cleanup: If the hotel was saved but the user failed, 
+        // you might want to delete the hotel here (Rollback)
+        if (err.code !== 11000 && savedHotel?._id) {
+            await Hotel.findByIdAndDelete(savedHotel._id);
+        }
+
+        res.status(500).json({ error: "Onboarding failed: " + err.message });
     }
 });
 // Middleware to check authentication (simple hardcoded check)
