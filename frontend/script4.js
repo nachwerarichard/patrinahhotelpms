@@ -847,8 +847,8 @@ async function updateBookingStats() {
 
     try {
         // 2. Add hotelId filter and Auth token
-        const response = await fetch(`${API_BASE_URL}/bookings/all?hotelId=${hotelId}`, {
-            method: 'GET',
+const response = await authenticatedFetch(`${API_BASE_URL}/bookings?limit=500`);
+        method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
