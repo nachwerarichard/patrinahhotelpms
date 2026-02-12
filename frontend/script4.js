@@ -192,8 +192,7 @@ async function updateDashboard() {
     }
 
     // Use authenticatedFetch - added a check to ensure response is valid JSON
-    const response = await authenticatedFetch(`${API_BASE_URL}/bookings/all?hotelId=${hotelId}`);
-    
+const response = await authenticatedFetch(`${API_BASE_URL}/bookings?limit=500`);    
     // GUARD 1: Check if request was successful
     if (!response || !response.ok) {
         console.warn(`Bookings API returned status: ${response ? response.status : 'No Response'}`);
