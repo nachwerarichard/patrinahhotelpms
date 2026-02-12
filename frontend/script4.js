@@ -2282,39 +2282,44 @@ async function generateReport() {
     updateReportSummaryCards(stats);
 }
 
-function updateReportSummaryCards(stats) {
-    const revenueEl = document.getElementById('reportTotalRevenue');
-    if (revenueEl) revenueEl.textContent = stats.revenue.toLocaleString();
+function updateReportSummaryCards(stats, roomTypeCounts, selectedDateStr) {
+    // Helper function to update text safely (Luxury touch: prevents crashes)
+    const setUI = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+
+    // Calculate Most Booked Room Type safely
+    const roomKeys = Object.keys(roomTypeCounts || {});
+    const mostBookedRoomType = roomKeys.length > 0 
+        ? roomKeys.reduce((a, b) => roomTypeCounts[a] > roomTypeCounts[b] ? a : b)
+        : 'N/A';
+
+    // 1. Update Main Stats
+    setUI('reportTotalRevenue', stats.revenue.toLocaleString());
+    setUI('totalAmountReport', stats.revenue.toFixed(2));
+    setUI('totalBalanceReport', stats.balance.toFixed(2));
+    setUI('mostBookedRoomType', mostBookedRoomType);
     
-    // Add other updates as needed (e.g., stats.cash, stats.checkedIn, etc.)
-}
+    // 2. Update Status Tally
+    setUI('reportCheckedIn', stats.checkedIn);
+    setUI('reportReserved', stats.reserved);
+    setUI('reportCancelled', stats.cancelled);
+    setUI('reportNoShows', stats.noShows);  
 
-    // Calculate Most Booked
-    let mostBookedRoomType = Object.keys(roomTypeCounts).reduce((a, b) => roomTypeCounts[a] > roomTypeCounts[b] ? a : b, 'N/A');
+    // 3. Update Payment Breakdown
+    setUI('cashRevenue', stats.cash.toFixed(2));
+    setUI('mtnRevenue', stats.mtn.toFixed(2));
+    setUI('airtelRevenue', stats.airtel.toFixed(2));
+    setUI('bankRevenue', stats.bank.toFixed(2));
 
-    // Update UI Summary
-    document.getElementById('totalAmountReport').textContent = stats.revenue.toFixed(2);
-    document.getElementById('totalBalanceReport').textContent = stats.balance.toFixed(2);
-    document.getElementById('mostBookedRoomType').textContent = mostBookedRoomType;
-    
-    document.getElementById('reportCheckedIn').textContent = stats.checkedIn;
-    document.getElementById('reportReserved').textContent = stats.reserved;
-    document.getElementById('reportCancelled').textContent = stats.cancelled;
-    document.getElementById('reportNoShows').textContent = stats.noShows;  
+    // 4. Calculate Total Collected
+    const totalCollected = (stats.cash || 0) + (stats.mtn || 0) + (stats.airtel || 0) + (stats.bank || 0);
+    setUI('totalCollected', totalCollected.toFixed(2));
 
-    // --- UPDATED PAYMENT BREAKDOWN LOGIC ---
-    
-    // 1. Update the UI for specific payment categories
-document.getElementById('cashRevenue').textContent = stats.cash.toFixed(2);
-document.getElementById('mtnRevenue').textContent = stats.mtn.toFixed(2);
-document.getElementById('airtelRevenue').textContent = stats.airtel.toFixed(2);
-document.getElementById('bankRevenue').textContent = stats.bank.toFixed(2);
-
-// 2. Calculate and Update the Total Collected
-const total = stats.cash + stats.mtn +stats.airtel + stats.bank;
-document.getElementById('totalCollected').textContent = total.toFixed(2);
-    // 3. Update the global reportSummary object (Critical for your Export function)
-    reportSummary = {
+    // 5. Update Global Object for Export
+    // Ensure 'reportSummary' is declared globally elsewhere: let reportSummary = {};
+    window.reportSummary = {
         Date: selectedDateStr,
         'Total Room Revenue': stats.revenue.toFixed(2),
         'Total Room Balance': stats.balance.toFixed(2),
@@ -2327,7 +2332,7 @@ document.getElementById('totalCollected').textContent = total.toFixed(2);
         'MTN Momo Total': stats.mtn.toFixed(2),
         'Airtel Pay Total': stats.airtel.toFixed(2),
         'Bank Total': stats.bank.toFixed(2),
-        'Grand Total Collected': total.toFixed(2)
+        'Grand Total Collected': totalCollected.toFixed(2)
     };
 }
 
