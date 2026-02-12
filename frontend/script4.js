@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api'; // Your Render backend URL
+//const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api'; // Your Render backend URL
 
 // --- Data (will be fetched from backend) ---
 let rooms = [];
