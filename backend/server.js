@@ -760,7 +760,10 @@ const User = mongoose.model('User', userSchema);
 
 
 app.post('/api/admin/onboard-hotel', auth, authorizeRole('super-admin'), async (req, res) => {
-    const { name, location, phoneNumber, email, adminPassword } = req.body;
+    const { name, location, phoneNumber, email } = req.body;
+    
+    // We declare this outside the try block so the catch block can see it for cleanup
+    let savedHotelId = null;
 
     try {
         // 1. Check if the admin user already exists globally by email
@@ -777,19 +780,18 @@ app.post('/api/admin/onboard-hotel', auth, authorizeRole('super-admin'), async (
             email 
         });
         const savedHotel = await newHotel.save();
+        savedHotelId = savedHotel._id; // Store ID for potential rollback
 
-        // 3. Create the Admin Credentials for this specific Hotel
-        // Suggestion: Use email as username for better UX, or a prefix like 'admin_'
+        // 3. Create the Admin Credentials
         const defaultAdmin = new User({
             hotelId: savedHotel._id,
-            username: email, // Email is more memorable than a MongoDB ID
-            password: admin || 'admin', // Allow custom pass or default
+            username: email, 
+            password:  'admin', // FIX: Use adminPassword (from req.body)
             role: 'admin',
             isInitial: true,
             status: 'active'
         });
 
-        // The User model's pre-save hook should handle the password hashing automatically
         await defaultAdmin.save();
 
         // 4. Final Response
@@ -805,10 +807,11 @@ app.post('/api/admin/onboard-hotel', auth, authorizeRole('super-admin'), async (
     } catch (err) {
         console.error("Onboarding Error:", err);
         
-        // Cleanup: If the hotel was saved but the user failed, 
-        // you might want to delete the hotel here (Rollback)
-        if (err.code !== 11000 && savedHotel?._id) {
-            await Hotel.findByIdAndDelete(savedHotel._id);
+        // 5. Cleanup Rollback
+        // If the hotel was saved but the user save failed, delete the orphaned hotel
+        if (savedHotelId) {
+            await Hotel.findByIdAndDelete(savedHotelId);
+            console.log(`Rollback: Deleted orphaned hotel ${savedHotelId}`);
         }
 
         res.status(500).json({ error: "Onboarding failed: " + err.message });
