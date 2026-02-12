@@ -859,22 +859,30 @@ function authorizeRole(requiredRole) {
 // Updated Login Route
 app.post('/api/login', async (req, res) => {
     try {
-        const { username, password, hotelId } = req.body;
+        const { username, password } = req.body;
 
-        // Super-admins log in globally; others log in per hotel
-        const query = hotelId ? { username, hotelId } : { username, role: 'super-admin' };
-        const user = await User.findOne(query);
+        // 1. Find the user by username only first
+        const user = await User.findOne({ username });
 
+        // 2. If no user, or password doesn't match
         if (!user || user.password !== password) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
+        // 3. Generate Token (Using standard format)
         const authToken = Buffer.from(`${username}:${password}`).toString('base64');
+        
+        // 4. Send back the user details (including the hotelId from the DB)
         res.json({ 
             token: authToken, 
-            user: { username: user.username, role: user.role, hotelId: user.hotelId } 
+            user: { 
+                username: user.username, 
+                role: user.role, 
+                hotelId: user.hotelId // This is now sent to the frontend
+            } 
         });
     } catch (error) {
+        console.error("Login Error:", error);
         res.status(500).json({ message: 'Server Error' });
     }
 });
