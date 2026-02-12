@@ -3777,131 +3777,7 @@ async function refreshDashboard() {
     }
 }
 
-      async function updateDashboard() {
-  try {
-    // 1. Get Multi-Tenant Context
-    const user = JSON.parse(localStorage.getItem('loggedInUser'));
-    const hotelId = user ? user.hotelId : null;
-
-    if (!hotelId) {
-        console.error("Dashboard Error: No hotelId found.");
-        return;
-    }
-
-    // 2. Fetch scoped data using authenticatedFetch
-    // Assuming your backend supports /bookings/all?hotelId=...
-    const response = await authenticatedFetch(`${API_BASE_URL}/bookings/all?hotelId=${hotelId}`);
-    if (!response) return;
-    
-    const allBookings = await response.json();
-
-    // 3. Setup Today's Date (EAT Timezone Friendly)
-    // Using locale string ensures "Today" is accurate to Uganda time
-    const today = new Date().toLocaleDateString('en-CA'); // Outputs YYYY-MM-DD
-
-    // 4. Filter for Today's Activity
-    const todayArrivals = allBookings.filter(b => b.checkIn === today);
-    const todayDepartures = allBookings.filter(b => b.checkOut === today);
-
-    // 5. Calculate KPIs (Safe handling for null/undefined values)
-    const kpis = {
-      arrivals: todayArrivals.length,
-      departures: todayDepartures.length,
-      amountpaid: todayArrivals.reduce((sum, b) => sum + (Number(b.amountPaid) || 0), 0),
-      revenue: todayArrivals.reduce((sum, b) => sum + (Number(b.totalDue) || 0), 0),
-      balance: todayArrivals.reduce((sum, b) => sum + (Number(b.balance) || 0), 0),
-      pending: todayArrivals.filter(b => 
-        ['Partially Paid', 'Pending'].includes(b.paymentStatus)
-      ).length,
-      noShow: todayArrivals.filter(b => b.gueststatus === 'no show').length
-    };
-
-    // 6. Update UI Text
-    const updateText = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.innerText = val;
-    };
-
-    updateText('total-arrivals', kpis.arrivals);
-    updateText('arrivals', kpis.arrivals);
-    updateText('departures', kpis.departures);
-    updateText('total-departures', kpis.departures);
-    updateText('pending-count', kpis.pending);
-    updateText('no-show-count', kpis.noShow);
-    
-    // Currency formatting
-    updateText('today-amountpaid', `UGX ${kpis.amountpaid.toLocaleString()}`);
-    updateText('today-revenue', `UGX ${kpis.revenue.toLocaleString()}`);
-    updateText('today-balance', `UGX ${kpis.balance.toLocaleString()}`);
-
-    // 7. Aggregate Data for Charts (Initializing with zeros to prevent "undefined" errors)
-    const statusCounts = { 'confirmed': 0, 'cancelled': 0, 'no show': 0, 'checkedin': 0, 'reserved': 0 };
-    const sourceCounts = { 'Walk in': 0, 'Booking.com': 0, 'Expedia': 0, 'Trip': 0, 'Hotel Website': 0, 'Airbnb': 0 };
-
-    // Use allBookings if you want general trends, or todayArrivals for specifically today's chart
-    todayArrivals.forEach(b => {
-      if (statusCounts.hasOwnProperty(b.gueststatus)) statusCounts[b.gueststatus]++;
-      if (sourceCounts.hasOwnProperty(b.guestsource)) sourceCounts[b.guestsource]++;
-    });
-
-    renderCharts(statusCounts, sourceCounts);
-
-  } catch (error) {
-    console.error('Failed to load dashboard data:', error);
-  }
-}
-
-// Initialize
-updateDashboard();
-function renderCharts(statusData, sourceData) {
-  // Status Pie Chart
-  new Chart(document.getElementById('statusChart'), {
-    type: 'pie', // Changed from 'doughnut' to 'pie'
-    data: {
-      labels: Object.keys(statusData),
-      datasets: [{
-        data: Object.values(statusData),
-        backgroundColor: [
-          '#3B82F6', // Blue
-          '#EF4444', // Red
-          '#F59E0B', // Amber
-          '#10B981', // Emerald (Added a 4th color just in case)
-          '#8B5CF6'  // Violet (Added a 5th color just in case)
-        ],
-        borderWidth: 1
-      }]
-    },
-    options: { 
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom' // Moves labels to the bottom for a cleaner look
-        }
-      }
-    }
-  });
-
-
-  // Source Bar Chart
-  new Chart(document.getElementById('sourceChart'), {
-    type: 'bar',
-    data: {
-      labels: Object.keys(sourceData),
-      datasets: [{
-        label: 'Bookings by Source',
-        data: Object.values(sourceData),
-        backgroundColor: '#10B981'
-      }]
-    },
-    options: { maintainAspectRatio: false }
-  });
-}
-
-// Initialize
-updateDashboard();
-        
-    
-       async function updateroomDashboard() {
+      async function updateroomDashboard() {
     try {
         // 1. Get Multi-Tenant Context
         const user = JSON.parse(localStorage.getItem('loggedInUser'));
@@ -3971,6 +3847,129 @@ updateDashboard();
     }
 }
 
+
+// Initialize
+updateDashboard();
+function renderCharts(statusData, sourceData) {
+  // Status Pie Chart
+  new Chart(document.getElementById('statusChart'), {
+    type: 'pie', // Changed from 'doughnut' to 'pie'
+    data: {
+      labels: Object.keys(statusData),
+      datasets: [{
+        data: Object.values(statusData),
+        backgroundColor: [
+          '#3B82F6', // Blue
+          '#EF4444', // Red
+          '#F59E0B', // Amber
+          '#10B981', // Emerald (Added a 4th color just in case)
+          '#8B5CF6'  // Violet (Added a 5th color just in case)
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: { 
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom' // Moves labels to the bottom for a cleaner look
+        }
+      }
+    }
+  });
+
+
+  // Source Bar Chart
+  new Chart(document.getElementById('sourceChart'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(sourceData),
+      datasets: [{
+        label: 'Bookings by Source',
+        data: Object.values(sourceData),
+        backgroundColor: '#10B981'
+      }]
+    },
+    options: { maintainAspectRatio: false }
+  });
+}
+
+// Initialize
+updateDashboard();
+        
+    
+      async function updateroomDashboard() {
+    try {
+        const user = JSON.parse(localStorage.getItem('loggedInUser'));
+        const hotelId = user ? user.hotelId : localStorage.getItem('hotelId');
+
+        if (!hotelId) return;
+
+        const response = await authenticatedFetch(`${API_BASE_URL}/rooms?hotelId=${hotelId}`);
+        
+        // GUARD: Handle non-JSON or error responses
+        if (!response || !response.ok) {
+            console.error("Room API failed");
+            return;
+        }
+
+        let rooms = await response.json();
+
+        // GUARD: If backend returns an error object instead of array
+        if (!Array.isArray(rooms)) {
+            console.error("Rooms data is not an array:", rooms);
+            rooms = []; // Reset to empty array to prevent filter errors
+        }
+
+        const total = rooms.length;
+        const clean = rooms.filter(r => r.status === 'clean').length;
+        const dirty = rooms.filter(r => r.status === 'dirty').length;
+        const maintenance = rooms.filter(r => r.status === 'under-maintenance').length;
+        const occupied = rooms.filter(r => r.status === 'blocked' || r.status === 'occupied').length;
+
+        const kpis = [
+            { label: 'Total Rooms', value: total, color: 'text-blue-600', bg: 'bg-blue-50', icon: 'fa-hotel' },
+            { label: 'Ready to Assign', value: clean, color: 'text-emerald-600', bg: 'bg-emerald-50', icon: 'fa-check-circle' },
+            { label: 'Needs Cleaning', value: dirty, color: 'text-amber-600', bg: 'bg-amber-50', icon: 'fa-broom' },
+            { label: 'Out of Order', value: maintenance, color: 'text-red-600', bg: 'bg-red-50', icon: 'fa-tools' },
+            { label: 'Occupied', value: occupied, color: 'text-indigo-600', bg: 'bg-indigo-50', icon: 'fa-door-closed' }
+        ];
+
+        const container = document.getElementById('stats-container');
+        if (!container) return;
+
+        container.innerHTML = kpis.map(kpi => {
+            const percentage = total > 0 ? ((kpi.value / total) * 100).toFixed(0) : 0;
+            const progressColor = kpi.color.replace('text', 'bg'); // Dynamic color matching
+            
+            return `
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transition-all hover:shadow-md">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">${kpi.label}</p>
+                        <p class="mt-2 text-3xl font-extrabold ${kpi.color}">${kpi.value.toLocaleString()}</p>
+                    </div>
+                    <div class="p-4 rounded-lg ${kpi.bg} ${kpi.color}">
+                        <i class="fas ${kpi.icon} text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <div class="flex justify-between mb-1">
+                        <span class="text-xs font-medium text-gray-400">Inventory Split</span>
+                        <span class="text-xs font-bold text-gray-600">${percentage}%</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-1.5">
+                        <div class="${progressColor} h-1.5 rounded-full transition-all duration-500" 
+                             style="width: ${percentage}%"></div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+    } catch (error) {
+        console.error('Failed to update room dashboard:', error);
+    }
+}
 // Initialize on page load
 updateroomDashboard();
        async function logout() {
