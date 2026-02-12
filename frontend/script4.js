@@ -124,19 +124,16 @@ async function authenticatedFetch(url, options = {}) {
         return null;
     }
 
-    // Automatically append hotelId if it's not already there
-    const separator = url.includes('?') ? '&' : '?';
-    const finalUrl = url.includes('hotelId=') ? url : `${url}${separator}hotelId=${hotelId}`;
-
     const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'x-hotel-id': hotelId, // Matches: req.headers['x-hotel-id']
         ...options.headers
     };
 
-    return fetch(finalUrl, { ...options, headers });
+    // We send to the original URL because the header handles the ID now
+    return fetch(url, { ...options, headers });
 }
-
 
 // 1. Get the raw string from storage
 const userDataString = localStorage.getItem('loggedInUser');
