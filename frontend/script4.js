@@ -117,22 +117,24 @@ const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn
 // IMPROVED FRONTEND FETCH
 async function authenticatedFetch(url, options = {}) {
     const token = localStorage.getItem('token');
-    const user = JSON.parse(localStorage.getItem('loggedInUser'));
-    
+    const hotelId = localStorage.getItem('hotelId');
+
     if (!token) {
         window.location.replace('/frontend/login.html');
         return null;
     }
 
+    // Automatically append hotelId if it's not already there
+    const separator = url.includes('?') ? '&' : '?';
+    const finalUrl = url.includes('hotelId=') ? url : `${url}${separator}hotelId=${hotelId}`;
+
     const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-        // By adding this, the backend always knows which hotel we are talking about
-        'x-hotel-id': user?.hotelId || '', 
         ...options.headers
     };
 
-    return fetch(url, { ...options, headers });
+    return fetch(finalUrl, { ...options, headers });
 }
 
 
