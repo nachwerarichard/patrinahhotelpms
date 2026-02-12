@@ -20,7 +20,7 @@ const app = express();
 // This is the "Open Door" policy
 app.use(cors({
     origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'x-hotel-id','OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json()); // This should also be before your routes to parse JSON bodies
@@ -2148,12 +2148,15 @@ async function auth(req, res, next) {
         }
 
         // 3. Attach hotelId to req.user so all routes can filter data automatically
-        req.user = { 
-            id: user._id,
-            username: user.username, 
-            role: user.role, 
-            hotelId: user.hotelId // This is the "Key" for all future queries
-        };
+        // Inside your auth function, after finding the user:
+req.user = { 
+    id: user._id,
+    username: user.username, 
+    role: user.role, 
+    // If they are super-admin, use the hotelId from the header so they can "switch" between hotels
+    hotelId: user.role === 'super-admin' ? hotelId : user.hotelId 
+};
+        
         
         next();
     } catch (err) {
