@@ -181,6 +181,79 @@ function showMessageBox(title, message, isError = false) {
     messageBox.style.display = 'flex'; // Use flex for centering
 }
 
+async function updateDashboard() {
+  try {
+    const user = JSON.parse(localStorage.getItem('loggedInUser'));
+    const hotelId = user ? user.hotelId : localStorage.getItem('hotelId');
+
+    if (!hotelId) {
+        console.error("Dashboard Error: No hotelId found.");
+        return;
+    }
+
+    // Use authenticatedFetch - added a check to ensure response is valid JSON
+    const response = await authenticatedFetch(`${API_BASE_URL}/bookings/all?hotelId=${hotelId}`);
+    
+    // GUARD 1: Check if request was successful
+    if (!response || !response.ok) {
+        console.warn(`Bookings API returned status: ${response ? response.status : 'No Response'}`);
+        return;
+    }
+
+    const allBookings = await response.json();
+
+    // GUARD 2: Ensure data is an array
+    if (!Array.isArray(allBookings)) {
+        console.error("Expected array for bookings, but received:", allBookings);
+        return;
+    }
+
+    const today = new Date().toLocaleDateString('en-CA'); 
+
+    const todayArrivals = allBookings.filter(b => b.checkIn === today);
+    const todayDepartures = allBookings.filter(b => b.checkOut === today);
+
+    const kpis = {
+      arrivals: todayArrivals.length,
+      departures: todayDepartures.length,
+      amountpaid: todayArrivals.reduce((sum, b) => sum + (Number(b.amountPaid) || 0), 0),
+      revenue: todayArrivals.reduce((sum, b) => sum + (Number(b.totalDue) || 0), 0),
+      balance: todayArrivals.reduce((sum, b) => sum + (Number(b.balance) || 0), 0),
+      pending: todayArrivals.filter(b => ['Partially Paid', 'Pending'].includes(b.paymentStatus)).length,
+      noShow: todayArrivals.filter(b => b.gueststatus === 'no show').length
+    };
+
+    const updateText = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
+    };
+
+    updateText('total-arrivals', kpis.arrivals);
+    updateText('arrivals', kpis.arrivals);
+    updateText('departures', kpis.departures);
+    updateText('total-departures', kpis.departures);
+    updateText('pending-count', kpis.pending);
+    updateText('no-show-count', kpis.noShow);
+    updateText('today-amountpaid', `UGX ${kpis.amountpaid.toLocaleString()}`);
+    updateText('today-revenue', `UGX ${kpis.revenue.toLocaleString()}`);
+    updateText('today-balance', `UGX ${kpis.balance.toLocaleString()}`);
+
+    const statusCounts = { 'confirmed': 0, 'cancelled': 0, 'no show': 0, 'checkedin': 0, 'reserved': 0 };
+    const sourceCounts = { 'Walk in': 0, 'Booking.com': 0, 'Expedia': 0, 'Trip': 0, 'Hotel Website': 0, 'Airbnb': 0 };
+
+    todayArrivals.forEach(b => {
+      if (statusCounts.hasOwnProperty(b.gueststatus)) statusCounts[b.gueststatus]++;
+      if (sourceCounts.hasOwnProperty(b.guestsource)) sourceCounts[b.guestsource]++;
+    });
+
+    if (typeof renderCharts === 'function') {
+        renderCharts(statusCounts, sourceCounts);
+    }
+
+  } catch (error) {
+    console.error('Critical Dashboard Failure:', error);
+  }
+}
 // --- 1. GLOBAL CONFIGURATION ---
 const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
 
