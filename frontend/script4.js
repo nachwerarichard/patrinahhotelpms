@@ -3047,7 +3047,7 @@ function handleLogout() {
             calculateRoomFinancials();
         }
     });
-});
+//});//
 
 
 window.addEventListener('DOMContentLoaded', async () => {
