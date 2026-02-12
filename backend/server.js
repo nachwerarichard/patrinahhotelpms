@@ -818,27 +818,6 @@ app.post('/api/admin/onboard-hotel', auth, authorizeRole('super-admin'), async (
     }
 });
 // Middleware to check authentication (simple hardcoded check)
-async function authenticateUser(req, res, next) {
-    // Check body OR headers (in case you send them via headers)
-    const username = req.body?.username || req.headers['x-username'];
-    const password = req.body?.password || req.headers['x-password'];
-
-    if (!username || !password) {
-        return res.status(401).json({ message: 'Authentication required. Please provide credentials.' });
-    }
-
-    try {
-        const user = await User.findOne({ username, password });
-        if (user) {
-            req.user = user;
-            next();
-        } else {
-            res.status(401).json({ message: 'Invalid credentials.' });
-        }
-    } catch (err) {
-        res.status(500).json({ message: 'Server error during authentication' });
-    }
-}
 
 // Authorization: Check if the logged-in user has the right role
 function authorizeRole(requiredRole) {
