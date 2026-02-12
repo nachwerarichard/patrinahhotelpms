@@ -3549,7 +3549,6 @@ async function fetchReport() {
  * Handles rendering, filtering, and exporting of booking data.
  */
 
-let currentData = []; // Global variable to hold the currently filtered data for export
 
 // 1. MAIN RENDER FUNCTION
 function renderTable(bookings) {
