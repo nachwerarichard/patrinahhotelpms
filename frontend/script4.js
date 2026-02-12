@@ -160,6 +160,44 @@ function showMessageBox(title, message, isError = false) {
     messageBox.style.display = 'flex'; // Use flex for centering
 }
 
+// --- 1. GLOBAL CONFIGURATION ---
+const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
+
+// --- 2. THE MISSING FETCH FUNCTION ---
+/**
+ * Global wrapper for all API calls. 
+ * Automatically attaches the Token and HotelID headers.
+ */
+async function authenticatedFetch(url, options = {}) {
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('loggedInUser'));
+    
+    if (!token) {
+        console.warn("No token found. Redirecting to login...");
+        window.location.replace('/frontend/login.html');
+        return null;
+    }
+
+    // Merge default headers with any custom headers
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+
+    return fetch(url, { ...options, headers });
+}
+
+// --- 3. SESSION HELPERS ---
+const getHotelId = () => {
+    const user = JSON.parse(localStorage.getItem('loggedInUser'));
+    if (!user || !user.hotelId) {
+        console.error("Dashboard Error: No hotelId found in session.");
+        return null;
+    }
+    return user.hotelId;
+};
+
 /**
  * Closes the custom message box.
  */
@@ -3706,6 +3744,29 @@ window.onload = () => {
     // Optional: Load today's report by default
     // setDateFilter('today');
 };
+
+// Update your refreshDashboard to be "Safe"
+async function refreshDashboard() {
+    const hotelId = getHotelId();
+    
+    // STOP if no hotelId. Prevents the 400 "undefined" errors.
+    if (!hotelId) {
+        console.warn("Refresh aborted: User not identified.");
+        return; 
+    }
+
+    console.log("Refreshing Dashboard Stats for Hotel:", hotelId);
+
+    try {
+        await Promise.all([
+            updateDashboard(),       // Financials
+            updateroomDashboard(),   // Occupancy
+            renderHousekeepingRooms() // Room list
+        ]);
+    } catch (err) {
+        console.error("Critical Dashboard Refresh Error:", err);
+    }
+}
 
       async function updateDashboard() {
   try {
