@@ -13,7 +13,7 @@ document.getElementById('typeForm').addEventListener('submit', async (e) => {
     
     // Note the backticks below!
     try {
-        const res = await fetch(`${BASE_URL}/api/room-types`, {
+        const res = await fetch(`${}/api/room-types`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
