@@ -3469,10 +3469,7 @@ const API_URL = `${API_BASE_URL}/bookings`; // Keep for backward compatibility i
 
 // 2. Multi-Tenant Helper
 // This ensures you are always pulling the ID of the specific hotel logged in
-const getHotelId = () => {
-    const user = JSON.parse(localStorage.getItem('loggedInUser'));
-    return user ? user.hotelId : null;
-};
+
 
 // 3. Global Data Store for Exports
 let currentData = []; 
