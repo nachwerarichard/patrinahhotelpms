@@ -470,52 +470,65 @@ loginForm.addEventListener('submit', async function(event) {
         const data = await response.json();
 
         if (response.ok) {
-            // 1. SAVE TO BROWSER MEMORY (Added hotelId here)
-            localStorage.setItem('loggedInUser', JSON.stringify({ 
+            // --- 1. UNIFIED STORAGE STRATEGY ---
+            // Save as an object for the new logic
+            const userSession = { 
                 username: data.user.username, 
                 role: data.user.role,
-                hotelId: data.user.hotelId || 'global', // Super-admin won't have a hotelId
+                hotelId: data.user.hotelId || 'global',
                 token: data.token 
-            }));
+            };
+            localStorage.setItem('loggedInUser', JSON.stringify(userSession));
 
-            // 2. CHECK ROLE FOR REDIRECTION
+            // Save individual keys for the OLD logic (this prevents logouts)
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('userRole', data.user.role);
+            localStorage.setItem('username', data.user.username);
+            localStorage.setItem('hotelId', data.user.hotelId || 'global');
+
+            // --- 2. ROLE REDIRECTION ---
             if (data.user.role === 'super-admin') {
-                // If they are a super-admin, send them to the Portfolio/Management page
                 window.location.href = 'super-admin-dashboard.html'; 
-                return; // Stop execution here for super-admins
+                return;
             }
 
-            // --- STANDARD USER LOGIC CONTINUES BELOW ---
-            currentUsername = data.user.username;
-            currentUserRole = data.user.role;
-
+            // --- 3. UI UPDATE ---
             const displayElement = document.getElementById('display-user-name');
             if (displayElement) {
-                displayElement.textContent = currentUsername;
+                displayElement.textContent = data.user.username;
             }
 
-            // TRIGGER THE STANDARD DASHBOARD
-            await showDashboard(data.user.username, data.user.role);
+            // --- 4. SECURE AUDIT LOG ---
+            // We must send the token here, or the server rejects it (401)
+            try {
+                await fetch(`${API_BASE_URL}/audit-log/action`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${data.token}` // FIXED: Added Auth Header
+                    },
+                    body: JSON.stringify({ 
+                        action: 'User Logged In', 
+                        user: data.user.username, 
+                        details: { role: data.user.role, hotelId: data.user.hotelId } 
+                    })
+                });
+            } catch (auditErr) {
+                console.warn("Audit log failed, but continuing login...");
+            }
 
-            // AUDIT LOG
-            await fetch(`${API_BASE_URL}/audit-log/action`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    action: 'User Logged In', 
-                    user: data.user.username, 
-                    details: { role: data.user.role, hotelId: data.user.hotelId } 
-                })
-            });
+            // --- 5. TRIGGER DASHBOARD ---
+            // Note: If showDashboard handles redirection, make sure it's working
+            await showDashboard(data.user.username, data.user.role);
 
         } else {
             showLoginMessageBox('Login Failed', data.message || 'Invalid credentials.');
         }
     } catch (error) {
         console.error('Login error:', error);
+        showLoginMessageBox('Error', 'Connection to server failed.');
     }
 });
-
 /**
  * Handles navigation clicks, showing/hiding sections and re-rendering content.
  * @param {Event} event - The click event.
