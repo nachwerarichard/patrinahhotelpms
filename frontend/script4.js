@@ -168,25 +168,6 @@ const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
  * Global wrapper for all API calls. 
  * Automatically attaches the Token and HotelID headers.
  */
-async function authenticatedFetch(url, options = {}) {
-    const token = localStorage.getItem('token');
-    const user = JSON.parse(localStorage.getItem('loggedInUser'));
-    
-    if (!token) {
-        console.warn("No token found. Redirecting to login...");
-        window.location.replace('/frontend/login.html');
-        return null;
-    }
-
-    // Merge default headers with any custom headers
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        ...options.headers
-    };
-
-    return fetch(url, { ...options, headers });
-}
 
 // --- 3. SESSION HELPERS ---
 const getHotelId = () => {
