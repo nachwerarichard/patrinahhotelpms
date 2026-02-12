@@ -272,6 +272,27 @@
             }
         });
 
+        async function deleteHotel(hotelId) {
+    if (!confirm('Are you sure you want to delete this hotel and all its data?')) return;
+
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/admin/hotels/${hotelId}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            showMessage('Hotel deleted successfully');
+            fetchHotels(); // Refresh your list
+        } else {
+            const err = await response.json();
+            showMessage('Error: ' + err.error, true);
+        }
+    } catch (error) {
+        console.error('Delete failed:', error);
+        showMessage('Connection error', true);
+    }
+}
+
         // --- MODAL UTILS ---
         function openModal(id) { 
             document.getElementById(id).classList.remove('hidden'); 
