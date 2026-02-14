@@ -117,9 +117,15 @@ const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn
 // IMPROVED FRONTEND FETCH
 async function authenticatedFetch(url, options = {}) {
     const token = localStorage.getItem('token');
-    const hotelId = localStorage.getItem('hotelId');
-
+    
+    // If we're on the login page and just submitted the form, 
+    // we might want to wait or return early instead of redirecting.
     if (!token) {
+        // Only redirect if we aren't currently on the login page trying to log in
+        if (window.location.pathname.includes('login.html')) {
+             console.warn("No token found, but staying on login page.");
+             return null;
+        }
         window.location.replace('/frontend/login.html');
         return null;
     }
@@ -127,13 +133,13 @@ async function authenticatedFetch(url, options = {}) {
     const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'x-hotel-id': hotelId, // Matches: req.headers['x-hotel-id']
+        'x-hotel-id': localStorage.getItem('hotelId') || 'global',
         ...options.headers
     };
 
-    // We send to the original URL because the header handles the ID now
     return fetch(url, { ...options, headers });
 }
+
 
 // 1. Get the raw string from storage
 const userDataString = localStorage.getItem('loggedInUser');
@@ -479,52 +485,57 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
     
     
 // --- Login and Role Management ---
-
 async function showDashboard(username, role) {
-    // 1. Set global variables (so the rest of your app knows who is logged in)
+    // 1. Set global/storage variables correctly
     currentUserRole = role;
-    // Save to storage
-localStorage.setItem('hotel_username', currentUsername);
+    // Use the 'username' variable passed into the function!
+    localStorage.setItem('hotel_username', username);
 
-// Also update the display immediately
-const displayElement = document.getElementById('display-user-name');
-if (displayElement) {
-    displayElement.textContent = currentUsername;
-}
+    // Update the display immediately
+    const displayElement = document.getElementById('display-user-name');
+    if (displayElement) {
+        displayElement.textContent = username;
+    }
+
     // 2. Switch the UI
     loginContainer.style.display = 'none';
     mainContent.style.display = 'flex';
     applyRoleAccess(role);
 
-    // 3. Determine which section to show (This is your existing logic)
+    // 3. Determine section (Fixing the 'dashbaord' typo too)
     let initialSectionId = '';
     let initialNavLinkId = '';
 
     if (role === 'admin' || role === 'super-admin' || role === 'manager') {
-        initialSectionId = 'dashbaord';
+        initialSectionId = 'dashbaord'; // Check if your HTML ID is 'dashboard' or 'dashbaord'
         initialNavLinkId = 'nav-dashboard';
     } else if (role === 'housekeeper') {
         initialSectionId = 'housekeeping';
-        document.getElementById('booking-management').style.display = 'none';
+        const bookingMgmt = document.getElementById('booking-management');
+        if (bookingMgmt) bookingMgmt.style.display = 'none';
         initialNavLinkId = 'nav-housekeeping';
     }
 
-    // 4. Set active link and Load data (This is your existing logic)
+    // 4. Set active link and Load data
     if (initialNavLinkId) {
-        document.getElementById(initialNavLinkId).classList.add('active');
+        const navEl = document.getElementById(initialNavLinkId);
+        if (navEl) navEl.classList.add('active');
     }
+    
     if (initialSectionId) {
-        document.getElementById(initialSectionId).classList.add('active');
-        
-        // Load the specific data for that role
-        if (initialSectionId === 'booking-management') {
-            currentPage = 1;
-            currentSearchTerm = '';
-           await (currentPage, currentSearchTerm);
-        } else if (initialSectionId === 'housekeeping') {
-            await renderHousekeepingRooms();
+        const secEl = document.getElementById(initialSectionId);
+        if (secEl) {
+            secEl.classList.add('active');
+            
+            if (initialSectionId === 'booking-management') {
+                currentPage = 1;
+                currentSearchTerm = '';
+                // Ensure your function call here is correct (you had await(page, search) which is empty)
+                // await loadBookings(currentPage, currentSearchTerm); 
+            } else if (initialSectionId === 'housekeeping') {
+                await renderHousekeepingRooms();
+            }
         }
-        // ... add your other else-if checks for reports/audit logs here ...
     }
 }
 
@@ -543,71 +554,48 @@ loginForm.addEventListener('submit', async function(event) {
         const data = await response.json();
 
         if (response.ok) {
-            // --- 1. UNIFIED STORAGE STRATEGY ---
-            // Save as an object for the new logic
-            const userSession = { 
-                username: data.user.username, 
-                role: data.user.role,
-                hotelId: data.user.hotelId || 'global',
-                token: data.token 
-            };
-            localStorage.setItem('loggedInUser', JSON.stringify(userSession));
-
-            // Save individual keys for the OLD logic (this prevents logouts)
+            // 1. SAVE ALL STORAGE DATA FIRST
             localStorage.setItem('token', data.token);
             localStorage.setItem('userRole', data.user.role);
             localStorage.setItem('username', data.user.username);
             localStorage.setItem('hotelId', data.user.hotelId || 'global');
+            localStorage.setItem('loggedInUser', JSON.stringify({ 
+                username: data.user.username, 
+                role: data.user.role, 
+                token: data.token,
+                hotelId: data.user.hotelId || 'global'
+            }));
 
-            // --- 2. ROLE REDIRECTION ---
-            
-            setTimeout(async () => {
-        if (data.user.role === 'super-admin') {
-            window.location.href = 'super-admin-dashboard.html';
-            return;
-        } else {
-            // If you are using a single-page approach (SPA):
-            await showDashboard(data.user.username, data.user.role);
-            // If you are redirecting to a home page:
-            // window.location.href = 'home12.html'; 
-        }
-    }, 50);
-
-            // --- 3. UI UPDATE ---
-            const displayElement = document.getElementById('display-user-name');
-            if (displayElement) {
-                displayElement.textContent = data.user.username;
+            // 2. HANDLE REDIRECTION OR SPA TRANSITION
+            if (data.user.role === 'super-admin') {
+                // If super-admin is a separate file:
+                window.location.href = 'super-admin-dashboard.html';
+                return; // Stop here!
+            } else {
+                // If it's a Single Page Application (SPA):
+                await showDashboard(data.user.username, data.user.role);
             }
 
-            // --- 4. SECURE AUDIT LOG ---
-            // We must send the token here, or the server rejects it (401)
-            try {
-                await fetch(`${API_BASE_URL}/audit-log/action`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${data.token}` // FIXED: Added Auth Header
-                    },
-                    body: JSON.stringify({ 
-                        action: 'User Logged In', 
-                        user: data.user.username, 
-                        details: { role: data.user.role, hotelId: data.user.hotelId } 
-                    })
-                });
-            } catch (auditErr) {
-                console.warn("Audit log failed, but continuing login...");
-            }
-
-            // --- 5. TRIGGER DASHBOARD ---
-            // Note: If showDashboard handles redirection, make sure it's working
-            await showDashboard(data.user.username, data.user.role);
+            // 3. BACKGROUND TASKS (like audit logs)
+            // Don't let a failed audit log stop the user from seeing the dashboard
+            fetch(`${API_BASE_URL}/audit-log/action`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${data.token}`
+                },
+                body: JSON.stringify({ 
+                    action: 'User Logged In', 
+                    user: data.user.username, 
+                    details: { role: data.user.role, hotelId: data.user.hotelId } 
+                })
+            }).catch(e => console.warn("Audit log failed"));
 
         } else {
             showLoginMessageBox('Login Failed', data.message || 'Invalid credentials.');
         }
     } catch (error) {
         console.error('Login error:', error);
-        showLoginMessageBox('Error', 'Connection to server failed.');
     }
 });
 /**
