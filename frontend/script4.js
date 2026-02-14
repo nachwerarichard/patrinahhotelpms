@@ -560,10 +560,18 @@ loginForm.addEventListener('submit', async function(event) {
             localStorage.setItem('hotelId', data.user.hotelId || 'global');
 
             // --- 2. ROLE REDIRECTION ---
-            if (data.user.role === 'super-admin') {
-                window.location.href = 'super-admin-dashboard.html'; 
-                return;
-            }
+            
+            setTimeout(async () => {
+        if (data.user.role === 'super-admin') {
+            window.location.href = 'super-admin-dashboard.html';
+            return;
+        } else {
+            // If you are using a single-page approach (SPA):
+            await showDashboard(data.user.username, data.user.role);
+            // If you are redirecting to a home page:
+            // window.location.href = 'home12.html'; 
+        }
+    }, 50);
 
             // --- 3. UI UPDATE ---
             const displayElement = document.getElementById('display-user-name');
