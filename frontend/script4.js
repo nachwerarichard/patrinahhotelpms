@@ -920,17 +920,15 @@ async function renderBookings(page = 1, searchTerm = '') {
     pageInfoSpan.textContent = `Page ${totalCount === 0 ? 0 : currentPage} of ${totalPages}`;
 }
 async function updateBookingStats() {
-    // 1. Retrieve session data from localStorage
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const hotelId = sessionData?.hotelId;
-    const token = sessionData?.token;
 
-    // Safety check: Don't fetch if we don't know which hotel this is
-    if (!hotelId) return;
+    const hotelId = getHotelId();
+    if (!hotelId) {
+        console.warn("Stats update skipped: No hotel selected.");
+        return;
+    }
 
     try {
-        // 2. Add hotelId filter and Auth token
-        const response = await fetch(`${API_BASE_URL}/bookings/all?hotelId=${hotelId}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/bookings/all?hotelId=${hotelId}`,                                                  {
         method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -940,7 +938,13 @@ async function updateBookingStats() {
             }
         });
 
-        if (!response.ok) throw new Error('Failed to fetch stats');
+      if (!response.ok) {
+            console.error("Stats API failed:", response.status);
+            return;
+        }
+
+        const data = await response.json();
+
         
         const allBookings = await response.json();
 
