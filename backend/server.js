@@ -31,10 +31,10 @@ app.use(cors({
   credentials: true
 }));
 
-app.options('*', cors());
+app.options('/*', cors());
 
 app.use(express.json()); // This should also be before your routes to parse JSON bodies
-
+ 
 const userSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' },
     username: { type: String, required: true }, // Removed unique: true
