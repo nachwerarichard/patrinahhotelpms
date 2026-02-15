@@ -7,7 +7,7 @@ let currentPage = 1;
 const recordsPerPage = 20; // Maximum 5 booking records per page
 let currentSearchTerm = ''; // New: To keep track of the active search term for pagination
 let currentBookingObjectId = null;
-
+const logsPerPage =20;
 // Calendar state
 let currentCalendarDate = new Date(); // Stores the month/year currently displayed in the calendar
 
@@ -3926,7 +3926,7 @@ async function refreshDashboard() {
     }
 }
 
-      async function updateroomDashboard() {
+      async function updateromDashboard() {
     try {
         // 1. Get Multi-Tenant Context
         const user = JSON.parse(localStorage.getItem('loggedInUser'));
