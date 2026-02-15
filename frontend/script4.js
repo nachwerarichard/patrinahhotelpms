@@ -2722,12 +2722,15 @@ async function renderCalendar() {
 
     try {
         const [roomsRes, bookingsRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/rooms?hotelId=${hotelId}`, { headers: { 'Authorization': `Bearer ${token}` }}),
-            fetch(`${API_BASE_URL}/bookings/all?hotelId=${hotelId}`, { headers: { 'Authorization': `Bearer ${token}` }})
-        ]);
+    authenticatedFetch(`${API_BASE_URL}/rooms`, { method: 'GET' }),
+    authenticatedFetch(`${API_BASE_URL}/bookings?limit=500`, { method: 'GET' })
+]);
+const roomsResult = await roomsRes.json();
+const bookingsResult = await bookingsRes.json();
 
-        const allRooms = await roomsRes.json();
-        const allBookings = await bookingsRes.json();
+const allRooms = roomsResult.rooms || [];
+const allBookings = bookingsResult.bookings || [];
+        
 
         // Sort rooms naturally
         allRooms.sort((a, b) => a.number.localeCompare(b.number, undefined, {numeric: true}));
