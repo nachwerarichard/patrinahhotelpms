@@ -3999,52 +3999,59 @@ async function refreshDashboard() {
 
 // Initialize
 updateDashboard();
+// 1️⃣ Global variables to store chart instances
+let statusChartInstance = null;
+let sourceChartInstance = null;
+
 function renderCharts(statusData, sourceData) {
-  // Status Pie Chart
-  new Chart(document.getElementById('statusChart'), {
-    type: 'pie', // Changed from 'doughnut' to 'pie'
-    data: {
-      labels: Object.keys(statusData),
-      datasets: [{
-        data: Object.values(statusData),
-        backgroundColor: [
-          '#3B82F6', // Blue
-          '#EF4444', // Red
-          '#F59E0B', // Amber
-          '#10B981', // Emerald (Added a 4th color just in case)
-          '#8B5CF6'  // Violet (Added a 5th color just in case)
-        ],
-        borderWidth: 1
-      }]
-    },
-    options: { 
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom' // Moves labels to the bottom for a cleaner look
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    const sourceCtx = document.getElementById('sourceChart').getContext('2d');
+
+    // 2️⃣ Destroy old charts if they exist
+    if (statusChartInstance) statusChartInstance.destroy();
+    if (sourceChartInstance) sourceChartInstance.destroy();
+
+    // 3️⃣ Status Pie Chart
+    statusChartInstance = new Chart(statusCtx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(statusData),
+            datasets: [{
+                data: Object.values(statusData),
+                backgroundColor: [
+                    '#3B82F6', // Blue
+                    '#EF4444', // Red
+                    '#F59E0B', // Amber
+                    '#10B981', // Emerald
+                    '#8B5CF6'  // Violet
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } }
         }
-      }
-    }
-  });
+    });
 
-
-  // Source Bar Chart
-  new Chart(document.getElementById('sourceChart'), {
-    type: 'bar',
-    data: {
-      labels: Object.keys(sourceData),
-      datasets: [{
-        label: 'Bookings by Source',
-        data: Object.values(sourceData),
-        backgroundColor: '#10B981'
-      }]
-    },
-    options: { maintainAspectRatio: false }
-  });
+    // 4️⃣ Source Bar Chart
+    sourceChartInstance = new Chart(sourceCtx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(sourceData),
+            datasets: [{
+                label: 'Bookings by Source',
+                data: Object.values(sourceData),
+                backgroundColor: '#10B981'
+            }]
+        },
+        options: { maintainAspectRatio: false }
+    });
 }
 
 // Initialize
 updateDashboard();
+
         
     
       async function updateroomDashboard() {
