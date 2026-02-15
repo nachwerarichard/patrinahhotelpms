@@ -35,6 +35,72 @@ app.options('*', cors());
 
 app.use(express.json()); // This should also be before your routes to parse JSON bodies
 
+async function auth(req, res, next) {
+    const authHeader = req.headers.authorization;
+    const hotelId = req.headers['x-hotel-id']; // Client must send this header
+
+    if (!authHeader) return res.status(401).json({ error: 'No authorization header' });
+
+    const token = authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Malformed authorization header' });
+
+    try {
+        const credentials = Buffer.from(token, 'base64').toString('ascii');
+        const [username, password] = credentials.split(':');
+
+        // 1. First, check if this is a global Super Admin (No hotelId needed)
+        let user = await User.findOne({ username, role: 'super-admin' });
+
+        // 2. If not Super Admin, look for the user WITHIN the specific hotel
+        if (!user) {
+            if (!hotelId) return res.status(400).json({ error: 'Hotel ID is required for login.' });
+            user = await User.findOne({ username, hotelId });
+        }
+
+        if (!user || user.password !== password) {
+            return res.status(401).json({ error: 'Invalid credentials for this hotel.' });
+        }
+
+        // 3. Attach hotelId to req.user so all routes can filter data automatically
+        // Inside your auth function, after finding the user:
+req.user = { 
+    id: user._id,
+    username: user.username, 
+    role: user.role, 
+    // If they are super-admin, use the hotelId from the header so they can "switch" between hotels
+    hotelId: user.role === 'super-admin' ? hotelId : user.hotelId 
+};
+        
+        
+        next();
+    } catch (err) {
+        console.error('Authentication error:', err);
+        res.status(500).json({ error: 'Authentication failed' });
+    }
+}
+function authorize(roles = []) {
+  if (typeof roles === 'string') {
+    roles = [roles];
+  }
+
+  return (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    // NEW: Allow Super Admin to bypass all role checks
+    if (req.user.role === 'super-admin') {
+        return next();
+    }
+
+    if (roles.length > 0 && !roles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden: Insufficient permissions.' });
+    }
+    
+    next();
+  };
+}
+
 // ... (Your other middleware, like URL-encoded parser if needed)
 
 // Your API routes go here
@@ -2131,71 +2197,7 @@ async function notifyLowStock(item, current) {
 }
 
 // --- Middleware ---
-async function auth(req, res, next) {
-    const authHeader = req.headers.authorization;
-    const hotelId = req.headers['x-hotel-id']; // Client must send this header
 
-    if (!authHeader) return res.status(401).json({ error: 'No authorization header' });
-
-    const token = authHeader.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Malformed authorization header' });
-
-    try {
-        const credentials = Buffer.from(token, 'base64').toString('ascii');
-        const [username, password] = credentials.split(':');
-
-        // 1. First, check if this is a global Super Admin (No hotelId needed)
-        let user = await User.findOne({ username, role: 'super-admin' });
-
-        // 2. If not Super Admin, look for the user WITHIN the specific hotel
-        if (!user) {
-            if (!hotelId) return res.status(400).json({ error: 'Hotel ID is required for login.' });
-            user = await User.findOne({ username, hotelId });
-        }
-
-        if (!user || user.password !== password) {
-            return res.status(401).json({ error: 'Invalid credentials for this hotel.' });
-        }
-
-        // 3. Attach hotelId to req.user so all routes can filter data automatically
-        // Inside your auth function, after finding the user:
-req.user = { 
-    id: user._id,
-    username: user.username, 
-    role: user.role, 
-    // If they are super-admin, use the hotelId from the header so they can "switch" between hotels
-    hotelId: user.role === 'super-admin' ? hotelId : user.hotelId 
-};
-        
-        
-        next();
-    } catch (err) {
-        console.error('Authentication error:', err);
-        res.status(500).json({ error: 'Authentication failed' });
-    }
-}
-function authorize(roles = []) {
-  if (typeof roles === 'string') {
-    roles = [roles];
-  }
-
-  return (req, res, next) => {
-    if (!req.user) {
-        return res.status(401).json({ error: 'Not authenticated' });
-    }
-
-    // NEW: Allow Super Admin to bypass all role checks
-    if (req.user.role === 'super-admin') {
-        return next();
-    }
-
-    if (roles.length > 0 && !roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Forbidden: Insufficient permissions.' });
-    }
-    
-    next();
-  };
-}
 // --- Date Helper Function (Corrected) ---
 // This function calculates the correct start and end of a day in UTC
 // for a given EAT date string ('YYYY-MM-DD').
