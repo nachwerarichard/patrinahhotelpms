@@ -31,7 +31,6 @@ app.use(cors({
   credentials: true
 }));
 
-app.options('/*', cors());
 
 app.use(express.json()); // This should also be before your routes to parse JSON bodies
  
