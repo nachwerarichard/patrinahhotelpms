@@ -2980,54 +2980,87 @@ document.getElementById('applyAuditLogFiltersBtn').addEventListener('click', () 
 });
 
 async function renderAuditLogs() {
+    // 1️⃣ Get session and authentication info
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
+    if (!sessionData || !sessionData.token) {
+        console.warn("Cannot fetch audit logs: User not logged in.");
+        return;
+    }
 
+    const token = sessionData.token;
+    const hotelId = getHotelId(); // safely get hotelId, returns null if none selected
+    if (!hotelId) {
+        const tableBody = document.querySelector("#auditLogTable tbody");
+        tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hotel selected.</td></tr>';
+        return;
+    }
+
+    // 2️⃣ Pagination and table elements
     const tableBody = document.querySelector("#auditLogTable tbody");
     const prevBtn = document.getElementById('prevAuditPage');
     const nextBtn = document.getElementById('nextAuditPage');
     const pageIndicator = document.getElementById('auditPageIndicator');
 
+    currentAuditPage = Number(currentAuditPage) || 1;
+    logsPerPage = Number(logsPerPage) || 20;
+
     tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Loading audit logs...</td></tr>';
 
-    // 1. Include hotelId in Query Params
-    let queryParams = new URLSearchParams({
+    // 3️⃣ Build query params dynamically (only include non-empty filters)
+    const params = {
         page: currentAuditPage,
         limit: logsPerPage,
-        hotelId: hotelId, // CRITICAL: Security boundary
-        user: document.getElementById('auditLogUserFilter').value,
-        action: document.getElementById('auditLogActionFilter').value,
-        startDate: document.getElementById('auditLogStartDateFilter').value,
-        endDate: document.getElementById('auditLogEndDateFilter').value
-    });
+        hotelId
+    };
+
+    const userFilter = document.getElementById('auditLogUserFilter').value;
+    if (userFilter) params.user = userFilter;
+
+    const actionFilter = document.getElementById('auditLogActionFilter').value;
+    if (actionFilter) params.action = actionFilter;
+
+    const startDateFilter = document.getElementById('auditLogStartDateFilter').value;
+    if (startDateFilter) params.startDate = startDateFilter;
+
+    const endDateFilter = document.getElementById('auditLogEndDateFilter').value;
+    if (endDateFilter) params.endDate = endDateFilter;
+
+    const queryParams = new URLSearchParams(params).toString();
 
     try {
-        const response = await fetch(`${API_BASE_URL}/audit-logs?${queryParams.toString()}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+        // 4️⃣ Fetch audit logs with required headers
+        const response = await fetch(`${API_BASE_URL}/audit-logs?${queryParams}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'x-hotel-id': hotelId
+            }
         });
 
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        
-        const logs = await response.json();
-        tableBody.innerHTML = ''; 
 
+        const logs = await response.json();
+        tableBody.innerHTML = '';
+
+        // 5️⃣ Update pagination buttons
         pageIndicator.innerText = `Page ${currentAuditPage}`;
         prevBtn.disabled = (currentAuditPage === 1);
         nextBtn.disabled = (logs.length < logsPerPage);
 
-        if (logs.length === 0) {
+        // 6️⃣ Display logs or empty state
+        if (!logs || logs.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No audit logs found.</td></tr>';
         } else {
             logs.forEach(log => {
-                const reason = (log.details && log.details.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
+                const reason = (log.details?.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
                 const row = tableBody.insertRow();
                 row.className = "border-b border-gray-200 hover:bg-gray-50 transition-colors";
-                
+
                 row.innerHTML = `
                     <td class="py-3 px-6 text-left text-sm">${new Date(log.timestamp).toLocaleString()}</td>
                     <td class="py-3 px-6 text-left font-medium">${log.user}</td>
-                    <td class="py-3 px-6 text-left"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs uppercase font-bold">${log.action}</span></td>
+                    <td class="py-3 px-6 text-left">
+                        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs uppercase font-bold">${log.action}</span>
+                    </td>
                     <td class="py-3 px-6 text-left text-sm italic text-gray-600">${reason}</td>
                     <td class="py-3 px-6 text-left">
                         <button onclick='console.log(${JSON.stringify(log.details)})' class="text-indigo-600 hover:underline text-xs font-mono">View Raw Details</button>
@@ -3040,6 +3073,9 @@ async function renderAuditLogs() {
         tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Error loading audit logs.</td></tr>';
     }
 }
+
+
+
 async function simulateChannelManagerSync() {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const token = sessionData?.token;
