@@ -3925,7 +3925,7 @@ async function refreshDashboard() {
     }
 }
 
-      async function updateroomDashboard() {
+      async function updroomDashboard() {
     try {
         // 1. Get Multi-Tenant Context
         const user = JSON.parse(localStorage.getItem('loggedInUser'));
