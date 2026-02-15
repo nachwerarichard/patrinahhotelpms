@@ -2579,13 +2579,9 @@ async function renderHousekeepingRooms() {
     try {
         // Fetch only this hotel's rooms and types
         const [roomsRes, typesRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/rooms?hotelId=${hotelId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            }),
-            fetch(`${API_BASE_URL}/room-types?hotelId=${hotelId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
-        ]);
+    authenticatedFetch(` ${API_BASE_URL}/rooms`, { method: 'GET' }),
+    authenticatedFetch(`${API_BASE_URL}/room-types`, { method: 'GET' })
+]);
 
         if (!roomsRes.ok || !typesRes.ok) throw new Error("Failed to fetch data");
 
