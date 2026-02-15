@@ -929,7 +929,7 @@ async function updateBookingStats() {
     }
 
     try {
-        const response = await authenticatedFetch(`/bookings/all?hotelId=${hotelId}`, {
+        const response = await authenticatedFetch(`/bookings?hotelId=${hotelId}`, {
             method: 'GET'
         });
 
