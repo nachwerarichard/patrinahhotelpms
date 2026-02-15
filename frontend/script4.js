@@ -436,7 +436,8 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',  
+                'x-hotel-id': sessionData?.hotelId 
             }
         });
 
@@ -582,7 +583,9 @@ loginForm.addEventListener('submit', async function(event) {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${data.token}`
+                    'Authorization': `Bearer ${data.token}`,
+                        'x-hotel-id': sessionData?.hotelId
+
                 },
                 body: JSON.stringify({ 
                     action: 'User Logged In', 
@@ -797,7 +800,8 @@ async function renderBookings(page = 1, searchTerm = '') {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',    'x-hotel-id': sessionData?.hotelId
+
             }
         });
 
@@ -918,7 +922,9 @@ async function updateBookingStats() {
         method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                    'x-hotel-id': sessionData?.hotelId
+
             }
         });
 
@@ -1017,7 +1023,9 @@ document.getElementById('confirmCancelBtn').addEventListener('click', async () =
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` // Pass the security token
+                'Authorization': `Bearer ${token}`, // Pass the security token
+                    'x-hotel-id': sessionData?.hotelId
+
             },
             body: JSON.stringify({ 
                 reason: reason,
@@ -1059,7 +1067,9 @@ document.getElementById('confirmVoidBtn').addEventListener('click', async () => 
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` 
+                'Authorization': `Bearer ${token}` ,
+                    'x-hotel-id': sessionData?.hotelId
+
             },
             body: JSON.stringify({ 
                 reason: reason,
@@ -1170,7 +1180,9 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` // Pass security token
+                'Authorization': `Bearer ${token}`, // Pass security token
+                    'x-hotel-id': sessionData?.hotelId
+
             },
             body: JSON.stringify({ 
                 newRoomNumber, 
@@ -1542,7 +1554,8 @@ bookingForm.addEventListener('submit', async function(event) {
         const requestOptions = {
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` 
+                'Authorization': `Bearer ${token}` ,
+                'x-hotel-id': sessionData?.hotelId
             },
             body: JSON.stringify(bookingData)
         };
@@ -1690,7 +1703,8 @@ function confirmDeleteBooking(id) {
                 method: 'DELETE',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` 
+                    'Authorization': `Bearer ${token}` ,
+                    'x-hotel-id': sessionData?.hotelId
                 },
                 body: JSON.stringify({ 
                     reason, 
@@ -1726,7 +1740,8 @@ async function checkoutBooking(id) {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'x-hotel-id': sessionData?.hotelId
             },
             body: JSON.stringify({ 
                 username: currentUsername,
@@ -1763,7 +1778,9 @@ async function checkinBooking(id) {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                    'x-hotel-id': sessionData?.hotelId
+
             },
             body: JSON.stringify({ 
                 username: currentUsername || 'Unknown User',
@@ -1890,7 +1907,9 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                    'x-hotel-id': sessionData?.hotelId
+
             },
             body: JSON.stringify({
                 bookingId: booking._id, 
@@ -2020,7 +2039,9 @@ document.getElementById('payAllChargesBtn').addEventListener('click', async () =
             method: 'PUT',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                    'x-hotel-id': sessionData?.hotelId
+
             },
             body: JSON.stringify({
                 username: currentUsername,
@@ -2074,7 +2095,9 @@ document.addEventListener('click', async (e) => {
             method: 'PATCH',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                    'x-hotel-id': sessionData?.hotelId
+
             },
             body: JSON.stringify({ 
                 hotelId: hotelId,
@@ -2127,7 +2150,9 @@ function confirmDeleteIncidentalCharge(chargeId, bookingCustomId) {
                 method: 'DELETE',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` 
+                    'Authorization': `Bearer ${token}` ,
+                        'x-hotel-id': sessionData?.hotelId
+
                 },
                 body: JSON.stringify({ reason, username: currentUsername, hotelId }) 
             });
@@ -2153,7 +2178,9 @@ async function confirmPayIncidentalCharge(chargeId, bookingCustomId) {
             method: 'PATCH',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` 
+                'Authorization': `Bearer ${token}` ,
+                    'x-hotel-id': sessionData?.hotelId
+
             },
             body: JSON.stringify({ username: sessionData?.username, hotelId })
         });
@@ -2189,7 +2216,9 @@ async function markAllChargesPaid() {
             method: 'PUT',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                    'x-hotel-id': sessionData?.hotelId
+
             },
             body: JSON.stringify({ username: sessionData?.username, hotelId }) 
         });
@@ -2655,7 +2684,9 @@ async function updateRoomStatus(roomMongoId, newStatus) {
             method: 'PUT',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                    'x-hotel-id': sessionData?.hotelId
+
             },
             body: JSON.stringify({ 
                 status: newStatus, 
@@ -3014,7 +3045,9 @@ async function simulateChannelManagerSync() {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                    'x-hotel-id': sessionData?.hotelId
+
             },
             body: JSON.stringify({ 
                 username: currentUsername,
@@ -3215,7 +3248,9 @@ async function markNoShow(bookingId) {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
+                "Authorization": `Bearer ${token}`,
+                    'x-hotel-id': sessionData?.hotelId
+
             },
             body: JSON.stringify({
                 username: currentUsername,
@@ -3249,7 +3284,9 @@ async function Confirm(bookingId) {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
+                "Authorization": `Bearer ${token}`,
+                    'x-hotel-id': sessionData?.hotelId
+
             },
             body: JSON.stringify({
                 username: currentUsername,
@@ -4059,7 +4096,9 @@ updateroomDashboard();
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`, // Updated to Bearer
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                        'x-hotel-id': sessionData?.hotelId
+
                 },
                 signal: controller.signal
             });
