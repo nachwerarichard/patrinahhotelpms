@@ -1231,6 +1231,19 @@ app.get('/api/bookings/id/:customId', auth, async (req, res) => {
 
 // Example of what your auth middleware should do:
 
+app.get('/api/bookings/all', auth, async (req, res) => {
+    try {
+        const hotelId = req.user.hotelId;
+
+        const bookings = await Booking
+            .find({ hotelId })
+            .sort({ checkIn: -1 });
+
+        res.json(bookings || []);
+    } catch (error) {
+        res.status(500).json([]);
+    }
+});
 
 // Get all bookings with pagination (Secure)
 app.get('/api/bookings', auth, async (req, res) => {
