@@ -2958,7 +2958,6 @@ exportServiceReportBtn.addEventListener('click', exportToExcel);
  */
 // 1. Initialize pagination state
 let currentAuditPage = 1;
-const logsPerPage = 10;
 
 // 2. Add Event Listeners for the buttons
 document.getElementById('prevAuditPage').addEventListener('click', () => {
