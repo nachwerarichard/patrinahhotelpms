@@ -2977,8 +2977,6 @@ document.getElementById('applyAuditLogFiltersBtn').addEventListener('click', () 
     currentAuditPage = 1;
     renderAuditLogs();
 });
-const logsPerPage = 10;
-
 
 async function renderAuditLogs() {
     // 1️⃣ Get session and authentication info
@@ -3002,29 +3000,28 @@ async function renderAuditLogs() {
     const nextBtn = document.getElementById('nextAuditPage');
     const pageIndicator = document.getElementById('auditPageIndicator');
 
-    // Use local function variables instead of overwriting globals
-    let currentPage = Number(currentAuditPage) || 1;
-    let pageSize = Number(logsPerPage) || 20;
+    currentAuditPage = Number(currentAuditPage) || 1;
+    logsPerPage = Number(logsPerPage) || 20;
 
     tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Loading audit logs...</td></tr>';
 
     // 3️⃣ Build query params dynamically (only include non-empty filters)
     const params = {
-        page: currentPage,
-        limit: pageSize,
+        page: currentAuditPage,
+        limit: logsPerPage,
         hotelId
     };
 
-    const userFilter = document.getElementById('auditLogUserFilter')?.value;
+    const userFilter = document.getElementById('auditLogUserFilter').value;
     if (userFilter) params.user = userFilter;
 
-    const actionFilter = document.getElementById('auditLogActionFilter')?.value;
+    const actionFilter = document.getElementById('auditLogActionFilter').value;
     if (actionFilter) params.action = actionFilter;
 
-    const startDateFilter = document.getElementById('auditLogStartDateFilter')?.value;
+    const startDateFilter = document.getElementById('auditLogStartDateFilter').value;
     if (startDateFilter) params.startDate = startDateFilter;
 
-    const endDateFilter = document.getElementById('auditLogEndDateFilter')?.value;
+    const endDateFilter = document.getElementById('auditLogEndDateFilter').value;
     if (endDateFilter) params.endDate = endDateFilter;
 
     const queryParams = new URLSearchParams(params).toString();
@@ -3044,9 +3041,9 @@ async function renderAuditLogs() {
         tableBody.innerHTML = '';
 
         // 5️⃣ Update pagination buttons
-        pageIndicator.innerText = `Page ${currentPage}`;
-        prevBtn.disabled = (currentPage === 1);
-        nextBtn.disabled = (logs.length < pageSize);
+        pageIndicator.innerText = `Page ${currentAuditPage}`;
+        prevBtn.disabled = (currentAuditPage === 1);
+        nextBtn.disabled = (logs.length < logsPerPage);
 
         // 6️⃣ Display logs or empty state
         if (!logs || logs.length === 0) {
@@ -3070,7 +3067,11 @@ async function renderAuditLogs() {
                 `;
             });
         }
-   
+    } catch (error) {
+        console.error('Error fetching audit logs:', error);
+        tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Error loading audit logs.</td></tr>';
+    }
+}
 
 
 
@@ -3925,7 +3926,7 @@ async function refreshDashboard() {
     }
 }
 
-      async function updroomDashboard() {
+      async function updateroomDashboard() {
     try {
         // 1. Get Multi-Tenant Context
         const user = JSON.parse(localStorage.getItem('loggedInUser'));
