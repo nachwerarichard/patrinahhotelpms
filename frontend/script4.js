@@ -270,10 +270,22 @@ const API_BASE_URL = 'https://novouscloudpms-tz4s.onrender.com/api';
 // --- 3. SESSION HELPERS ---
 const getHotelId = () => {
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
-    if (!user || !user.hotelId) {
-        console.error("Dashboard Error: No hotelId found in session.");
+
+    if (!user) {
+        console.error("No user session found.");
         return null;
     }
+
+    if (user.role === 'super-admin' && !user.hotelId) {
+        console.warn("Super admin has not selected a hotel yet.");
+        return null;
+    }
+
+    if (!user.hotelId) {
+        console.error("No hotelId found in session.");
+        return null;
+    }
+
     return user.hotelId;
 };
 
