@@ -19,10 +19,20 @@ const app = express();
 
 // This is the "Open Door" policy
 app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'x-hotel-id','OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+  origin: [
+    'https://elegant-pasca-cea136.netlify.app'
+  ],
+  methods: ['GET','POST','PUT','PATCH', 'DELETE','OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'x-hotel-id'
+  ],
+  credentials: true
 }));
+
+app.options('*', cors());
+
 app.use(express.json()); // This should also be before your routes to parse JSON bodies
 
 // ... (Your other middleware, like URL-encoded parser if needed)
