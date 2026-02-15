@@ -927,9 +927,8 @@ async function updateBookingStats() {
         console.warn("Stats update skipped: No hotel selected.");
         return;
     }
-
     try {
-        const response = await authenticatedFetch(`/bookings?hotelId=${hotelId}`, {
+        const response = await authenticatedFetch(`/bookings?limit=500`, {
             method: 'GET'
         });
 
