@@ -35,6 +35,19 @@ app.options('*', cors());
 
 app.use(express.json()); // This should also be before your routes to parse JSON bodies
 
+const userSchema = new mongoose.Schema({
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' },
+    username: { type: String, required: true }, // Removed unique: true
+    password: { type: String, required: true },
+    role: { 
+        type: String, 
+        enum: ['super-admin', 'admin', 'bar', 'housekeeper', 'cashier', 'Front office'], 
+        default: 'admin' 
+    },
+    isInitial: { type: Boolean, default: false } // For default credentials
+});
+
+
 async function auth(req, res, next) {
     const authHeader = req.headers.authorization;
     const hotelId = req.headers['x-hotel-id']; // Client must send this header
@@ -807,17 +820,6 @@ const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 
 // --- 6. Hardcoded Users for Authentication (Highly Insecure for Production!) ---
 // --- Updated User Schema ---
-const userSchema = new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' },
-    username: { type: String, required: true }, // Removed unique: true
-    password: { type: String, required: true },
-    role: { 
-        type: String, 
-        enum: ['super-admin', 'admin', 'bar', 'housekeeper', 'cashier', 'Front office'], 
-        default: 'admin' 
-    },
-    isInitial: { type: Boolean, default: false } // For default credentials
-});
 
 // Ensure a username is unique ONLY within the same hotel
 userSchema.index({ hotelId: 1, username: 1 }, { unique: true });
