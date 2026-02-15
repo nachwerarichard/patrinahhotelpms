@@ -919,6 +919,7 @@ async function renderBookings(page = 1, searchTerm = '') {
     nextPageBtn.disabled = currentPage >= totalPages;
     pageInfoSpan.textContent = `Page ${totalCount === 0 ? 0 : currentPage} of ${totalPages}`;
 }
+
 async function updateBookingStats() {
 
     const hotelId = getHotelId();
@@ -928,50 +929,43 @@ async function updateBookingStats() {
     }
 
     try {
-    const response = await authenticatedFetch(`${API_BASE_URL}/bookings/all?hotelId=${hotelId}`,                                                  {
-        method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-                    'x-hotel-id': sessionData?.hotelId
-
-            }
+        const response = await authenticatedFetch(`/bookings/all?hotelId=${hotelId}`, {
+            method: 'GET'
         });
 
-      if (!response.ok) {
+        if (!response.ok) {
             console.error("Stats API failed:", response.status);
             return;
         }
 
-        const data = await response.json();
-
-        
         const allBookings = await response.json();
 
-        // Get "Today" in YYYY-MM-DD format
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // 3. Arrivals: Check-in is today AND status is confirmed
-        // Note: Using 'confirmed' (lowercase) or 'Confirmed' based on your backend consistency
         const arrivalsToday = allBookings.filter(b => {
             const bCheckIn = new Date(b.checkIn).toISOString().split('T')[0];
-            return bCheckIn === todayStr && (b.gueststatus === 'confirmed' || b.gueststatus === 'Confirmed');
+            return bCheckIn === todayStr &&
+                (b.gueststatus === 'confirmed' || b.gueststatus === 'Confirmed');
         }).length;
 
-        // 4. Departures: Check-out is today AND status is checked-in
         const departuresToday = allBookings.filter(b => {
             const bCheckOut = new Date(b.checkOut).toISOString().split('T')[0];
-            return bCheckOut === todayStr && (b.gueststatus === 'checkedin' || b.gueststatus === 'Checked-In');
+            return bCheckOut === todayStr &&
+                (b.gueststatus === 'checkedin' || b.gueststatus === 'Checked-In');
         }).length;
 
-        // Update UI elements if they exist
-        if(document.getElementById('arrivals-count')) document.getElementById('arrivals-count').textContent = arrivalsToday;
-        if(document.getElementById('departures-count')) document.getElementById('departures-count').textContent = departuresToday;
+        const arrivalsEl = document.getElementById('arrivals-count');
+        const departuresEl = document.getElementById('departures-count');
+
+        if (arrivalsEl) arrivalsEl.textContent = arrivalsToday;
+        if (departuresEl) departuresEl.textContent = departuresToday;
 
     } catch (error) {
         console.error('Error updating booking stats:', error);
     }
 }
+
+
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Initial load of all dashboard data
     refreshDashboard();
