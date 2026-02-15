@@ -928,7 +928,7 @@ async function updateBookingStats() {
         return;
     }
     try {
-        const response = await authenticatedFetch(`${API_BASE_URL}/bookings?limit=500`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/bookings/all?limit=500`, {
             method: 'GET'
         });
 
