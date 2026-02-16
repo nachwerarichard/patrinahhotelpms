@@ -1653,10 +1653,14 @@ bookingForm.addEventListener('submit', async function(event) {
 
         if (id) {
             // Update existing booking
-            response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
-                method: 'PUT',
-                ...requestOptions
-            });
+            response = await authenticatedFetch(
+    `${API_BASE_URL}/bookings/${id}`,
+    {
+        method: 'PUT',
+        ...requestOptions
+    }
+);
+
             message = 'Booking updated successfully!';
         } else {
             // Create new booking
