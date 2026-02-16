@@ -284,6 +284,57 @@ app.post('/api/room-types', auth, async (req, res) => {
     }
 });
 
+app.post('/api/bookings/:id/add-payment', auth, async (req, res) => {
+    const { id } = req.params;
+    const { amount, method, recordedBy } = req.body;
+
+    if (!amount || amount <= 0) {
+        return res.status(400).json({ message: 'Invalid payment amount' });
+    }
+
+    if (!method) {
+        return res.status(400).json({ message: 'Payment method is required' });
+    }
+
+    try {
+        const booking = await Booking.findOne({
+            id,
+            hotelId: req.user.hotelId   // 🔒 CRITICAL
+        });
+
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        const newBalance = Math.max(0, booking.paymentbalance - amount);
+
+        booking.paymentbalance = newBalance;
+        booking.paymentMethod = method;
+        booking.paymentStatus = newBalance === 0 ? 'Paid' : 'Partially Paid';
+
+        await booking.save();
+
+        await addAuditLog('Payment Added', recordedBy || 'System', {
+            bookingId: booking.id,
+            amount,
+            method,
+            remainingBalance: newBalance,
+            hotelId: req.user.hotelId
+        });
+
+        res.json({
+            message: 'Payment added successfully',
+            newBalance,
+            paymentStatus: booking.paymentStatus
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error adding payment' });
+    }
+});
+
+
 // Get all room types (Filtered by hotel)
 app.get('/api/room-types', auth, async (req, res) => {
     try {
