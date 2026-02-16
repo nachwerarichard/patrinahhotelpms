@@ -201,6 +201,7 @@ const RoomType = mongoose.model('RoomType', roomTypeSchema);
 
 // 2. Room Schema (The actual physical rooms)
 const roomSchema = new mongoose.Schema({
+    id: { type: String, unique: true },
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
     number: { type: String, required: true, unique: true },
     roomTypeId: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType' },
@@ -338,6 +339,7 @@ app.post('/api/rooms', auth, async (req, res) => {
         }
 
         const room = new Room({
+            id: crypto.randomUUID(),
             number,
             roomTypeId,
             hotelId: req.user.hotelId,
