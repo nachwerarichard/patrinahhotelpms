@@ -920,6 +920,85 @@ async function renderBookings(page = 1, searchTerm = '') {
     pageInfoSpan.textContent = `Page ${totalCount === 0 ? 0 : currentPage} of ${totalPages}`;
 }
 
+async function viewBooking(id) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings/id/${id}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const booking = await response.json();
+
+        if (!booking) {
+            showMessageBox('Error', 'Booking not found.', true);
+            return;
+        }
+
+        // 1. Update Modal Title
+        document.getElementById('modalTitle').textContent = 'Booking Details';
+
+       // 2. Populate Fields
+// --- Primary IDs and Guest Info ---
+document.getElementById('bookingId').value = booking.id || '';
+document.getElementById('name').value = booking.name || '';
+document.getElementById('occupation').value = booking.occupation || '';
+document.getElementById('nationality').value = booking.nationality || '';
+document.getElementById('nationalIdNo').value = booking.nationalIdNo || '';
+document.getElementById('address').value = booking.address || '';
+document.getElementById('phoneNo').value = booking.phoneNo || '';
+document.getElementById('guestEmail').value = booking.guestEmail || '';
+
+// --- Room & Stay Details ---
+document.getElementById('room').value = booking.room || '';
+document.getElementById('checkIn').value = booking.checkIn || '';
+document.getElementById('checkIntime').value = booking.checkIntime || '';
+document.getElementById('checkOut').value = booking.checkOut || '';
+document.getElementById('checkOuttime').value = booking.checkOuttime || '';
+document.getElementById('nights').value = booking.nights || 0;
+document.getElementById('people').value = booking.people || 1;
+document.getElementById('extraperson').value = booking.extraperson || '';
+
+// --- Financials ---
+document.getElementById('amtPerNight').value = booking.amtPerNight || 0;
+document.getElementById('totalDue').value = booking.totalDue || 0;
+document.getElementById('amountPaid').value = booking.amountPaid || 0;
+document.getElementById('balance').value = booking.balance || 0;
+
+// --- Status & Methods ---
+document.getElementById('paymentStatus').value = booking.paymentStatus || 'Pending';
+document.getElementById('paymentMethod').value = booking.paymentMethod || 'Cash';
+document.getElementById('guestsource').value = booking.guestsource || 'Walk in';
+document.getElementById('gueststatus').value = booking.gueststatus || 'confirmed';
+document.getElementById('transactionid').value = booking.transactionid || '';
+
+// --- Logistics & Extras ---
+document.getElementById('vehno').value = booking.vehno || '';
+document.getElementById('destination').value = booking.destination || '';
+document.getElementById('kin').value = booking.kin || '';
+document.getElementById('kintel').value = booking.kintel || '';
+document.getElementById('purpose').value = booking.purpose || '';
+document.getElementById('declarations').value = booking.declarations || '';
+        // 3. Populate Room (Async)
+        await populateRoomDropdown(booking.room);
+
+        // 4. DISABLE ALL INPUTS
+        // This targets all inputs, selects, and textareas inside the modal
+        const formElements = bookingModal.querySelectorAll('input, select, textarea');
+        formElements.forEach(el => {
+            el.disabled = true; 
+            el.style.backgroundColor = '#f9f9f9'; // Optional: make it look "read-only"
+        });
+
+        // 5. Hide the 'Save/Submit' button if it exists
+        const saveBtn = document.getElementById('saveBookingBtn'); 
+        if (saveBtn) saveBtn.style.display = 'none';
+
+        bookingModal.style.display = 'flex';
+
+    } catch (error) {
+        console.error('Error fetching booking:', error);
+        showMessageBox('Error', `Failed to load details: ${error.message}`, true);
+    }
+}
+
+
 async function updateBookingStats() {
 
     const hotelId = getHotelId();
