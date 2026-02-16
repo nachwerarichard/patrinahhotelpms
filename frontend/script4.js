@@ -923,7 +923,7 @@ async function renderBookings(page = 1, searchTerm = '') {
 async function viewBooking(id) {
     try {
         const response = await authenticatedFetch(
-    `${API_BASE_URL}/bookings/id/${id}`,
+    `${API_BASE_URL}/booking/id/${id}`,
     { method: 'GET' }
 );
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -2046,7 +2046,7 @@ async function viewCharges(bookingCustomId) {
     try {
         // 2. Fetch booking details (Filtered by hotelId)
         const bookingResponse = await fetch(
-    `${API_BASE_URL}/bookings/id/${bookingCustomId}`,
+    `${API_BASE_URL}/booking/id/${bookingCustomId}`,
     {
         headers: { 'Authorization': `Bearer ${token}` }
     }
