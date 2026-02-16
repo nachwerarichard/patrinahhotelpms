@@ -734,6 +734,37 @@ app.get('/api/pos/reports/daily', auth, async (req, res) => {
         res.status(500).json({ message: 'Error generating POS report' });
     }
 });
+app.get('/api/rooms/available', auth, async (req, res) => {
+    try {
+        const { checkIn, checkOut } = req.query;
+
+        if (!checkIn || !checkOut) {
+            return res.status(400).json({ message: 'checkIn and checkOut are required' });
+        }
+
+        const hotelId = req.user.hotelId;
+
+        const conflictingBookings = await Booking.find({
+            hotelId,
+            checkIn: { $lt: new Date(checkOut) },
+            checkOut: { $gt: new Date(checkIn) }
+        });
+
+        const bookedRoomNumbers = conflictingBookings.map(b => b.room);
+
+        const availableRooms = await Room.find({
+            hotelId,
+            status: 'clean',
+            number: { $nin: bookedRoomNumbers }
+        });
+
+        res.json(availableRooms);
+
+    } catch (error) {
+        console.error("AVAILABLE ROOMS ERROR:", error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
 
 // GET: Scoped search for active bookings (suggestions)
 app.get('/api/pos/suggestions/bookings', auth, async (req, res) => {
