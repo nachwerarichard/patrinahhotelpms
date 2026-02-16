@@ -1462,6 +1462,63 @@ app.post('/api/bookings/:id/checkout', auth, async (req, res) => {
     }
 });
 
+app.post('/api/bookings/:id/void', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason, recordedBy } = req.body;
+
+        if (!reason || reason.trim() === '') {
+            return res.status(400).json({ message: 'Void reason is required' });
+        }
+
+        // 🔒 Multi-tenant protection
+        const booking = await Booking.findOne({
+            id,
+            hotelId: req.user.hotelId
+        });
+
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        if (booking.gueststatus === 'void') {
+            return res.status(400).json({ message: 'Booking already voided' });
+        }
+
+        booking.gueststatus = 'void';
+        booking.voidReason = reason;
+
+        await booking.save();
+
+        // Optional: free room if it was occupied
+        if (booking.room) {
+            await Room.findOneAndUpdate(
+                { number: booking.room, hotelId: req.user.hotelId },
+                { status: 'clean' }
+            );
+        }
+
+        // Audit log
+        await addAuditLog(
+            'Booking Voided',
+            recordedBy || 'System',
+            {
+                bookingId: booking.id,
+                guestName: booking.name,
+                reason
+            },
+            req.user.hotelId
+        );
+
+        res.json({ message: 'Booking successfully voided.' });
+
+    } catch (error) {
+        console.error("VOID ERROR:", error);
+        res.status(500).json({ message: 'Error voiding booking' });
+    }
+});
+
+
 app.post('/api/bookings/:id/checkin', auth, async (req, res) => {
     try {
         const { id } = req.params;
