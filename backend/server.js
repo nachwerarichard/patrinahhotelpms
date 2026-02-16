@@ -203,10 +203,11 @@ const RoomType = mongoose.model('RoomType', roomTypeSchema);
 const roomSchema = new mongoose.Schema({
     id: { type: String, unique: true },
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
-    number: { type: String, required: true, unique: true },
+    number: { type: String, required: true },
     roomTypeId: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType' },
     status: { type: String, enum: ['clean', 'dirty', 'under-maintenance', 'blocked'], default: 'clean' }
 });
+roomSchema.index({ hotelId: 1, number: 1 }, { unique: true });
 const Room = mongoose.model('Room', roomSchema);
 // Create a Room Type (Tied to the hotel)
 
@@ -1182,36 +1183,64 @@ app.post('/api/audit-log/action', auth, async (req, res) => {
         res.status(500).json({ message: 'Error creating audit log entry' });
     }
 });
-app.get('/api/rooms/available', auth, async (req, res) => {
-    const { checkIn, checkOut } = req.query;
-    const hotelId = req.user.hotelId;
 
-    if (!checkIn || !checkOut) {
-        return res.status(400).json({ message: 'Dates are required.' });
-    }
+app.post('/api/bookings/:id/move', auth, async (req, res) => {
+    const { id } = req.params;
+    const { newRoomNumber, overridePrice, reason, username } = req.body;
 
     try {
-        // 1. Find conflicting bookings ONLY within this hotel
-        const conflictingBookings = await Booking.find({
-            hotelId: hotelId,
-            checkIn: { $lt: checkOut },
-            checkOut: { $gt: checkIn }
+        // 1️⃣ Find booking inside this hotel
+        const booking = await Booking.findOne({
+            id: id,
+            hotelId: req.user.hotelId
         });
 
-        const bookedRoomNumbers = conflictingBookings.map(booking => booking.room);
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
 
-        // 2. Find rooms in this hotel that are clean and not booked
-        const availableRooms = await Room.find({
-            hotelId: hotelId, // CRITICAL: Only show this hotel's rooms
-            status: 'clean',
-            number: { $nin: bookedRoomNumbers }
+        // 2️⃣ Find new room inside this hotel
+        const newRoom = await Room.findOne({
+            number: newRoomNumber,
+            hotelId: req.user.hotelId
         });
 
-        res.json(availableRooms);
+        if (!newRoom) {
+            return res.status(404).json({ message: 'Room not found' });
+        }
+
+        // 3️⃣ Update old room → clean
+        await Room.updateOne(
+            { number: booking.room, hotelId: req.user.hotelId },
+            { $set: { status: 'clean' } }
+        );
+
+        // 4️⃣ Update new room → occupied or blocked
+        newRoom.status = 'blocked';
+        await newRoom.save();
+
+        // 5️⃣ Update booking
+        booking.room = newRoomNumber;
+        if (overridePrice) booking.amtPerNight = overridePrice;
+        await booking.save();
+
+        // 6️⃣ Audit
+        await addAuditLog('Room Moved', username || 'System', {
+            hotelId: req.user.hotelId,
+            bookingId: booking.id,
+            oldRoom: booking.room,
+            newRoom: newRoomNumber,
+            reason
+        });
+
+        res.json({ message: 'Room moved successfully.' });
+
     } catch (error) {
-        res.status(500).json({ message: 'Error checking availability' });
+        console.error("MOVE ERROR:", error);
+        res.status(500).json({ message: error.message });
     }
 });
+
 // Get all rooms for the logged-in hotel
 app.get('/api/rooms', auth, async (req, res) => {
     try {
