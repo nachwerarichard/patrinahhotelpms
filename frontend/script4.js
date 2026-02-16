@@ -922,7 +922,10 @@ async function renderBookings(page = 1, searchTerm = '') {
 
 async function viewBooking(id) {
     try {
-        const response = await fetch(`${API_BASE_URL}/bookings/id/${id}`);
+        const response = await authenticatedFetch(
+    `${API_BASE_URL}/bookings/id/${id}`,
+    { method: 'GET' }
+);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const booking = await response.json();
 
