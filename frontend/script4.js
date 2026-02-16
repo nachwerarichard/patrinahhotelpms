@@ -2045,9 +2045,13 @@ async function viewCharges(bookingCustomId) {
 
     try {
         // 2. Fetch booking details (Filtered by hotelId)
-        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}?hotelId=${hotelId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const bookingResponse = await fetch(
+    `${API_BASE_URL}/bookings/id/${bookingCustomId}`,
+    {
+        headers: { 'Authorization': `Bearer ${token}` }
+    }
+);
+
         if (!bookingResponse.ok) throw new Error('Booking fetch failed');
 
         const booking = await bookingResponse.json();
@@ -2062,9 +2066,9 @@ async function viewCharges(bookingCustomId) {
         viewChargesRoomNumberSpan.textContent = booking.room;
 
         // 3. Fetch charges (Filtered by hotelId)
-        const response = await fetch(`${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}?hotelId=${hotelId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+fetch(`${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+});
         if (!response.ok) throw new Error('Charges fetch failed');
 
         const charges = await response.json();
