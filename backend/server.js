@@ -1284,6 +1284,29 @@ app.get('/api/bookings/id/:customId', auth, async (req, res) => {
         res.status(500).json({ message: 'Error fetching booking', error: error.message });
     }
 });
+app.get('/api/booking/id/:customId', auth, async (req, res) => {
+    try {
+
+        console.log("User hotelId:", req.user.hotelId);
+        console.log("Booking ID:", req.params.customId);
+
+        const booking = await Booking.findOne({
+            id: req.params.customId,
+            hotelId: req.user.hotelId
+        });
+
+        if (!booking) {
+            return res.status(404).json({ message: "Booking not found" });
+        }
+
+        res.json(booking);
+
+    } catch (err) {
+        console.error("GET BOOKING ERROR:", err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
 
 // Example of what your auth middleware should do:
 
