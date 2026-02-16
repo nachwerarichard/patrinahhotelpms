@@ -1186,57 +1186,68 @@ document.getElementById('confirmVoidBtn').addEventListener('click', async () => 
     }
 });
 async function moveBooking(id) {
-    // 1. Get session data
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
-
     selectedBookingId = id;
+
     const modal = document.getElementById('moveRoomModal');
     const select = document.getElementById('availableRoomsSelect');
 
     try {
-        // 2. Get specific booking details (Filtered by hotelId)
-        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${id}?hotelId=${hotelId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        console.log("🔵 Moving booking ID:", id);
+
+        // 1️⃣ Fetch booking details (hotelId auto-added by authenticatedFetch)
+        const bookingResponse = await authenticatedFetch(
+            `${API_BASE_URL}/bookings/id/${id}`
+        );
+
+        if (!bookingResponse) return;
+
+        if (!bookingResponse.ok) {
+            const text = await bookingResponse.text();
+            console.error("❌ Booking fetch failed:", text);
+            throw new Error('Booking fetch failed');
+        }
+
         const booking = await bookingResponse.json();
-if (!bookingResponse.ok) {
-    const text = await bookingResponse.text();
-    console.error("Booking fetch failed:", text);
-    throw new Error('Booking fetch failed');
-}
+        console.log("✅ Booking loaded:", booking);
 
-        // 3. Get available rooms ONLY for this hotel
-        const response = await fetch(
-    `${API_BASE_URL}/rooms/available?checkIn=${booking.checkIn}&checkOut=${booking.checkOut}`,
-    {
-        headers: { 'Authorization': `Bearer ${token}` }
-    }
-);
+        // 2️⃣ Fetch available rooms
+        const roomsResponse = await authenticatedFetch(
+            `${API_BASE_URL}/rooms/available?checkIn=${booking.checkIn}&checkOut=${booking.checkOut}`
+        );
 
-        if (!response.ok) throw new Error('Failed to fetch rooms');
-        
-        availableRoomsForMove = await response.json(); 
+        if (!roomsResponse) return;
+
+        if (!roomsResponse.ok) {
+            const text = await roomsResponse.text();
+            console.error("❌ Rooms fetch failed:", text);
+            throw new Error('Failed to fetch rooms');
+        }
+
+        availableRoomsForMove = await roomsResponse.json();
+        console.log("✅ Available rooms:", availableRoomsForMove);
 
         if (availableRoomsForMove.length === 0) {
             return showMessageBox('No Rooms', 'No vacant rooms available for move.', true);
         }
 
-        // Populate dropdown
+        // 3️⃣ Populate dropdown
         select.innerHTML = availableRoomsForMove
-            .map(r => `<option value="${r.number}">Room ${r.number} (${r.type} - UGX ${r.basePrice})</option>`)
+            .map(r => `<option value="${r.number}">
+                Room ${r.number} (${r.type || ''} - UGX ${r.basePrice || 0})
+            </option>`)
             .join('');
 
         updateMovePricePreview();
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
+
     } catch (error) {
-        console.error('Move booking error:', error);
+        console.error('🔥 Move booking error:', error);
         showMessageBox('Error', 'Could not load available rooms.', true);
     }
 }
+
 
 // Helper to update the price input when the dropdown changes
 function updateMovePricePreview() {
