@@ -284,6 +284,7 @@ app.post('/api/room-types', auth, async (req, res) => {
     }
 });
 
+
 app.post('/api/bookings/:id/add-payment', auth, async (req, res) => {
     const { id } = req.params;
     const { amount, method, recordedBy } = req.body;
@@ -299,37 +300,63 @@ app.post('/api/bookings/:id/add-payment', auth, async (req, res) => {
     try {
         const booking = await Booking.findOne({
             id,
-            hotelId: req.user.hotelId   // 🔒 CRITICAL
+            hotelId: req.user.hotelId   // 🔒 Multi-tenant protection
         });
 
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found' });
         }
 
-        const newBalance = Math.max(0, booking.paymentbalance - amount);
+        const totalDue = Number(booking.totalDue) || 0;
+        const alreadyPaid = Number(booking.amountPaid) || 0;
+        const paymentAmount = Number(amount);
 
-        booking.paymentbalance = newBalance;
+        // Prevent overpayment
+        if (paymentAmount > (totalDue - alreadyPaid)) {
+            return res.status(400).json({ 
+                message: 'Payment exceeds remaining balance' 
+            });
+        }
+
+        const newAmountPaid = alreadyPaid + paymentAmount;
+        const newBalance = totalDue - newAmountPaid;
+
+        booking.amountPaid = newAmountPaid;
+        booking.balance = newBalance;
         booking.paymentMethod = method;
-        booking.paymentStatus = newBalance === 0 ? 'Paid' : 'Partially Paid';
+
+        if (newBalance === 0) {
+            booking.paymentStatus = 'Paid';
+        } else if (newAmountPaid > 0) {
+            booking.paymentStatus = 'Partially Paid';
+        } else {
+            booking.paymentStatus = 'Pending';
+        }
 
         await booking.save();
 
-        await addAuditLog('Payment Added', recordedBy || 'System', {
-            bookingId: booking.id,
-            amount,
-            method,
-            remainingBalance: newBalance,
-            hotelId: req.user.hotelId
-        });
+        // ✅ Proper Audit Log Call
+        await addAuditLog(
+            'Payment Added',
+            recordedBy || 'System',
+            {
+                bookingId: booking.id,
+                amount: paymentAmount,
+                method,
+                remainingBalance: newBalance
+            },
+            req.user.hotelId  // 🔥 Pass hotelId separately
+        );
 
         res.json({
             message: 'Payment added successfully',
+            newAmountPaid,
             newBalance,
             paymentStatus: booking.paymentStatus
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("ADD PAYMENT ERROR:", error);
         res.status(500).json({ message: 'Error adding payment' });
     }
 });
