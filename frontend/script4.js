@@ -1828,71 +1828,76 @@ function confirmDeleteBooking(id) {
 async function checkoutBooking(id) {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
     const currentUsername = sessionData?.username;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/bookings/${id}/checkout`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'x-hotel-id': sessionData?.hotelId
-            },
-            body: JSON.stringify({ 
-                username: currentUsername,
-                hotelId: hotelId 
-            }) 
-        });
+        const response = await fetch(
+            `${API_BASE_URL}/bookings/${id}/checkout`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    username: currentUsername || 'Unknown User'
+                })
+            }
+        );
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            const text = await response.text(); // safer than .json()
+            console.error("Server returned:", text);
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
-        showMessageBox('Success', 'Guest checked out successfully');
 
-        renderBookings(currentPage, currentSearchTerm);
-        renderHousekeepingRooms();
-        if (typeof renderCalendar === 'function') renderCalendar();
-        if (typeof renderAuditLogs === 'function') renderAuditLogs();
+        showMessageBox('Success', data.message || 'Guest checked out successfully');
+
+        await Promise.all([
+            renderBookings(currentPage, currentSearchTerm),
+            renderHousekeepingRooms(),
+            (typeof renderCalendar === 'function' ? renderCalendar() : Promise.resolve()),
+            (typeof renderAuditLogs === 'function' ? renderAuditLogs() : Promise.resolve())
+        ]);
 
     } catch (error) {
         console.error('Error during checkout:', error);
         showMessageBox('Error', `Failed to process checkout: ${error.message}`, true);
     }
 }
+
 async function checkinBooking(id) {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
     const currentUsername = sessionData?.username;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/bookings/${id}/checkin`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                    'x-hotel-id': sessionData?.hotelId
-
-            },
-            body: JSON.stringify({ 
-                username: currentUsername || 'Unknown User',
-                hotelId: hotelId 
-            }) 
-        });
+        const response = await fetch(
+            `${API_BASE_URL}/bookings/${id}/checkin`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    username: currentUsername || 'Unknown User'
+                })
+            }
+        );
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            const text = await response.text(); // safer
+            console.error("Server returned:", text);
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
+
         showMessageBox('Success', data.message || 'Guest checked in successfully.');
 
-        // Concurrent UI Refresh
         await Promise.all([
             renderBookings(currentPage, currentSearchTerm),
             renderHousekeepingRooms(),
