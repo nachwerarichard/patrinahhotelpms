@@ -1701,10 +1701,11 @@ async function editBooking(id) {
     const hotelId = sessionData?.hotelId;
 
     try {
-        // Fetch specific booking, filtered by hotelId for security
-        const response = await fetch(`${API_BASE_URL}/bookings/id/${id}?hotelId=${hotelId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+       const response = await authenticatedFetch(
+    `${API_BASE_URL}/bookings/id/${id}`,
+    { method: 'GET' }
+);
+
         
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const booking = await response.json();
