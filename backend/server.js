@@ -1380,7 +1380,7 @@ app.post('/api/bookings/:id/checkin', auth, async (req, res) => {
         });
 
         if (room) {
-            room.status = 'occupied';
+            room.status = 'blocked';
             await room.save();
         }
 
