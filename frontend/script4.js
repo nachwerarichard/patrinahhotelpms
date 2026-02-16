@@ -2057,25 +2057,22 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
     }
 });
 async function viewCharges(bookingCustomId) {
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
 
     incidentalChargesTableBody.innerHTML =
         '<tr><td colspan="6" style="text-align:center;">Loading charges...</td></tr>';
     totalIncidentalChargesSpan.textContent = '0.00';
 
     try {
-        // 1️⃣ Fetch booking
-        const bookingResponse = await fetch(
-            `${API_BASE_URL}/booking/id/${bookingCustomId}`,
-            {
-                headers: { Authorization: `Bearer ${token}` }
-            }
+        // 1️⃣ Fetch booking (hotelId auto included)
+        const bookingResponse = await authenticatedFetch(
+            `${API_BASE_URL}/bookings/id/${bookingCustomId}`
         );
+
+        if (!bookingResponse) return;
 
         if (!bookingResponse.ok) {
             const text = await bookingResponse.text();
-            console.error("Booking fetch failed:", text);
+            console.error("❌ Booking fetch failed:", text);
             throw new Error('Booking fetch failed');
         }
 
@@ -2085,17 +2082,16 @@ async function viewCharges(bookingCustomId) {
         viewChargesGuestNameSpan.textContent = booking.name;
         viewChargesRoomNumberSpan.textContent = booking.room;
 
-        // 2️⃣ Fetch charges
-        const response = await fetch(
-            `${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`,
-            {
-                headers: { Authorization: `Bearer ${token}` }
-            }
+        // 2️⃣ Fetch incidental charges
+        const response = await authenticatedFetch(
+            `${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`
         );
+
+        if (!response) return;
 
         if (!response.ok) {
             const text = await response.text();
-            console.error("Charges fetch failed:", text);
+            console.error("❌ Charges fetch failed:", text);
             throw new Error('Charges fetch failed');
         }
 
@@ -2134,7 +2130,7 @@ async function viewCharges(bookingCustomId) {
         viewChargesModal.style.display = 'flex';
 
     } catch (error) {
-        console.error(error);
+        console.error("🔥 View charges error:", error);
         showMessageBox('Error', error.message, true);
         incidentalChargesTableBody.innerHTML =
             '<tr><td colspan="6" style="text-align:center;color:red;">Error loading charges.</td></tr>';
