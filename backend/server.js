@@ -202,7 +202,6 @@ const RoomType = mongoose.model('RoomType', roomTypeSchema);
 // 2. Room Schema (The actual physical rooms)
 const roomSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
-    id: { type: String, required: true, unique: true },
     number: { type: String, required: true, unique: true },
     roomTypeId: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType' },
     status: { type: String, enum: ['clean', 'dirty', 'under-maintenance', 'blocked'], default: 'clean' }
