@@ -310,7 +310,6 @@ app.put('/api/room-types/:id', auth, async (req, res) => {
 
 // Create a physical Room
 app.post('/api/rooms', auth, async (req, res) => {
-app.post('/api/rooms', auth, async (req, res) => {
     console.log("========== CREATE ROOM REQUEST ==========");
     console.log("Incoming body:", req.body);
     console.log("Authenticated user:", req.user);
