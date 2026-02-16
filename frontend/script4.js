@@ -2048,90 +2048,90 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
     }
 });
 async function viewCharges(bookingCustomId) {
-    // 1. Get session data
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
 
-    incidentalChargesTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading charges...</td></tr>';
+    incidentalChargesTableBody.innerHTML =
+        '<tr><td colspan="6" style="text-align:center;">Loading charges...</td></tr>';
     totalIncidentalChargesSpan.textContent = '0.00';
 
     try {
-        // 2. Fetch booking details (Filtered by hotelId)
+        // 1️⃣ Fetch booking
         const bookingResponse = await fetch(
-    `${API_BASE_URL}/booking/id/${bookingCustomId}`,
-    {
-        headers: { 'Authorization': `Bearer ${token}` }
-    }
-);
+            `${API_BASE_URL}/booking/id/${bookingCustomId}`,
+            {
+                headers: { Authorization: `Bearer ${token}` }
+            }
+        );
 
-        if (!bookingResponse.ok) throw new Error('Booking fetch failed');
+        if (!bookingResponse.ok) {
+            const text = await bookingResponse.text();
+            console.error("Booking fetch failed:", text);
+            throw new Error('Booking fetch failed');
+        }
 
         const booking = await bookingResponse.json();
-        if (!booking) {
-            showMessageBox('Error', 'Booking not found.', true);
-            closeViewChargesModal();
-            return;
-        }
 
         currentBookingObjectId = booking._id;
         viewChargesGuestNameSpan.textContent = booking.name;
         viewChargesRoomNumberSpan.textContent = booking.room;
 
-        // 3. Fetch charges (Filtered by hotelId)
-fetch(`${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-});
-        if (!response.ok) throw new Error('Charges fetch failed');
+        // 2️⃣ Fetch charges
+        const response = await fetch(
+            `${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`,
+            {
+                headers: { Authorization: `Bearer ${token}` }
+            }
+        );
+
+        if (!response.ok) {
+            const text = await response.text();
+            console.error("Charges fetch failed:", text);
+            throw new Error('Charges fetch failed');
+        }
 
         const charges = await response.json();
+
         incidentalChargesTableBody.innerHTML = '';
 
         let totalChargesAmount = 0;
         let hasUnpaidCharges = false;
 
         if (charges.length === 0) {
-            incidentalChargesTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No incidental charges.</td></tr>';
+            incidentalChargesTableBody.innerHTML =
+                '<tr><td colspan="6" style="text-align:center;">No incidental charges.</td></tr>';
         } else {
             charges.forEach(charge => {
                 if (!charge.isPaid) hasUnpaidCharges = true;
 
                 const row = incidentalChargesTableBody.insertRow();
                 row.innerHTML = `
-                  <td class="px-4 py-2">${charge.type}</td>
-                  <td class="px-4 py-2">${charge.description || '-'}</td>
-                  <td class="px-4 py-2">${Number(charge.amount).toLocaleString()}</td>
-                  <td class="px-4 py-2">${new Date(charge.date).toLocaleDateString()}</td>
-                  <td class="px-4 py-2">
-                    <button class="bg-red-500 text-white px-2 py-1 rounded text-xs mr-1 ${charge.isPaid ? 'opacity-50 cursor-not-allowed' : ''}"
-                      ${charge.isPaid ? 'disabled' : ''}
-                      onclick="confirmDeleteIncidentalCharge('${charge._id}', '${bookingCustomId}')">
-                      Delete
-                    </button>
-                    <button class="bg-green-600 text-white px-2 py-1 rounded text-xs ${charge.isPaid ? 'opacity-50 cursor-not-allowed' : ''}"
-                      onclick="confirmPayIncidentalCharge('${charge._id}', '${bookingCustomId}')"
-                      ${charge.isPaid ? 'disabled' : ''}>
-                      ${charge.isPaid ? 'Paid' : 'Pay'}
-                    </button>
-                  </td>
+                    <td class="px-4 py-2">${charge.type}</td>
+                    <td class="px-4 py-2">${charge.description || '-'}</td>
+                    <td class="px-4 py-2">${Number(charge.amount).toLocaleString()}</td>
+                    <td class="px-4 py-2">${new Date(charge.date).toLocaleDateString()}</td>
                 `;
+
                 totalChargesAmount += Number(charge.amount);
             });
         }
 
-        totalIncidentalChargesSpan.textContent = totalChargesAmount.toLocaleString();
+        totalIncidentalChargesSpan.textContent =
+            totalChargesAmount.toLocaleString();
 
-        const payAllBtn = document.getElementById('payAllChargesBtn');
-        if (payAllBtn) payAllBtn.disabled = !hasUnpaidCharges;
+        document.getElementById('payAllChargesBtn').disabled =
+            !hasUnpaidCharges;
 
         viewChargesModal.style.display = 'flex';
 
     } catch (error) {
         console.error(error);
         showMessageBox('Error', error.message, true);
-        incidentalChargesTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:red;">Error loading charges.</td></tr>';
+        incidentalChargesTableBody.innerHTML =
+            '<tr><td colspan="6" style="text-align:center;color:red;">Error loading charges.</td></tr>';
     }
 }
+
 document.getElementById('payAllChargesBtn').addEventListener('click', async () => {
     // 1. Get session data
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
