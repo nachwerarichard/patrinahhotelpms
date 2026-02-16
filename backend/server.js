@@ -1271,6 +1271,97 @@ app.get('/api/rooms/report', auth, async (req, res) => {
     }
 });
 // --- Bookings API ---
+app.post('/api/bookings/:id/checkout', auth, async (req, res) => {
+    const { id } = req.params;
+    const { username } = req.body;
+
+    try {
+
+        console.log("Checkout request for booking:", id);
+        console.log("User hotelId:", req.user.hotelId);
+
+        // 1️⃣ Find booking only inside this hotel
+        const booking = await Booking.findOneAndUpdate(
+            {
+                id: id,
+                hotelId: req.user.hotelId
+            },
+            { $set: { gueststatus: 'checkedout' } },
+            { new: true }
+        );
+
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        // 2️⃣ Update room ONLY inside this hotel
+        await Room.findOneAndUpdate(
+            {
+                number: booking.room,
+                hotelId: req.user.hotelId
+            },
+            { $set: { status: 'dirty' } }
+        );
+
+        // 3️⃣ Audit Log
+        await addAuditLog('Booking Checked Out', username || 'System', {
+            hotelId: req.user.hotelId,
+            bookingId: booking.id,
+            guestName: booking.name,
+            roomNumber: booking.room
+        });
+
+        res.json({
+            message: `Room ${booking.room} marked as dirty upon checkout.`
+        });
+
+    } catch (error) {
+        console.error("CHECKOUT ERROR:", error);
+        res.status(500).json({
+            message: 'Error during checkout',
+            error: error.message
+        });
+    }
+});
+
+app.post('/api/bookings/:id/checkin', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        console.log("Check-in request for booking:", id);
+        console.log("User hotelId:", req.user.hotelId);
+
+        // 🔒 Only find booking inside this hotel
+        const booking = await Booking.findOne({
+            id: id,
+            hotelId: req.user.hotelId
+        });
+
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        booking.gueststatus = 'checkedin';
+        await booking.save();
+
+        // Update room status
+        const room = await Room.findOne({
+            number: booking.room,
+            hotelId: req.user.hotelId
+        });
+
+        if (room) {
+            room.status = 'occupied';
+            await room.save();
+        }
+
+        res.json({ message: 'Guest checked in successfully.' });
+
+    } catch (error) {
+        console.error("CHECKIN ERROR:", error);
+        res.status(500).json({ message: error.message });
+    }
+});
 
 // NEW: Get single booking by custom ID
 // Get booking by custom ID (Secure)
