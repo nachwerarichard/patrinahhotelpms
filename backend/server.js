@@ -1347,6 +1347,66 @@ app.get('/api/bookings', auth, async (req, res) => {
         res.status(500).json({ bookings: [], message: 'Server error', error: error.message });
     }
 });
+
+app.put('/api/bookings/:id', auth, async (req, res) => {
+    const { id } = req.params;
+    const { username, ...updatedBookingData } = req.body;
+
+    try {
+
+        console.log("User hotelId:", req.user.hotelId);
+
+        // ✅ Only find booking for this hotel
+        const oldBooking = await Booking.findOne({
+            id: id,
+            hotelId: req.user.hotelId
+        });
+
+        if (!oldBooking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        // ✅ Conflict check must also include hotelId
+        const conflictingBooking = await Booking.findOne({
+            id: { $ne: id },
+            hotelId: req.user.hotelId,
+            room: updatedBookingData.room,
+            $or: [
+                {
+                    checkIn: { $lt: updatedBookingData.checkOut },
+                    checkOut: { $gt: updatedBookingData.checkIn }
+                }
+            ]
+        });
+
+        if (conflictingBooking) {
+            return res.status(400).json({
+                message: `Room ${updatedBookingData.room} is already booked for a conflicting period.`
+            });
+        }
+
+        // ✅ Update only inside this hotel
+        const updatedBooking = await Booking.findOneAndUpdate(
+            { id: id, hotelId: req.user.hotelId },
+            updatedBookingData,
+            { new: true }
+        );
+
+        res.json({
+            message: 'Booking updated successfully!',
+            booking: updatedBooking
+        });
+
+    } catch (error) {
+        console.error("UPDATE BOOKING ERROR:", error);
+        res.status(500).json({
+            message: 'Error updating booking',
+            error: error.message
+        });
+    }
+});
+
+
 app.post('/api/bookings', auth, async (req, res) => {
     const { username, ...newBookingData } = req.body;
     try {
