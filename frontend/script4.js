@@ -1201,12 +1201,20 @@ async function moveBooking(id) {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const booking = await bookingResponse.json();
+if (!bookingResponse.ok) {
+    const text = await bookingResponse.text();
+    console.error("Booking fetch failed:", text);
+    throw new Error('Booking fetch failed');
+}
 
         // 3. Get available rooms ONLY for this hotel
-        const response = await fetch(`${API_BASE_URL}/rooms/available?checkIn=${booking.checkIn}&checkOut=${booking.checkOut}&hotelId=${hotelId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
+        const response = await fetch(
+    `${API_BASE_URL}/rooms/available?checkIn=${booking.checkIn}&checkOut=${booking.checkOut}`,
+    {
+        headers: { 'Authorization': `Bearer ${token}` }
+    }
+);
+
         if (!response.ok) throw new Error('Failed to fetch rooms');
         
         availableRoomsForMove = await response.json(); 
