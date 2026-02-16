@@ -3699,8 +3699,15 @@ async function submitPayment() {
                 recordedBy: user ? user.username : 'system' // Audit trail
             })
         });
+        if (!response) return;
 
-        const result = await response.json();
+if (!response.ok) {
+    const text = await response.text();
+    console.error("Server returned:", text);
+    throw new Error("Failed to add payment");
+}
+
+const result = await response.json();
 
         if (response && response.ok) {
             // 5. Success Flow
