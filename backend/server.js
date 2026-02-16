@@ -252,15 +252,34 @@ app.delete('/api/admin/hotel/:id', auth, authorizeRole('super-admin'), async (re
 
 app.post('/api/room-types', auth, async (req, res) => {
     try {
-        // Automatically inject the hotelId from the logged-in user
-        const newType = new RoomType({ 
-            ...req.body, 
-            hotelId: req.user.hotelId 
+        console.log("Incoming body:", req.body);
+        console.log("Authenticated user:", req.user);
+        console.log("HotelId from user:", req.user?.hotelId);
+
+        const newType = new RoomType({
+            ...req.body,
+            hotelId: req.user.hotelId
         });
+
         await newType.save();
+
+        console.log("Room type created successfully:", newType);
+
         res.status(201).json(newType);
+
     } catch (err) {
-        res.status(400).json({ error: err.message });
+        console.error("❌ RoomType creation failed");
+        console.error("Error message:", err.message);
+        console.error("Full error object:", err);
+        
+        if (err.errors) {
+            console.error("Validation errors:", err.errors);
+        }
+
+        res.status(400).json({
+            error: err.message,
+            details: err.errors || null
+        });
     }
 });
 
