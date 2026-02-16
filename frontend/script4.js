@@ -1889,26 +1889,23 @@ async function checkoutBooking(id) {
 
 async function checkinBooking(id) {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
     const currentUsername = sessionData?.username;
 
     try {
-        const response = await fetch(
+        const response = await authenticatedFetch(
             `${API_BASE_URL}/bookings/${id}/checkin`,
             {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify({
                     username: currentUsername || 'Unknown User'
                 })
             }
         );
 
+        if (!response) return;
+
         if (!response.ok) {
-            const text = await response.text(); // safer
+            const text = await response.text();
             console.error("Server returned:", text);
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -1930,6 +1927,7 @@ async function checkinBooking(id) {
         showMessageBox('Error', `Failed to process checkin: ${error.message}`, true);
     }
 }
+
 
 // Event listeners for date and amount changes to calculate nights, total due, balance
 checkInInput.addEventListener('change', calculateNights);
