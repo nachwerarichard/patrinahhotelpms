@@ -3066,7 +3066,6 @@ exportServiceReportBtn.addEventListener('click', exportToExcel);
  * Renders the audit logs table based on filters.
  */
 // 1. Initialize pagination state
-let currentAuditPage = 1;
 
 // 2. Add Event Listeners for the buttons
 document.getElementById('prevAuditPage').addEventListener('click', () => {
