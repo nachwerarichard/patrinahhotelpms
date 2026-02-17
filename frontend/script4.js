@@ -3830,7 +3830,7 @@ async function fetchReport() {
         }
 
         // 6. Execute Request using authenticatedFetch
-        const response = await authenticatedFetch(`${API_BASE_URL}/bookings ?${params}`);
+        const response = await authenticatedFetch(`${API_BASE_URL}/bookings?${params}`);
         
         if (!response) throw new Error("No response from server");
         
