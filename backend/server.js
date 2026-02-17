@@ -1350,6 +1350,71 @@ app.post('/api/bookings/:id/move', auth, async (req, res) => {
     }
 });
 
+// Add seasonal rate to a room type
+app.post('/api/room-types/:typeId/seasons', auth, async (req, res) => {
+    try {
+        const { typeId } = req.params;
+        const { seasonName, startDate, endDate, rate } = req.body;
+
+        // 🔐 Multi-tenant protection
+        const hotelId = req.user.hotelId;
+
+        // Validation
+        if (!seasonName || !startDate || !endDate || !rate) {
+            return res.status(400).json({ message: "All fields are required." });
+        }
+
+        if (Number(rate) <= 0) {
+            return res.status(400).json({ message: "Rate must be greater than 0." });
+        }
+
+        if (new Date(startDate) > new Date(endDate)) {
+            return res.status(400).json({ message: "Start date cannot be after end date." });
+        }
+
+        // Find room type (must belong to same hotel)
+        const roomType = await RoomType.findOne({
+            _id: typeId,
+            hotelId
+        });
+
+        if (!roomType) {
+            return res.status(404).json({ message: "Room type not found." });
+        }
+
+        // Optional: prevent overlapping seasons
+        const overlappingSeason = roomType.seasonalRates.find(season =>
+            (new Date(startDate) <= season.endDate &&
+             new Date(endDate) >= season.startDate)
+        );
+
+        if (overlappingSeason) {
+            return res.status(400).json({ 
+                message: "Season overlaps with an existing seasonal rate." 
+            });
+        }
+
+        // Push new season
+        roomType.seasonalRates.push({
+            seasonName,
+            startDate: new Date(startDate),
+            endDate: new Date(endDate),
+            rate: Number(rate)
+        });
+
+        await roomType.save();
+
+        res.json({
+            message: "Seasonal rate added successfully.",
+            seasonalRates: roomType.seasonalRates
+        });
+
+    } catch (error) {
+        console.error("Season creation error:", error);
+        res.status(500).json({ message: "Server error adding seasonal rate." });
+    }
+});
+
 // Get all rooms for the logged-in hotel
 app.get('/api/rooms', auth, async (req, res) => {
     try {
