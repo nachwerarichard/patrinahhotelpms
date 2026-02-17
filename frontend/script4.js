@@ -2830,16 +2830,17 @@ async function renderCalendar() {
     calendarMonthYear.textContent = `${currentCalendarDate.toLocaleString('en-US', { month: 'long' })} ${year}`;
 
     try {
-        const [roomsRes, bookingsRes] = await Promise.all([
-    authenticatedFetch(`${API_BASE_URL}/rooms`, { method: 'GET' }),
-    authenticatedFetch(`${API_BASE_URL}/bookings?limit=500`, { method: 'GET' })
+const [roomsRes, bookingsRes] = await Promise.all([
+    authenticatedFetch(`${API_BASE_URL}/rooms`),
+    authenticatedFetch(`${API_BASE_URL}/bookings?limit=500`)
 ]);
-const roomsResult = await roomsRes.json();
-const bookingsResult = await bookingsRes.json();
 
-const allRooms = roomsResult.rooms || [];
-const allBookings = bookingsResult.bookings || [];
-        
+if (!roomsRes.ok || !bookingsRes.ok) {
+    throw new Error("Failed to fetch calendar data");
+}
+
+const allRooms = await roomsRes.json();
+const allBookings = await bookingsRes.json();
 
         // Sort rooms naturally
         allRooms.sort((a, b) => a.number.localeCompare(b.number, undefined, {numeric: true}));
