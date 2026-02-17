@@ -2840,7 +2840,10 @@ if (!roomsRes.ok || !bookingsRes.ok) {
 }
 
 const allRooms = await roomsRes.json();
-const allBookings = await bookingsRes.json();
+
+const bookingsData = await bookingsRes.json();
+const allBookings = bookingsData.bookings || [];
+
 
         // Sort rooms naturally
         allRooms.sort((a, b) => a.number.localeCompare(b.number, undefined, {numeric: true}));
