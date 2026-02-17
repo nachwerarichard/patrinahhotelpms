@@ -3087,7 +3087,7 @@ document.getElementById('applyAuditLogFiltersBtn').addEventListener('click', () 
 });
 
 let currentAuditPage = 1;
-const logsPerPage = 20;
+//const logsPerPage = 20;
 
 async function renderAuditLogs() {
     // 1️⃣ Get session and authentication info
