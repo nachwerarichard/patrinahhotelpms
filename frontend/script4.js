@@ -3539,7 +3539,7 @@ function renderRadialOptions() {
 
         btn.onclick = () => {
             const u = localStorage.getItem('username');
-            const p = localStorage.getItem('userPassword');
+            const p = localStorage.getItem('password');
             window.location.href = `${mod.url}?autoLogin=true&u=${u}&p=${p}&r=${role}`;
         };
 
@@ -3560,7 +3560,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Save these to the local domain's storage so the session persists
         localStorage.setItem('username', u);
-        localStorage.setItem('userPassword', p);
+        localStorage.setItem('password', p);
         localStorage.setItem('userRole', params.get('r'));
 
         // Perform your existing login fetch/request here automatically
