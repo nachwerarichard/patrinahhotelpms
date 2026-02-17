@@ -2461,7 +2461,7 @@ async function sendLowStockEmail(item, quantity, lowStockLevel) {
 
 // Submit checklist
 // Submit a Checklist (Secure & Tenant-Aware)
-app.post('/api/submit-checklist', auth, async (req, res) => {
+app.post('/api/submit-checklist', async (req, res) => {
   const { room, date, items } = req.body;
   const hotelId = req.user.hotelId;
 
@@ -2511,7 +2511,7 @@ app.post('/api/submit-checklist', auth, async (req, res) => {
 });
 
 // Get checklists (Filtered by Hotel)
-app.get('/api/checklists', auth, async (req, res) => {
+app.get('/api/checklists',  async (req, res) => {
   try {
     const data = await Checklist.find({ hotelId: req.user.hotelId })
                                 .sort({ date: -1, createdAt: -1 });
@@ -2521,7 +2521,7 @@ app.get('/api/checklists', auth, async (req, res) => {
   }
 });
 // Submit Status Report (Secure)
-app.post('/api/submit-status-report', auth, async (req, res) => {
+app.post('/api/submit-status-report', async (req, res) => {
   const { room, category, status, remarks, dateTime } = req.body;
 
   try {
@@ -2543,7 +2543,7 @@ app.post('/api/submit-status-report', auth, async (req, res) => {
 });
 
 // Update Status Report (Secure)
-app.put('/api/status-reports/:id', auth, async (req, res) => {
+app.put('/api/status-reports/:id',  async (req, res) => {
   try {
     const updated = await StatusReport.findOneAndUpdate(
       { _id: req.params.id, hotelId: req.user.hotelId }, // Secure filter
@@ -2560,7 +2560,7 @@ app.put('/api/status-reports/:id', auth, async (req, res) => {
 });
 
 // Delete Status Report (Secure)
-app.delete('/api/status-reports/:id', auth, async (req, res) => {
+app.delete('/api/status-reports/:id',  async (req, res) => {
   try {
     const deleted = await StatusReport.findOneAndDelete({ 
       _id: req.params.id, 
