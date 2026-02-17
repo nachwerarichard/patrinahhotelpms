@@ -3087,6 +3087,9 @@ document.getElementById('applyAuditLogFiltersBtn').addEventListener('click', () 
     renderAuditLogs();
 });
 
+let currentAuditPage = 1;
+const logsPerPage = 20;
+
 async function renderAuditLogs() {
     // 1️⃣ Get session and authentication info
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
@@ -3109,8 +3112,6 @@ async function renderAuditLogs() {
     const nextBtn = document.getElementById('nextAuditPage');
     const pageIndicator = document.getElementById('auditPageIndicator');
 
-    currentAuditPage = Number(currentAuditPage) || 1;
-    logsPerPage = Number(logsPerPage) || 20;
 
     tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Loading audit logs...</td></tr>';
 
