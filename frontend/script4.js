@@ -5037,19 +5037,18 @@ async function fetchUsers() {
                     </select>
                 </td>
                 <td class="px-8 py-4 text-right">
-                    <div class="flex justify-end gap-2">
-                        <button onclick="fillEditForm('${user.username}', '${user.role}')" 
-                                class="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-transparent hover:border-indigo-100"
-                                title="Edit User">
-                            <i data-lucide="edit-3" class="w-4 h-4"></i>
-                        </button>
-                        <button onclick="deleteUser('${user._id}')" 
-                                class="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all border border-transparent hover:border-red-100"
-                                title="Delete User">
-                            <i data-lucide="trash-2" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                </td>
+    <div class="flex justify-end items-center gap-3">
+        <button onclick="fillEditForm('${user.username}', '${user.role}')" 
+                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-md transition-all border border-indigo-100 active:scale-95">
+            <span>Edit</span>
+        </button>
+
+        <button onclick="deleteUser('${user._id}')" 
+                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-md transition-all border border-red-100 active:scale-95">
+            <span>Delete</span>
+        </button>
+    </div>
+</td>
             </tr>
         `).join('');
 
