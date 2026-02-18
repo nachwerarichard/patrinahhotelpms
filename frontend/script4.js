@@ -5060,3 +5060,37 @@ async function fetchUsers() {
     }
 }
 
+async function handleSaveUser() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const role = document.getElementById('role').value;
+    const hotelId = getHotelId();
+
+    if (!username || !password) return alert("Please fill in credentials");
+
+    try {
+        const res = await authenticatedFetch(`${API_BASE_URL}/admin/manage-user`, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                targetUsername: username, 
+                newPassword: password, 
+                newRole: role,
+                hotelId: hotelId // Ensure new staff is linked to this hotel
+            })
+        });
+
+        if (!res) return; // Token missing or redirected to login
+
+        if (res.ok) {
+            closeModal();
+            fetchUsers(); // Refresh the table after saving
+        } else {
+            const data = await res.json();
+            alert(`Error saving user: ${data.message || 'Username might be taken.'}`);
+        }
+    } catch (err) {
+        console.error("Error saving user:", err);
+        alert("Failed to save user. Check console for details.");
+    }
+}
+
