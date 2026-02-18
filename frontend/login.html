@@ -132,16 +132,16 @@ const API_URL = 'https://novouscloudpms-tz4s.onrender.com/api';
 
                 // Departmental Routing Logic
                 if (sessionRole === 'admin' || sessionRole === 'super-admin') {
-                    options.appendChild(createBtn('Bar & Restaurant', 'bg-emerald-600 hover:bg-emerald-700', () => finalizeLogin(result.token, 'systemA')));
+                    //options.appendChild(createBtn('Bar & Restaurant', 'bg-emerald-600 hover:bg-emerald-700', () => finalizeLogin(result.token, 'systemA')));
                     options.appendChild(createBtn('Front Office & Housekeeping', 'bg-indigo-600 hover:bg-indigo-700', () => finalizeLogin(result.token, 'systemB')));
-                    options.appendChild(createBtn('Kitchen Display System', 'bg-amber-600 hover:bg-amber-700', () => finalizeLogin(result.token, 'systemC')));
-                    options.appendChild(createBtn('Staff Management', 'bg-slate-800 hover:bg-slate-900', () => finalizeLogin(result.token, 'systemD')));
+                    //options.appendChild(createBtn('Kitchen Display System', 'bg-amber-600 hover:bg-amber-700', () => finalizeLogin(result.token, 'systemC')));
+                    //options.appendChild(createBtn('Staff Management', 'bg-slate-800 hover:bg-slate-900', () => finalizeLogin(result.token, 'systemD')));
                 } 
                 else if (['bar', 'cashier', 'waiter'].includes(sessionRole)) {
-                    options.appendChild(createBtn('Open Bar System', 'bg-emerald-600 hover:bg-emerald-700', () => finalizeLogin(result.token, 'systemA')));
+                    //options.appendChild(createBtn('Open Bar System', 'bg-emerald-600 hover:bg-emerald-700', () => finalizeLogin(result.token, 'systemA')));
                 } 
                 else if (['housekeeping', 'reception', 'frontoffice'].includes(sessionRole)) {
-                    options.appendChild(createBtn('Open Front Office', 'bg-indigo-600 hover:bg-indigo-700', () => finalizeLogin(result.token, 'systemB')));
+                    //options.appendChild(createBtn('Open Front Office', 'bg-indigo-600 hover:bg-indigo-700', () => finalizeLogin(result.token, 'systemB')));
                 }
                 else {
                     err.textContent = `No modules assigned to role: ${sessionRole}`;
