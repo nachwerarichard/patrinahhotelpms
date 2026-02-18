@@ -754,36 +754,66 @@ app.put('/api/admin/users/:id', auth, async (req, res) => {
     }
 });
 app.post('/api/admin/manage-user', auth, async (req, res) => {
+    console.log("=== CREATE USER ROUTE HIT ===");
+
     try {
+        console.log("Request body:", req.body);
+        console.log("Authenticated user:", req.user);
+
         const { targetUsername, newPassword, newRole } = req.body;
 
         if (!targetUsername || !newPassword || !newRole) {
+            console.log("❌ Missing required fields");
             return res.status(400).json({ message: "All fields required" });
         }
 
-        const hotelId = req.user.hotelId;
+        const hotelId = req.user?.hotelId;
+        console.log("Hotel ID from token:", hotelId);
 
+        if (!hotelId) {
+            console.log("❌ hotelId missing from token");
+            return res.status(400).json({ message: "Hotel ID missing in token" });
+        }
+
+        console.log("Checking if user already exists...");
         const existing = await User.findOne({
             username: targetUsername,
             hotelId
         });
 
+        console.log("Existing user result:", existing);
+
         if (existing) {
+            console.log("❌ User already exists in this hotel");
             return res.status(400).json({ message: "User already exists in this hotel" });
         }
 
-        await User.create({
+        console.log("Creating user with data:", {
             username: targetUsername,
-            password: newPassword,
             role: newRole,
             hotelId
         });
 
+        const createdUser = await User.create({
+            username: targetUsername,
+            password: newPassword,  // (we'll hash later)
+            role: newRole,
+            hotelId
+        });
+
+        console.log("✅ User created successfully:", createdUser);
+
         res.json({ message: "User created successfully" });
 
     } catch (err) {
-        console.error("CREATE USER ERROR:", err);
-        res.status(500).json({ message: "Error creating user", error: err.message });
+        console.error("🚨 CREATE USER ERROR FULL OBJECT:", err);
+        console.error("🚨 ERROR MESSAGE:", err.message);
+        console.error("🚨 ERROR STACK:", err.stack);
+
+        res.status(500).json({ 
+            message: "Error creating user", 
+            error: err.message 
+        });
     }
 });
 
