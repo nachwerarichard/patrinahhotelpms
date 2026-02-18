@@ -46,7 +46,6 @@ const userSchema = new mongoose.Schema({
     isInitial: { type: Boolean, default: false } // For default credentials
 });
 
-AuditLog.find({}).then(console.log);
 
 
 async function auth(req, res, next) {
@@ -983,6 +982,9 @@ hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
     details: { type: mongoose.Schema.Types.Mixed } // Flexible field for storing relevant data (e.g., { bookingId: 'BKG001', oldStatus: 'clean', newStatus: 'dirty', reason: '...' })
 });
 const AuditLog = mongoose.model('AuditLog', auditLogSchema);
+
+AuditLog.find({}).then(logs => console.log("All logs:", logs));
+
 
 
 // --- 6. Hardcoded Users for Authentication (Highly Insecure for Production!) ---
