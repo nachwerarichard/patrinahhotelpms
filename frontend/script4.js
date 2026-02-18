@@ -4986,12 +4986,11 @@ function closeModal() {
 
 async function fetchUsers() {
     try {
-        // Use authenticatedFetch so token & headers are handled automatically
         const res = await authenticatedFetch(`${API_BASE_URL}/admin/users`, {
             method: 'GET'
         });
 
-        if (!res) return; // Token missing or redirected to login
+        if (!res) return;
         if (!res.ok) throw new Error("Connection Failed");
 
         const users = await res.json();
@@ -5003,28 +5002,33 @@ async function fetchUsers() {
         const statusEl = document.getElementById('connectionStatus');
         if (statusEl) {
             statusEl.innerText = "Server Online";
-            statusEl.className = "text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 px-2 py-0.5 rounded";
+            statusEl.className = "flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 px-3 py-1.5 rounded-full border border-green-200";
+            // Update the dot color if it exists
+            const dot = statusEl.querySelector('span');
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-green-500";
         }
 
-        // Populate the table
         const tbody = document.getElementById('userTableBody');
+        
+        // Use map and join, but ensure buttons have clear dimensions
         tbody.innerHTML = users.map(user => `
-            <tr class="hover:bg-slate-50/80 transition group border-b border-slate-100">
-                <td class="px-6 py-4">
+            <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
+                <td class="px-8 py-4">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
-                            ${user.username.charAt(0).toUpperCase()}
+                        <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100">
+                            ${user.username ? user.username.charAt(0).toUpperCase() : '?'}
                         </div>
-                        <span class="font-semibold text-slate-800">${user.username}</span>
+                        <span class="font-semibold text-slate-700">${user.username}</span>
                     </div>
                 </td>
-                <td class="px-6 py-4">
+                <td class="px-8 py-4">
                     <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-wider border ${getRoleClass(user.role)}">
                         ${user.role.toUpperCase()}
                     </span>
                 </td>
-                <td class="px-6 py-4">
-                    <select onchange="updateRole('${user._id}', this.value)" class="text-sm bg-transparent border-b-2 border-transparent hover:border-indigo-300 outline-none cursor-pointer py-1 transition">
+                <td class="px-8 py-4">
+                    <select onchange="updateRole('${user._id}', this.value)" 
+                            class="text-sm bg-white border border-slate-200 rounded-md px-2 py-1 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition">
                         <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
                         <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
                         <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
@@ -5032,12 +5036,16 @@ async function fetchUsers() {
                         <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
                     </select>
                 </td>
-                <td class="px-6 py-4 text-right">
-                    <div class="flex justify-end gap-1">
-                        <button onclick="fillEditForm('${user.username}', '${user.role}')" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition">
+                <td class="px-8 py-4 text-right">
+                    <div class="flex justify-end gap-2">
+                        <button onclick="fillEditForm('${user.username}', '${user.role}')" 
+                                class="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-transparent hover:border-indigo-100"
+                                title="Edit User">
                             <i data-lucide="edit-3" class="w-4 h-4"></i>
                         </button>
-                        <button onclick="deleteUser('${user._id}')" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
+                        <button onclick="deleteUser('${user._id}')" 
+                                class="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all border border-transparent hover:border-red-100"
+                                title="Delete User">
                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                         </button>
                     </div>
@@ -5045,18 +5053,22 @@ async function fetchUsers() {
             </tr>
         `).join('');
 
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        // CRITICAL: Re-initialize icons after adding them to the DOM
+        if (window.lucide) {
+            window.lucide.createIcons();
+        } else {
+            console.error("Lucide library not found. Buttons may appear empty.");
+        }
 
     } catch (err) {
-        console.error(err);
+        console.error("Fetch Error:", err);
         const statusEl = document.getElementById('connectionStatus');
         if (statusEl) {
             statusEl.innerText = "Offline";
-            statusEl.className = "text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-700 px-2 py-0.5 rounded";
+            statusEl.className = "flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-700 px-3 py-1.5 rounded-full border border-red-200";
         }
     }
 }
-
 async function handleSaveUser() {
     const username = document.getElementById('staffusername').value;
     const password = document.getElementById('staffpassword').value;
