@@ -5160,24 +5160,10 @@ async function updateRole(id, newRole) {
         alert("Failed to update role. Check console for details.");
     }
 }
-function fillEditForm(id, username, role) {
-    // 1. Set the hidden ID so handleSaveUser knows we are editing
-    document.getElementById('staffId').value = id;
-    
-    // 2. Fill the inputs
-    document.getElementById('staffusername').value = username;
-    document.getElementById('staffrole').value = role;
-    
-    // 3. Clear password field (usually don't show old password for security)
-    document.getElementById('staffpassword').value = "";
-    
-    // 4. Update Modal UI (Optional)
-    const submitBtn = document.querySelector('#modalSubmitBtn');
-    if(submitBtn) submitBtn.innerText = "Update Staff Member";
-    
-    openModal(); // Function to show your modal
-}
 
+function fillEditForm(id,name, role) {
+    openModal({id,name, role});
+}
 function resetForm() {
     document.getElementById('modalTitle').innerText = "Add New Staff";
     document.getElementById('staffusername').value = "";
