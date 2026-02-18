@@ -4482,11 +4482,13 @@ updateroomDashboard();
     console.log("Session cleared. Redirecting to login...");
     window.location.replace('https://elegant-pasca-cea136.netlify.app/frontend/login.html');
 }
-   (function autoLoginHook() {
+(function autoLoginHook() {
     const urlParams = new URLSearchParams(window.location.search);
 
+    // Only run if autoLogin flag is present
     if (urlParams.get('autoLogin') === 'true') {
-        // 1. Inject CSS for the multi-tenant preloader
+        
+        // 1. Inject CSS for the Preloader
         const style = document.createElement('style');
         style.id = 'auto-login-styles';
         style.innerHTML = `
@@ -4506,7 +4508,7 @@ updateroomDashboard();
                 --d: 22px;
                 width: 4px; height: 4px;
                 border-radius: 50%;
-                color: #4f46e5; /* Indigo-600 to match your luxury theme */
+                color: #4f46e5;
                 box-shadow: 
                     calc(1 * var(--d))      calc(0 * var(--d))      0 0,
                     calc(0.707 * var(--d)) calc(0.707 * var(--d)) 0 1px,
@@ -4522,7 +4524,7 @@ updateroomDashboard();
         `;
         document.head.appendChild(style);
 
-        // 2. Create Overlay with status text
+        // 2. Create Overlay
         const overlay = document.createElement('div');
         overlay.id = 'auto-login-overlay';
         overlay.innerHTML = `
@@ -4539,45 +4541,61 @@ updateroomDashboard();
             }
         };
 
-        // 3. Auto-Login Logic
+        // 3. Extract Data and Sync LocalStorage
+        const token = urlParams.get('t');
         const user = urlParams.get('u');
-        const pass = urlParams.get('p');
-        
-        const userField = document.querySelector('input[type="text"]') || document.getElementById('username');
-        const passField = document.querySelector('input[type="password"]') || document.getElementById('password');
-        const loginBtn = document.querySelector('button[type="submit"]') || document.getElementById('login-button');
+        const role = urlParams.get('r');
+        const hotelId = urlParams.get('h');
 
-        if (userField && passField && loginBtn) {
-            userField.value = user;
-            passField.value = pass;
+        if (token && user) {
+            // Save data to the current domain's storage
+            localStorage.setItem('token', token);
+            localStorage.setItem('username', user);
+            localStorage.setItem('userRole', role);
+            localStorage.setItem('hotelId', hotelId || 'global');
+            
+            // Re-create the loggedInUser object if your other scripts need it
+            localStorage.setItem('loggedInUser', JSON.stringify({
+                username: user,
+                role: role,
+                token: token,
+                hotelId: hotelId || 'global'
+            }));
 
-            // Strip credentials from URL immediately
+            // Clean the URL (remove sensitive data from address bar)
             const cleanUrl = window.location.origin + window.location.pathname;
-            window.history.replaceState({}, '', cleanUrl);
+            window.history.replaceState({}, document.title, cleanUrl);
 
-            setTimeout(() => {
-                loginBtn.click();
-                
-                // Watchdog: Remove overlay once the main app container appears
-                const checkFinished = setInterval(() => {
-                    const mainContentVisible = document.getElementById('main-content')?.style.display === 'flex';
-                    if (mainContentVisible) {
-                        removeOverlay();
-                        clearInterval(checkFinished);
-                    }
-                }, 50);
+            // 4. Initialize the App
+            console.log("Session synchronized. Initializing dashboard...");
+            
+            if (typeof initDashboard === "function") {
+                initDashboard();
+            }
 
-                // Safety timeout
-                setTimeout(() => {
+            // Watchdog: Hide overlay when specific UI elements appear
+            const checkUI = setInterval(() => {
+                // Check if your dashboard container exists and is visible
+                const mainContent = document.getElementById('main-content') || document.querySelector('nav');
+                if (mainContent) {
                     removeOverlay();
-                    clearInterval(checkFinished);
-                }, 3000); 
-            }, 300);
+                    clearInterval(checkUI);
+                }
+            }, 100);
+
+            // Safety timeout: Remove overlay after 3 seconds anyway
+            setTimeout(() => {
+                removeOverlay();
+                clearInterval(checkUI);
+            }, 3000);
+
         } else {
+            console.error("Auto-login failed: Missing parameters in URL.");
             removeOverlay();
         }
     }
 })();
+
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Retrieve the full user object (contains username and hotelName)
     const savedUserData = localStorage.getItem('loggedInUser');
