@@ -5165,14 +5165,47 @@ async function updateRole(id, newRole) {
 }
 
 function handleEditClick(button) {
+    // 1. Pull data from the button attributes
     const id = button.getAttribute('data-id');
     const name = button.getAttribute('data-username');
     const role = button.getAttribute('data-role');
 
-    // Now pass it to your modal logic
+    console.log("Editing User:", { id, name, role }); // Check your console!
+
+    // 2. Pass it to the filler function
     fillEditForm(id, name, role);
 }
 
+function fillEditForm(id, name, role) {
+    // Fill the hidden ID
+    const idInput = document.getElementById('staffId');
+    if (idInput) idInput.value = id;
+
+    // Fill Username
+    const nameInput = document.getElementById('staffusername');
+    if (nameInput) nameInput.value = name;
+
+    // Fill Role
+    const roleSelect = document.getElementById('staffrole');
+    if (roleSelect) roleSelect.value = role;
+
+    // Clear password (safety)
+    const passInput = document.getElementById('staffpassword');
+    if (passInput) passInput.value = "";
+
+    // Update UI Labels
+    const title = document.getElementById('modalTitle');
+    const btn = document.getElementById('modalSubmitBtn');
+    if (title) title.innerText = "Edit Staff Member";
+    if (btn) btn.innerText = "Update Permissions";
+
+    // Open the modal (Use whatever function name you have for opening)
+    if (typeof openModal === 'function') {
+        openModal(); 
+    } else {
+        document.getElementById('userModal').classList.remove('hidden');
+    }
+}
 function fillEditForm(id, name, role) {
     // Set the hidden field we discussed earlier
     document.getElementById('staffId').value = id;
