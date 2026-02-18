@@ -114,16 +114,11 @@ const auditLogEndDateFilter = document.getElementById('auditLogEndDateFilter');
 const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn');
 
 async function authenticatedFetch(url, options = {}) {
-    const token = localStorage.getItem('token');
-    
-    // If we're on the login page and just submitted the form, 
-    // we might want to wait or return early instead of redirecting.
+    const session = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = session?.token;
+    const hotelId = session?.hotelId;
+
     if (!token) {
-        // Only redirect if we aren't currently on the login page trying to log in
-        if (window.location.pathname.includes('login.html')) {
-             console.warn("No token found, but staying on login page.");
-             return null;
-        }
         window.location.replace('/frontend/login.html');
         return null;
     }
@@ -131,7 +126,7 @@ async function authenticatedFetch(url, options = {}) {
     const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'x-hotel-id': localStorage.getItem('hotelId') || 'global',
+        'x-hotel-id': hotelId,
         ...options.headers
     };
 
