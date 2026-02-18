@@ -3701,22 +3701,39 @@ function renderRadialOptions() {
 }
     
         // Add this to the TOP of your scripts on the destination pages
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
+    
     if (params.get('autoLogin') === 'true') {
-        const u = params.get('u');
-        const p = params.get('p');
-        
-        // Save these to the local domain's storage so the session persists
-        localStorage.setItem('username', u);
-        localStorage.setItem('password', p);
-        localStorage.setItem('userRole', params.get('r'));
+        // 1. Extract the data from the URL
+        const token = params.get('t'); // Pass the 't' (token) instead of 'p' (password)
+        const username = params.get('u');
+        const role = params.get('r');
+        const hotelId = params.get('h');
 
-        // Perform your existing login fetch/request here automatically
-        // e.g., performLogin(u, p);
+        // 2. Inject them into THIS domain's localStorage
+        if (token && username) {
+            localStorage.setItem('token', token);
+            localStorage.setItem('username', username);
+            localStorage.setItem('userRole', role);
+            localStorage.setItem('hotelId', hotelId);
+
+            // 3. Clean the URL so the token doesn't sit in the address bar
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            // 4. Trigger the dashboard load
+            // Ensure you call whatever function starts your app here
+            if (typeof initDashboard === "function") {
+                initDashboard(); 
+            }
+        }
+    } else {
+        // Normal check: If no autoLogin and no token in storage, kick to login
+        if (!localStorage.getItem('token')) {
+            window.location.href = 'https://your-login-page.com';
+        }
     }
 });
-
 function toggleActionButtons(event, button) {
     const menu = button.nextElementSibling;
 
