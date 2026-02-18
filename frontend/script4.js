@@ -171,45 +171,39 @@ const getHotelId = () => {
 
     return hotelId;
 };
+
 async function authenticatedFetch(url, options = {}) {
     let token = localStorage.getItem('token');
     const params = new URLSearchParams(window.location.search);
+    
+    // Check BOTH storage and URL for the autoLogin flag
+    const isAutoLoginMode = params.get('autoLogin') === 'true';
 
-    // 1. If no token but we see autoLogin in URL, WAIT.
-    if (!token && params.get('autoLogin') === 'true') {
-        console.log("Auto-login in progress... holding fetch.");
+    if (!token && isAutoLoginMode) {
+        console.log("Auto-login detected, waiting for token to settle...");
         
-        // Poll localStorage every 100ms for up to 3 seconds to see if the token appears
         await new Promise((resolve) => {
             let attempts = 0;
             const interval = setInterval(() => {
-                token = localStorage.getItem('token');
+                token = localStorage.getItem('token') || params.get('t'); // Check URL too!
                 attempts++;
-                if (token || attempts > 30) { // 3 seconds max
+                if (token || attempts > 50) { 
+                    if (token) localStorage.setItem('token', token); // Ensure it's saved
                     clearInterval(interval);
                     resolve();
                 }
-            }, 100);
+            }, 50);
         });
     }
 
-    // 2. Now check for token again
+    // FINAL CHECK: If still no token, redirect
     if (!token) {
-        console.error("No token found. Redirecting to login...");
-        // Use your actual login URL here
         window.location.replace('https://novouscloudpms-tz4s.onrender.com/login.html');
         return null;
     }
-
-    // 3. Proceed with the request
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'x-hotel-id': localStorage.getItem('hotelId') || 'global',
-        ...options.headers
-    };
-
     return fetch(url, { ...options, headers });
+
+    // ... proceed with fetch
 }
 
 // IMPROVED FRONTEND FETCH
@@ -5279,3 +5273,31 @@ function getRoleClass(role) {
     };
     return classes[role] || 'bg-gray-50 text-gray-600 border-gray-100';
 }
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const params = new URLSearchParams(window.location.search);
+    const isAutoLogin = params.get('autoLogin') === 'true';
+    
+    if (isAutoLogin) {
+        const token = params.get('t');
+        if (token) {
+            localStorage.setItem('token', token);
+            localStorage.setItem('username', params.get('u'));
+            localStorage.setItem('userRole', params.get('r'));
+            localStorage.setItem('hotelId', params.get('h'));
+
+            // IMPORTANT: Do NOT clean the URL here. 
+            // Wait until the dashboard is initialized.
+            if (typeof initDashboard === "function") {
+                await initDashboard(); 
+            }
+
+            // NOW clean the URL after fetches have had a chance to start
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    } else {
+        if (!localStorage.getItem('token')) {
+            window.location.href = 'https://novouscloudpms-tz4s.onrender.com/login.html';
+        }
+    }
+});
