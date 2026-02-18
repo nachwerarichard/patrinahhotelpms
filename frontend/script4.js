@@ -5069,6 +5069,7 @@ async function fetchUsers() {
     }
 }
 async function handleSaveUser() {
+    const hotelId = getHotelId();
     const username = document.getElementById('staffusername').value;
     const password = document.getElementById('staffpassword').value;
     const role = document.getElementById('staffrole').value;
@@ -5082,6 +5083,7 @@ async function handleSaveUser() {
                 targetUsername: username, 
                 newPassword: password, 
                 newRole: role,
+                hotelId: hotelId // Ensure new staff is linked to this hotel
             })
         });
 
