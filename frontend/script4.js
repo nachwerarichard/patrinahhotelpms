@@ -641,6 +641,7 @@ loginForm.addEventListener('submit', async function(event) {
         const data = await response.json();
 
         if (response.ok) {
+            
             // 1. SAVE ALL STORAGE DATA FIRST
             localStorage.setItem('token', data.token);
             localStorage.setItem('userRole', data.user.role);
@@ -3168,13 +3169,6 @@ let currentAuditPage = 1;
 //const logsPerPage = 20;
 
 async function renderAuditLogs() {
-    // 1️⃣ Get session and authentication info
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    if (!sessionData || !sessionData.token) {
-        console.warn("Cannot fetch audit logs: User not logged in.");
-        return;
-    }
-
     const token = sessionData.token;
     const hotelId = getHotelId(); // safely get hotelId, returns null if none selected
     if (!hotelId) {
@@ -3226,6 +3220,7 @@ async function renderAuditLogs() {
     }
 
     const logs = await response.json();
+    console.log("Logs received:", logs);
 
         tableBody.innerHTML = '';
 
