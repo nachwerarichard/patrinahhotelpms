@@ -1931,6 +1931,10 @@ app.get('/api/audit-logs', auth, async (req, res) => {
             filter.timestamp.$lte = end;
         }
     }
+console.log("User hotelId:", req.user.hotelId);
+
+const count = await AuditLog.countDocuments({});
+console.log("Total logs in DB:", count);
 
     try {
         const logs = await AuditLog.find(filter)
