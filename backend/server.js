@@ -1104,7 +1104,7 @@ const hotelSchema = new mongoose.Schema({
 const Hotel = mongoose.model('Hotel', hotelSchema);
 
 
-app.post('/api/admin/onboard-hotel', auth, authorizeRole('super-admin'), async (req, res) => {
+app.post('/api/admin/onboard-hotel', async (req, res) => {
     const { name, location, phoneNumber, email } = req.body;
     
     // We declare this outside the try block so the catch block can see it for cleanup
