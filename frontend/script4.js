@@ -3169,7 +3169,6 @@ let currentAuditPage = 1;
 //const logsPerPage = 20;
 
 async function renderAuditLogs() {
-    const token = sessionData.token;
     const hotelId = getHotelId(); // safely get hotelId, returns null if none selected
     if (!hotelId) {
         const tableBody = document.querySelector("#auditLogTable tbody");
