@@ -45,7 +45,8 @@ const userSchema = new mongoose.Schema({
     },
     isInitial: { type: Boolean, default: false } // For default credentials
 });
-
+userSchema.index({ hotelId: 1, username: 1 }, { unique: true });
+const User = mongoose.model('User', userSchema);
 
 
 async function auth(req, res, next) {
@@ -1089,7 +1090,6 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
 // --- Updated User Schema ---
 
 // Ensure a username is unique ONLY within the same hotel
-userSchema.index({ hotelId: 1, username: 1 }, { unique: true });
 
 // --- New Hotel Schema ---
 const hotelSchema = new mongoose.Schema({
@@ -1101,7 +1101,6 @@ const hotelSchema = new mongoose.Schema({
 });
 
 const Hotel = mongoose.model('Hotel', hotelSchema);
-const User = mongoose.model('User', userSchema);
 
 
 app.post('/api/admin/onboard-hotel', auth, authorizeRole('super-admin'), async (req, res) => {
