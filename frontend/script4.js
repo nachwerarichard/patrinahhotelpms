@@ -147,29 +147,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 async function authenticatedFetch(url, options = {}) {
-    // 1. Look for the individual items you saved
-    const token = localStorage.getItem('token');
-    const hotelId = localStorage.getItem('hotelId');
-
-    // 2. If no token, check if we are currently in the middle of an autoLogin
+    let token = localStorage.getItem('token');
     const params = new URLSearchParams(window.location.search);
+
+    // 1. If no token but we see autoLogin in URL, WAIT.
     if (!token && params.get('autoLogin') === 'true') {
-        // Wait a tiny bit or return a promise that waits for the DOM load script to finish
-        console.log("Auto-login detected, waiting for storage sync...");
-        return null; 
+        console.log("Auto-login in progress... holding fetch.");
+        
+        // Poll localStorage every 100ms for up to 3 seconds to see if the token appears
+        await new Promise((resolve) => {
+            let attempts = 0;
+            const interval = setInterval(() => {
+                token = localStorage.getItem('token');
+                attempts++;
+                if (token || attempts > 30) { // 3 seconds max
+                    clearInterval(interval);
+                    resolve();
+                }
+            }, 100);
+        });
     }
 
+    // 2. Now check for token again
     if (!token) {
-        console.error("No token found. Redirecting...");
-        // Use the FULL URL of your login page to be safe
-        window.location.replace('https://your-main-login-site.com');
+        console.error("No token found. Redirecting to login...");
+        // Use your actual login URL here
+        window.location.replace('https://novouscloudpms-tz4s.onrender.com/login.html');
         return null;
     }
 
+    // 3. Proceed with the request
     const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'x-hotel-id': hotelId || 'global',
+        'x-hotel-id': localStorage.getItem('hotelId') || 'global',
         ...options.headers
     };
 
