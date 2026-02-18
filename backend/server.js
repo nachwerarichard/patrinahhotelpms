@@ -718,19 +718,29 @@ app.delete('/api/admin/users/:id', auth, async (req, res) => {
 // PUT: Edit a user's role (Secure Check)
 app.put('/api/admin/users/:id', auth, async (req, res) => {
     try {
-        const { role } = req.body;
+        const { newRole, newPassword } = req.body;
+
+        const updateData = {};
+        if (newRole) updateData.role = newRole;
+        if (newPassword) updateData.password = newPassword;
+
         const updated = await User.findOneAndUpdate(
-            { _id: req.params.id, hotelId: req.user.hotelId }, 
-            { role },
+            { _id: req.params.id, hotelId: req.user.hotelId },
+            updateData,
             { new: true }
         );
-        
-        if (!updated) return res.status(404).json({ message: 'User not found' });
-        res.json({ message: 'Role updated successfully' });
+
+        if (!updated) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.json({ message: 'User updated successfully' });
+
     } catch (err) {
-        res.status(500).json({ message: 'Error updating role' });
+        res.status(500).json({ message: 'Error updating user' });
     }
 });
+
 
 app.get('/api/rooms/report-daily', auth, async (req, res) => {
     try {
@@ -1130,32 +1140,48 @@ app.post('/api/login', async (req, res) => {
 // Multi-client aware route for creating/updating staff
 app.post('/api/admin/manage-user', auth, async (req, res) => {
     const { targetUsername, newPassword, newRole } = req.body;
-    const hotelId = req.user.hotelId; // Use the authenticated user's hotel
+    const hotelId = req.user.hotelId;
 
     if (!targetUsername || !newPassword || !newRole) {
         return res.status(400).json({ message: 'Username, password, and role are required.' });
     }
 
     try {
-        // Find a user for this hotel by username and update, or create if not exists
-        const updatedUser = await User.findOneAndUpdate(
-            { username: targetUsername, hotelId },   // Ensure user is hotel-specific
-            { password: newPassword, role: newRole, hotelId }, 
-            { upsert: true, new: true, setDefaultsOnInsert: true }
-        );
+        const existingUser = await User.findOne({ username: targetUsername, hotelId });
 
-        // Optionally: log this action for audit
-        await addAuditLog(
-            updatedUser._id ? 'User Updated' : 'User Created', 
-            req.user.username, 
-            hotelId, 
-            { targetUsername, role: newRole }
-        );
+        let updatedUser;
 
-        res.json({ message: 'User updated/created successfully', user: updatedUser });
+        if (existingUser) {
+            existingUser.password = newPassword;
+            existingUser.role = newRole;
+            updatedUser = await existingUser.save();
+
+            await addAuditLog(
+                'User Updated',
+                req.user.username,
+                hotelId,
+                { targetUsername, role: newRole }
+            );
+        } else {
+            updatedUser = await User.create({
+                username: targetUsername,
+                password: newPassword,
+                role: newRole,
+                hotelId
+            });
+
+            await addAuditLog(
+                'User Created',
+                req.user.username,
+                hotelId,
+                { targetUsername, role: newRole }
+            );
+        }
+
+        res.json({ message: 'User processed successfully', user: updatedUser });
+
     } catch (err) {
-        console.error('Error managing user:', err);
-        res.status(500).json({ message: 'Error managing user', error: err.message });
+        res.status(500).json({ message: 'Error managing user' });
     }
 });
 
