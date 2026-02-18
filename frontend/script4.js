@@ -5206,78 +5206,7 @@ function fillEditForm(id, name, role) {
         document.getElementById('userModal').classList.remove('hidden');
     }
 }
-function fillEditForm(id, name, role) {
-    console.group("Staff Modal Population Debug");
-    console.log("Incoming Data:", { id, name, role });
 
-    // 1. Check Hidden ID Field
-    const idInput = document.getElementById('staffId');
-    if (idInput) {
-        idInput.value = id;
-        console.log("✅ staffId found. Value set to:", idInput.value);
-    } else {
-        console.error("❌ ERROR: Element with id='staffId' NOT FOUND in HTML");
-    }
-
-    // 2. Check Username Field
-    const nameInput = document.getElementById('staffusername');
-    if (nameInput) {
-        nameInput.value = name;
-        console.log("✅ staffusername found. Value set to:", nameInput.value);
-    } else {
-        console.error("❌ ERROR: Element with id='staffusername' NOT FOUND in HTML");
-    }
-
-    // 3. Check Role Select Field
-    const roleSelect = document.getElementById('staffrole');
-    if (roleSelect) {
-        roleSelect.value = role;
-        console.log("✅ staffrole found. Selection set to:", roleSelect.value);
-        if (roleSelect.value === "") {
-            console.warn("⚠️ WARNING: staffrole value was set, but it's empty. Does the <option> value match '" + role + "' exactly?");
-        }
-    } else {
-        console.error("❌ ERROR: Element with id='staffrole' NOT FOUND in HTML");
-    }
-
-    // 4. Check Password Field
-    const passInput = document.getElementById('staffpassword');
-    if (passInput) {
-        passInput.value = "";
-        console.log("✅ staffpassword found. Field cleared.");
-    } else {
-        console.warn("⚠️ NOTICE: Element with id='staffpassword' not found. (Optional)");
-    }
-
-    // 5. Check UI Elements
-    const title = document.getElementById('modalTitle');
-    const btn = document.getElementById('modalSubmitBtn');
-    console.log("UI Elements Check:", { 
-        titleFound: !!title, 
-        submitBtnFound: !!btn 
-    });
-
-    if (title) title.innerText = "Edit Staff Member";
-    if (btn) btn.innerText = "Update Permissions";
-
-    // 6. Check Modal Opening Function
-    console.log("Checking openModal function...");
-    if (typeof openModal === 'function') {
-        console.log("🚀 Calling openModal()...");
-        openModal(); 
-    } else {
-        console.warn("⚠️ openModal() is not a function. Attempting manual class removal...");
-        const modal = document.getElementById('userModal'); // Ensure this ID matches your modal container
-        if (modal) {
-            modal.classList.remove('hidden');
-            console.log("✅ Modal 'hidden' class removed.");
-        } else {
-            console.error("❌ ERROR: Could not find modal container to display.");
-        }
-    }
-
-    console.groupEnd();
-}
 function resetForm() {
     document.getElementById('modalTitle').innerText = "Add New Staff";
     document.getElementById('staffusername').value = "";
