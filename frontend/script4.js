@@ -3214,17 +3214,19 @@ async function renderAuditLogs() {
     const queryParams = new URLSearchParams(params).toString();
 
     try {
-        // 4️⃣ Fetch audit logs with required headers
-        const response = await fetch(`${API_BASE_URL}/audit-logs?${queryParams}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'x-hotel-id': hotelId
-            }
-        });
+    const response = await authenticatedFetch(
+        `${API_BASE_URL}/audit-logs?${queryParams}`,
+        { method: "GET" }
+    );
 
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response) return; // authenticatedFetch redirected
 
-        const logs = await response.json();
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const logs = await response.json();
+
         tableBody.innerHTML = '';
 
         // 5️⃣ Update pagination buttons
