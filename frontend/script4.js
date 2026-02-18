@@ -424,6 +424,11 @@ function calculateRoomFinancials() {
     }
 }
 
+/**
+ * Populates the room dropdown in the booking modal with available rooms.
+ * @param {string} [selectedRoomNumber=null] - The room number to pre-select, useful for editing.
+ */
+
 function getApplicableRate(roomType, checkInDate) {
     if (!roomType) return 0;
 
@@ -458,30 +463,28 @@ document.getElementById('checkIn').addEventListener('change', function () {
 });
 
 
-/**
- * Populates the room dropdown in the booking modal with available rooms.
- * @param {string} [selectedRoomNumber=null] - The room number to pre-select, useful for editing.
- */
-async function populateRoomDropdown(selectedRoomNumber = null) {
-
+ async function populateRoomDropdown(selectedRoomNumber = null) {
+    // 1. Get auth data from localStorage
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelId = sessionData?.hotelId;
     const token = sessionData?.token;
 
+    // Safety check: if no hotelId, we shouldn't even try to fetch
     if (!hotelId) {
         console.error("No Hotel ID found in session.");
         return;
     }
 
     roomSelect.innerHTML = '<option value="">Select a Room</option>';
-
+    
     try {
-
+        // 2. Add hotelId to URL and Token to Headers
         const response = await fetch(`${API_BASE_URL}/rooms?hotelId=${hotelId}`, {
             method: 'GET',
             headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json'
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',  
+                'x-hotel-id': sessionData?.hotelId 
             }
         });
 
@@ -490,78 +493,79 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
         }
 
         const fetchedRooms = await response.json();
-        rooms = fetchedRooms;
+        rooms = fetchedRooms; // Update local rooms array
 
-        const availableRooms = rooms.filter(room =>
-            room.status === 'clean' || room.number === selectedRoomNumber
-        );
+        // Filter for clean rooms or the currently selected room (for editing)
+        const availableRooms = rooms.filter(room => room.status === 'clean' || room.number === selectedRoomNumber);
 
+        // Group rooms by type for better display
         const roomTypes = {};
-
         availableRooms.forEach(room => {
+            
             const typeName = room.roomTypeId?.name || "Unknown";
 
-            if (!roomTypes[typeName]) {
-                roomTypes[typeName] = [];
-            }
+if (!roomTypes[typeName]) {
+    roomTypes[typeName] = [];
+}
 
-            roomTypes[typeName].push(room);
+roomTypes[typeName].push(room);
+
         });
 
         for (const type in roomTypes) {
-
             const optgroup = document.createElement('optgroup');
             optgroup.label = type;
-
-            roomTypes[type]
-                .sort((a, b) => parseInt(a.number) - parseInt(b.number))
-                .forEach(room => {
-
-                    const option = document.createElement('option');
-                    option.value = room.number;
-                    option.textContent = `Room ${room.number}`;
-
-                    if (selectedRoomNumber && room.number === selectedRoomNumber) {
-                        option.selected = true;
-                    }
-
-                    optgroup.appendChild(option);
-                });
-
-            roomSelect.appendChild(optgroup);
-        }
-
-    } catch (error) {
-        console.error('Error populating room dropdown:', error);
-        showMessageBox('Error', 'Failed to load rooms for dropdown. Please try again.', true);
-    }
-}
-
-roomSelect.addEventListener('change', handleRoomChange);
-document.getElementById('checkIn').addEventListener('change', handleRoomChange);
-function handleRoomChange() {
-
-    const selectedRoomNumber = roomSelect.value;
+            roomTypes[type].sort((a, b) => parseInt(a.number) - parseInt(b.number)).forEach(room => {
+                const option = document.createElement('option');
+                option.value = room.number;
+                option.textContent = `Room ${room.number}`;
+                if (selectedRoomNumber && room.number === selectedRoomNumber) {
+                    option.selected = true;
+                }
+                optgroup.appendChild(option);
+            });
+            roomSelect.addEventListener('change', function () {
+    const selectedRoomNumber = this.value;
     const checkInDate = document.getElementById('checkIn').value;
 
     if (!selectedRoomNumber) return;
 
     const selectedRoom = rooms.find(room => room.number === selectedRoomNumber);
 
-    if (!selectedRoom || !selectedRoom.roomTypeId) return;
+    if (selectedRoom && selectedRoom.roomTypeId) {
 
-    let rate;
+        let rate;
 
-    if (checkInDate) {
-        rate = getApplicableRate(selectedRoom.roomTypeId, checkInDate);
-    } else {
-        rate = selectedRoom.roomTypeId.basePrice;
+        if (checkInDate) {
+            rate = getApplicableRate(selectedRoom.roomTypeId, checkInDate);
+        } else {
+            rate = selectedRoom.roomTypeId.basePrice;
+        }
+
+        document.getElementById('amtPerNight').value = rate;
     }
+});
 
-    document.getElementById('amtPerNight').value = rate;
+            roomSelect.appendChild(optgroup);
+            roomSelect.addEventListener('change', function () {
+    const selectedRoomNumber = this.value;
+
+    if (!selectedRoomNumber) return;
+
+    const selectedRoom = rooms.find(room => room.number === selectedRoomNumber);
+
+    if (selectedRoom && selectedRoom.roomTypeId) {
+        const basePrice = selectedRoom.roomTypeId.basePrice;
+        document.getElementById('amtPerNight').value = basePrice;
+    }
+});
+
+        }
+    } catch (error) {
+        console.error('Error populating room dropdown:', error);
+        showMessageBox('Error', 'Failed to load rooms for dropdown. Please try again.', true);
+    }
 }
-
-
      // 2. SAVE to LocalStorage
 
     // 3. Update the UI
