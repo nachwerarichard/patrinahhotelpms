@@ -466,10 +466,15 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
         // Group rooms by type for better display
         const roomTypes = {};
         availableRooms.forEach(room => {
-            if (!roomTypes[room.type]) {
-                roomTypes[room.type] = [];
-            }
-            roomTypes[room.type].push(room);
+            
+            const typeName = room.roomTypeId?.name || "Unknown";
+
+if (!roomTypes[typeName]) {
+    roomTypes[typeName] = [];
+}
+
+roomTypes[typeName].push(room);
+
         });
 
         for (const type in roomTypes) {
@@ -485,6 +490,19 @@ async function populateRoomDropdown(selectedRoomNumber = null) {
                 optgroup.appendChild(option);
             });
             roomSelect.appendChild(optgroup);
+            roomSelect.addEventListener('change', function () {
+    const selectedRoomNumber = this.value;
+
+    if (!selectedRoomNumber) return;
+
+    const selectedRoom = rooms.find(room => room.number === selectedRoomNumber);
+
+    if (selectedRoom && selectedRoom.roomTypeId) {
+        const basePrice = selectedRoom.roomTypeId.basePrice;
+        document.getElementById('amtPerNight').value = basePrice;
+    }
+});
+
         }
     } catch (error) {
         console.error('Error populating room dropdown:', error);
