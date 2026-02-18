@@ -146,6 +146,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 });
+const getHotelId = () => {
+    // 1. Get the role and hotelId from separate keys
+    const role = localStorage.getItem('userRole');
+    const hotelId = localStorage.getItem('hotelId');
+
+    // 2. Check if the session exists at all
+    if (!role) {
+        console.error("No user session found (userRole missing).");
+        return null;
+    }
+
+    // 3. Logic for Super Admin
+    if (role === 'super-admin' && (!hotelId || hotelId === 'global')) {
+        console.warn("Super admin has not selected a specific hotel yet.");
+        return 'global'; // Or return null depending on how your API handles global access
+    }
+
+    // 4. Logic for regular users
+    if (!hotelId) {
+        console.error("No hotelId found in session.");
+        return null;
+    }
+
+    return hotelId;
+};
 async function authenticatedFetch(url, options = {}) {
     let token = localStorage.getItem('token');
     const params = new URLSearchParams(window.location.search);
@@ -398,31 +423,7 @@ const API_BASE_URL = 'https://novouscloudpms-tz4s.onrender.com/api';
  */
 
 // --- 3. SESSION HELPERS ---
-const getHotelId = () => {
-    // 1. Get the role and hotelId from separate keys
-    const role = localStorage.getItem('userRole');
-    const hotelId = localStorage.getItem('hotelId');
 
-    // 2. Check if the session exists at all
-    if (!role) {
-        console.error("No user session found (userRole missing).");
-        return null;
-    }
-
-    // 3. Logic for Super Admin
-    if (role === 'super-admin' && (!hotelId || hotelId === 'global')) {
-        console.warn("Super admin has not selected a specific hotel yet.");
-        return 'global'; // Or return null depending on how your API handles global access
-    }
-
-    // 4. Logic for regular users
-    if (!hotelId) {
-        console.error("No hotelId found in session.");
-        return null;
-    }
-
-    return hotelId;
-};
 
 /**
  * Closes the custom message box.
