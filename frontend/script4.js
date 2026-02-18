@@ -5038,7 +5038,7 @@ async function fetchUsers() {
                 </td>
                 <td class="px-8 py-4 text-right">
     <div class="flex justify-end items-center gap-3">
-        <button onclick="fillEditForm('${user.username}', '${user.role}')" 
+        <button onclick="fillEditForm('${user.username}', '${user.role}','${user.id}')" 
                 class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-md transition-all border border-indigo-100 active:scale-95">
             <span>Edit</span>
         </button>
@@ -5069,34 +5069,53 @@ async function fetchUsers() {
     }
 }
 async function handleSaveUser() {
+    const staffId = document.getElementById('staffId').value; // Hidden field
     const username = document.getElementById('staffusername').value;
     const password = document.getElementById('staffpassword').value;
     const role = document.getElementById('staffrole').value;
 
-    if (!username || !password) return alert("Please fill in credentials");
+    // Validation: Password only strictly required for NEW users
+    if (!username || (!staffId && !password)) {
+        return alert("Please fill in all required credentials");
+    }
+
+    // Determine if we are updating or creating
+    const isEdit = staffId && staffId !== "";
+    const url = isEdit 
+        ? `${API_BASE_URL}/admin/users/${staffId}`  // URL for editing
+        : `${API_BASE_URL}/admin/manage-user`;      // URL for creating
+
+    const method = isEdit ? 'PUT' : 'POST';
 
     try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/admin/manage-user`, {
-            method: 'POST',
-            body: JSON.stringify({ 
-                targetUsername: username, 
-                newPassword: password, 
-                newRole: role,
-            })
+        const payload = { 
+            targetUsername: username, 
+            newRole: role 
+        };
+        
+        // Only send password if it's provided (important for edits)
+        if (password) payload.newPassword = password;
+
+        const res = await authenticatedFetch(url, {
+            method: method,
+            body: JSON.stringify(payload)
         });
 
-        if (!res) return; // Token missing or redirected to login
+        if (!res) return;
 
         if (res.ok) {
+            alert(isEdit ? "User updated successfully!" : "User created successfully!");
             closeModal();
-            fetchUsers(); // Refresh the table after saving
+            // Reset the hidden ID for next time
+            document.getElementById('staffId').value = ""; 
+            fetchUsers(); 
         } else {
             const data = await res.json();
-            alert(`Error saving user: ${data.message || 'Username might be taken.'}`);
+            alert(`Action failed: ${data.message || 'Check connection'}`);
         }
     } catch (err) {
         console.error("Error saving user:", err);
-        alert("Failed to save user. Check console for details.");
+        alert("System error. Check console.");
     }
 }
 async function deleteUser(id) {
@@ -5141,8 +5160,22 @@ async function updateRole(id, newRole) {
         alert("Failed to update role. Check console for details.");
     }
 }
-function fillEditForm(name, role) {
-    openModal({name, role});
+function fillEditForm(id, username, role) {
+    // 1. Set the hidden ID so handleSaveUser knows we are editing
+    document.getElementById('staffId').value = id;
+    
+    // 2. Fill the inputs
+    document.getElementById('staffusername').value = username;
+    document.getElementById('staffrole').value = role;
+    
+    // 3. Clear password field (usually don't show old password for security)
+    document.getElementById('staffpassword').value = "";
+    
+    // 4. Update Modal UI (Optional)
+    const submitBtn = document.querySelector('#modalSubmitBtn');
+    if(submitBtn) submitBtn.innerText = "Update Staff Member";
+    
+    openModal(); // Function to show your modal
 }
 
 function resetForm() {
