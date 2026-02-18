@@ -4983,3 +4983,80 @@ function closeModal() {
     document.getElementById('userModal').classList.add('hidden');
     document.body.classList.remove('modal-active');
 }
+
+async function fetchUsers() {
+    const hotelId = getHotelId();
+    if (!hotelId) return;
+
+    try {
+        // Use authenticatedFetch so token & headers are handled automatically
+        const res = await authenticatedFetch(`${API_BASE_URL}/admin/users?hotelId=${hotelId}`, {
+            method: 'GET'
+        });
+
+        if (!res) return; // Token missing or redirected to login
+        if (!res.ok) throw new Error("Connection Failed");
+
+        const users = await res.json();
+        
+        // Update Stats
+        const staffCountEl = document.getElementById('totalStaffCount');
+        if (staffCountEl) staffCountEl.innerText = users.length;
+        
+        const statusEl = document.getElementById('connectionStatus');
+        if (statusEl) {
+            statusEl.innerText = "Server Online";
+            statusEl.className = "text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 px-2 py-0.5 rounded";
+        }
+
+        // Populate the table
+        const tbody = document.getElementById('userTableBody');
+        tbody.innerHTML = users.map(user => `
+            <tr class="hover:bg-slate-50/80 transition group border-b border-slate-100">
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
+                            ${user.username.charAt(0).toUpperCase()}
+                        </div>
+                        <span class="font-semibold text-slate-800">${user.username}</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-wider border ${getRoleClass(user.role)}">
+                        ${user.role.toUpperCase()}
+                    </span>
+                </td>
+                <td class="px-6 py-4">
+                    <select onchange="updateRole('${user._id}', this.value)" class="text-sm bg-transparent border-b-2 border-transparent hover:border-indigo-300 outline-none cursor-pointer py-1 transition">
+                        <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
+                        <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
+                        <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
+                        <option value="reception" ${user.role === 'reception' ? 'selected' : ''}>Reception</option>
+                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                    </select>
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <div class="flex justify-end gap-1">
+                        <button onclick="fillEditForm('${user.username}', '${user.role}')" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition">
+                            <i data-lucide="edit-3" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="deleteUser('${user._id}')" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    } catch (err) {
+        console.error(err);
+        const statusEl = document.getElementById('connectionStatus');
+        if (statusEl) {
+            statusEl.innerText = "Offline";
+            statusEl.className = "text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-700 px-2 py-0.5 rounded";
+        }
+    }
+}
+
