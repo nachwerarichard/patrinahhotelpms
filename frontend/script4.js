@@ -5177,53 +5177,36 @@ function handleEditClick(button) {
 }
 
 function fillEditForm(id, name, role) {
-    console.log("Filling form with:", id, name, role);
-
-    // 1. Set text inputs
+    // Fill the hidden ID
     const idInput = document.getElementById('staffId');
-    const nameInput = document.getElementById('staffusername');
-    const passInput = document.getElementById('staffpassword');
-
     if (idInput) idInput.value = id;
+
+    // Fill Username
+    const nameInput = document.getElementById('staffusername');
     if (nameInput) nameInput.value = name;
-    if (passInput) passInput.value = ""; // Always clear password on edit
 
-    // 2. Set Select Dropdown (Force lowercase check)
+    // Fill Role
     const roleSelect = document.getElementById('staffrole');
-    if (roleSelect) {
-        // We force the value to lowercase to match 'admin', 'bar', etc.
-        roleSelect.value = role.toLowerCase().trim();
-        
-        // If it still didn't set (e.g., 'front office' vs 'Front office')
-        if (roleSelect.selectedIndex === -1) {
-            console.warn("Exact role match not found, searching options...");
-            for (let i = 0; i < roleSelect.options.length; i++) {
-                if (roleSelect.options[i].value.toLowerCase() === role.toLowerCase()) {
-                    roleSelect.selectedIndex = i;
-                    break;
-                }
-            }
-        }
-    }
+    if (roleSelect) roleSelect.value = role;
 
-    // 3. Update Labels
+    // Clear password (safety)
+    const passInput = document.getElementById('staffpassword');
+    if (passInput) passInput.value = "";
+
+    // Update UI Labels
     const title = document.getElementById('modalTitle');
     const btn = document.getElementById('modalSubmitBtn');
-    
     if (title) title.innerText = "Edit Staff Member";
-    // We update the button HTML to keep your icon
-    if (btn) {
-        btn.innerHTML = `<i data-lucide="save" class="w-5 h-5"></i> Update Staff Member`;
-        if (window.lucide) lucide.createIcons();
-    }
+    if (btn) btn.innerText = "Update Permissions";
 
-    // 4. Show the Modal
-    const modal = document.getElementById('userModal');
-    if (modal) {
-        modal.classList.remove('hidden');
-        modal.classList.add('flex'); // Ensure flex is added back
+    // Open the modal (Use whatever function name you have for opening)
+    if (typeof openModal === 'function') {
+        openModal(); 
+    } else {
+        document.getElementById('userModal').classList.remove('hidden');
     }
 }
+
 function resetForm() {
     document.getElementById('modalTitle').innerText = "Add New Staff";
     document.getElementById('staffusername').value = "";
