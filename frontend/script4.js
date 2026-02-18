@@ -5038,7 +5038,10 @@ async function fetchUsers() {
                 </td>
                 <td class="px-8 py-4 text-right">
     <div class="flex justify-end items-center gap-3">
-        <button onclick="fillEditForm('${user.username}', '${user.role}','${user.id}')" 
+        <button data-id="${user._id}" 
+    data-username="${user.username}" 
+    data-role="${user.role}"
+    onclick="handleEditClick(this)" 
                 class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-md transition-all border border-indigo-100 active:scale-95">
             <span>Edit</span>
         </button>
@@ -5161,8 +5164,26 @@ async function updateRole(id, newRole) {
     }
 }
 
-function fillEditForm(id,name, role) {
-    openModal({id,name, role});
+function handleEditClick(button) {
+    const id = button.getAttribute('data-id');
+    const name = button.getAttribute('data-username');
+    const role = button.getAttribute('data-role');
+
+    // Now pass it to your modal logic
+    fillEditForm(id, name, role);
+}
+
+function fillEditForm(id, name, role) {
+    // Set the hidden field we discussed earlier
+    document.getElementById('staffId').value = id;
+    document.getElementById('staffusername').value = name;
+    document.getElementById('staffrole').value = role;
+    
+    // Change UI text so the user knows they are editing
+    document.getElementById('modalTitle').innerText = "Edit Staff Member";
+    document.getElementById('modalSubmitBtn').innerText = "Update User";
+    
+    openModal(); 
 }
 function resetForm() {
     document.getElementById('modalTitle').innerText = "Add New Staff";
