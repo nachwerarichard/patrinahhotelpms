@@ -718,26 +718,72 @@ app.delete('/api/admin/users/:id', auth, async (req, res) => {
 // PUT: Edit a user's role (Secure Check)
 app.put('/api/admin/users/:id', auth, async (req, res) => {
     try {
-        const { newRole, newPassword } = req.body;
+        const { id } = req.params;
+        const { targetUsername, newPassword, newRole } = req.body;
 
-        const updateData = {};
-        if (newRole) updateData.role = newRole;
-        if (newPassword) updateData.password = newPassword;
+        if (!req.user || !req.user.hotelId) {
+            return res.status(400).json({ message: "Invalid auth context" });
+        }
 
-        const updated = await User.findOneAndUpdate(
-            { _id: req.params.id, hotelId: req.user.hotelId },
+        const hotelId = req.user.hotelId;
+
+        const updateData = {
+            username: targetUsername,
+            role: newRole
+        };
+
+        if (newPassword) {
+            updateData.password = newPassword;
+        }
+
+        const updatedUser = await User.findOneAndUpdate(
+            { _id: id, hotelId },   // 🔥 CRITICAL
             updateData,
             { new: true }
         );
 
-        if (!updated) {
-            return res.status(404).json({ message: 'User not found' });
+        if (!updatedUser) {
+            return res.status(404).json({ message: "User not found in this hotel" });
         }
 
-        res.json({ message: 'User updated successfully' });
+        res.json({ message: "User updated successfully" });
 
     } catch (err) {
-        res.status(500).json({ message: 'Error updating user' });
+        console.error("UPDATE USER ERROR:", err);
+        res.status(500).json({ message: "Error updating user", error: err.message });
+    }
+});
+app.post('/api/admin/manage-user', auth, async (req, res) => {
+    try {
+        const { targetUsername, newPassword, newRole } = req.body;
+
+        if (!targetUsername || !newPassword || !newRole) {
+            return res.status(400).json({ message: "All fields required" });
+        }
+
+        const hotelId = req.user.hotelId;
+
+        const existing = await User.findOne({
+            username: targetUsername,
+            hotelId
+        });
+
+        if (existing) {
+            return res.status(400).json({ message: "User already exists in this hotel" });
+        }
+
+        await User.create({
+            username: targetUsername,
+            password: newPassword,
+            role: newRole,
+            hotelId
+        });
+
+        res.json({ message: "User created successfully" });
+
+    } catch (err) {
+        console.error("CREATE USER ERROR:", err);
+        res.status(500).json({ message: "Error creating user", error: err.message });
     }
 });
 
@@ -1138,52 +1184,6 @@ app.post('/api/login', async (req, res) => {
 
 // Admin Route: Create or Update users (Accessible only by Admins)
 // Multi-client aware route for creating/updating staff
-app.post('/api/admin/manage-user', auth, async (req, res) => {
-    const { targetUsername, newPassword, newRole } = req.body;
-    const hotelId = req.user.hotelId;
-
-    if (!targetUsername || !newPassword || !newRole) {
-        return res.status(400).json({ message: 'Username, password, and role are required.' });
-    }
-
-    try {
-        const existingUser = await User.findOne({ username: targetUsername, hotelId });
-
-        let updatedUser;
-
-        if (existingUser) {
-            existingUser.password = newPassword;
-            existingUser.role = newRole;
-            updatedUser = await existingUser.save();
-
-            await addAuditLog(
-                'User Updated',
-                req.user.username,
-                hotelId,
-                { targetUsername, role: newRole }
-            );
-        } else {
-            updatedUser = await User.create({
-                username: targetUsername,
-                password: newPassword,
-                role: newRole,
-                hotelId
-            });
-
-            await addAuditLog(
-                'User Created',
-                req.user.username,
-                hotelId,
-                { targetUsername, role: newRole }
-            );
-        }
-
-        res.json({ message: 'User processed successfully', user: updatedUser });
-
-    } catch (err) {
-        res.status(500).json({ message: 'Error managing user' });
-    }
-});
 
 /**
  * Helper function to add an entry to the audit log.
