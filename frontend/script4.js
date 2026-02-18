@@ -112,21 +112,64 @@ const auditLogActionFilter = document.getElementById('auditLogActionFilter');
 const auditLogStartDateFilter = document.getElementById('auditLogStartDateFilter');
 const auditLogEndDateFilter = document.getElementById('auditLogEndDateFilter');
 const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn');
+  // Add this to the TOP of your scripts on the destination pages
+document.addEventListener('DOMContentLoaded', async () => {
+    const params = new URLSearchParams(window.location.search);
+    
+    if (params.get('autoLogin') === 'true') {
+        // 1. Extract the data from the URL
+        const token = params.get('t'); // Pass the 't' (token) instead of 'p' (password)
+        const username = params.get('u');
+        const role = params.get('r');
+        const hotelId = params.get('h');
 
+        // 2. Inject them into THIS domain's localStorage
+        if (token && username) {
+            localStorage.setItem('token', token);
+            localStorage.setItem('username', username);
+            localStorage.setItem('userRole', role);
+            localStorage.setItem('hotelId', hotelId);
+
+            // 3. Clean the URL so the token doesn't sit in the address bar
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            // 4. Trigger the dashboard load
+            // Ensure you call whatever function starts your app here
+            if (typeof initDashboard === "function") {
+                initDashboard(); 
+            }
+        }
+    } else {
+        // Normal check: If no autoLogin and no token in storage, kick to login
+        if (!localStorage.getItem('token')) {
+            window.location.href = 'https://your-login-page.com';
+        }
+    }
+});
 async function authenticatedFetch(url, options = {}) {
-    const session = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = session?.token;
-    const hotelId = session?.hotelId;
+    // 1. Look for the individual items you saved
+    const token = localStorage.getItem('token');
+    const hotelId = localStorage.getItem('hotelId');
+
+    // 2. If no token, check if we are currently in the middle of an autoLogin
+    const params = new URLSearchParams(window.location.search);
+    if (!token && params.get('autoLogin') === 'true') {
+        // Wait a tiny bit or return a promise that waits for the DOM load script to finish
+        console.log("Auto-login detected, waiting for storage sync...");
+        return null; 
+    }
 
     if (!token) {
-        window.location.replace('/frontend/login.html');
+        console.error("No token found. Redirecting...");
+        // Use the FULL URL of your login page to be safe
+        window.location.replace('https://your-main-login-site.com');
         return null;
     }
 
     const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'x-hotel-id': hotelId,
+        'x-hotel-id': hotelId || 'global',
         ...options.headers
     };
 
@@ -3700,40 +3743,7 @@ function renderRadialOptions() {
     });
 }
     
-        // Add this to the TOP of your scripts on the destination pages
-document.addEventListener('DOMContentLoaded', async () => {
-    const params = new URLSearchParams(window.location.search);
-    
-    if (params.get('autoLogin') === 'true') {
-        // 1. Extract the data from the URL
-        const token = params.get('t'); // Pass the 't' (token) instead of 'p' (password)
-        const username = params.get('u');
-        const role = params.get('r');
-        const hotelId = params.get('h');
-
-        // 2. Inject them into THIS domain's localStorage
-        if (token && username) {
-            localStorage.setItem('token', token);
-            localStorage.setItem('username', username);
-            localStorage.setItem('userRole', role);
-            localStorage.setItem('hotelId', hotelId);
-
-            // 3. Clean the URL so the token doesn't sit in the address bar
-            window.history.replaceState({}, document.title, window.location.pathname);
-
-            // 4. Trigger the dashboard load
-            // Ensure you call whatever function starts your app here
-            if (typeof initDashboard === "function") {
-                initDashboard(); 
-            }
-        }
-    } else {
-        // Normal check: If no autoLogin and no token in storage, kick to login
-        if (!localStorage.getItem('token')) {
-            window.location.href = 'https://your-login-page.com';
-        }
-    }
-});
+      
 function toggleActionButtons(event, button) {
     const menu = button.nextElementSibling;
 
