@@ -5058,9 +5058,9 @@ async function fetchUsers() {
 }
 
 async function handleSaveUser() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    const role = document.getElementById('role').value;
+    const username = document.getElementById('staffusername').value;
+    const password = document.getElementById('staffpassword').value;
+    const role = document.getElementById('staffrole').value;
 
     if (!username || !password) return alert("Please fill in credentials");
 
