@@ -748,8 +748,7 @@ loginForm.addEventListener('submit', async function(event) {
                 headers: { 
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${data.token}`,
-                        'x-hotel-id': sessionData?.hotelId
-
+                   'x-hotel-id': data.user.hotelId || 'global'
                 },
                 body: JSON.stringify({ 
                     action: 'User Logged In', 
