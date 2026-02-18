@@ -158,6 +158,29 @@ mongoose.connect(mongoURI)
         console.error('MongoDB connection error:', err);
     });
 // --- 5. Define Mongoose Schemas and Models ---
+const auditLogSchema = new mongoose.Schema({
+hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this    timestamp: { type: Date, default: Date.now },
+    action: { type: String, required: true }, // e.g., 'Booking Added', 'Room Status Updated', 'Booking Deleted'
+    user: { type: String, required: true }, // Username of the user who performed the action
+    details: { type: mongoose.Schema.Types.Mixed } // Flexible field for storing relevant data (e.g., { bookingId: 'BKG001', oldStatus: 'clean', newStatus: 'dirty', reason: '...' })
+});
+const AuditLog = mongoose.model('AuditLog', auditLogSchema);
+
+async function addAuditLog(action, username, hotelId, details = {}) {
+    try {
+        const log = new AuditLog({
+            action,
+            user: username,
+            hotelId: hotelId, // CRITICAL: Link log to the specific hotel
+            details: details
+        });
+        await log.save();
+        console.log(`Audit Logged: ${action} by ${username} for Hotel ${hotelId}`);
+    } catch (error) {
+        console.error('Error adding audit log:', error);
+    }
+}
+
 
 // Add this new schema and model definition with your other schemas
 const walkInChargeSchema = new mongoose.Schema({
@@ -975,17 +998,6 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
     }
 });
 // Audit Log Schema
-const auditLogSchema = new mongoose.Schema({
-hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this    timestamp: { type: Date, default: Date.now },
-    action: { type: String, required: true }, // e.g., 'Booking Added', 'Room Status Updated', 'Booking Deleted'
-    user: { type: String, required: true }, // Username of the user who performed the action
-    details: { type: mongoose.Schema.Types.Mixed } // Flexible field for storing relevant data (e.g., { bookingId: 'BKG001', oldStatus: 'clean', newStatus: 'dirty', reason: '...' })
-});
-const AuditLog = mongoose.model('AuditLog', auditLogSchema);
-
-AuditLog.find({}).then(logs => console.log("All logs:", logs));
-
-
 
 // --- 6. Hardcoded Users for Authentication (Highly Insecure for Production!) ---
 // --- Updated User Schema ---
@@ -1137,20 +1149,7 @@ app.post('/api/admin/manage-user',  async (req, res) => {
  * @param {string} username - The username of the actor.
  * @param {object} [details={}] - Additional details to store.
  */
-async function addAuditLog(action, username, hotelId, details = {}) {
-    try {
-        const log = new AuditLog({
-            action,
-            user: username,
-            hotelId: hotelId, // CRITICAL: Link log to the specific hotel
-            details: details
-        });
-        await log.save();
-        console.log(`Audit Logged: ${action} by ${username} for Hotel ${hotelId}`);
-    } catch (error) {
-        console.error('Error adding audit log:', error);
-    }
-}
+
 // GET: Find active booking for a room (Scoped to Hotel)
 app.get('/api/pos/room/:roomNumber/latest-booking', auth, async (req, res) => {
     const { roomNumber } = req.params;
