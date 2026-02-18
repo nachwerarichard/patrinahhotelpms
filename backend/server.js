@@ -1087,31 +1087,33 @@ app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        // 1. Find the user by username only first
         const user = await User.findOne({ username });
-
-        // 2. If no user, or password doesn't match
         if (!user || user.password !== password) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        // 3. Generate Token (Using standard format)
+        // Generate Token
         const authToken = Buffer.from(`${username}:${password}`).toString('base64');
-        
-        // 4. Send back the user details (including the hotelId from the DB)
+
+        // Record audit log
+        await addAuditLog('User Logged In', user.username, user.hotelId, { role: user.role });
+
+        // Send response
         res.json({ 
             token: authToken, 
             user: { 
                 username: user.username, 
                 role: user.role, 
-                hotelId: user.hotelId // This is now sent to the frontend
+                hotelId: user.hotelId 
             } 
         });
+
     } catch (error) {
         console.error("Login Error:", error);
         res.status(500).json({ message: 'Server Error' });
     }
 });
+
 // Admin Route: Create or Update users (Accessible only by Admins)
 app.post('/api/admin/manage-user',  async (req, res) => {
     const { targetUsername, newPassword, newRole } = req.body;
