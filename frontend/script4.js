@@ -4963,3 +4963,23 @@ document.getElementById('editRoomForm').addEventListener('submit', async (e) => 
         showMessage("Update failed: " + err.message, true);
     }
 });
+
+function openModal(editData = null) {
+    const modal = document.getElementById('userModal');
+    modal.classList.remove('hidden');
+    document.body.classList.add('modal-active');
+    
+    if(editData) {
+        document.getElementById('modalTitle').innerText = "Edit Staff Member";
+        document.getElementById('username').value = editData.name;
+        document.getElementById('role').value = editData.role;
+        // Password field usually stays blank on edit unless changing it
+    } else {
+        resetForm();
+    }
+}
+
+function closeModal() {
+    document.getElementById('userModal').classList.add('hidden');
+    document.body.classList.remove('modal-active');
+}
