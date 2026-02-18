@@ -176,36 +176,39 @@ async function authenticatedFetch(url, options = {}) {
     let token = localStorage.getItem('token');
     const params = new URLSearchParams(window.location.search);
     
-    // Check BOTH storage and URL for the autoLogin flag
-    const isAutoLoginMode = params.get('autoLogin') === 'true';
-
-    if (!token && isAutoLoginMode) {
-        console.log("Auto-login detected, waiting for token to settle...");
-        
+    // 1. Wait for token if auto-login is active
+    if (!token && params.get('autoLogin') === 'true') {
         await new Promise((resolve) => {
             let attempts = 0;
             const interval = setInterval(() => {
-                token = localStorage.getItem('token') || params.get('t'); // Check URL too!
+                token = localStorage.getItem('token');
                 attempts++;
-                if (token || attempts > 50) { 
-                    if (token) localStorage.setItem('token', token); // Ensure it's saved
+                if (token || attempts > 30) { 
                     clearInterval(interval);
                     resolve();
                 }
-            }, 50);
+            }, 100);
         });
     }
 
-    // FINAL CHECK: If still no token, redirect
+    // 2. Check if we finally have a token
     if (!token) {
+        console.error("Authentication required. Redirecting...");
         window.location.replace('https://novouscloudpms-tz4s.onrender.com/login.html');
         return null;
     }
-    return fetch(url, { ...options, headers });
 
-    // ... proceed with fetch
+    // 3. DEFINE HEADERS (This is where your error was!)
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'x-hotel-id': localStorage.getItem('hotelId') || 'global',
+        ...options.headers // This merges any extra headers you pass in
+    };
+
+    // 4. Return the fetch call using the defined headers
+    return fetch(url, { ...options, headers: headers });
 }
-
 // IMPROVED FRONTEND FETCH
 async function renderAuditLogs() {
     const tableBody = document.querySelector("#auditLogTable tbody");
