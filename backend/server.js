@@ -46,6 +46,8 @@ const userSchema = new mongoose.Schema({
     isInitial: { type: Boolean, default: false } // For default credentials
 });
 
+AuditLog.find({}).then(console.log);
+
 
 async function auth(req, res, next) {
     const authHeader = req.headers.authorization;
