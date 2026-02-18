@@ -1912,14 +1912,16 @@ app.get('/api/incidental-charges/booking-custom-id/:bookingCustomId', auth, asyn
         res.status(500).json({ message: 'Error fetching charges', error: error.message });
     }
 });
+
 app.get('/api/audit-logs', auth, async (req, res) => {
-    const { user, action, startDate, endDate } = req.query;
-    
-    // Always start with the hotelId filter
+
+    const { user, action, startDate, endDate, page = 1, limit = 20 } = req.query;
+
     const filter = { hotelId: req.user.hotelId };
 
     if (user) filter.user = { $regex: user, $options: 'i' };
     if (action) filter.action = { $regex: action, $options: 'i' };
+
     if (startDate || endDate) {
         filter.timestamp = {};
         if (startDate) filter.timestamp.$gte = new Date(startDate);
@@ -1931,12 +1933,18 @@ app.get('/api/audit-logs', auth, async (req, res) => {
     }
 
     try {
-        const logs = await AuditLog.find(filter).sort({ timestamp: -1 }).limit(200);
+        const logs = await AuditLog.find(filter)
+            .sort({ timestamp: -1 })
+            .skip((page - 1) * limit)
+            .limit(Number(limit));
+
         res.json(logs);
+
     } catch (error) {
         res.status(500).json({ message: 'Error fetching logs', error: error.message });
     }
 });
+
 
 // Public availability check
 app.get('/api/public/rooms/available', async (req, res) => {
