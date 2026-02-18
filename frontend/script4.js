@@ -5093,4 +5093,67 @@ async function handleSaveUser() {
         alert("Failed to save user. Check console for details.");
     }
 }
+async function deleteUser(id) {
+    if (!confirm('Delete this account permanently?')) return;
+
+    try {
+        const res = await authenticatedFetch(`${API_BASE_URL}/admin/users/${id}`, {
+            method: 'DELETE'
+        });
+
+        if (!res) return; // Token missing or redirected
+
+        if (res.ok) {
+            fetchUsers(); // Refresh the table after deletion
+        } else {
+            const data = await res.json();
+            alert(`Failed to delete user: ${data.message || 'Unknown error'}`);
+        }
+    } catch (err) {
+        console.error("Error deleting user:", err);
+        alert("Failed to delete user. Check console for details.");
+    }
+}
+
+async function updateRole(id, newRole) {
+    try {
+        const res = await authenticatedFetch(`${API_BASE_URL}/admin/users/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ role: newRole })
+        });
+
+        if (!res) return; // Token missing or redirected
+
+        if (res.ok) {
+            fetchUsers(); // Refresh after role update
+        } else {
+            const data = await res.json();
+            alert(`Failed to update role: ${data.message || 'Unknown error'}`);
+        }
+    } catch (err) {
+        console.error("Error updating role:", err);
+        alert("Failed to update role. Check console for details.");
+    }
+}
+function fillEditForm(name, role) {
+    openModal({name, role});
+}
+
+function resetForm() {
+    document.getElementById('modalTitle').innerText = "Add New Staff";
+    document.getElementById('username').value = "";
+    document.getElementById('password').value = "";
+    document.getElementById('role').value = "";
+}
+
+function getRoleClass(role) {
+    const classes = {
+        admin: 'bg-purple-50 text-purple-600 border-purple-100',
+        bar: 'bg-amber-50 text-amber-600 border-amber-100',
+        reception: 'bg-blue-50 text-blue-600 border-blue-100',
+        cashier: 'bg-cyan-50 text-cyan-600 border-cyan-100',
+        housekeeper: 'bg-emerald-50 text-emerald-600 border-emerald-100'
+    };
+    return classes[role] || 'bg-gray-50 text-gray-600 border-gray-100';
+}
 
