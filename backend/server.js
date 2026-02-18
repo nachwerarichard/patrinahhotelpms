@@ -1127,22 +1127,38 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Admin Route: Create or Update users (Accessible only by Admins)
-app.post('/api/admin/manage-user',  async (req, res) => {
+// Multi-client aware route for creating/updating staff
+app.post('/api/admin/manage-user', auth, async (req, res) => {
     const { targetUsername, newPassword, newRole } = req.body;
-    
+    const hotelId = req.user.hotelId; // Use the authenticated user's hotel
+
+    if (!targetUsername || !newPassword || !newRole) {
+        return res.status(400).json({ message: 'Username, password, and role are required.' });
+    }
+
     try {
-        // findOneAndUpdate with { upsert: true } creates the user if they don't exist
+        // Find a user for this hotel by username and update, or create if not exists
         const updatedUser = await User.findOneAndUpdate(
-            { username: targetUsername },
-            { password: newPassword, role: newRole },
-            { upsert: true, new: true }
+            { username: targetUsername, hotelId },   // Ensure user is hotel-specific
+            { password: newPassword, role: newRole, hotelId }, 
+            { upsert: true, new: true, setDefaultsOnInsert: true }
         );
-        
+
+        // Optionally: log this action for audit
+        await addAuditLog(
+            updatedUser._id ? 'User Updated' : 'User Created', 
+            req.user.username, 
+            hotelId, 
+            { targetUsername, role: newRole }
+        );
+
         res.json({ message: 'User updated/created successfully', user: updatedUser });
     } catch (err) {
+        console.error('Error managing user:', err);
         res.status(500).json({ message: 'Error managing user', error: err.message });
     }
 });
+
 /**
  * Helper function to add an entry to the audit log.
  * @param {string} action - The action performed (e.g., "Booking Created").
