@@ -4971,8 +4971,8 @@ function openModal(editData = null) {
     
     if(editData) {
         document.getElementById('modalTitle').innerText = "Edit Staff Member";
-        document.getElementById('username').value = editData.name;
-        document.getElementById('role').value = editData.role;
+        document.getElementById('staffusername').value = editData.name;
+        document.getElementById('staffrole').value = editData.role;
         // Password field usually stays blank on edit unless changing it
     } else {
         resetForm();
@@ -5149,9 +5149,9 @@ function fillEditForm(name, role) {
 
 function resetForm() {
     document.getElementById('modalTitle').innerText = "Add New Staff";
-    document.getElementById('username').value = "";
-    document.getElementById('password').value = "";
-    document.getElementById('role').value = "";
+    document.getElementById('staffusername').value = "";
+    document.getElementById('staffpassword').value = "";
+    document.getElementById('staffrole').value = "";
 }
 
 function getRoleClass(role) {
