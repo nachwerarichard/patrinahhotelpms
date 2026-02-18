@@ -115,31 +115,88 @@ const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn
 
 
 // IMPROVED FRONTEND FETCH
-async function authenticatedFetch(url, options = {}) {
-    const token = localStorage.getItem('token');
-    
-    // If we're on the login page and just submitted the form, 
-    // we might want to wait or return early instead of redirecting.
-    if (!token) {
-        // Only redirect if we aren't currently on the login page trying to log in
-        if (window.location.pathname.includes('login.html')) {
-             console.warn("No token found, but staying on login page.");
-             return null;
-        }
-        window.location.replace('/frontend/login.html');
-        return null;
-    }
+async function renderAuditLogs() {
+    const tableBody = document.querySelector("#auditLogTable tbody");
+    const prevBtn = document.getElementById('prevAuditPage');
+    const nextBtn = document.getElementById('nextAuditPage');
+    const pageIndicator = document.getElementById('auditPageIndicator');
 
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'x-hotel-id': localStorage.getItem('hotelId') || 'global',
-        ...options.headers
+    // Show loading state
+    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Loading audit logs...</td></tr>';
+
+    // Build query params dynamically from filters and pagination
+    const params = {
+        page: currentAuditPage,
+        limit: logsPerPage
     };
 
-    return fetch(url, { ...options, headers });
-}
+    const userFilter = document.getElementById('auditLogUserFilter')?.value;
+    if (userFilter) params.user = userFilter;
 
+    const actionFilter = document.getElementById('auditLogActionFilter')?.value;
+    if (actionFilter) params.action = actionFilter;
+
+    const startDateFilter = document.getElementById('auditLogStartDateFilter')?.value;
+    if (startDateFilter) params.startDate = startDateFilter;
+
+    const endDateFilter = document.getElementById('auditLogEndDateFilter')?.value;
+    if (endDateFilter) params.endDate = endDateFilter;
+
+    const queryParams = new URLSearchParams(params).toString();
+
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/audit-logs?${queryParams}`, {
+            method: "GET"
+        });
+
+        if (!response) return; // User not authenticated, redirected
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const logs = await response.json();
+        console.log("Logs received:", logs);
+
+        // Clear table before inserting rows
+        tableBody.innerHTML = '';
+
+        // Update pagination buttons
+        pageIndicator.innerText = `Page ${currentAuditPage}`;
+        prevBtn.disabled = currentAuditPage === 1;
+        nextBtn.disabled = logs.length < logsPerPage;
+
+        // Display logs or empty state
+        if (!logs || logs.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No audit logs found.</td></tr>';
+        } else {
+            logs.forEach(log => {
+                const reason = (log.details?.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
+                const row = tableBody.insertRow();
+                row.className = "border-b border-gray-200 hover:bg-gray-50 transition-colors";
+
+                row.innerHTML = `
+                    <td class="py-3 px-6 text-left text-sm">${new Date(log.timestamp).toLocaleString()}</td>
+                    <td class="py-3 px-6 text-left font-medium">${log.user}</td>
+                    <td class="py-3 px-6 text-left">
+                        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs uppercase font-bold">${log.action}</span>
+                    </td>
+                    <td class="py-3 px-6 text-left text-sm italic text-gray-600">${reason}</td>
+                    <td class="py-3 px-6 text-left">
+                        <button class="text-indigo-600 hover:underline text-xs font-mono" 
+                                onclick='console.log(${JSON.stringify(log.details)})'>
+                            View Raw Details
+                        </button>
+                    </td>
+                `;
+            });
+        }
+
+    } catch (error) {
+        console.error('Error fetching audit logs:', error);
+        tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Error loading audit logs.</td></tr>';
+    }
+}
 
 // 1. Get the raw string from storage
 const userDataString = localStorage.getItem('loggedInUser');
