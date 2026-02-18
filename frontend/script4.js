@@ -4174,8 +4174,7 @@ function setDateFilter(type) {
 
 // 5. INITIALIZATION
 window.onload = () => {
-    // Optional: Load today's report by default
-    // setDateFilter('today');
+    fetchUsers();
 };
 
 // Update your refreshDashboard to be "Safe"
