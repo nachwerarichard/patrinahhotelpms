@@ -75,19 +75,14 @@ const API_URL = 'https://novouscloudpms-tz4s.onrender.com/api';
     let sessionHotelId = "";
 
     const finalizeLogin = (token, systemKey) => {
-        const username = document.getElementById('username').value.trim();
-        const password = document.getElementById('password').value.trim();
-        
-        localStorage.setItem('token', token);
-        localStorage.setItem('username', username);
-        localStorage.setItem('userRole', sessionRole);
-        localStorage.setItem('hotelId', sessionHotelId);
-
-        const targetUrl = SYSTEM_LINKS[systemKey];
-        // Redirect with encrypted context
-        window.location.replace(`${targetUrl}?autoLogin=true&u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}&r=${encodeURIComponent(sessionRole)}&h=${encodeURIComponent(sessionHotelId)}`);
-    };
-
+    const username = document.getElementById('username').value.trim();
+    const targetUrl = SYSTEM_LINKS[systemKey];
+    
+    // Notice we use 't' for token now, much safer than 'p' for password
+    const secureParams = `?autoLogin=true&u=${encodeURIComponent(username)}&t=${encodeURIComponent(token)}&r=${encodeURIComponent(sessionRole)}&h=${encodeURIComponent(sessionHotelId)}`;
+    
+    window.location.replace(`${targetUrl}${secureParams}`);
+};
     const createBtn = (label, color, onClickAction) => {
         const btn = document.createElement('button');
         btn.className = `w-full py-4 rounded-2xl shadow-lg text-white font-bold text-sm tracking-wide transition-all transform hover:scale-[1.02] active:scale-95 ${color}`;
