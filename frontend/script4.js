@@ -4985,12 +4985,9 @@ function closeModal() {
 }
 
 async function fetchUsers() {
-    const hotelId = getHotelId();
-    if (!hotelId) return;
-
     try {
         // Use authenticatedFetch so token & headers are handled automatically
-        const res = await authenticatedFetch(`${API_BASE_URL}/admin/users?hotelId=${hotelId}`, {
+        const res = await authenticatedFetch(`${API_BASE_URL}/admin/users`, {
             method: 'GET'
         });
 
@@ -5064,7 +5061,6 @@ async function handleSaveUser() {
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     const role = document.getElementById('role').value;
-    const hotelId = getHotelId();
 
     if (!username || !password) return alert("Please fill in credentials");
 
@@ -5075,7 +5071,6 @@ async function handleSaveUser() {
                 targetUsername: username, 
                 newPassword: password, 
                 newRole: role,
-                hotelId: hotelId // Ensure new staff is linked to this hotel
             })
         });
 
