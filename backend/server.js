@@ -3008,21 +3008,7 @@ app.delete('/inventory/:id', auth, async (req, res) => {
 });
 
 // GET /audit-logs (Scoped to Hotel)
-app.get('/audit-logs', auth, async (req, res) => {
-  try {
-    const { page = 1, limit = 10 } = req.query;
-    const query = { hotelId: req.user.hotelId }; // Mandatory filter
 
-    const logs = await AuditLog.find(query)
-      .sort({ timestamp: -1 })
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
-
-    res.json({ data: logs, total: await AuditLog.countDocuments(query) });
-  } catch (err) {
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
 
 // --- NEW REPORTING ENDPOINTS FOR DASHBOARD ---
 
