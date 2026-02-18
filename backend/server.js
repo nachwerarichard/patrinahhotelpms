@@ -160,10 +160,11 @@ mongoose.connect(mongoURI)
     });
 // --- 5. Define Mongoose Schemas and Models ---
 const auditLogSchema = new mongoose.Schema({
-hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this    timestamp: { type: Date, default: Date.now },
-    action: { type: String, required: true }, // e.g., 'Booking Added', 'Room Status Updated', 'Booking Deleted'
-    user: { type: String, required: true }, // Username of the user who performed the action
-    details: { type: mongoose.Schema.Types.Mixed } // Flexible field for storing relevant data (e.g., { bookingId: 'BKG001', oldStatus: 'clean', newStatus: 'dirty', reason: '...' })
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+    timestamp: { type: Date, default: Date.now }, // Ensure this is a separate line
+    action: { type: String, required: true },
+    user: { type: String, required: true },
+    details: { type: mongoose.Schema.Types.Mixed }
 });
 const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 
@@ -1990,15 +1991,18 @@ app.get('/api/incidental-charges/booking-custom-id/:bookingCustomId', auth, asyn
 });
 
 app.get('/api/audit-logs', auth, async (req, res) => {
+    // Convert to Numbers immediately to avoid math errors
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const { user, action, startDate, endDate } = req.query;
 
-    const { user, action, startDate, endDate, page = 1, limit = 20 } = req.query;
-
+    // Ensure we are filtering by the logged-in user's hotel
     const filter = { hotelId: req.user.hotelId };
 
     if (user) filter.user = { $regex: user, $options: 'i' };
     if (action) filter.action = { $regex: action, $options: 'i' };
 
-    if (startDate || endDate) {
+ if (startDate || endDate) {
         filter.timestamp = {};
         if (startDate) filter.timestamp.$gte = new Date(startDate);
         if (endDate) {
@@ -2007,19 +2011,21 @@ app.get('/api/audit-logs', auth, async (req, res) => {
             filter.timestamp.$lte = end;
         }
     }
-
     try {
         const logs = await AuditLog.find(filter)
             .sort({ timestamp: -1 })
             .skip((page - 1) * limit)
-            .limit(Number(limit));
+            .limit(limit);
 
+        // Debugging: Log this to your terminal to see if the DB actually returns items
+        console.log(`Found ${logs.length} logs for Hotel: ${req.user.hotelId}`);
+        
         res.json(logs);
-
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching logs', error: error.message });
+        res.status(500).json({ message: 'Error', error: error.message });
     }
 });
+
 
 
 // Public availability check
@@ -2504,15 +2510,7 @@ const Transaction = mongoose.model('Transaction', transactionSchema);
 
 
 // --- Secure Logging Function ---
-async function createAuditLog(action, details) {
-  try {
-    const log = new AuditLog({ action, details });
-    await log.save();
-    console.log(`📝 Audit Log: ${action} -`, details);
-  } catch (err) {
-    console.error('❌ Failed to create audit log:', err);
-  }
-}
+
 
 // --- Email Transporter ---
 
