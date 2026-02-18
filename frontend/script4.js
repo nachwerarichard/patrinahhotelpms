@@ -743,6 +743,7 @@ loginForm.addEventListener('submit', async function(event) {
             } else {
                 // If it's a Single Page Application (SPA):
                 await showDashboard(data.user.username, data.user.role);
+                fetchUsers(); // Refresh the table after saving
             }
 
             // 3. BACKGROUND TASKS (like audit logs)
