@@ -95,38 +95,33 @@
                 phoneNumber: document.getElementById('phoneNumber').value
             };
 
-         try {
+        try {
     const response = await fetch(`${API_BASE_URL}/public/onboard-hotel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(hotelData)
     });
 
-    if(response.ok) {
+    // Read the response once as text FIRST
+    const rawText = await response.text();
+    let data;
+    try {
+        data = JSON.parse(rawText); // Try to turn it into JSON
+    } catch (e) {
+        data = { message: rawText }; // Fallback to raw text if it's an HTML 404 page
+    }
+
+    if (response.ok) {
         formContainer.classList.add('hidden');
         successState.classList.remove('hidden');
     } else { 
-        // --- DIAGNOSTIC LOGGING START ---
-        console.error("--- Server Rejected Request ---");
-        console.error("Status Code:", response.status); // Should show 401
-        console.error("Status Text:", response.statusText);
-        
-        // Check if there are any specific security headers
-        const authHeader = response.headers.get('WWW-Authenticate');
-        if (authHeader) console.warn("Security Header Found:", authHeader);
-
-        try {
-            const errorData = await response.json();
-            console.error("Server Error Body:", errorData);
-            alert(`Submission Error (${response.status}): ${errorData.error || errorData.message || "Unauthorized access"}`);
-        } catch (jsonErr) {
-            // If the server sends a 401, it might send HTML instead of JSON
-            const textData = await response.text();
-            console.error("Server Response (Text):", textData);
-            alert(`Access Denied (401): The server requires admin authentication.`);
-        }
-        // --- DIAGNOSTIC LOGGING END ---
+        console.error("Server Error:", response.status, data);
+        alert(`Error (${response.status}): ${data.error || data.message || "Unknown Error"}`);
     }
+} catch (err) {
+    console.error("Connection Error:", err);
+    alert("Could not connect to the server.");
+}
 } catch (err) {
     console.error("Network/Connection Error:", err);
     alert("The connection to the registration server was interrupted.");
