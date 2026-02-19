@@ -47,82 +47,52 @@ const userSchema = new mongoose.Schema({
 userSchema.index({ hotelId: 1, username: 1 }, { unique: true });
 const User = mongoose.model('User', userSchema);
 
-app.post('/api/public/onboard-hotel', async (req, res) => {
+app.post('/api/public/hotel', async (req, res) => {
     const { name, location, phoneNumber, email } = req.body;
-    
-    console.log(`[Onboarding] New request received for: ${name} (${email})`);
     
     let savedHotelId = null;
 
     try {
-        // 1. Validation check
         if (!name || !location || !phoneNumber || !email) {
             return res.status(400).json({ error: "All fields are required." });
         }
 
-        // 2. Check if user already exists
-        // FIX: Search by 'username' because 'email' is not a field in your userSchema
+        // Search by username because email isn't in your UserSchema
         const existingUser = await User.findOne({ username: email });
         if (existingUser) {
-            return res.status(400).json({ error: "A user with this email/username already exists." });
+            return res.status(400).json({ error: "A user with this email already exists." });
         }
 
-        // 3. Create Hotel Record (Uses Hotel Schema)
-        const newHotel = new Hotel({ 
-            name, 
-            location, 
-            phoneNumber, 
-            email // This is allowed here because Hotel schema has email
-        });
-
+        // 1. Save to Hotel Schema
+        const newHotel = new Hotel({ name, location, phoneNumber, email });
         const savedHotel = await newHotel.save();
         savedHotelId = savedHotel._id; 
-        console.log(`[Onboarding] Hotel record created: ${savedHotelId}`);
 
-        // 4. Create Admin Credentials (Uses User Schema)
+        // 2. Save to User Schema (Only using valid fields)
         const defaultAdmin = new User({
-            hotelId: savedHotel._id, // LINKING the two schemas
-            username: email,         // Correct field
-            password: 'admin',       // Correct field
-            role: 'admin',           // Correct field
-            isInitial: true          // Correct field
-            // REMOVED: 'email: email' and 'status: active' because they are NOT in your userSchema
+            hotelId: savedHotel._id,
+            username: email, 
+            password: 'admin',
+            role: 'admin',
+            isInitial: true
+            // Removed 'email' and 'status' - they caused your schema to reject the save
         });
 
         await defaultAdmin.save();
-        console.log(`[Onboarding] Admin user created for: ${email}`);
 
-        // 5. Success Response
         res.status(201).json({ 
             message: "Hotel Onboarded Successfully ✅",
             hotelId: savedHotel._id,
-            credentials: {
-                username: email,
-                password: 'admin',
-                role: 'admin'
-            }
+            credentials: { username: email, role: 'admin' }
         });
 
     } catch (err) {
-        console.error("CRITICAL ONBOARDING ERROR:", err);
-        
-        // 6. Rollback Logic: If User creation failed, delete the Hotel we just made
         if (savedHotelId) {
-            try {
-                await Hotel.findByIdAndDelete(savedHotelId);
-                console.log(`[Rollback] Deleted orphaned hotel: ${savedHotelId}`);
-            } catch (rollbackErr) {
-                console.error("[Rollback] FAILED:", rollbackErr);
-            }
+            await Hotel.findByIdAndDelete(savedHotelId);
         }
-
-        res.status(500).json({ 
-            error: "Core server error during onboarding.",
-            details: err.message 
-        });
+        res.status(500).json({ error: "Onboarding failed", details: err.message });
     }
 });
-
 
 async function auth(req, res, next) {
     const authHeader = req.headers.authorization;
