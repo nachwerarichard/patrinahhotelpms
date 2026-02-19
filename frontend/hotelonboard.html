@@ -53,7 +53,8 @@
                 <p class="text-[10px] text-amber-600 uppercase font-black tracking-widest mb-1">Onboarding Information</p>
                 <p class="text-xs text-slate-600 leading-relaxed">
                     By submitting this form, you are initiating your digital property setup. 
-                    You will receive a unique <span class="font-bold">Hotel ID</span> via email to access your management suite.
+                    Your <span class="font-bold">Professional Email</span> will serve as your login username. 
+                    Initial password defaults to <span class="font-bold text-amber-700">admin</span>.
                 </p>
             </div>
 
@@ -68,7 +69,10 @@
             <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
         </div>
         <h2 class="luxury-title text-3xl text-slate-900 mb-2">Registration Received</h2>
-        <p class="text-slate-500 mb-8">Your property is being indexed. Please check your email for your unique Hotel ID and temporary credentials.</p>
+        <p class="text-slate-500 mb-8">
+            Your property is being indexed. You may now log in to the suite using your 
+            <span class="font-bold text-slate-800">Email Address</span> and the temporary passkey <span class="font-bold text-amber-600">admin</span>.
+        </p>
         <button onclick="window.location.reload()" class="text-sm font-bold text-amber-600 uppercase tracking-widest hover:text-amber-700">Register another property</button>
     </div>
 
@@ -92,8 +96,6 @@
             };
 
             try {
-                // NOTE: For a public form, your backend endpoint must be "Public" 
-                // (No Bearer Token required) or use a specific "Public-Onboarding" route.
                 const response = await fetch(`${API_BASE_URL}/admin/onboard-hotel`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
