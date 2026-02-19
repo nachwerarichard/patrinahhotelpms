@@ -95,26 +95,45 @@
                 phoneNumber: document.getElementById('phoneNumber').value
             };
 
-            try {
-                const response = await fetch(`${API_BASE_URL}/admin/onboard-hotel`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(hotelData)
-                });
+         try {
+    const response = await fetch(`${API_BASE_URL}/admin/onboard-hotel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(hotelData)
+    });
 
-                if(response.ok) {
-                    formContainer.classList.add('hidden');
-                    successState.classList.remove('hidden');
-                } else { 
-                    const errorData = await response.json();
-                    alert(`Submission Error: ${errorData.message || "Please verify your details and try again."}`); 
-                }
-            } catch (err) {
-                alert("The connection to the registration server was interrupted.");
-            } finally {
-                btn.disabled = false;
-                btn.textContent = "Request Partner Access";
-            }
+    if(response.ok) {
+        formContainer.classList.add('hidden');
+        successState.classList.remove('hidden');
+    } else { 
+        // --- DIAGNOSTIC LOGGING START ---
+        console.error("--- Server Rejected Request ---");
+        console.error("Status Code:", response.status); // Should show 401
+        console.error("Status Text:", response.statusText);
+        
+        // Check if there are any specific security headers
+        const authHeader = response.headers.get('WWW-Authenticate');
+        if (authHeader) console.warn("Security Header Found:", authHeader);
+
+        try {
+            const errorData = await response.json();
+            console.error("Server Error Body:", errorData);
+            alert(`Submission Error (${response.status}): ${errorData.error || errorData.message || "Unauthorized access"}`);
+        } catch (jsonErr) {
+            // If the server sends a 401, it might send HTML instead of JSON
+            const textData = await response.text();
+            console.error("Server Response (Text):", textData);
+            alert(`Access Denied (401): The server requires admin authentication.`);
+        }
+        // --- DIAGNOSTIC LOGGING END ---
+    }
+} catch (err) {
+    console.error("Network/Connection Error:", err);
+    alert("The connection to the registration server was interrupted.");
+} finally {
+    btn.disabled = false;
+    btn.textContent = "Request Partner Access";
+}
         });
     </script>
 </body>
