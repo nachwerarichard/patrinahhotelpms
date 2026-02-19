@@ -117,7 +117,7 @@
     } else { 
         console.error("Server Error:", response.status, data);
         alert(`Error (${response.status}): ${data.error || data.message || "Unknown Error"}`);
-    }
+    
 } catch (err) {
     console.error("Connection Error:", err);
     alert("Could not connect to the server.");
