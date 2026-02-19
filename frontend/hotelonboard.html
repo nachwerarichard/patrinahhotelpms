@@ -3,77 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hotel Onboarding | Super Admin</title>
+    <title>Patrinah | Partner Onboarding</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; letter-spacing: -0.01em; }
+        .luxury-title { font-family: 'Playfair Display', serif; }
+        .gold-gradient { background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); }
+        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
+        
+        .success-animation { animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center p-6">
+<body class="bg-[#fcfaf7] text-slate-900 min-h-screen flex items-center justify-center p-6">
 
-    <div class="max-w-2xl w-full bg-white rounded-xl shadow-lg overflow-hidden">
-        <div class="bg-indigo-600 p-6">
-            <h1 class="text-2xl font-bold text-white">Hotel Onboarding</h1>
-            <p class="text-indigo-100 text-sm">Register a new property and generate default admin credentials.</p>
+    <div id="registrationContainer" class="max-w-2xl w-full glass-card rounded-[2.5rem] shadow-2xl overflow-hidden">
+        <div class="bg-slate-900 p-10 text-center">
+            <h1 class="luxury-title text-4xl text-amber-400 tracking-tight">Join Novous</h1>
+            <div class="h-px w-12 bg-amber-400 mx-auto mt-4 opacity-50"></div>
+            <p class="text-slate-400 text-[10px] uppercase tracking-[0.3em] mt-4 font-bold">Property Registration Portal</p>
         </div>
 
-        <form id="onboardForm" class="p-8 space-y-6">
-            <div>
-                <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Property Details</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Hotel Name</label>
-                        <input type="text" id="name" required placeholder="Grand Plaza Hotel"
-                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Location/Address</label>
-                        <input type="text" id="location" required placeholder="Nairobi, Kenya"
-                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Primary Email</label>
-                        <input type="email" id="email" required placeholder="contact@hotel.com"
-                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Phone Number</label>
-                        <input type="tel" id="phoneNumber" required placeholder="+254..."
-                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
+        <form id="publicOnboardForm" class="p-10 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Hotel Name</label>
+                    <input type="text" id="name" placeholder="e.g. Grand Valais" required 
+                        class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-amber-400 transition-all">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Location</label>
+                    <input type="text" id="location" placeholder="e.g. Geneva, CH" required 
+                        class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-amber-400 transition-all">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Professional Email</label>
+                    <input type="email" id="email" placeholder="concierge@hotel.com" required 
+                        class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-amber-400 transition-all">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Contact Phone</label>
+                    <input type="tel" id="phoneNumber" placeholder="+44 ..." required 
+                        class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-amber-400 transition-all">
                 </div>
             </div>
 
-            <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <h2 class="text-sm font-bold text-blue-800 uppercase tracking-wider">Default Admin Account</h2>
-                <p class="text-sm text-blue-600 mt-1">A default admin user will be created automatically:</p>
-                <div class="mt-2 text-sm font-mono bg-white p-2 rounded border border-blue-200">
-                    <div>Username: <span class="font-bold">admin</span></div>
-                    <div>Password: <span class="font-bold">admin</span></div>
-                </div>
-                <p class="text-xs text-blue-500 mt-2">Note: The hotel manager should change this password upon first login.</p>
+            <div class="bg-amber-50/50 p-6 rounded-[1.5rem] border border-amber-100">
+                <p class="text-[10px] text-amber-600 uppercase font-black tracking-widest mb-1">Onboarding Information</p>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                    By submitting this form, you are initiating your digital property setup. 
+                    Your <span class="font-bold">Professional Email</span> will serve as your login username. 
+                    Initial password defaults to <span class="font-bold text-amber-700">admin</span>.
+                </p>
             </div>
 
-            <div id="statusMsg" class="hidden p-4 rounded-md text-sm"></div>
-
-            <button type="submit" id="submitBtn"
-                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
-                Complete Onboarding
+            <button type="submit" id="submitBtn" class="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold hover:bg-amber-600 shadow-xl transition-all duration-300 transform active:scale-[0.98]">
+                Request Partner Access
             </button>
         </form>
     </div>
 
+    <div id="successState" class="hidden max-w-md w-full glass-card rounded-[2.5rem] p-10 text-center success-animation">
+        <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+        </div>
+        <h2 class="luxury-title text-3xl text-slate-900 mb-2">Registration Received</h2>
+        <p class="text-slate-500 mb-8">
+            Your property is being indexed. You may now log in to the suite using your 
+            <span class="font-bold text-slate-800">Email Address</span> and the temporary passkey <span class="font-bold text-amber-600">admin</span>.
+        </p>
+        <button onclick="window.location.reload()" class="text-sm font-bold text-amber-600 uppercase tracking-widest hover:text-amber-700">Register another property</button>
+    </div>
+
     <script>
-      document.getElementById('onboardForm').addEventListener('submit', async (e) => {
+        const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
+
+       document.getElementById('publicOnboardForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-
-    const submitBtn = document.getElementById('submitBtn');
-    const statusMsg = document.getElementById('statusMsg');
+    const btn = document.getElementById('submitBtn');
+    const formContainer = document.getElementById('registrationContainer');
+    const successState = document.getElementById('successState');
     
-    // UI Loading State
-    submitBtn.disabled = true;
-    submitBtn.innerText = 'Creating Hotel & Admin...';
-    statusMsg.className = 'hidden';
+    // UI Feedback
+    btn.disabled = true;
+    btn.textContent = "Processing Registration...";
 
-    // Collect Data
-    const formData = {
+    const hotelData = {
         name: document.getElementById('name').value,
         location: document.getElementById('location').value,
         email: document.getElementById('email').value,
@@ -81,39 +97,46 @@
     };
 
     try {
-        // We assume the Super Admin's token is stored in localStorage
-        const token = localStorage.getItem('token'); 
-
-        const response = await fetch('/api/admin/onboard-hotel', {
+        const response = await fetch(`${API_BASE_URL}/public/onboard-hotel`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(formData)
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(hotelData)
         });
 
-        const result = await response.json();
+        // 1. Read the response text once
+        const rawText = await response.text();
+        let data;
 
+        // 2. Safely parse JSON
+        try {
+            data = JSON.parse(rawText);
+        } catch (parseError) {
+            data = { message: rawText }; // Fallback for 404 HTML pages
+        }
+
+        // 3. Handle Success vs Error
         if (response.ok) {
-            // Success State
-            statusMsg.innerText = "Success! Hotel onboarded. Temporary credentials: admin / admin";
-            statusMsg.className = "p-4 rounded-md text-sm bg-green-100 text-green-800 block";
-            document.getElementById('onboardForm').reset();
-            
-            // Optional: Redirect to a Dashboard or List view after 3 seconds
-            // setTimeout(() => { window.location.href = '/admin/hotels'; }, 3000);
+            formContainer.classList.add('hidden');
+            successState.classList.remove('hidden');
+            console.log("Success:", data);
         } else {
-            // Error State
-            throw new Error(result.error || 'Failed to onboard hotel');
+            console.error(`Server Error (${response.status}):`, data);
+            
+            // Helpful hint for 404s
+            if (response.status === 404) {
+                alert("Error 404: The server endpoint was not found. Please ensure your backend is deployed and the URL path is correct.");
+            } else {
+                alert(`Submission Error (${response.status}): ${data.error || data.message || "Unknown error"}`);
+            }
         }
 
     } catch (err) {
-        statusMsg.innerText = "Error: " + err.message;
-        statusMsg.className = "p-4 rounded-md text-sm bg-red-100 text-red-800 block";
+        console.error("Network/Connection Error:", err);
+        alert("The connection to the registration server was interrupted or failed.");
     } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerText = 'Complete Onboarding';
+        // Reset button state regardless of outcome
+        btn.disabled = false;
+        btn.textContent = "Request Partner Access";
     }
 });
     </script>
