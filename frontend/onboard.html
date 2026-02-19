@@ -25,19 +25,12 @@
         <div class="max-w-md w-full glass-card rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
             <div class="bg-slate-900 p-10 text-center">
                 <h1 class="luxury-title text-4xl text-amber-400 tracking-tight">Patrinah</h1>
-                <div class="h-px w-12 bg-amber-400 mx-auto mt-4 opacity-50"></div>
                 <p class="text-slate-400 text-[10px] uppercase tracking-[0.3em] mt-4 font-bold">Executive Access Only</p>
             </div>
             <form id="loginForm" class="p-10 space-y-6">
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Identity</label>
-                    <input type="text" id="loginUser" placeholder="Super Admin Username" required class="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-400 outline-none transition">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Passkey</label>
-                    <input type="password" id="loginPass" placeholder="••••••••" required class="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-400 outline-none transition">
-                </div>
-                <button type="submit" class="w-full bg-slate-900 text-white font-semibold py-4 rounded-xl hover:bg-amber-600 transition-all duration-300 shadow-xl tracking-wide">Authenticate</button>
+                <input type="text" id="loginUser" placeholder="Username" required class="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-400 outline-none">
+                <input type="password" id="loginPass" placeholder="••••••••" required class="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-400 outline-none">
+                <button type="submit" class="w-full bg-slate-900 text-white font-semibold py-4 rounded-xl hover:bg-amber-600 transition-all shadow-xl">Authenticate</button>
             </form>
         </div>
     </div>
@@ -45,34 +38,25 @@
     <div id="dashboardSection" class="hidden">
         <nav class="bg-slate-900/95 backdrop-blur-md text-white p-5 sticky top-0 z-40 border-b border-white/10">
             <div class="max-w-7xl mx-auto flex justify-between items-center">
-                <div class="flex items-center gap-4">
-                    <span class="luxury-title text-2xl text-amber-400">Patrinah</span>
-                    <span class="h-4 w-px bg-slate-700"></span>
-                    <span class="text-[10px] text-slate-400 tracking-[0.2em] font-light">SUPER ADMIN PORTAL</span>
-                </div>
-                <button onclick="logout()" class="text-[11px] font-bold uppercase tracking-wider border border-slate-700 px-5 py-2 rounded-full hover:bg-red-500/10 hover:border-red-500 transition-all">Terminal Exit</button>
+                <span class="luxury-title text-2xl text-amber-400">Patrinah <span class="text-xs text-slate-400 ml-2">SUPER ADMIN</span></span>
+                <button onclick="logout()" class="text-[11px] font-bold uppercase tracking-wider border border-slate-700 px-5 py-2 rounded-full hover:bg-red-500/10 hover:border-red-500 transition-all">Exit</button>
             </div>
         </nav>
 
         <main class="max-w-7xl mx-auto p-10">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
-                <div>
-                    <h2 class="luxury-title text-5xl text-slate-900">Portfolio</h2>
-                    <p class="text-slate-500 mt-2 font-light italic">Managing property identities and system access keys.</p>
-                </div>
-                <button onclick="openModal('onboardModal')" class="btn-luxury gold-gradient text-white px-8 py-4 rounded-2xl font-bold shadow-2xl flex items-center gap-3">
-                    <span class="text-xl">+</span> Onboard Property
-                </button>
+            <div class="flex justify-between items-center mb-12">
+                <h2 class="luxury-title text-5xl text-slate-900">Portfolio</h2>
+                <button onclick="openModal('onboardModal')" class="btn-luxury gold-gradient text-white px-8 py-4 rounded-2xl font-bold shadow-2xl">+ Onboard Property</button>
             </div>
 
-            <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+            <div class="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
                 <table class="w-full text-left">
-                    <thead class="bg-slate-50/50 text-slate-400 text-[10px] uppercase tracking-[0.15em]">
+                    <thead class="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-widest">
                         <tr>
-                            <th class="p-6 border-b font-bold">Property Details</th>
-                            <th class="p-6 border-b font-bold">Hotel ID (Login)</th>
-                            <th class="p-6 border-b font-bold">Location & Contact</th>
-                            <th class="p-6 border-b font-bold text-right">Management</th>
+                            <th class="p-6">Property</th>
+                            <th class="p-6">Hotel ID</th>
+                            <th class="p-6">Contact</th>
+                            <th class="p-6 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="hotelTableBody" class="divide-y divide-slate-50"></tbody>
@@ -83,21 +67,37 @@
 
     <div id="onboardModal" class="hidden fixed inset-0 z-50 modal-overlay flex items-center justify-center p-4">
         <div class="bg-white max-w-2xl w-full rounded-[2.5rem] shadow-2xl overflow-hidden">
-            <div class="bg-slate-900 p-8 flex justify-between items-center">
-                <div>
-                    <h3 class="luxury-title text-2xl text-amber-400">Property Registration</h3>
-                    <p class="text-slate-400 text-[10px] tracking-widest uppercase">Asset Initialization</p>
-                </div>
-                <button onclick="closeModal('onboardModal')" class="text-white text-2xl">&times;</button>
+            <div class="bg-slate-900 p-8 flex justify-between items-center text-white">
+                <h3 class="luxury-title text-2xl text-amber-400">Registration</h3>
+                <button onclick="closeModal('onboardModal')" class="text-2xl">&times;</button>
             </div>
             <form id="onboardForm" class="p-10 space-y-6">
                 <div class="grid grid-cols-2 gap-6">
-                    <input type="text" id="name" placeholder="Hotel Name" required class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
-                    <input type="text" id="location" placeholder="Location" required class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
-                    <input type="email" id="email" placeholder="Email" required class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
-                    <input type="tel" id="phoneNumber" placeholder="Phone" required class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
+                    <input type="text" id="name" placeholder="Hotel Name" required class="p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-amber-400">
+                    <input type="text" id="location" placeholder="Location" required class="p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-amber-400">
+                    <input type="email" id="email" placeholder="Email" required class="p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-amber-400">
+                    <input type="tel" id="phoneNumber" placeholder="Phone" required class="p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-amber-400">
                 </div>
-                <button type="submit" id="submitBtn" class="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold">Confirm Asset Entry</button>
+                <button type="submit" id="submitBtn" class="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold">Confirm Entry</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="editModal" class="hidden fixed inset-0 z-50 modal-overlay flex items-center justify-center p-4">
+        <div class="bg-white max-w-2xl w-full rounded-[2.5rem] shadow-2xl overflow-hidden">
+            <div class="bg-slate-900 p-8 flex justify-between items-center text-white">
+                <h3 class="luxury-title text-2xl text-amber-400">Update Asset</h3>
+                <button onclick="closeModal('editModal')" class="text-2xl">&times;</button>
+            </div>
+            <form id="editForm" class="p-10 space-y-6">
+                <input type="hidden" id="editHotelId">
+                <div class="grid grid-cols-2 gap-6">
+                    <input type="text" id="editName" placeholder="Hotel Name" class="p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-amber-400">
+                    <input type="text" id="editLocation" placeholder="Location" class="p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-amber-400">
+                    <input type="email" id="editEmail" placeholder="Email" class="p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-amber-400">
+                    <input type="tel" id="editPhone" placeholder="Phone" class="p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-amber-400">
+                </div>
+                <button type="submit" class="w-full py-5 gold-gradient text-white rounded-2xl font-bold">Save Changes</button>
             </form>
         </div>
     </div>
@@ -105,6 +105,18 @@
     <script>
         const API_BASE_URL = 'https://novouscloudpms-tz4s.onrender.com/api';
         let hotels = [];
+
+        // --- UTILITIES ---
+        function getHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('superToken')}`
+            };
+        }
+
+        function showMessage(msg, isError = false) {
+            alert(msg); // Basic alert for now, you can replace with luxury toast
+        }
 
         // --- AUTH ---
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -123,10 +135,10 @@
                 if (response.ok && data.user.role === 'super-admin') {
                     localStorage.setItem('superToken', data.token);
                     initDashboard();
-                } else { 
-                    alert("Unauthorized: Executive Access Only."); 
+                } else {
+                    showMessage("Access Denied: Invalid Credentials.", true);
                 }
-            } catch (err) { alert("Core Server Connectivity Error."); }
+            } catch (err) { showMessage("Server Offline.", true); }
         });
 
         function initDashboard() {
@@ -135,21 +147,15 @@
             fetchHotels();
         }
 
-        function logout() { 
-            localStorage.removeItem('superToken'); 
-            location.reload(); 
-        }
+        function logout() { localStorage.removeItem('superToken'); location.reload(); }
 
-        // --- FETCH & RENDER ---
+        // --- CORE DATA ---
         async function fetchHotels() {
-            const token = localStorage.getItem('superToken');
             try {
-                const response = await fetch(`${API_BASE_URL}/admin/hotels`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await fetch(`${API_BASE_URL}/admin/hotels`, { headers: getHeaders() });
                 hotels = await response.json();
                 renderTable();
-            } catch (e) { console.error("Fetch failed"); }
+            } catch (e) { console.error("Fetch error"); }
         }
 
         function renderTable() {
@@ -157,27 +163,81 @@
             body.innerHTML = hotels.map(hotel => `
                 <tr class="hover:bg-slate-50 transition-all">
                     <td class="p-6">
-                        <div class="font-bold text-slate-800">${hotel.name}</div>
-                        <div class="text-[10px] text-amber-600 uppercase tracking-widest">@${hotel.name.toLowerCase().replace(/\s/g, '')}</div>
+                        <div class="font-bold text-slate-800 text-lg">${hotel.name}</div>
+                        <div class="text-[10px] text-amber-600 font-bold uppercase tracking-widest">@${hotel.name.toLowerCase().replace(/\s/g, '')}</div>
                     </td>
+                    <td class="p-6"><code class="bg-slate-100 px-3 py-1 rounded text-xs">${hotel._id}</code></td>
                     <td class="p-6">
-                        <code class="bg-slate-100 px-2 py-1 rounded text-xs text-slate-600">${hotel._id}</code>
-                    </td>
-                    <td class="p-6">
-                        <div class="text-sm text-slate-600">${hotel.location}</div>
+                        <div class="text-sm font-medium text-slate-600">${hotel.location}</div>
                         <div class="text-xs text-slate-400">${hotel.email}</div>
                     </td>
                     <td class="p-6 text-right space-x-4">
-                        <button onclick="deleteHotel('${hotel._id}')" class="text-red-400 hover:text-red-600 text-[10px] font-bold uppercase">Retire</button>
+                        <button onclick="openEdit('${hotel._id}')" class="text-slate-400 hover:text-amber-600 font-bold uppercase text-[10px]">Edit</button>
+                        <button onclick="deleteHotel('${hotel._id}')" class="text-slate-300 hover:text-red-500 font-bold uppercase text-[10px]">Retire</button>
                     </td>
                 </tr>
             `).join('');
         }
 
-        // --- ONBOARDING ---
+        // --- DELETE ---
+        async function deleteHotel(hotelId) {
+            if (!confirm('Permanent Action: Retire this asset from the portfolio?')) return;
+            try {
+                // Fixed URL to /hotel/:id to match your backend
+                const response = await fetch(`${API_BASE_URL}/admin/hotel/${hotelId}`, {
+                    method: 'DELETE',
+                    headers: getHeaders()
+                });
+                if (response.ok) {
+                    showMessage('Asset Successfully Retired');
+                    fetchHotels();
+                } else { showMessage('Registry Error', true); }
+            } catch (error) { showMessage('Connection Failed', true); }
+        }
+
+        // --- EDIT ---
+        function openEdit(id) {
+            const hotel = hotels.find(h => h._id === id);
+            if (!hotel) return;
+            document.getElementById('editHotelId').value = hotel._id;
+            document.getElementById('editName').value = hotel.name;
+            document.getElementById('editLocation').value = hotel.location;
+            document.getElementById('editEmail').value = hotel.email;
+            document.getElementById('editPhone').value = hotel.phoneNumber || '';
+            openModal('editModal');
+        }
+
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editHotelId').value;
+            const updatedData = {
+                name: document.getElementById('editName').value,
+                location: document.getElementById('editLocation').value,
+                email: document.getElementById('editEmail').value,
+                phoneNumber: document.getElementById('editPhone').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/hotel/${id}`, {
+                    method: 'PUT',
+                    headers: getHeaders(),
+                    body: JSON.stringify(updatedData)
+                });
+                if (response.ok) {
+                    showMessage("Asset Details Updated");
+                    closeModal('editModal');
+                    fetchHotels();
+                }
+            } catch (err) { showMessage("Update failed", true); }
+        });
+
+        // --- CREATE ---
         document.getElementById('onboardForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const token = localStorage.getItem('superToken');
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.textContent = "Processing...";
+
             const hotelData = {
                 name: document.getElementById('name').value,
                 location: document.getElementById('location').value,
@@ -188,47 +248,22 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/admin/onboard-hotel`, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json', 
-                        'Authorization': `Bearer ${token}` 
-                    },
+                    headers: getHeaders(),
                     body: JSON.stringify(hotelData)
                 });
-
                 if(response.ok) {
                     closeModal('onboardModal');
                     fetchHotels();
-                    alert("Asset Registered.");
-                } else { alert("Registry Failure."); }
-            } catch (err) { alert("Connection Error."); }
+                    document.getElementById('onboardForm').reset();
+                    showMessage("Asset Registered Successfully");
+                }
+            } catch (err) { showMessage("Connection Error", true); }
+            finally { btn.disabled = false; btn.textContent = "Confirm Asset Entry"; }
         });
 
-        // --- DELETE (FIXED) ---
-        async function deleteHotel(hotelId) {
-            if (!confirm('Permanently retire this asset?')) return;
-            const token = localStorage.getItem('superToken');
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/admin/hotels/${hotelId}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    alert('Asset Retired Successfully');
-                    fetchHotels();
-                } else {
-                    const err = await response.json();
-                    alert('Error: ' + (err.error || 'Unauthorized'));
-                }
-            } catch (error) {
-                alert('Server Connection Failed');
-            }
-        }
-
-        // --- UTILS ---
-        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        // --- MODALS ---
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.body.style.overflow = 'auto'; }
 
         if (localStorage.getItem('superToken')) initDashboard();
     </script>
