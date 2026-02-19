@@ -96,7 +96,7 @@
             };
 
          try {
-    const response = await fetch(`${API_BASE_URL}/admin/onboard-hotel`, {
+    const response = await fetch(`${API_BASE_URL}/public/onboard-hotel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(hotelData)
