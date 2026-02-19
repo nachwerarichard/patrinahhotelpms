@@ -30,6 +30,23 @@ app.use(cors({
   ],
   credentials: true
 }));
+
+app.use(express.json()); // This should also be before your routes to parse JSON bodies
+ 
+const userSchema = new mongoose.Schema({
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' },
+    username: { type: String, required: true }, // Removed unique: true
+    password: { type: String, required: true },
+    role: { 
+        type: String, 
+        enum: ['super-admin', 'admin', 'bar', 'housekeeper', 'cashier', 'Front office'], 
+        default: 'admin' 
+    },
+    isInitial: { type: Boolean, default: false } // For default credentials
+});
+userSchema.index({ hotelId: 1, username: 1 }, { unique: true });
+const User = mongoose.model('User', userSchema);
+
 app.post('/api/public/onboard-hotel', async (req, res) => {
     const { name, location, phoneNumber, email } = req.body;
     
@@ -109,23 +126,6 @@ app.post('/api/public/onboard-hotel', async (req, res) => {
         });
     }
 });
-
-
-app.use(express.json()); // This should also be before your routes to parse JSON bodies
- 
-const userSchema = new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' },
-    username: { type: String, required: true }, // Removed unique: true
-    password: { type: String, required: true },
-    role: { 
-        type: String, 
-        enum: ['super-admin', 'admin', 'bar', 'housekeeper', 'cashier', 'Front office'], 
-        default: 'admin' 
-    },
-    isInitial: { type: Boolean, default: false } // For default credentials
-});
-userSchema.index({ hotelId: 1, username: 1 }, { unique: true });
-const User = mongoose.model('User', userSchema);
 
 
 async function auth(req, res, next) {
