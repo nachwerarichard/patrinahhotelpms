@@ -50,7 +50,6 @@ const User = mongoose.model('User', userSchema);
 app.post('/api/public/onboard-hotel', async (req, res) => {
     const { name, location, phoneNumber, email } = req.body;
     
-    // Detailed Request Logging
     console.log(`[Onboarding] New request received for: ${name} (${email})`);
     
     let savedHotelId = null;
@@ -58,43 +57,40 @@ app.post('/api/public/onboard-hotel', async (req, res) => {
     try {
         // 1. Validation check
         if (!name || !location || !phoneNumber || !email) {
-            console.warn("[Onboarding] Validation Failed: Missing required fields.");
             return res.status(400).json({ error: "All fields are required." });
         }
 
         // 2. Check if user already exists
-        const existingUser = await User.findOne({ email });
+        // FIX: Search by 'username' because 'email' is not a field in your userSchema
+        const existingUser = await User.findOne({ username: email });
         if (existingUser) {
-            console.warn(`[Onboarding] Conflict: User with email ${email} already exists.`);
-            return res.status(400).json({ error: "A user with this email already exists." });
+            return res.status(400).json({ error: "A user with this email/username already exists." });
         }
 
-        // 3. Create Hotel Record
+        // 3. Create Hotel Record (Uses Hotel Schema)
         const newHotel = new Hotel({ 
             name, 
             location, 
             phoneNumber, 
-            email 
+            email // This is allowed here because Hotel schema has email
         });
 
         const savedHotel = await newHotel.save();
         savedHotelId = savedHotel._id; 
         console.log(`[Onboarding] Hotel record created: ${savedHotelId}`);
 
-        // 4. Create Admin Credentials
-        // Username is set to 'email' as requested
+        // 4. Create Admin Credentials (Uses User Schema)
         const defaultAdmin = new User({
-            hotelId: savedHotel._id,
-            username: email, // Use email as the username
-            email: email,
-            password: 'admin', // Default temporary password
-            role: 'admin',
-            isInitial: true,
-            status: 'active'
+            hotelId: savedHotel._id, // LINKING the two schemas
+            username: email,         // Correct field
+            password: 'admin',       // Correct field
+            role: 'admin',           // Correct field
+            isInitial: true          // Correct field
+            // REMOVED: 'email: email' and 'status: active' because they are NOT in your userSchema
         });
 
         await defaultAdmin.save();
-        console.log(`[Onboarding] Admin user created for email: ${email}`);
+        console.log(`[Onboarding] Admin user created for: ${email}`);
 
         // 5. Success Response
         res.status(201).json({ 
@@ -102,21 +98,21 @@ app.post('/api/public/onboard-hotel', async (req, res) => {
             hotelId: savedHotel._id,
             credentials: {
                 username: email,
+                password: 'admin',
                 role: 'admin'
             }
         });
 
     } catch (err) {
-        // Log the full error to the console for debugging
         console.error("CRITICAL ONBOARDING ERROR:", err);
         
-        // 6. Rollback Logic
+        // 6. Rollback Logic: If User creation failed, delete the Hotel we just made
         if (savedHotelId) {
             try {
                 await Hotel.findByIdAndDelete(savedHotelId);
-                console.log(`[Rollback] Successfully deleted orphaned hotel: ${savedHotelId}`);
+                console.log(`[Rollback] Deleted orphaned hotel: ${savedHotelId}`);
             } catch (rollbackErr) {
-                console.error("[Rollback] FAILED to delete orphaned hotel:", rollbackErr);
+                console.error("[Rollback] FAILED:", rollbackErr);
             }
         }
 
