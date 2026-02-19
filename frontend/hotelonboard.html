@@ -79,57 +79,66 @@
     <script>
         const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
 
-        document.getElementById('publicOnboardForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('submitBtn');
-            const formContainer = document.getElementById('registrationContainer');
-            const successState = document.getElementById('successState');
-            
-            btn.disabled = true;
-            btn.textContent = "Processing Registration...";
-
-            const hotelData = {
-                name: document.getElementById('name').value,
-                location: document.getElementById('location').value,
-                email: document.getElementById('email').value,
-                phoneNumber: document.getElementById('phoneNumber').value
-            };
-
-        try {
-    const response = await fetch(`${API_BASE_URL}/public/onboard-hotel`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(hotelData)
-    });
-
-    // Read the response once as text FIRST
-    const rawText = await response.text();
-    let data;
-    try {
-        data = JSON.parse(rawText); // Try to turn it into JSON
-    } catch (e) {
-        data = { message: rawText }; // Fallback to raw text if it's an HTML 404 page
-    }
-
-    if (response.ok) {
-        formContainer.classList.add('hidden');
-        successState.classList.remove('hidden');
-    } else { 
-        console.error("Server Error:", response.status, data);
-        alert(`Error (${response.status}): ${data.error || data.message || "Unknown Error"}`);
+       document.getElementById('publicOnboardForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    const formContainer = document.getElementById('registrationContainer');
+    const successState = document.getElementById('successState');
     
-} catch (err) {
-    console.error("Connection Error:", err);
-    alert("Could not connect to the server.");
-}
-} catch (err) {
-    console.error("Network/Connection Error:", err);
-    alert("The connection to the registration server was interrupted.");
-} finally {
-    btn.disabled = false;
-    btn.textContent = "Request Partner Access";
-}
+    // UI Feedback
+    btn.disabled = true;
+    btn.textContent = "Processing Registration...";
+
+    const hotelData = {
+        name: document.getElementById('name').value,
+        location: document.getElementById('location').value,
+        email: document.getElementById('email').value,
+        phoneNumber: document.getElementById('phoneNumber').value
+    };
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/public/onboard-hotel`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(hotelData)
         });
+
+        // 1. Read the response text once
+        const rawText = await response.text();
+        let data;
+
+        // 2. Safely parse JSON
+        try {
+            data = JSON.parse(rawText);
+        } catch (parseError) {
+            data = { message: rawText }; // Fallback for 404 HTML pages
+        }
+
+        // 3. Handle Success vs Error
+        if (response.ok) {
+            formContainer.classList.add('hidden');
+            successState.classList.remove('hidden');
+            console.log("Success:", data);
+        } else {
+            console.error(`Server Error (${response.status}):`, data);
+            
+            // Helpful hint for 404s
+            if (response.status === 404) {
+                alert("Error 404: The server endpoint was not found. Please ensure your backend is deployed and the URL path is correct.");
+            } else {
+                alert(`Submission Error (${response.status}): ${data.error || data.message || "Unknown error"}`);
+            }
+        }
+
+    } catch (err) {
+        console.error("Network/Connection Error:", err);
+        alert("The connection to the registration server was interrupted or failed.");
+    } finally {
+        // Reset button state regardless of outcome
+        btn.disabled = false;
+        btn.textContent = "Request Partner Access";
+    }
+});
     </script>
 </body>
 </html>
