@@ -52,29 +52,44 @@
             <div class="bg-amber-50/50 p-6 rounded-[1.5rem] border border-amber-100">
                 <p class="text-[10px] text-amber-600 uppercase font-black tracking-widest mb-1">Onboarding Information</p>
                 <p class="text-xs text-slate-600 leading-relaxed">
-                    By submitting this form, you are initiating your digital property setup. 
-                    Your <span class="font-bold">Professional Email</span> will serve as your login username. 
-                    Initial password defaults to <span class="font-bold text-amber-700">admin</span>.
-                </p>
+    By submitting this form, you are initiating your digital property setup. 
+    Your <span class="font-bold">Professional Email</span> will serve as your login username. 
+    Initial password defaults to <span class="font-bold text-amber-700">admin</span>.
+    <span class="block mt-2 text-amber-600 font-semibold">
+        ⚠️ Important: You will be required to change this password immediately after your initial login for security.
+    </span>
+</p>
             </div>
 
             <button type="submit" id="submitBtn" class="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold hover:bg-amber-600 shadow-xl transition-all duration-300 transform active:scale-[0.98]">
-                Request Partner Access
-            </button>
+Sign Up            </button>
         </form>
     </div>
 
     <div id="successState" class="hidden max-w-md w-full glass-card rounded-[2.5rem] p-10 text-center success-animation">
-        <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-        </div>
-        <h2 class="luxury-title text-3xl text-slate-900 mb-2">Registration Received</h2>
-        <p class="text-slate-500 mb-8">
-            Your property is being indexed. You may now log in to the suite using your 
-            <span class="font-bold text-slate-800">Email Address</span> and the temporary passkey <span class="font-bold text-amber-600">admin</span>.
-        </p>
-        <button onclick="window.location.reload()" class="text-sm font-bold text-amber-600 uppercase tracking-widest hover:text-amber-700">Register another property</button>
+    <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+        </svg>
     </div>
+    <h2 class="luxury-title text-3xl text-slate-900 mb-2">Registration Received</h2>
+    <div class="space-y-4 mb-8">
+        <p class="text-slate-500">
+            Your property is being indexed. You may now log in to the suite using your 
+            <span class="font-bold text-slate-800">Email Address</span> and the temporary passkey 
+            <span class="font-bold text-amber-600">admin</span>.
+        </p>
+        <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
+            <p class="text-xs text-amber-800 leading-tight">
+                <span class="font-bold uppercase block mb-1">Security Action Required:</span>
+                For your protection, you will be prompted to create a secure password immediately upon your first login.
+            </p>
+        </div>
+    </div>
+    <button onclick="window.location.reload()" class="text-sm font-bold text-amber-600 uppercase tracking-widest hover:text-amber-700">
+        Register another property
+    </button>
+</div>
 
     <script>
      const API_BASE_URL = 'https://novouscloudpms-tz4s.onrender.com/api';
