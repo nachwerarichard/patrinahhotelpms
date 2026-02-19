@@ -1103,6 +1103,85 @@ const hotelSchema = new mongoose.Schema({
 
 const Hotel = mongoose.model('Hotel', hotelSchema);
 
+app.post('/api/public/onboard-hotel', async (req, res) => {
+    const { name, location, phoneNumber, email } = req.body;
+    
+    // Detailed Request Logging
+    console.log(`[Onboarding] New request received for: ${name} (${email})`);
+    
+    let savedHotelId = null;
+
+    try {
+        // 1. Validation check
+        if (!name || !location || !phoneNumber || !email) {
+            console.warn("[Onboarding] Validation Failed: Missing required fields.");
+            return res.status(400).json({ error: "All fields are required." });
+        }
+
+        // 2. Check if user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            console.warn(`[Onboarding] Conflict: User with email ${email} already exists.`);
+            return res.status(400).json({ error: "A user with this email already exists." });
+        }
+
+        // 3. Create Hotel Record
+        const newHotel = new Hotel({ 
+            name, 
+            location, 
+            phoneNumber, 
+            email 
+        });
+
+        const savedHotel = await newHotel.save();
+        savedHotelId = savedHotel._id; 
+        console.log(`[Onboarding] Hotel record created: ${savedHotelId}`);
+
+        // 4. Create Admin Credentials
+        // Username is set to 'email' as requested
+        const defaultAdmin = new User({
+            hotelId: savedHotel._id,
+            username: email, // Use email as the username
+            email: email,
+            password: 'admin', // Default temporary password
+            role: 'admin',
+            isInitial: true,
+            status: 'active'
+        });
+
+        await defaultAdmin.save();
+        console.log(`[Onboarding] Admin user created for email: ${email}`);
+
+        // 5. Success Response
+        res.status(201).json({ 
+            message: "Hotel Onboarded Successfully ✅",
+            hotelId: savedHotel._id,
+            credentials: {
+                username: email,
+                role: 'admin'
+            }
+        });
+
+    } catch (err) {
+        // Log the full error to the console for debugging
+        console.error("CRITICAL ONBOARDING ERROR:", err);
+        
+        // 6. Rollback Logic
+        if (savedHotelId) {
+            try {
+                await Hotel.findByIdAndDelete(savedHotelId);
+                console.log(`[Rollback] Successfully deleted orphaned hotel: ${savedHotelId}`);
+            } catch (rollbackErr) {
+                console.error("[Rollback] FAILED to delete orphaned hotel:", rollbackErr);
+            }
+        }
+
+        res.status(500).json({ 
+            error: "Core server error during onboarding.",
+            details: err.message 
+        });
+    }
+});
 
 app.post('/api/admin/onboard-hotel', async (req, res) => {
     const { name, location, phoneNumber, email } = req.body;
