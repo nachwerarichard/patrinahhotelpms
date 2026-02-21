@@ -5742,9 +5742,6 @@ if (!res.ok) {
     console.error("Inventory lookup failed:", error);
     return;
 }
-
-const data = await res.json();
-        if (!res.ok) throw new Error('Inventory load failed');
         inventoryData = await res.json();
         
         const list = document.getElementById('inventoryItems');
