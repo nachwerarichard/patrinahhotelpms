@@ -942,6 +942,7 @@ function applyRoleAccess(role) {
       document.getElementById('nav-inventory').style.display = 'none';
     document.getElementById('nav-sales').style.display = 'none';
           document.getElementById('nav-posinventory').style.display = 'none';
+    document.getElementById('nav-kds').style.display = 'none';
 
     document.getElementById('nav-expenses').style.display = 'none';
     document.getElementById('nav-cash').style.display = 'none';
@@ -963,6 +964,7 @@ function applyRoleAccess(role) {
             document.getElementById('nav-dashboard').style.display = 'list-item';
             document.getElementById('nav-inventory').style.display = 'list-item';
             document.getElementById('nav-staff').style.display = 'list-item';
+           document.getElementById('nav-kds').style.display = 'list-item';
             document.getElementById('nav-housekeepingreports').style.display = 'list-item';
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             document.getElementById('nav-reports').style.display = 'list-item';
@@ -4692,6 +4694,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const navRates = document.getElementById('nav-inventory');
         const navStaff = document.getElementById('nav-staff');
+    const navKDS = document.getElementById('nav-KDS');
 
     const navReports = document.getElementById('nav-reports');
     const navServiceReports = document.getElementById('nav-service-reports');
@@ -4710,6 +4713,12 @@ document.addEventListener('DOMContentLoaded', () => {
         navCash.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
             showSection('cash');
+        });
+    }
+  if (navKDS) {
+        navKDS.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('kds');
         });
     }
       if (navPOSInventory) {
