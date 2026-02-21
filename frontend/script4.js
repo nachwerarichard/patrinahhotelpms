@@ -5716,7 +5716,7 @@ const resetUI = () => {
     document.getElementById('chargesList').innerHTML = `<tr><td colspan="3" class="text-center py-10 text-slate-400 italic">No items yet</td></tr>`;
 };
 
-const resetForm = () => {
+const resetposForm = () => {
     document.getElementById('itemDesc').value = '';
     document.getElementById('number').value = '';
     document.getElementById('itemPrice').value = '';
