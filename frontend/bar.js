@@ -180,15 +180,6 @@ function showMessage(message, callback = null) {
         });
     }
 
-    // Listener for inventory edit modal close button (if it exists)
-    const editModal = document.getElementById('edit-inventory-modal');
-    if (editModal) {
-         const closeBtn = editModal.querySelector('.close-button');
-         if (closeBtn) closeBtn.addEventListener('click', () => editModal.classList.add('hidden'));
-    }
-});
-
-
 
 async function fetchInventory() {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
