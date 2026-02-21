@@ -5334,3 +5334,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 });
+
+function openReportModal() {
+    const modal = document.getElementById('reportModal');
+    modal.classList.remove('hidden');
+    // Set current date/time as default when opening
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('reportDateTime').value = now.toISOString().slice(0, 16);
+}
+
+function closeReportModal() {
+    const modal = document.getElementById('reportModal');
+    modal.classList.add('hidden');
+    document.getElementById('statusReportForm').reset(); // Optional: clear form on close
+}
+
+// Close modal if user clicks outside the white box
+window.onclick = function(event) {
+    const modal = document.getElementById('reportModal');
+    if (event.target == modal) {
+        closeReportModal();
+    }
+}
