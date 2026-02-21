@@ -5825,7 +5825,7 @@ let authToken = localStorage.getItem('authToken') || ''; // <-- Issue is here
 // ...
 
 // Pagination variables (placeholders)
-let currentPage = 1; 
+//let currentPage = 1; 
 const itemsPerPage = 10;
 let currentSalesPage = 1; 
 const salesPerPage = 15;
