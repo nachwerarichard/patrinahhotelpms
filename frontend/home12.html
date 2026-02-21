@@ -1313,8 +1313,118 @@
     </div>
 </div>
             <section id="expense" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-                <h2 class="text-2xl font-bold mb-4 text-blue-600">Expenses</h2>
-            </section>
+    <div class="flex justify-between items-center mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-blue-600">Expense Management</h2>
+            <p class="text-sm text-gray-500">Track and monitor departmental expenditures</p>
+        </div>
+        <button onclick="toggleExpenseModal(true)" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 flex items-center space-x-2 shadow-sm">
+            <i class="fas fa-file-invoice-dollar"></i>
+            <span>Record New Expense</span>
+        </button>
+    </div>
+
+    <div id="expenses-records">
+        <div class="filter-controls flex flex-wrap gap-4 mb-6 items-end bg-gray-50 p-4 rounded-xl border border-gray-100">
+            <div class="flex flex-col">
+                <label for="expenses-date-filter" class="text-xs font-bold text-gray-500 uppercase mb-1">Filter by Date</label>
+                <input type="date" id="expenses-date-filter" class="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            
+            <button id="expenses-search-button" onclick="fetchExpenses()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition flex items-center gap-2">
+                <i class="fas fa-search"></i>
+                <span id="expenses-search-button-text">Search Records</span>
+            </button>
+
+            <button class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition" onclick="exportTableToExcel('expenses-table', 'Expense_Report')">
+                <i class="fas fa-file-excel mr-1"></i> Export
+            </button>
+        </div>
+
+        <div class="table-responsive overflow-x-auto">
+            <table id="expenses-table" class="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Department</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Description</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Amount</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Receipt ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Source</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<div id="expense-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center z-[70] p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all">
+        <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+            <div class="flex items-center gap-2 text-red-600">
+                <i class="fas fa-minus-circle text-xl"></i>
+                <h3 class="text-lg font-bold">Record Expense</h3>
+            </div>
+            <button onclick="toggleExpenseModal(false)" class="text-gray-400 hover:text-gray-600 text-2xl transition">&times;</button>
+        </div>
+
+        <form id="expense-form" class="p-6">
+            <input type="hidden" id="expense-id">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <label for="expense-department" class="block text-xs font-bold text-gray-500 uppercase mb-1">Department</label>
+                    <select id="expense-department" required class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none bg-white">
+                        <option value="" disabled selected>Select department...</option>
+                        <option value="Bar">Bar</option>
+                        <option value="Restaurant">Restaurant</option>
+                        <option value="Housekeeping">Housekeeping</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="expense-amount" class="block text-xs font-bold text-gray-500 uppercase mb-1">Amount (UGX)</label>
+                    <input type="number" id="expense-amount" step="0.01" min="0" required placeholder="0.00" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-bold">
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="expense-description" class="block text-xs font-bold text-gray-500 uppercase mb-1">Description / Purpose</label>
+                    <input type="text" id="expense-description" required placeholder="e.g., Purchase of cleaning supplies" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
+                </div>
+
+                <div>
+                    <label for="expense-date" class="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
+                    <input type="date" id="expense-date" required class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
+                </div>
+
+                <div>
+                    <label for="expense-receiptId" class="block text-xs font-bold text-gray-500 uppercase mb-1">Receipt / Voucher ID</label>
+                    <input type="text" id="expense-receiptId" required placeholder="Enter ID number" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="expense-source" class="block text-xs font-bold text-gray-500 uppercase mb-1">Source of Funds</label>
+                    <input type="text" id="expense-source" required placeholder="e.g., Petty Cash, Director, Sales" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-8">
+                <button type="button" onclick="toggleExpenseModal(false)" class="px-6 py-2.5 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition">
+                    Cancel
+                </button>
+                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-8 rounded-xl transition-all shadow-lg flex items-center gap-2">
+                    <i class="fas fa-save"></i>
+                    <span id="expense-submit-text">Record Expense</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
             <section id="salereport" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
                 <h2 class="text-2xl font-bold mb-4 text-blue-600">Reports</h2>
             </section>
@@ -2226,6 +2336,28 @@ window.onclick = function(event) {
 window.addEventListener('click', (e) => {
     const modal = document.getElementById('sale-modal');
     if (e.target === modal) toggleSaleModal(false);
+});
+
+    function toggleExpenseModal(show) {
+    const modal = document.getElementById('expense-modal');
+    if (show) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        // Default to today's date
+        document.getElementById('expense-date').valueAsDate = new Date();
+    } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.getElementById('expense-form').reset();
+        document.getElementById('expense-id').value = '';
+        document.getElementById('expense-submit-text').innerText = 'Record Expense';
+    }
+}
+
+// Close modal when clicking on the dark backdrop
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('expense-modal');
+    if (e.target === modal) toggleExpenseModal(false);
 });
 </script>
     <script src="housekeep.js"></script>
