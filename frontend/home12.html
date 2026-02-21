@@ -1094,8 +1094,224 @@
   </div>
 </div>
             <section id="sale" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-                <h2 class="text-2xl font-bold mb-4 text-blue-600">Sales</h2>
-            </section>
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-blue-600">Sales & POS</h2>
+        <button onclick="toggleSaleModal(true)" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 flex items-center space-x-2">
+            <i class="fas fa-plus-circle"></i>
+            <span>Manual Sale Entry</span>
+        </button>
+    </div>
+
+    <div id="messageBox" class="fixed top-20 right-4 z-50 transition-all duration-300 transform translate-x-full"></div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div class="lg:col-span-9 space-y-6">
+            <div id="activeAccountSection" class="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div class="bg-slate-900 rounded-[2rem] p-8 text-white flex flex-col md:flex-row justify-between items-center shadow-xl relative overflow-hidden">
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="px-2 py-0.5 bg-emerald-500 text-[10px] font-black rounded uppercase">Active Folio</span>
+                            <span id="currentRoomNumber" class="text-indigo-300 text-sm font-bold tracking-widest"></span>
+                        </div>
+                        <h2 id="currentGuestName" class="text-3xl font-black">New Sale</h2>
+                    </div>
+                    <div class="text-center md:text-right mt-6 md:mt-0 relative z-10">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-tighter mb-1">Unpaid Balance</p>
+                        <div class="flex items-baseline justify-center md:justify-end gap-1">
+                            <span class="text-slate-400 text-lg font-medium">UGX</span>
+                            <span id="totalCharges" class="text-5xl font-black text-white">0.00</span>
+                        </div>
+                    </div>
+                    <div class="absolute right-0 top-0 w-64 h-64 bg-indigo-500 opacity-10 rounded-full -mr-20 -mt-20"></div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase mb-6 flex items-center gap-2">
+                            <i class="fas fa-cart-plus text-indigo-500"></i> POS Terminal
+                        </h3>
+                        <form id="addChargeForm" class="space-y-5">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Department</label>
+                                <select name="department" id="deptSelect" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700">
+                                    <option value="">Select Department</option>
+                                    <option value="Bar">Bar</option>
+                                    <option value="Restaurant">Restaurant</option>
+                                </select>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Search Inventory</label>
+                                <input list="inventoryItems" name="description" id="itemDesc" onchange="autoFillPrices(this.value)" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Type item name...">
+                                <datalist id="inventoryItems"></datalist>
+                            </div>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div class="col-span-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Qty</label>
+                                    <input type="number" name="number" id="number" value="1" min="1" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Selling Price</label>
+                                    <input type="number" name="amount" id="itemPrice" class="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl outline-none text-slate-600 font-bold">
+                                </div>
+                            </div>
+                            <button type="submit" id="submitBtn" class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg transition-all uppercase tracking-widest text-sm">Submit Item</button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Live Folio</h3>
+                            <span class="text-[10px] font-bold text-indigo-500 px-2 py-0.5 bg-indigo-50 rounded">AUTO-SAVING</span>
+                        </div>
+                        <div class="flex-grow overflow-y-auto max-h-[250px] custom-scroll">
+                            <table class="w-full text-left">
+                                <thead class="sticky top-0 bg-white shadow-sm">
+                                    <tr class="text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
+                                        <th class="px-6 py-3">Time</th>
+                                        <th class="px-6 py-3">Item</th>
+                                        <th class="px-6 py-3 text-right">Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="chargesList" class="divide-y divide-slate-50">
+                                    <tr><td colspan="3" class="px-6 py-10 text-center text-slate-400 italic text-sm">No items posted yet</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-6 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-3">
+                            <button id="postToRoomBtn" class="flex flex-col items-center justify-center p-3 border-2 border-indigo-100 bg-white text-indigo-600 rounded-2xl hover:border-indigo-600 transition-all group">
+                                <i class="fas fa-bed mb-1 group-hover:scale-110"></i>
+                                <span class="text-[10px] font-extrabold uppercase">Post to Room</span>
+                            </button>
+                            <button id="issueReceiptBtn" class="flex flex-col items-center justify-center p-3 bg-slate-900 text-white rounded-2xl hover:bg-black transition-all group">
+                                <i class="fas fa-print mb-1 group-hover:scale-110"></i>
+                                <span class="text-[10px] font-extrabold uppercase">Settle Bill</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-3 space-y-6">
+            <div id="createAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">New In-house guest</h2>
+                <form id="createAccountForm" class="space-y-4">
+                    <input type="text" name="guestName" id="guestname" required placeholder="Guest Full Name" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" name="roomNumber" id="roomNumber" placeholder="Room Number" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button type="submit" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl text-sm">Open Account</button>
+                </form>
+            </div>
+            <div id="searchAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-3">Search Accounts</label>
+                <form id="searchAccountForm" class="relative">
+                    <input type="text" id="searchQuery" required placeholder="Name or Room..." class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    <button type="submit" class="absolute right-2 top-2 p-1.5 bg-indigo-600 text-white rounded-lg"><i class="fas fa-search"></i></button>
+                </form>
+                <div id="searchResults" class="mt-4 space-y-2 max-h-48 overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="activeAccountsSection" class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-lg font-bold text-slate-800">In-House Accounts</h2>
+            <button onclick="fetchActiveAccounts()" class="p-2 hover:bg-slate-100 rounded-full"><i class="fas fa-sync-alt text-slate-400"></i></button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="border-b border-slate-100">
+                        <th class="pb-3 text-xs font-bold text-slate-400 uppercase">Guest / Room</th>
+                        <th class="pb-3 text-xs font-bold text-slate-400 uppercase">Total Charges</th>
+                        <th class="pb-3 text-xs font-bold text-slate-400 uppercase">Last Updated</th>
+                        <th class="pb-3 text-xs font-bold text-slate-400 uppercase text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="activeAccountsTableBody" class="divide-y divide-slate-50"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="sales-records" class="mt-12 pt-8 border-t border-slate-200">
+        <h3 class="text-xl font-medium mb-4 text-gray-800">Historical Sales Records</h3>
+        <div class="filter-controls flex flex-wrap gap-4 mb-4 items-end">
+            <div>
+                <label for="sales-date-filter" class="block text-xs font-bold text-gray-500 uppercase mb-1">Filter by Date:</label>
+                <input type="date" id="sales-date-filter" class="p-2 border border-gray-300 rounded-md">
+            </div>
+            <button onclick="fetchSales()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">
+                <i class="fas fa-search"></i> Search
+            </button>
+            <button class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg" onclick="exportTableToExcel('sales-table', 'Sales_Report')">Export Excel</button>
+        </div>
+        <div class="table-responsive">
+            <table id="sales-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
+                <thead class="bg-gray-50">
+                    <tr class="text-[10px] text-gray-500 uppercase">
+                        <th class="px-6 py-3 text-left">Dept</th>
+                        <th class="px-6 py-3 text-left">Item</th>
+                        <th class="px-6 py-3 text-left">Qty</th>
+                        <th class="px-6 py-3 text-left">BP</th>
+                        <th class="px-6 py-3 text-left">SP</th>
+                        <th class="px-6 py-3 text-left">Profit</th>
+                        <th class="px-6 py-3 text-left">%</th>
+                        <th class="px-6 py-3 text-left">Date</th>
+                        <th class="px-6 py-3 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200"></tbody>
+            </table>
+            <div id="sales-summary" class="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200 font-semibold text-gray-700"></div>
+        </div>
+    </div>
+</section>
+
+<div id="sale-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center z-[60] p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+            <h3 class="text-lg font-bold text-gray-800">Manual Sale Entry</h3>
+            <button onclick="toggleSaleModal(false)" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        </div>
+        <form id="sale-form" class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="hidden" id="sale-id">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase">Department</label>
+                <select id="department-item" required class="mt-1 p-2.5 block w-full border border-gray-300 rounded-xl bg-white text-sm">
+                    <option value="" disabled selected>Select...</option>
+                    <option value="Bar">Bar</option>
+                    <option value="Restaurant">Restaurant</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase">Item</label>
+                <input type="text" id="sale-item" list="item-suggestions" required class="mt-1 p-2.5 block w-full border border-gray-300 rounded-xl text-sm" placeholder="Search item...">
+                <datalist id="item-suggestions"></datalist>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase">Qty Sold</label>
+                <input type="number" id="sale-number" min="1" required class="mt-1 p-2.5 block w-full border border-gray-300 rounded-xl text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase">Buying Price</label>
+                <input type="number" id="sale-bp" step="0.01" min="0" required class="mt-1 p-2.5 block w-full border border-gray-300 rounded-xl text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase">Selling Price</label>
+                <input type="number" id="sale-sp" step="0.01" min="0" required class="mt-1 p-2.5 block w-full border border-gray-300 rounded-xl text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase">Date</label>
+                <input type="date" id="sales-date" required class="mt-1 p-2.5 block w-full border border-gray-300 rounded-xl text-sm">
+            </div>
+            <div class="md:col-span-2 flex justify-end gap-3 mt-4">
+                <button type="button" onclick="toggleSaleModal(false)" class="px-6 py-2 text-gray-600 font-bold">Cancel</button>
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-8 rounded-xl transition-all shadow-lg">
+                    Record Sale
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
             <section id="expense" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
                 <h2 class="text-2xl font-bold mb-4 text-blue-600">Expenses</h2>
             </section>
@@ -1992,6 +2208,25 @@ window.onclick = function(event) {
         toggleInventoryModal(false);
     }
 }
+    function toggleSaleModal(show) {
+    const modal = document.getElementById('sale-modal');
+    if (show) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        // Pre-fill today's date
+        document.getElementById('sales-date').valueAsDate = new Date();
+    } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.getElementById('sale-form').reset();
+    }
+}
+
+// Close on outside click
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('sale-modal');
+    if (e.target === modal) toggleSaleModal(false);
+});
 </script>
     <script src="housekeep.js"></script>
     
