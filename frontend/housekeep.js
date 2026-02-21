@@ -57,13 +57,10 @@ document.getElementById('statusReportForm')?.addEventListener('submit', async fu
   const data = Object.fromEntries(formData.entries());
 
   try {
-    const res = await fetch(`${backendURL}/submit-status-report`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
+   const res = await authenticatedFetch(`${backendURL}/submit-status-report`, {
+  method: 'POST',
+  body: JSON.stringify(data),
+});
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const result = await res.json();
     showMessage('statusMessage', result.message || 'Status report submitted.');
@@ -77,8 +74,7 @@ document.getElementById('statusReportForm')?.addEventListener('submit', async fu
 
 async function loadStatusReports() {
   try {
-    const res = await fetch(`${backendURL}/status-reports`, {});
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+const res = await authenticatedFetch(`${backendURL}/status-reports`);    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     allStatusReports = await res.json();
     filteredStatusReports = [...allStatusReports];
     renderStatusReportTable();
@@ -229,13 +225,10 @@ async function saveStatusReport(id) {
   };
 
   try {
-    const res = await fetch(`${backendURL}/status-reports/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updatedData),
-    });
+    const res = await authenticatedFetch(`${backendURL}/status-reports/${id}`, {
+  method: 'PUT',
+  body: JSON.stringify(updatedData),
+});
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const result = await res.json();
     showMessage('statusMessage', result.message || 'Report updated successfully!');
@@ -250,9 +243,9 @@ async function deleteStatusReport(id) {
   if (!window.confirm('Are you sure you want to delete this status report?')) return;
 
   try {
-    const res = await fetch(`${backendURL}/status-reports/${id}`, {
-      method: 'DELETE',
-    });
+    const res = await authenticatedFetch(`${backendURL}/status-reports/${id}`, {
+  method: 'DELETE',
+});
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const result = await res.json();
     showMessage('statusMessage', result.message || 'Report deleted successfully!');
