@@ -237,7 +237,6 @@ async function deleteStatusReport(id) {
   }
 }
 // Expose functions used by inline onclick
-window.exportToExcel = exportToExcel;
 window.filterStatusReportsByDate = filterStatusReportsByDate;
 window.clearStatusDateFilter = clearStatusDateFilter;
 window.exportStatusReportsToExcel = exportStatusReportsToExcel;
