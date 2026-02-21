@@ -4699,12 +4699,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const navAuditLogs = document.getElementById('nav-audit-logs');
     const navChannelManager = document.getElementById('nav-channel-manager');
         const navPOSInventory = document.getElementById('nav-posinventory');
-
+      const navCash = document.getElementById('nav-cash');
       const navInventory = document.getElementById('nav-inventory');
-        const navExpense = document.getElementById('nav-expense');
-      const navSale = document.getElementById('nav-sale');
-      const navPOSreport = document.getElementById('nav-posreport');
+        const navExpense = document.getElementById('nav-expenses');
+      const navSale = document.getElementById('nav-sales');
+      const navPOSreport = document.getElementById('nav-posreports');
         const navBarReport = document.getElementById('nav-salereport');
+
+  if (navCash) {
+        navCash.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('cash');
+        });
+    }
       if (navPOSInventory) {
         navPOSInventory.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
