@@ -939,6 +939,12 @@ function applyRoleAccess(role) {
     document.getElementById('nav-booking').style.display = 'none';
     document.getElementById('nav-dashboard').style.display = 'none';
     document.getElementById('nav-housekeeping').style.display = 'none';
+      document.getElementById('nav-inventory').style.display = 'none';
+    document.getElementById('nav-sales').style.display = 'none';
+    document.getElementById('nav-expenses').style.display = 'none';
+    document.getElementById('nav-cash').style.display = 'none';
+    document.getElementById('nav-posreports').style.display = 'none';
+    document.getElementById('nav-salereport').style.display = 'none';
       document.getElementById('nav-housekeepingreports').style.display = 'none';
         document.getElementById('nav-inventory').style.display = 'none';
         document.getElementById('nav-staff').style.display = 'none';
@@ -954,12 +960,18 @@ function applyRoleAccess(role) {
             document.getElementById('nav-booking').style.display = 'list-item';
             document.getElementById('nav-dashboard').style.display = 'list-item';
             document.getElementById('nav-inventory').style.display = 'list-item';
-                        document.getElementById('nav-staff').style.display = 'list-item';
+            document.getElementById('nav-staff').style.display = 'list-item';
             document.getElementById('nav-housekeepingreports').style.display = 'list-item';
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             document.getElementById('nav-reports').style.display = 'list-item';
             document.getElementById('nav-calendar').style.display = 'list-item';
             document.getElementById('nav-audit-logs').style.display = 'list-item';
+        document.getElementById('nav-inventory').style.display = 'list-item';
+    document.getElementById('nav-sales').style.display = 'list-item';
+    document.getElementById('nav-expenses').style.display = 'list-item';
+    document.getElementById('nav-cash').style.display = 'list-item';
+    document.getElementById('nav-posreports').style.display = 'list-item';
+    document.getElementById('nav-salereport').style.display = 'list-item';
             break;
         case 'housekeeper':
             document.getElementById('booking-management').style.display = 'none';
@@ -974,6 +986,8 @@ function applyRoleAccess(role) {
              document.getElementById('nav-booking').style.display = 'none';
             // Bar staff only see booking management and logout
             document.getElementById('nav-booking').style.display = 'list-item';
+            document.getElementById('nav-sales').style.display = 'list-item';
+
             break;
         default:
             // For any other undefined role, hide everything
@@ -4681,6 +4695,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const navCalendar = document.getElementById('nav-calendar');
     const navAuditLogs = document.getElementById('nav-audit-logs');
     const navChannelManager = document.getElementById('nav-channel-manager');
+      const navInventory = document.getElementById('nav-inventory');
+        const navExpense = document.getElementById('nav-expense');
+      const navSale = document.getElementById('nav-sale');
+      const navPOSreport = document.getElementById('nav-posreport');
+        const navBarReport = document.getElementById('nav-salereport');
+      if (navBarReport) {
+        navBarReport.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('salereport');
+        });
+    }
+      if (navPOSreport) {
+        navPOSreport.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('posreport');
+        });
+    }
+    if (navSale) {
+        navSale.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('sale');
+        });
+    }
+
+    if (navInventory) {
+        navInventory.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('inventory');
+        });
+    }
+      if (navExpense {
+        navExpense.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('expense');
+        });
+    }
 
     if (navBooking) {
         navBooking.addEventListener('click', (e) => {
