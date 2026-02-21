@@ -5505,7 +5505,7 @@ const createAccount = async (guestName, roomNumber) => {
     showMessage('Initializing account...', 'info');
     
     try {
-      const res = await authenticatedFetch(`${BASE_URL}/api/pos/client/account`, {
+      const res = await authenticatedFetch(`${API_BASE_URL}/api/pos/client/account`, {
     method: 'POST',
     body: JSON.stringify({ guestName, roomNumber, hotelId })
 });
@@ -5526,7 +5526,7 @@ const searchAccounts = async (query) => {
     
     try {
         const res = await authenticatedFetch(
-    `${BASE_URL}/api/pos/client/search?query=${encodeURIComponent(query)}`,
+    `${API_BASE_URL}/api/pos/client/search?query=${encodeURIComponent(query)}`,
     {
         method: 'GET'
     }
@@ -5587,8 +5587,8 @@ const addCharge = async (description, number, department) => {
         }
 
       const endpoint = (department === 'Restaurant') 
-    ? `${BASE_URL}/api/kitchen/order` 
-    : `${BASE_URL}/sales`;
+    ? `${API_BASE_URL}/api/kitchen/order` 
+    : `${API_BASE_URL}/sales`;
 
 const res = await authenticatedFetch(endpoint, {
     method: 'POST',
@@ -5608,7 +5608,7 @@ const data = await res.json();
 
         // If it's a guest folio (Non-Quick Sale), update the guest account
         if (activeAccountId) {
-            const folioRes = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
+            const folioRes = await fetch(`${API_BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
     method: 'POST',
     headers: { 
         'Content-Type': 'application/json', 
@@ -5649,7 +5649,7 @@ const settleAccount = async (method) => {
 
     try {
 const res = await authenticatedFetch(
-    `${BASE_URL}/api/pos/client/account/${activeAccountId}/settle`,
+    `${API_BASE_URL}/api/pos/client/account/${activeAccountId}/settle`,
     {
         method: 'POST',
         body: JSON.stringify(payload)
@@ -5728,10 +5728,10 @@ const resetposForm = () => {
 
 // --- INVENTORY LOOKUP ---
 async function loadInventory() {
-    const hotelId = getHotelId();
+    //const hotelId = getHotelId();
     try {
        const res = await authenticatedFetch(
-    `${BASE_URL}/inventory/lookup`,
+    `${API_BASE_URL}/inventory/lookup`,
     { method: 'GET' }
 );
 
