@@ -5817,7 +5817,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // --- Initialization Variables ---
-//const API_BASE_URL = 'https://novouscloudpms-tz4s.onrender.com';
+const API_BAS_URL = 'https://novouscloudpms-tz4s.onrender.com';
  
 let authToken = localStorage.getItem('authToken') || ''; // <-- Issue is here
 //let currentUsername = localStorage.getItem('username') || ''; 
@@ -6028,7 +6028,7 @@ async function fetchInventory() {
             params.append('limit', itemsPerPage);
         }
 
-        const url = `${API_BASE_URL}/inventory?${params.toString()}`;
+        const url = `${API_BAS_URL}/inventory?${params.toString()}`;
 
         // 3. Use your authenticatedFetch wrapper
         const response = await authenticatedFetch(url);
@@ -6247,7 +6247,7 @@ async function handleUpdateSubmit(event) {
         loadingText.classList.remove('hidden');
         loadingText.classList.add('flex');
 
-        const response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
+        const response = await authenticatedFetch(`${API_BAS_URL}/inventory/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(inventoryData)
@@ -6380,7 +6380,7 @@ async function deleteInventory(id) {
     try {
         // 3. Authenticated DELETE Request
         // We pass the hotelId to ensure the backend only deletes if the item matches the hotel
-        const response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
+        const response = await authenticatedFetch(`${API_BAS_URL}/inventory/${id}`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ hotelId: hotelId }) 
@@ -6449,7 +6449,7 @@ async function createNewItem() {
 
     try {
         setLoadingState(true);
-        const response = await authenticatedFetch(`${API_BASE_URL}/inventory`, {
+        const response = await authenticatedFetch(`${API_BAS_URL}/inventory`, {
             method: 'POST',
             body: JSON.stringify(data) // hotelId is included via getInventoryFormData
         });
@@ -6484,7 +6484,7 @@ async function updateExistingItem(id) {
     const data = getInventoryFormData();
     try {
         setLoadingState(true);
-        const response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
+        const response = await authenticatedFetch(`${API_BAS_URL}/inventory/${id}`, {
             method: 'PUT',
             body: JSON.stringify(data)
         });
@@ -6569,7 +6569,7 @@ async function fetchSales() {
         const dateFilterInput = document.getElementById('sales-date-filter');
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
 
-        let url = `${API_BASE_URL}/sales`;
+        let url = `${API_BAS_URL}/sales`;
         const params = new URLSearchParams();
         if (dateFilter) params.append('date', dateFilter);
         params.append('page', currentSalesPage);
@@ -6803,7 +6803,7 @@ async function submitSaleForm(event) {
         submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
         submitButton.disabled = true;
 
-        const url = id ? `${API_BASE_URL}/sales/${id}` : `${API_BASE_URL}/sales`;
+        const url = id ? `${API_BAS_URL}/sales/${id}` : `${API_BAS_URL}/sales`;
         const method = id ? 'PUT' : 'POST';
 
         const response = await authenticatedFetch(url, {
@@ -6840,7 +6840,7 @@ async function deleteSale(id) {
 
     if (confirm('Permanently delete this sales record? This cannot be undone.')) {
         try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/sales/${id}`, {
+            const response = await authenticatedFetch(`${API_BAS_URL}/sales/${id}`, {
                 method: 'DELETE',
                 body: JSON.stringify({ hotelId }) // Send hotelId to verify ownership
             });
@@ -6912,7 +6912,7 @@ async function fetchExpenses() {
         params.append('page', currentExpensesPage);
         params.append('limit', expensesPerPage);
 
-        const url = `${API_BASE_URL}/expenses?${params.toString()}`;
+        const url = `${API_BAS_URL}/expenses?${params.toString()}`;
 
         // 4. Use Authenticated Wrapper
         const response = await authenticatedFetch(url);
@@ -7239,7 +7239,7 @@ async function submitEditExpenseForm(event) {
     setEditButtonLoading(true);
 
     try {
-        const response = await authenticatedFetch(`${API_BASE_URL}/expenses/${id}`, {
+        const response = await authenticatedFetch(`${API_BAS_URL}/expenses/${id}`, {
             method: 'PUT',
             body: JSON.stringify(expenseData)
         });
@@ -7305,7 +7305,7 @@ async function submitExpenseForm(event) {
         if (submitIcon) submitIcon.className = 'fas fa-spinner fa-spin'; 
         submitButton.disabled = true;
 
-        const url = id ? `${API_BASE_URL}/expenses/${id}` : `${API_BASE_URL}/expenses`;
+        const url = id ? `${API_BAS_URL}/expenses/${id}` : `${API_BAS_URL}/expenses`;
         const method = id ? 'PUT' : 'POST';
 
         // Check admin permissions for edits
@@ -7388,7 +7388,7 @@ async function fetchCashJournal() {
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
         const responsibleFilter = responsibleFilterInput ? responsibleFilterInput.value : '';
 
-        let url = `${API_BASE_URL}/cash-journal`;
+        let url = `${API_BAS_URL}/cash-journal`;
         const params = new URLSearchParams();
         if (dateFilter) params.append('date', dateFilter);
         if (responsibleFilter) params.append('responsiblePerson', responsibleFilter);
@@ -7594,7 +7594,7 @@ async function submitEditCashForm(event) {
     setCashButtonLoading(true);
 
     try {
-        const response = await authenticatedFetch(`${API_BASE_URL}/cash-journal/${id}`, {
+        const response = await authenticatedFetch(`${API_BAS_URL}/cash-journal/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(cashData)
@@ -7702,7 +7702,7 @@ async function generateReports() {
 
         // Fetch Sales for this Hotel
         do {
-            const resp = await authenticatedFetch(`${API_BASE_URL}/sales?${queryParams}&page=${page}&limit=100`);
+            const resp = await authenticatedFetch(`${API_BAS_URL}/sales?${queryParams}&page=${page}&limit=100`);
             res = await resp.json();
             if (res && res.data) { 
                 allSales = allSales.concat(res.data); 
@@ -7713,7 +7713,7 @@ async function generateReports() {
         // Fetch Expenses for this Hotel
         page = 1;
         do {
-            const resp = await authenticatedFetch(`${API_BASE_URL}/expenses?${queryParams}&page=${page}&limit=100`);
+            const resp = await authenticatedFetch(`${API_BAS_URL}/expenses?${queryParams}&page=${page}&limit=100`);
             res = await resp.json();
             if (res && res.data) { 
                 allExpenses = allExpenses.concat(res.data); 
@@ -7845,7 +7845,7 @@ async function fetchAuditLogs() {
         }
 
         // 4. API Request
-        const response = await authenticatedFetch(`${API_BASE_URL}/audit-logs?${params.toString()}`);
+        const response = await authenticatedFetch(`${API_BAS_URL}/audit-logs?${params.toString()}`);
         
         if (!response || !response.ok) {
             throw new Error('Failed to reach the audit server.');
