@@ -4694,7 +4694,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const navRates = document.getElementById('nav-inventory');
         const navStaff = document.getElementById('nav-staff');
-    const navKDS = document.getElementById('nav-KDS');
+    const navKDS = document.getElementById('nav-kds');
 
     const navReports = document.getElementById('nav-reports');
     const navServiceReports = document.getElementById('nav-service-reports');
