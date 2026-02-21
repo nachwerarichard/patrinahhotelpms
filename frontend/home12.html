@@ -319,6 +319,31 @@
                     <span class="ml-4 font-medium text-[15px]">Housekeeping</span>
                 </a>
             </li>
+            <li id="nav-housekeeping" class="space-y-1">
+    <button onclick="toggleDropdown('housekeeping-menu', 'housekeeping-arrow')" 
+            class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+        <div class="flex items-center">
+            <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                <i class="fas fa-broom text-slate-400 group-hover:text-white"></i>
+            </div>
+            <span class="ml-4 font-medium text-[15px]">Housekeeping</span>
+        </div>
+        <i id="housekeeping-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+    </button>
+
+    <ul id="housekeeping-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
+        <li>
+            <a href="#housekeeping-reports" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+                Housekeeping Reports
+            </a>
+        </li>
+        <li>
+            <a href="#housekeeping-table" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+                Housekeeping Table
+            </a>
+        </li>
+    </ul>
+</li>
 
             <li id="nav-reports">
                 <a href="#" class="flex items-center group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
@@ -1659,7 +1684,18 @@ Add Guest Details            </h2>
   </div>
 </div>
     
-
+<script>
+    function toggleDropdown(menuId, arrowId) {
+    const menu = document.getElementById(menuId);
+    const arrow = document.getElementById(arrowId);
+    
+    // Toggle the 'hidden' class
+    menu.classList.toggle('hidden');
+    
+    // Rotate arrow icon
+    arrow.classList.toggle('rotate-180');
+}
+</script>
     
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
