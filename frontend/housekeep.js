@@ -3,11 +3,6 @@
   =============================== */
 
 const backendURL = 'https://novouscloudpms-tz4s.onrender.com/api';
-
-
-// --- App State ---
-let currentPage = 1;
-const rowsPerPage = 5;
 let allStatusReports = [];
 let filteredStatusReports = [];
 
