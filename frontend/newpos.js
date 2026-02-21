@@ -9,10 +9,10 @@ let activeAccountData = null;
 let inventoryData = [];
 
 // --- HELPER: GET MULTI-TENANT CONTEXT ---
-const getHotelId = () => {
+/*const getHotelId = () => {
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
     return user ? user.hotelId : null;
-};
+};*/
 
 const getAuthToken = () => localStorage.getItem('token');
 
