@@ -301,6 +301,38 @@
                     <span class="ml-4 font-medium text-[15px]">Dashboard</span>
                 </a>
             </li>
+<li id="nav-book" class="space-y-1">
+    <button onclick="toggleDropdown('booking-menu', 'booking-arrow')" 
+            class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+        <div class="flex items-center">
+            <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                <i class="fas fa-broom text-slate-400 group-hover:text-white"></i>
+            </div>
+            <span class="ml-4 font-medium text-[15px]">Housekeeping</span>
+        </div>
+        <i id="booking-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+    </button>
+
+    <ul id="booking-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
+          <li id="nav-booking">
+                <a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+                   Booking Management
+                </a>
+            </li>
+        
+        <li>
+              <li id="nav-reports">
+                <a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"> 
+                    Front Office Reports
+                </a>
+            </li><li id="nav-calendar">
+                <a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"> 
+                    Calendar
+                </a>
+            </li>
+        
+    </ul>
+</li>
 
             <li id="nav-booking">
                 <a href="#" class="flex items-center group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
@@ -351,7 +383,7 @@
     </button>
 
     <ul id="pos-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
-          <li id="nav-inventory">
+          <li id="nav-posinventory">
                 <a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
                    Inventory
                 </a>
@@ -388,23 +420,8 @@
 </li>
 
 
-            <li id="nav-reports">
-                <a href="#" class="flex items-center group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
-                    <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                        <i class="fas fa-file-invoice-dollar text-slate-400 group-hover:text-white"></i>
-                    </div>
-                    <span class="ml-4 font-medium text-[15px]">Front Office Reports</span>
-                </a>
-            </li>
 
-            <li id="nav-calendar" class="hidden">
-                <a href="#" class="flex items-center group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
-                    <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                        <i class="fas fa-calendar-alt text-slate-400 group-hover:text-white"></i>
-                    </div>
-                    <span class="ml-4 font-medium text-[15px]">Calendar</span>
-                </a>
-            </li>
+
             <li id="nav-inventory">
                 <a href="#" class="flex items-center group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
                     <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
