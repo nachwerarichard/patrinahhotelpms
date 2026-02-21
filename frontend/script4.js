@@ -3715,9 +3715,9 @@ function toggleSwitchMenu() {
 
 const SYSTEM_LINKS = {
     // Keys match exactly what is called in the function below
-    systemA: { label: '💰', full: 'Point of Sale', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html' },
-    systemB: { label: '🏨', full: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html' },
-    staff: { label: '👥', full: 'Staff', url: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html' },
+    //systemA: { label: '💰', full: 'Point of Sale', url: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html' },
+    //systemB: { label: '🏨', full: 'Front Office', url: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html' },
+    //staff: { label: '👥', full: 'Staff', url: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html' },
     KDS: { label: '🍳', full: 'Kitchen Display', url: 'https://elegant-pasca-cea136.netlify.app/frontend/kitchen.html' }
 };
 
