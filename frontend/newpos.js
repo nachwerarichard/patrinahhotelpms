@@ -169,18 +169,18 @@ const data = await res.json();
         // If it's a guest folio (Non-Quick Sale), update the guest account
         if (activeAccountId) {
             const folioRes = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'Authorization': `Bearer ${getAuthToken()}` 
-                },
-                body: JSON.stringify({
-                    description: `${description} (x${qtyValue})`,
-                    amount: payload.sp * payload.number,
-                    type: payload.department,
-                    hotelId: hotelId
-                })
-            });
+    method: 'POST',
+    headers: { 
+        'Content-Type': 'application/json', 
+        'Authorization': `Bearer ${getAuthToken()}` 
+    },
+    body: JSON.stringify({
+        description: `${description} (x${qtyValue})`,
+        amount: payload.sp * payload.number,
+        type: payload.department,
+        hotelId: hotelId
+    })
+});
             const updatedAccount = await folioRes.json();
             updateActiveAccountUI(updatedAccount);
             showMessage("Charged to Guest Folio!", "success");
@@ -208,17 +208,25 @@ const settleAccount = async (method) => {
         : { paymentMethod: 'Cash', hotelId };
 
     try {
-        const res = await fetch(`${BASE_URL}/api/pos/client/account/${activeAccountId}/settle`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${getAuthToken()}`
-            },
-            body: JSON.stringify(payload)
-        });
+const res = await authenticatedFetch(
+    `${BASE_URL}/api/pos/client/account/${activeAccountId}/settle`,
+    {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    }
+);
 
-        if (!res.ok) throw new Error('Failed to settle');
-        const data = await res.json();
+if (!res) return; // redirect handled if token missing
+
+if (!res.ok) {
+    const error = await res.json();
+    console.error("Settle failed:", error);
+    return;
+}
+
+const data = await res.json();
+
+
 
         if (method === 'receipt') {
             printReceiptFromAccount(data.receipt);
@@ -282,9 +290,20 @@ const resetForm = () => {
 async function loadInventory() {
     const hotelId = getHotelId();
     try {
-        const res = await fetch(`${BASE_URL}/inventory/lookup?hotelId=${hotelId}`, {
-            headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-        });
+       const res = await authenticatedFetch(
+    `${BASE_URL}/inventory/lookup`,
+    { method: 'GET' }
+);
+
+if (!res) return;
+
+if (!res.ok) {
+    const error = await res.json();
+    console.error("Inventory lookup failed:", error);
+    return;
+}
+
+const data = await res.json();
         if (!res.ok) throw new Error('Inventory load failed');
         inventoryData = await res.json();
         
