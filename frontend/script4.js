@@ -5820,7 +5820,7 @@ document.addEventListener('DOMContentLoaded', () => {
 //const API_BASE_URL = 'https://novouscloudpms-tz4s.onrender.com';
  
 let authToken = localStorage.getItem('authToken') || ''; // <-- Issue is here
-let currentUsername = localStorage.getItem('username') || ''; 
+//let currentUsername = localStorage.getItem('username') || ''; 
 let currentUserRole = localStorage.getItem('userRole') || ''; 
 // ...
 
