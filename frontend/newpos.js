@@ -17,7 +17,7 @@ const getHotelId = () => {
 const getAuthToken = () => localStorage.getItem('token');
 
 // --- UI NOTIFICATIONS ---
-const showMessage = (message, type) => {
+/*const showMessage = (message, type) => {
     const messageBox = document.getElementById('messageBox');
     if (!messageBox) return;
 
@@ -29,7 +29,7 @@ const showMessage = (message, type) => {
         messageBox.classList.add('translate-x-full');
     }, 3000);
     messageBox.classList.remove('translate-x-full');
-};
+};*/
 
 // --- QUICK SALE LOGIC ---
 function startQuickSale() {
