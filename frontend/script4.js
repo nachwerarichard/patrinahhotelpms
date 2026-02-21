@@ -939,6 +939,7 @@ function applyRoleAccess(role) {
     document.getElementById('nav-booking').style.display = 'none';
     document.getElementById('nav-dashboard').style.display = 'none';
     document.getElementById('nav-housekeeping').style.display = 'none';
+      document.getElementById('nav-housekeepingreports').style.display = 'none';
         document.getElementById('nav-inventory').style.display = 'none';
         document.getElementById('nav-staff').style.display = 'none';
 
@@ -954,7 +955,7 @@ function applyRoleAccess(role) {
             document.getElementById('nav-dashboard').style.display = 'list-item';
             document.getElementById('nav-inventory').style.display = 'list-item';
                         document.getElementById('nav-staff').style.display = 'list-item';
-
+            document.getElementById('nav-housekeepingreports').style.display = 'list-item';
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             document.getElementById('nav-reports').style.display = 'list-item';
             document.getElementById('nav-calendar').style.display = 'list-item';
@@ -964,6 +965,8 @@ function applyRoleAccess(role) {
             document.getElementById('booking-management').style.display = 'none';
             // Housekeepers only see housekeeping and logout
             document.getElementById('nav-housekeeping').style.display = 'list-item';
+            document.getElementById('nav-housekeepingreports').style.display = 'list-item';
+
             renderHousekeepingRooms() ;
 
             break;
@@ -4668,6 +4671,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const navDashboard = document.getElementById('nav-dashboard');
 
     const navHousekeeping = document.getElementById('nav-housekeeping');
+      const navHousekeepingreports = document.getElementById('nav-housekeepingreports');
+
         const navRates = document.getElementById('nav-inventory');
         const navStaff = document.getElementById('nav-staff');
 
@@ -4716,6 +4721,13 @@ document.addEventListener('DOMContentLoaded', () => {
         navHousekeeping.addEventListener('click', (e) => {
             e.preventDefault();
             showSection('housekeeping');
+        });
+    }
+
+  if (navHousekeepingreports) {
+        navHousekeepingreports.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection('housekeepingreports');
         });
     }
 
