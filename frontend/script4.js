@@ -3323,7 +3323,7 @@ document.getElementById('applyAuditLogFiltersBtn').addEventListener('click', () 
     renderAuditLogs();
 });
 
-let currentAuditPage = 1;
+//let currentAuditPage = 1;
 //const logsPerPage = 20;
 
 async function renderAuditLogs() {
