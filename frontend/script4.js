@@ -941,6 +941,8 @@ function applyRoleAccess(role) {
     document.getElementById('nav-housekeeping').style.display = 'none';
       document.getElementById('nav-inventory').style.display = 'none';
     document.getElementById('nav-sales').style.display = 'none';
+          document.getElementById('nav-posinventory').style.display = 'none';
+
     document.getElementById('nav-expenses').style.display = 'none';
     document.getElementById('nav-cash').style.display = 'none';
     document.getElementById('nav-posreports').style.display = 'none';
@@ -966,6 +968,7 @@ function applyRoleAccess(role) {
             document.getElementById('nav-reports').style.display = 'list-item';
             document.getElementById('nav-calendar').style.display = 'list-item';
             document.getElementById('nav-audit-logs').style.display = 'list-item';
+            document.getElementById('nav-posinventory').style.display = 'list-item';
         document.getElementById('nav-inventory').style.display = 'list-item';
     document.getElementById('nav-sales').style.display = 'list-item';
     document.getElementById('nav-expenses').style.display = 'list-item';
@@ -4695,11 +4698,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const navCalendar = document.getElementById('nav-calendar');
     const navAuditLogs = document.getElementById('nav-audit-logs');
     const navChannelManager = document.getElementById('nav-channel-manager');
+        const navPOSInventory = document.getElementById('nav-posinventory');
+
       const navInventory = document.getElementById('nav-inventory');
         const navExpense = document.getElementById('nav-expense');
       const navSale = document.getElementById('nav-sale');
       const navPOSreport = document.getElementById('nav-posreport');
         const navBarReport = document.getElementById('nav-salereport');
+      if (navPOSInventory) {
+        navPOSInventory.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('posinventory');
+        });
+    }
       if (navBarReport) {
         navBarReport.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
