@@ -4725,7 +4725,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showSection('inventory');
         });
     }
-      if (navExpense {
+      if (navExpense) {
         navExpense.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
             showSection('expense');
