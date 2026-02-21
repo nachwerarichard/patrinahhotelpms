@@ -31,20 +31,6 @@ function hideAllSections() {
   housekeepingReportSection?.classList.add('hidden');
   inventorySection?.classList.add('hidden');
 }
-
-async function showTab(tabName) {
-  hideAllSections();
-  resetTabButtons();
-
-// Tab button handlers
-tabChecklistBtn?.addEventListener('click', () => showTab('checklist'));
-tabHousekeepingBtn?.addEventListener('click', () => showTab('housekeeping'));
-tabInventoryBtn?.addEventListener('click', () => showTab('inventory'));
-
-
-
-
-
 /* ---------- Housekeeping Reports ---------- */
 document.getElementById('statusReportForm')?.addEventListener('submit', async function (e) {
   e.preventDefault();
