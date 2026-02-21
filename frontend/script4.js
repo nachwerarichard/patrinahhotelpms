@@ -5725,13 +5725,13 @@ const resetposForm = () => {
     itemDescInput.dataset.sp = '0';
     document.getElementById('deptSelect').focus();
 };
-
+const BASE_URL='https://novouscloudpms-tz4s.onrender.com';
 // --- INVENTORY LOOKUP ---
 async function loadInventory() {
     //const hotelId = getHotelId();
     try {
        const res = await authenticatedFetch(
-    `${API_BASE_URL}/inventory/lookup`,
+    `${BASE_URL}/inventory/lookup`,
     { method: 'GET' }
 );
 
