@@ -5821,7 +5821,7 @@ document.addEventListener('DOMContentLoaded', () => {
  
 let authToken = localStorage.getItem('authToken') || ''; // <-- Issue is here
 //let currentUsername = localStorage.getItem('username') || ''; 
-let currentUserRole = localStorage.getItem('userRole') || ''; 
+//let currentUserRole = localStorage.getItem('userRole') || ''; 
 // ...
 
 // Pagination variables (placeholders)
