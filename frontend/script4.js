@@ -7408,22 +7408,21 @@ function populateExpenseForm(expense) {
 // --- Cash Management Functions ---
 
 async function fetchCashJournal() {
-    // 1. Change button text to 'Searching'
-    updateCashSearchButton('Searching', 'fas fa-spinner fa-spin'); // Spinning icon for loading
+    updateCashSearchButton('Searching', 'fas fa-spinner fa-spin');
 
     try {
         const dateFilterInput = document.getElementById('cash-filter-date');
-        // Note: 'cash-filter-responsible' doesn't exist in the HTML you provided, 
-        // but the JS will safely handle it if it's implemented elsewhere.
-        const responsibleFilterInput = document.getElementById('cash-filter-responsible'); 
-
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
-        const responsibleFilter = responsibleFilterInput ? responsibleFilterInput.value : '';
+        
+        // 1. FIX: Get hotelId from localStorage
+        const hotelId = localStorage.getItem('hotelId');
 
         let url = `${API_BASE_URL}/cash-journal`;
         const params = new URLSearchParams();
+        
+        // 2. FIX: Append hotelId to the URL parameters
+        if (hotelId) params.append('hotelId', hotelId);
         if (dateFilter) params.append('date', dateFilter);
-        if (responsibleFilter) params.append('responsiblePerson', responsibleFilter);
 
         if (params.toString()) {
             url += `?${params.toString()}`;
@@ -7431,32 +7430,29 @@ async function fetchCashJournal() {
 
         const response = await authenticatedFetch(url);
         if (!response) {
-            // Restore button on non-response
             updateCashSearchButton('Search', 'fas fa-search');
             return;
         }
         
-        const records = await response.json();
-        // Assuming renderCashJournalTable is defined elsewhere
-        renderCashJournalTable(records);
+        const result = await response.json();
+        
+        // 3. FIX: Access the 'journals' array specifically, not the whole result object
+        // Use a fallback empty array [] so .forEach never fails
+        const journalsArray = result.journals || [];
+        
+        renderCashJournalTable(journalsArray);
 
-        // 2. Change button text to 'Done' after successful display
         updateCashSearchButton('Done', 'fas fa-check');
-
-        // 3. Set a timeout to revert the button text back to 'Search' after 2 seconds
         setTimeout(() => {
             updateCashSearchButton('Search', 'fas fa-search');
-        }, 2000); // 2000 milliseconds = 2 seconds
+        }, 2000);
 
     } catch (error) {
         console.error('Error fetching cash journal:', error);
         showMessage('Failed to fetch cash journal: ' + error.message);
-        
-        // Ensure the button is reverted to 'Search' on error
         updateCashSearchButton('Search', 'fas fa-search');
     }
 }
-
 /**
  * Updates the text and icon of the cash records search button.
  * Requires the button to have id='cash-search-button'.
