@@ -3329,30 +3329,43 @@ app.get('/api/expenses', async (req, res) => {
         // 2. Build Query Object
         let query = { hotelId };
 
-        // 3. Date Filtering (matches your frontend: 2026-02-16)
+        // 3. Robust Date Filtering
         if (date) {
+            // Option A: If you store dates as ISO Date Objects in MongoDB
+            // We use UTC to avoid server timezone shifts
             const startOfDay = new Date(date);
-            startOfDay.setHours(0, 0, 0, 0);
+            startOfDay.setUTCHours(0, 0, 0, 0);
+
             const endOfDay = new Date(date);
-            endOfDay.setHours(23, 59, 59, 999);
+            endOfDay.setUTCHours(23, 59, 59, 999);
             
             query.date = { $gte: startOfDay, $lte: endOfDay };
+
+            /* Option B: If the above still returns nothing, your DB might be 
+            storing dates as plain strings (e.g., "2026-02-23").
+            In that case, uncomment the line below and comment out the lines above:
+            
+            // query.date = date; 
+            */
         }
 
         // 4. Execute with Pagination
-        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const p = parseInt(page) || 1;
+        const l = parseInt(limit) || 5;
+        const skip = (p - 1) * l;
+
         const expenses = await Expense.find(query)
-            .sort({ date: -1 }) // Newest first
+            .sort({ date: -1 })
             .skip(skip)
-            .limit(parseInt(limit));
+            .limit(l);
 
         const total = await Expense.countDocuments(query);
 
         // 5. Send Response
         res.status(200).json({
-            expenses, // Your frontend renderer likely expects this key
-            totalPages: Math.ceil(total / limit),
-            currentPage: parseInt(page),
+            expenses, 
+            totalPages: Math.ceil(total / l),
+            currentPage: p,
             totalItems: total
         });
     } catch (error) {
