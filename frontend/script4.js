@@ -6423,81 +6423,74 @@ function setLoadingState(isLoading) {
     }
 }
 // Ensure you are using the correct variable name: API_BASE_URL
-async function submitInventoryForm(event) {
-    event.preventDefault();
-    const idField = document.getElementById('inventory-id');
-    const id = idField ? idField.value : '';
-
-    console.log(`Submitting inventory form. Mode: ${id ? 'Edit' : 'Create'}, ID: ${id || 'New'}`);
-
-    try {
-        if (id && id.trim() !== '') {
-            await updateExistingItem(id);
-        } else {
-            await createNewItem();
-        }
-    } catch (err) {
-        // High-level catch for any logic errors inside the sub-functions
-        console.error('Form Submission Error:', err);
-        showMessageBox('Error', 'An unexpected error occurred while processing the form.', true);
+/**
+ * Collects and validates inventory form data
+ * @returns {Object|null} The data object or null if validation fails
+ */
+function getInventoryFormData() {
+    const hotelId = localStorage.getItem('hotelId');
+    
+    if (!hotelId) {
+        showMessageBox('Error', 'No hotel selected. Please log in again.', true);
+        return null;
     }
-}
 
-async function createNewItem() {
+    // Map your HTML IDs to the Backend Schema fields
+    return {
+        item: document.getElementById('item').value.trim(),
+        opening: parseFloat(document.getElementById('opening').value) || 0,
+        purchases: parseFloat(document.getElementById('purchases').value) || 0,
+        sales: parseFloat(document.getElementById('inventory-sales').value) || 0,
+        spoilage: parseFloat(document.getElementById('spoilage').value) || 0,
+        buyingprice: parseFloat(document.getElementById('buyingprice').value) || 0,
+        sellingprice: parseFloat(document.getElementById('sellingprice').value) || 0,
+        trackInventory: document.getElementById('trackInventory').checked
+    };
+}
+/**
+ * Sends the form data to the backend
+ */
+async function submitInventory() {
     const data = getInventoryFormData();
+    if (!data) return; // Stop if data is invalid/missing hotelId
+
     const inventoryForm = document.getElementById('inventory-form');
 
     try {
         setLoadingState(true);
-        
-        // FIX: Use API_BASE_URL (corrected spelling) 
-        // Ensure this doesn't result in /api/api/inventory
-        const url = `${API_BASE_URL}/inventory`; 
-        console.log('Attempting POST to:', url, 'Data:', data);
 
-        const response = await authenticatedFetch(url, {
+        // Ensure the path matches your backend: /api/inventory
+        const response = await authenticatedFetch(`${API_BASE_URL}/api/inventory`, {
             method: 'POST',
             body: JSON.stringify(data)
         });
 
-        // Detailed Logging for 404s and other errors
-        if (!response) {
-            throw new Error('No response from server. Check your internet connection.');
-        }
+        if (!response) return; // authenticatedFetch handles the redirect on 401
+
+        const result = await response.json();
 
         if (response.ok) {
-            const result = await response.json();
-            console.log('Successfully created item:', result);
-
             if (inventoryForm) inventoryForm.reset();
+            
+            // Clear hidden ID if you use this for updates too
             const idField = document.getElementById('inventory-id');
             if (idField) idField.value = '';
 
-            showMessageBox('Success', 'Item added to your hotel inventory! ✅');
-            fetchInventory(); 
+            showMessageBox('Success', `${data.item} saved successfully! ✅`);
+            
+            // Refresh the list if the function exists
+            if (typeof fetchInventory === 'function') fetchInventory(); 
         } else {
-            // Log specific server-side errors
-            const errorData = await response.json().catch(() => ({})); 
-            console.error(`Server Error (${response.status}):`, errorData);
-            
-            if (response.status === 404) {
-                throw new Error(`Endpoint not found (404). Please verify the URL: ${url}`);
-            }
-            
-            throw new Error(errorData.error || errorData.message || `Server error: ${response.status}`);
+            throw new Error(result.error || 'Failed to save item');
         }
     } catch (error) {
-        // Log the full error object for debugging
-        console.error('Create Inventory Error:', {
-            message: error.message,
-            stack: error.stack,
-            url: `${API_BASE_URL}/inventory`
-        });
+        console.error('Submission Error:', error);
         showMessageBox('Error', error.message, true);
     } finally {
         setLoadingState(false);
     }
 }
+
 async function updateExistingItem(id) {
     const adminRoles = ['admin', 'super-admin'];
     if (!adminRoles.includes(currentUserRole)) {
