@@ -96,47 +96,79 @@ app.post('/api/public/hotel', async (req, res) => {
 
 async function auth(req, res, next) {
     const authHeader = req.headers.authorization;
-    const hotelId = req.headers['x-hotel-id']; // Client must send this header
+    const hotelId = req.headers['x-hotel-id'];
 
-    if (!authHeader) return res.status(401).json({ error: 'No authorization header' });
+    if (!authHeader) {
+        return res.status(401).json({ error: 'No authorization header' });
+    }
 
-    const token = authHeader.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Malformed authorization header' });
+    // Accept both:
+    // "Bearer xxx"
+    // "Basic xxx"
+    let token;
+
+    if (authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+    } else if (authHeader.startsWith('Basic ')) {
+        token = authHeader.split(' ')[1];
+    } else {
+        return res.status(401).json({ error: 'Invalid authorization format' });
+    }
+
+    if (!token) {
+        return res.status(401).json({ error: 'Malformed authorization header' });
+    }
 
     try {
-        const credentials = Buffer.from(token, 'base64').toString('ascii');
-        const [username, password] = credentials.split(':');
+        // Decode base64 safely
+        let credentials;
+        try {
+            credentials = Buffer.from(token, 'base64').toString('ascii');
+        } catch (e) {
+            return res.status(401).json({ error: 'Invalid token encoding' });
+        }
 
-        // 1. First, check if this is a global Super Admin (No hotelId needed)
-        let user = await User.findOne({ username, role: 'super-admin' });
+        const parts = credentials.split(':');
+        if (parts.length !== 2) {
+            return res.status(401).json({ error: 'Invalid token structure' });
+        }
 
-        // 2. If not Super Admin, look for the user WITHIN the specific hotel
+        const [username, password] = parts;
+
+        let user;
+
+        // 1️⃣ Super Admin (global access)
+        user = await User.findOne({ username, role: 'super-admin' });
+
+        // 2️⃣ Normal user must belong to a hotel
         if (!user) {
-            if (!hotelId) return res.status(400).json({ error: 'Hotel ID is required for login.' });
+            if (!hotelId) {
+                return res.status(400).json({ error: 'Hotel ID header required' });
+            }
+
             user = await User.findOne({ username, hotelId });
         }
 
         if (!user || user.password !== password) {
-            return res.status(401).json({ error: 'Invalid credentials for this hotel.' });
+            return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        // 3. Attach hotelId to req.user so all routes can filter data automatically
-        // Inside your auth function, after finding the user:
-req.user = { 
-    id: user._id,
-    username: user.username, 
-    role: user.role, 
-    // If they are super-admin, use the hotelId from the header so they can "switch" between hotels
-    hotelId: user.role === 'super-admin' ? hotelId : user.hotelId 
-};
-        
-        
+        // Attach safe user object
+        req.user = {
+            id: user._id,
+            username: user.username,
+            role: user.role,
+            hotelId: user.role === 'super-admin' ? hotelId : user.hotelId
+        };
+
         next();
+
     } catch (err) {
         console.error('Authentication error:', err);
-        res.status(500).json({ error: 'Authentication failed' });
+        return res.status(500).json({ error: 'Authentication failed' });
     }
 }
+
 function authorize(roles = []) {
   if (typeof roles === 'string') {
     roles = [roles];
