@@ -6920,40 +6920,46 @@ async function fetchExpenses() {
         const dateFilterInput = document.getElementById('expenses-date-filter');
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
 
-        // 3. Build Tenant-Aware Query Params
+        // 3. Build Query Params
         const params = new URLSearchParams();
-        params.append('hotelId', hotelId); // CRITICAL: Scopes expenses to this hotel
+        params.append('hotelId', hotelId);
         
-        if (dateFilter) {
+        // Ensure we only send the date if it actually has a value
+        if (dateFilter && dateFilter.trim() !== "") {
             params.append('date', dateFilter);
         }
 
-        // Only paginate if we aren't looking at a specific full-day report
-        params.append('page', currentExpensesPage);
-        params.append('limit', expensesPerPage);
+        params.append('page', currentExpensesPage || 1);
+        params.append('limit', expensesPerPage || 10);
 
         const url = `${API_BASE_URL}/expenses?${params.toString()}`;
 
-        // 4. Use Authenticated Wrapper
+        // 4. API Call
         const response = await authenticatedFetch(url);
         
         if (!response || !response.ok) {
-            // Restore button on non-response or error status
-            updateExpensesSearchButton('Search', 'fas fa-search');
-            return;
+            const errorText = response ? await response.text() : "No response from server";
+            throw new Error(errorText);
         }
 
         const result = await response.json();
         
         // 5. Render Data
-        // Ensure result.data is an array or fallback to empty
-        renderExpensesTable(result.expenses || []);
-        renderExpensesPagination(result.page, result.pages);
+        // FIXED: Using the correct keys from your backend response
+        const expensesData = result.expenses || [];
+        renderExpensesTable(expensesData);
+        
+        // FIXED: Using currentPage and totalPages from your backend
+        renderExpensesPagination(result.currentPage, result.totalPages);
 
         // 6. Success Feedback UI
+        if (expensesData.length === 0 && dateFilter) {
+            showMessage('No expenses found for this date.', false);
+        }
+
         updateExpensesSearchButton('Done', 'fas fa-check');
 
-        // Revert the button text back to 'Search' after 2 seconds
+        // Revert button text
         setTimeout(() => {
             updateExpensesSearchButton('Search', 'fas fa-search');
         }, 2000); 
@@ -6961,8 +6967,6 @@ async function fetchExpenses() {
     } catch (error) {
         console.error('Error fetching expenses:', error);
         showMessage('Failed to fetch expenses: ' + error.message, true);
-        
-        // Reset UI on failure
         updateExpensesSearchButton('Search', 'fas fa-search');
     }
 }
