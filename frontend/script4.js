@@ -6424,15 +6424,24 @@ function setLoadingState(isLoading) {
         if (icon) icon.className = 'fas fa-save'; // Restore original icon
     }
 }
+// Ensure you are using the correct variable name: API_BASE_URL
 async function submitInventoryForm(event) {
     event.preventDefault();
-    const id = document.getElementById('inventory-id').value;
+    const idField = document.getElementById('inventory-id');
+    const id = idField ? idField.value : '';
 
-    // Direct the request based on whether we are editing an old item or creating a new one
-    if (id && id.trim() !== '') {
-        await updateExistingItem(id);
-    } else {
-        await createNewItem();
+    console.log(`Submitting inventory form. Mode: ${id ? 'Edit' : 'Create'}, ID: ${id || 'New'}`);
+
+    try {
+        if (id && id.trim() !== '') {
+            await updateExistingItem(id);
+        } else {
+            await createNewItem();
+        }
+    } catch (err) {
+        // High-level catch for any logic errors inside the sub-functions
+        console.error('Form Submission Error:', err);
+        showMessageBox('Error', 'An unexpected error occurred while processing the form.', true);
     }
 }
 
@@ -6442,32 +6451,55 @@ async function createNewItem() {
 
     try {
         setLoadingState(true);
-        const response = await authenticatedFetch(`${API_BAS_URL}/inventory`, {
+        
+        // FIX: Use API_BASE_URL (corrected spelling) 
+        // Ensure this doesn't result in /api/api/inventory
+        const url = `${API_BAS_URL}/inventory`; 
+        console.log('Attempting POST to:', url, 'Data:', data);
+
+        const response = await authenticatedFetch(url, {
             method: 'POST',
-            body: JSON.stringify(data) // hotelId is included via getInventoryFormData
+            body: JSON.stringify(data)
         });
 
-        if (response.ok) {
-            if (inventoryForm) inventoryForm.reset();
+        // Detailed Logging for 404s and other errors
+        if (!response) {
+            throw new Error('No response from server. Check your internet connection.');
+        }
 
-            // Clear the hidden ID to reset the form to "Create Mode"
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Successfully created item:', result);
+
+            if (inventoryForm) inventoryForm.reset();
             const idField = document.getElementById('inventory-id');
             if (idField) idField.value = '';
 
             showMessageBox('Success', 'Item added to your hotel inventory! ✅');
             fetchInventory(); 
         } else {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to save item');
+            // Log specific server-side errors
+            const errorData = await response.json().catch(() => ({})); 
+            console.error(`Server Error (${response.status}):`, errorData);
+            
+            if (response.status === 404) {
+                throw new Error(`Endpoint not found (404). Please verify the URL: ${url}`);
+            }
+            
+            throw new Error(errorData.error || errorData.message || `Server error: ${response.status}`);
         }
     } catch (error) {
-        console.error('Create Error:', error);
+        // Log the full error object for debugging
+        console.error('Create Inventory Error:', {
+            message: error.message,
+            stack: error.stack,
+            url: `${API_BAS_URL}/inventory`
+        });
         showMessageBox('Error', error.message, true);
     } finally {
         setLoadingState(false);
     }
 }
-
 async function updateExistingItem(id) {
     const adminRoles = ['admin', 'super-admin'];
     if (!adminRoles.includes(currentUserRole)) {
