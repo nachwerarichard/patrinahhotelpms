@@ -1505,8 +1505,7 @@
             </div>
             <button onclick="toggleExpenseModal(false)" class="text-gray-400 hover:text-gray-600 text-2xl transition">&times;</button>
         </div>
-
-        <form id="expense-form" class="p-6">
+        <form id="expense-form" class="p-6" onsubmit="submitExpenseForm(event)">
             <input type="hidden" id="expense-id">
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
