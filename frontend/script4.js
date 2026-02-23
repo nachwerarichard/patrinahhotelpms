@@ -6025,7 +6025,7 @@ async function fetchInventory() {
         params.append('page', currentPage || 1);
         params.append('limit', itemsPerPage || 10);
 
-        const url = `${API_BASE_URL}/api/inventory?${params.toString()}`;
+        const url = `${API_BASE_URL}/inventory?${params.toString()}`;
 
         // 3. Use authenticatedFetch wrapper
         const response = await authenticatedFetch(url);
