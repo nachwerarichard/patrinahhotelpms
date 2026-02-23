@@ -3032,6 +3032,25 @@ app.get('/api/kitchen/Pending', auth, async (req, res) => {
     }
 });
 
+app.get('/api/inventory/lookup', auth, async (req, res) => {
+    try {
+        const items = await Inventory.aggregate([
+            { $match: { hotelId: req.user.hotelId } }, // Filter by hotel first
+            { $sort: { date: -1 } },
+            { $group: {
+                _id: "$item",
+                item: { $first: "$item" },
+                buyingprice: { $first: "$buyingprice" },
+                sellingprice: { $first: "$sellingprice" }
+            }},
+            { $match: { sellingprice: { $exists: true, $gt: 0 } }}
+        ]);
+        res.json(items);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Specific endpoint for the sales form dropdown (Tenant Isolated)
 app.get('/api/inventory', auth, async (req, res) => {
     try {
