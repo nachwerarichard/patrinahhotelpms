@@ -6460,7 +6460,7 @@ async function submitInventory() {
         setLoadingState(true);
 
         // Ensure the path matches your backend: /api/inventory
-        const response = await authenticatedFetch(`${API_BASE_URL}/api/inventory`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/inventory`, {
             method: 'POST',
             body: JSON.stringify(data)
         });
