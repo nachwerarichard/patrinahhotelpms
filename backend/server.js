@@ -3092,32 +3092,29 @@ app.post('/api/inventory', auth, async (req, res) => {
 // Add 'auth' middleware here to make it secure
 app.get('/api/inventory', auth, async (req, res) => {
     try {
-        // 1. ALWAYS get hotelId from req.user (populated by auth middleware)
-        // This prevents users from "guessing" other hotel IDs
         const hotelId = req.user.hotelId;
         const { page = 1, limit = 10 } = req.query;
 
         if (!hotelId || hotelId === 'global') {
-            return res.status(400).json({ error: 'Please select a hotel to view inventory.' });
+            return res.status(400).json({ error: 'Please select a hotel.' });
         }
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        // 2. Get the most recent date available in the DB for this hotel
-        // Usually, users want to see "Today's" status.
-        const latestRecord = await Inventory.findOne({ hotelId }).sort({ date: -1 });
-        
-        let query = { hotelId };
-        
-        // Optional: Filter to show only the most recent records
-        if (latestRecord) {
-            const startOfDay = new Date(latestRecord.date);
-            startOfDay.setHours(0, 0, 0, 0);
-            query.date = { $gte: startOfDay };
-        }
+        // FIX: Create a "Today" start point in UTC
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0); 
+
+        // Change the query: 
+        // If you want ALL records ever: remove the date part.
+        // If you want TODAY'S records: keep the date part.
+        let query = { 
+            hotelId: hotelId,
+            date: { $gte: today } // Fetch records created today or later
+        };
 
         const items = await Inventory.find(query)
-            .sort({ item: 1 }) // Sort alphabetically by item name
+            .sort({ item: 1 })
             .skip(skip)
             .limit(parseInt(limit));
 
