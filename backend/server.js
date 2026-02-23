@@ -3045,7 +3045,7 @@ app.get('/api/inventory/lookup', auth, async (req, res) => {
 });
 
 // Create/Update Daily Inventory (Tenant Isolated)
-app.post('/inventory', auth, async (req, res) => {
+app.post('/api/inventory', auth, async (req, res) => {
   try {
     const { item, opening, purchases, sales, spoilage, sellingprice, buyingprice, trackInventory } = req.body;
 
@@ -3282,7 +3282,7 @@ app.post('/cash-journal', auth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-app.delete('/inventory/:id', auth, async (req, res) => {
+app.delete('/api/inventory/:id', auth, async (req, res) => {
   try {
     // SECURE: User can only delete if the item belongs to their hotel
     const deletedDoc = await Inventory.findOneAndDelete({ 
