@@ -6947,7 +6947,7 @@ async function fetchExpenses() {
         
         // 5. Render Data
         // Ensure result.data is an array or fallback to empty
-        renderExpensesTable(result.data || []);
+        renderExpensesTable(result.expenses || []);
         renderExpensesPagination(result.page, result.pages);
 
         // 6. Success Feedback UI
