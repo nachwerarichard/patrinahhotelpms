@@ -3212,7 +3212,7 @@ app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-app.post('/sales', auth, async (req, res) => {
+app.post('/api/sales', auth, async (req, res) => {
   try {
     const { item, department, number, bp, sp, date, accountId } = req.body;
     const hotelId = req.user.hotelId; // Extract tenant ID
