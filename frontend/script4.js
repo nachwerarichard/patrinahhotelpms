@@ -6587,46 +6587,54 @@ function updateSalesSearchButton(text, iconClass) {
 }
 
 async function fetchSales() {
-    // 1. Change button text to 'Searching'
-    updateSalesSearchButton('Searching', 'fas fa-spinner fa-spin'); // Spinning icon for loading
+    updateSalesSearchButton('Searching', 'fas fa-spinner fa-spin');
 
     try {
         const dateFilterInput = document.getElementById('sales-date-filter');
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
 
-        let url = `${API_BAS_URL}/api/sales`;
+        // 1. FIX: Use API_BASE_URL (Correct spelling)
+        // 2. FIX: Ensure you don't have double /api/api
+        // If API_BASE_URL is ".../api", use `${API_BASE_URL}/sales`
+        let url = `${API_BASE_URL}/sales`; 
+        
         const params = new URLSearchParams();
         if (dateFilter) params.append('date', dateFilter);
         params.append('page', currentSalesPage);
         params.append('limit', salesPerPage);
+        
+        // hotelId is required by the backend route we wrote
+        const hotelId = localStorage.getItem('hotelId'); 
+        if (hotelId) params.append('hotelId', hotelId);
+
         url += `?${params.toString()}`;
 
         const response = await authenticatedFetch(url);
         if (!response) {
-            // Restore button on non-response
             updateSalesSearchButton('Search', 'fas fa-search');
             return;
         }
 
         const result = await response.json();
         
-        // Assuming renderSalesTable and renderSalesPagination are defined elsewhere
-        renderSalesTable(result.data); 
-        renderSalesPagination(result.page, result.pages);
+        // 3. FIX: Backend sends 'sales', not 'data'
+        // 4. ADD: Fallback to empty array [] to prevent .length errors
+        const salesData = result.sales || [];
+        const totalPages = result.totalPages || 1;
+        const currentPage = result.currentPage || 1;
 
-        // 2. Change button text to 'Done' after successful display
+        renderSalesTable(salesData); 
+        renderSalesPagination(currentPage, totalPages);
+
         updateSalesSearchButton('Done', 'fas fa-check');
 
-        // 3. Set a timeout to revert the button text back to 'Search' after 2 seconds
         setTimeout(() => {
             updateSalesSearchButton('Search', 'fas fa-search');
-        }, 2000); // 2000 milliseconds = 2 seconds
+        }, 2000);
         
     } catch (error) {
         console.error('Error fetching sales:', error);
         showMessage('Failed to fetch sales: ' + error.message);
-        
-        // Ensure the button is reverted to 'Search' on error
         updateSalesSearchButton('Search', 'fas fa-search');
     }
 }
