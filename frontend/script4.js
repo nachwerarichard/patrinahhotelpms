@@ -6529,11 +6529,11 @@ async function updateExistingItem(id) {
 }
 
 function getInventoryFormData() {
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    //const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     
     return {
         // Multi-tenant context
-        hotelId: sessionData?.hotelId, 
+        //hotelId: sessionData?.hotelId, 
         
         // Item details
         item: document.getElementById('item').value.trim(),
