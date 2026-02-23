@@ -3228,10 +3228,10 @@ app.post('/expenses', auth, async (req, res) => {
   }
 });
 
-// GET Expenses endpoint
-app.get('/api/expenses', async (req, res) => {
+// GET Cash Journal records
+app.get('/api/cash-journal', async (req, res) => {
     try {
-        const { hotelId, date, department, page = 1, limit = 5 } = req.query;
+        const { hotelId, date, page = 1, limit = 10 } = req.query;
 
         if (!hotelId) {
             return res.status(400).json({ error: 'hotelId is required' });
@@ -3239,7 +3239,7 @@ app.get('/api/expenses', async (req, res) => {
 
         const query = { hotelId };
 
-        // 1. Handle Date Filtering (Matches the 'date' param in your error log)
+        // Date filtering logic
         if (date) {
             const startOfDay = new Date(date);
             startOfDay.setHours(0, 0, 0, 0);
@@ -3248,31 +3248,27 @@ app.get('/api/expenses', async (req, res) => {
             query.date = { $gte: startOfDay, $lte: endOfDay };
         }
 
-        // 2. Optional Department Filter
-        if (department) {
-            query.department = department;
-        }
-
-        // 3. Pagination Logic
         const skip = (parseInt(page) - 1) * parseInt(limit);
-        const expenses = await Expense.find(query)
-            .sort({ date: -1 }) // Newest first
+
+        const journals = await CashJournal.find(query)
+            .sort({ date: -1 })
             .skip(skip)
             .limit(parseInt(limit));
 
-        const total = await Expense.countDocuments(query);
+        const total = await CashJournal.countDocuments(query);
 
         res.status(200).json({
-            expenses,
+            journals,
             totalPages: Math.ceil(total / limit),
             currentPage: parseInt(page),
             totalItems: total
         });
     } catch (error) {
-        console.error('Error fetching expenses:', error);
-        res.status(500).json({ error: 'Server error while fetching expenses' });
+        console.error('Error fetching cash journal:', error);
+        res.status(500).json({ error: 'Server error while fetching cash journal' });
     }
 });
+
 // POST /cash-journal (Tenant Isolated)
 app.post('/cash-journal', auth, async (req, res) => {
   try {
