@@ -6594,7 +6594,7 @@ async function fetchSales() {
         const dateFilterInput = document.getElementById('sales-date-filter');
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
 
-        let url = `${API_BAS_URL}/sales`;
+        let url = `${API_BAS_URL}/api/sales`;
         const params = new URLSearchParams();
         if (dateFilter) params.append('date', dateFilter);
         params.append('page', currentSalesPage);
