@@ -3049,20 +3049,37 @@ app.post('/api/inventory', auth, async (req, res) => {
   try {
     const { item, opening, purchases, sales, spoilage, sellingprice, buyingprice, trackInventory } = req.body;
 
-    // Use a helper that is now hotel-aware
-    let record = await getTodayInventory(item, opening, req.user.hotelId);
-    
-    // ... [Calculations remain the same] ...
+    // 1. Ensure we have a hotelId from the auth middleware
+    const hotelId = req.user.hotelId;
 
-    record.hotelId = req.user.hotelId; // Ensure hotelId is saved
+    if (!hotelId || hotelId === 'global') {
+        return res.status(400).json({ error: "Please select a specific hotel (Super Admin cannot post to 'global')" });
+    }
+
+    // 2. Pass hotelId to your helper function
+    let record = await getTodayInventory(item, opening, hotelId);
+    
+    // 3. Update the record fields
+    record.item = item;
+    record.purchases = purchases || 0;
+    record.sales = sales || 0;
+    record.spoilage = spoilage || 0;
+    record.buyingprice = buyingprice || 0;
+    record.sellingprice = sellingprice || 0;
+    record.trackInventory = trackInventory;
+    
+    // IMPORTANT: Explicitly set the hotelId from the authenticated user
+    record.hotelId = hotelId; 
+
+    // 4. Save the record
     await record.save();
 
     res.status(200).json(record);
   } catch (err) {
+    console.error("Inventory Save Error:", err);
     res.status(500).json({ error: err.message });
   }
 });
-
                // GET Inventory endpoint
 app.get('/api/inventory', async (req, res) => {
     try {
