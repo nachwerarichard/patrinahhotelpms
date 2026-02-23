@@ -6519,25 +6519,7 @@ async function updateExistingItem(id) {
     }
 }
 
-function getInventoryFormData() {
-  const hotelId = localStorage.getItem('hotelId');
-    //const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    
-    return {
-        // Multi-tenant context
-        //hotelId: sessionData?.hotelId, 
-        
-        // Item details
-        item: document.getElementById('item').value.trim(),
-        opening: parseInt(document.getElementById('opening').value) || 0,
-        purchases: parseInt(document.getElementById('purchases').value) || 0,
-        sales: parseInt(document.getElementById('inventory-sales').value) || 0,
-        spoilage: parseInt(document.getElementById('spoilage').value) || 0,
-        buyingprice: parseFloat(document.getElementById('buyingprice').value) || 0,
-        sellingprice: parseFloat(document.getElementById('sellingprice').value) || 0,
-        trackInventory: document.getElementById('trackInventory').checked
-    };
-}
+
 // --- Sales Functions ---
 // Helper function to update the sales search button text and icon
 
