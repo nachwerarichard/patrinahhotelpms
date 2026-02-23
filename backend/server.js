@@ -3063,6 +3063,36 @@ app.post('/inventory', auth, async (req, res) => {
   }
 });
 
+               // GET Inventory endpoint
+app.get('/api/inventory', async (req, res) => {
+    try {
+        const { hotelId, page = 1, limit = 10 } = req.query;
+
+        if (!hotelId) {
+            return res.status(400).json({ error: 'hotelId is required' });
+        }
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        // Fetch items specifically for this hotel with pagination
+        const items = await Inventory.find({ hotelId })
+            .sort({ date: -1 }) // Show newest items first
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        const total = await Inventory.countDocuments({ hotelId });
+
+        res.status(200).json({
+            items,
+            totalPages: Math.ceil(total / limit),
+            currentPage: parseInt(page),
+            totalItems: total
+        });
+    } catch (error) {
+        console.error('Error fetching inventory:', error);
+        res.status(500).json({ error: 'Server error while fetching inventory' });
+    }
+});
 app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
     try {
         const order = await KitchenOrder.findOne({ _id: req.params.id, hotelId: req.user.hotelId });
