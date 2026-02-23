@@ -6529,6 +6529,7 @@ async function updateExistingItem(id) {
 }
 
 function getInventoryFormData() {
+  const hotelId = localStorage.getItem('hotelId');
     //const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     
     return {
