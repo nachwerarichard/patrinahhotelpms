@@ -3213,7 +3213,7 @@ app.get('/api/sales', async (req, res) => {
     }
 });
 // POST /expenses (Tenant Isolated)
-app.post('/expenses', auth, async (req, res) => {
+app.post('/api/expenses', auth, async (req, res) => {
   try {
     const exp = await Expense.create({
       ...req.body,
@@ -3228,6 +3228,50 @@ app.post('/expenses', auth, async (req, res) => {
   }
 });
 
+// GET Expenses with Filtering and Pagination
+app.get('/api/expenses', async (req, res) => {
+    try {
+        const { hotelId, date, page = 1, limit = 5 } = req.query;
+
+        // 1. Validation
+        if (!hotelId) {
+            return res.status(400).json({ error: 'hotelId is required' });
+        }
+
+        // 2. Build Query Object
+        let query = { hotelId };
+
+        // 3. Date Filtering (matches your frontend: 2026-02-16)
+        if (date) {
+            const startOfDay = new Date(date);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(date);
+            endOfDay.setHours(23, 59, 59, 999);
+            
+            query.date = { $gte: startOfDay, $lte: endOfDay };
+        }
+
+        // 4. Execute with Pagination
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const expenses = await Expense.find(query)
+            .sort({ date: -1 }) // Newest first
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        const total = await Expense.countDocuments(query);
+
+        // 5. Send Response
+        res.status(200).json({
+            expenses, // Your frontend renderer likely expects this key
+            totalPages: Math.ceil(total / limit),
+            currentPage: parseInt(page),
+            totalItems: total
+        });
+    } catch (error) {
+        console.error('Error fetching expenses:', error);
+        res.status(500).json({ error: 'Server error while fetching expenses' });
+    }
+});
 // GET Cash Journal records
 app.get('/api/cash-journal', async (req, res) => {
     try {
