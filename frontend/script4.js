@@ -6437,11 +6437,6 @@ async function submitInventoryForm(event) {
 }
 
 async function createNewItem() {
-    const allowedRoles = ['admin', 'manager', 'super-admin', 'cashier', 'bar'];
-    if (!allowedRoles.includes(currentUserRole)) {
-        return showMessageBox('Permission Denied', 'You do not have permission to add inventory.', true);
-    }
-
     const data = getInventoryFormData();
     const inventoryForm = document.getElementById('inventory-form');
 
