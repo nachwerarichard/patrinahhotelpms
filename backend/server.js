@@ -3025,7 +3025,7 @@ app.get('/api/kitchen/Pending', auth, async (req, res) => {
 });
 
 // Specific endpoint for the sales form dropdown (Tenant Isolated)
-app.get('/inventory/lookup', auth, async (req, res) => {
+app.get('/api/inventory/lookup', auth, async (req, res) => {
     try {
         const items = await Inventory.aggregate([
             { $match: { hotelId: req.user.hotelId } }, // Filter by hotel first
