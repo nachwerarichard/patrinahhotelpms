@@ -7734,7 +7734,7 @@ async function generateReports() {
 
         // Fetch Sales for this Hotel
         do {
-            const resp = await authenticatedFetch(`${API_BASE_URL}/api/sales?${queryParams}&page=${page}&limit=100`);
+            const resp = await authenticatedFetch(`${API_BASE_URL}/sales?${queryParams}&page=${page}&limit=100`);
             res = await resp.json();
             if (res && res.data) { 
                 allSales = allSales.concat(res.data); 
