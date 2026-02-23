@@ -2908,42 +2908,50 @@ function getStartAndEndOfDayInUTC(dateString) {
 
 // --- INVENTORY HELPERS (CORRECTED) ---
 // This helper function correctly finds or creates today's inventory record.
-async function getTodayInventory(itemName, initialOpening = 0) {
-  // Ensure the initial opening value is not negative.
+async function getTodayInventory(itemName, initialOpening = 0, hotelId) {
+  // 1. Validation: Ensure hotelId is present
+  if (!hotelId) {
+    throw new Error("hotelId is required to find or create inventory.");
+  }
+
   initialOpening = Math.max(0, initialOpening);
-  
   const { utcStart, utcEnd } = getStartAndEndOfDayInUTC(new Date().toISOString().slice(0, 10));
   
-  // Find a record for today
-  let record = await Inventory.findOne({ item: itemName, date: { $gte: utcStart, $lt: utcEnd } });
+  // 2. Find record for today - MUST filter by hotelId
+  let record = await Inventory.findOne({ 
+    item: itemName, 
+    hotelId: hotelId, // Filter by hotel
+    date: { $gte: utcStart, $lt: utcEnd } 
+  });
 
   if (!record) {
-    // 1. Get the most recent record for this item (Yesterday or older)
-    const latest = await Inventory.findOne({ item: itemName }).sort({ date: -1 });
+    // 3. Get the most recent record for this item FOR THIS HOTEL
+    const latest = await Inventory.findOne({ 
+      item: itemName, 
+      hotelId: hotelId // Filter by hotel
+    }).sort({ date: -1 });
     
     const opening = latest ? latest.closing : initialOpening;
-    
-    // 2. Carry over the settings and prices
-    // If 'latest' exists, we use its settings. If not, we use defaults.
     const trackInventory = latest ? latest.trackInventory : true;
     const buyingprice = latest ? latest.buyingprice : 0;
     const sellingprice = latest ? latest.sellingprice : 0;
     
-    // 3. Create the new record for today with carried-over data
+    // 4. Create the new record WITH hotelId
     record = await Inventory.create({
+      hotelId,        // <--- THIS WAS MISSING AND CAUSED THE 500 ERROR
       item: itemName,
       opening,
       purchases: 0,
       sales: 0,
       spoilage: 0,
       closing: opening,
-      trackInventory, // Carry over tracking status
-      buyingprice,    // Carry over prices
-      sellingprice,   // Carry over prices
+      trackInventory,
+      buyingprice,
+      sellingprice,
       date: new Date()
     });
     
-    console.log(`[Inventory] New daily record created for ${itemName}. Tracking: ${trackInventory}`);
+    console.log(`[Inventory] New daily record for ${itemName} at hotel ${hotelId}.`);
   }
 
   return record;
