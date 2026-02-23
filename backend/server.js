@@ -3228,6 +3228,51 @@ app.post('/expenses', auth, async (req, res) => {
   }
 });
 
+// GET Expenses endpoint
+app.get('/api/expenses', async (req, res) => {
+    try {
+        const { hotelId, date, department, page = 1, limit = 5 } = req.query;
+
+        if (!hotelId) {
+            return res.status(400).json({ error: 'hotelId is required' });
+        }
+
+        const query = { hotelId };
+
+        // 1. Handle Date Filtering (Matches the 'date' param in your error log)
+        if (date) {
+            const startOfDay = new Date(date);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(date);
+            endOfDay.setHours(23, 59, 59, 999);
+            query.date = { $gte: startOfDay, $lte: endOfDay };
+        }
+
+        // 2. Optional Department Filter
+        if (department) {
+            query.department = department;
+        }
+
+        // 3. Pagination Logic
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const expenses = await Expense.find(query)
+            .sort({ date: -1 }) // Newest first
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        const total = await Expense.countDocuments(query);
+
+        res.status(200).json({
+            expenses,
+            totalPages: Math.ceil(total / limit),
+            currentPage: parseInt(page),
+            totalItems: total
+        });
+    } catch (error) {
+        console.error('Error fetching expenses:', error);
+        res.status(500).json({ error: 'Server error while fetching expenses' });
+    }
+});
 // POST /cash-journal (Tenant Isolated)
 app.post('/cash-journal', auth, async (req, res) => {
   try {
