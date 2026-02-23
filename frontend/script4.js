@@ -7279,94 +7279,121 @@ async function submitEditExpenseForm(event) {
         setEditButtonLoading(false);
     }
 }
+
+async function createExpense(expenseData) {
+    const url = `${API_BASE_URL}/expenses`;
+    const response = await authenticatedFetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(expenseData)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to record expense.');
+    }
+
+    return await response.json();
+}
+
+async function updateExpense(id, expenseData) {
+    // Permission check specific to editing
+    const adminRoles = ['admin', 'super-admin'];
+    if (!adminRoles.includes(currentUserRole)) {
+        throw new Error('Only admins can edit existing expenses.');
+    }
+
+    const url = `${API_BASE_URL}/expenses/${id}`;
+    const response = await authenticatedFetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(expenseData)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update expense.');
+    }
+
+    return await response.json();
+}
+
 async function submitExpenseForm(event) {
     event.preventDefault();
 
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const hotelId = sessionData?.hotelId;
-
+    // 1. Initial Setup & UI State
     const submitButton = document.querySelector('#expense-form button[type="submit"]');
     const submitTextSpan = document.getElementById('expense-submit-text');
-    const submitIcon = submitButton ? submitButton.querySelector('i.fas') : null;
-    
+    const submitIcon = submitButton?.querySelector('i.fas');
     const originalIconClass = submitIcon ? submitIcon.className : 'fas fa-plus-circle';
     const originalButtonText = submitTextSpan ? submitTextSpan.textContent : 'Record Expense';
 
+    // 2. Global Access Check
     const allowedRoles = ['manager', 'cashier', 'admin', 'super-admin', 'bar'];
     if (!allowedRoles.includes(currentUserRole)) {
-        showMessage('Permission Denied: You cannot record expenses.', true);
-        return;
+        return showMessage('Permission Denied: You cannot record expenses.', true);
     }
 
-    // Gather Inputs
+    // 3. Gather Data
     const id = document.getElementById('expense-id').value;
-    const amount = parseFloat(document.getElementById('expense-amount').value);
-    const description = document.getElementById('expense-description').value.trim();
-    const date = document.getElementById('expense-date').value;
-
-    if (!description || isNaN(amount) || amount <= 0 || !date) {
-        showMessage('Please ensure description, amount, and date are valid.', true);
-        return;
-    }
-
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    
     const expenseData = {
-        hotelId,
+        hotelId: sessionData?.hotelId,
         department: document.getElementById('expense-department').value,
-        description: description,
-        amount: amount,
+        description: document.getElementById('expense-description').value.trim(),
+        amount: parseFloat(document.getElementById('expense-amount').value),
         receiptId: document.getElementById('expense-receiptId').value,
         source: document.getElementById('expense-source').value,
-        date: date,
+        date: document.getElementById('expense-date').value,
         recordedBy: currentUsername
     };
 
+    // 4. Validation
+    if (!expenseData.description || isNaN(expenseData.amount) || expenseData.amount <= 0 || !expenseData.date) {
+        return showMessage('Please ensure description, amount, and date are valid.', true);
+    }
+
     try {
+        // UI Loading State
         submitTextSpan.textContent = 'Processing...';
-        if (submitIcon) submitIcon.className = 'fas fa-spinner fa-spin'; 
+        if (submitIcon) submitIcon.className = 'fas fa-spinner fa-spin';
         submitButton.disabled = true;
 
-        const url = id ? `${API_BASE_URL}/expenses/${id}` : `${API_BASE_URL}/expenses`;
-        const method = id ? 'PUT' : 'POST';
-
-        // Check admin permissions for edits
-        if (id && !['admin', 'super-admin'].includes(currentUserRole)) {
-            throw new Error('Only admins can edit existing expenses.');
-        }
-
-        const response = await authenticatedFetch(url, {
-            method: method,
-            body: JSON.stringify(expenseData)
-        });
-        
-        if (response.ok) {
-            submitTextSpan.textContent = 'Done! ✅';
-            if (submitIcon) submitIcon.className = 'fas fa-check'; 
-            
-            showMessage(id ? 'Expense updated! ✅' : 'Expense recorded! ✅');
-
-            setTimeout(() => {
-                const form = document.getElementById('expense-form');
-                if (form) form.reset();
-                document.getElementById('expense-id').value = '';
-
-                // Reset to today's date
-                const today = new Date().toISOString().split('T')[0];
-                const dateInput = document.getElementById('expense-date');
-                if (dateInput) dateInput.value = today;
-
-                submitTextSpan.textContent = originalButtonText;
-                if (submitIcon) submitIcon.className = originalIconClass;
-                submitButton.disabled = false;
-                fetchExpenses();
-            }, 2000); 
-
+        // 5. Execute API Call
+        if (id) {
+            await updateExpense(id, expenseData);
+            showMessage('Expense updated! ✅');
         } else {
-             const errorData = await response.json();
-             throw new Error(errorData.message || 'Server error.');
+            await createExpense(expenseData);
+            showMessage('Expense recorded! ✅');
         }
+
+        // 6. Success Feedback & Reset
+        submitTextSpan.textContent = 'Done! ✅';
+        if (submitIcon) submitIcon.className = 'fas fa-check';
+
+        setTimeout(() => {
+            const form = document.getElementById('expense-form');
+            if (form) form.reset();
+            document.getElementById('expense-id').value = '';
+
+            // Reset to today's date
+            const today = new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('expense-date');
+            if (dateInput) dateInput.value = today;
+
+            // Restore Button
+            submitTextSpan.textContent = originalButtonText;
+            if (submitIcon) submitIcon.className = originalIconClass;
+            submitButton.disabled = false;
+            
+            fetchExpenses(); // Refresh list
+        }, 2000);
 
     } catch (error) {
         showMessage('Error: ' + error.message, true);
+        // Reset Button immediately on error
         submitTextSpan.textContent = originalButtonText;
         if (submitIcon) submitIcon.className = originalIconClass;
         submitButton.disabled = false;
