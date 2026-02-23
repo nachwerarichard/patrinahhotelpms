@@ -3273,7 +3273,7 @@ app.get('/api/expenses', async (req, res) => {
     }
 });
 // GET Cash Journal records
-app.get('/api/cash-journal', async (req, res) => {
+app.get('/api/cash-journal', auth, async (req, res) => {
     try {
         const { hotelId, date, page = 1, limit = 10 } = req.query;
 
