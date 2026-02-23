@@ -5725,14 +5725,12 @@ const resetposForm = () => {
     itemDescInput.dataset.sp = '0';
     document.getElementById('deptSelect').focus();
 };
-const API_BAS_URL = 'https://novouscloudpms-tz4s.onrender.com';
-const BAS_URL='https://novouscloudpms-tz4s.onrender.com';
 // --- INVENTORY LOOKUP ---
 async function loadInventory() {
     //const hotelId = getHotelId();
     try {
        const res = await authenticatedFetch(
-    `${API_BAS_URL}/inventory/lookup`,
+    `${API_BASE_URL}/inventory/lookup`,
     { method: 'GET' }
 );
 
@@ -6026,7 +6024,7 @@ async function fetchInventory() {
             params.append('limit', itemsPerPage);
         }
 
-        const url = `${API_BAS_URL}/api/inventory?${params.toString()}`;
+        const url = `${API_BASE_URL}/inventory?${params.toString()}`;
 
         // 3. Use your authenticatedFetch wrapper
         const response = await authenticatedFetch(url);
@@ -6245,7 +6243,7 @@ async function handleUpdateSubmit(event) {
         loadingText.classList.remove('hidden');
         loadingText.classList.add('flex');
 
-        const response = await authenticatedFetch(`${API_BAS_URL}/inventory/${id}`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(inventoryData)
@@ -7879,7 +7877,7 @@ async function fetchAuditLogs() {
         }
 
         // 4. API Request
-        const response = await authenticatedFetch(`${API_BAS_URL}/audit-logs?${params.toString()}`);
+        const response = await authenticatedFetch(`${API_BASE_URL}/audit-logs?${params.toString()}`);
         
         if (!response || !response.ok) {
             throw new Error('Failed to reach the audit server.');
