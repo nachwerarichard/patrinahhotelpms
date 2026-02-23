@@ -3171,6 +3171,47 @@ app.post('/sales', auth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// GET Sales endpoint
+app.get('/api/sales', async (req, res) => {
+    try {
+        // 1. Get query parameters
+        const { hotelId, page = 1, limit = 15, department } = req.query;
+
+        if (!hotelId) {
+            return res.status(400).json({ error: 'hotelId is required' });
+        }
+
+        // 2. Build the filter object
+        const filter = { hotelId };
+        if (department) {
+            filter.department = department;
+        }
+
+        // 3. Setup Pagination
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        // 4. Fetch sales from MongoDB
+        const sales = await Sale.find(filter)
+            .sort({ date: -1 }) // Newest first
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        // 5. Get total count for pagination controls
+        const total = await Sale.countDocuments(filter);
+
+        // 6. Return response
+        res.status(200).json({
+            sales,
+            totalPages: Math.ceil(total / limit),
+            currentPage: parseInt(page),
+            totalItems: total
+        });
+    } catch (error) {
+        console.error('Error fetching sales:', error);
+        res.status(500).json({ error: 'Server error while fetching sales' });
+    }
+});
 // POST /expenses (Tenant Isolated)
 app.post('/expenses', auth, async (req, res) => {
   try {
