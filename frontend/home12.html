@@ -1174,8 +1174,7 @@
       <h3 id="modal-title" class="text-xl font-bold text-gray-800">Add Inventory Item</h3>
       <button onclick="toggleInventoryModal(false)" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
     </div>
-    
-    <form id="inventory-form" class="p-6">
+    <form id="inventory-form" class="p-6" onsubmit="event.preventDefault(); submitInventory();">
       <input type="hidden" id="inventory-id">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
