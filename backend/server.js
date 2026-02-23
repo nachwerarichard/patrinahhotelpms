@@ -3033,22 +3033,53 @@ app.get('/api/kitchen/Pending', auth, async (req, res) => {
 });
 
 // Specific endpoint for the sales form dropdown (Tenant Isolated)
-app.get('/api/inventory/lookup', auth, async (req, res) => {
+app.get('/api/inventory', auth, async (req, res) => {
     try {
-        const items = await Inventory.aggregate([
-            { $match: { hotelId: req.user.hotelId } }, // Filter by hotel first
-            { $sort: { date: -1 } },
-            { $group: {
-                _id: "$item",
-                item: { $first: "$item" },
-                buyingprice: { $first: "$buyingprice" },
-                sellingprice: { $first: "$sellingprice" }
-            }},
-            { $match: { sellingprice: { $exists: true, $gt: 0 } }}
-        ]);
-        res.json(items);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+        const hotelId = req.user.hotelId;
+        const { item, date, page = 1, limit = 10 } = req.query;
+
+        let query = { hotelId };
+
+        // Filter by Item Name (Case-insensitive search)
+        if (item) {
+            query.item = { $regex: item, $options: 'i' };
+        }
+
+        // Filter by Date
+        if (date) {
+            // Match the specific day from 00:00 to 23:59
+            const startOfDay = new Date(date);
+            startOfDay.setUTCHours(0, 0, 0, 0);
+            
+            const endOfDay = new Date(date);
+            endOfDay.setUTCHours(23, 59, 59, 999);
+            
+            query.date = { $gte: startOfDay, $lte: endOfDay };
+        } else {
+            // Default: Show today's records if no date is specified
+            const today = new Date();
+            today.setUTCHours(0, 0, 0, 0);
+            query.date = { $gte: today };
+        }
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const items = await Inventory.find(query)
+            .sort({ date: -1, item: 1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        const total = await Inventory.countDocuments(query);
+
+        res.status(200).json({
+            items,
+            totalPages: Math.ceil(total / limit),
+            currentPage: parseInt(page),
+            totalItems: total
+        });
+    } catch (error) {
+        console.error('Fetch Error:', error);
+        res.status(500).json({ error: 'Failed to fetch inventory' });
     }
 });
 
