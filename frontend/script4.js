@@ -6012,44 +6012,43 @@ async function fetchInventory() {
         const itemFilter = itemFilterInput ? itemFilterInput.value.trim() : '';
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
 
-        // 2. Build Multi-Tenant Query Params
+        // 2. Build Query Params
         const params = new URLSearchParams();
-        params.append('hotelId', hotelId); // CRITICAL: Only get stock for THIS hotel
+        // Note: authenticatedFetch already adds x-hotel-id header, 
+        // but adding it to params ensures backend compatibility.
+        params.append('hotelId', hotelId); 
         
         if (itemFilter) params.append('item', itemFilter);
         if (dateFilter) params.append('date', dateFilter); 
         
-        if (!dateFilter) {
-            params.append('page', currentPage);
-            params.append('limit', itemsPerPage);
-        }
+        // Pagination logic
+        params.append('page', currentPage || 1);
+        params.append('limit', itemsPerPage || 10);
 
-        const url = `${API_BASE_URL}/inventory?${params.toString()}`;
+        const url = `${API_BASE_URL}/api/inventory?${params.toString()}`;
 
-        // 3. Use your authenticatedFetch wrapper
+        // 3. Use authenticatedFetch wrapper
         const response = await authenticatedFetch(url);
 
         if (!response || !response.ok) {
-            updateSearchButton('Search', 'fas fa-search');
-            return;
+            const err = await response.json();
+            throw new Error(err.error || 'Server responded with an error');
         }
 
         const result = await response.json(); 
 
         // 4. Data Assignment
-        let inventoryData = dateFilter ? (result.report || []) : (result.data || []);
+        // Standardize: Look for items in result.items (matching your backend GET route)
+        // fall back to .data or .report for backward compatibility
+        let inventoryData = result.items || result.data || result.report || [];
         
-        // Handle Pagination UI
-        if (dateFilter) {
-            renderPagination(1, 1);
-        } else {
-            renderPagination(result.page, result.pages);
-        }
+        // 5. Handle Pagination UI
+        renderPagination(result.currentPage || 1, result.totalPages || 1);
 
-        // 5. Render Table
+        // 6. Render Table
         renderInventoryTable(inventoryData);
 
-        // 6. Final UI State
+        // 7. Final UI State
         if (inventoryData.length === 0) {
             updateSearchButton('No Results', 'fas fa-exclamation-circle');
         } else {
