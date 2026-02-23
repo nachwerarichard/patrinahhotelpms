@@ -5725,13 +5725,14 @@ const resetposForm = () => {
     itemDescInput.dataset.sp = '0';
     document.getElementById('deptSelect').focus();
 };
+const API_BAS_URL = 'https://novouscloudpms-tz4s.onrender.com';
 const BAS_URL='https://novouscloudpms-tz4s.onrender.com';
 // --- INVENTORY LOOKUP ---
 async function loadInventory() {
     //const hotelId = getHotelId();
     try {
        const res = await authenticatedFetch(
-    `${BAS_URL}/inventory/lookup`,
+    `${API_BAS_URL}/inventory/lookup`,
     { method: 'GET' }
 );
 
@@ -5814,7 +5815,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // --- Initialization Variables ---
-const API_BAS_URL = 'https://novouscloudpms-tz4s.onrender.com';
+//const API_BAS_URL = 'https://novouscloudpms-tz4s.onrender.com';
  
 let authToken = localStorage.getItem('authToken') || ''; // <-- Issue is here
 //let currentUsername = localStorage.getItem('username') || ''; 
