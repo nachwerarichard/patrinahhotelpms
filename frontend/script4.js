@@ -6760,75 +6760,89 @@ function renderSalesSummary(tbody, departmentTotals, grandTotal) {
     `;
 }
 
+async function createSale(saleData) {
+    const url = `${API_BASE_URL}/sales`;
+    const response = await authenticatedFetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(saleData)
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to record sale.');
+    }
+
+    return await response.json();
+}
+async function updateSale(id, saleData) {
+    const url = `${API_BASE_URL}/sales/${id}`;
+    const response = await authenticatedFetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(saleData)
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update sale.');
+    }
+
+    return await response.json();
+}
 async function submitSaleForm(event) {
     event.preventDefault();
 
+    // 1. Authorization Check
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelId = sessionData?.hotelId;
-
     const allowedRoles = ['cashier', 'manager', 'bar', 'super-admin', 'admin'];
+
     if (!allowedRoles.includes(currentUserRole)) {
         return showMessageBox('Access Denied', 'You do not have permission to record sales.', true);
     }
 
+    // 2. UI Elements & Validation
     const submitButton = document.querySelector('#sale-form button[type="submit"]');
     const originalText = submitButton.innerHTML;
-
-    // Gather Inputs
     const id = document.getElementById('sale-id').value;
-    const item = document.getElementById('sale-item').value.trim();
-    const department = document.getElementById('department-item').value;
-    const number = parseInt(document.getElementById('sale-number').value);
-    const bp = parseFloat(document.getElementById('sale-bp').value);
-    const sp = parseFloat(document.getElementById('sale-sp').value);
-    const date = document.getElementById('sales-date').value;
 
-    if (!item || isNaN(number) || isNaN(bp) || isNaN(sp) || !date) {
+    const saleData = {
+        hotelId,
+        item: document.getElementById('sale-item').value.trim(),
+        department: document.getElementById('department-item').value,
+        number: parseInt(document.getElementById('sale-number').value),
+        bp: parseFloat(document.getElementById('sale-bp').value),
+        sp: parseFloat(document.getElementById('sale-sp').value),
+        date: document.getElementById('sales-date').value
+    };
+
+    if (!saleData.item || isNaN(saleData.number) || isNaN(saleData.bp) || isNaN(saleData.sp) || !saleData.date) {
         return showMessageBox('Incomplete Form', 'Please fill all fields with valid data.', true);
     }
 
-    // Calculations
-    const totalBuyingPrice = bp * number;
-    const totalSellingPrice = sp * number;
-    const profit = totalSellingPrice - totalBuyingPrice;
-    const percentageProfit = totalBuyingPrice !== 0 ? (profit / totalBuyingPrice) * 100 : 0;
+    // 3. Logic Calculations
+    saleData.profit = (saleData.sp - saleData.bp) * saleData.number;
+    saleData.percentageprofit = saleData.bp !== 0 ? (saleData.profit / (saleData.bp * saleData.number)) * 100 : 0;
 
-    const saleData = {
-        hotelId, // Multi-tenant context
-        department,
-        item,
-        number,
-        bp,
-        sp,
-        profit,
-        percentageprofit: percentageProfit,
-        date
-    };
-
+    // 4. Execution
     try {
         submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
         submitButton.disabled = true;
 
-        const url = id ? `${API_BASE_URL}/sales/${id}` : `${API_BASE_URL}/sales`;
-        const method = id ? 'PUT' : 'POST';
-
-        const response = await authenticatedFetch(url, {
-            method: method,
-            body: JSON.stringify(saleData)
-        });
-
-        if (response.ok) {
-            showMessageBox('Success', id ? 'Sale updated!' : 'Sale recorded! ✅');
-            
-            // Cleanup UI
-            document.getElementById('sale-form').reset();
-            document.getElementById('sale-id').value = '';
-            
-            fetchSales(); // Refresh table
+        if (id) {
+            await updateSale(id, saleData);
+            showMessageBox('Success', 'Sale updated! ✅');
         } else {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to save sale.');
+            await createSale(saleData);
+            showMessageBox('Success', 'Sale recorded! ✅');
         }
+
+        // Cleanup
+        document.getElementById('sale-form').reset();
+        document.getElementById('sale-id').value = '';
+        fetchSales(); 
+
     } catch (error) {
         showMessageBox('Error', error.message, true);
     } finally {
