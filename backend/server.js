@@ -3089,23 +3089,39 @@ app.post('/api/inventory', auth, async (req, res) => {
   }
 });
                // GET Inventory endpoint
-app.get('/api/inventory', async (req, res) => {
+// Add 'auth' middleware here to make it secure
+app.get('/api/inventory', auth, async (req, res) => {
     try {
-        const { hotelId, page = 1, limit = 10 } = req.query;
+        // 1. ALWAYS get hotelId from req.user (populated by auth middleware)
+        // This prevents users from "guessing" other hotel IDs
+        const hotelId = req.user.hotelId;
+        const { page = 1, limit = 10 } = req.query;
 
-        if (!hotelId) {
-            return res.status(400).json({ error: 'hotelId is required' });
+        if (!hotelId || hotelId === 'global') {
+            return res.status(400).json({ error: 'Please select a hotel to view inventory.' });
         }
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        // Fetch items specifically for this hotel with pagination
-        const items = await Inventory.find({ hotelId })
-            .sort({ date: -1 }) // Show newest items first
+        // 2. Get the most recent date available in the DB for this hotel
+        // Usually, users want to see "Today's" status.
+        const latestRecord = await Inventory.findOne({ hotelId }).sort({ date: -1 });
+        
+        let query = { hotelId };
+        
+        // Optional: Filter to show only the most recent records
+        if (latestRecord) {
+            const startOfDay = new Date(latestRecord.date);
+            startOfDay.setHours(0, 0, 0, 0);
+            query.date = { $gte: startOfDay };
+        }
+
+        const items = await Inventory.find(query)
+            .sort({ item: 1 }) // Sort alphabetically by item name
             .skip(skip)
             .limit(parseInt(limit));
 
-        const total = await Inventory.countDocuments({ hotelId });
+        const total = await Inventory.countDocuments(query);
 
         res.status(200).json({
             items,
@@ -3115,7 +3131,7 @@ app.get('/api/inventory', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching inventory:', error);
-        res.status(500).json({ error: 'Server error while fetching inventory' });
+        res.status(500).json({ error: 'Server error' });
     }
 });
 app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
