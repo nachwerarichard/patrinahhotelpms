@@ -8768,8 +8768,12 @@ function setEditInventoryLoading(isLoading) {
 
 
 // Add an event listener to the new edit form
-document.getElementById('edit-inventory-form').addEventListener('submit', submitEditForm);
-        
+document.addEventListener('DOMContentLoaded', () => {
+  const editForm = document.getElementById('edit-inventory-form');
+  if (editForm) {
+    editForm.addEventListener('submit', submitEditForm);
+  }
+});        
         
     
 
