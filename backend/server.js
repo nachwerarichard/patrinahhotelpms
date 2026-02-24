@@ -3082,6 +3082,58 @@ app.get('/api/inventory/lookup', auth, async (req, res) => {
     }
 });
 
+// PUT /api/inventory/:id
+app.put('/api/inventory/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      item, 
+      opening, 
+      purchases, 
+      sales, 
+      spoilage, 
+      buyingprice, 
+      sellingprice, 
+      trackInventory 
+    } = req.body;
+
+    // Calculate closing stock based on your schema logic
+    // Formula: Opening + Purchases - Sales - Spoilage
+    const closing = (opening + purchases) - (sales + spoilage);
+
+    // Basic Validation: Ensure closing isn't negative if trackInventory is enabled
+    if (trackInventory && closing < 0) {
+      return res.status(400).json({ 
+        message: "Operation failed: Closing stock cannot be negative when tracking is enabled." 
+      });
+    }
+
+    const updatedItem = await Inventory.findByIdAndUpdate(
+      id,
+      {
+        item,
+        opening,
+        purchases,
+        sales,
+        spoilage,
+        closing, // Update the calculated closing stock
+        buyingprice,
+        sellingprice,
+        trackInventory
+      },
+      { new: true, runValidators: true } // returns the updated document and checks schema rules
+    );
+
+    if (!updatedItem) {
+      return res.status(404).json({ message: "Inventory item not found." });
+    }
+
+    res.status(200).json(updatedItem);
+  } catch (error) {
+    console.error("Update Error:", error);
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+});
 // Specific endpoint for the sales form dropdown (Tenant Isolated)
 app.get('/api/inventory', auth, async (req, res) => {
     try {
