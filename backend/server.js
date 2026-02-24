@@ -3415,7 +3415,7 @@ app.get('/api/cash-journal', auth, async (req, res) => {
 });
 
 // POST /cash-journal (Tenant Isolated)
-app.post('/cash-journal', auth, async (req, res) => {
+app.post('/api/cash-journal', auth, async (req, res) => {
   try {
     const newEntry = await CashJournal.create({
       ...req.body,
