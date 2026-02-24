@@ -2538,6 +2538,71 @@ Add Guest Details            </h2>
         </div>
     </div>
 
+<div id="edit-inventory-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl p-6 relative">
+    <h2 class="text-xl font-bold text-emerald-600 mb-6">Edit Inventory Item</h2>
+    
+    <form id="edit-inventory-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <input type="hidden" id="edit-inventory-id">
+      
+      <div class="md:col-span-2">
+        <label for="edit-item" class="block text-sm font-medium text-gray-700">Item:</label>
+        <input type="text" id="edit-item" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-opening" class="block text-sm font-medium text-gray-700">Opening Stock:</label>
+        <input type="number" id="edit-opening" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-purchases" class="block text-sm font-medium text-gray-700">Purchases:</label>
+        <input type="number" id="edit-purchases" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-inventory-sales" class="block text-sm font-medium text-gray-700">Sales (deducted from inventory):</label>
+        <input type="number" id="edit-inventory-sales" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-spoilage" class="block text-sm font-medium text-gray-700">Spoilage:</label>
+        <input type="number" id="edit-spoilage" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+            <div>
+        <label for="edit-spoilage" class="block text-sm font-medium text-gray-700">Buying Price:</label>
+        <input type="number" id="edit-buyingprice" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+            <div>
+        <label for="edit-spoilage" class="block text-sm font-medium text-gray-700">Selling Price:</label>
+        <input type="number" id="edit-sellingprice" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div class="md:col-span-2 flex items-center space-x-3 p-2 bg-gray-50 rounded-md border border-gray-200">
+    <input type="checkbox" id="edit-trackInventory" class="h-5 w-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500">
+    <label for="edit-trackInventory" class="text-sm font-medium text-gray-700">
+        Track Stock Levels 
+        <span class="text-xs text-gray-400 font-normal block">(Uncheck for Kitchen/Restaurant items to allow sales regardless of stock)</span>
+    </label>
+</div>
+      <div class="md:col-span-2 flex justify-end space-x-3 mt-4">
+        <button type="button" onclick="closeEditModal()" class="bg-gray-400 hover:bg-gray-500 text-white py-2 px-4 rounded-lg">Cancel</button>
+<button type="submit" id="edit-inventory-submit-btn"
+    class="relative bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg flex items-center justify-center min-w-[120px]">
+    
+    <span id="edit-inventory-btn-default" class="inline-flex items-center gap-2">
+        <span>Save Changes</span>
+    </span>
+
+    <span id="edit-inventory-btn-loading" class="hidden items-center gap-2"> 
+        <span>Saving...</span>
+        <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+    </span>
+</button>
+
+      </div>
+    </form>
+  </div>
+</div>
 
     <div id="addPaymentModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
   <div class="bg-white rounded-xl w-96 p-6 shadow-xl">
