@@ -5543,7 +5543,7 @@ const addCharge = async (description, number, department) => {
         }
 
       const endpoint = (department === 'Restaurant') 
-    ? `${API_BASE_URL}/api/kitchen/order` 
+    ? `${API_BASE_URL}/kitchen/order` 
     : `${API_BASE_URL}/sales`;
 
 const res = await authenticatedFetch(endpoint, {
@@ -8318,7 +8318,7 @@ MARK READY                    </button>
         async function completeOrder(id) {
             try {
                const res = await authenticatedFetch(
-    `${API_BASE}/api/kitchen/order/${id}/ready`,
+    `${API_BASE}/kitchen/order/${id}/ready`,
     { method: 'PATCH' }
 );
 if (res.ok) loadOrders();
@@ -8344,7 +8344,7 @@ const data = await res.json();
 async function markAsPreparing(orderId) {
     try {
         const res = await authenticatedFetch(
-            `${API_BASE}/api/orders/${orderId}/preparing`,
+            `${API_BASE}/orders/${orderId}/preparing`,
             { method: 'PATCH' }
         );
 
@@ -9276,7 +9276,7 @@ async function loadWaiterTracker() {
     try {
         const token = localStorage.getItem('token');
        // Change the fetch URL to /api/waiter/orders
-const res = await fetch('https://patrinahhotelpms.onrender.com/api/waiter/orders', {
+const res = await fetch('{API_BASE_URL}/waiter/orders', {
     headers: { 'Authorization': `Bearer ${token}` }
 });
         
@@ -9337,7 +9337,7 @@ loadWaiterTracker();
 
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`https://patrinahhotelpms.onrender.com/api/kitchen/order/${orderId}/served`, {
+        const res = await fetch(`{API_BASE_URL}/kitchen/order/${orderId}/served`, {
             method: 'DELETE', // We delete it once it's actually served
             headers: { 'Authorization': `Bearer ${token}` }
         });
