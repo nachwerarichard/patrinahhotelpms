@@ -7579,93 +7579,98 @@ function setCashButtonLoading(isLoading) {
     }
 }
 
+async function createCashEntry(cashData) {
+    const url = `${API_BASE_URL}/cash-journal`;
+    const response = await authenticatedFetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cashData)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to record cash entry.');
+    }
+    return await response.json();
+}
+async function updateCashEntry(id, cashData) {
+    // Admin-only check for editing
+    const adminRoles = ['admin', 'super-admin'];
+    if (!adminRoles.includes(currentUserRole)) {
+        throw new Error('Permission Denied: Only administrators can edit cash entries.');
+    }
+
+    const url = `${API_BASE_URL}/cash-journal/${id}`;
+    const response = await authenticatedFetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cashData)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update cash entry.');
+    }
+    return await response.json();
+}
 async function submitEditCashForm(event) {
     event.preventDefault();
     const modal = document.getElementById('edit-cash-modal');
     
-    // 1. Role-Based Security
-    const adminRoles = ['admin', 'super-admin'];
-    if (!adminRoles.includes(currentUserRole)) {
-        showMessage('Permission Denied: Only administrators can edit cash entries.', true);
-        return;
-    }
-
-    // 2. Multi-Tenant Context
+    // 1. Context & Data Gathering
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelId = sessionData?.hotelId;
+    const id = document.getElementById('edit-cash-id')?.value;
 
     if (!hotelId) {
-        showMessage('Session Error: No hotel context found.', true);
-        return;
+        return showMessage('Session Error: No hotel context found.', true);
     }
 
-    // 3. Form Input References
-    const idInput = document.getElementById('edit-cash-id');
-    const cashAtHandInput = document.getElementById('edit-cash-at-hand');
-    const cashOnPhoneInput = document.getElementById('edit-cash-on-phone');
-    const cashBankedInput = document.getElementById('edit-cash-banked');
-    const bankReceiptIdInput = document.getElementById('edit-bank-receipt-id');
-    const cashDateInput = document.getElementById('edit-cash-date');
-
-    if (!idInput || !cashAtHandInput || !cashBankedInput || !bankReceiptIdInput || !cashDateInput) {
-        showMessage('Edit form elements are missing.');
-        return;
-    }
-
-    // 4. Data Extraction & Correction
-    const id = idInput.value;
-    const cashAtHand = parseFloat(cashAtHandInput.value) || 0;
-    const cashOnPhone = parseFloat(cashOnPhoneInput.value) || 0; // Fixed assignment
-    const cashBanked = parseFloat(cashBankedInput.value) || 0;  // Fixed assignment
-    const bankReceiptId = bankReceiptIdInput.value.trim();
-    const date = cashDateInput.value; 
-
-    // 5. Validation
-    if (!id || isNaN(cashAtHand) || isNaN(cashBanked) || !bankReceiptId || !date) {
-        showMessage('Please fill in all edit fields correctly.', true);
-        return;
-    }
-
-    // Build Payload with Tenant ID
     const cashData = { 
-        hotelId, // Multi-tenant scoping
-        cashAtHand, 
-        cashOnPhone, 
-        cashBanked, 
-        bankReceiptId, 
-        date,
+        hotelId,
+        cashAtHand: parseFloat(document.getElementById('edit-cash-at-hand')?.value) || 0,
+        cashOnPhone: parseFloat(document.getElementById('edit-cash-on-phone')?.value) || 0,
+        cashBanked: parseFloat(document.getElementById('edit-cash-banked')?.value) || 0,
+        bankReceiptId: document.getElementById('edit-bank-receipt-id')?.value.trim(),
+        date: document.getElementById('edit-cash-date')?.value,
         updatedBy: currentUsername // Audit trail
     };
 
-    // --- START LOADING STATE ---
+    // 2. Validation
+    if (isNaN(cashData.cashAtHand) || !cashData.bankReceiptId || !cashData.date) {
+        return showMessage('Please fill in all fields correctly.', true);
+    }
+
+    // 3. Execution
     setCashButtonLoading(true);
 
     try {
-        const response = await authenticatedFetch(`${API_BASE_URL}/cash-journal/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(cashData)
-        });
-
-        if (response && response.ok) { 
+        if (id) {
+            // Updating existing entry
+            await updateCashEntry(id, cashData);
             showMessage('Cash entry updated successfully! 🎉');
-            
-            // UI Cleanup
-            if (modal) {
-                modal.style.display = "none";
-                modal.classList.add('hidden');
-            }
-            
-            fetchCashJournal(); // Refresh table to show correct totals
         } else {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Server error occurred during update.');
+            // Creating new entry (if applicable to this form)
+            await createCashEntry(cashData);
+            showMessage('Cash entry recorded! 🎉');
         }
+
+        // 4. UI Cleanup
+        if (modal) {
+            modal.style.display = "none";
+            modal.classList.add('hidden');
+        }
+        
+        // Reset form if it exists
+        const form = document.getElementById('edit-cash-form');
+        if (form) form.reset();
+
+        fetchCashJournal(); // Refresh the table
+
     } catch (error) {
-        console.error('Error updating cash entry:', error);
-        showMessage('Update Failed: ' + error.message, true);
+        console.error('Operation failed:', error);
+        showMessage(error.message, true);
     } finally {
-        // --- STOP LOADING STATE ---
         setCashButtonLoading(false);
     }
 }
