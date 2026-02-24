@@ -2604,6 +2604,214 @@ Add Guest Details            </h2>
   </div>
 </div>
 
+
+    <div id="edit-sale-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white w-full max-w-2xl rounded-xl shadow-lg p-6 relative">
+    <h2 class="text-xl font-bold text-emerald-600 mb-4">Edit Sale Record</h2>
+    <form id="edit-sale-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <input type="hidden" id="edit-sale-id">
+       <div>
+  <label for="department-item" class="block text-sm font-medium text-gray-700">Department:</label>
+  <select 
+    id="edit-sale-department" 
+    required 
+    class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+  >
+    <option value="" disabled selected>Select a department...</option>
+    <option value="Bar">Bar</option>
+    <option value="Restaurant">Restaurant</option>
+     </select>
+</div>
+      <div>
+  <label for="sale-item" class="block text-sm font-medium text-gray-700">Item:</label>
+  <input 
+    type="text" 
+    id="edit-sale-item" 
+    list="item-suggestions" 
+    autocomplete="off"
+    placeholder="Type to search..."
+    class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm"
+  >
+  <datalist id="item-suggestions"></datalist>
+</div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Number Sold:</label>
+        <input type="number" id="edit-sale-number" min="1" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Buying Price (BP):</label>
+        <input type="number" id="edit-sale-bp" step="0.01" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Selling Price (SP):</label>
+        <input type="number" id="edit-sale-sp" step="0.01" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+       <div>
+        <label for="edit-sale-date" class="block text-sm font-medium text-gray-700">Date:</label>
+        <input type="date" id="edit-sale-date" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+      <div class="md:col-span-2 flex justify-end space-x-3 mt-4">
+  <button type="button" onclick="closeModal('edit-sale-modal')" class="bg-gray-400 hover:bg-gray-500 text-white py-2 px-4 rounded-lg">Cancel</button>
+  
+  <button type="submit" id="edit-sale-submit-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg flex items-center justify-center">
+    
+    <span id="edit-sale-btn-default" class="flex items-center">
+      <span>Save Changes</span>
+    </span>
+
+    <span id="edit-sale-btn-loading" class="hidden items-center">
+      <span class="mr-2">Saving...</span>
+      <div id="edit-sale-spinner" class="w-4 h-4 border-2 border-white border-t-transparent border-solid rounded-full animate-spin"></div>
+    </span>
+  </button>
+</div>
+    </form>
+  </div>
+</div>
+  
+<!-- Edit Expense Modal -->
+<div id="edit-expense-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white w-full max-w-2xl rounded-xl shadow-lg p-6 relative">
+    <h2 class="text-2xl font-bold mb-4 text-emerald-600">Expenses — Edit</h2>
+    <form id="edit-expense-form" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <input type="hidden" id="edit-expense-id">
+                              <div>
+  <label for="department-item" class="block text-sm font-medium text-gray-700">Department:</label>
+  <select 
+    id="edit-expense-department" 
+    required 
+    class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+  >
+    <option value="" disabled selected>Select a department...</option>
+    <option value="Bar">Bar</option>
+    <option value="Restaurant">Restaurant</option>
+     </select>
+</div>
+
+      
+      <div>
+        <label for="edit-expense-description" class="block text-sm font-medium text-gray-700">Description:</label>
+        <input type="text" id="edit-expense-description" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-expense-amount" class="block text-sm font-medium text-gray-700">Amount:</label>
+        <input type="number" id="edit-expense-amount" step="0.01" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-expense-date" class="block text-sm font-medium text-gray-700">Date:</label>
+        <input type="date" id="edit-expense-date" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-expense-receiptId" class="block text-sm font-medium text-gray-700">Receipt ID:</label>
+        <input type="number" id="edit-expense-receiptId" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-expense-source" class="block text-sm font-medium text-gray-700">Source:</label>
+        <input type="text" id="edit-expense-source" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+
+           <div class="md:col-span-2 flex justify-end space-x-3 pt-4">
+  <button type="button" onclick="closeModal('edit-expense-modal')" class="bg-gray-400 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg">
+    Cancel
+  </button>
+  <button type="submit" id="edit-expense-submit-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center">
+    
+    <span id="edit-expense-btn-default" class="flex items-center">
+      <i class="fas fa-save mr-2"></i> <span>Save Changes</span>
+    </span>
+
+    <span id="edit-expense-btn-loading" class="hidden flex items-center">
+      <span class="mr-2">Saving...</span>
+      <div id="edit-expense-spinner" class="w-4 h-4 border-2 border-white border-t-transparent border-solid rounded-full animate-spin"></div>
+    </span>
+  </button>
+</div>
+      
+    </form>
+  </div>
+</div>
+ <div id="delete-confirmation-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-gray-900 opacity-75"></div>
+
+    <div class="flex items-center justify-center min-h-screen p-4">
+        
+        <div class="bg-white rounded-lg shadow-2xl max-w-sm w-full z-10 p-6 transform transition-all scale-100 opacity-100">
+            
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Confirm Deletion</h3>
+            
+            <p class="text-gray-700 mb-6 break-words">
+                Are you sure you want to delete this inventory item? This action cannot be undone.
+            </p>
+
+            <div class="flex justify-end space-x-3">
+                <button id="cancel-delete-btn" type="button" 
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none transition duration-150">
+                    Cancel
+                </button>
+                
+                <button id="confirm-delete-btn" type="button" 
+                    class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+    
+<!-- Edit Cash Modal -->
+<div id="edit-cash-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white w-full max-w-2xl rounded-xl shadow-lg p-6 relative">
+    <h2 class="text-xl font-bold text-emerald-600 mb-4">Edit Cash Record</h2>
+    <form id="edit-cash-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <input type="hidden" id="edit-cash-id">
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Cash At Hand:</label>
+        <input type="number" id="edit-cash-at-hand" step="0.01" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Cash Banked:</label>
+        <input type="number" id="edit-cash-banked" step="0.01" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Cash On Phone:</label>
+        <input type="number" id="edit-cash-on-phone" step="0.01" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Bank Receipt ID:</label>
+        <input type="text" id="edit-bank-receipt-id" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Date:</label>
+        <input type="date" id="edit-cash-date" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div class="md:col-span-2 flex justify-end space-x-3 mt-4">
+  <button type="button" onclick="closeModal('edit-cash-modal')" class="bg-gray-400 hover:bg-gray-500 text-white py-2 px-4 rounded-lg">Cancel</button>
+  
+  <button type="submit" id="edit-cash-submit-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg flex items-center justify-center">
+    
+    <span id="edit-cash-btn-default" class="flex items-center">
+      <span>Save Changes</span>
+    </span>
+
+    <span id="edit-cash-btn-loading" class="hidden items-center">
+      <span class="mr-2">Saving...</span>
+      <div class="w-4 h-4 border-2 border-white border-t-transparent border-solid rounded-full animate-spin"></div>
+    </span>
+  </button>
+</div>
+    </form>
+  </div>
+</div>
+
+    <div id="receipt-print">
+  <div id="receipt-details"></div>
+  <span id="receipt-date"></span>
+</div>
     <div id="addPaymentModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
   <div class="bg-white rounded-xl w-96 p-6 shadow-xl">
 
