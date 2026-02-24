@@ -997,25 +997,41 @@
         </div>
         
         <div class="flex items-center gap-4">
-            <div id="kdsSummary" class="hidden md:flex gap-4">
-                </div>
-            <button onclick="refreshKDS()" class="bg-slate-800 hover:bg-slate-700 text-white p-3 rounded-xl transition-all border border-slate-600">
+            <div id="kdsSummary" class="hidden md:flex gap-4"></div>
+            <button onclick="loadWaiterTracker()" class="bg-slate-800 hover:bg-slate-700 text-white p-3 rounded-xl transition-all border border-slate-600">
                 <i class="fas fa-sync-alt"></i>
             </button>
         </div>
     </div>
 
-    <div id="kitchenOrders" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-        <div class="col-span-full py-20 text-center">
-            <div class="inline-flex items-center justify-center w-20 h-20 bg-slate-800 rounded-full mb-4">
-                <i class="fas fa-utensils text-3xl text-slate-600"></i>
-            </div>
-            <h3 class="text-xl font-bold text-slate-500">No active orders right now.</h3>
-            <p class="text-slate-600">New orders will appear here automatically.</p>
+    <div class="bg-white rounded-[1.5rem] shadow-lg border border-slate-200 overflow-hidden mb-8">
+        <div class="bg-slate-800 px-8 py-5 flex justify-between items-center">
+            <h3 class="text-white font-bold flex items-center gap-3 uppercase tracking-tighter text-sm">
+                <span class="flex h-2 w-2 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                </span>
+                Active Prep List
+            </h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 text-[10px] uppercase text-slate-500 font-black border-b border-slate-100">
+                    <tr>
+                        <th class="px-8 py-4">Time</th>
+                        <th class="px-8 py-4">Description</th>
+                        <th class="px-8 py-4 text-center">Qty</th>
+                        <th class="px-8 py-4">KDS Status</th>
+                        <th class="px-8 py-4 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="waiterTrackerBody" class="divide-y divide-slate-100 text-sm">
+                    </tbody>
+            </table>
         </div>
     </div>
 
-    <div id="available-modules" class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
+    <div id="kitchenOrders" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
         </div>
 
     <audio id="orderDing" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
