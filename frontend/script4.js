@@ -7989,7 +7989,7 @@ function exportTableToExcel(tableID, filename = '') {
 // --- Initial Setup and Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
     // Check authentication status on page load
-    updateUIForUserRole();
+    //updateUIForUserRole();
 
     // Attach form submission handlers
     const inventoryForm = document.getElementById('inventory-form');
