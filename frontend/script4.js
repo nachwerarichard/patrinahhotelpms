@@ -759,68 +759,24 @@ async function showDashboard(username, role) {
     }
 }
 
-loginForm.addEventListener('submit', async function(event) {
-    event.preventDefault();
-    const username = usernameInput.value;
-    const password = passwordInput.value;
+async function authenticatedFetch(url, options = {}) {
+    let token = localStorage.getItem('token');
+    let hotelId = localStorage.getItem('hotelId'); // Pull current tenant ID
 
-    try {
-        const response = await fetch(`${API_BASE_URL}/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            
-            // 1. SAVE ALL STORAGE DATA FIRST
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('userRole', data.user.role);
-            localStorage.setItem('username', data.user.username);
-            localStorage.setItem('hotelId', data.user.hotelId || 'global');
-            localStorage.setItem('loggedInUser', JSON.stringify({ 
-                username: data.user.username, 
-                role: data.user.role, 
-                token: data.token,
-                hotelId: data.user.hotelId || 'global'
-            }));
-
-            // 2. HANDLE REDIRECTION OR SPA TRANSITION
-            if (data.user.role === 'super-admin') {
-                // If super-admin is a separate file:
-                window.location.href = 'super-admin-dashboard.html';
-                return; // Stop here!
-            } else {
-                // If it's a Single Page Application (SPA):
-                await showDashboard(data.user.username, data.user.role);
-                fetchUsers(); // Refresh the table after saving
-            }
-
-            // 3. BACKGROUND TASKS (like audit logs)
-            // Don't let a failed audit log stop the user from seeing the dashboard
-            fetch(`${API_BASE_URL}/audit-log/action`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${data.token}`,
-                   'x-hotel-id': data.user.hotelId || 'global'
-                },
-                body: JSON.stringify({ 
-                    action: 'User Logged In', 
-                    user: data.user.username, 
-                    details: { role: data.user.role, hotelId: data.user.hotelId } 
-                })
-            }).catch(e => console.warn("Audit log failed"));
-
-        } else {
-            showLoginMessageBox('Login Failed', data.message || 'Invalid credentials.');
-        }
-    } catch (error) {
-        console.error('Login error:', error);
+    if (!token) {
+        window.location.replace('/login.html');
+        return null;
     }
-});
+
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'x-hotel-id': hotelId || 'global', // Identify the tenant
+        ...options.headers 
+    };
+
+    return fetch(url, { ...options, headers });
+}
 /**
  * Handles navigation clicks, showing/hiding sections and re-rendering content.
  * @param {Event} event - The click event.
@@ -8421,76 +8377,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function generatePOSReport(event) {
     event.preventDefault();
-
     const dateInput = document.getElementById('reportDate');
     const tableBody = document.getElementById('posreportTableBody');
     const totalRevenueEl = document.getElementById('posreportTotalRevenue');
-    const dateDisplay = document.getElementById('posreportDateDisplay');
     const submitBtn = event.submitter;
 
     if (!dateInput.value) return;
 
-    // UI Loading State
-    const originalBtnHtml = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
     submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading...';
 
     try {
-        // Fetch from your specific POS reports endpoint
+        // The hotelId is handled automatically by authenticatedFetch headers
         const response = await authenticatedFetch(`${API_BASE_URL}/pos/reports/daily?date=${dateInput.value}`);
-        
-        if (!response.ok) throw new Error('Failed to fetch POS report');
-        
         const data = await response.json();
 
-        // 1. Update Headers & Summary
-        dateDisplay.textContent = new Date(dateInput.value).toLocaleDateString('en-GB', {
-            day: 'numeric', month: 'long', year: 'numeric'
-        });
-        totalRevenueEl.textContent = data.totalRevenue.toLocaleString();
+        if (!response.ok) throw new Error(data.message || 'Report failed');
 
-        // 2. Clear and Populate Table
-        tableBody.innerHTML = '';
+        // Update Summary Card
+        totalRevenueEl.textContent = Number(data.totalRevenue).toLocaleString();
+        document.getElementById('posreportDateDisplay').textContent = data.reportDate;
 
-        if (data.transactions.length === 0) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="4" class="px-8 py-10 text-center text-slate-400 italic">
-                        No transactions found for this date.
-                    </td>
-                </tr>`;
-        } else {
-            data.transactions.forEach(trx => {
-                const row = document.createElement('tr');
-                row.className = "hover:bg-slate-50 transition-colors";
-                
-                row.innerHTML = `
+        // Populate Table
+        tableBody.innerHTML = data.transactions.length ? '' : '<tr><td colspan="4" class="text-center py-10">No records found.</td></tr>';
+
+        data.transactions.forEach(trx => {
+            const row = `
+                <tr class="border-b border-slate-50 hover:bg-indigo-50/30 transition-all">
                     <td class="px-8 py-4">
-                        <div class="font-bold text-slate-700">${trx.guestName}</div>
-                        <div class="text-[10px] text-slate-400 uppercase tracking-tight">Room: ${trx.roomNumber}</div>
+                        <span class="font-bold text-slate-700">${trx.guestName}</span>
+                        <div class="text-[10px] text-slate-400 uppercase">Room: ${trx.roomNumber}</div>
                     </td>
-                    <td class="px-8 py-4 text-slate-600">
-                        ${trx.description}
-                    </td>
+                    <td class="px-8 py-4 text-slate-600">${trx.description}</td>
                     <td class="px-8 py-4 text-center">
-                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${getSourceStyle(trx.source)}">
+                        <span class="px-2 py-1 rounded text-[10px] font-bold ${getSourceStyle(trx.source)}">
                             ${trx.source}
                         </span>
                     </td>
-                    <td class="px-8 py-4 text-right font-black text-slate-700">
-                        ${trx.amount.toLocaleString()}
+                    <td class="px-8 py-4 text-right font-black text-indigo-600">
+                        ${Number(trx.amount).toLocaleString()}
                     </td>
-                `;
-                tableBody.appendChild(row);
-            });
-        }
+                </tr>`;
+            tableBody.insertAdjacentHTML('beforeend', row);
+        });
 
-    } catch (error) {
-        console.error('POS Report Error:', error);
-        showMessage('Error generating POS report: ' + error.message, true);
+    } catch (err) {
+        showMessage(err.message, true);
     } finally {
-        submitBtn.innerHTML = originalBtnHtml;
         submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-chart-line"></i> Generate Summary';
     }
 }
 
