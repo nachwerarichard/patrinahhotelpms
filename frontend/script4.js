@@ -7706,19 +7706,11 @@ async function generateReports() {
     const generateButton = document.getElementById('generate-report-btn');
     let originalButtonHtml = generateButton ? generateButton.innerHTML : '';
     
-    // 1. Get Hotel Context
-    // Pulling directly from localStorage is safer if sessionData is nested
+    // 1. Context Check
     const hotelId = localStorage.getItem('hotelId');
-
     if (!hotelId) {
         showMessage('Session expired. Please log in again.', true);
         return;
-    }
-
-    // Start Loading State
-    if (generateButton) {
-        generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-        generateButton.disabled = true;
     }
 
     const startDate = document.getElementById('report-start-date').value;
@@ -7726,43 +7718,48 @@ async function generateReports() {
 
     if (!startDate || !endDate) {
         showMessage('Please select both start and end dates.', true);
-        if (generateButton) { 
-            generateButton.innerHTML = originalButtonHtml; 
-            generateButton.disabled = false; 
-        }
         return;
     }
 
+    // UI Loading State
+    if (generateButton) {
+        generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        generateButton.disabled = true;
+    }
+
     const tbody = document.getElementById('department-report-tbody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Loading data...</td></tr>'; 
+    if (tbody) tbody.innerHTML = ''; 
 
     try {
-        // 2. FETCH DATA
-        // Note: authenticatedFetch already attaches hotelId in headers
-        const queryParams = `startDate=${startDate}&endDate=${endDate}&hotelId=${hotelId}`;
+        const queryParams = `hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`;
         
-        let allSales = [], allExpenses = [], page = 1, res;
+        let allSales = [], allExpenses = [];
+        let page = 1, totalPages = 1;
 
-        // Fetch Sales
+        // --- Fetch Sales ---
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/sales?${queryParams}&page=${page}&limit=100`);
-            res = await resp.json();
-            if (res && res.data) { 
-                allSales = allSales.concat(res.data); 
+            const res = await resp.json();
+            // BACKEND FIX: Your backend sends 'sales' and 'totalPages'
+            if (res && res.sales) { 
+                allSales = allSales.concat(res.sales); 
+                totalPages = res.totalPages || 1;
                 page++; 
-            }
-        } while (res && res.data && res.data.length > 0 && page <= (res.pages || 1));
+            } else { break; }
+        } while (page <= totalPages);
 
-        // Fetch Expenses
-        page = 1;
+        // --- Fetch Expenses ---
+        page = 1; totalPages = 1;
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/expenses?${queryParams}&page=${page}&limit=100`);
-            res = await resp.json();
-            if (res && res.data) { 
-                allExpenses = allExpenses.concat(res.data); 
+            const res = await resp.json();
+            // BACKEND FIX: Your backend sends 'expenses' and 'totalPages'
+            if (res && res.expenses) { 
+                allExpenses = allExpenses.concat(res.expenses); 
+                totalPages = res.totalPages || 1;
                 page++; 
-            }
-        } while (res && res.data && res.data.length > 0 && page <= (res.pages || 1));
+            } else { break; }
+        } while (page <= totalPages);
 
         // 3. AGGREGATE
         const report = {};
@@ -7770,73 +7767,53 @@ async function generateReports() {
         allSales.forEach(sale => {
             const dept = sale.department || 'Other';
             if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
-            // Ensure we use 'qty' or 'number' based on your schema
-            const amount = (sale.number || sale.qty || 0) * (sale.sp || 0);
-            report[dept].sales += amount;
+            // Ensure numbers are handled correctly
+            report[dept].sales += (Number(sale.number) * Number(sale.sp));
         });
 
         allExpenses.forEach(exp => {
             const dept = exp.department || 'Other';
             if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
-            report[dept].expenses += (exp.amount || 0);
+            report[dept].expenses += (Number(exp.amount) || 0);
         });
 
-        // 4. RENDER TABLE
-        tbody.innerHTML = ''; // Clear loading message
+        // 4. RENDER
         let totalS = 0, totalE = 0;
         const sortedDepts = Object.keys(report).sort();
 
         if (sortedDepts.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500 italic">No financial activity found for this period.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500 italic">No activity found for this period.</td></tr>';
         } else {
             sortedDepts.forEach(dept => {
                 const { sales, expenses } = report[dept];
-                totalS += sales; 
-                totalE += expenses;
+                totalS += sales; totalE += expenses;
                 const balance = sales - expenses;
 
                 const row = tbody.insertRow();
                 row.className = "border-b border-gray-100 hover:bg-gray-50";
                 row.innerHTML = `
-                    <td class="px-6 py-4 font-medium">${dept}</td>
+                    <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
                     <td class="px-6 py-4">${sales.toLocaleString()}</td>
                     <td class="px-6 py-4">${expenses.toLocaleString()}</td>
-                    <td class="px-6 py-4 text-right font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}">
+                    <td class="px-6 py-4 text-right font-bold ${balance >= 0 ? 'text-emerald-600' : 'text-red-600'}">
                         ${balance.toLocaleString()}
                     </td>
                 `;
             });
         }
 
-        // 5. UPDATE SUMMARY CARDS (Matches your HTML IDs)
-        const updateVal = (id, val) => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = val.toLocaleString(undefined, { minimumFractionDigits: 0 });
-        };
-
-        updateVal('overall-sales-card', totalS);
-        updateVal('overall-expenses-card', totalE);
-        updateVal('overall-balance-card', (totalS - totalE));
-
-        // Update Hidden Export Table
-        updateVal('overall-sales', totalS);
-        updateVal('overall-expenses', totalE);
-        updateVal('overall-balance', (totalS - totalE));
-
-        if (generateButton) {
-            generateButton.innerHTML = '<i class="fas fa-check"></i> Report Generated';
-            setTimeout(() => { 
-                generateButton.innerHTML = originalButtonHtml; 
-                generateButton.disabled = false; 
-            }, 2000);
-        }
+        // 5. UPDATE UI CARDS (Matching your specific HTML IDs)
+        document.getElementById('overall-sales-card').textContent = totalS.toLocaleString();
+        document.getElementById('overall-expenses-card').textContent = totalE.toLocaleString();
+        document.getElementById('overall-balance-card').textContent = (totalS - totalE).toLocaleString();
 
     } catch (error) {
         console.error('Report Error:', error);
-        showMessage('Failed to generate report: ' + error.message, true);
-        if (generateButton) { 
-            generateButton.innerHTML = originalButtonHtml; 
-            generateButton.disabled = false; 
+        showMessage('Error generating report: ' + error.message, true);
+    } finally {
+        if (generateButton) {
+            generateButton.innerHTML = originalButtonHtml;
+            generateButton.disabled = false;
         }
     }
 }
