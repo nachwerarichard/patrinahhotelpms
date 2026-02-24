@@ -7992,8 +7992,8 @@ document.addEventListener('DOMContentLoaded', () => {
     //updateUIForUserRole();
 
     // Attach form submission handlers
-    const inventoryForm = document.getElementById('inventory-form');
-    if (inventoryForm) inventoryForm.addEventListener('submit', submitInventoryForm);
+    //const inventoryForm = document.getElementById('inventory-form');
+    //if (inventoryForm) inventoryForm.addEventListener('submit', submitInventoryForm);
 
     const saleForm = document.getElementById('sale-form');
     if (saleForm) saleForm.addEventListener('submit', submitSaleForm);
