@@ -8411,6 +8411,124 @@ async function markAsPreparing(orderId) {
     }
 }
 
+// Initialize the POS Report Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    const posForm = document.getElementById('posdailyReportForm');
+    if (posForm) {
+        posForm.addEventListener('submit', generatePOSReport);
+    }
+});
+
+async function generatePOSReport(event) {
+    event.preventDefault();
+
+    const dateInput = document.getElementById('reportDate');
+    const tableBody = document.getElementById('posreportTableBody');
+    const totalRevenueEl = document.getElementById('posreportTotalRevenue');
+    const dateDisplay = document.getElementById('posreportDateDisplay');
+    const submitBtn = event.submitter;
+
+    if (!dateInput.value) return;
+
+    // UI Loading State
+    const originalBtnHtml = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    submitBtn.disabled = true;
+
+    try {
+        // Fetch from your specific POS reports endpoint
+        const response = await authenticatedFetch(`${API_BASE_URL}/pos/reports/daily?date=${dateInput.value}`);
+        
+        if (!response.ok) throw new Error('Failed to fetch POS report');
+        
+        const data = await response.json();
+
+        // 1. Update Headers & Summary
+        dateDisplay.textContent = new Date(dateInput.value).toLocaleDateString('en-GB', {
+            day: 'numeric', month: 'long', year: 'numeric'
+        });
+        totalRevenueEl.textContent = data.totalRevenue.toLocaleString();
+
+        // 2. Clear and Populate Table
+        tableBody.innerHTML = '';
+
+        if (data.transactions.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="px-8 py-10 text-center text-slate-400 italic">
+                        No transactions found for this date.
+                    </td>
+                </tr>`;
+        } else {
+            data.transactions.forEach(trx => {
+                const row = document.createElement('tr');
+                row.className = "hover:bg-slate-50 transition-colors";
+                
+                row.innerHTML = `
+                    <td class="px-8 py-4">
+                        <div class="font-bold text-slate-700">${trx.guestName}</div>
+                        <div class="text-[10px] text-slate-400 uppercase tracking-tight">Room: ${trx.roomNumber}</div>
+                    </td>
+                    <td class="px-8 py-4 text-slate-600">
+                        ${trx.description}
+                    </td>
+                    <td class="px-8 py-4 text-center">
+                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${getSourceStyle(trx.source)}">
+                            ${trx.source}
+                        </span>
+                    </td>
+                    <td class="px-8 py-4 text-right font-black text-slate-700">
+                        ${trx.amount.toLocaleString()}
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+    } catch (error) {
+        console.error('POS Report Error:', error);
+        showMessage('Error generating POS report: ' + error.message, true);
+    } finally {
+        submitBtn.innerHTML = originalBtnHtml;
+        submitBtn.disabled = false;
+    }
+}
+
+/**
+ * Helper to style the "Source" badges based on where the money came from
+ */
+function getSourceStyle(source) {
+    switch (source.toLowerCase()) {
+        case 'restaurant sale': return 'bg-emerald-100 text-emerald-700';
+        case 'room charge': return 'bg-blue-100 text-blue-700';
+        case 'walk-in': return 'bg-amber-100 text-amber-700';
+        default: return 'bg-slate-100 text-slate-700';
+    }
+}
+
+document.getElementById('exportposReportBtn').addEventListener('click', function() {
+    const table = document.querySelector('#posreportResults table');
+    let csv = [];
+    const rows = table.querySelectorAll("tr");
+    
+    for (let i = 0; i < rows.length; i++) {
+        let row = [], cols = rows[i].querySelectorAll("td, th");
+        for (let j = 0; j < cols.length; j++) {
+            // Clean text of commas to avoid breaking CSV format
+            row.push('"' + cols[j].innerText.replace(/"/g, '""') + '"');
+        }
+        csv.push(row.join(","));
+    }
+
+    const csvContent = "data:text/csv;charset=utf-8," + csv.join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `POS_Report_${document.getElementById('reportDate').value}.csv`);
+    document.body.appendChild(link);
+    link.click();
+});
+
 
    
 
