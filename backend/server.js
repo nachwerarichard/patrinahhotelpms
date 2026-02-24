@@ -3007,6 +3007,30 @@ app.post('/login', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+// GET active orders for the Waiter Tracker
+app.get('/api/waiter/orders', auth, async (req, res) => {
+    try {
+        // req.user.hotelId is populated by your auth middleware
+        const hotelId = req.user.hotelId;
+
+        if (!hotelId) {
+            return res.status(400).json({ error: "Hotel context missing" });
+        }
+
+        // We only want orders for THIS hotel that are NOT yet 'Served'
+        // We sort by 'createdAt' so the newest orders appear (or oldest first, depending on preference)
+        const orders = await KitchenOrder.find({ 
+            hotelId: hotelId,
+            status: { $ne: 'Served' } // $ne means "Not Equal"
+        }).sort({ createdAt: -1 });
+
+        res.status(200).json(orders);
+    } catch (err) {
+        console.error("Error fetching waiter orders:", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 // POST /api/kitchen/order
 app.post('/api/kitchen/order', auth, async (req, res) => {
     try {
