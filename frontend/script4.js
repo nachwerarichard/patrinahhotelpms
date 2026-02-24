@@ -9444,8 +9444,14 @@ window.fillBooking = (name, room) => {
 
 // Close suggestions if user clicks outside
 document.addEventListener('click', (e) => {
-    if (!suggestionBox.contains(e.target) && e.target !== suggestInput) {
-        suggestionBox.classList.add('hidden');
+    const suggestionBox = document.getElementById('suggestionBox'); // Or however you define it
+    const suggestInput = document.getElementById('suggestInput');
+
+    // Only run logic if both elements actually exist on the current page
+    if (suggestionBox && suggestInput) {
+        if (!suggestionBox.contains(e.target) && e.target !== suggestInput) {
+            suggestionBox.classList.add('hidden');
+        }
     }
 });
 
