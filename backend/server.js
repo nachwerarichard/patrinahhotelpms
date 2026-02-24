@@ -945,8 +945,11 @@ app.get('/api/rooms/report-daily', auth, async (req, res) => {
         res.status(500).json({ message: 'Error generating report' });
     }
 });
+
 app.get('/api/pos/reports/daily', auth, async (req, res) => {
     const { date } = req.query; 
+    
+    // SECURITY: Use the hotelId from the AUTH middleware, not the request body/query
     const hotelId = req.user.hotelId;
     
     try {
@@ -954,14 +957,15 @@ app.get('/api/pos/reports/daily', auth, async (req, res) => {
 
         const { utcStart, utcEnd } = getStartAndEndOfDayInUTC(date);
 
-        // Fetch from all sources using the hotelId filter
+        // Fetching data scoped strictly to the authenticated hotelId
         const [roomCharges, walkinCharges, restaurantSales] = await Promise.all([
             IncidentalCharge.find({ hotelId, date: { $gte: utcStart, $lt: utcEnd } }),
             WalkInCharge.find({ hotelId, date: { $gte: utcStart, $lt: utcEnd } }),
             Sale.find({ hotelId, date: { $gte: utcStart, $lt: utcEnd } })
         ]);
 
-        const formattedRestaurantSales = restaurantSales.map(s => ({
+        // ... (rest of your formatting logic remains the same)
+      const formattedRestaurantSales = restaurantSales.map(s => ({
             guestName: s.waiter || 'Restaurant Guest',
             roomNumber: 'Restaurant',
             description: `${s.item} (x${s.number})`,
@@ -990,10 +994,11 @@ app.get('/api/pos/reports/daily', auth, async (req, res) => {
             ...formattedRestaurantSales
         ];
 
+        
         res.status(200).json({
             reportDate: date,
+            tenant: hotelId, // Good for debugging
             totalRevenue: allTransactions.reduce((sum, t) => sum + t.amount, 0),
-            transactionCount: allTransactions.length,
             transactions: allTransactions.sort((a, b) => new Date(b.time) - new Date(a.time))
         });
 
@@ -2886,23 +2891,25 @@ async function notifyLowStock(item, current) {
 // This function calculates the correct start and end of a day in UTC
 // for a given EAT date string ('YYYY-MM-DD').
 function getStartAndEndOfDayInUTC(dateString) {
-  const selectedDate = new Date(dateString);
-  if (isNaN(selectedDate.getTime())) {
-    return { error: 'Invalid date format. Use YYYY-MM-DD.' };
-  }
-  
-  // Set the date to midnight UTC (00:00:00.000) to create a consistent reference point.
-  selectedDate.setUTCHours(0, 0, 0, 0);
+    // 1. Explicitly parse to avoid the "UTC-mismatch" bug
+    const [year, month, day] = dateString.split('-').map(Number);
+    
+    // Create a date object based on the local components (Month is 0-indexed in JS)
+    const date = new Date(year, month - 1, day);
+    
+    if (isNaN(date.getTime())) {
+        return { error: 'Invalid date format. Use YYYY-MM-DD.' };
+    }
 
-  // EAT is UTC+3. To find the start of the EAT day in UTC,
-  // we must subtract 3 hours from the UTC midnight time.
-  // For example, EAT 00:00 is UTC 21:00 of the previous day.
-  const utcStart = new Date(selectedDate.getTime() - 3 * 60 * 60 * 1000);
+    // 2. Set to Midnight EAT (which is 21:00 UTC of the previous night)
+    // Since EAT is UTC+3, we manually define the UTC start point.
+    const utcStart = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+    utcStart.setUTCHours(utcStart.getUTCHours() - 3);
 
-  // The end of the EAT day is exactly 24 hours after its start.
-  const utcEnd = new Date(utcStart.getTime() + 24 * 60 * 60 * 1000);
-  
-  return { utcStart, utcEnd };
+    // 3. End point is 23:59:59.999 EAT
+    const utcEnd = new Date(utcStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+    return { utcStart, utcEnd };
 }
 
 
