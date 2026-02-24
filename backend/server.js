@@ -3295,6 +3295,50 @@ app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+// PUT /api/sales/:id
+app.put('/api/sales/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { department, item, number, bp, sp, date } = req.body;
+
+    // 1. Calculate Profit Logic
+    // Profit = (Selling Price - Buying Price) * Quantity
+    const totalCost = bp * number;
+    const totalRevenue = sp * number;
+    const profit = totalRevenue - totalCost;
+    
+    // Percentage Profit = (Profit / Total Cost) * 100
+    // We check totalCost > 0 to avoid division by zero
+    const percentageprofit = totalCost > 0 ? (profit / totalCost) * 100 : 0;
+
+    // 2. Update the Database
+    const updatedSale = await Sale.findByIdAndUpdate(
+      id,
+      {
+        department,
+        item,
+        number,
+        bp,
+        sp,
+        profit,
+        percentageprofit,
+        date: date || Date.now()
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedSale) {
+      return res.status(404).json({ message: "Sale record not found." });
+    }
+
+    res.status(200).json(updatedSale);
+  } catch (error) {
+    console.error("Error updating sale:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
 app.post('/api/sales', auth, async (req, res) => {
   try {
     const { item, department, number, bp, sp, date, accountId } = req.body;
