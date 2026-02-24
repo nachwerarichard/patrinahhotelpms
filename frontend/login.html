@@ -16,80 +16,42 @@
 <body class="min-h-screen login-bg flex items-center justify-center p-4 font-sans text-slate-900">
     <div id="auth-container" class="w-full max-w-md bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl p-8 transition-all duration-500 border border-white/20">
     
-    <div class="text-center mb-8">
-        <div class="mx-auto h-24 w-auto flex items-center justify-center mb-4">
-            <img src="/novuscloud.png" alt="Patrinah Logo" class="max-h-full w-auto object-contain" />
+        <div class="text-center mb-8">
+            <div class="mx-auto h-24 w-auto flex items-center justify-center mb-4">
+                <img src="/novuscloud.png" alt="Patrinah Logo" class="max-h-full w-auto object-contain" />
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-800">System Access</h1>
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-500 mt-2">Executive Management Suite</p>
         </div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-800">System Access</h1>
-        <p id="welcome-text" class="text-xs uppercase tracking-[0.2em] text-slate-500 mt-2">Executive Management Suite</p>
+
+        <form id="login-form" class="space-y-5">
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Username</label>
+                <input type="text" id="username" required 
+                       class="block w-full px-5 py-3.5 bg-slate-100/50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all" 
+                       placeholder="Enter username">
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Password</label>
+                <input type="password" id="password" required 
+                       class="block w-full px-5 py-3.5 bg-slate-100/50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all" 
+                       placeholder="••••••••">
+            </div>
+            
+            <div id="error-message" class="text-red-500 text-sm hidden text-center font-medium animate-pulse"></div>
+
+            <button type="submit" id="login-button" 
+                    class="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-xl hover:bg-indigo-700 active:scale-[0.98] transition-all duration-200">
+                Secure Login
+            </button>
+        </form>
     </div>
-
-    <form id="login-form" class="space-y-5">
-        <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Username</label>
-            <input type="text" id="username" required 
-                   class="block w-full px-5 py-3.5 bg-slate-100/50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all" 
-                   placeholder="Enter username">
-        </div>
-
-        <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Password</label>
-            <input type="password" id="password" required 
-                   class="block w-full px-5 py-3.5 bg-slate-100/50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all" 
-                   placeholder="••••••••">
-        </div>
-        
-        <div id="error-message" class="text-red-500 text-sm hidden text-center font-medium animate-pulse"></div>
-
-        <button type="submit" id="login-button" 
-                class="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-xl hover:bg-indigo-700 active:scale-[0.98] transition-all duration-200">
-            Secure Login
-        </button>
-    </form>
-
-    <div id="system-selection" class="hidden text-center space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <h2 class="text-xl font-bold text-slate-800 mb-1">Select Department</h2>
-        <p class="text-[10px] uppercase tracking-widest text-slate-400 mb-6">Authenticated Session</p>
-        
-        <div id="system-options" class="grid grid-cols-1 gap-3"></div>
-        
-        <button id="logout-button" 
-                class="mt-8 w-full py-2 text-xs font-bold text-slate-400 hover:text-red-500 transition-colors uppercase tracking-widest">
-            Terminate Session
-        </button>
-    </div>
-</div>
 
 <script>
-    // Single consolidated URL
-// This works because Render masks the URL for you!
-const API_URL = 'https://novouscloudpms-tz4s.onrender.com/api';
-    const SYSTEM_LINKS = {
-        systemA: 'https://elegant-pasca-cea136.netlify.app/bar&rest/bar.html',
-        systemB: 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html',
-        systemC: 'https://elegant-pasca-cea136.netlify.app/frontend/kitchen.html',
-        systemD: 'https://elegant-pasca-cea136.netlify.app/frontend/staff.html',
-    };
-
-    let sessionRole = "";
-    let sessionHotelId = "";
-
-    const finalizeLogin = (token, systemKey) => {
-    const username = document.getElementById('username').value.trim();
-    const targetUrl = SYSTEM_LINKS[systemKey];
-    
-    // Notice we use 't' for token now, much safer than 'p' for password
-    const secureParams = `?autoLogin=true&u=${encodeURIComponent(username)}&t=${encodeURIComponent(token)}&r=${encodeURIComponent(sessionRole)}&h=${encodeURIComponent(sessionHotelId)}`;
-    
-    window.location.replace(`${targetUrl}${secureParams}`);
-};
-    const createBtn = (label, color, onClickAction) => {
-        const btn = document.createElement('button');
-        btn.className = `w-full py-4 rounded-2xl shadow-lg text-white font-bold text-sm tracking-wide transition-all transform hover:scale-[1.02] active:scale-95 ${color}`;
-        btn.textContent = label;
-        btn.onclick = onClickAction;
-        return btn;
-    };
+    const API_URL = 'https://novouscloudpms-tz4s.onrender.com/api';
+    // The single destination for all users
+    const MAIN_SYSTEM_URL = 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html';
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -114,34 +76,18 @@ const API_URL = 'https://novouscloudpms-tz4s.onrender.com/api';
 
             if (response.ok) {
                 const user = result.user;
-                sessionRole = (user.role || '').toLowerCase();
-                sessionHotelId = user.hotelId || "";
+                const token = result.token;
+                const role = (user.role || '').toLowerCase();
+                const hotelId = user.hotelId || "";
 
-                // UI State Swap
-                document.getElementById('login-form').classList.add('hidden');
-                document.getElementById('system-selection').classList.remove('hidden');
-                document.getElementById('auth-container').classList.replace('max-w-md', 'max-w-lg');
+                // Immediate Redirect Logic
+                btn.innerHTML = `<span class="flex items-center justify-center gap-2">Access Granted. Redirecting...</span>`;
+                btn.classList.replace('bg-slate-900', 'bg-emerald-600');
+
+                const secureParams = `?autoLogin=true&u=${encodeURIComponent(username)}&t=${encodeURIComponent(token)}&r=${encodeURIComponent(role)}&h=${encodeURIComponent(hotelId)}`;
                 
-                const options = document.getElementById('system-options');
-                options.innerHTML = '';
+                window.location.replace(`${MAIN_SYSTEM_URL}${secureParams}`);
 
-                // Departmental Routing Logic
-                if (sessionRole === 'admin' || sessionRole === 'super-admin') {
-                    //options.appendChild(createBtn('Bar & Restaurant', 'bg-emerald-600 hover:bg-emerald-700', () => finalizeLogin(result.token, 'systemA')));
-                    options.appendChild(createBtn('Front Office & Housekeeping', 'bg-indigo-600 hover:bg-indigo-700', () => finalizeLogin(result.token, 'systemB')));
-                    //options.appendChild(createBtn('Kitchen Display System', 'bg-amber-600 hover:bg-amber-700', () => finalizeLogin(result.token, 'systemC')));
-                    //options.appendChild(createBtn('Staff Management', 'bg-slate-800 hover:bg-slate-900', () => finalizeLogin(result.token, 'systemD')));
-                } 
-                else if (['bar', 'cashier', 'waiter'].includes(sessionRole)) {
-                    //options.appendChild(createBtn('Open Bar System', 'bg-emerald-600 hover:bg-emerald-700', () => finalizeLogin(result.token, 'systemA')));
-                } 
-                else if (['housekeeping', 'reception', 'frontoffice'].includes(sessionRole)) {
-                    //options.appendChild(createBtn('Open Front Office', 'bg-indigo-600 hover:bg-indigo-700', () => finalizeLogin(result.token, 'systemB')));
-                }
-                else {
-                    err.textContent = `No modules assigned to role: ${sessionRole}`;
-                    err.classList.remove('hidden');
-                }
             } else {
                 err.textContent = result.message || 'Authentication failed.';
                 err.classList.remove('hidden');
@@ -150,15 +96,12 @@ const API_URL = 'https://novouscloudpms-tz4s.onrender.com/api';
             err.textContent = 'Server unreachable. Check your connection.';
             err.classList.remove('hidden');
         } finally {
-            btn.disabled = false;
-            btn.textContent = 'Secure Login';
+            if (!response?.ok) {
+                btn.disabled = false;
+                btn.textContent = 'Secure Login';
+            }
         }
     });
-
-    document.getElementById('logout-button').onclick = () => {
-        localStorage.clear();
-        location.reload();
-    };
 </script>
 </body>
 </html>
