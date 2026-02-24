@@ -1074,55 +1074,60 @@
             <button onclick="toggleCashModal(false)" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
         </div>
 
-        <form id="cash-journal-form" class="p-6">
-            <input type="hidden" id="cash-journal-id">
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                    <label for="cash-at-hand" class="block text-xs font-bold text-gray-500 uppercase mb-1">Physical Cash (Hand)</label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-2.5 text-gray-400 text-sm">UGX</span>
-                        <input type="number" id="cash-at-hand" step="0.01" min="0" required class="w-full pl-12 p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-semibold">
-                    </div>
-                </div>
-
-                <div>
-                    <label for="cash-on-phone" class="block text-xs font-bold text-gray-500 uppercase mb-1">Mobile Money (Phone)</label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-2.5 text-gray-400 text-sm">UGX</span>
-                        <input type="number" id="cash-on-phone" step="0.01" min="0" required class="w-full pl-12 p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-semibold">
-                    </div>
-                </div>
-
-                <div>
-                    <label for="cash-banked" class="block text-xs font-bold text-gray-500 uppercase mb-1">Cash Banked</label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-2.5 text-gray-400 text-sm">UGX</span>
-                        <input type="number" id="cash-banked" step="0.01" min="0" required class="w-full pl-12 p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-semibold">
-                    </div>
-                </div>
-
-                <div>
-                    <label for="bank-receipt-id" class="block text-xs font-bold text-gray-500 uppercase mb-1">Bank Receipt / Ref ID</label>
-                    <input type="text" id="bank-receipt-id" required placeholder="Slip Number" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
-                </div>
-
-                <div class="md:col-span-2">
-                    <label for="cash-date" class="block text-xs font-bold text-gray-500 uppercase mb-1">Transaction Date</label>
-                    <input type="date" id="cash-date" required class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
-                </div>
+        <form id="cash-journal-form" class="p-6" onsubmit="submitEditCashForm(event)">
+    <input type="hidden" id="cash-journal-id">
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div>
+            <label for="cash-at-hand" class="block text-xs font-bold text-gray-500 uppercase mb-1">Physical Cash (Hand)</label>
+            <div class="relative">
+                <span class="absolute left-3 top-2.5 text-gray-400 text-sm">UGX</span>
+                <input type="number" id="cash-at-hand" step="0.01" min="0" required placeholder="0.00" 
+                    class="w-full pl-12 p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-semibold">
             </div>
+        </div>
 
-            <div class="flex justify-end gap-3 mt-8">
-                <button type="button" onclick="toggleCashModal(false)" class="px-6 py-2.5 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition">
-                    Discard
-                </button>
-                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-8 rounded-xl transition-all shadow-lg flex items-center gap-2">
-                    <i class="fas fa-check-double"></i>
-                    <span id="cash-submit-text">Save Cash Entry</span>
-                </button>
+        <div>
+            <label for="cash-on-phone" class="block text-xs font-bold text-gray-500 uppercase mb-1">Mobile Money (Phone)</label>
+            <div class="relative">
+                <span class="absolute left-3 top-2.5 text-gray-400 text-sm">UGX</span>
+                <input type="number" id="cash-on-phone" step="0.01" min="0" required placeholder="0.00"
+                    class="w-full pl-12 p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-semibold">
             </div>
-        </form>
+        </div>
+
+        <div>
+            <label for="cash-banked" class="block text-xs font-bold text-gray-500 uppercase mb-1">Cash Banked</label>
+            <div class="relative">
+                <span class="absolute left-3 top-2.5 text-gray-400 text-sm">UGX</span>
+                <input type="number" id="cash-banked" step="0.01" min="0" required placeholder="0.00"
+                    class="w-full pl-12 p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-semibold">
+            </div>
+        </div>
+
+        <div>
+            <label for="bank-receipt-id" class="block text-xs font-bold text-gray-500 uppercase mb-1">Bank Receipt / Ref ID</label>
+            <input type="text" id="bank-receipt-id" required placeholder="Enter Slip or Ref Number" 
+                class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+
+        <div class="md:col-span-2">
+            <label for="cash-date" class="block text-xs font-bold text-gray-500 uppercase mb-1">Transaction Date</label>
+            <input type="date" id="cash-date" required 
+                class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+    </div>
+
+    <div class="flex justify-end gap-3 mt-8">
+        <button type="button" onclick="closeCashModal()" class="px-6 py-2.5 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition">
+            Discard
+        </button>
+        <button type="submit" id="cash-submit-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-8 rounded-xl transition-all shadow-lg flex items-center gap-2">
+            <i class="fas fa-save"></i>
+            <span id="cash-submit-text">Record Entry</span>
+        </button>
+    </div>
+</form>
     </div>
 </div>
 
