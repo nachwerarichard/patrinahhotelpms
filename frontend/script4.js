@@ -9341,5 +9341,285 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+async function loadWaiterTracker() {
+    try {
+        const token = localStorage.getItem('token');
+       // Change the fetch URL to /api/waiter/orders
+const res = await fetch('https://patrinahhotelpms.onrender.com/api/waiter/orders', {
+    headers: { 'Authorization': `Bearer ${token}` }
+});
+        
+        const orders = await res.json();
+        const tbody = document.getElementById('waiterTrackerBody');
+
+        if (!orders || orders.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400">No active kitchen orders found.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = orders.map(order => {
+            let statusBadge = "";
+            const timeStr = new Date(order.date || order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            // Logic for status colors
+            switch(order.status) {
+                case 'Preparing':
+                    statusBadge = `<span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-black animate-pulse border border-amber-200">PREPARING</span>`;
+                    break;
+                case 'Ready':
+                    statusBadge = `<span class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-black shadow-sm">READY TO SERVE</span>`;
+                    break;
+                default:
+                    statusBadge = `<span class="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-xs font-bold border border-slate-200">PENDING</span>`;
+            }
+
+// ... inside your tracker mapping logic ...
+return `
+    <tr class="hover:bg-slate-50 transition">
+        <td class="px-6 py-4 text-slate-500 text-sm">${timeStr}</td>
+        <td class="px-6 py-4 font-bold text-slate-800">${order.item}</td>
+        <td class="px-6 py-4 text-center text-slate-700 font-mono">${order.number || order.quantity}</td>
+        <td class="px-6 py-4">${statusBadge}</td>
+        <td class="px-6 py-4 text-right">
+            ${order.status === 'Ready' ? `
+                <button onclick="markAsServed('${order._id}')" 
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-4 py-2 rounded-lg shadow-sm transition transform active:scale-95">
+                    Mark Served
+                </button>
+            ` : '<span class="text-gray-300 text-xs italic">Awaiting Kitchen</span>'}
+        </td>
+    </tr>
+`;
+            
+        }).join('');
+    } catch (err) {
+        console.error("Waiter Tracker Error:", err);
+    }
+}
+
+// Auto-refresh every 15 seconds to keep the waiter updated
+setInterval(loadWaiterTracker, 15000);
+loadWaiterTracker();
+
+        async function markAsServed(orderId) {
+    if (!confirm("Confirm this order has been delivered to the table?")) return;
+
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`https://patrinahhotelpms.onrender.com/api/kitchen/order/${orderId}/served`, {
+            method: 'DELETE', // We delete it once it's actually served
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+            loadWaiterTracker(); // Refresh the list
+        }
+    } catch (err) {
+        alert("Failed to update status. Check connection.");
+    }
+}
+    function startNewTransaction() {
+    // 1. Reset all forms
+    document.getElementById('searchAccountForm').reset();
+    document.getElementById('createAccountForm').reset();
+    
+    // 2. Clear visual labels for the active guest
+    document.getElementById('currentGuestName').textContent = '-';
+    document.getElementById('currentRoomNumber').textContent = '';
+    document.getElementById('totalCharges').textContent = '0.00';
+    
+    // 3. Clear the Live Folio table
+    const chargesList = document.getElementById('chargesList');
+    if (chargesList) {
+        chargesList.innerHTML = `
+            <tr>
+                <td colspan="2" class="px-6 py-10 text-center text-slate-400 italic text-sm">No items posted yet</td>
+            </tr>
+        `;
+    }
+
+    // 4. Clear search results list
+    const searchResults = document.getElementById('searchResults');
+    if (searchResults) {
+        searchResults.innerHTML = '';
+    }
+    
+    console.log("UI Cleared for new transaction.");
+}
+
+const suggestInput = document.getElementById('guestname');
+const suggestionBox = document.getElementById('bookingSuggestions');
+const roomInput = document.querySelector('input[name="roomNumber"]');
+let suggestTimer;
+
+suggestInput.addEventListener('input', () => {
+    clearTimeout(suggestTimer);
+    const val = suggestInput.value.trim();
+
+    if (val.length < 2) {
+        suggestionBox.classList.add('hidden');
+        return;
+    }
+
+    suggestTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/pos/suggestions/bookings?name=${val}`);
+        
+        if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+        
+        const bookings = await res.json();
+            if (bookings.length > 0) {
+                suggestionBox.innerHTML = bookings.map(b => `
+                    <div class="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0"
+                         onclick="fillBooking('${b.name}', '${b.room}')">
+                        <p class="text-sm font-medium text-slate-700">${b.name}</p>
+                        <p class="text-xs text-slate-400">Room ${b.room}</p>
+                    </div>
+                `).join('');
+                suggestionBox.classList.remove('hidden');
+            } else {
+                suggestionBox.classList.add('hidden');
+            }
+        } catch (err) {
+            console.error('Suggestion fetch failed:', err);
+        }
+    }, 300);
+});
+
+// Function to auto-fill the form
+window.fillBooking = (name, room) => {
+    suggestInput.value = name;
+    roomInput.value = room;
+    suggestionBox.classList.add('hidden');
+};
+
+// Close suggestions if user clicks outside
+document.addEventListener('click', (e) => {
+    if (!suggestionBox.contains(e.target) && e.target !== suggestInput) {
+        suggestionBox.classList.add('hidden');
+    }
+});
+
+async function fetchActiveAccounts() {
+    const tableBody = document.getElementById('activeAccountsTableBody');
+    const emptyMessage = document.getElementById('noAccountsMessage');
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/pos/accounts/active`);
+        const accounts = await response.json();
+
+        if (accounts.length === 0) {
+            tableBody.innerHTML = '';
+            emptyMessage.classList.remove('hidden');
+            return;
+        }
+
+        emptyMessage.classList.add('hidden');
+        tableBody.innerHTML = accounts.map(acc => `
+            <tr class="hover:bg-slate-50 transition-colors">
+                <td class="py-4">
+                    <div class="font-semibold text-slate-700">${acc.guestName}</div>
+                    <div class="text-xs text-indigo-500 font-medium">Room ${acc.roomNumber || 'N/A'}</div>
+                </td>
+                <td class="py-4 font-mono text-sm text-slate-600">
+                    UGX ${Number(acc.totalCharges).toFixed(2)}
+                </td>
+<td class="py-4 text-xs text-slate-400">
+    <div class="font-medium text-slate-500">
+        ${acc.lastUpdated ? 
+            new Date(acc.lastUpdated).toLocaleDateString([], { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            }) : 'No Date'}
+    </div>
+    <div class="text-[10px] opacity-75">
+        ${acc.lastUpdated ? 
+            new Date(acc.lastUpdated).toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            }) : 'Just now'}
+    </div>
+</td>
+                <td class="py-4 text-right">
+                    <button onclick="viewAccountDetails('${acc._id}')" 
+                        class="text-xs bg-slate-100 hover:bg-indigo-600 hover:text-white px-3 py-1.5 rounded-lg font-bold transition-all">
+                        MANAGE
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch (err) {
+        console.error('Failed to fetch active accounts:', err);
+    }
+}
+
+// Load accounts when the page opens
+document.addEventListener('DOMContentLoaded', fetchActiveAccounts);
+
+let debounceTimer;
+const searchInput = document.getElementById('searchQuery'); // Change to your ID
+
+searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim();
+    
+    // Clear the previous timer
+    clearTimeout(debounceTimer);
+
+    // If input is empty, clear results and stop
+    if (query.length === 0) {
+        searchResults.innerHTML = '';
+        return;
+    }
+
+    // Wait 300ms after user stops typing to call API
+    debounceTimer = setTimeout(() => {
+        searchAccounts(query);
+    }, 300);
+});
+    const searchAccounts = async (query) => {
+    try {
+        // Show a small loader or clear previous results immediately
+        searchResults.innerHTML = '<div class="text-center py-4"><span class="animate-pulse text-xs text-slate-400">Searching...</span></div>';
+        
+        const res = await fetch(`${BASE_URL}/api/pos/client/search?query=${encodeURIComponent(query)}`);
+        const data = await res.json();
+
+        // Handle 404 or empty data
+        if (!res.ok || !data.length) {
+            searchResults.innerHTML = '<p class="text-xs text-center text-slate-400 py-4">No records found</p>';
+            return;
+        }
+
+        searchResults.innerHTML = ''; // Clear "Searching..."
+        
+        data.forEach(acc => {
+            const el = document.createElement('div');
+            el.className = 'p-3 mb-2 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-300 hover:bg-white transition-all group';
+            el.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-sm font-bold text-slate-700">${acc.guestName}</p>
+                        <p class="text-[10px] uppercase font-bold text-slate-400">Room: ${acc.roomNumber || 'Walk-In'}</p>
+                    </div>
+                    <span class="text-xs font-black text-indigo-600 opacity-0 group-hover:opacity-100">SELECT →</span>
+                </div>`;
+            
+            el.onclick = () => {
+                activeAccountId = acc._id;
+                activeAccountData = acc;
+                updateActiveAccountUI(acc);
+                searchResults.innerHTML = ''; // Clear results after selection
+                searchInput.value = acc.guestName; // Optional: fill input with selected name
+            };
+            searchResults.appendChild(el);
+        });
+    } catch (err) { 
+        searchResults.innerHTML = '';
+        showMessage(err.message, 'error'); 
+    }
+};
+
    
 
