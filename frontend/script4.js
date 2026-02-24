@@ -7706,25 +7706,26 @@ async function generateReports() {
     const generateButton = document.getElementById('generate-report-btn');
     let originalButtonHtml = generateButton ? generateButton.innerHTML : '';
     
-    // 1. Multi-Tenant Context
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const hotelId = sessionData?.hotelId;
+    // 1. Get Hotel Context
+    // Pulling directly from localStorage is safer if sessionData is nested
+    const hotelId = localStorage.getItem('hotelId');
 
     if (!hotelId) {
         showMessage('Session expired. Please log in again.', true);
         return;
     }
 
+    // Start Loading State
     if (generateButton) {
         generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
         generateButton.disabled = true;
     }
 
-    const startDateInput = document.getElementById('report-start-date');
-    const endDateInput = document.getElementById('report-end-date');
+    const startDate = document.getElementById('report-start-date').value;
+    const endDate = document.getElementById('report-end-date').value;
 
-    if (!startDateInput.value || !endDateInput.value) {
-        showMessage('Please select both start and end dates.');
+    if (!startDate || !endDate) {
+        showMessage('Please select both start and end dates.', true);
         if (generateButton) { 
             generateButton.innerHTML = originalButtonHtml; 
             generateButton.disabled = false; 
@@ -7733,16 +7734,16 @@ async function generateReports() {
     }
 
     const tbody = document.getElementById('department-report-tbody');
-    if (tbody) tbody.innerHTML = ''; 
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Loading data...</td></tr>'; 
 
     try {
-        // 2. FETCH DATA (Scoped to Hotel and Date Range)
-        // Optimization: Pass dates to the backend to reduce payload size
-        const queryParams = `hotelId=${hotelId}&startDate=${startDateInput.value}&endDate=${endDateInput.value}`;
+        // 2. FETCH DATA
+        // Note: authenticatedFetch already attaches hotelId in headers
+        const queryParams = `startDate=${startDate}&endDate=${endDate}&hotelId=${hotelId}`;
         
         let allSales = [], allExpenses = [], page = 1, res;
 
-        // Fetch Sales for this Hotel
+        // Fetch Sales
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/sales?${queryParams}&page=${page}&limit=100`);
             res = await resp.json();
@@ -7752,7 +7753,7 @@ async function generateReports() {
             }
         } while (res && res.data && res.data.length > 0 && page <= (res.pages || 1));
 
-        // Fetch Expenses for this Hotel
+        // Fetch Expenses
         page = 1;
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/expenses?${queryParams}&page=${page}&limit=100`);
@@ -7763,13 +7764,15 @@ async function generateReports() {
             }
         } while (res && res.data && res.data.length > 0 && page <= (res.pages || 1));
 
-        // 3. AGGREGATE DATA
+        // 3. AGGREGATE
         const report = {};
 
         allSales.forEach(sale => {
             const dept = sale.department || 'Other';
             if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
-            report[dept].sales += (sale.number * sale.sp);
+            // Ensure we use 'qty' or 'number' based on your schema
+            const amount = (sale.number || sale.qty || 0) * (sale.sp || 0);
+            report[dept].sales += amount;
         });
 
         allExpenses.forEach(exp => {
@@ -7778,12 +7781,13 @@ async function generateReports() {
             report[dept].expenses += (exp.amount || 0);
         });
 
-        // 4. RENDER TO TABLE
+        // 4. RENDER TABLE
+        tbody.innerHTML = ''; // Clear loading message
         let totalS = 0, totalE = 0;
         const sortedDepts = Object.keys(report).sort();
 
         if (sortedDepts.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500 italic">No financial activity recorded for this period.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500 italic">No financial activity found for this period.</td></tr>';
         } else {
             sortedDepts.forEach(dept => {
                 const { sales, expenses } = report[dept];
@@ -7793,28 +7797,32 @@ async function generateReports() {
 
                 const row = tbody.insertRow();
                 row.className = "border-b border-gray-100 hover:bg-gray-50";
-                row.insertCell().textContent = dept;
-                row.insertCell().textContent = sales.toLocaleString(undefined, { minimumFractionDigits: 2 });
-                row.insertCell().textContent = expenses.toLocaleString(undefined, { minimumFractionDigits: 2 });
-                
-                const bCell = row.insertCell();
-                bCell.textContent = balance.toLocaleString(undefined, { minimumFractionDigits: 2 });
-                bCell.className = `font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`;
+                row.innerHTML = `
+                    <td class="px-6 py-4 font-medium">${dept}</td>
+                    <td class="px-6 py-4">${sales.toLocaleString()}</td>
+                    <td class="px-6 py-4">${expenses.toLocaleString()}</td>
+                    <td class="px-6 py-4 text-right font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}">
+                        ${balance.toLocaleString()}
+                    </td>
+                `;
             });
         }
 
-        // 5. UPDATE SUMMARY CARDS
-        updateElementText('overall-sales', totalS);
-        updateElementText('overall-expenses', totalE);
-        
-        const overallBal = totalS - totalE;
-        const balEl = document.getElementById('overall-balance');
-        if (balEl) {
-            balEl.textContent = overallBal.toLocaleString(undefined, { minimumFractionDigits: 2 });
-            balEl.className = `text-2xl font-bold ${overallBal >= 0 ? 'text-green-600' : 'text-red-600'}`;
-        }
+        // 5. UPDATE SUMMARY CARDS (Matches your HTML IDs)
+        const updateVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val.toLocaleString(undefined, { minimumFractionDigits: 0 });
+        };
 
-        // Success State
+        updateVal('overall-sales-card', totalS);
+        updateVal('overall-expenses-card', totalE);
+        updateVal('overall-balance-card', (totalS - totalE));
+
+        // Update Hidden Export Table
+        updateVal('overall-sales', totalS);
+        updateVal('overall-expenses', totalE);
+        updateVal('overall-balance', (totalS - totalE));
+
         if (generateButton) {
             generateButton.innerHTML = '<i class="fas fa-check"></i> Report Generated';
             setTimeout(() => { 
@@ -7825,14 +7833,13 @@ async function generateReports() {
 
     } catch (error) {
         console.error('Report Error:', error);
-        showMessage('Error: ' + error.message, true);
+        showMessage('Failed to generate report: ' + error.message, true);
         if (generateButton) { 
             generateButton.innerHTML = originalButtonHtml; 
             generateButton.disabled = false; 
         }
     }
 }
-
 // Helper for cleaner code
 function updateElementText(id, value) {
     const el = document.getElementById(id);
