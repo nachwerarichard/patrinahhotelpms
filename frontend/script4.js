@@ -9274,14 +9274,18 @@ window.addEventListener('DOMContentLoaded', () => {
 
 async function loadWaiterTracker() {
     try {
-        const token = localStorage.getItem('token');
-       // Change the fetch URL to /api/waiter/orders
-const res = await fetch('{API_BASE_URL}/waiter/orders', {
-    headers: { 'Authorization': `Bearer ${token}` }
-});
+        const tbody = document.getElementById('waiterTrackerBody');
+        
+        // 1. Use the wrapper - it handles Authorization and x-hotel-id automatically
+        // This hits: https://novouscloudpms-tz4s.onrender.com/api/waiter/orders
+        const res = await authenticatedFetch(`${API_BASE_URL}/waiter/orders`);
+        
+        if (!res || !res.ok) {
+            console.error("Failed to fetch orders");
+            return;
+        }
         
         const orders = await res.json();
-        const tbody = document.getElementById('waiterTrackerBody');
 
         if (!orders || orders.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400">No active kitchen orders found.</td></tr>`;
@@ -9304,27 +9308,30 @@ const res = await fetch('{API_BASE_URL}/waiter/orders', {
                     statusBadge = `<span class="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-xs font-bold border border-slate-200">PENDING</span>`;
             }
 
-// ... inside your tracker mapping logic ...
-return `
-    <tr class="hover:bg-slate-50 transition">
-        <td class="px-6 py-4 text-slate-500 text-sm">${timeStr}</td>
-        <td class="px-6 py-4 font-bold text-slate-800">${order.item}</td>
-        <td class="px-6 py-4 text-center text-slate-700 font-mono">${order.number || order.quantity}</td>
-        <td class="px-6 py-4">${statusBadge}</td>
-        <td class="px-6 py-4 text-right">
-            ${order.status === 'Ready' ? `
-                <button onclick="markAsServed('${order._id}')" 
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-4 py-2 rounded-lg shadow-sm transition transform active:scale-95">
-                    Mark Served
-                </button>
-            ` : '<span class="text-gray-300 text-xs italic">Awaiting Kitchen</span>'}
-        </td>
-    </tr>
-`;
-            
+            return `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="px-6 py-4 text-slate-500 text-sm">${timeStr}</td>
+                    <td class="px-6 py-4 font-bold text-slate-800">${order.item}</td>
+                    <td class="px-6 py-4 text-center text-slate-700 font-mono">${order.number || order.quantity}</td>
+                    <td class="px-6 py-4">${statusBadge}</td>
+                    <td class="px-6 py-4 text-right">
+                        ${order.status === 'Ready' ? `
+                            <button onclick="markAsServed('${order._id}')" 
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-4 py-2 rounded-lg shadow-sm transition transform active:scale-95">
+                                Mark Served
+                            </button>
+                        ` : '<span class="text-gray-300 text-xs italic">Awaiting Kitchen</span>'}
+                    </td>
+                </tr>
+            `;
         }).join('');
+        
     } catch (err) {
         console.error("Waiter Tracker Error:", err);
+        const tbody = document.getElementById('waiterTrackerBody');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Error loading tracker data.</td></tr>`;
+        }
     }
 }
 
@@ -9332,21 +9339,29 @@ return `
 setInterval(loadWaiterTracker, 15000);
 loadWaiterTracker();
 
-        async function markAsServed(orderId) {
+async function markAsServed(orderId) {
     if (!confirm("Confirm this order has been delivered to the table?")) return;
 
     try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`{API_BASE_URL}/kitchen/order/${orderId}/served`, {
-            method: 'DELETE', // We delete it once it's actually served
-            headers: { 'Authorization': `Bearer ${token}` }
+        // Use authenticatedFetch to handle headers and token automatically
+        // Path: https://novouscloudpms-tz4s.onrender.com/api/kitchen/order/[ID]/served
+        const res = await authenticatedFetch(`${API_BASE_URL}/kitchen/order/${orderId}/served`, {
+            method: 'DELETE'
         });
 
-        if (res.ok) {
-            loadWaiterTracker(); // Refresh the list
+        if (res && res.ok) {
+            // Success: reload the tracker to show the order has been removed
+            loadWaiterTracker(); 
+            
+            // Optional: Provide a small toast or non-intrusive notification
+            console.log(`Order ${orderId} marked as served.`);
+        } else {
+            const errorData = await res.json();
+            throw new Error(errorData.error || 'Failed to update order status');
         }
     } catch (err) {
-        alert("Failed to update status. Check connection.");
+        console.error("markAsServed Error:", err);
+        alert("Failed to update status: " + err.message);
     }
 }
     function startNewTransaction() {
@@ -9394,8 +9409,7 @@ suggestInput.addEventListener('input', () => {
 
     suggestTimer = setTimeout(async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/api/pos/suggestions/bookings?name=${val}`);
-        
+const res = await authenticatedFetch(`${API_BASE_URL}/pos/suggestions/bookings?name=${val}`);        
         if (!res.ok) throw new Error(`Server responded with ${res.status}`);
         
         const bookings = await res.json();
@@ -9436,8 +9450,8 @@ async function fetchActiveAccounts() {
     const emptyMessage = document.getElementById('noAccountsMessage');
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/pos/accounts/active`);
-        const accounts = await response.json();
+      const response = await authenticatedFetch(`${API_BASE_URL}/pos/accounts/active`);
+      const accounts = await response.json();
 
         if (accounts.length === 0) {
             tableBody.innerHTML = '';
