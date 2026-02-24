@@ -9272,7 +9272,7 @@ window.addEventListener('DOMContentLoaded', () => {
         loadDashboardData(); 
     } else {
         // 5. If no token, make sure they stay at the login screen
-        updateUI(false);
+        //updateUI(false);
     }
 });
 
