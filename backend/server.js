@@ -3490,6 +3490,54 @@ app.get('/api/expenses', async (req, res) => {
         res.status(500).json({ error: 'Server error while fetching expenses' });
     }
 });
+
+// PUT /api/expenses/:id
+// Note: If your frontend calls /api/expenses, we use that path here
+app.put('/api/expenses/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      cashAtHand, 
+      cashBanked, 
+      cashOnPhone, 
+      bankReceiptId, 
+      responsiblePerson, 
+      date 
+    } = req.body;
+
+    // 1. Find and Update the CashJournal entry
+    const updatedJournal = await CashJournal.findByIdAndUpdate(
+      id,
+      {
+        cashAtHand: Number(cashAtHand) || 0,
+        cashBanked: Number(cashBanked) || 0,
+        cashOnPhone: Number(cashOnPhone) || 0,
+        bankReceiptId,
+        responsiblePerson,
+        date: date || Date.now()
+      },
+      { new: true, runValidators: true }
+    );
+
+    // 2. Handle missing record
+    if (!updatedJournal) {
+      return res.status(404).json({ 
+        message: "Journal entry not found. Check if the ID is correct." 
+      });
+    }
+
+    // 3. Success response
+    res.status(200).json(updatedJournal);
+    
+  } catch (error) {
+    console.error("Error updating Cash Journal:", error);
+    res.status(500).json({ 
+      message: "Internal Server Error", 
+      error: error.message 
+    });
+  }
+});
+
 // GET Cash Journal records
 app.get('/api/cash-journal', auth, async (req, res) => {
     try {
