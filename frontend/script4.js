@@ -7579,100 +7579,90 @@ function setCashButtonLoading(isLoading) {
     }
 }
 
-async function createCashEntry(cashData) {
-    const url = `${API_BASE_URL}/cash-journal`;
-    const response = await authenticatedFetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cashData)
-    });
+function getCashFormData() {
+    const hotelId = localStorage.getItem('hotelId');
+    const username = localStorage.getItem('username');
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to record cash entry.');
+    return {
+        hotelId,
+        cashAtHand: parseFloat(document.getElementById('cash-at-hand').value) || 0,
+        cashOnPhone: parseFloat(document.getElementById('cash-on-phone').value) || 0,
+        cashBanked: parseFloat(document.getElementById('cash-banked').value) || 0,
+        bankReceiptId: document.getElementById('bank-receipt-id').value.trim(),
+        date: document.getElementById('cash-date').value,
+        updatedBy: username,
+        createdBy: username // For new entries
+    };
+}
+
+async function createCashEntry(cashData) {
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/cash-journal`, {
+            method: 'POST',
+            body: JSON.stringify(cashData)
+        });
+
+        if (!response.ok) throw new Error('Failed to create entry');
+        
+        showMessage('Cash entry recorded! 💰');
+        return true;
+    } catch (error) {
+        showMessage(error.message, true);
+        return false;
     }
-    return await response.json();
 }
 async function updateCashEntry(id, cashData) {
-    // Admin-only check for editing
-    const adminRoles = ['admin', 'super-admin'];
-    if (!adminRoles.includes(currentUserRole)) {
-        throw new Error('Permission Denied: Only administrators can edit cash entries.');
+    // Role Check for Edits
+    const userRole = localStorage.getItem('userRole');
+    if (!['admin', 'super-admin'].includes(userRole)) {
+        showMessage('Permission Denied: Admins only.', true);
+        return false;
     }
-
-    const url = `${API_BASE_URL}/cash-journal/${id}`;
-    const response = await authenticatedFetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cashData)
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update cash entry.');
-    }
-    return await response.json();
-}
-async function submitEditCashForm(event) {
-    event.preventDefault();
-    const modal = document.getElementById('edit-cash-modal');
-    
-    // 1. Context & Data Gathering
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const hotelId = sessionData?.hotelId;
-    const id = document.getElementById('edit-cash-id')?.value;
-
-    if (!hotelId) {
-        return showMessage('Session Error: No hotel context found.', true);
-    }
-
-    const cashData = { 
-        hotelId,
-        cashAtHand: parseFloat(document.getElementById('edit-cash-at-hand')?.value) || 0,
-        cashOnPhone: parseFloat(document.getElementById('edit-cash-on-phone')?.value) || 0,
-        cashBanked: parseFloat(document.getElementById('edit-cash-banked')?.value) || 0,
-        bankReceiptId: document.getElementById('edit-bank-receipt-id')?.value.trim(),
-        date: document.getElementById('edit-cash-date')?.value,
-        updatedBy: currentUsername // Audit trail
-    };
-
-    // 2. Validation
-    if (isNaN(cashData.cashAtHand) || !cashData.bankReceiptId || !cashData.date) {
-        return showMessage('Please fill in all fields correctly.', true);
-    }
-
-    // 3. Execution
-    setCashButtonLoading(true);
 
     try {
-        if (id) {
-            // Updating existing entry
-            await updateCashEntry(id, cashData);
-            showMessage('Cash entry updated successfully! 🎉');
-        } else {
-            // Creating new entry (if applicable to this form)
-            await createCashEntry(cashData);
-            showMessage('Cash entry recorded! 🎉');
-        }
+        const response = await authenticatedFetch(`${API_BASE_URL}/cash-journal/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(cashData)
+        });
 
-        // 4. UI Cleanup
-        if (modal) {
-            modal.style.display = "none";
-            modal.classList.add('hidden');
-        }
-        
-        // Reset form if it exists
-        const form = document.getElementById('edit-cash-form');
-        if (form) form.reset();
+        if (!response.ok) throw new Error('Failed to update entry');
 
-        fetchCashJournal(); // Refresh the table
-
+        showMessage('Cash entry updated! 🎉');
+        return true;
     } catch (error) {
-        console.error('Operation failed:', error);
         showMessage(error.message, true);
-    } finally {
-        setCashButtonLoading(false);
+        return false;
     }
+}
+
+async function handleCashFormSubmit(event) {
+    event.preventDefault();
+    const id = document.getElementById('cash-journal-id').value;
+    const cashData = getCashFormData();
+
+    // Basic Validation
+    if (!cashData.bankReceiptId || !cashData.date) {
+        return showMessage("Please fill in all required fields.", true);
+    }
+
+    setCashButtonLoading(true);
+    let success = false;
+
+    if (id) {
+        // If ID exists, we are UPDATING (PUT)
+        success = await updateCashEntry(id, cashData);
+    } else {
+        // If no ID, we are CREATING (POST)
+        success = await createCashEntry(cashData);
+    }
+
+    if (success) {
+        toggleCashModal(false); // Close Modal
+        document.getElementById('cash-journal-form').reset(); // Clear form
+        fetchCashJournal(); // Refresh table
+    }
+    
+    setCashButtonLoading(false);
 }
 // **You must add an event listener to your edit form when the page loads:**
 
