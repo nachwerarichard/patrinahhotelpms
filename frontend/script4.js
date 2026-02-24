@@ -7622,12 +7622,7 @@ async function handleCashFormSubmit(event) {
 }
 // **You must add an event listener to your edit form when the page loads:**
 
-document.addEventListener('DOMContentLoaded', () => {
-    const editForm = document.getElementById('edit-cash-form');
-    if (editForm) {
-        editForm.addEventListener('submit', submitEditCashForm);
-    }
-});
+
 
 
 function populateEditCashModal(record) {
