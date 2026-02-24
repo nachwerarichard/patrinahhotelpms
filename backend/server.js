@@ -3263,41 +3263,31 @@ app.post('/api/sales', auth, async (req, res) => {
 // GET Sales endpoint
 app.get('/api/sales', async (req, res) => {
     try {
-        // 1. Get query parameters
-        const { hotelId, page = 1, limit = 15, department } = req.query;
+        const { hotelId, page = 1, limit = 15, department, startDate, endDate } = req.query;
+        if (!hotelId) return res.status(400).json({ error: 'hotelId required' });
 
-        if (!hotelId) {
-            return res.status(400).json({ error: 'hotelId is required' });
-        }
-
-        // 2. Build the filter object
         const filter = { hotelId };
-        if (department) {
-            filter.department = department;
+        if (department) filter.department = department;
+
+        // DATE FILTER ADDED HERE
+        if (startDate && endDate) {
+            filter.date = { 
+                $gte: new Date(startDate + "T00:00:00.000Z"), 
+                $lte: new Date(endDate + "T23:59:59.999Z") 
+            };
         }
 
-        // 3. Setup Pagination
         const skip = (parseInt(page) - 1) * parseInt(limit);
-
-        // 4. Fetch sales from MongoDB
-        const sales = await Sale.find(filter)
-            .sort({ date: -1 }) // Newest first
-            .skip(skip)
-            .limit(parseInt(limit));
-
-        // 5. Get total count for pagination controls
+        const sales = await Sale.find(filter).sort({ date: -1 }).skip(skip).limit(parseInt(limit));
         const total = await Sale.countDocuments(filter);
 
-        // 6. Return response
         res.status(200).json({
-            sales,
+            sales, // The frontend now looks for this key
             totalPages: Math.ceil(total / limit),
-            currentPage: parseInt(page),
             totalItems: total
         });
     } catch (error) {
-        console.error('Error fetching sales:', error);
-        res.status(500).json({ error: 'Server error while fetching sales' });
+        res.status(500).json({ error: error.message });
     }
 });
 // POST /expenses (Tenant Isolated)
