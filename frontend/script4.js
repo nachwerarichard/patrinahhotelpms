@@ -8188,93 +8188,103 @@ function showSection(sectionId) {
 let lastOrderCount = 0; 
 
 async function loadOrders() {
+    console.log("1. loadOrders started");
     try {
         const res = await authenticatedFetch(`${API_BASE}/api/kitchen/Pending`, { method: 'GET' });
-        if (!res || !res.ok) return;
+        
+        if (!res || !res.ok) {
+            console.error("2. API Error", res?.status);
+            return;
+        }
 
         const orders = await res.json();
+        console.log("3. Orders received:", orders.length);
         
         const cardContainer = document.getElementById('kitchenOrders');
         const tableBody = document.getElementById('waiterTrackerBody');
 
-        // 1. Update Table (This is working for you, kept stable)
+        // --- RENDER TABLE ---
         if (tableBody) {
+            console.log("4. Rendering Table");
             tableBody.innerHTML = orders.map(order => {
-                // Use createdAt as per your schema
                 const time = order.createdAt ? new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '---';
                 return `
-                    <tr class="hover:bg-slate-50">
+                    <tr class="hover:bg-slate-50 border-b border-slate-100">
                         <td class="px-8 py-4 font-medium">${time}</td>
-                        <td class="px-8 py-4 font-bold">${order.item || 'Unknown'}</td>
-                        <td class="px-8 py-4 text-center">${order.number || 0}</td>
+                        <td class="px-8 py-4 font-bold text-slate-800">${order.item || 'N/A'}</td>
+                        <td class="px-8 py-4 text-center font-black">${order.number || 0}</td>
                         <td class="px-8 py-4">
-                            <span class="px-2 py-1 rounded-full text-xs font-bold ${order.status === 'Preparing' ? 'bg-amber-100 text-amber-600' : 'bg-orange-100 text-orange-600'}">
-                                ${order.status.toUpperCase()}
+                            <span class="px-2 py-1 rounded-full text-[10px] font-bold ${order.status === 'Preparing' ? 'bg-amber-100 text-amber-600' : 'bg-orange-100 text-orange-600'}">
+                                ${(order.status || 'Pending').toUpperCase()}
                             </span>
                         </td>
                         <td class="px-8 py-4 text-right">
-                            <button onclick="completeOrder('${order._id}')" class="text-emerald-600 font-bold hover:underline">DONE</button>
+                            <button onclick="completeOrder('${order._id}')" class="text-emerald-600 font-bold">DONE</button>
                         </td>
                     </tr>`;
             }).join('');
         }
 
-        // 2. Update Cards (The fix for the missing display)
-        if (!cardContainer) return;
+        // --- RENDER CARDS ---
+        if (!cardContainer) {
+            console.error("5. Error: kitchenOrders div not found!");
+            return;
+        }
 
+        console.log("6. Rendering Cards");
         if (orders.length === 0) {
-            cardContainer.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400">No active orders in kitchen.</div>`;
+            cardContainer.innerHTML = `<div class="col-span-full text-center py-20 text-slate-500 bg-white rounded-3xl border-2 border-dashed">No active orders.</div>`;
             return;
         }
 
         cardContainer.innerHTML = orders.map(order => {
-            // Calculation Guard: Use createdAt from your schema
-            const createdTime = order.createdAt ? new Date(order.createdAt) : new Date();
-            const diffMs = Math.max(0, new Date() - createdTime);
-            const minutes = Math.floor(diffMs / 60000);
+            // Safety: Handle time math carefully
+            const created = order.createdAt ? new Date(order.createdAt) : new Date();
+            const now = new Date();
+            const minutes = Math.floor((now - created) / 60000) || 0;
             const isLate = minutes >= 15;
-
-            // ID Guard: Ensure it's a string before slicing
-            const displayId = order._id ? String(order._id).slice(-5).toUpperCase() : 'N/A';
+            
+            // Safety: Handle ID string
+            const displayId = order._id ? String(order._id).slice(-5).toUpperCase() : '???';
 
             return `
-            <div class="group relative bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col ${isLate ? 'ring-4 ring-red-500/20 border-red-200' : ''}">
-                <div class="${isLate ? 'bg-red-500 text-white' : 'bg-slate-900 text-white'} px-6 py-4 flex justify-between items-center">
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs font-black uppercase tracking-widest">${minutes} MIN AGO</span>
-                    </div>
-                    <span class="text-[10px] font-bold opacity-70 italic">#${displayId}</span>
+            <div class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col ${isLate ? 'ring-4 ring-red-500/20' : ''}">
+                <div class="${isLate ? 'bg-red-500' : 'bg-slate-900'} text-white px-6 py-4 flex justify-between items-center">
+                    <span class="text-xs font-black uppercase tracking-widest">${minutes} MIN AGO</span>
+                    <span class="text-[10px] font-bold opacity-70">#${displayId}</span>
                 </div>
 
                 <div class="p-8 flex-grow">
-                    <div class="flex justify-between items-start mb-6">
+                    <div class="flex justify-between items-start mb-4">
                         <div class="space-y-1">
                             <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Order Item</p>
-                            <h2 class="text-2xl font-bold text-slate-800 leading-tight capitalize">${order.item}</h2>
-                            <p class="text-xs text-slate-400">Table: ${order.tableNumber || 'N/A'}</p>
+                            <h2 class="text-2xl font-bold text-slate-800 leading-tight capitalize">${order.item || 'Unnamed Item'}</h2>
+                            <p class="text-xs text-slate-400">Table: ${order.tableNumber || 'Walking'}</p>
                         </div>
-                        <div class="bg-slate-900 text-white h-16 w-16 rounded-2xl flex flex-col items-center justify-center">
-                            <span class="text-[10px] font-bold opacity-60">Qty</span>
-                            <span class="text-2xl font-black">${order.number}</span>
+                        <div class="bg-slate-900 text-white h-14 w-14 rounded-xl flex flex-col items-center justify-center">
+                            <span class="text-[8px] font-bold opacity-60">QTY</span>
+                            <span class="text-xl font-black">${order.number || 1}</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="p-6 pt-0 space-y-3">
+                <div class="p-6 pt-0 space-y-2">
                     <button onclick="markAsPreparing('${order._id}')" 
-                            class="w-full ${order.status === 'Preparing' ? 'bg-slate-100 text-slate-400' : 'bg-amber-50 text-amber-600'} py-4 rounded-2xl font-bold text-xs border-2 border-transparent transition-all">
+                            class="w-full ${order.status === 'Preparing' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-amber-50 text-amber-600 border-2 border-amber-100'} py-3 rounded-xl font-bold text-xs transition-all">
                         ${order.status === 'Preparing' ? 'IN PROGRESS' : 'START PREPARING'}
                     </button>
                     <button onclick="completeOrder('${order._id}')" 
-                            class="w-full bg-emerald-500 text-white py-4 rounded-2xl font-bold text-xs shadow-lg hover:bg-emerald-600 active:scale-95 transition-all">
+                            class="w-full bg-emerald-500 text-white py-3 rounded-xl font-bold text-xs shadow-md">
                         MARK READY
                     </button>
                 </div>
             </div>`;
         }).join('');
+        
+        console.log("7. Render Complete");
 
     } catch (err) {
-        console.error("Critical Render Error:", err);
+        console.error("CRITICAL JS ERROR:", err);
     }
 }
 
