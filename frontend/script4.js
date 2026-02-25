@@ -9506,3 +9506,7 @@ searchInput.addEventListener('input', (e) => {
         searchAccounts(query);
     }, 300);
 });
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadOrders();
+});
