@@ -8220,47 +8220,59 @@ async function loadOrders() {
         }
 
         // 4. Render the Cards (The section you said is missing)
-        if (!cardContainer) return;
+// ... (Keep table rendering as is)
 
-        if (orders.length === 0) {
-            cardContainer.innerHTML = `
-                <div class="col-span-full flex flex-col items-center justify-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-200">
-                    <p class="text-slate-500 font-medium tracking-wide text-lg">No pending orders.</p>
-                </div>`;
-        } else {
-            cardContainer.innerHTML = orders.map(order => {
-                const minutes = Math.floor((new Date() - new Date(order.createdAt)) / 60000);
-                const isLate = minutes >= 15;
+// 4. Render the Cards
+if (!cardContainer) return;
 
-                return `
-                <div class="group relative bg-white rounded-[2rem] shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-200 overflow-hidden flex flex-col ${isLate ? 'ring-4 ring-red-500/20 border-red-200' : ''}">
-                    <div class="${isLate ? 'bg-red-500 text-white' : 'bg-slate-900 text-white'} px-6 py-4 flex justify-between items-center">
-                        <div class="flex items-center gap-3">
-                            <span class="text-xs font-black uppercase tracking-widest">${minutes} MIN AGO</span>
-                        </div>
-                        <span class="text-[10px] font-bold opacity-70 italic">#${order._id.slice(-5).toUpperCase()}</span>
+if (orders.length === 0) {
+    cardContainer.innerHTML = `
+        <div class="col-span-full flex flex-col items-center justify-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-200">
+            <p class="text-slate-500 font-medium tracking-wide text-lg">No pending orders.</p>
+        </div>`;
+} else {
+    cardContainer.innerHTML = orders.map(order => {
+        // SAFETY CHECK 1: Date
+        const rawDate = order.createdAt || new Date();
+        const minutes = Math.floor((new Date() - new Date(rawDate)) / 60000) || 0;
+        const isLate = minutes >= 15;
+
+        // SAFETY CHECK 2: ID
+        const displayId = order._id ? order._id.slice(-5).toUpperCase() : 'NEW';
+
+        // SAFETY CHECK 3: Fields
+        const itemName = order.item || 'Unknown Item';
+        const itemQty = order.number || 1;
+
+        return `
+        <div class="group relative bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col ${isLate ? 'ring-4 ring-red-500/20 border-red-200' : ''}">
+            <div class="${isLate ? 'bg-red-500 text-white' : 'bg-slate-900 text-white'} px-6 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <span class="text-xs font-black uppercase tracking-widest">${minutes} MIN AGO</span>
+                </div>
+                <span class="text-[10px] font-bold opacity-70 italic">#${displayId}</span>
+            </div>
+
+            <div class="p-8 flex-grow">
+                <div class="flex justify-between items-start mb-6">
+                    <div class="space-y-1">
+                        <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Order Item</p>
+                        <h2 class="text-2xl font-bold text-slate-800 leading-tight capitalize">${itemName}</h2>
                     </div>
-
-                    <div class="p-8 flex-grow">
-                        <div class="flex justify-between items-start mb-6">
-                            <div class="space-y-1">
-                                <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Order Item</p>
-                                <h2 class="text-2xl font-bold text-slate-800 leading-tight capitalize">${order.item}</h2>
-                            </div>
-                            <div class="bg-slate-900 text-white h-16 w-16 rounded-2xl flex flex-col items-center justify-center">
-                                <span class="text-[10px] font-bold opacity-60">Qty</span>
-                                <span class="text-2xl font-black">${order.number}</span>
-                            </div>
-                        </div>
+                    <div class="bg-slate-900 text-white h-16 w-16 rounded-2xl flex flex-col items-center justify-center">
+                        <span class="text-[10px] font-bold opacity-60">Qty</span>
+                        <span class="text-2xl font-black">${itemQty}</span>
                     </div>
+                </div>
+            </div>
 
-                    <div class="p-6 pt-0 space-y-3">
-                        <button onclick="markAsPreparing('${order._id}')" class="w-full bg-amber-50 text-amber-600 py-4 rounded-2xl font-bold text-xs border-2 border-amber-100">START PREPARING</button>
-                        <button onclick="completeOrder('${order._id}')" class="w-full bg-emerald-500 text-white py-4 rounded-2xl font-bold text-xs shadow-lg">MARK READY</button>
-                    </div>
-                </div>`;
-            }).join('');
-        }
+            <div class="p-6 pt-0 space-y-3">
+                <button onclick="markAsPreparing('${order._id}')" class="w-full bg-amber-50 text-amber-600 py-4 rounded-2xl font-bold text-xs border-2 border-amber-100 transition-colors hover:bg-amber-500 hover:text-white">START PREPARING</button>
+                <button onclick="completeOrder('${order._id}')" class="w-full bg-emerald-500 text-white py-4 rounded-2xl font-bold text-xs shadow-lg hover:bg-emerald-600 transition-transform active:scale-95">MARK READY</button>
+            </div>
+        </div>`;
+    }).join('');
+}
     } catch (err) {
         console.error("KDS Load Error:", err);
     }
