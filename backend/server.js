@@ -3140,7 +3140,7 @@ app.get('/api/kitchen/Pending', auth, async (req, res) => {
     }
 });
 
-app.get('/api/inventory/lookup', auth, async (req, res) => {
+app.get('/api/lookup', auth, async (req, res) => {
     try {
         const items = await Inventory.aggregate([
             { $match: { hotelId: req.user.hotelId } }, // Filter by hotel first
@@ -3159,7 +3159,7 @@ app.get('/api/inventory/lookup', auth, async (req, res) => {
     }
 });
 
-// PUT /api/inventory/:id
+// PUT /api/:id
 app.put('/api/inventory/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -3215,70 +3215,74 @@ app.put('/api/inventory/:id', async (req, res) => {
 app.get('/api/inventory', auth, async (req, res) => {
     try {
         const hotelId = req.user.hotelId;
-        const { item, date, page = 1, limit = 10 } = req.query;
+        const { item, date, page = 1, limit = 50 } = req.query; // Higher limit to show all items
 
-        let query = { hotelId };
+        // 1. Set Date Boundaries
+        const searchDate = date ? new Date(date) : new Date();
+        const startOfDay = new Date(searchDate).setUTCHours(0, 0, 0, 0);
+        const endOfDay = new Date(searchDate).setUTCHours(23, 59, 59, 999);
 
+        const today = new Date();
+        const isSelectedDateToday = searchDate.toDateString() === today.toDateString();
+
+        // 2. Get the Master List of all unique items for this hotel
+        // (Alternatively, query a 'Products' collection if you have one)
+        const masterItems = await Inventory.distinct('item', { hotelId });
+
+        // 3. Get the actual transaction records for the selected day
+        const dailyRecords = await Inventory.find({
+            hotelId,
+            date: { $gte: startOfDay, $lte: endOfDay }
+        }).lean();
+
+        // 4. Merge: For every master item, find its record or create a "Static" placeholder
+        let report = await Promise.all(masterItems.map(async (itemName) => {
+            let record = dailyRecords.find(r => r.item === itemName);
+
+            if (!record) {
+                // Find the MOST RECENT closing stock before this date to act as Opening
+                const lastRecord = await Inventory.findOne({
+                    hotelId,
+                    item: itemName,
+                    date: { $lt: startOfDay }
+                }).sort({ date: -1 });
+
+                const previousClosing = lastRecord ? lastRecord.closing : 0;
+
+                record = {
+                    item: itemName,
+                    opening: previousClosing,
+                    purchases: 0,
+                    sales: 0,
+                    spoilage: 0,
+                    closing: previousClosing,
+                    buyingprice: lastRecord?.buyingprice || 0,
+                    sellingprice: lastRecord?.sellingprice || 0,
+                    date: searchDate,
+                    status: 'Static'
+                };
+            } else {
+                record.status = (record.purchases > 0 || record.sales > 0 || record.spoilage > 0) ? 'Updated' : 'Static';
+            }
+
+            record.isToday = isSelectedDateToday;
+            return record;
+        }));
+
+        // 5. Apply Frontend Filter (if searching for specific item name)
         if (item) {
-            query.item = { $regex: item, $options: 'i' };
+            report = report.filter(r => r.item.toLowerCase().includes(item.toLowerCase()));
         }
-
-        // Define Today's boundaries for the "hide closing stock" logic
-        const todayStart = new Date();
-        todayStart.setUTCHours(0, 0, 0, 0);
-        const todayEnd = new Date();
-        todayEnd.setUTCHours(23, 59, 59, 999);
-
-        if (date) {
-            const startOfDay = new Date(date);
-            startOfDay.setUTCHours(0, 0, 0, 0);
-            const endOfDay = new Date(date);
-            endOfDay.setUTCHours(23, 59, 59, 999);
-            query.date = { $gte: startOfDay, $lte: endOfDay };
-        } else {
-            // Default to all history if no date, or keep your "today" default
-            // query.date = { $gte: todayStart }; 
-        }
-
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-        const items = await Inventory.find(query)
-            .sort({ date: -1, item: 1 })
-            .skip(skip)
-            .limit(parseInt(limit))
-            .lean(); // Use lean for faster processing and adding virtual fields
-
-        const processedItems = items.map(record => {
-            const recordDate = new Date(record.date);
-            const isToday = recordDate >= todayStart && recordDate <= todayEnd;
-            
-            // Calculate Current Stock
-            const currentStock = (record.opening || 0) + (record.purchases || 0) - (record.sales || 0);
-            
-            // Determine Status: If activity occurred, it's updated.
-            const hasActivity = (record.purchases > 0 || record.sales > 0);
-            
-            return {
-                ...record,
-                currentStock,
-                isToday, // Flag for frontend to hide closing stock
-                status: hasActivity ? 'Updated' : 'Static'
-            };
-        });
-
-        const total = await Inventory.countDocuments(query);
 
         res.status(200).json({
-            items: processedItems,
-            totalPages: Math.ceil(total / limit),
-            currentPage: parseInt(page),
-            totalItems: total
+            items: report,
+            totalItems: report.length
         });
     } catch (error) {
-        console.error('Fetch Error:', error);
-        res.status(500).json({ error: 'Failed to fetch inventory' });
+        console.error('Master Inventory Fetch Error:', error);
+        res.status(500).json({ error: 'Failed to generate daily inventory report' });
     }
 });
-
 // Create/Update Daily Inventory (Tenant Isolated)
 app.post('/api/inventory', auth, async (req, res) => {
   try {
