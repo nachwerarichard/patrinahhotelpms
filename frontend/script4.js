@@ -6563,7 +6563,7 @@ async function submitInventory() {
             const idField = document.getElementById('inventory-id');
             if (idField) idField.value = '';
 
-            showMessageBox('Success', `${data.item} saved successfully! ✅`);
+            alert('Success', `${data.item} saved successfully! ✅`);
             
             // Refresh the list if the function exists
             if (typeof fetchInventory === 'function') fetchInventory(); 
@@ -6572,7 +6572,7 @@ async function submitInventory() {
         }
     } catch (error) {
         console.error('Submission Error:', error);
-        showMessageBox('Error', error.message, true);
+        alert('Error', error.message, true);
     } finally {
         setLoadingState(false);
     }
