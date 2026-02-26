@@ -301,15 +301,15 @@ const roomTypeSchema = new mongoose.Schema({
 });
 roomTypeSchema.index({ hotelId: 1, name: 1 }, { unique: true });
 const RoomType = mongoose.model('RoomType', roomTypeSchema);
-
-// 2. Room Schema (The actual physical rooms)
 const roomSchema = new mongoose.Schema({
-    id: { type: String, unique: true },
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
-    number: { type: String, required: true },
-    roomTypeId: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType' },
+    // We remove the manual 'id' string because MongoDB provides '_id' automatically
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+    number: { type: String, required: true }, 
+    roomTypeId: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType', required: true },
     status: { type: String, enum: ['clean', 'dirty', 'under-maintenance', 'blocked'], default: 'clean' }
 });
+
+// This ensures Room 101 is unique ONLY within the same hotel
 roomSchema.index({ hotelId: 1, number: 1 }, { unique: true });
 const Room = mongoose.model('Room', roomSchema);
 // Create a Room Type (Tied to the hotel)
@@ -2588,17 +2588,13 @@ const Checklist = mongoose.model('Checklist', checklistSchema);
 
 // StatusReport Schema and Model
 const statusReportSchema = new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
-  room: { type: String, required: true },
-  category: { type: String, required: true },
-  status: { type: String, required: true },
-  remarks: { type: String, default: '' },
-  dateTime: { type: Date, required: true, default: Date.now },
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+    roomId: { type: mongoose.Schema.Types.ObjectId, ref: 'Room', required: true }, // LINKED HERE
+    status: { type: String, required: true },
+    remarks: { type: String, default: '' },
+    dateTime: { type: Date, required: true, default: Date.now },
 }, { timestamps: true });
-
 const StatusReport = mongoose.model('StatusReport', statusReportSchema);
-
-
 
 const transactionSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
@@ -2615,33 +2611,67 @@ app.get('/api/status-reports', auth, async (req, res) => {
         let query = { hotelId: req.user.hotelId };
 
         if (date) {
-            // Create range for the specific day (00:00:00 to 23:59:59)
             const start = new Date(date);
             start.setUTCHours(0, 0, 0, 0);
-            
             const end = new Date(date);
             end.setUTCHours(23, 59, 59, 999);
-
             query.dateTime = { $gte: start, $lte: end };
         }
 
-        const reports = await StatusReport.find(query).sort({ dateTime: -1 });
+        // --- THE MODIFICATION: POPULATE ---
+        const reports = await StatusReport.find(query)
+            .populate({
+                path: 'roomId',           // 1. Look at the roomId field in StatusReport
+                select: 'number',        // 2. Only pull the room number
+                populate: {              // 3. Deep populate: look at roomTypeId inside the Room
+                    path: 'roomTypeId',
+                    select: 'name'       // 4. Only pull the category name (e.g., "Deluxe")
+                }
+            })
+            .sort({ dateTime: -1 });
+
         res.json(reports);
     } catch (err) {
+        console.error("Fetch Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
 // POST: Create a new report
 app.post('/api/status-reports', auth, async (req, res) => {
     try {
-        const reportData = {
-            ...req.body,
-            hotelId: req.user.hotelId // Secured to current hotel
-        };
-        const report = new StatusReport(reportData);
+        const { room, status, category, remarks, dateTime } = req.body;
+        const hotelId = req.user.hotelId;
+
+        // 1. Find the physical Room document using the number and hotel context
+        const roomDoc = await Room.findOne({ number: room, hotelId: hotelId });
+
+        if (!roomDoc) {
+            return res.status(404).json({ error: `Room ${room} not found in your hotel inventory.` });
+        }
+
+        // 2. Prepare the linked report data
+        const report = new StatusReport({
+            hotelId: hotelId,
+            roomId: roomDoc._id, // Link to the Room's ObjectId
+            status: status,
+            remarks: remarks,
+            dateTime: dateTime || new Date()
+        });
+
+        // 3. Save the report
         await report.save();
+
+        // 4. Update the Room's actual status in the Room collection
+        // Map housekeeping status to room schema status
+        let roomMasterStatus = 'clean';
+        if (status === 'occupied') roomMasterStatus = 'clean'; // or keep as is
+        if (status === 'departure' || status === 'vacant_not_ready') roomMasterStatus = 'dirty';
+        
+        await Room.findByIdAndUpdate(roomDoc._id, { status: roomMasterStatus });
+
         res.status(201).json(report);
     } catch (err) {
+        console.error("POST Status Report Error:", err);
         res.status(400).json({ error: err.message });
     }
 });
