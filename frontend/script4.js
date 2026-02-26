@@ -9971,16 +9971,4 @@ async function loadRoomDatalist() {
         console.error("Could not load room list", err);
     }
 }
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Target the element
-    const hotelNameElement = document.getElementById('hotel-name-display');
-    
-    // 2. Get the name we saved during login
-    const savedHotelName = localStorage.getItem('hotelName');
 
-    // 3. Update the text
-    if (hotelNameElement) {
-        // Fallback to "General Management" if no name is found
-        hotelNameElement.textContent = savedHotelName || "General Management";
-    }
-});
