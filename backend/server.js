@@ -3007,7 +3007,51 @@ app.post('/login', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+// Route for: PATCH /kitchen/order/:id/ready
+app.patch('/api/kitchen/order/:id/ready', async (req, res) => {
+    try {
+        const order = await KitchenOrder.findByIdAndUpdate(
+            req.params.id,
+            { 
+                status: 'Ready',
+                readyAt: new Date() 
+            },
+            { new: true }
+        );
 
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        res.status(200).json(order);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Route for: PATCH /orders/:id/preparing
+// Note: Ensure your frontend uses /kitchen/order if you want consistency, 
+// but here is the route matching your current 404 error:
+app.patch('/api/orders/:id/preparing', async (req, res) => {
+    try {
+        const order = await KitchenOrder.findByIdAndUpdate(
+            req.params.id,
+            { 
+                status: 'Preparing',
+                preparingAt: new Date() 
+            },
+            { new: true }
+        );
+
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        res.status(200).json(order);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 // GET active orders for the Waiter Tracker
 app.get('/api/waiter/orders', auth, async (req, res) => {
     try {
