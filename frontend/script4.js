@@ -6239,16 +6239,24 @@ async function handleUpdateSubmit(event) {
         // --- 2. CONSTRUCT URL & METHOD ---
         // If idValue is an empty string, it uses POST to /inventory
         // If idValue has text, it uses PUT to /inventory/ID
-        const method = idValue ? 'PUT' : 'POST';
-        const url = idValue ? `${API_BASE_URL}/inventory/${idValue}` : `${API_BASE_URL}/inventory`;
+       // FIND THIS SECTION IN submitEditForm (around line 8740)
+const idValue = document.getElementById('edit-inventory-id').value.trim();
 
-        console.log(`[debug] Request: ${method} to ${url}`);
+// 1. Force POST if ID is empty, PUT if ID exists
+const method = idValue ? 'PUT' : 'POST';
 
-        const response = await authenticatedFetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(inventoryData)
-        });
+// 2. Build URL: Do NOT add a trailing slash if idValue is empty
+const url = idValue 
+    ? `${API_BASE_URL}/inventory/${idValue}` 
+    : `${API_BASE_URL}/inventory`; 
+
+console.log(`[debug] Requesting: ${method} ${url}`);
+
+const response = await authenticatedFetch(url, {
+    method: method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(inventoryData)
+});
 
         // --- 3. HANDLE RESPONSE ---
         if (!response) throw new Error("No response from server");
