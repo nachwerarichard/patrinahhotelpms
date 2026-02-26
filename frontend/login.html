@@ -85,7 +85,7 @@
                 btn.innerHTML = `<span class="flex items-center justify-center gap-2">Access Granted. Redirecting...</span>`;
                 btn.classList.replace('bg-slate-900', 'bg-emerald-600');
 
-                const secureParams = `?autoLogin=true&u=${encodeURIComponent(username)}&t=${encodeURIComponent(token)}&r=${encodeURIComponent(role)}&h=${encodeURIComponent(hotelId)}`;
+                const secureParams = `?autoLogin=true&u=${encodeURIComponent(username)}&t=${encodeURIComponent(token)}&n=${encodeURIComponent(hotelName)}&r=${encodeURIComponent(role)}&h=${encodeURIComponent(hotelId)}`;
                 
                 window.location.replace(`${MAIN_SYSTEM_URL}${secureParams}`);
 
