@@ -2610,7 +2610,60 @@ const transactionSchema = new mongoose.Schema({
 
 const Transaction = mongoose.model('Transaction', transactionSchema);
 
+// POST: Create a new report
+app.post('/api/status-reports', auth, async (req, res) => {
+    try {
+        const reportData = {
+            ...req.body,
+            hotelId: req.user.hotelId // Secured to current hotel
+        };
+        const report = new StatusReport(reportData);
+        await report.save();
+        res.status(201).json(report);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
 
+// GET: Fetch all reports for the current hotel
+app.get('/api/status-reports', auth, async (req, res) => {
+    try {
+        const reports = await StatusReport.find({ hotelId: req.user.hotelId })
+                                          .sort({ dateTime: -1 });
+        res.json(reports);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// PUT: Update a report
+app.put('/api/status-reports/:id', auth, async (req, res) => {
+    try {
+        const updatedReport = await StatusReport.findOneAndUpdate(
+            { _id: req.params.id, hotelId: req.user.hotelId },
+            req.body,
+            { new: true }
+        );
+        if (!updatedReport) return res.status(404).json({ error: "Report not found" });
+        res.json(updatedReport);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// DELETE: Remove a report
+app.delete('/api/status-reports/:id', auth, async (req, res) => {
+    try {
+        const deleted = await StatusReport.findOneAndDelete({ 
+            _id: req.params.id, 
+            hotelId: req.user.hotelId 
+        });
+        if (!deleted) return res.status(404).json({ error: "Report not found" });
+        res.sendStatus(204);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // --- Secure Logging Function ---
 
