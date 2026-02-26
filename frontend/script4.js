@@ -9917,3 +9917,38 @@ function editReport(reportDataJson) {
     const submitBtn = document.querySelector('#statusReportForm button[type="submit"]');
     submitBtn.innerHTML = '<i class="fa-solid fa-save mr-2"></i> Update Report';
 }
+
+let lookupTimeout;
+
+document.getElementById('reportRoom').addEventListener('input', function(e) {
+    const roomNumber = e.target.value.trim();
+    
+    // Clear the previous timer
+    clearTimeout(lookupTimeout);
+
+    if (roomNumber.length > 0) {
+        // Wait 500ms after typing stops to search
+        lookupTimeout = setTimeout(async () => {
+            try {
+                const response = await authenticatedFetch(`${API_BASE_URL}/rooms/lookup/${roomNumber}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Auto-fill fields
+                    const categoryInput = document.getElementById('reportCategory');
+                    const statusSelect = document.getElementById('reportStatus');
+
+                    // Only fill if user hasn't manually typed something else yet
+                    if (data.category) categoryInput.value = data.category;
+                    if (data.status) statusSelect.value = data.status;
+
+                    // Add a subtle visual cue that auto-fill worked
+                    categoryInput.classList.add('bg-blue-50');
+                    setTimeout(() => categoryInput.classList.remove('bg-blue-50'), 1000);
+                }
+            } catch (err) {
+                console.log("Room not found in inventory yet.");
+            }
+        }, 500);
+    }
+});
