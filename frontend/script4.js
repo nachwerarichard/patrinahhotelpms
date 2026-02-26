@@ -113,44 +113,40 @@ const auditLogStartDateFilter = document.getElementById('auditLogStartDateFilter
 const auditLogEndDateFilter = document.getElementById('auditLogEndDateFilter');
 const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn');
   // Add this to the TOP of your scripts on the destination pages
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     const hotelNameElement = document.getElementById('hotel-name-display');
     
-    // 1. Check for Auto-Login in URL
+    // DEBUG: See what is in the URL
+    console.log("URL Name Parameter:", params.get('n'));
+
+    let nameToDisplay = "";
+
     if (params.get('autoLogin') === 'true') {
+        // 1. Extract from URL
         const token = params.get('t');
-        const username = params.get('u');
-        const role = params.get('r');
-        const hotelId = params.get('h');
         const hotelName = params.get('n');
-
-        if (token && username) {
+        
+        if (token) {
             localStorage.setItem('token', token);
-            localStorage.setItem('username', username);
-            localStorage.setItem('userRole', role);
-            localStorage.setItem('hotelId', hotelId);
-            localStorage.setItem('hotelName', hotelName); // Saving it here
-
-            // Update UI immediately after saving
-            if (hotelNameElement) {
-                hotelNameElement.textContent = hotelName;
-            }
-
-            // Clean URL
-            window.history.replaceState({}, document.title, window.location.pathname);
+            localStorage.setItem('hotelName', hotelName); // Save to storage
+            nameToDisplay = hotelName;
             
-            if (typeof initDashboard === "function") initDashboard(); 
+            // Clean the URL
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
     } else {
-        // 2. No Auto-Login? Just load from existing storage
-        const savedHotelName = localStorage.getItem('hotelName');
-        if (hotelNameElement) {
-            hotelNameElement.textContent = savedHotelName || "General Management";
-        }
+        // 2. Extract from Storage if not a fresh login
+        nameToDisplay = localStorage.getItem('hotelName');
+    }
 
-        if (!localStorage.getItem('token')) {
-            window.location.href = 'https://novouscloudpms-tz4s.onrender.com/login.html';
+    // 3. Update the UI
+    if (hotelNameElement) {
+        // If nameToDisplay is null, undefined, or "null" string, use fallback
+        if (nameToDisplay && nameToDisplay !== "null" && nameToDisplay !== "undefined") {
+            hotelNameElement.textContent = nameToDisplay;
+        } else {
+            hotelNameElement.textContent = "General Management";
         }
     }
 });
