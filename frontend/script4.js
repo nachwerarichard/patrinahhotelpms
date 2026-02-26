@@ -9742,10 +9742,9 @@ async function refreshTodayPOSStats() {
     }
 }
 
-const activeAccountsContainer = document.getElementById('active-accounts-list');
-if (activeAccountsContainer) {
-    activeAccountsContainer.classList.add('hidden');
-}
+document.addEventListener('DOMContentLoaded', () => {
+    refreshTodayPOSStats();
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     loadOrders();
