@@ -6235,7 +6235,16 @@ async function handleUpdateSubmit(event) {
 
         // 3. Construct URL and Method
         // IMPORTANT: Ensure no trailing slash for POST
-        const method = idValue ? 'PUT' : 'POST';
+      // Inside handleUpdateSubmit
+const idInput = document.getElementById('edit-inventory-id');
+const idValue = idInput ? idInput.value.trim() : "";
+
+// Only add the ID to the URL if it actually exists
+const url = idValue 
+    ? `${API_BASE_URL}/inventory/${idValue}` 
+    : `${API_BASE_URL}/inventory`; 
+
+const method = idValue ? 'PUT' : 'POST';
         const url = idValue ? `${API_BASE_URL}/inventory/${idValue}` : `${API_BASE_URL}/inventory`;
 
         console.log(`[debug] Request: ${method} to ${url}`);
