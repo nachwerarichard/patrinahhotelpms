@@ -8291,7 +8291,7 @@ async function loadOrders() {
         async function completeOrder(id) {
             try {
                const res = await authenticatedFetch(
-    `${API_BASE}/kitchen/order/${id}/ready`,
+    `${API_BASE_URL}/kitchen/order/${id}/ready`,
     { method: 'PATCH' }
 );
 if (res.ok) loadOrders();
@@ -8317,7 +8317,7 @@ const data = await res.json();
 async function markAsPreparing(orderId) {
     try {
         const res = await authenticatedFetch(
-            `${API_BASE}/orders/${orderId}/preparing`,
+            `${API_BASE_URL}/orders/${orderId}/preparing`,
             { method: 'PATCH' }
         );
 
