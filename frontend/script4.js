@@ -8308,35 +8308,25 @@ const data = await res.json();
             }
         }
 
-
-
-
-
-
-
 async function markAsPreparing(orderId) {
     try {
+        // FIX: Changed /orders/ to /kitchen/order/ to match your backend route
         const res = await authenticatedFetch(
-            `${API_BASE_URL}/orders/${orderId}/preparing`,
+            `${API_BASE_URL}/kitchen/order/${orderId}/preparing`, 
             { method: 'PATCH' }
         );
 
-        if (!res) return; // Redirect handled if token missing
+        if (!res) return; 
 
-        if (!res.ok) {
+        if (res.ok) {
+            console.log("Status updated to Preparing");
+            loadOrders(); 
+        } else {
             const error = await res.json();
-            console.error("Failed to mark as preparing:", error);
-            return;
+            console.error("Backend found the route but returned an error:", error);
         }
-
-        const data = await res.json();
-        console.log(data);
-
-        // refresh orders or update UI
-        loadOrders();
-
     } catch (err) {
-        console.error("Error marking order as preparing:", err);
+        console.error("Network or Syntax Error:", err);
     }
 }
 
