@@ -9753,7 +9753,12 @@ document.getElementById('reportDateTime').value = new Date().toISOString().slice
 function openReportModal() {
     document.getElementById('reportModal').classList.remove('hidden');
     document.getElementById('statusReportForm').reset();
+    document.getElementById('reportId').value = ''; // CRITICAL: Clear the ID
     document.getElementById('reportDateTime').value = new Date().toISOString().slice(0, 16);
+    
+    // Reset button text
+    const submitBtn = document.querySelector('#statusReportForm button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fa-solid fa-upload mr-2"></i> Submit Report';
 }
 
 function closeReportModal() {
@@ -9763,35 +9768,33 @@ function closeReportModal() {
 // CREATE / SUBMIT Operation
 document.getElementById('statusReportForm').onsubmit = async (e) => {
     e.preventDefault();
-    const msg = document.getElementById('statusMessage');
-    
-    // Gather form data
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
+    const reportId = data._id;
+
+    // Determine method and URL
+    const method = reportId ? 'PUT' : 'POST';
+    const url = reportId 
+        ? `${API_BASE_URL}/status-reports/${reportId}` 
+        : `${API_BASE_URL}/status-reports`;
 
     try {
-        msg.textContent = "Submitting report...";
-        
-        const response = await authenticatedFetch(`${API_BASE_URL}/status-reports`, {
-            method: 'POST',
+        const response = await authenticatedFetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
 
         if (response.ok) {
-            msg.textContent = "Report submitted successfully! ✅";
-            setTimeout(() => {
-                closeReportModal();
-                msg.textContent = "";
-                if (typeof fetchStatusReports === 'function') fetchStatusReports();
-            }, 1500);
+            alert(reportId ? "Report updated! ✅" : "Report created! ✅");
+            closeReportModal();
+            fetchStatusReports();
         } else {
             const err = await response.json();
-            throw new Error(err.error || "Submission failed");
+            throw new Error(err.error || "Save failed");
         }
     } catch (err) {
-        msg.textContent = "Error: " + err.message;
-        msg.classList.replace('text-blue-500', 'text-red-500');
+        alert("Error: " + err.message);
     }
 };
 
@@ -9838,11 +9841,15 @@ function renderStatusTable(reports) {
             </td>
             <td class="p-3">${r.remarks}</td>
             <td class="p-3 text-sm text-gray-500">${new Date(r.dateTime).toLocaleString()}</td>
-            <td class="p-3">
-                <button onclick="deleteReport('${r._id}')" class="text-red-500 hover:text-red-700">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
-            </td>
+// ... inside your map function ...
+<td class="p-3 flex gap-3">
+    <button onclick="editReport('${encodeURIComponent(JSON.stringify(r))}')" class="text-indigo-500 hover:text-indigo-700 transition-colors">
+        <i class="fa-solid fa-pen-to-square"></i>
+    </button>
+    <button onclick="deleteReport('${r._id}')" class="text-red-400 hover:text-red-600 transition-colors">
+        <i class="fa-solid fa-trash"></i>
+    </button>
+</td>
         </tr>
     `).join('');
 }
@@ -9887,3 +9894,27 @@ async function filterStatusReportsByDate() {
 document.addEventListener('DOMContentLoaded', () => {
     loadOrders();
 });
+function editReport(reportDataJson) {
+    const report = JSON.parse(decodeURIComponent(reportDataJson));
+    
+    // Open the modal
+    openReportModal();
+    
+    // Fill the fields
+    document.getElementById('reportId').value = report._id;
+    document.getElementById('reportRoom').value = report.room;
+    document.getElementById('reportCategory').value = report.category;
+    document.getElementById('reportStatus').value = report.status;
+    document.getElementById('reportRemarks').value = report.remarks || '';
+    
+    // Format date for datetime-local input (YYYY-MM-DDTHH:mm)
+    if (report.dateTime) {
+        const dt = new Date(report.dateTime);
+        const formattedDt = dt.toISOString().slice(0, 16);
+        document.getElementById('reportDateTime').value = formattedDt;
+    }
+
+    // Change button text to indicate update
+    const submitBtn = document.querySelector('#statusReportForm button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fa-solid fa-save mr-2"></i> Update Report';
+}
