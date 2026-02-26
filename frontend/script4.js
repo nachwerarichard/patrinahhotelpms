@@ -9841,7 +9841,6 @@ function renderStatusTable(reports) {
             </td>
             <td class="p-3">${r.remarks}</td>
             <td class="p-3 text-sm text-gray-500">${new Date(r.dateTime).toLocaleString()}</td>
-// ... inside your map function ...
 <td class="p-3 flex gap-3">
     <button onclick="editReport('${encodeURIComponent(JSON.stringify(r))}')" class="text-indigo-500 hover:text-indigo-700 transition-colors">
         <i class="fa-solid fa-pen-to-square"></i>
