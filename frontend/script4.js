@@ -5957,74 +5957,80 @@ function renderInventoryTable(inventory) {
     const dateInput = document.getElementById('search-inventory-date');
     const tableHeaders = document.querySelectorAll('#inventory-table thead th');
     
-    const selectedDate = dateInput.value;
+    const selectedDate = dateInput.value || new Date().toISOString().split('T')[0];
     const todayStr = new Date().toISOString().split('T')[0];
-    const isToday = !selectedDate || selectedDate === todayStr;
+    const isToday = selectedDate === todayStr;
 
     if (tableHeaders[5]) { 
         tableHeaders[5].textContent = isToday ? 'Current Stock' : 'Closing Stock';
     }
 
     if (inventory.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-gray-400 italic">No items found in catalog.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-gray-500 italic">No stock records found.</td></tr>`;
         return;
     }
 
     inventory.forEach(item => {
-        const row = tbody.insertRow();
-        row.className = "hover:bg-slate-50 transition-colors border-b border-slate-100";
-        
-        // Status Styling
-        const isUpdated = item.status === 'Updated';
-        const statusBadge = isUpdated 
-            ? `<span class="px-2 py-0.5 text-[10px] font-black bg-emerald-100 text-emerald-700 rounded-md border border-emerald-200">UPDATED</span>`
-            : `<span class="px-2 py-0.5 text-[10px] font-black bg-slate-100 text-slate-500 rounded-md border border-slate-200">NO CHANGE</span>`;
+        // IMPORTANT: Attach the selected date to the item object 
+        // so the modal knows which day this record belongs to.
+        item.viewingDate = selectedDate;
 
-        // Calculate Stock
-        const currentCalculated = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
-        const stockDisplay = isToday ? currentCalculated : (item.closing ?? currentCalculated);
+        const row = tbody.insertRow();
+        row.className = "hover:bg-gray-50 transition-colors border-b border-gray-100";
+        
+        const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
+        const statusBadge = hasMovement 
+            ? `<span class="ml-2 px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-700 rounded-full uppercase">Updated</span>`
+            : `<span class="ml-2 px-2 py-0.5 text-[10px] font-bold bg-gray-100 text-gray-500 rounded-full uppercase">Static</span>`;
+
+        const calculatedCurrent = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
+        const stockDisplay = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
 
         row.innerHTML = `
-            <td class="px-4 py-3">
+            <td class="px-4 py-3 font-medium text-gray-800">
                 <div class="flex flex-col">
-                    <span class="font-semibold text-slate-800">${item.item}</span>
-                    <div class="mt-1">${statusBadge}</div>
+                    <span>${item.item}</span>
+                    <div class="flex items-center mt-1">${statusBadge}</div>
                 </div>
             </td>
-            <td class="px-4 py-3 text-slate-600 font-mono">${item.opening || 0}</td>
-            <td class="px-4 py-3 text-emerald-600 font-bold">+${item.purchases || 0}</td>
-            <td class="px-4 py-3 text-blue-600 font-bold">-${item.sales || 0}</td>
-            <td class="px-4 py-3 text-rose-500 font-bold">-${item.spoilage || 0}</td>
-            <td class="px-4 py-3 font-black text-lg ${isToday ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-900'}">
+            <td class="px-4 py-3">${item.opening || 0}</td>
+            <td class="px-4 py-3 text-green-600 font-medium">+${item.purchases || 0}</td>
+            <td class="px-4 py-3 text-blue-600 font-medium">-${item.sales || 0}</td>
+            <td class="px-4 py-3 text-red-500 font-medium">-${item.spoilage || 0}</td>
+            <td class="px-4 py-3 font-bold ${isToday ? 'text-indigo-600 bg-indigo-50/50' : 'text-gray-900'}">
                 ${stockDisplay}
             </td>
-            <td class="px-4 py-3 text-xs text-slate-400">${Number(item.buyingprice || 0).toLocaleString()}</td>
-            <td class="px-4 py-3 text-xs text-slate-400">${Number(item.sellingprice || 0).toLocaleString()}</td>
-            <td class="px-4 py-3 text-right" id="actions-${item._id || 'new'}"></td>
+            <td class="px-4 py-3 text-sm">${Number(item.buyingprice || 0).toLocaleString()}</td>
+            <td class="px-4 py-3 text-sm">${Number(item.sellingprice || 0).toLocaleString()}</td>
+            <td class="px-4 py-3 text-right" id="actions-${item._id || Math.random().toString(36).substr(2, 9)}"></td>
         `;
 
-        // Action Menu Logic
-        const actionsCell = row.querySelector(`#actions-${item._id || 'new'}`);
-        if (['admin', 'super-admin'].includes(currentUserRole)) {
+        const actionsCell = row.querySelector('[id^="actions-"]');
+        const authorizedRoles = ['admin', 'super-admin', 'manager'];
+
+        if (authorizedRoles.includes(currentUserRole)) {
             const dropdown = document.createElement('div');
             dropdown.className = 'relative inline-block text-left';
             dropdown.innerHTML = `
-                <button class="dots-btn p-2 hover:bg-slate-200 rounded-full">
-                    <i class="fas fa-ellipsis-v text-slate-400"></i>
+                <button class="dots-btn p-2 hover:bg-gray-200 rounded-full">
+                    <i class="fas fa-ellipsis-h"></i>
                 </button>
-                <div class="menu hidden absolute right-0 bottom-full mb-2 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1">
+                <div class="menu hidden absolute right-0 bottom-full mb-2 w-40 bg-white border border-gray-200 rounded-lg shadow-xl z-50 py-1">
                     <button class="w-full text-left px-4 py-2 text-sm hover:bg-indigo-50 text-indigo-700 flex items-center gap-2 edit-opt">
-                        <i class="fas fa-edit"></i> Edit
+                        <i class="fas fa-edit"></i> ${item._id ? 'Edit Record' : 'Create Record'}
                     </button>
-                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 adjust-opt">
+                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-amber-50 text-amber-700 flex items-center gap-2 adjust-opt">
                         <i class="fas fa-plus-circle"></i> Add Stock
+                    </button>
+                    <div class="border-t border-gray-100 my-1"></div>
+                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600 flex items-center gap-2 delete-opt">
+                        <i class="fas fa-trash"></i> Delete
                     </button>
                 </div>
             `;
 
             const btn = dropdown.querySelector('.dots-btn');
             const menu = dropdown.querySelector('.menu');
-
             btn.onclick = (e) => {
                 e.stopPropagation();
                 document.querySelectorAll('.menu').forEach(m => m !== menu && m.classList.add('hidden'));
@@ -6033,11 +6039,14 @@ function renderInventoryTable(inventory) {
 
             dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
             dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
+            dropdown.querySelector('.delete-opt').onclick = () => {
+                if(item._id) showDeleteModal(item._id);
+                else alert("Cannot delete a placeholder. This item hasn't been saved for this date yet.");
+            };
             actionsCell.appendChild(dropdown);
         }
     });
 }
-
 function renderPagination(current, totalPages) {
     const container = document.getElementById('pagination');
     if (!container) return;
@@ -8479,40 +8488,59 @@ document.getElementById('exportposReportBtn').addEventListener('click', function
     // New function to handle the modal display and population
 // New function to handle the modal display and population
 function openEditModal(item) {
-    // 1. Permissions (Admin & Manager)
+    // 1. Permission check
     const authorizedRoles = ['admin', 'super-admin', 'manager'];
     if (!authorizedRoles.includes(currentUserRole)) {
-        showMessage('Permission Denied: You cannot edit inventory items.');
+        if (typeof showMessage === 'function') showMessage('Permission Denied', true);
+        else alert('Permission Denied');
         return;
     }
 
-    // 2. Element Check
-    const modal = document.getElementById('edit-inventory-modal');
-    if (!modal) return console.error("Modal 'edit-inventory-modal' not found.");
+    // 2. Data Validation - Only error if item name is missing
+    if (!item || !item.item) {
+        console.error("Item object is invalid:", item);
+        alert("Error: Could not identify the inventory item.");
+        return;
+    }
 
-    // 3. Populate Form (Handle both existing items and placeholders)
-    // If item._id is missing, we set the idInput to empty string
-    document.getElementById('edit-inventory-id').value = item._id || '';
-    document.getElementById('edit-item').value = item.item || '';
-    document.getElementById('edit-opening').value = item.opening || 0;
-    document.getElementById('edit-purchases').value = item.purchases || 0;
-    document.getElementById('edit-inventory-sales').value = item.sales || 0;
-    document.getElementById('edit-spoilage').value = item.spoilage || 0;
-    document.getElementById('edit-buyingprice').value = item.buyingprice || 0;
-    document.getElementById('edit-sellingprice').value = item.sellingprice || 0;
+    const modal = document.getElementById('edit-inventory-modal');
+    if (!modal) return console.error("Modal 'edit-inventory-modal' missing from HTML");
+
+    // 3. Populate Form
+    // If _id is missing, it's a new record for that day
+    const idField = document.getElementById('edit-inventory-id');
+    if (idField) idField.value = item._id || '';
+
+    const nameField = document.getElementById('edit-item');
+    if (nameField) nameField.value = item.item || '';
+
+    // Numeric fields with 0 fallback
+    const numericFields = {
+        'edit-opening': item.opening,
+        'edit-purchases': item.purchases,
+        'edit-inventory-sales': item.sales,
+        'edit-spoilage': item.spoilage,
+        'edit-buyingprice': item.buyingprice,
+        'edit-sellingprice': item.sellingprice
+    };
+
+    for (let [id, val] of Object.entries(numericFields)) {
+        const input = document.getElementById(id);
+        if (input) input.value = val || 0;
+    }
 
     const trackInput = document.getElementById('edit-trackInventory');
     if (trackInput) {
         trackInput.checked = item.trackInventory !== undefined ? item.trackInventory : true;
     }
 
-    // 4. Change Modal Title (Visual feedback)
-    const modalTitle = modal.querySelector('h2'); // or whatever your title tag is
-    if (modalTitle) {
-        modalTitle.textContent = item._id ? `Edit ${item.item}` : `Create Record for ${item.item}`;
+    // 4. Update Modal Header
+    const title = modal.querySelector('h2');
+    if (title) {
+        title.textContent = item._id ? `Edit ${item.item}` : `Initialize ${item.item} for ${item.viewingDate}`;
     }
 
-    // 5. Show Modal
+    // 5. Open Modal
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
 }
