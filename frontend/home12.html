@@ -624,6 +624,37 @@
             </div>
         </div>
 
+             <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+            <div class="flex items-center gap-2 mb-6">
+                <div class="h-1 w-8 bg-green-500 rounded-full"></div>
+                <h3 class="text-lg font-bold text-gray-700 uppercase tracking-wide text-sm"> Point of Sale Revenue & Payments</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="relative">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Revenue</p>
+                    <p id="today-revenue" class="text-xl font-bold text-gray-900 mt-1">UGX 0</p>
+                    <div class="absolute -left-4 top-0 h-full w-1 bg-green-500 rounded-full"></div>
+                </div>
+                <div class="relative">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Gross Profit</p>
+                    <p id="today-amountpaid" class="text-xl font-bold text-gray-900 mt-1 text-green-600">UGX 0</p>
+                    <div class="absolute -left-4 top-0 h-full w-1 bg-blue-500 rounded-full"></div>
+                </div>
+                <div class="relative">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Revenue</p>
+                    <p id="today-balance" class="text-xl font-bold text-gray-900 mt-1 text-red-500">UGX 0</p>
+                    <div class="absolute -left-4 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
+                </div>
+                <div class="relative">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Net Balance</p>
+                    <p id="pending-count" class="text-xl font-bold text-gray-900 mt-1">0</p>
+                    <div class="absolute -left-4 top-0 h-full w-1 bg-yellow-500 rounded-full"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="stats-container" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                 <div class="flex items-center justify-between mb-6">
@@ -650,7 +681,6 @@
             </div>
         </div>
         
-        <div id="stats-container" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
     </div>
 </section>
                   <section id="staff" class="section bg-slate-50 min-h-screen rounded-lg shadow-inner mb-8 hidden">
