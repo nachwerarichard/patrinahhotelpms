@@ -6417,9 +6417,13 @@ function renderInventoryTable(inventory) {
             dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
             dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
             dropdown.querySelector('.delete-opt').onclick = () => {
-                if(item._id) showDeleteModal(item._id);
-                else alert("This is a generated placeholder. Please 'Add Stock' first to create a record.");
-            };
+    // We only delete if there is a real database ID (_id)
+    if (item._id) { 
+        deleteInventoryItem(item._id);
+    } else {
+        alert("Cannot delete a placeholder. This item hasn't been saved for this date yet.");
+    }
+};
 
             actionsCell.appendChild(dropdown);
         } else {
