@@ -1288,24 +1288,27 @@ app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        const user = await User.findOne({ username });
+        // 1. USE POPULATE here to get the hotel details
+        const user = await User.findOne({ username }).populate('hotelId');
+        
         if (!user || user.password !== password) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        // Generate Token
+        // Generate Token (Note: This is Basic Auth encoding, not a JWT!)
         const authToken = Buffer.from(`${username}:${password}`).toString('base64');
 
         // Record audit log
-        await addAuditLog('User Logged In', user.username, user.hotelId, { role: user.role });
+        await addAuditLog('User Logged In', user.username, user.hotelId._id, { role: user.role });
 
-        // Send response
+        // 2. SEND RESPONSE with the hotel name
         res.json({ 
             token: authToken, 
             user: { 
                 username: user.username, 
                 role: user.role, 
-                hotelId: user.hotelId 
+                hotelId: user.hotelId._id,
+                hotelName: user.hotelId ? user.hotelId.name : 'Unknown Hotel' // This is the new line
             } 
         });
 
