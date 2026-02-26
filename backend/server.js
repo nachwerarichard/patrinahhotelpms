@@ -3008,6 +3008,35 @@ app.post('/login', async (req, res) => {
     }
 });
 
+// DELETE (or Mark as Served) Multi-tenant route
+app.delete('/api/kitchen/order/:id/served', auth, async (req, res) => {
+    try {
+        const hotelId = req.user.hotelId;
+        const orderId = req.params.id;
+
+        // Option A: Actually delete the record
+        const order = await KitchenOrder.findOneAndDelete({ _id: orderId, hotelId: hotelId });
+
+        // Option B: If you prefer keeping records, change status to 'Served' instead
+        /*
+        const order = await KitchenOrder.findOneAndUpdate(
+            { _id: orderId, hotelId: hotelId },
+            { status: 'Served', servedAt: new Date() },
+            { new: true }
+        );
+        */
+
+        if (!order) {
+            return res.status(404).json({ error: "Order not found or access denied" });
+        }
+
+        res.status(200).json({ message: "Order processed successfully" });
+    } catch (err) {
+        console.error("Delete Error:", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 // 1. Mark Order as "Ready" (Multi-tenant)
 app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
     try {
