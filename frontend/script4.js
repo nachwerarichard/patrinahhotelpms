@@ -9836,6 +9836,7 @@ function renderStatusTable(reports) {
                     ${r.status.replace('_', ' ').toUpperCase()}
                 </span>
             </td>
+            <td class="p-3">${r.remarks}</td>
             <td class="p-3 text-sm text-gray-500">${new Date(r.dateTime).toLocaleString()}</td>
             <td class="p-3">
                 <button onclick="deleteReport('${r._id}')" class="text-red-500 hover:text-red-700">
