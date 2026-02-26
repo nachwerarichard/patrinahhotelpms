@@ -113,38 +113,26 @@ const auditLogStartDateFilter = document.getElementById('auditLogStartDateFilter
 const auditLogEndDateFilter = document.getElementById('auditLogEndDateFilter');
 const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn');
   // Add this to the TOP of your scripts on the destination pages
+// At the top of script4.js
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     const hotelNameElement = document.getElementById('hotel-name-display');
     
-    // DEBUG: See what is in the URL
-    console.log("URL Name Parameter:", params.get('n'));
+    // 1. Try to get name from URL first (Fresh Login)
+    let displayName = params.get('n');
 
-    let nameToDisplay = "";
-
-    if (params.get('autoLogin') === 'true') {
-        // 1. Extract from URL
-        const token = params.get('t');
-        const hotelName = params.get('n');
-        
-        if (token) {
-            localStorage.setItem('token', token);
-            localStorage.setItem('hotelName', hotelName); // Save to storage
-            nameToDisplay = hotelName;
-            
-            // Clean the URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
+    // 2. If URL name is missing or the string "null", try LocalStorage
+    if (!displayName || displayName === "null") {
+        displayName = localStorage.getItem('hotelName');
     } else {
-        // 2. Extract from Storage if not a fresh login
-        nameToDisplay = localStorage.getItem('hotelName');
+        // 3. If we found a good name in the URL, save it for future refreshes
+        localStorage.setItem('hotelName', displayName);
     }
 
-    // 3. Update the UI
+    // 4. Final Display Logic
     if (hotelNameElement) {
-        // If nameToDisplay is null, undefined, or "null" string, use fallback
-        if (nameToDisplay && nameToDisplay !== "null" && nameToDisplay !== "undefined") {
-            hotelNameElement.textContent = nameToDisplay;
+        if (displayName && displayName !== "null" && displayName !== "undefined") {
+            hotelNameElement.textContent = displayName;
         } else {
             hotelNameElement.textContent = "General Management";
         }
