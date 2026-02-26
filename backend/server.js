@@ -3007,11 +3007,14 @@ app.post('/login', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Route for: PATCH /kitchen/order/:id/ready
-app.patch('/api/kitchen/order/:id/ready', async (req, res) => {
+
+// 1. Mark Order as "Ready" (Multi-tenant)
+app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
     try {
-        const order = await KitchenOrder.findByIdAndUpdate(
-            req.params.id,
+        const hotelId = req.user.hotelId; // Extracted from token by auth middleware
+
+        const order = await KitchenOrder.findOneAndUpdate(
+            { _id: req.params.id, hotelId: hotelId }, // Ensure ID AND Hotel match
             { 
                 status: 'Ready',
                 readyAt: new Date() 
@@ -3020,7 +3023,7 @@ app.patch('/api/kitchen/order/:id/ready', async (req, res) => {
         );
 
         if (!order) {
-            return res.status(404).json({ message: "Order not found" });
+            return res.status(404).json({ message: "Order not found or access denied for this hotel." });
         }
 
         res.status(200).json(order);
@@ -3029,13 +3032,13 @@ app.patch('/api/kitchen/order/:id/ready', async (req, res) => {
     }
 });
 
-// Route for: PATCH /orders/:id/preparing
-// Note: Ensure your frontend uses /kitchen/order if you want consistency, 
-// but here is the route matching your current 404 error:
-app.patch('/api/orders/:id/preparing', async (req, res) => {
+// 2. Mark Order as "Preparing" (Multi-tenant)
+app.patch('/api/kitchen/order/:id/preparing', auth, async (req, res) => {
     try {
-        const order = await KitchenOrder.findByIdAndUpdate(
-            req.params.id,
+        const hotelId = req.user.hotelId;
+
+        const order = await KitchenOrder.findOneAndUpdate(
+            { _id: req.params.id, hotelId: hotelId }, // Secure multi-tenant check
             { 
                 status: 'Preparing',
                 preparingAt: new Date() 
@@ -3044,7 +3047,7 @@ app.patch('/api/orders/:id/preparing', async (req, res) => {
         );
 
         if (!order) {
-            return res.status(404).json({ message: "Order not found" });
+            return res.status(404).json({ message: "Order not found or access denied for this hotel." });
         }
 
         res.status(200).json(order);
@@ -3052,6 +3055,7 @@ app.patch('/api/orders/:id/preparing', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
 // GET active orders for the Waiter Tracker
 app.get('/api/waiter/orders', auth, async (req, res) => {
     try {
