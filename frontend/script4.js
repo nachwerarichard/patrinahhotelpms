@@ -6194,23 +6194,25 @@ function closeEditModal() {
     const trackCheckbox = document.getElementById('edit-trackInventory');
     if (trackCheckbox) trackCheckbox.disabled = false;
 }
+
 async function handleUpdateSubmit(event) {
     event.preventDefault();
 
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const hotelId = sessionData?.hotelId;
+    // Fix: Use your existing helper to get the hotelId
+    const hotelId = getHotelId();
     
-    // Get the ID - if it's a placeholder, this will be empty
+    if (!hotelId || hotelId === 'global') {
+        showMessageBox('Error', 'Please select a hotel context before saving.', true);
+        return;
+    }
+
     const id = document.getElementById('edit-inventory-id').value;
-    
-    // Get the current date from the search filter to ensure we save to the right day
     const selectedDate = document.getElementById('search-inventory-date').value || new Date().toISOString().split('T')[0];
 
     const submitBtn = document.getElementById('edit-inventory-submit-btn');
     const defaultText = document.getElementById('edit-inventory-btn-default');
     const loadingText = document.getElementById('edit-inventory-btn-loading');
 
-    // Gather Data
     const inventoryData = {
         hotelId: hotelId,
         item: document.getElementById('edit-item').value,
@@ -6221,10 +6223,10 @@ async function handleUpdateSubmit(event) {
         buyingprice: parseFloat(document.getElementById('edit-buyingprice').value) || 0,
         sellingprice: parseFloat(document.getElementById('edit-sellingprice').value) || 0,
         trackInventory: document.getElementById('edit-trackInventory').checked,
-        date: selectedDate // CRITICAL: Tells the backend which day this record is for
+        date: selectedDate 
     };
 
-    // Calculate Closing Stock before sending
+    // Calculate Closing Stock
     inventoryData.closing = inventoryData.opening + inventoryData.purchases - inventoryData.sales - inventoryData.spoilage;
 
     try {
@@ -6232,25 +6234,22 @@ async function handleUpdateSubmit(event) {
         defaultText.classList.add('hidden');
         loadingText.classList.remove('hidden');
 
-        // DYNAMIC ROUTING:
-        // If id exists: PUT to /inventory/:id
-        // If no id: POST to /inventory
+        // If ID exists, it's a PUT (Update). If empty, it's a POST (Create).
         const url = id ? `${API_BASE_URL}/inventory/${id}` : `${API_BASE_URL}/inventory`;
         const method = id ? 'PUT' : 'POST';
 
         const response = await authenticatedFetch(url, {
             method: method,
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(inventoryData)
         });
 
-        if (response.ok) {
+        if (response && response.ok) {
             showMessageBox('Success', id ? 'Stock updated! ✅' : 'New record created! ✅');
-            closeEditModal();
-            fetchInventory(); // Refresh the table
+            if (typeof closeEditModal === "function") closeEditModal();
+            fetchInventory(); 
         } else {
             const error = await response.json();
-            throw new Error(error.message || 'Operation failed');
+            throw new Error(error.error || error.message || 'Operation failed');
         }
     } catch (err) {
         showMessageBox('Inventory Error', err.message, true);
