@@ -6199,15 +6199,20 @@ async function handleUpdateSubmit(event) {
 
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelId = sessionData?.hotelId;
+    
+    // Get the ID - if it's a placeholder, this will be empty
     const id = document.getElementById('edit-inventory-id').value;
     
+    // Get the current date from the search filter to ensure we save to the right day
+    const selectedDate = document.getElementById('search-inventory-date').value || new Date().toISOString().split('T')[0];
+
     const submitBtn = document.getElementById('edit-inventory-submit-btn');
     const defaultText = document.getElementById('edit-inventory-btn-default');
     const loadingText = document.getElementById('edit-inventory-btn-loading');
 
-    // Gather Data + Inject Hotel Identity
+    // Gather Data
     const inventoryData = {
-        hotelId: hotelId, // CRITICAL: Identify which hotel this stock belongs to
+        hotelId: hotelId,
         item: document.getElementById('edit-item').value,
         opening: parseInt(document.getElementById('edit-opening').value) || 0,
         purchases: parseInt(document.getElementById('edit-purchases').value) || 0,
@@ -6215,38 +6220,46 @@ async function handleUpdateSubmit(event) {
         spoilage: parseInt(document.getElementById('edit-spoilage').value) || 0,
         buyingprice: parseFloat(document.getElementById('edit-buyingprice').value) || 0,
         sellingprice: parseFloat(document.getElementById('edit-sellingprice').value) || 0,
-        trackInventory: document.getElementById('edit-trackInventory').checked
+        trackInventory: document.getElementById('edit-trackInventory').checked,
+        date: selectedDate // CRITICAL: Tells the backend which day this record is for
     };
+
+    // Calculate Closing Stock before sending
+    inventoryData.closing = inventoryData.opening + inventoryData.purchases - inventoryData.sales - inventoryData.spoilage;
 
     try {
         submitBtn.disabled = true;
         defaultText.classList.add('hidden');
         loadingText.classList.remove('hidden');
-        loadingText.classList.add('flex');
 
-        const response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
-            method: 'PUT',
+        // DYNAMIC ROUTING:
+        // If id exists: PUT to /inventory/:id
+        // If no id: POST to /inventory
+        const url = id ? `${API_BASE_URL}/inventory/${id}` : `${API_BASE_URL}/inventory`;
+        const method = id ? 'PUT' : 'POST';
+
+        const response = await authenticatedFetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(inventoryData)
         });
 
         if (response.ok) {
-            showMessageBox('Success', 'Stock levels updated successfully! ✅');
+            showMessageBox('Success', id ? 'Stock updated! ✅' : 'New record created! ✅');
             closeEditModal();
-            fetchInventory(); // Refresh list
+            fetchInventory(); // Refresh the table
         } else {
             const error = await response.json();
-            throw new Error(error.message || 'Update failed');
+            throw new Error(error.message || 'Operation failed');
         }
     } catch (err) {
-        showMessageBox('Update Error', err.message, true);
+        showMessageBox('Inventory Error', err.message, true);
     } finally {
         submitBtn.disabled = false;
         defaultText.classList.remove('hidden');
         loadingText.classList.add('hidden');
     }
 }
-
 function renderInventoryTable(inventory) {
     const tbody = document.querySelector('#inventory-table tbody');
     if (!tbody) return;
