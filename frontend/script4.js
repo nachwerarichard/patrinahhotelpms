@@ -115,37 +115,42 @@ const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn
   // Add this to the TOP of your scripts on the destination pages
 document.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
+    const hotelNameElement = document.getElementById('hotel-name-display');
     
+    // 1. Check for Auto-Login in URL
     if (params.get('autoLogin') === 'true') {
-        // 1. Extract the data from the URL
-        const token = params.get('t'); // Pass the 't' (token) instead of 'p' (password)
+        const token = params.get('t');
         const username = params.get('u');
         const role = params.get('r');
         const hotelId = params.get('h');
         const hotelName = params.get('n');
 
-        // 2. Inject them into THIS domain's localStorage
         if (token && username) {
             localStorage.setItem('token', token);
             localStorage.setItem('username', username);
             localStorage.setItem('userRole', role);
             localStorage.setItem('hotelId', hotelId);
-            localStorage.setItem('hotelName', hotelName);
+            localStorage.setItem('hotelName', hotelName); // Saving it here
 
-
-            // 3. Clean the URL so the token doesn't sit in the address bar
-            window.history.replaceState({}, document.title, window.location.pathname);
-
-            // 4. Trigger the dashboard load
-            // Ensure you call whatever function starts your app here
-            if (typeof initDashboard === "function") {
-                initDashboard(); 
+            // Update UI immediately after saving
+            if (hotelNameElement) {
+                hotelNameElement.textContent = hotelName;
             }
+
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            if (typeof initDashboard === "function") initDashboard(); 
         }
     } else {
-        // Normal check: If no autoLogin and no token in storage, kick to login
+        // 2. No Auto-Login? Just load from existing storage
+        const savedHotelName = localStorage.getItem('hotelName');
+        if (hotelNameElement) {
+            hotelNameElement.textContent = savedHotelName || "General Management";
+        }
+
         if (!localStorage.getItem('token')) {
-            window.location.href = 'https://your-login-page.com';
+            window.location.href = 'https://novouscloudpms-tz4s.onrender.com/login.html';
         }
     }
 });
