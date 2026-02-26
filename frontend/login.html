@@ -76,22 +76,37 @@
 
          // INSIDE YOUR LOGIN PAGE SCRIPT
 if (response.ok) {
-    const user = result.user;
-    const token = result.token;
+    const user = result.user; // Data from your Node.js res.json
+    const token = result.token; // Your Base64 token
     
-    // Check if the backend actually sent the name
+    // 1. LOGGING: Very important for debugging the "null" issue
     console.log("Full User Object from Backend:", user);
 
+    // 2. EXTRACTION: Get the specific fields
     const username = user.username;
     const role = (user.role || '').toLowerCase();
     const hotelId = user.hotelId || "";
-    // Ensure we use user.hotelName (sent by your res.json)
-    const hotelName = user.hotelName || "Our Hotel";
+    
+    // This is the key field we added to the backend
+    const hotelName = user.hotelName || "Our Hotel"; 
 
-    const secureParams = `?autoLogin=true&u=${encodeURIComponent(username)}&t=${encodeURIComponent(token)}&n=${encodeURIComponent(hotelName)}&r=${encodeURIComponent(role)}&h=${encodeURIComponent(hotelId)}`;
-    
-    console.log("Final URL with Name:", secureParams);
-    
+    // 3. URL CONSTRUCTION: Encode everything to handle spaces/special characters
+    const secureParams = `?autoLogin=true` +
+        `&u=${encodeURIComponent(username)}` +
+        `&t=${encodeURIComponent(token)}` +
+        `&n=${encodeURIComponent(hotelName)}` + // 'n' is for Name
+        `&r=${encodeURIComponent(role)}` +
+        `&h=${encodeURIComponent(hotelId)}`;
+
+    // 4. FEEDBACK: Show the user something is happening
+    const btn = document.getElementById('login-button');
+    if (btn) {
+        btn.innerHTML = `<span class="flex items-center justify-center gap-2">Access Granted. Redirecting...</span>`;
+        btn.classList.replace('bg-slate-900', 'bg-emerald-600');
+    }
+
+    // 5. REDIRECT: Send to the dashboard
+    console.log("Redirecting to:", `${MAIN_SYSTEM_URL}${secureParams}`);
     window.location.replace(`${MAIN_SYSTEM_URL}${secureParams}`);
 }else {
                 err.textContent = result.message || 'Authentication failed.';
