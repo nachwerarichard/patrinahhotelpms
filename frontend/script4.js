@@ -4569,32 +4569,7 @@ updateroomDashboard();
     }
 })();
 
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Retrieve the full user object (contains username and hotelName)
-    const savedUserData = localStorage.getItem('loggedInUser');
 
-    if (savedUserData) {
-        const user = JSON.parse(savedUserData);
-        
-        // Update global variables
-        currentUsername = user.username;
-        const hotelName = user.hotelName || "Hotel Management System";
-
-        // 2. Update Username Display
-        const userDisplay = document.getElementById('display-user-name');
-        if (userDisplay) {
-            userDisplay.textContent = user.username;
-        }
-
-        // 3. Update Hotel Name Display (The Branding)
-        const hotelDisplay = document.getElementById('hotel-name-display');
-        if (hotelDisplay) {
-            hotelDisplay.textContent = hotelName;
-            // Also update the document title so the browser tab shows the hotel name
-            document.title = `${hotelName} | PMS`;
-        }
-    }
-});
 function closeSection(sectionId) {
   const element = document.getElementById(sectionId);
   
