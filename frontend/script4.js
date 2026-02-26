@@ -9746,6 +9746,116 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshTodayPOSStats();
 });
 
+// Initialize: Set default date-time to now
+document.getElementById('reportDateTime').value = new Date().toISOString().slice(0, 16);
+
+// Modal Controls
+function openReportModal() {
+    document.getElementById('reportModal').classList.remove('hidden');
+    document.getElementById('statusReportForm').reset();
+    document.getElementById('reportDateTime').value = new Date().toISOString().slice(0, 16);
+}
+
+function closeReportModal() {
+    document.getElementById('reportModal').classList.add('hidden');
+}
+
+// CREATE / SUBMIT Operation
+document.getElementById('statusReportForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('statusMessage');
+    
+    // Gather form data
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+        msg.textContent = "Submitting report...";
+        
+        const response = await authenticatedFetch(`${API_BASE_URL}/status-reports`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            msg.textContent = "Report submitted successfully! ✅";
+            setTimeout(() => {
+                closeReportModal();
+                msg.textContent = "";
+                if (typeof fetchStatusReports === 'function') fetchStatusReports();
+            }, 1500);
+        } else {
+            const err = await response.json();
+            throw new Error(err.error || "Submission failed");
+        }
+    } catch (err) {
+        msg.textContent = "Error: " + err.message;
+        msg.classList.replace('text-blue-500', 'text-red-500');
+    }
+};
+
+// READ Operation (Fetching data for a table)
+async function fetchStatusReports() {
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/status-reports`);
+        const reports = await response.json();
+        renderStatusTable(reports);
+    } catch (err) {
+        console.error("Failed to load reports:", err);
+    }
+}
+
+// DELETE Operation
+async function deleteReport(id) {
+    if (!confirm("Are you sure you want to delete this status report?")) return;
+    
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/status-reports/${id}`, {
+            method: 'DELETE'
+        });
+        if (response.ok) {
+            alert("Report deleted");
+            fetchStatusReports();
+        }
+    } catch (err) {
+        alert("Delete failed: " + err.message);
+    }
+}
+
+function renderStatusTable(reports) {
+    const tbody = document.getElementById('statusReportTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = reports.map(r => `
+        <tr class="border-b hover:bg-gray-50">
+            <td class="p-3 font-medium">${r.room}</td>
+            <td class="p-3">${r.category}</td>
+            <td class="p-3">
+                <span class="px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(r.status)}">
+                    ${r.status.replace('_', ' ').toUpperCase()}
+                </span>
+            </td>
+            <td class="p-3 text-sm text-gray-500">${new Date(r.dateTime).toLocaleString()}</td>
+            <td class="p-3">
+                <button onclick="deleteReport('${r._id}')" class="text-red-500 hover:text-red-700">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'vacant_ready': 'bg-green-100 text-green-700',
+        'occupied': 'bg-blue-100 text-blue-700',
+        'departure': 'bg-red-100 text-red-700',
+        'vacant_not_ready': 'bg-yellow-100 text-yellow-700'
+    };
+    return colors[status] || 'bg-gray-100 text-gray-700';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     loadOrders();
 });
