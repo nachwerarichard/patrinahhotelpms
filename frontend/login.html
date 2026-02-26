@@ -79,6 +79,7 @@
                 const token = result.token;
                 const role = (user.role || '').toLowerCase();
                 const hotelId = user.hotelId || "";
+                const hotelName = user.hotelName || "Our Hotel";
 
                 // Immediate Redirect Logic
                 btn.innerHTML = `<span class="flex items-center justify-center gap-2">Access Granted. Redirecting...</span>`;
