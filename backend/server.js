@@ -3286,37 +3286,60 @@ app.get('/api/inventory', auth, async (req, res) => {
 // Create/Update Daily Inventory (Tenant Isolated)
 app.post('/api/inventory', auth, async (req, res) => {
   try {
-    const { item, opening, purchases, sales, spoilage, sellingprice, buyingprice, trackInventory } = req.body;
+    const { 
+      item, opening, purchases, sales, spoilage, 
+      sellingprice, buyingprice, trackInventory, 
+      date // <--- Add date from request body
+    } = req.body;
 
-    // 1. Ensure we have a hotelId from the auth middleware
     const hotelId = req.user.hotelId;
 
     if (!hotelId || hotelId === 'global') {
-        return res.status(400).json({ error: "Please select a specific hotel (Super Admin cannot post to 'global')" });
+        return res.status(400).json({ error: "Please select a specific hotel context." });
     }
 
-    // 2. Pass hotelId to your helper function
-    let record = await getTodayInventory(item, opening, hotelId);
-    
-    // 3. Update the record fields
-    record.item = item;
+    // 1. Determine the target date
+    // Use the date sent from frontend, or default to now
+    const targetDate = date ? new Date(date) : new Date();
+    const startOfDay = new Date(targetDate).setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate).setUTCHours(23, 59, 59, 999);
+
+    // 2. Find if a record already exists for this item ON THIS SPECIFIC DATE
+    let record = await Inventory.findOne({
+        hotelId,
+        item,
+        date: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    // 3. If no record exists for that day, create a new one
+    if (!record) {
+        record = new Inventory({
+            hotelId,
+            item,
+            date: targetDate // Maintain the date user was looking at
+        });
+    }
+
+    // 4. Update the fields
+    record.opening = opening || 0;
     record.purchases = purchases || 0;
     record.sales = sales || 0;
     record.spoilage = spoilage || 0;
     record.buyingprice = buyingprice || 0;
     record.sellingprice = sellingprice || 0;
-    record.trackInventory = trackInventory;
-    
-    // IMPORTANT: Explicitly set the hotelId from the authenticated user
-    record.hotelId = hotelId; 
+    record.trackInventory = trackInventory !== undefined ? trackInventory : true;
 
-    // 4. Save the record
+    // 5. CRITICAL: Calculate Closing Stock
+    // Closing = Opening + Purchases - Sales - Spoilage
+    record.closing = record.opening + record.purchases - record.sales - record.spoilage;
+
+    // 6. Final Save
     await record.save();
 
     res.status(200).json(record);
   } catch (err) {
     console.error("Inventory Save Error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Failed to save inventory record: " + err.message });
   }
 });
                // GET Inventory endpoint
