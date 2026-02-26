@@ -9855,7 +9855,34 @@ function getStatusColor(status) {
     };
     return colors[status] || 'bg-gray-100 text-gray-700';
 }
+async function filterStatusReportsByDate() {
+    const dateInput = document.getElementById('statusReportFilterDate');
+    const selectedDate = dateInput ? dateInput.value : '';
 
+    if (!selectedDate) {
+        alert("Please select a date to filter.");
+        return;
+    }
+
+    try {
+        // Construct URL with query parameter
+        const url = `${API_BASE_URL}/status-reports?date=${selectedDate}`;
+        
+        const response = await authenticatedFetch(url);
+        if (!response.ok) throw new Error("Failed to filter reports");
+
+        const reports = await response.json();
+        
+        // Use your existing render function to update the table
+        renderStatusTable(reports);
+        
+        // Optional: show a "Clear Filter" button
+        console.log(`Filtered results for ${selectedDate}: ${reports.length} found.`);
+    } catch (err) {
+        console.error("Filter Error:", err);
+        alert("Could not filter reports: " + err.message);
+    }
+}
 document.addEventListener('DOMContentLoaded', () => {
     loadOrders();
 });
