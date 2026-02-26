@@ -8479,49 +8479,64 @@ document.getElementById('exportposReportBtn').addEventListener('click', function
     // New function to handle the modal display and population
 // New function to handle the modal display and population
 function openEditModal(item) {
-    // Check permission
-    const allowedToEditInventory = ['admin'];
-    if (!allowedToEditInventory.includes(currentUserRole)) {
+    // 1. UPDATE PERMISSIONS: Include 'manager' to match your render function
+    const authorizedRoles = ['admin', 'super-admin', 'manager'];
+    if (!authorizedRoles.includes(currentUserRole)) {
         showMessage('Permission Denied: You cannot edit inventory items.');
         return;
     }
 
+    // 2. SAFETY CHECK: Ensure the item exists
     if (!item || !item._id) {
-        showMessage('Error: Inventory item data is missing or invalid.');
+        // If it's a placeholder (no _id), we use the Adjust Modal instead
+        console.warn("Item has no ID. It might be a generated placeholder.");
+        showMessage('Please use "Add Stock" to create a record for this item first.');
         return;
     }
 
-    // Get the modal and form elements
+    // 3. ELEMENTS CHECK: Prevent crashes if an ID is missing in HTML
     const modal = document.getElementById('edit-inventory-modal');
-    const idInput = document.getElementById('edit-inventory-id');
-    const itemInput = document.getElementById('edit-item');
-    const openingInput = document.getElementById('edit-opening');
-    const purchasesInput = document.getElementById('edit-purchases');
-    const salesInput = document.getElementById('edit-inventory-sales');
-    const spoilageInput = document.getElementById('edit-spoilage');
-    const buyingpriceInput = document.getElementById('edit-buyingprice');
-    const sellingpriceInput = document.getElementById('edit-sellingprice');
-    
-    // NEW: Get the checkbox element
-    const trackInventoryInput = document.getElementById('edit-trackInventory');
+    if (!modal) {
+        console.error("Critical Error: 'edit-inventory-modal' not found in HTML.");
+        return;
+    }
 
-    // Populate the form with the item's data
-    idInput.value = item._id;
-    itemInput.value = item.item;
-    openingInput.value = item.opening;
-    purchasesInput.value = item.purchases;
-    salesInput.value = item.sales;
-    spoilageInput.value = item.spoilage;
-    sellingpriceInput.value = item.sellingprice;
-    buyingpriceInput.value = item.buyingprice;
+    try {
+        // Mapping fields with safe assignment
+        const fields = {
+            'edit-inventory-id': item._id,
+            'edit-item': item.item,
+            'edit-opening': item.opening || 0,
+            'edit-purchases': item.purchases || 0,
+            'edit-inventory-sales': item.sales || 0,
+            'edit-spoilage': item.spoilage || 0,
+            'edit-buyingprice': item.buyingprice || 0,
+            'edit-sellingprice': item.sellingprice || 0
+        };
 
-    // NEW: Set the checkbox state
-    // Use the value from the database, default to true if it doesn't exist yet
-    trackInventoryInput.checked = item.trackInventory !== undefined ? item.trackInventory : true;
+        // Populate text/number inputs
+        for (const [id, value] of Object.entries(fields)) {
+            const el = document.getElementById(id);
+            if (el) el.value = value;
+            else console.warn(`Element with ID '${id}' missing from HTML.`);
+        }
 
-    // Show the modal
-    modal.classList.remove('hidden'); // Using classList is cleaner for Tailwind
-    modal.style.display = 'flex';
+        // Handle Checkbox separately
+        const trackInput = document.getElementById('edit-trackInventory');
+        if (trackInput) {
+            trackInput.checked = item.trackInventory !== undefined ? item.trackInventory : true;
+        }
+
+        // 4. SHOW MODAL: Use both methods to be safe
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        
+        console.log("Modal opened for:", item.item);
+
+    } catch (err) {
+        console.error("Error populating modal:", err);
+        showMessage("Error loading the edit form.");
+    }
 }
 // New function to handle the form submission for the modal
 /**
