@@ -6204,15 +6204,15 @@ async function handleUpdateSubmit(event) {
         return;
     }
 
-    // 1. Correctly capture the ID once
-    const idValue = document.getElementById('edit-inventory-id').value.trim();
+    // --- 1. CAPTURE DATA ONCE ---
+    const idInput = document.getElementById('edit-inventory-id');
+    const idValue = idInput ? idInput.value.trim() : "";
     const selectedDate = document.getElementById('search-inventory-date').value || new Date().toISOString().split('T')[0];
 
     const submitBtn = document.getElementById('edit-inventory-submit-btn');
     const defaultText = document.getElementById('edit-inventory-btn-default');
     const loadingText = document.getElementById('edit-inventory-btn-loading');
 
-    // 2. Gather Data
     const inventoryData = {
         hotelId: hotelId,
         item: document.getElementById('edit-item').value,
@@ -6231,21 +6231,16 @@ async function handleUpdateSubmit(event) {
     try {
         if (submitBtn) submitBtn.disabled = true;
         if (defaultText) defaultText.classList.add('hidden');
-        if (loadingText) loadingText.classList.remove('hidden');
+        if (loadingText) {
+            loadingText.classList.remove('hidden');
+            loadingText.classList.add('flex');
+        }
 
-        // 3. Construct URL and Method
-        // IMPORTANT: Ensure no trailing slash for POST
-      // Inside handleUpdateSubmit
-const idInput = document.getElementById('edit-inventory-id');
-const idValue = idInput ? idInput.value.trim() : "";
-
-// Only add the ID to the URL if it actually exists
-const url = idValue 
-    ? `${API_BASE_URL}/inventory/${idValue}` 
-    : `${API_BASE_URL}/inventory`; 
-
-const method = idValue ? 'PUT' : 'POST';
-        //const url = idValue ? `${API_BASE_URL}/inventory/${idValue}` : `${API_BASE_URL}/inventory`;
+        // --- 2. CONSTRUCT URL & METHOD ---
+        // If idValue is an empty string, it uses POST to /inventory
+        // If idValue has text, it uses PUT to /inventory/ID
+        const method = idValue ? 'PUT' : 'POST';
+        const url = idValue ? `${API_BASE_URL}/inventory/${idValue}` : `${API_BASE_URL}/inventory`;
 
         console.log(`[debug] Request: ${method} to ${url}`);
 
@@ -6255,21 +6250,22 @@ const method = idValue ? 'PUT' : 'POST';
             body: JSON.stringify(inventoryData)
         });
 
-        // 4. Handle Response Safely
-        const contentType = response.headers.get("content-type");
+        // --- 3. HANDLE RESPONSE ---
+        if (!response) throw new Error("No response from server");
+
         if (response.ok) {
             alert(idValue ? 'Stock updated! ✅' : 'New record created! ✅');
             if (typeof closeEditModal === "function") closeEditModal();
             if (typeof fetchInventory === "function") fetchInventory(); 
         } else {
-            // Check if response is actually JSON before parsing
-            if (contentType && contentType.indexOf("application/json") !== -1) {
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || errorData.message || 'Server Error');
             } else {
                 const textError = await response.text();
-                console.error("Server returned non-JSON error:", textError);
-                throw new Error(`Server Error: ${response.status} ${response.statusText}`);
+                console.error("Server returned HTML instead of JSON:", textError);
+                throw new Error(`Server returned 404/Error (Check your backend routes)`);
             }
         }
     } catch (err) {
@@ -6278,7 +6274,10 @@ const method = idValue ? 'PUT' : 'POST';
     } finally {
         if (submitBtn) submitBtn.disabled = false;
         if (defaultText) defaultText.classList.remove('hidden');
-        if (loadingText) loadingText.classList.add('hidden');
+        if (loadingText) {
+            loadingText.classList.add('hidden');
+            loadingText.classList.remove('flex');
+        }
     }
 }
 function renderInventoryTable(inventory) {
