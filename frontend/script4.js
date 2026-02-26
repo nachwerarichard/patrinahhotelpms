@@ -9832,8 +9832,8 @@ function renderStatusTable(reports) {
 
     tbody.innerHTML = reports.map(r => `
         <tr class="border-b hover:bg-gray-50">
-            <td class="p-3 font-medium">${r.room}</td>
-            <td class="p-3">${r.category}</td>
+            <td>${r.roomId.number}</td>
+            <td>${r.roomId.roomTypeId.name}</td>
             <td class="p-3">
                 <span class="px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(r.status)}">
                     ${r.status.replace('_', ' ').toUpperCase()}
