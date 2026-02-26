@@ -6039,13 +6039,45 @@ function renderInventoryTable(inventory) {
 
             dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
             dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
-            dropdown.querySelector('.delete-opt').onclick = () => {
-                if(item._id) showDeleteModal(item._id);
-                else alert("Cannot delete a placeholder. This item hasn't been saved for this date yet.");
-            };
+dropdown.querySelector('.delete-opt').onclick = () => {
+    // We only delete if there is a real database ID (_id)
+    if (item._id) { 
+        deleteInventoryItem(item._id);
+    } else {
+        alert("Cannot delete a placeholder. This item hasn't been saved for this date yet.");
+    }
+};
             actionsCell.appendChild(dropdown);
         }
     });
+}
+
+async function deleteInventoryItem(id) {
+    // 1. Confirm with the user
+    if (!confirm("Are you sure you want to delete this inventory record? This action cannot be undone.")) {
+        return;
+    }
+
+    try {
+        // 2. Send the DELETE request
+        const response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            alert("Deleted successfully! ✅");
+            // 3. Refresh the inventory table
+            if (typeof fetchInventory === "function") {
+                fetchInventory();
+            }
+        } else {
+            const error = await response.json();
+            throw new Error(error.error || "Failed to delete item.");
+        }
+    } catch (err) {
+        console.error("Delete Error:", err);
+        alert("Error: " + err.message);
+    }
 }
 function renderPagination(current, totalPages) {
     const container = document.getElementById('pagination');
