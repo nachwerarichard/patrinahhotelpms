@@ -3219,39 +3219,56 @@ app.get('/api/inventory', auth, async (req, res) => {
 
         let query = { hotelId };
 
-        // Filter by Item Name (Case-insensitive search)
         if (item) {
             query.item = { $regex: item, $options: 'i' };
         }
 
-        // Filter by Date
+        // Define Today's boundaries for the "hide closing stock" logic
+        const todayStart = new Date();
+        todayStart.setUTCHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setUTCHours(23, 59, 59, 999);
+
         if (date) {
-            // Match the specific day from 00:00 to 23:59
             const startOfDay = new Date(date);
             startOfDay.setUTCHours(0, 0, 0, 0);
-            
             const endOfDay = new Date(date);
             endOfDay.setUTCHours(23, 59, 59, 999);
-            
             query.date = { $gte: startOfDay, $lte: endOfDay };
         } else {
-            // Default: Show today's records if no date is specified
-            const today = new Date();
-            today.setUTCHours(0, 0, 0, 0);
-            query.date = { $gte: today };
+            // Default to all history if no date, or keep your "today" default
+            // query.date = { $gte: todayStart }; 
         }
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
-
         const items = await Inventory.find(query)
             .sort({ date: -1, item: 1 })
             .skip(skip)
-            .limit(parseInt(limit));
+            .limit(parseInt(limit))
+            .lean(); // Use lean for faster processing and adding virtual fields
+
+        const processedItems = items.map(record => {
+            const recordDate = new Date(record.date);
+            const isToday = recordDate >= todayStart && recordDate <= todayEnd;
+            
+            // Calculate Current Stock
+            const currentStock = (record.opening || 0) + (record.purchases || 0) - (record.sales || 0);
+            
+            // Determine Status: If activity occurred, it's updated.
+            const hasActivity = (record.purchases > 0 || record.sales > 0);
+            
+            return {
+                ...record,
+                currentStock,
+                isToday, // Flag for frontend to hide closing stock
+                status: hasActivity ? 'Updated' : 'Static'
+            };
+        });
 
         const total = await Inventory.countDocuments(query);
 
         res.status(200).json({
-            items,
+            items: processedItems,
             totalPages: Math.ceil(total / limit),
             currentPage: parseInt(page),
             totalItems: total
