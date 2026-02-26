@@ -5949,77 +5949,52 @@ function showMessage(message, callback = null) {
     }
 
 
-async function fetchInventory() {
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const hotelId = sessionData?.hotelId;
+function renderInventoryTable(items) {
+    const tbody = document.getElementById('inventory-table-body');
+    if (!tbody) return;
 
-    if (!hotelId) {
-        showMessage('Error: No hotel context found. Please log in again.', true);
+    if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No inventory records found.</td></tr>';
         return;
     }
 
-    // 1. UI Loading State
-    updateSearchButton('Searching', 'fas fa-spinner fa-spin'); 
-
-    try {
-        const itemFilterInput = document.getElementById('search-inventory-item');
-        const dateFilterInput = document.getElementById('search-inventory-date');
+    tbody.innerHTML = items.map(item => {
+        // Calculate current stock
+        const currentStock = (item.opening + item.purchases) - item.sales;
         
-        const itemFilter = itemFilterInput ? itemFilterInput.value.trim() : '';
-        const dateFilter = dateFilterInput ? dateFilterInput.value : '';
-
-        // 2. Build Query Params
-        const params = new URLSearchParams();
-        // Note: authenticatedFetch already adds x-hotel-id header, 
-        // but adding it to params ensures backend compatibility.
-        params.append('hotelId', hotelId); 
-        
-        if (itemFilter) params.append('item', itemFilter);
-        if (dateFilter) params.append('date', dateFilter); 
-        
-        // Pagination logic
-        params.append('page', currentPage || 1);
-        params.append('limit', itemsPerPage || 10);
-
-        const url = `${API_BASE_URL}/inventory?${params.toString()}`;
-
-        // 3. Use authenticatedFetch wrapper
-        const response = await authenticatedFetch(url);
-
-        if (!response || !response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || 'Server responded with an error');
-        }
-
-        const result = await response.json(); 
-
-        // 4. Data Assignment
-        // Standardize: Look for items in result.items (matching your backend GET route)
-        // fall back to .data or .report for backward compatibility
-        let inventoryData = result.items || result.data || result.report || [];
-        
-        // 5. Handle Pagination UI
-        renderPagination(result.currentPage || 1, result.totalPages || 1);
-
-        // 6. Render Table
-        renderInventoryTable(inventoryData);
-
-        // 7. Final UI State
-        if (inventoryData.length === 0) {
-            updateSearchButton('No Results', 'fas fa-exclamation-circle');
+        // Determine Stock Status Badge
+        let statusBadge = '';
+        if (currentStock <= 0) {
+            statusBadge = '<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">OUT OF STOCK</span>';
+        } else if (currentStock < 10) {
+            statusBadge = '<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-bold">LOW STOCK</span>';
         } else {
-            updateSearchButton('Done', 'fas fa-check');
+            statusBadge = '<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">STABLE</span>';
         }
 
-        setTimeout(() => {
-            updateSearchButton('Search', 'fas fa-search');
-        }, 2000); 
+        // Check if item was updated (based on timestamps)
+        const isUpdated = new Date(item.updatedAt) > new Date(item.createdAt);
+        const updateIndicator = isUpdated 
+            ? `<i class="fas fa-edit text-blue-500 ml-1" title="Last updated: ${new Date(item.updatedAt).toLocaleString()}"></i>` 
+            : '';
 
-    } catch (error) {
-        console.error('Inventory Fetch Error:', error);
-        showMessage('Error loading inventory: ' + error.message, true);
-        updateSearchButton('Search', 'fas fa-search');
-    }
+        return `
+            <tr class="border-b hover:bg-gray-50">
+                <td class="p-3 font-medium">${item.item} ${updateIndicator}</td>
+                <td class="p-3 text-center">${new Date(item.date).toLocaleDateString()}</td>
+                <td class="p-3 text-center bg-blue-50">${item.opening}</td>
+                <td class="p-3 text-center text-emerald-600">+${item.purchases}</td>
+                <td class="p-3 text-center text-red-600">-${item.sales}</td>
+                <td class="p-3 text-center font-bold">${currentStock}</td>
+                <td class="p-3 text-center">${statusBadge}</td>
+                <td class="p-3 text-right">
+                    <button onclick="editInventory('${item._id}')" class="text-indigo-600 hover:text-indigo-900 mr-2">
+                        <i class="fas fa-sync"></i> Update
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 function renderPagination(current, totalPages) {
     const container = document.getElementById('pagination');
