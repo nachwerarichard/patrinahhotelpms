@@ -299,7 +299,7 @@ const roomTypeSchema = new mongoose.Schema({
         rate: Number
     }]
 });
-
+roomTypeSchema.index({ hotelId: 1, name: 1 }, { unique: true });
 const RoomType = mongoose.model('RoomType', roomTypeSchema);
 
 // 2. Room Schema (The actual physical rooms)
