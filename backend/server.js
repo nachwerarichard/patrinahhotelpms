@@ -3814,6 +3814,51 @@ app.get('/reports/financial-summary', auth, async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch financial summary' });
     }
 });
+
+app.get('/api/pos-today-summary', auth, async (req, res) => {
+    try {
+        const hotelId = req.user.hotelId;
+        
+        // Get start and end of today in UTC
+        const start = new Date();
+        start.setUTCHours(0, 0, 0, 0);
+        const end = new Date();
+        end.setUTCHours(23, 59, 59, 999);
+
+        // 1. Sum Sales & Profit
+        const salesStats = await Sale.aggregate([
+            { $match: { hotelId, date: { $gte: start, $lte: end } } },
+            { $group: {
+                _id: null,
+                revenue: { $sum: { $multiply: ["$number", "$sp"] } },
+                profit: { $sum: "$profit" }
+            }}
+        ]);
+
+        // 2. Sum Expenses
+        const expenseStats = await Expense.aggregate([
+            { $match: { hotelId, date: { $gte: start, $lte: end } } },
+            { $group: {
+                _id: null,
+                total: { $sum: "$amount" }
+            }}
+        ]);
+
+        const revenue = salesStats[0]?.revenue || 0;
+        const profit = salesStats[0]?.profit || 0;
+        const expenses = expenseStats[0]?.total || 0;
+
+        res.json({
+            revenue,
+            profit,
+            expenses,
+            netBalance: revenue - expenses // Or profit - expenses, depending on your business logic
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get('/reports/low-stock-items', auth, async (req, res) => {
     try {
         const LOW_STOCK_THRESHOLD = Number(process.env.LOW_STOCK_THRESHOLD) || 10;
