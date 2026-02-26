@@ -6245,7 +6245,7 @@ const url = idValue
     : `${API_BASE_URL}/inventory`; 
 
 const method = idValue ? 'PUT' : 'POST';
-        const url = idValue ? `${API_BASE_URL}/inventory/${idValue}` : `${API_BASE_URL}/inventory`;
+        //const url = idValue ? `${API_BASE_URL}/inventory/${idValue}` : `${API_BASE_URL}/inventory`;
 
         console.log(`[debug] Request: ${method} to ${url}`);
 
