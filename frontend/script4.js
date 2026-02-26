@@ -122,6 +122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const username = params.get('u');
         const role = params.get('r');
         const hotelId = params.get('h');
+        const hotelName = params.get('n');
 
         // 2. Inject them into THIS domain's localStorage
         if (token && username) {
@@ -129,6 +130,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             localStorage.setItem('username', username);
             localStorage.setItem('userRole', role);
             localStorage.setItem('hotelId', hotelId);
+            localStorage.setItem('hotelName', hotelName);
+
 
             // 3. Clean the URL so the token doesn't sit in the address bar
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -9963,3 +9966,16 @@ async function loadRoomDatalist() {
         console.error("Could not load room list", err);
     }
 }
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Target the element
+    const hotelNameElement = document.getElementById('hotel-name-display');
+    
+    // 2. Get the name we saved during login
+    const savedHotelName = localStorage.getItem('hotelName');
+
+    // 3. Update the text
+    if (hotelNameElement) {
+        // Fallback to "General Management" if no name is found
+        hotelNameElement.textContent = savedHotelName || "General Management";
+    }
+});
