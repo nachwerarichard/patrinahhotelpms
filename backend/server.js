@@ -2609,7 +2609,28 @@ const transactionSchema = new mongoose.Schema({
 });
 
 const Transaction = mongoose.model('Transaction', transactionSchema);
+app.get('/api/status-reports', auth, async (req, res) => {
+    try {
+        const { date } = req.query;
+        let query = { hotelId: req.user.hotelId };
 
+        if (date) {
+            // Create range for the specific day (00:00:00 to 23:59:59)
+            const start = new Date(date);
+            start.setUTCHours(0, 0, 0, 0);
+            
+            const end = new Date(date);
+            end.setUTCHours(23, 59, 59, 999);
+
+            query.dateTime = { $gte: start, $lte: end };
+        }
+
+        const reports = await StatusReport.find(query).sort({ dateTime: -1 });
+        res.json(reports);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 // POST: Create a new report
 app.post('/api/status-reports', auth, async (req, res) => {
     try {
