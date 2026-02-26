@@ -9650,6 +9650,11 @@ searchInput.addEventListener('input', (e) => {
     }, 300);
 });
 
+const activeAccountsContainer = document.getElementById('active-accounts-list');
+if (activeAccountsContainer) {
+    activeAccountsContainer.classList.add('hidden');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     loadOrders();
 });
