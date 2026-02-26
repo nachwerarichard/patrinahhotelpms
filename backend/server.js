@@ -3160,55 +3160,47 @@ app.get('/api/inventory/lookup', auth, async (req, res) => {
 });
 
 // PUT /api/:id
-app.put('/api/inventory/:id', async (req, res) => {
+// PUT /api/inventory/:id
+app.put('/api/inventory/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
-      item, 
-      opening, 
-      purchases, 
-      sales, 
-      spoilage, 
-      buyingprice, 
-      sellingprice, 
-      trackInventory 
-    } = req.body;
-
-    // Calculate closing stock based on your schema logic
-    // Formula: Opening + Purchases - Sales - Spoilage
-    const closing = (opening + purchases) - (sales + spoilage);
-
-    // Basic Validation: Ensure closing isn't negative if trackInventory is enabled
-    if (trackInventory && closing < 0) {
-      return res.status(400).json({ 
-        message: "Operation failed: Closing stock cannot be negative when tracking is enabled." 
-      });
+    
+    // Check if ID is provided or valid
+    if (!id || id === 'undefined' || id === 'null') {
+      return res.status(400).json({ error: "Invalid ID provided for update. Use POST to create new records." });
     }
 
-    const updatedItem = await Inventory.findByIdAndUpdate(
-      id,
+    const { 
+      opening, purchases, sales, spoilage, 
+      buyingprice, sellingprice, trackInventory 
+    } = req.body;
+
+    // Calculate closing stock
+    const closing = (Number(opening) + Number(purchases)) - (Number(sales) + Number(spoilage));
+
+    const updatedItem = await Inventory.findOneAndUpdate(
+      { _id: id, hotelId: req.user.hotelId }, // Ensure user only updates THEIR hotel's data
       {
-        item,
-        opening,
-        purchases,
-        sales,
-        spoilage,
-        closing, // Update the calculated closing stock
-        buyingprice,
-        sellingprice,
-        trackInventory
+        opening: Number(opening),
+        purchases: Number(purchases),
+        sales: Number(sales),
+        spoilage: Number(spoilage),
+        closing: closing,
+        buyingprice: Number(buyingprice),
+        sellingprice: Number(sellingprice),
+        trackInventory: trackInventory
       },
-      { new: true, runValidators: true } // returns the updated document and checks schema rules
+      { new: true, runValidators: true }
     );
 
     if (!updatedItem) {
-      return res.status(404).json({ message: "Inventory item not found." });
+      return res.status(404).json({ error: "Inventory record not found or unauthorized." });
     }
 
     res.status(200).json(updatedItem);
   } catch (error) {
     console.error("Update Error:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error.message });
+    res.status(500).json({ error: "Internal Server Error", message: error.message });
   }
 });
 // Specific endpoint for the sales form dropdown (Tenant Isolated)
