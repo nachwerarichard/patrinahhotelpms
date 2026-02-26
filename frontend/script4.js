@@ -6237,6 +6237,7 @@ async function handleUpdateSubmit(event) {
         loadingText.classList.add('hidden');
     }
 }
+
 function renderInventoryTable(inventory) {
     const tbody = document.querySelector('#inventory-table tbody');
     if (!tbody) return;
@@ -6244,9 +6245,13 @@ function renderInventoryTable(inventory) {
 
     const dateInput = document.getElementById('search-inventory-date');
     const tableHeaders = document.querySelectorAll('#inventory-table thead th');
-    const today = new Date().toISOString().split('T')[0];
-    const isToday = !dateInput.value || dateInput.value === today;
+    
+    // Determine if we are looking at today
+    const selectedDate = dateInput.value;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isToday = !selectedDate || selectedDate === todayStr;
 
+    // 1. Update Header based on date context
     if (tableHeaders[5]) { 
         tableHeaders[5].textContent = isToday ? 'Current Stock' : 'Closing Stock';
     }
@@ -6260,22 +6265,42 @@ function renderInventoryTable(inventory) {
         const row = tbody.insertRow();
         row.className = "hover:bg-gray-50 transition-colors border-b border-gray-100";
         
+        // 2. Status Logic (Movement Check)
+        const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
+        const statusBadge = hasMovement 
+            ? `<span class="ml-2 px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-700 rounded-full uppercase">Updated</span>`
+            : `<span class="ml-2 px-2 py-0.5 text-[10px] font-bold bg-gray-100 text-gray-500 rounded-full uppercase">Static</span>`;
+
+        // 3. Stock Calculation
+        // If today, we show the live math. If historical, we show the saved closing value.
+        const calculatedCurrent = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
+        const stockDisplay = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
+
         row.innerHTML = `
-            <td class="px-4 py-3 font-medium text-gray-800">${item.item}</td>
+            <td class="px-4 py-3 font-medium text-gray-800">
+                <div class="flex flex-col">
+                    <span>${item.item}</span>
+                    <div class="flex items-center mt-1">${statusBadge}</div>
+                </div>
+            </td>
             <td class="px-4 py-3">${item.opening || 0}</td>
-            <td class="px-4 py-3 text-green-600">+${item.purchases || 0}</td>
-            <td class="px-4 py-3 text-blue-600">-${item.sales || 0}</td>
-            <td class="px-4 py-3 text-red-500">-${item.spoilage || 0}</td>
-            <td class="px-4 py-3 font-bold ${isToday ? 'text-indigo-600' : ''}">${item.closing ?? 'N/A'}</td>
-            <td class="px-4 py-3">${Number(item.buyingprice).toLocaleString()}</td>
-            <td class="px-4 py-3">${Number(item.sellingprice).toLocaleString()}</td>
-            <td class="px-4 py-3 text-right" id="actions-${item._id}"></td>
+            <td class="px-4 py-3 text-green-600 font-medium">+${item.purchases || 0}</td>
+            <td class="px-4 py-3 text-blue-600 font-medium">-${item.sales || 0}</td>
+            <td class="px-4 py-3 text-red-500 font-medium">-${item.spoilage || 0}</td>
+            <td class="px-4 py-3 font-bold ${isToday ? 'text-indigo-600 bg-indigo-50/50' : 'text-gray-900'}">
+                ${stockDisplay}
+            </td>
+            <td class="px-4 py-3 text-sm">${Number(item.buyingprice || 0).toLocaleString()}</td>
+            <td class="px-4 py-3 text-sm">${Number(item.sellingprice || 0).toLocaleString()}</td>
+            <td class="px-4 py-3 text-right" id="actions-${item._id || 'new'}"></td>
         `;
 
-        const actionsCell = row.querySelector(`#actions-${item._id}`);
-        const adminRoles = ['admin', 'super-admin'];
+        const actionsCell = row.querySelector(`#actions-${item._id || 'new'}`);
+        
+        // 4. Permission Logic: Include 'manager' and allow edits regardless of date
+        const authorizedRoles = ['admin', 'super-admin', 'manager'];
 
-        if (adminRoles.includes(currentUserRole) && item._id) {
+        if (authorizedRoles.includes(currentUserRole)) {
             const dropdown = document.createElement('div');
             dropdown.className = 'relative inline-block text-left';
 
@@ -6285,7 +6310,7 @@ function renderInventoryTable(inventory) {
                 </button>
                 <div class="menu hidden absolute right-0 bottom-full mb-2 w-40 bg-white border border-gray-200 rounded-lg shadow-xl z-50 py-1">
                     <button class="w-full text-left px-4 py-2 text-sm hover:bg-indigo-50 text-indigo-700 flex items-center gap-2 edit-opt">
-                        <i class="fas fa-edit"></i> Edit Item
+                        <i class="fas fa-edit"></i> Edit Record
                     </button>
                     <button class="w-full text-left px-4 py-2 text-sm hover:bg-amber-50 text-amber-700 flex items-center gap-2 adjust-opt">
                         <i class="fas fa-plus-circle"></i> Add Stock
@@ -6306,13 +6331,17 @@ function renderInventoryTable(inventory) {
                 menu.classList.toggle('hidden');
             };
 
+            // Setup click handlers for the options
             dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
             dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
-            dropdown.querySelector('.delete-opt').onclick = () => showDeleteModal(item._id);
+            dropdown.querySelector('.delete-opt').onclick = () => {
+                if(item._id) showDeleteModal(item._id);
+                else alert("This is a generated placeholder. Please 'Add Stock' first to create a record.");
+            };
 
             actionsCell.appendChild(dropdown);
         } else {
-            actionsCell.innerHTML = `<span class="text-gray-400 text-xs italic">Locked</span>`;
+            actionsCell.innerHTML = `<span class="text-gray-400 text-xs italic"><i class="fas fa-lock mr-1"></i>View Only</span>`;
         }
     });
 }
