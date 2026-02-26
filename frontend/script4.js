@@ -5957,77 +5957,67 @@ function renderInventoryTable(inventory) {
     const dateInput = document.getElementById('search-inventory-date');
     const tableHeaders = document.querySelectorAll('#inventory-table thead th');
     
-    // Determine if we are looking at today
     const selectedDate = dateInput.value;
     const todayStr = new Date().toISOString().split('T')[0];
     const isToday = !selectedDate || selectedDate === todayStr;
 
-    // 1. Update Header based on date
     if (tableHeaders[5]) { 
         tableHeaders[5].textContent = isToday ? 'Current Stock' : 'Closing Stock';
     }
 
     if (inventory.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-gray-500 italic">No inventory records found for this period.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-gray-400 italic">No items found in catalog.</td></tr>`;
         return;
     }
 
     inventory.forEach(item => {
         const row = tbody.insertRow();
-        row.className = "hover:bg-gray-50 transition-colors border-b border-gray-100";
+        row.className = "hover:bg-slate-50 transition-colors border-b border-slate-100";
         
-        // 2. Status Logic: Check if there was any movement (Purchases, Sales, Spoilage)
-        const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
-        const statusBadge = hasMovement 
-            ? `<span class="ml-2 px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-700 rounded-full uppercase">Updated</span>`
-            : `<span class="ml-2 px-2 py-0.5 text-[10px] font-bold bg-gray-100 text-gray-500 rounded-full uppercase">Static</span>`;
+        // Status Styling
+        const isUpdated = item.status === 'Updated';
+        const statusBadge = isUpdated 
+            ? `<span class="px-2 py-0.5 text-[10px] font-black bg-emerald-100 text-emerald-700 rounded-md border border-emerald-200">UPDATED</span>`
+            : `<span class="px-2 py-0.5 text-[10px] font-black bg-slate-100 text-slate-500 rounded-md border border-slate-200">NO CHANGE</span>`;
 
-        // 3. Calculation for Current Stock (if closing isn't pre-calculated by backend)
-        const calculatedCurrent = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
-        
-        // If it's today, we show the live calculated stock. If it's a past date, we show the historical closing.
-        const stockDisplay = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
+        // Calculate Stock
+        const currentCalculated = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
+        const stockDisplay = isToday ? currentCalculated : (item.closing ?? currentCalculated);
 
         row.innerHTML = `
-            <td class="px-4 py-3 font-medium text-gray-800">
+            <td class="px-4 py-3">
                 <div class="flex flex-col">
-                    <span>${item.item}</span>
-                    <div class="flex items-center mt-1">${statusBadge}</div>
+                    <span class="font-semibold text-slate-800">${item.item}</span>
+                    <div class="mt-1">${statusBadge}</div>
                 </div>
             </td>
-            <td class="px-4 py-3 text-gray-600">${item.opening || 0}</td>
-            <td class="px-4 py-3 text-green-600 font-medium">+${item.purchases || 0}</td>
-            <td class="px-4 py-3 text-blue-600 font-medium">-${item.sales || 0}</td>
-            <td class="px-4 py-3 text-red-500 font-medium">-${item.spoilage || 0}</td>
-            <td class="px-4 py-3 font-bold ${isToday ? 'text-indigo-600 bg-indigo-50/30' : 'text-gray-900'}">
+            <td class="px-4 py-3 text-slate-600 font-mono">${item.opening || 0}</td>
+            <td class="px-4 py-3 text-emerald-600 font-bold">+${item.purchases || 0}</td>
+            <td class="px-4 py-3 text-blue-600 font-bold">-${item.sales || 0}</td>
+            <td class="px-4 py-3 text-rose-500 font-bold">-${item.spoilage || 0}</td>
+            <td class="px-4 py-3 font-black text-lg ${isToday ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-900'}">
                 ${stockDisplay}
             </td>
-            <td class="px-4 py-3 text-sm text-gray-500">${Number(item.buyingprice || 0).toLocaleString()}</td>
-            <td class="px-4 py-3 text-sm text-gray-500">${Number(item.sellingprice || 0).toLocaleString()}</td>
-            <td class="px-4 py-3 text-right" id="actions-${item._id}"></td>
+            <td class="px-4 py-3 text-xs text-slate-400">${Number(item.buyingprice || 0).toLocaleString()}</td>
+            <td class="px-4 py-3 text-xs text-slate-400">${Number(item.sellingprice || 0).toLocaleString()}</td>
+            <td class="px-4 py-3 text-right" id="actions-${item._id || 'new'}"></td>
         `;
 
-        // 4. Action Menu Logic
-        const actionsCell = row.querySelector(`#actions-${item._id}`);
-        const adminRoles = ['admin', 'super-admin', 'manager']; // Added manager for flexibility
-
-        if (adminRoles.includes(currentUserRole) && item._id) {
+        // Action Menu Logic
+        const actionsCell = row.querySelector(`#actions-${item._id || 'new'}`);
+        if (['admin', 'super-admin'].includes(currentUserRole)) {
             const dropdown = document.createElement('div');
             dropdown.className = 'relative inline-block text-left';
             dropdown.innerHTML = `
-                <button class="dots-btn p-2 hover:bg-gray-200 rounded-full transition-all">
-                    <i class="fas fa-ellipsis-v text-gray-400"></i>
+                <button class="dots-btn p-2 hover:bg-slate-200 rounded-full">
+                    <i class="fas fa-ellipsis-v text-slate-400"></i>
                 </button>
-                <div class="menu hidden absolute right-0 bottom-full mb-2 w-44 bg-white border border-gray-200 rounded-lg shadow-xl z-50 py-1 origin-bottom-right">
+                <div class="menu hidden absolute right-0 bottom-full mb-2 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1">
                     <button class="w-full text-left px-4 py-2 text-sm hover:bg-indigo-50 text-indigo-700 flex items-center gap-2 edit-opt">
-                        <i class="fas fa-edit w-4"></i> Edit Item
+                        <i class="fas fa-edit"></i> Edit
                     </button>
-                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-amber-50 text-amber-700 flex items-center gap-2 adjust-opt">
-                        <i class="fas fa-plus-circle w-4"></i> Add Stock
-                    </button>
-                    <div class="border-t border-gray-100 my-1"></div>
-                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600 flex items-center gap-2 delete-opt">
-                        <i class="fas fa-trash w-4"></i> Delete Record
+                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 adjust-opt">
+                        <i class="fas fa-plus-circle"></i> Add Stock
                     </button>
                 </div>
             `;
@@ -6037,24 +6027,17 @@ function renderInventoryTable(inventory) {
 
             btn.onclick = (e) => {
                 e.stopPropagation();
-                // Close all other open menus
                 document.querySelectorAll('.menu').forEach(m => m !== menu && m.classList.add('hidden'));
                 menu.classList.toggle('hidden');
             };
 
-            // Close menu on outside click
-            window.onclick = () => menu.classList.add('hidden');
-
             dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
             dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
-            dropdown.querySelector('.delete-opt').onclick = () => showDeleteModal(item._id);
-
             actionsCell.appendChild(dropdown);
-        } else {
-            actionsCell.innerHTML = `<i class="fas fa-lock text-gray-300" title="Restricted access"></i>`;
         }
     });
 }
+
 function renderPagination(current, totalPages) {
     const container = document.getElementById('pagination');
     if (!container) return;
