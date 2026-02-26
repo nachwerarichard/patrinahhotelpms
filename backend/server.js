@@ -1288,27 +1288,28 @@ app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        // 1. USE POPULATE here to get the hotel details
         const user = await User.findOne({ username }).populate('hotelId');
         
         if (!user || user.password !== password) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        // Generate Token (Note: This is Basic Auth encoding, not a JWT!)
         const authToken = Buffer.from(`${username}:${password}`).toString('base64');
 
-        // Record audit log
-        await addAuditLog('User Logged In', user.username, user.hotelId._id, { role: user.role });
+        // SAFE AUDIT LOG: Use ?. to prevent crashing if hotelId is null
+        const safeHotelId = user.hotelId?._id || user.hotelId || 'no-hotel-id';
+        await addAuditLog('User Logged In', user.username, safeHotelId, { role: user.role });
 
-        // 2. SEND RESPONSE with the hotel name
+        // SAFE RESPONSE
         res.json({ 
             token: authToken, 
             user: { 
                 username: user.username, 
                 role: user.role, 
-                hotelId: user.hotelId._id,
-                hotelName: user.hotelId ? user.hotelId.name : 'Unknown Hotel' // This is the new line
+                // If populated, hotelId is an object. If not, it's just the ID.
+                hotelId: user.hotelId?._id || user.hotelId, 
+                // This is where your frontend gets the name!
+                hotelName: user.hotelId?.name || 'Unknown Hotel'
             } 
         });
 
