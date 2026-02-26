@@ -6198,21 +6198,21 @@ function closeEditModal() {
 async function handleUpdateSubmit(event) {
     event.preventDefault();
 
-    // Fix: Use your existing helper to get the hotelId
     const hotelId = getHotelId();
-    
     if (!hotelId || hotelId === 'global') {
-        showMessageBox('Error', 'Please select a hotel context before saving.', true);
+        alert('Please select a hotel context before saving.');
         return;
     }
 
-    const id = document.getElementById('edit-inventory-id').value;
+    // 1. Correctly capture the ID once
+    const idValue = document.getElementById('edit-inventory-id').value.trim();
     const selectedDate = document.getElementById('search-inventory-date').value || new Date().toISOString().split('T')[0];
 
     const submitBtn = document.getElementById('edit-inventory-submit-btn');
     const defaultText = document.getElementById('edit-inventory-btn-default');
     const loadingText = document.getElementById('edit-inventory-btn-loading');
 
+    // 2. Gather Data
     const inventoryData = {
         hotelId: hotelId,
         item: document.getElementById('edit-item').value,
@@ -6226,45 +6226,50 @@ async function handleUpdateSubmit(event) {
         date: selectedDate 
     };
 
-    // Calculate Closing Stock
     inventoryData.closing = inventoryData.opening + inventoryData.purchases - inventoryData.sales - inventoryData.spoilage;
 
     try {
-        submitBtn.disabled = true;
-        defaultText.classList.add('hidden');
-        loadingText.classList.remove('hidden');
-// Inside your submit handler
-const id = document.getElementById('edit-inventory-id').value;
+        if (submitBtn) submitBtn.disabled = true;
+        if (defaultText) defaultText.classList.add('hidden');
+        if (loadingText) loadingText.classList.remove('hidden');
 
-// Ensure NO trailing slash if the ID is missing
-const url = id 
-    ? `${API_BASE_URL}/inventory/${id}` 
-    : `${API_BASE_URL}/inventory`; 
+        // 3. Construct URL and Method
+        // IMPORTANT: Ensure no trailing slash for POST
+        const method = idValue ? 'PUT' : 'POST';
+        const url = idValue ? `${API_BASE_URL}/inventory/${idValue}` : `${API_BASE_URL}/inventory`;
 
-const method = id ? 'PUT' : 'POST';
+        console.log(`[debug] Request: ${method} to ${url}`);
 
-console.log(`[debug] Sending ${method} request to: ${url}`);
+        const response = await authenticatedFetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(inventoryData)
+        });
 
-const response = await authenticatedFetch(url, {
-    method: method,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(inventoryData)
-});
-
-        if (response && response.ok) {
-            showMessageBox('Success', id ? 'Stock updated! ✅' : 'New record created! ✅');
+        // 4. Handle Response Safely
+        const contentType = response.headers.get("content-type");
+        if (response.ok) {
+            alert(idValue ? 'Stock updated! ✅' : 'New record created! ✅');
             if (typeof closeEditModal === "function") closeEditModal();
-            fetchInventory(); 
+            if (typeof fetchInventory === "function") fetchInventory(); 
         } else {
-            const error = await response.json();
-            throw new Error(error.error || error.message || 'Operation failed');
+            // Check if response is actually JSON before parsing
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || errorData.message || 'Server Error');
+            } else {
+                const textError = await response.text();
+                console.error("Server returned non-JSON error:", textError);
+                throw new Error(`Server Error: ${response.status} ${response.statusText}`);
+            }
         }
     } catch (err) {
-        showMessageBox('Inventory Error', err.message, true);
+        console.error("Submit Error:", err);
+        alert("Inventory Error: " + err.message);
     } finally {
-        submitBtn.disabled = false;
-        defaultText.classList.remove('hidden');
-        loadingText.classList.add('hidden');
+        if (submitBtn) submitBtn.disabled = false;
+        if (defaultText) defaultText.classList.remove('hidden');
+        if (loadingText) loadingText.classList.add('hidden');
     }
 }
 function renderInventoryTable(inventory) {
