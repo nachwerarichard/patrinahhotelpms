@@ -9952,3 +9952,14 @@ document.getElementById('reportRoom').addEventListener('input', function(e) {
         }, 500);
     }
 });
+
+async function loadRoomDatalist() {
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/rooms`);
+        const rooms = await response.json();
+        const datalist = document.getElementById('roomOptions');
+        datalist.innerHTML = rooms.map(r => `<option value="${r.number}">`).join('');
+    } catch (err) {
+        console.error("Could not load room list", err);
+    }
+}
