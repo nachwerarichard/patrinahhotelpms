@@ -9715,6 +9715,33 @@ searchInput.addEventListener('input', (e) => {
     }, 300);
 });
 
+async function refreshTodayPOSStats() {
+    try {
+        // We use your existing authenticatedFetch
+        const response = await authenticatedFetch(`${API_BASE_URL}/pos-today-summary`);
+        
+        if (!response || !response.ok) return;
+        
+        const data = await response.json();
+
+        // Update the UI with formatted currency
+        document.getElementById('postoday-revenue').innerText = `UGX ${data.revenue.toLocaleString()}`;
+        document.getElementById('postoday-profit').innerText = `UGX ${data.profit.toLocaleString()}`;
+        document.getElementById('postoday-expense').innerText = `UGX ${data.expenses.toLocaleString()}`;
+        
+        const balanceEl = document.getElementById('postoday-balance');
+        balanceEl.innerText = `UGX ${data.netBalance.toLocaleString()}`;
+        
+        // Color coding the balance
+        balanceEl.className = data.netBalance >= 0 
+            ? "text-xl font-bold mt-1 text-green-600" 
+            : "text-xl font-bold mt-1 text-red-600";
+
+    } catch (err) {
+        console.error("Failed to refresh today's POS stats:", err);
+    }
+}
+
 const activeAccountsContainer = document.getElementById('active-accounts-list');
 if (activeAccountsContainer) {
     activeAccountsContainer.classList.add('hidden');
