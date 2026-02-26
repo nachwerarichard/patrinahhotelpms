@@ -79,17 +79,18 @@ if (response.ok) {
     const user = result.user;
     const token = result.token;
     
-    // DEBUG: Check if hotelName exists here!
-    console.log("Data from Backend:", user);
+    // Check if the backend actually sent the name
+    console.log("Full User Object from Backend:", user);
 
-    const hotelName = user.hotelName || "Our Hotel";
-    const hotelId = user.hotelId || "";
+    const username = user.username;
     const role = (user.role || '').toLowerCase();
+    const hotelId = user.hotelId || "";
+    // Ensure we use user.hotelName (sent by your res.json)
+    const hotelName = user.hotelName || "Our Hotel";
 
-    // Construct the URL
     const secureParams = `?autoLogin=true&u=${encodeURIComponent(username)}&t=${encodeURIComponent(token)}&n=${encodeURIComponent(hotelName)}&r=${encodeURIComponent(role)}&h=${encodeURIComponent(hotelId)}`;
     
-    console.log("Redirecting to:", `${MAIN_SYSTEM_URL}${secureParams}`);
+    console.log("Final URL with Name:", secureParams);
     
     window.location.replace(`${MAIN_SYSTEM_URL}${secureParams}`);
 }else {
