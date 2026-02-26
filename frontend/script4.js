@@ -6233,15 +6233,23 @@ async function handleUpdateSubmit(event) {
         submitBtn.disabled = true;
         defaultText.classList.add('hidden');
         loadingText.classList.remove('hidden');
+// Inside your submit handler
+const id = document.getElementById('edit-inventory-id').value;
 
-        // If ID exists, it's a PUT (Update). If empty, it's a POST (Create).
-        const url = id ? `${API_BASE_URL}/inventory/${id}` : `${API_BASE_URL}/inventory`;
-        const method = id ? 'PUT' : 'POST';
+// Ensure NO trailing slash if the ID is missing
+const url = id 
+    ? `${API_BASE_URL}/inventory/${id}` 
+    : `${API_BASE_URL}/inventory`; 
 
-        const response = await authenticatedFetch(url, {
-            method: method,
-            body: JSON.stringify(inventoryData)
-        });
+const method = id ? 'PUT' : 'POST';
+
+console.log(`[debug] Sending ${method} request to: ${url}`);
+
+const response = await authenticatedFetch(url, {
+    method: method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(inventoryData)
+});
 
         if (response && response.ok) {
             showMessageBox('Success', id ? 'Stock updated! ✅' : 'New record created! ✅');
