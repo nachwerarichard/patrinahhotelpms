@@ -9505,50 +9505,47 @@ async function fetchActiveAccounts() {
     const emptyMessage = document.getElementById('noAccountsMessage');
 
     try {
-      const response = await authenticatedFetch(`${API_BASE_URL}/pos/accounts/active`);
-      const accounts = await response.json();
+        const response = await authenticatedFetch(`${API_BASE_URL}/pos/accounts/active`);
+        const accounts = await response.json();
 
-        if (accounts.length === 0) {
-            tableBody.innerHTML = '';
-            emptyMessage.classList.remove('hidden');
-            return;
+        // Check if tableBody exists before clearing it
+        if (tableBody) {
+            if (accounts.length === 0) {
+                tableBody.innerHTML = '';
+                // Only access classList if emptyMessage actually exists
+                if (emptyMessage) emptyMessage.classList.remove('hidden');
+                return;
+            }
         }
 
-        emptyMessage.classList.add('hidden');
-        tableBody.innerHTML = accounts.map(acc => `
-            <tr class="hover:bg-slate-50 transition-colors">
-                <td class="py-4">
-                    <div class="font-semibold text-slate-700">${acc.guestName}</div>
-                    <div class="text-xs text-indigo-500 font-medium">Room ${acc.roomNumber || 'N/A'}</div>
-                </td>
-                <td class="py-4 font-mono text-sm text-slate-600">
-                    UGX ${Number(acc.totalCharges).toFixed(2)}
-                </td>
-<td class="py-4 text-xs text-slate-400">
-    <div class="font-medium text-slate-500">
-        ${acc.lastUpdated ? 
-            new Date(acc.lastUpdated).toLocaleDateString([], { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-            }) : 'No Date'}
-    </div>
-    <div class="text-[10px] opacity-75">
-        ${acc.lastUpdated ? 
-            new Date(acc.lastUpdated).toLocaleTimeString([], { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            }) : 'Just now'}
-    </div>
-</td>
-                <td class="py-4 text-right">
-                    <button onclick="viewAccountDetails('${acc._id}')" 
-                        class="text-xs bg-slate-100 hover:bg-indigo-600 hover:text-white px-3 py-1.5 rounded-lg font-bold transition-all">
-                        MANAGE
-                    </button>
-                </td>
-            </tr>
-        `).join('');
+        // Hide empty message if it exists
+        if (emptyMessage) emptyMessage.classList.add('hidden');
+
+        // Render table
+        if (tableBody) {
+            tableBody.innerHTML = accounts.map(acc => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="py-4">
+                        <div class="font-semibold text-slate-700">${acc.guestName}</div>
+                        <div class="text-xs text-indigo-500 font-medium">Room ${acc.roomNumber || 'N/A'}</div>
+                    </td>
+                    <td class="py-4 font-mono text-sm text-slate-600">
+                        UGX ${Number(acc.totalCharges).toFixed(2)}
+                    </td>
+                    <td class="py-4 text-xs text-slate-400">
+                        <div class="font-medium text-slate-500">
+                            ${acc.lastUpdated ? new Date(acc.lastUpdated).toLocaleDateString() : 'No Date'}
+                        </div>
+                    </td>
+                    <td class="py-4 text-right">
+                        <button onclick="viewAccountDetails('${acc._id}')" 
+                            class="text-xs bg-slate-100 hover:bg-indigo-600 hover:text-white px-3 py-1.5 rounded-lg font-bold transition-all">
+                            MANAGE
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
 
     } catch (err) {
         console.error('Failed to fetch active accounts:', err);
