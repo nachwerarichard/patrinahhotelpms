@@ -8037,7 +8037,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Determine if the current user is Martha or Joshua
-    const isMarthaOrJoshua = ['cashier','bar'].includes(currentUserRole);
+   // const isMarthaOrJoshua = ['cashier','bar'].includes(currentUserRole);
 
     // Conditionally attach event listeners for Export buttons
     const salesExportButton = document.getElementById('export-sales-excel');
