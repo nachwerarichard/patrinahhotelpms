@@ -114,30 +114,7 @@ const auditLogEndDateFilter = document.getElementById('auditLogEndDateFilter');
 const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn');
   // Add this to the TOP of your scripts on the destination pages
 // At the top of script4.js
-document.addEventListener('DOMContentLoaded', () => {
-    const params = new URLSearchParams(window.location.search);
-    const hotelNameElement = document.getElementById('hotel-name-display');
-    
-    // 1. Try to get name from URL first (Fresh Login)
-    let displayName = params.get('n');
 
-    // 2. If URL name is missing or the string "null", try LocalStorage
-    if (!displayName || displayName === "null") {
-        displayName = localStorage.getItem('hotelName');
-    } else {
-        // 3. If we found a good name in the URL, save it for future refreshes
-        localStorage.setItem('hotelName', displayName);
-    }
-
-    // 4. Final Display Logic
-    if (hotelNameElement) {
-        if (displayName && displayName !== "null" && displayName !== "undefined") {
-            hotelNameElement.textContent = displayName;
-        } else {
-            hotelNameElement.textContent = "General Management";
-        }
-    }
-});
 const getHotelId = () => {
     // 1. Get the role and hotelId from separate keys
     const role = localStorage.getItem('userRole');
