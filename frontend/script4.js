@@ -5391,6 +5391,7 @@ const addCharge = async (description, number, department) => {
 
     const itemInfo = document.getElementById('itemDesc').dataset;
     const qtyValue = parseFloat(number) || 1;
+    const tableNum = document.getElementById('tableNum')?.value || "N/A";
 
     const payload = {
         item: description,
@@ -5399,8 +5400,8 @@ const addCharge = async (description, number, department) => {
         bp: parseFloat(itemInfo.bp || 0),
         sp: parseFloat(itemInfo.sp || 0),
         accountId: activeAccountId || null,
-        hotelId: hotelId, // Multi-client requirement
-        tableNumber: document.getElementById('tableNum')?.value || "N/A",
+        hotelId: hotelId,
+        tableNumber: tableNum,
         isQuickSale: isQuickSale,
         date: new Date()
     };
@@ -5411,50 +5412,56 @@ const addCharge = async (description, number, department) => {
             submitBtn.innerHTML = `Processing...`;
         }
 
-      const endpoint = (department === 'Restaurant') 
-    ? `${API_BASE_URL}/kitchen/order` 
-    : `${API_BASE_URL}/sales`;
+        // 1. Send Order to Department (Kitchen or Sales)
+        const endpoint = (department === 'Restaurant') 
+            ? `${API_BASE_URL}/kitchen/order` 
+            : `${API_BASE_URL}/sales`;
 
-const res = await authenticatedFetch(endpoint, {
-    method: 'POST',
-    body: JSON.stringify(payload)
-});
+        const res = await authenticatedFetch(endpoint, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
 
-if (!res) return; // in case redirect happened
+        if (!res) return;
+        if (!res.ok) throw new Error("Failed to record primary sale.");
 
-if (!res.ok) {
-    const error = await res.json();
-    console.error("Request failed:", error);
-    return;
-}
-
-const data = await res.json();
-
-
-        // If it's a guest folio (Non-Quick Sale), update the guest account
-        if (activeAccountId) {
-            const folioRes = await fetch(`${API_BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
-    method: 'POST',
-    headers: { 
-        'Content-Type': 'application/json', 
-        'Authorization': `Bearer ${getAuthToken()}` 
-    },
-    body: JSON.stringify({
-        description: `${description} (x${qtyValue})`,
-        amount: payload.sp * payload.number,
-        type: payload.department,
-        hotelId: hotelId
-    })
-});
-            const updatedAccount = await folioRes.json();
-            updateActiveAccountUI(updatedAccount);
-            showMessage("Charged to Guest Folio!", "success");
-        } else {
-            showMessage("Direct Sale Recorded!", "success");
+        // --- KITCHEN ALERT ---
+        if (department === 'Restaurant') {
+            showMessage(`Kitchen order for Table ${tableNum} has been sent!`, "success");
         }
+
+        // 2. If Guest Folio exists, update the account
+        if (activeAccountId) {
+            const folioRes = await authenticatedFetch(`${API_BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    description: `${description} (x${qtyValue})`,
+                    amount: payload.sp * payload.number,
+                    type: payload.department,
+                    hotelId: hotelId
+                })
+            });
+
+            if (folioRes && folioRes.ok) {
+                const updatedAccount = await folioRes.json();
+                updateActiveAccountUI(updatedAccount);
+                
+                // Avoid double alerting if kitchen message already showed
+                if (department !== 'Restaurant') {
+                    showMessage("Charged to Guest Folio!", "success");
+                }
+            }
+        } else {
+            // Standard direct sale message
+            if (department !== 'Restaurant') {
+                showMessage("Direct Sale Recorded!", "success");
+            }
+        }
+
         resetForm();
 
     } catch (err) {
+        console.error("Add Charge Error:", err);
         showMessage(err.message, "error");
     } finally {
         if (submitBtn) {
