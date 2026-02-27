@@ -3417,41 +3417,6 @@ function handleLogout() {
     });
 //});//
 
-
-window.addEventListener('DOMContentLoaded', async () => {
-    const savedUser = localStorage.getItem('loggedInUser');
-
-    if (savedUser) {
-        try {
-            const userData = JSON.parse(savedUser);
-            
-            // Re-assign global variables for use in fetch headers
-            currentUsername = userData.username;
-            currentUserRole = userData.role;
-            // hotelId and token should be pulled from userData whenever a fetch is made
-
-            // UI logic to show the main app
-            loginContainer.style.display = 'none';
-            mainContent.style.display = 'flex';
-
-            // Function to initialize the UI based on the user's hotel and role
-            if (typeof showDashboard === 'function') {
-                await showDashboard(userData.username, userData.role);
-            } else {
-                // Fallback: if showDashboard isn't used, trigger standard renders
-                renderBookings(currentPage, currentSearchTerm);
-                updateBookingStats();
-            }
-        } catch (e) {
-            console.error("Session restoration failed:", e);
-            localStorage.removeItem('loggedInUser');
-            location.reload(); 
-        }
-    } else {
-        loginContainer.style.display = 'flex';
-        mainContent.style.display = 'none';
-    }
-});
 async function markNoShow(bookingId) {
     if (!confirm("Mark this booking as No Show?")) return;
 
