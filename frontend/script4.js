@@ -4421,6 +4421,8 @@ updateroomDashboard();
         const user = urlParams.get('u');
         const role = urlParams.get('r');
         const hotelId = urlParams.get('h');
+        const hotelName = urlParams.get('n');
+
 
         if (token && user) {
             // Save data to the current domain's storage
@@ -4428,12 +4430,14 @@ updateroomDashboard();
             localStorage.setItem('username', user);
             localStorage.setItem('userRole', role);
             localStorage.setItem('hotelId', hotelId || 'global');
-            
+            localStorage.setItem('hotelName', hotelName || 'global');
+
             // Re-create the loggedInUser object if your other scripts need it
             localStorage.setItem('loggedInUser', JSON.stringify({
                 username: user,
                 role: role,
                 token: token,
+                hotelName:hotelName,
                 hotelId: hotelId || 'global'
             }));
 
