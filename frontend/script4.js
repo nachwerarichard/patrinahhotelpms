@@ -284,6 +284,34 @@ async function renderAuditLogs() {
         tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Error loading audit logs.</td></tr>';
     }
 }
+
+// 1. Get the raw string from storage
+const userDataString = localStorage.getItem('loggedInUser');
+
+// 2. Parse it back into an object, or default to null
+const userData = userDataString ? JSON.parse(userDataString) : null;
+
+// 3. Set your global variable used by checkoutBooking and others
+let currentUsername = userData ? userData.username : 'Guest';
+let currentUserRole = userData ? userData.role : null;
+
+// 4. Update the UI immediately on page load
+document.addEventListener('DOMContentLoaded', () => {
+    const displayElement = document.getElementById('display-user-name');
+    if (displayElement && userData) {
+        displayElement.textContent = userData.username;
+    }
+});
+
+/*document.addEventListener('DOMContentLoaded', () => {
+    const navItems = document.querySelectorAll('aside nav ul li');
+    navItems.forEach(item => {
+        // Exclude the logout button from this general navigation handler
+        if (item.id !== 'nav-logout') {
+            item.addEventListener('click', handleNavigation);
+        }
+    });
+});*/
 /**
  * Displays a custom message box to the user.
  * @param {string} title - The title of the message box.
@@ -673,23 +701,14 @@ async function showDashboard(username, role) {
     // 1. Set global/storage variables correctly
     currentUserRole = role;
     // Use the 'username' variable passed into the function!
-     localStorage.setItem('hotel_username', username);
-      localStorage.setItem('hotel_name', hotelName);
-
+    localStorage.setItem('hotel_username', username);
 
     // Update the display immediately
     const displayElement = document.getElementById('display-user-name');
     if (displayElement) {
         displayElement.textContent = username;
     }
-const displayElemen = document.getElementById('display-user-role');
-    if (displayElemen) {
-        displayElemen.textContent = currentUserRole;
-    }
-  const displayName = document.getElementById('hotel-name-display');
-    if (displayName) {
-        displayName.textContent = hotelName;
-    }
+
     // 2. Switch the UI
     loginContainer.style.display = 'none';
     mainContent.style.display = 'flex';
@@ -3417,6 +3436,41 @@ function handleLogout() {
     });
 //});//
 
+
+window.addEventListener('DOMContentLoaded', async () => {
+    const savedUser = localStorage.getItem('loggedInUser');
+
+    if (savedUser) {
+        try {
+            const userData = JSON.parse(savedUser);
+            
+            // Re-assign global variables for use in fetch headers
+            currentUsername = userData.username;
+            currentUserRole = userData.role;
+            // hotelId and token should be pulled from userData whenever a fetch is made
+
+            // UI logic to show the main app
+            loginContainer.style.display = 'none';
+            mainContent.style.display = 'flex';
+
+            // Function to initialize the UI based on the user's hotel and role
+            if (typeof showDashboard === 'function') {
+                await showDashboard(userData.username, userData.role);
+            } else {
+                // Fallback: if showDashboard isn't used, trigger standard renders
+                renderBookings(currentPage, currentSearchTerm);
+                updateBookingStats();
+            }
+        } catch (e) {
+            console.error("Session restoration failed:", e);
+            localStorage.removeItem('loggedInUser');
+            location.reload(); 
+        }
+    } else {
+        loginContainer.style.display = 'flex';
+        mainContent.style.display = 'none';
+    }
+});
 async function markNoShow(bookingId) {
     if (!confirm("Mark this booking as No Show?")) return;
 
@@ -8037,7 +8091,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Determine if the current user is Martha or Joshua
-   // const isMarthaOrJoshua = ['cashier','bar'].includes(currentUserRole);
+    const isMarthaOrJoshua = ['cashier','bar'].includes(currentUserRole);
 
     // Conditionally attach event listeners for Export buttons
     const salesExportButton = document.getElementById('export-sales-excel');
@@ -9785,4 +9839,3 @@ async function loadRoomDatalist() {
         console.error("Could not load room list", err);
     }
 }
-
