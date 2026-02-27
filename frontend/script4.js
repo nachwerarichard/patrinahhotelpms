@@ -299,15 +299,15 @@ let currentUserRole = userData ? userData.role : null;
 
 // 4. Update the UI immediately on page load
 document.addEventListener('DOMContentLoaded', () => {
-    const displayElement = document.getElementById('display-user-name');
+    const displayElement1 = document.getElementById('display-user-name');
     if (displayElement && userData) {
         displayElement.textContent = userData.username;
     }
-      const displayElement = document.getElementById('display-user-role');
+      const displayElement2 = document.getElementById('display-user-role');
     if (displayElement && userData) {
         displayElement.textContent = userData.role;
     }
-      const displayElement = document.getElementById('hotel-name-display');
+      const displayElement3 = document.getElementById('hotel-name-display');
     if (displayElement && userData) {
         displayElement.textContent = userData.hotelName;
     }
