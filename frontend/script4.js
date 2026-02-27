@@ -284,44 +284,6 @@ async function renderAuditLogs() {
         tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Error loading audit logs.</td></tr>';
     }
 }
-
-// 1. Get the raw string from storage
-const userDataString = localStorage.getItem('loggedInUser');
-
-// 2. Parse it back into an object, or default to null
-const userData = userDataString ? JSON.parse(userDataString) : null;
-
-// 3. Set your global variable used by checkoutBooking and others
-let currentUsername = userData ? userData.username : 'Guest';
-let currentHotel = userData ? userData.hotelName : 'Property Mnagement System';
-
-let currentUserRole = userData ? userData.role : null;
-
-// 4. Update the UI immediately on page load
-document.addEventListener('DOMContentLoaded', () => {
-    const displayElement1 = document.getElementById('display-user-name');
-    if (displayElement && userData) {
-        displayElement.textContent = userData.username;
-    }
-      const displayElement2 = document.getElementById('display-user-role');
-    if (displayElement && userData) {
-        displayElement.textContent = userData.role;
-    }
-      const displayElement3 = document.getElementById('hotel-name-display');
-    if (displayElement && userData) {
-        displayElement.textContent = userData.hotelName;
-    }
-});
-
-/*document.addEventListener('DOMContentLoaded', () => {
-    const navItems = document.querySelectorAll('aside nav ul li');
-    navItems.forEach(item => {
-        // Exclude the logout button from this general navigation handler
-        if (item.id !== 'nav-logout') {
-            item.addEventListener('click', handleNavigation);
-        }
-    });
-});*/
 /**
  * Displays a custom message box to the user.
  * @param {string} title - The title of the message box.
@@ -711,14 +673,23 @@ async function showDashboard(username, role) {
     // 1. Set global/storage variables correctly
     currentUserRole = role;
     // Use the 'username' variable passed into the function!
-    localStorage.setItem('hotel_username', username);
+     localStorage.setItem('hotel_username', username);
+      localStorage.setItem('hotel_name', hotelName);
+
 
     // Update the display immediately
     const displayElement = document.getElementById('display-user-name');
     if (displayElement) {
         displayElement.textContent = username;
     }
-
+const displayElemen = document.getElementById('display-user-role');
+    if (displayElemen) {
+        displayElemen.textContent = currentUserRole;
+    }
+  const displayName = document.getElementById('hotel-name-display');
+    if (displayName) {
+        displayName.textContent = hotelName;
+    }
     // 2. Switch the UI
     loginContainer.style.display = 'none';
     mainContent.style.display = 'flex';
