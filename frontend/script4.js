@@ -276,14 +276,9 @@ let currentHotel = userData ? userData.hotelName : 'Property Mnagement System';
 
 // 4. Update the UI immediately on page load
 document.addEventListener('DOMContentLoaded', () => {
-    const displayElement = document.getElementById('display-user-role');
-    if (displayElement && userData) {
-        displayElement.textContent = userData.role;
-    }
-
    const displayName = document.getElementById('hotel-name-display');
     if (displayName && userData) {
-        displayElement.textContent = userData.hotelName;
+        displayName.textContent = userData.hotelName;
     }
 });
 
