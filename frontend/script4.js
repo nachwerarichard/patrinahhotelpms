@@ -692,6 +692,11 @@ async function showDashboard(username, role) {
     if (displayElement) {
         displayElement.textContent = username;
     }
+    const displayName = document.getElementById('display-user-role');
+    if (displayName) {
+        displayName.textContent = currentUserRole;
+    }
+
 
     // 2. Switch the UI
     loginContainer.style.display = 'none';
