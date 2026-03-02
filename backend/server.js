@@ -71,48 +71,62 @@ userSchema.index({ hotelId: 1, username: 1 }, { unique: true });
 const User = mongoose.model('User', userSchema);
 
 app.post('/api/public/hotel', async (req, res) => {
-    const { name, location, phoneNumber, email } = req.body;
+    const { name, location, phoneNumber, email, domainName, password, confirmPassword } = req.body;
     
     let savedHotelId = null;
 
     try {
-        if (!name || !location || !phoneNumber || !email) {
+        // 1. Enhanced Validation
+        if (!name || !location || !phoneNumber || !email || !domainName || !password) {
             return res.status(400).json({ error: "All fields are required." });
         }
 
-        // Search by username because email isn't in your UserSchema
-        const existingUser = await User.findOne({ username: email });
-        if (existingUser) {
-            return res.status(400).json({ error: "A user with this email already exists." });
+        if (password !== confirmPassword) {
+            return res.status(400).json({ error: "Passwords do not match." });
         }
 
-        // 1. Save to Hotel Schema
-        const newHotel = new Hotel({ name, location, phoneNumber, email });
+        if (password.length < 6) {
+            return res.status(400).json({ error: "Password must be at least 6 characters long." });
+        }
+
+        // 2. Domain Sanitization
+        let sanitizedDomain = domainName.toLowerCase()
+            .replace(/^https?:\/\//, '')
+            .replace(/\/$/, '')
+            .split('/')[0];
+
+        const domainExists = await Hotel.findOne({ domainName: sanitizedDomain });
+        if (domainExists) return res.status(400).json({ error: "Domain already registered." });
+
+        const existingUser = await User.findOne({ username: email });
+        if (existingUser) return res.status(400).json({ error: "Email already in use." });
+
+        // 3. Save Hotel
+        const newHotel = new Hotel({ 
+            name, location, phoneNumber, email, 
+            domainName: sanitizedDomain 
+        });
         const savedHotel = await newHotel.save();
         savedHotelId = savedHotel._id; 
 
-        // 2. Save to User Schema (Only using valid fields)
-        const defaultAdmin = new User({
+        // 4. Save User with PREFERRED Password
+        const newUser = new User({
             hotelId: savedHotel._id,
             username: email, 
-            password: 'admin',
+            password: password, // The User model should handle hashing!
             role: 'admin',
-            isInitial: true
-            // Removed 'email' and 'status' - they caused your schema to reject the save
+            isInitial: false // Setting to false because they just set their password
         });
 
-        await defaultAdmin.save();
+        await newUser.save();
 
         res.status(201).json({ 
-            message: "Hotel Onboarded Successfully ✅",
-            hotelId: savedHotel._id,
-            credentials: { username: email, role: 'admin' }
+            message: "Property & Admin Account Created ✅",
+            hotelId: savedHotel._id
         });
 
     } catch (err) {
-        if (savedHotelId) {
-            await Hotel.findByIdAndDelete(savedHotelId);
-        }
+        if (savedHotelId) await Hotel.findByIdAndDelete(savedHotelId);
         res.status(500).json({ error: "Onboarding failed", details: err.message });
     }
 });

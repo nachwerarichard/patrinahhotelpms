@@ -25,45 +25,49 @@
             <p class="text-slate-400 text-[10px] uppercase tracking-[0.3em] mt-4 font-bold">Property Registration Portal</p>
         </div>
 
-        <form id="publicOnboardForm" class="p-10 space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Hotel Name</label>
-                    <input type="text" id="name" placeholder="e.g. Grand Valais" required 
-                        class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-amber-400 transition-all">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Location</label>
-                    <input type="text" id="location" placeholder="e.g. Geneva, CH" required 
-                        class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-amber-400 transition-all">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Professional Email</label>
-                    <input type="email" id="email" placeholder="concierge@hotel.com" required 
-                        class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-amber-400 transition-all">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Contact Phone</label>
-                    <input type="tel" id="phoneNumber" placeholder="+44 ..." required 
-                        class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-amber-400 transition-all">
-                </div>
-            </div>
+          <form id="publicOnboardForm" class="p-10 space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="space-y-1">
+            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Hotel Name</label>
+            <input type="text" id="name" placeholder="Grand Valais" required class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-amber-400 transition-all">
+        </div>
+        <div class="space-y-1">
+            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Location</label>
+            <input type="text" id="location" placeholder="Geneva, CH" required class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-amber-400 transition-all">
+        </div>
+        <div class="space-y-1 md:col-span-2">
+            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Website Domain</label>
+            <input type="text" id="domainName" placeholder="grandvalais.com" required class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-400 transition-all">
+        </div>
+        <div class="space-y-1">
+            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Email</label>
+            <input type="email" id="email" required class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-amber-400 transition-all">
+        </div>
+        <div class="space-y-1">
+            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Phone</label>
+            <input type="tel" id="phoneNumber" required class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-amber-400 transition-all">
+        </div>
 
-            <div class="bg-amber-50/50 p-6 rounded-[1.5rem] border border-amber-100">
-                <p class="text-[10px] text-amber-600 uppercase font-black tracking-widest mb-1">Onboarding Information</p>
-                <p class="text-xs text-slate-600 leading-relaxed">
-    By submitting this form, you are initiating your digital property setup. 
-    Your <span class="font-bold">Professional Email</span> will serve as your login username. 
-    Initial password defaults to <span class="font-bold text-amber-700">admin</span>.
-    <span class="block mt-2 text-amber-600 font-semibold">
-        ⚠️ Important: You will be required to change this password immediately after your initial login for security.
-    </span>
-</p>
-            </div>
+        <div class="space-y-1">
+            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Create Password</label>
+            <input type="password" id="password" placeholder="••••••••" required 
+                class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-amber-400 transition-all">
+        </div>
+        <div class="space-y-1">
+            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Confirm Password</label>
+            <input type="password" id="confirmPassword" placeholder="••••••••" required 
+                class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-amber-400 transition-all">
+        </div>
+    </div>
 
-            <button type="submit" id="submitBtn" class="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold hover:bg-amber-600 shadow-xl transition-all duration-300 transform active:scale-[0.98]">
-Sign Up            </button>
-        </form>
+    <p id="passwordError" class="text-red-500 text-[10px] font-bold hidden">❌ Passwords do not match</p>
+
+    <button type="submit" id="submitBtn" class="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold hover:bg-amber-600 shadow-xl transition-all duration-300 transform active:scale-[0.98]">
+        Create Partner Account
+    </button>
+</form>
+
+
     </div>
 
   <div id="successState" class="hidden max-w-md w-full glass-card rounded-[2.5rem] p-10 text-center success-animation">
@@ -104,68 +108,61 @@ Sign Up            </button>
     </div>
 
     <script>
-     const API_BASE_URL = 'https://novouscloudpms-tz4s.onrender.com/api';
+    const API_BASE_URL = 'https://novouscloudpms-tz4s.onrender.com/api';
 
-       document.getElementById('publicOnboardForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('submitBtn');
-    const formContainer = document.getElementById('registrationContainer');
-    const successState = document.getElementById('successState');
-    
-    // UI Feedback
-    btn.disabled = true;
-    btn.textContent = "Processing Registration...";
+    document.getElementById('publicOnboardForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const errorText = document.getElementById('passwordError');
 
-    const hotelData = {
-        name: document.getElementById('name').value,
-        location: document.getElementById('location').value,
-        email: document.getElementById('email').value,
-        phoneNumber: document.getElementById('phoneNumber').value
-    };
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/public/hotel`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(hotelData)
-        });
-
-        // 1. Read the response text once
-        const rawText = await response.text();
-        let data;
-
-        // 2. Safely parse JSON
-        try {
-            data = JSON.parse(rawText);
-        } catch (parseError) {
-            data = { message: rawText }; // Fallback for 404 HTML pages
-        }
-
-        // 3. Handle Success vs Error
-        if (response.ok) {
-            formContainer.classList.add('hidden');
-            successState.classList.remove('hidden');
-            console.log("Success:", data);
+        // Client-side Match Check
+        if (password !== confirmPassword) {
+            errorText.classList.remove('hidden');
+            return;
         } else {
-            console.error(`Server Error (${response.status}):`, data);
-            
-            // Helpful hint for 404s
-            if (response.status === 404) {
-                alert("Error 404: The server endpoint was not found. Please ensure your backend is deployed and the URL path is correct.");
-            } else {
-                alert(`Submission Error (${response.status}): ${data.error || data.message || "Unknown error"}`);
-            }
+            errorText.classList.add('hidden');
         }
 
-    } catch (err) {
-        console.error("Network/Connection Error:", err);
-        alert("The connection to the registration server was interrupted or failed.");
-    } finally {
-        // Reset button state regardless of outcome
-        btn.disabled = false;
-        btn.textContent = "Request Partner Access";
-    }
-});
-    </script>
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.textContent = "Setting up your property...";
+
+        const hotelData = {
+            name: document.getElementById('name').value,
+            location: document.getElementById('location').value,
+            domainName: document.getElementById('domainName').value,
+            email: document.getElementById('email').value,
+            phoneNumber: document.getElementById('phoneNumber').value,
+            password: password,
+            confirmPassword: confirmPassword
+        };
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/public/hotel`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(hotelData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('registrationContainer').classList.add('hidden');
+                document.getElementById('successState').classList.remove('hidden');
+                // Update success message text to remove the "admin" password reference
+                document.querySelector('#successState p').innerHTML = `Your property is being indexed. You may now log in using your <span class="font-bold text-slate-800">Email Address</span> and the password you just created.`;
+            } else {
+                alert(data.error || "Onboarding failed");
+            }
+        } catch (err) {
+            alert("Network error. Please try again.");
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "Create Partner Account";
+        }
+    });
+</script>
 </body>
 </html>
