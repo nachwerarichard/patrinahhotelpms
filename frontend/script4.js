@@ -4716,27 +4716,43 @@ async function loadRoomTypes() {
 // --- B. CREATE NEW ROOM TYPE ---
 document.getElementById('typeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const hotelId = getSessionHotelId();
-
-    const data = {
-        hotelId,
-        name: document.getElementById('typeName').value,
-        basePrice: parseFloat(document.getElementById('basePrice').value)
-    };
     
+    // 1. Create FormData instead of a plain object
+    const formData = new FormData();
+    
+    // Add text fields
+    formData.append('name', document.getElementById('typeName').value);
+    formData.append('basePrice', document.getElementById('basePrice').value);
+    
+    // 2. Grab the file from the input
+const imageInput = document.getElementById('roomImage'); 
+const files = imageInput.files;
+
+for (let i = 0; i < files.length; i++) {
+    // Note the key 'images' matches the backend upload.array('images')
+    formData.append('images', files[i]); 
+}
+
     try {
+        // 3. Use authenticatedFetch with the FormData as the body
+        // IMPORTANT: Ensure authenticatedFetch DOES NOT force 'Content-Type': 'application/json'
+        // If it does, the upload will fail.
         const res = await authenticatedFetch(`${API_BASE_URL}/room-types`, {
             method: 'POST',
-            body: JSON.stringify(data)
+            body: formData // Send the FormData object directly
         });
 
-        if(res && res.ok) {
-            showMessage("Room Type Created! 🎉");
+        if (res && res.ok) {
+            showMessage("Room Type Created with Image! 🎉");
             e.target.reset();
             loadRoomTypes(); 
+        } else {
+            const errorData = await res.json();
+            showMessage(errorData.error || "Upload failed", true);
         }
     } catch (error) {
         console.error("Failed to connect to the server:", error);
+        showMessage("Connection Error", true);
     }
 });
 
