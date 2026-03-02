@@ -6,13 +6,19 @@ const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-
+//CLOUDINARY_URL=cloudinary://986177637794957:**********@dckvyguun
+cloudinary.config({
+    cloud_name: 'dckvyguun',
+    api_key: '986177637794957',
+    api_secret: '986177637794957'
+});
+//**********
 // 1. Configure Cloudinary Storage for Multer
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: async (req, file) => {
         return {
-            folder: `patrinah/hotels/${req.user.hotelId}/room-categories`,
+            folder: `novouspms/hotels/${req.user.hotelId}/room-categories`,
             allowed_formats: ['jpg', 'png', 'webp'],
             // Dynamic transformation to keep your database "light"
             transformation: [{ width: 1000, height: 600, crop: 'fill' }] 
@@ -372,19 +378,18 @@ app.delete('/api/admin/hotel/:id', auth, authorizeRole('super-admin'), async (re
     res.json({ message: "Deleted" });
 });
 
+// Add 'upload.array('images', 5)' as a second middleware after 'auth'
 app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) => {
     try {
-        console.log("Authenticated hotelId:", req.user.hotelId);
-        
-        // Map the uploaded Cloudinary files to their secure URLs
+        // req.files is populated by multer-storage-cloudinary with the final URLs
         const uploadedUrls = req.files ? req.files.map(file => file.path) : [];
 
         const newType = new RoomType({
             hotelId: req.user.hotelId,
             name: req.body.name,
             basePrice: parseFloat(req.body.basePrice),
-            imageUrls: uploadedUrls, // Array of strings from Cloudinary
-            // Fallback to default if no images were uploaded
+            imageUrls: uploadedUrls,
+            // If images were uploaded, use the first one as default
             defaultImage: uploadedUrls.length > 0 ? uploadedUrls[0] : 'room_default.webp'
         });
 
@@ -392,11 +397,10 @@ app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) =>
         res.status(201).json(newType);
 
     } catch (err) {
-        console.error("❌ RoomType creation failed:", err.message);
+        console.error("❌ RoomType creation failed:", err);
         res.status(400).json({ error: err.message });
     }
 });
-
 
 app.post('/api/bookings/:id/add-payment', auth, async (req, res) => {
     const { id } = req.params;
@@ -2146,25 +2150,16 @@ app.get('/api/audit-logs', auth, async (req, res) => {
 // Backend: api/public/room-types
 app.get('/api/public/room-types', async (req, res) => {
     try {
-        // AUTOMATION: Detect hotel by Domain/Referer as discussed
-        const referer = req.get('referer');
-        let hotelId = req.query.hotelId; // Fallback to query param
-
-        if (referer && !hotelId) {
-            const domain = new URL(referer).hostname;
-            const hotel = await Hotel.findOne({ registeredDomain: domain });
-            if (hotel) hotelId = hotel._id;
+        const { hotelId } = req.query; // Get hotel context from the URL
+        
+        if (!hotelId) {
+            return res.status(400).json({ message: "Hotel ID is required" });
         }
 
-        if (!hotelId) return res.status(400).json({ message: "Hotel context not found" });
-
-        // Fetch room types for THIS hotel only
         const roomTypes = await RoomType.find({ hotelId });
-        
-        // Return full objects so frontend has access to .imageUrls and .basePrice
         res.json(roomTypes);
     } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Error fetching room types", error: error.message });
     }
 });
 
