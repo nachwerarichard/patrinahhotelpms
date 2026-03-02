@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Obsidian Manor | Ultra-Luxury Stay</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400..900;1,400..900&family=Inter:wght@300;400;600&display=swap');
+        
+        :root {
+            --gold: #c5a059;
+        }
+        .font-serif { font-family: 'Bodoni Moda', serif; }
+        .font-sans { font-family: 'Inter', sans-serif; }
+        .text-gold { color: var(--gold); }
+        .bg-gold { background-color: var(--gold); }
+        .border-gold { border-color: var(--gold); }
+    </style>
+</head>
+<body class="bg-[#0f0f0f] text-stone-200 font-sans">
+
+    <nav class="fixed w-full z-50 px-6 py-8">
+        <div class="max-w-7xl mx-auto flex justify-between items-center bg-black/40 backdrop-blur-xl border border-white/10 px-8 py-4 rounded-full">
+            <div class="text-xl font-serif tracking-[0.3em] text-white">OBSIDIAN</div>
+            <div class="hidden lg:flex space-x-10 text-[10px] uppercase tracking-[0.2em] font-semibold">
+                <a href="#rooms" class="hover:text-gold transition">Suites</a>
+                <a href="#restaurant" class="hover:text-gold transition">Dining</a>
+                <a href="#amenities" class="hover:text-gold transition">Wellness</a>
+                <a href="#attractions" class="hover:text-gold transition">Discover</a>
+            </div>
+            <button class="bg-gold text-black px-6 py-2 text-[10px] uppercase tracking-widest font-bold hover:bg-white transition-all duration-300">
+                Book Now
+            </button>
+        </div>
+    </nav>
+
+    <section id="hero" class="relative h-screen flex items-end pb-24 px-6">
+        <img src="https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=1920&q=80" class="absolute inset-0 w-full h-full object-cover" alt="Manor Exterior">
+        <div class="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] via-transparent to-transparent"></div>
+        <div class="relative z-10 max-w-7xl mx-auto w-full">
+            <span class="text-gold uppercase tracking-[0.5em] text-xs mb-4 block">Established 1924</span>
+            <h1 class="text-6xl md:text-9xl font-serif leading-none mb-8">Refined <br><span class="italic text-white/90 pl-12 md:pl-24">Solitude.</span></h1>
+        </div>
+    </section>
+
+    <section id="rooms" class="py-32 px-6 overflow-hidden">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
+            <div>
+                <h2 class="text-gold uppercase tracking-widest text-sm mb-4">The Collection</h2>
+                <h3 class="text-4xl md:text-6xl font-serif">Private Sanctuaries</h3>
+            </div>
+            <p class="max-w-md text-stone-400 font-light leading-relaxed">Each suite is a masterclass in minimalist luxury, featuring hand-carved stone and panoramic views of the midnight valley.</p>
+        </div>
+
+        <div class="flex flex-col md:flex-row gap-8 max-w-7xl mx-auto">
+            <div class="flex-1 group">
+                <div class="relative overflow-hidden aspect-[3/4]">
+                    <img src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition duration-1000">
+                    <div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition duration-500"></div>
+                </div>
+                <div class="mt-6 flex justify-between items-start">
+                    <div>
+                        <h4 class="text-xl font-serif uppercase tracking-wider">The Shadow Suite</h4>
+                        <p class="text-stone-500 text-sm mt-1 italic">Private Terrace & Fireplace</p>
+                    </div>
+                    <span class="text-gold">$550</span>
+                </div>
+            </div>
+
+            <div class="flex-1 group mt-12 md:mt-24">
+                <div class="relative overflow-hidden aspect-[3/4]">
+                    <img src="https://images.unsplash.com/photo-1595576508898-0ad5c879a061?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition duration-1000">
+                </div>
+                <div class="mt-6 flex justify-between items-start">
+                    <div>
+                        <h4 class="text-xl font-serif uppercase tracking-wider">Obsidian Penthouse</h4>
+                        <p class="text-stone-500 text-sm mt-1 italic">360° Skyward Views</p>
+                    </div>
+                    <span class="text-gold">$1,200</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="restaurant" class="py-32 bg-stone-100 text-stone-900">
+        <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-12 gap-12">
+            <div class="md:col-span-5 order-2 md:order-1">
+                <img src="https://images.unsplash.com/photo-1550966842-24128280dca5?auto=format&fit=crop&w=800&q=80" class="w-full aspect-square object-cover" alt="Chef's Plate">
+            </div>
+            <div class="md:col-span-7 flex flex-col justify-center order-1 md:order-2">
+                <h2 class="text-sm uppercase tracking-[0.4em] text-stone-400 mb-6">Gastronomy</h2>
+                <h3 class="text-5xl md:text-7xl font-serif mb-8 leading-tight">Vesper <br><span class="italic text-gold">Dining Room</span></h3>
+                <p class="text-lg leading-relaxed text-stone-600 mb-10">Sensory exploration through molecular gastronomy. Open exclusively for dinner, Vesper offers an 11-course tasting menu that mirrors the seasons.</p>
+                <div class="border-t border-stone-300 pt-8 flex gap-12">
+                    <div>
+                        <p class="font-bold text-xs uppercase mb-2">Dinner</p>
+                        <p class="text-stone-500 text-sm">19:00 — 23:00</p>
+                    </div>
+                    <div>
+                        <p class="font-bold text-xs uppercase mb-2">Dress Code</p>
+                        <p class="text-stone-500 text-sm">Black Tie Optional</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="amenities" class="py-32 px-6">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-2 gap-24">
+            <div>
+                <h2 class="text-4xl font-serif mb-12 italic border-l-4 border-gold pl-8">The Experience</h2>
+                <div class="space-y-12">
+                    <div class="flex gap-6">
+                        <span class="text-gold font-serif text-2xl italic">01</span>
+                        <div>
+                            <h4 class="text-lg uppercase tracking-widest mb-2">Subterranean Spa</h4>
+                            <p class="text-stone-400 text-sm leading-relaxed">A thermal sanctuary carved directly into the mountain bedrock, featuring saltwater float tanks.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-6">
+                        <span class="text-gold font-serif text-2xl italic">02</span>
+                        <div>
+                            <h4 class="text-lg uppercase tracking-widest mb-2">The Library Bar</h4>
+                            <p class="text-stone-400 text-sm leading-relaxed">A collection of 5,000 rare volumes paired with the world’s most exclusive vintage cognacs.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-6">
+                        <span class="text-gold font-serif text-2xl italic">03</span>
+                        <div>
+                            <h4 class="text-lg uppercase tracking-widest mb-2">Starlight Helipad</h4>
+                            <p class="text-stone-400 text-sm leading-relaxed">Discreet arrivals and departures. Bespoke alpine tours available upon request.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="attractions">
+                <div class="bg-[#1a1a1a] p-12 h-full flex flex-col justify-center">
+                    <h3 class="text-2xl font-serif mb-8">Nearby Discoveries</h3>
+                    <ul class="space-y-8">
+                        <li class="group">
+                            <p class="text-gold text-xs uppercase tracking-tighter mb-1">2.4 Miles Away</p>
+                            <h5 class="text-xl group-hover:translate-x-2 transition-transform duration-300 cursor-pointer">The Silver Mine Grotto &rarr;</h5>
+                        </li>
+                        <li class="group border-t border-white/5 pt-8">
+                            <p class="text-gold text-xs uppercase tracking-tighter mb-1">Private Access</p>
+                            <h5 class="text-xl group-hover:translate-x-2 transition-transform duration-300 cursor-pointer">Glacier Ridge Skywalk &rarr;</h5>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="gallery" class="px-6 pb-32">
+        <div class="max-w-7xl mx-auto grid grid-cols-12 gap-4">
+            <div class="col-span-12 md:col-span-8 overflow-hidden aspect-video">
+                <img src="https://images.unsplash.com/photo-1571011234479-052494803964?auto=format&fit=crop&w=1200&q=80" class="w-full h-full object-cover hover:scale-105 transition duration-1000">
+            </div>
+            <div class="col-span-6 md:col-span-4 overflow-hidden">
+                <img src="https://images.unsplash.com/photo-1544161515-4ae6ce6ca606?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover hover:scale-105 transition duration-1000">
+            </div>
+            <div class="col-span-6 md:col-span-4 overflow-hidden">
+                <img src="https://images.unsplash.com/photo-1535827848748-24934667f390?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover hover:scale-105 transition duration-1000">
+            </div>
+            <div class="col-span-12 md:col-span-8 overflow-hidden aspect-video">
+                <img src="https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=1200&q=80" class="w-full h-full object-cover hover:scale-105 transition duration-1000">
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="py-32 bg-stone-100 text-stone-900 px-6">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-5xl font-serif mb-8 italic">Secure Your Presence</h2>
+            <p class="mb-12 text-stone-500 max-w-lg mx-auto italic">Reservations are highly encouraged three months in advance to ensure availability of specific suites.</p>
+            <form class="grid md:grid-cols-2 gap-8 text-left">
+                <div class="flex flex-col">
+                    <label class="text-[10px] uppercase font-bold tracking-widest mb-2">Arrival</label>
+                    <input type="date" class="bg-white border border-stone-200 p-4 focus:outline-none focus:border-gold">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-[10px] uppercase font-bold tracking-widest mb-2">Departure</label>
+                    <input type="date" class="bg-white border border-stone-200 p-4 focus:outline-none focus:border-gold">
+                </div>
+                <div class="md:col-span-2">
+                    <button class="w-full bg-stone-900 text-white py-6 uppercase tracking-[0.3em] text-xs font-bold hover:bg-gold hover:text-stone-900 transition-colors duration-500">
+                        Check Availability
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <footer class="py-24 px-6 border-t border-white/5">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
+            <div class="text-3xl font-serif tracking-[0.5em]">OBSIDIAN</div>
+            <div class="flex gap-8 text-xs uppercase tracking-widest text-stone-500">
+                <a href="#" class="hover:text-gold transition">Instagram</a>
+                <a href="#" class="hover:text-gold transition">Private Concierge</a>
+                <a href="#" class="hover:text-gold transition">Privacy</a>
+            </div>
+            <div class="text-stone-600 text-[10px] tracking-widest">
+                &copy; 2026 THE OBSIDIAN MANOR GROUP.
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
