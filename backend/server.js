@@ -3,7 +3,24 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors'); // Required for Cross-Origin Resource Sharing
 const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
+const cloudinary = require('cloudinary').v2;
+const multer = require('multer');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
+// 1. Configure Cloudinary Storage for Multer
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: async (req, file) => {
+        return {
+            folder: `patrinah/hotels/${req.user.hotelId}/room-categories`,
+            allowed_formats: ['jpg', 'png', 'webp'],
+            // Dynamic transformation to keep your database "light"
+            transformation: [{ width: 1000, height: 600, crop: 'fill' }] 
+        };
+    },
+});
+
+const upload = multer({ storage: storage });
 const app = express();
 
 
@@ -291,7 +308,8 @@ const roomTypeSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
     name: { type: String, required: true, unique: true },
     basePrice: { type: Number, required: true },
-    imageUrl: { type: String, default: 'room_.webp' }, // NEW
+    imageUrls: [{ type: String }], 
+    defaultImage: { type: String, default: 'room_.webp' },
     seasonalRates: [{
         seasonName: String,
         startDate: Date,
@@ -354,36 +372,28 @@ app.delete('/api/admin/hotel/:id', auth, authorizeRole('super-admin'), async (re
     res.json({ message: "Deleted" });
 });
 
-app.post('/api/room-types', auth, async (req, res) => {
+app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) => {
     try {
-        console.log("Incoming body:", req.body);
-        console.log("Authenticated user:", req.user);
-        console.log("HotelId from user:", req.user?.hotelId);
+        console.log("Authenticated hotelId:", req.user.hotelId);
+        
+        // Map the uploaded Cloudinary files to their secure URLs
+        const uploadedUrls = req.files ? req.files.map(file => file.path) : [];
 
         const newType = new RoomType({
-            ...req.body,
-            hotelId: req.user.hotelId
+            hotelId: req.user.hotelId,
+            name: req.body.name,
+            basePrice: parseFloat(req.body.basePrice),
+            imageUrls: uploadedUrls, // Array of strings from Cloudinary
+            // Fallback to default if no images were uploaded
+            defaultImage: uploadedUrls.length > 0 ? uploadedUrls[0] : 'room_default.webp'
         });
 
         await newType.save();
-
-        console.log("Room type created successfully:", newType);
-
         res.status(201).json(newType);
 
     } catch (err) {
-        console.error("❌ RoomType creation failed");
-        console.error("Error message:", err.message);
-        console.error("Full error object:", err);
-        
-        if (err.errors) {
-            console.error("Validation errors:", err.errors);
-        }
-
-        res.status(400).json({
-            error: err.message,
-            details: err.errors || null
-        });
+        console.error("❌ RoomType creation failed:", err.message);
+        res.status(400).json({ error: err.message });
     }
 });
 
