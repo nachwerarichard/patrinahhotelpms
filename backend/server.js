@@ -2143,7 +2143,30 @@ app.get('/api/audit-logs', auth, async (req, res) => {
     }
 });
 
+// Backend: api/public/room-types
+app.get('/api/public/room-types', async (req, res) => {
+    try {
+        // AUTOMATION: Detect hotel by Domain/Referer as discussed
+        const referer = req.get('referer');
+        let hotelId = req.query.hotelId; // Fallback to query param
 
+        if (referer && !hotelId) {
+            const domain = new URL(referer).hostname;
+            const hotel = await Hotel.findOne({ registeredDomain: domain });
+            if (hotel) hotelId = hotel._id;
+        }
+
+        if (!hotelId) return res.status(400).json({ message: "Hotel context not found" });
+
+        // Fetch room types for THIS hotel only
+        const roomTypes = await RoomType.find({ hotelId });
+        
+        // Return full objects so frontend has access to .imageUrls and .basePrice
+        res.json(roomTypes);
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
 
 // Public availability check
 app.get('/api/public/rooms/available', async (req, res) => {
