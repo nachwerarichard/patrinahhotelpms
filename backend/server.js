@@ -1191,6 +1191,8 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
 // --- New Hotel Schema ---
 const hotelSchema = new mongoose.Schema({
     name: { type: String, required: true },
+    // NEW: The domain where the booking engine will be hosted
+    domainName: { type: String, unique: true, sparse: true }, 
     location: String,
     phoneNumber: String,
     email: String,
@@ -2150,27 +2152,33 @@ app.get('/api/audit-logs', auth, async (req, res) => {
 // Backend: api/public/room-types
 app.get('/api/public/room-types', async (req, res) => {
     try {
-        const { hotelId } = req.query; // Get hotel context from the URL
-        
+        const hotelId = await getHotelIdFromRequest(req);
+
         if (!hotelId) {
-            return res.status(400).json({ message: "Hotel ID is required" });
+            return res.status(404).json({ 
+                message: "This domain is not registered with our PMS." 
+            });
         }
 
         const roomTypes = await RoomType.find({ hotelId });
         res.json(roomTypes);
     } catch (error) {
-        res.status(500).json({ message: "Error fetching room types", error: error.message });
+        res.status(500).json({ message: "Server error", error: error.message });
     }
 });
-
 // Public availability check
 app.get('/api/public/rooms/available', async (req, res) => {
-    const { checkIn, checkOut, roomType, hotelId } = req.query; // hotelId is now required
-
-    if (!hotelId) return res.status(400).json({ message: "Hotel ID is required" });
+    const { checkIn, checkOut, roomType } = req.query;
 
     try {
-        // Find conflicting bookings for THIS hotel only
+        // AUTOMATION: Get hotelId by sniffing the Domain/Referer
+        const hotelId = await getHotelIdFromRequest(req);
+
+        if (!hotelId) {
+            return res.status(400).json({ message: "Hotel context not found for this domain." });
+        }
+
+        // 1. Find conflicting bookings for THIS hotel
         const conflictingBookings = await Booking.find({
             hotelId,
             checkIn: { $lt: checkOut },
@@ -2179,15 +2187,24 @@ app.get('/api/public/rooms/available', async (req, res) => {
 
         const bookedRoomNumbers = conflictingBookings.map(booking => booking.room);
 
+        // 2. Query available rooms
         let query = {
             hotelId,
             status: { $nin: ['under-maintenance', 'blocked'] },
             number: { $nin: bookedRoomNumbers }
         };
 
+        // Filter by specific type if the user selected one (other than 'Any')
+        if (roomType && roomType !== 'Any') {
+            // We need to find the RoomType ID first because roomType in query is a Name string
+            const rType = await RoomType.findOne({ hotelId, name: roomType });
+            if (rType) query.roomTypeId = rType._id;
+        }
+
         const availableRooms = await Room.find(query).populate('roomTypeId');
         
-        // ... [Rest of the grouping logic remains the same] ...
+        // ... (Your grouping logic: availableRoomsByType) ...
+        
         res.json(availableRoomsByType);
     } catch (error) {
         res.status(500).json({ message: 'Error checking availability', error: error.message });
@@ -2196,21 +2213,47 @@ app.get('/api/public/rooms/available', async (req, res) => {
 
 // Public booking creation
 app.post('/api/public/bookings', async (req, res) => {
-    const { hotelId, roomsRequested, ...bookingDetails } = req.body;
-
-    if (!hotelId) return res.status(400).json({ message: "Hotel ID is required" });
+    const { roomsRequested, ...bookingDetails } = req.body;
 
     try {
-        // ... [Inside the loop where you create the booking] ...
-        const newBooking = new Booking({
-            ...bookingDetails,
-            hotelId, // Critical: Assign the public booking to the correct hotel
-            guestsource: 'Hotel Website',
-            gueststatus: 'reserved'
-        });
+        // AUTOMATION: Verify hotelId from the request source
+        const hotelId = await getHotelIdFromRequest(req);
+
+        if (!hotelId) {
+            return res.status(400).json({ message: "Invalid booking source." });
+        }
+
+        // Detect Social Source (Facebook, X, etc.)
+        const referer = req.get('referer') || '';
+        let guestsource = 'Hotel Website';
+        if (referer.includes('facebook.com')) guestsource = 'Facebook';
+        if (referer.includes('t.co')) guestsource = 'X/Twitter';
+
+        // Assuming roomsRequested is an array of rooms the guest picked
+        const savedBookings = [];
         
-        await newBooking.save();
-        // ...
+        for (const item of roomsRequested) {
+            // Find an actual room number that fits the type (Simplified logic)
+            const availableRoom = await Room.findOne({ 
+                hotelId, 
+                roomTypeId: item.roomTypeId, // Ensure you send ID from frontend
+                status: 'available' 
+            });
+
+            const newBooking = new Booking({
+                ...bookingDetails,
+                hotelId, 
+                room: availableRoom ? availableRoom.number : 'Unassigned',
+                guestsource,
+                gueststatus: 'reserved'
+            });
+            
+            await newBooking.save();
+            savedBookings.push(newBooking);
+        }
+        
+        res.status(201).json({ message: "Booking confirmed!", bookings: savedBookings });
+
     } catch (error) {
         res.status(500).json({ message: 'Error confirming booking', error: error.message });
     }
