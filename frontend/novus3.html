@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Obsidian Marquee | Ultra-Luxury Stay</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .font-serif { font-family: 'Bodoni Moda', serif; }
+    </style>
+</head>
+<body class="bg-[#0f0f0f] text-stone-300">
+
+    <nav class="fixed w-full z-50 bg-black/90 border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-8 py-5 flex justify-between items-center">
+            <div class="text-2xl font-serif tracking-[0.3em] font-bold text-white">OBSIDIAN</div>
+            <div class="hidden lg:flex space-x-10 text-[10px] uppercase tracking-[0.2em] font-semibold text-stone-400">
+                <a href="#hero" class="hover:text-white transition">The Estate</a>
+                <a href="#rooms" class="hover:text-white transition">Suites</a>
+                <a href="#dining" class="hover:text-white transition">Gastronomy</a>
+                <a href="#experience" class="hover:text-white transition">Experiences</a>
+                <a href="#contact" class="hover:text-white transition">Inquire</a>
+            </div>
+            <a href="#booking" class="bg-white text-black px-7 py-2.5 text-[10px] font-bold uppercase tracking-widest hover:bg-stone-200 transition">Book A Stay</a>
+        </div>
+    </nav>
+
+    <section id="hero" class="relative h-[90vh] flex items-center justify-center">
+        <img src="https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=1920&q=90" class="absolute inset-0 w-full h-full object-cover opacity-60" alt="Lobby">
+        <div class="relative z-10 text-center px-6">
+            <span class="text-xs uppercase tracking-[0.5em] mb-4 block text-stone-400">Since 1924</span>
+            <h1 class="text-6xl md:text-8xl font-serif text-white mb-8 italic">The Art of Silence</h1>
+            <p class="max-w-xl mx-auto text-stone-300 font-light leading-relaxed mb-10">Private villas. Unrivaled service. An escape into the extraordinary.</p>
+        </div>
+        
+        <div id="booking" class="absolute -bottom-12 left-1/2 -translate-x-1/2 w-[90%] max-w-5xl bg-stone-900 border border-white/10 p-6 grid grid-cols-2 md:grid-cols-4 gap-4 shadow-2xl z-20">
+            <div class="border-r border-white/10 px-4">
+                <label class="block text-[10px] uppercase tracking-widest text-stone-500 mb-1">Arrival</label>
+                <input type="date" class="bg-transparent text-white w-full focus:outline-none">
+            </div>
+            <div class="border-r border-white/10 px-4">
+                <label class="block text-[10px] uppercase tracking-widest text-stone-500 mb-1">Departure</label>
+                <input type="date" class="bg-transparent text-white w-full focus:outline-none">
+            </div>
+            <div class="border-r border-white/10 px-4">
+                <label class="block text-[10px] uppercase tracking-widest text-stone-500 mb-1">Guests</label>
+                <select class="bg-transparent text-white w-full focus:outline-none">
+                    <option class="bg-stone-900">1 Guest</option>
+                    <option class="bg-stone-900" selected>2 Guests</option>
+                    <option class="bg-stone-900">4+ Guests</option>
+                </select>
+            </div>
+            <button class="bg-stone-100 text-black font-bold text-xs uppercase tracking-widest hover:bg-white transition h-full py-4">Check Availability</button>
+        </div>
+    </section>
+
+    <section id="rooms" class="pt-40 pb-24 max-w-7xl mx-auto px-8">
+        <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+            <div class="max-w-xl">
+                <h2 class="text-4xl md:text-5xl font-serif text-white mb-4">Curated Living</h2>
+                <p class="text-stone-500">Each suite is a masterpiece of architectural precision and comfort, featuring hand-selected marble and bespoke silk furnishings.</p>
+            </div>
+            <a href="#" class="text-xs uppercase tracking-widest border-b border-white pb-2 hover:text-white transition">View All 42 Suites</a>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-12">
+            <div class="relative group overflow-hidden">
+                <img src="https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=1200&q=80" class="w-full h-[500px] object-cover transition duration-1000 group-hover:scale-110">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-10">
+                    <h3 class="text-3xl font-serif text-white mb-2">Skyline Master</h3>
+                    <p class="text-sm text-stone-400 mb-4 italic">Private heated pool • 240sqm</p>
+                    <button class="text-[10px] uppercase tracking-[0.3em] text-white underline underline-offset-8">Explore Suite</button>
+                </div>
+            </div>
+            <div class="relative group overflow-hidden md:mt-24">
+                <img src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=1200&q=80" class="w-full h-[500px] object-cover transition duration-1000 group-hover:scale-110">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-10">
+                    <h3 class="text-3xl font-serif text-white mb-2">The Conservatory</h3>
+                    <p class="text-sm text-stone-400 mb-4 italic">Floor-to-ceiling glass • Garden access</p>
+                    <button class="text-[10px] uppercase tracking-[0.3em] text-white underline underline-offset-8">Explore Suite</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="dining" class="py-24 bg-white text-stone-900">
+        <div class="max-w-7xl mx-auto px-8 grid lg:grid-cols-3 gap-12 items-center">
+            <div class="lg:col-span-1">
+                <span class="text-xs font-bold text-stone-400 uppercase tracking-widest">Gastronomy</span>
+                <h2 class="text-5xl font-serif my-6 leading-tight">The <br>Crystalline <br>Room</h2>
+                <p class="text-stone-600 mb-8 leading-relaxed">Where rare vintages meet avant-garde cuisine. Our 3-star kitchen redefined the concept of the chef's table.</p>
+                <button class="px-10 py-4 border border-stone-900 text-[10px] uppercase font-bold tracking-widest hover:bg-stone-900 hover:text-white transition">Reserve a Table</button>
+            </div>
+            <div class="lg:col-span-2 relative h-[600px]">
+                <img src="https://images.unsplash.com/photo-1550966841-3ee7adac1661?auto=format&fit=crop&w=1200&q=80" class="w-full h-full object-cover rounded-sm">
+                <div class="absolute -bottom-6 -left-6 bg-stone-900 text-white p-8 max-w-xs hidden md:block">
+                    <p class="italic font-serif text-xl">"The best tasting menu in the hemisphere."</p>
+                    <p class="mt-4 text-[10px] uppercase text-stone-500">— Vogue Living</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="experience" class="py-24 bg-[#0f0f0f]">
+        <div class="max-w-7xl mx-auto px-8">
+            <div class="grid md:grid-cols-3 gap-16 border-t border-white/10 pt-16">
+                <div>
+                    <h4 class="text-white font-serif text-xl mb-4 italic">Private Aviation</h4>
+                    <p class="text-sm text-stone-500 leading-relaxed">Direct helipad access and luxury jet charters arranged within hours of your request.</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-serif text-xl mb-4 italic">The Vault Spa</h4>
+                    <p class="text-sm text-stone-500 leading-relaxed">Subterranean wellness treatments featuring Swiss cellular technology and salt therapy.</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-serif text-xl mb-4 italic">Elite Concierge</h4>
+                    <p class="text-sm text-stone-500 leading-relaxed">No request is too small or too large, from private island tours to front-row gala seating.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="gallery" class="columns-1 md:columns-3 gap-4 px-4 space-y-4">
+        <img src="https://images.unsplash.com/photo-1560624052-449f5ddf0c31?auto=format&fit=crop&w=800&q=80" class="w-full rounded-sm brightness-75 hover:brightness-100 transition">
+        <img src="https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=800&q=80" class="w-full rounded-sm brightness-75 hover:brightness-100 transition">
+        <img src="https://images.unsplash.com/photo-1544161515-4ae6ce6ca606?auto=format&fit=crop&w=800&q=80" class="w-full rounded-sm brightness-75 hover:brightness-100 transition">
+        <img src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=800&q=80" class="w-full rounded-sm brightness-75 hover:brightness-100 transition">
+        <img src="https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=800&q=80" class="w-full rounded-sm brightness-75 hover:brightness-100 transition">
+        <img src="https://images.unsplash.com/photo-1551882547-ff43c63efe81?auto=format&fit=crop&w=800&q=80" class="w-full rounded-sm brightness-75 hover:brightness-100 transition">
+    </section>
+
+    <section id="contact" class="py-24 bg-stone-100 text-stone-900">
+        <div class="max-w-7xl mx-auto px-8 grid lg:grid-cols-2 gap-24">
+            <div>
+                <h2 class="text-4xl font-serif mb-12 italic text-black">Plan Your Arrival</h2>
+                <div class="space-y-12">
+                    <div class="flex gap-6">
+                        <span class="text-stone-400 text-lg font-serif italic">01</span>
+                        <div>
+                            <h5 class="uppercase text-xs font-bold tracking-widest mb-2">Location</h5>
+                            <p class="text-sm">777 Celestial Ridge, French Riviera</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-6">
+                        <span class="text-stone-400 text-lg font-serif italic">02</span>
+                        <div>
+                            <h5 class="uppercase text-xs font-bold tracking-widest mb-2">Nearby Attractions</h5>
+                            <p class="text-sm leading-loose">Monaco Grand Prix Circuit (15 mins) <br> La Croisette (10 mins) <br> Private Beach Club (Direct Access)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <form class="space-y-6">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <input type="text" placeholder="Full Name" class="w-full bg-white border border-stone-200 p-4 text-xs uppercase tracking-widest focus:border-stone-900 outline-none">
+                    <input type="email" placeholder="Email Address" class="w-full bg-white border border-stone-200 p-4 text-xs uppercase tracking-widest focus:border-stone-900 outline-none">
+                </div>
+                <textarea rows="5" placeholder="Special Requirements" class="w-full bg-white border border-stone-200 p-4 text-xs uppercase tracking-widest focus:border-stone-900 outline-none"></textarea>
+                <button class="bg-stone-900 text-white px-12 py-5 text-[10px] font-bold uppercase tracking-widest hover:bg-black transition">Submit Inquiry</button>
+            </form>
+        </div>
+    </section>
+
+    <footer class="bg-black text-white/40 py-20 border-t border-white/5">
+        <div class="max-w-7xl mx-auto px-8 grid md:grid-cols-4 gap-12">
+            <div class="md:col-span-1">
+                <div class="text-white text-2xl font-serif tracking-[0.3em] font-bold mb-6 italic">OBSIDIAN</div>
+                <p class="text-xs leading-loose">A member of the Grand Estates Collection. Redefining high-society travel since 1924.</p>
+            </div>
+            <div>
+                <h6 class="text-white text-[10px] font-bold uppercase tracking-widest mb-6">Discovery</h6>
+                <ul class="text-[10px] uppercase tracking-widest space-y-4">
+                    <li><a href="#" class="hover:text-white transition">The Spa</a></li>
+                    <li><a href="#" class="hover:text-white transition">Wine Cellar</a></li>
+                    <li><a href="#" class="hover:text-white transition">Membership</a></li>
+                </ul>
+            </div>
+            <div>
+                <h6 class="text-white text-[10px] font-bold uppercase tracking-widest mb-6">Contact</h6>
+                <ul class="text-[10px] uppercase tracking-widest space-y-4">
+                    <li>reservations@obsidian.com</li>
+                    <li>+33 (0) 4 93 00 00 00</li>
+                </ul>
+            </div>
+            <div>
+                <h6 class="text-white text-[10px] font-bold uppercase tracking-widest mb-6">Follow</h6>
+                <div class="flex space-x-6 text-lg">
+                    <a href="#" class="hover:text-white"><i class="fa-brands fa-instagram"></i></a>
+                    <a href="#" class="hover:text-white"><i class="fa-brands fa-x-twitter"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto px-8 mt-20 pt-8 border-t border-white/5 text-[9px] uppercase tracking-[0.4em] text-center">
+            &copy; 2026 Obsidian Marquee Grand Hotel. Excellence in Every Detail.
+        </div>
+    </footer>
+
+</body>
+</html>
