@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Obsidian Manor | Ultra-Luxury & Bespoke Experiences</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, .font-serif { font-family: 'Playfair Display', serif; }
+
+        .faq-shadow:hover { box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1); }
+        
+        /* Custom scrollbar for luxury feel */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #0f0f0f; }
+        ::-webkit-scrollbar-thumb { background: #444; }
+    </style>
+</head>
+<body class="bg-[#0f0f0f] text-stone-200 selection:bg-amber-500 selection:text-black">
+
+    <nav class="fixed w-full z-50 bg-[#0f0f0f]/90 border-b border-stone-800 backdrop-blur-sm">
+        <div class="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+            <div class="text-2xl font-serif tracking-[0.2em] font-bold text-white uppercase">Obsidian <span class="text-amber-500">.</span></div>
+            <div class="hidden lg:flex space-x-10 text-[11px] uppercase tracking-[0.3em] font-light">
+                <a href="#hero" class="hover:text-amber-500 transition">Heritage</a>
+                <a href="#rooms" class="hover:text-amber-500 transition">Suites</a>
+                <a href="#experiences" class="hover:text-amber-500 transition">Experiences</a>
+                <a href="#restaurant" class="hover:text-amber-500 transition">Dining</a>
+                <a href="#faq" class="hover:text-amber-500 transition">FAQ</a>
+            </div>
+            <button class="border border-stone-700 px-8 py-2 text-[10px] uppercase tracking-[0.2em] hover:bg-white hover:text-black transition duration-500">Book Now</button>
+        </div>
+    </nav>
+
+    <section id="hero" class="relative h-screen flex items-center justify-start overflow-hidden">
+        <img src="https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=1920&q=80" class="absolute inset-0 w-full h-full object-cover opacity-60" alt="Lobby">
+        <div class="relative z-10 max-w-7xl mx-auto px-6">
+            <span class="text-amber-500 uppercase tracking-[0.5em] text-xs mb-4 block">Est. 1924 • London</span>
+            <h1 class="text-6xl md:text-8xl font-serif mb-8 leading-tight">Quiet Luxury.<br><span class="italic">Loud Comfort.</span></h1>
+            <div class="flex flex-col md:flex-row gap-8 items-center">
+                <a href="#rooms" class="bg-white text-black px-10 py-4 uppercase text-xs tracking-[0.2em] hover:bg-amber-500 transition">The Collection</a>
+                <p class="text-stone-400 max-w-sm text-sm border-l border-stone-700 pl-6">Voted Europe's leading boutique hotel three years in a row.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="rooms" class="py-32 px-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-4">
+                <h2 class="text-4xl md:text-5xl font-serif">Private Sanctuaries</h2>
+                <p class="text-stone-500 max-w-xs uppercase tracking-widest text-[10px]">Elegance in every square inch</p>
+            </div>
+            <div class="grid md:grid-cols-2 gap-12">
+                <div class="group">
+                    <div class="relative overflow-hidden aspect-[4/5]">
+                        <img src="https://images.unsplash.com/photo-1560448204-61dc36dc98c8?auto=format&fit=crop&w=1000&q=80" class="w-full h-full object-cover group-hover:scale-110 transition duration-[2s]">
+                        <div class="absolute bottom-0 left-0 p-8 bg-gradient-to-t from-black w-full">
+                            <h3 class="text-2xl font-serif text-white">The Skyline Loft</h3>
+                            <p class="text-amber-500 text-sm italic mt-2">Personalized Butler Service</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="group mt-12 md:mt-24">
+                    <div class="relative overflow-hidden aspect-[4/5]">
+                        <img src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=1000&q=80" class="w-full h-full object-cover group-hover:scale-110 transition duration-[2s]">
+                        <div class="absolute bottom-0 left-0 p-8 bg-gradient-to-t from-black w-full">
+                            <h3 class="text-2xl font-serif text-white">Master Conservatory</h3>
+                            <p class="text-amber-500 text-sm italic mt-2">Private Terrace & Pool</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="experiences" class="py-32 bg-[#0a0a0a]">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-20">
+                <span class="text-amber-500 uppercase tracking-[0.3em] text-[10px] mb-4 block">The Art of Living</span>
+                <h2 class="text-4xl md:text-5xl font-serif italic text-white">Curated Experiences</h2>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="relative group h-[500px] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1534533983688-c7b8e13fd3b6?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-105 transition duration-700">
+                    <div class="absolute inset-0 bg-black/40 group-hover:bg-transparent transition duration-700"></div>
+                    <div class="absolute bottom-8 left-8 right-8">
+                        <h4 class="text-xl font-serif mb-2 text-white">Aura Rooftop Spa</h4>
+                        <p class="text-xs text-stone-300 opacity-0 group-hover:opacity-100 transition duration-500 leading-relaxed">Holistic rituals overlooking the city skyline.</p>
+                    </div>
+                </div>
+                <div class="relative group h-[500px] overflow-hidden md:mt-12">
+                    <img src="https://images.unsplash.com/photo-1513509194686-58651963566c?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-105 transition duration-700">
+                    <div class="absolute inset-0 bg-black/40 group-hover:bg-transparent transition duration-700"></div>
+                    <div class="absolute bottom-8 left-8 right-8">
+                        <h4 class="text-xl font-serif mb-2 text-white">Private Chauffeur</h4>
+                        <p class="text-xs text-stone-300 opacity-0 group-hover:opacity-100 transition duration-500 leading-relaxed">Luxury fleet with knowledgeable local guides.</p>
+                    </div>
+                </div>
+                <div class="relative group h-[500px] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-105 transition duration-700">
+                    <div class="absolute inset-0 bg-black/40 group-hover:bg-transparent transition duration-700"></div>
+                    <div class="absolute bottom-8 left-8 right-8">
+                        <h4 class="text-xl font-serif mb-2 text-white">The Rare Cellar</h4>
+                        <p class="text-xs text-stone-300 opacity-0 group-hover:opacity-100 transition duration-500 leading-relaxed">Sommelier-led tastings of vintages dating to 1950.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="restaurant" class="py-32 bg-stone-100 text-stone-900">
+        <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-12 gap-12 items-center">
+            <div class="lg:col-span-5">
+                <span class="text-stone-400 uppercase tracking-widest text-xs">Gastronomy</span>
+                <h2 class="text-5xl font-serif mt-4 mb-8">The Nocturne Grill</h2>
+                <p class="text-lg text-stone-600 mb-8 italic">"Where the fire meets the soul. Our charcoal-inspired menu redefines the modern steakhouse."</p>
+                <div class="space-y-6">
+                    <div class="border-b border-stone-300 pb-4">
+                        <span class="font-bold">7:00 PM — 11:00 PM</span>
+                        <p class="text-sm text-stone-500">Tasting Menu Available Nightly</p>
+                    </div>
+                    <button class="bg-stone-900 text-white px-8 py-3 uppercase text-[10px] tracking-[0.2em]">View Menu</button>
+                </div>
+            </div>
+            <div class="lg:col-span-7 relative">
+                <img src="https://images.unsplash.com/photo-1550966841-3ee5ad60d0d9?auto=format&fit=crop&w=1200&q=80" class="w-full h-[600px] object-cover shadow-2xl">
+                <div class="absolute -bottom-6 -left-6 bg-white p-6 hidden md:block border border-stone-200">
+                    <p class="text-xs uppercase tracking-widest font-bold">Chef's Signature</p>
+                    <p class="text-stone-500 italic text-sm mt-1">Wagyu A5 with Truffle Jus</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-32 bg-stone-50 text-stone-900 border-y border-stone-200">
+        <div class="max-w-4xl mx-auto px-6 text-center">
+            <div class="flex justify-center mb-8 text-amber-500 space-x-1">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+            </div>
+            <p class="text-2xl md:text-3xl font-serif italic mb-10 leading-relaxed">"An unparalleled experience. The staff anticipated my needs before I even realized them myself. The Obsidian is more than a hotel; it's a feeling."</p>
+            <span class="uppercase tracking-[0.3em] text-xs font-bold">— Julianne Moore, Travel Curator</span>
+        </div>
+    </section>
+
+    <section id="gallery" class="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80" class="w-full aspect-square object-cover filter brightness-75 hover:brightness-100 transition duration-700">
+        <img src="https://images.unsplash.com/photo-1541971875076-8f970d573be6?auto=format&fit=crop&w=800&q=80" class="w-full aspect-square object-cover filter brightness-75 hover:brightness-100 transition duration-700">
+        <img src="https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=800&q=80" class="w-full aspect-square object-cover filter brightness-75 hover:brightness-100 transition duration-700">
+        <img src="https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&w=800&q=80" class="w-full aspect-square object-cover filter brightness-75 hover:brightness-100 transition duration-700">
+    </section>
+
+    <section id="faq" class="py-32 max-w-3xl mx-auto px-6">
+        <h2 class="text-4xl font-serif text-center mb-16 text-white">Frequently Asked</h2>
+        <div class="space-y-4">
+            <details class="group bg-stone-900/30 border border-stone-800 rounded-lg overflow-hidden faq-shadow transition" open>
+                <summary class="flex justify-between items-center p-6 cursor-pointer list-none">
+                    <span class="font-medium">What is the check-in and check-out policy?</span>
+                    <span class="text-amber-500 group-open:rotate-180 transition-transform"><i class="fa-solid fa-chevron-down"></i></span>
+                </summary>
+                <div class="px-6 pb-6 text-stone-400 text-sm leading-relaxed">
+                    Standard check-in is at 3:00 PM and check-out at 12:00 PM. We offer flexible hours for our Diamond Suite members, subject to availability.
+                </div>
+            </details>
+            <details class="group bg-stone-900/30 border border-stone-800 rounded-lg overflow-hidden faq-shadow transition">
+                <summary class="flex justify-between items-center p-6 cursor-pointer list-none">
+                    <span class="font-medium">Do you offer private airport transfers?</span>
+                    <span class="text-amber-500 group-open:rotate-180 transition-transform"><i class="fa-solid fa-chevron-down"></i></span>
+                </summary>
+                <div class="px-6 pb-6 text-stone-400 text-sm">
+                    Yes, we provide complimentary luxury transfers in our house Rolls Royce for all suite bookings.
+                </div>
+            </details>
+        </div>
+    </section>
+
+    <section id="contact" class="py-32 bg-stone-100 text-stone-900">
+        <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-20">
+            <div>
+                <h2 class="text-5xl font-serif mb-12">The Neighborhood</h2>
+                <div class="space-y-10">
+                    <div class="flex gap-6">
+                        <span class="text-stone-300 font-serif text-4xl">01</span>
+                        <div>
+                            <h4 class="font-bold uppercase tracking-widest text-sm text-stone-900">Royal Albert Hall</h4>
+                            <p class="text-stone-500 mt-2">The world's most prestigious stage, just a 10-minute walk.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-6">
+                        <span class="text-stone-300 font-serif text-4xl">02</span>
+                        <div>
+                            <h4 class="font-bold uppercase tracking-widest text-sm text-stone-900">The High Street</h4>
+                            <p class="text-stone-500 mt-2">Home to flagship luxury boutiques and secret artisan cafes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-12 shadow-2xl">
+                <h3 class="text-2xl font-serif mb-8 text-stone-900">Reach Out</h3>
+                <form class="space-y-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="text" placeholder="First Name" class="w-full bg-stone-50 border border-stone-100 p-4 focus:border-amber-500 outline-none transition">
+                        <input type="text" placeholder="Last Name" class="w-full bg-stone-50 border border-stone-100 p-4 focus:border-amber-500 outline-none transition">
+                    </div>
+                    <input type="email" placeholder="Email Address" class="w-full bg-stone-50 border border-stone-100 p-4 focus:border-amber-500 outline-none transition">
+                    <textarea placeholder="How can we assist you?" rows="4" class="w-full bg-stone-50 border border-stone-100 p-4 focus:border-amber-500 outline-none transition"></textarea>
+                    <button class="w-full bg-black text-white py-4 uppercase tracking-[0.3em] text-xs hover:bg-amber-600 transition duration-500">Inquire Now</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <footer class="py-20 bg-[#0a0a0a] border-t border-stone-900">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-12">
+            <div class="text-2xl font-serif tracking-[0.2em] font-bold text-white uppercase">Obsidian <span class="text-amber-500">.</span></div>
+            <div class="flex space-x-8 text-stone-500">
+                <a href="#" class="hover:text-white transition"><i class="fa-brands fa-instagram text-lg"></i></a>
+                <a href="#" class="hover:text-white transition"><i class="fa-brands fa-x-twitter text-lg"></i></a>
+                <a href="#" class="hover:text-white transition"><i class="fa-brands fa-linkedin-in text-lg"></i></a>
+            </div>
+            <p class="text-[10px] text-stone-600 uppercase tracking-widest">&copy; 2026 The Obsidian Manor. A member of Grande Hotels.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
