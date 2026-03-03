@@ -4303,53 +4303,43 @@ updateDashboard();
 }
 // Initialize on page load
 updateroomDashboard();
-       async function logout() {
-    // 1. Visual feedback
+async function logout() {
     console.log("Initiating secure logout...");
     
     try {
-        // Use the token from localStorage if in-memory is empty
-        const token = authToken || localStorage.getItem('authToken');
+        // Create an AbortController to prevent the logout from hanging 
+        // if the server is slow or the internet is spotty.
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000); 
 
-        if (token) {
-            // 2. Notify backend (Optional but good for revoking JWTs/Sessions)
-            // Note: We use a timeout so the redirect happens even if the server is slow
-            const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), 2000); // 2 second limit
+        // authenticatedFetch handles Authorization and x-hotel-id automatically
+        await authenticatedFetch(`${API_BASE_URL}/logout`, {
+            method: 'POST',
+            signal: controller.signal
+        });
 
-            await fetch(`${API_BASE_URL}/logout`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`, // Updated to Bearer
-                    'Content-Type': 'application/json',
-                        'x-hotel-id': sessionData?.hotelId
-
-                },
-                signal: controller.signal
-            });
-            clearTimeout(id);
-        }
+        clearTimeout(timeoutId);
     } catch (error) {
-        // We don't block the user if the server is down
-        console.warn('Backend logout sync skipped or timed out:', error);
+        // If the server fails, we log it but continue with the local wipe
+        console.warn('Backend logout sync skipped or timed out:', error.message);
     }
 
-    // 3. Wipe all local in-memory variables
-    authToken = '';
-    currentUsername = '';
-    currentUserRole = '';
+    /* ---------- WIPE LOCAL STATE ---------- */
+    // 1. Clear in-memory variables (if they exist in your scope)
+    if (typeof authToken !== 'undefined') authToken = '';
+    if (typeof currentUsername !== 'undefined') currentUsername = '';
+    if (typeof currentUserRole !== 'undefined') currentUserRole = '';
 
-    // 4. Clear all stored data (Tokens, Roles, Hotel IDs)
-    // This is critical to prevent the next user from seeing the previous hotel's data
+    // 2. Clear all persistence (Critical for multi-tenant security)
     localStorage.clear();
-    sessionStorage.clear(); // Clear session storage just in case
+    sessionStorage.clear();
 
-    // 5. Secure Redirect
-    // window.location.replace prevents the user from clicking "Back" to re-enter
+    // 3. Secure Redirect
     const LOGIN_PAGE = 'https://elegant-pasca-cea136.netlify.app/frontend/login.html';
-    
     console.log("Session cleared. Redirecting to login...");
-    window.location.replace('https://elegant-pasca-cea136.netlify.app/frontend/login.html');
+    
+    // .replace prevents the user from clicking the "Back" button to see cached data
+    window.location.replace(LOGIN_PAGE);
 }
 (function autoLoginHook() {
     const urlParams = new URLSearchParams(window.location.search);
