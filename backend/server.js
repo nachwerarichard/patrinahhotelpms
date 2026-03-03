@@ -541,7 +541,6 @@ app.put('/api/room-types/:id', auth, async (req, res) => {
 });
 
 // Create a physical Roomapp.post('/api/rooms', auth, async (req, res) => {
-const mongoose = require('mongoose');
 
 app.post('/api/rooms', auth, async (req, res) => {
     try {
@@ -4117,33 +4116,6 @@ app.get('/reports/low-stock-items', auth, async (req, res) => {
     }
 });
 
-
-const cleanupRoomIndexes = async () => {
-    try {
-        // Access the underlying MongoDB collection
-        const collection = mongoose.connection.collection('rooms');
-        
-        // List all existing indexes to check if 'number_1' exists
-        const indexes = await collection.indexes();
-        const hasGlobalNumberIndex = indexes.some(index => index.name === 'number_1');
-
-        if (hasGlobalNumberIndex) {
-            console.log("⚠️ Found old global index 'number_1'. Dropping it now...");
-            await collection.dropIndex('number_1');
-            console.log("✅ Successfully dropped 'number_1'. Per-hotel uniqueness is now active.");
-        } else {
-            console.log("ℹ️ Global index 'number_1' not found. No cleanup needed.");
-        }
-    } catch (err) {
-        // We use a catch here because dropIndex throws an error if the index doesn't exist
-        console.error("❌ Error during index cleanup:", err.message);
-    }
-};
-
-// Call this after your DB connection is established
-mongoose.connection.once('open', () => {
-    cleanupRoomIndexes();
-});
 
 const port = process.env.PORT || 3000;
 
