@@ -5507,32 +5507,30 @@ const addCharge = async (description, number, department) => {
 
 const settleAccount = async (method) => {
     if (!activeAccountId) return;
-    const hotelId = getHotelId();
 
+    // Use 'room' or 'Cash' based on the method clicked
     const payload = method === 'room' 
-        ? { roomPost: true, hotelId } 
-        : { paymentMethod: 'Cash', hotelId };
+        ? { roomPost: true } 
+        : { paymentMethod: 'Cash' };
 
     try {
-const res = await authenticatedFetch(
-    `${API_BASE_URL}/pos/client/account/${activeAccountId}/settle`,
-    {
-        method: 'POST',
-        body: JSON.stringify(payload)
-    }
-);
+        const res = await authenticatedFetch(
+            `${API_BASE_URL}/pos/client/account/${activeAccountId}/settle`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }, // Ensure headers are set
+                body: JSON.stringify(payload)
+            }
+        );
 
-if (!res) return; // redirect handled if token missing
+        const data = await res.json(); // Read the JSON once
 
-if (!res.ok) {
-    const error = await res.json();
-    console.error("Settle failed:", error);
-    return;
-}
-
-const data = await res.json();
-
-
+        if (!res.ok) {
+            // This will now show the actual message like "No matching active booking..."
+            console.error("Settle failed:", data.message);
+            showMessage(data.message || 'Settlement failed', 'error');
+            return;
+        }
 
         if (method === 'receipt') {
             printReceiptFromAccount(data.receipt);
@@ -5542,7 +5540,10 @@ const data = await res.json();
             showMessage('Posted to room successfully', 'success');
             resetUI();
         }
-    } catch (err) { showMessage(err.message, 'error'); }
+    } catch (err) { 
+        console.error(err);
+        showMessage("Connection error", 'error'); 
+    }
 };
 
 // --- UI UPDATES ---
