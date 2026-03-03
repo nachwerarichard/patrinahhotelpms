@@ -4718,42 +4718,36 @@ async function loadRoomTypes() {
 // --- B. CREATE NEW ROOM TYPE ---
 document.getElementById('typeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    // 1. Create FormData instead of a plain object
     const formData = new FormData();
     
-    // Add text fields
     formData.append('name', document.getElementById('typeName').value);
     formData.append('basePrice', document.getElementById('basePrice').value);
     
-    // 2. Grab the file from the input
-const imageInput = document.getElementById('roomImage'); 
-const files = imageInput.files;
-
-for (let i = 0; i < files.length; i++) {
-    // Note the key 'images' matches the backend upload.array('images')
-    formData.append('images', files[i]); 
-}
+    const imageInput = document.getElementById('roomImage'); 
+    
+    // Only append if the user actually picked files
+    if (imageInput.files && imageInput.files.length > 0) {
+        for (let i = 0; i < imageInput.files.length; i++) {
+            formData.append('images', imageInput.files[i]); 
+        }
+    }
 
     try {
-        // 3. Use authenticatedFetch with the FormData as the body
-        // IMPORTANT: Ensure authenticatedFetch DOES NOT force 'Content-Type': 'application/json'
-        // If it does, the upload will fail.
         const res = await authenticatedFetch(`${API_BASE_URL}/room-types`, {
             method: 'POST',
-            body: formData // Send the FormData object directly
+            body: formData 
         });
 
-        if (res && res.ok) {
-            showMessage("Room Type Created with Image! 🎉");
+        // Parse JSON safely
+        const data = await res.json().catch(() => ({ error: "Server returned non-JSON response" }));
+
+        if (res.ok) {
+            showMessage("Room Type Created! 🎉");
             e.target.reset();
-            loadRoomTypes(); 
         } else {
-            const errorData = await res.json();
-            showMessage(errorData.error || "Upload failed", true);
+            showMessage(data.error || "Upload failed", true);
         }
     } catch (error) {
-        console.error("Failed to connect to the server:", error);
         showMessage("Connection Error", true);
     }
 });
