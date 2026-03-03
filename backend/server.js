@@ -540,40 +540,39 @@ app.put('/api/room-types/:id', auth, async (req, res) => {
     }
 });
 
-// Create a physical Room
-app.post('/api/rooms', auth, async (req, res) => {
+// Create a physical Roomapp.post('/api/rooms', auth, async (req, res) => {
     try {
-        const { number, roomTypeId, status } = req.body;
+        const { number, roomTypeId, status, hotelId } = req.body; // Add hotelId here
 
-        if (!roomTypeId || !number) {
-            return res.status(400).json({ error: "Missing required fields." });
+        // 1. Determine which Hotel ID to use (Body or User object)
+        const finalHotelId = hotelId || req.user?.hotelId;
+
+        if (!number || !roomTypeId || !finalHotelId) {
+            console.log("❌ Missing fields:", { number, roomTypeId, finalHotelId });
+            return res.status(400).json({ 
+                error: "Room number, Type, and Hotel ID are all required." 
+            });
         }
 
         const room = new Room({
-            // Ensure these are converted to proper ObjectIds
-            hotelId: new mongoose.Types.ObjectId(req.user.hotelId),
-            roomTypeId: new mongoose.Types.ObjectId(roomTypeId),
             number: number.trim(),
+            roomTypeId: roomTypeId, // Mongoose usually handles string to ObjectId conversion automatically
+            hotelId: finalHotelId,
             status: status || 'clean'
         });
 
-        console.log("Room object before save:", room);
         await room.save();
         res.status(201).json(room);
 
     } catch (err) {
         console.error("❌ ERROR CREATING ROOM:", err.message);
         
-        // Handle the specific error where the ID format is wrong
-        if (err.name === 'CastError') {
-            return res.status(400).json({ error: `Invalid ID format for ${err.path}` });
-        }
-
+        // Handle Duplicate Room Number within same hotel
         if (err.code === 11000) {
-            return res.status(400).json({ error: "Room number already exists in this hotel." });
+            return res.status(400).json({ error: "This room number already exists." });
         }
 
-        res.status(500).json({ error: err.message });
+        res.status(400).json({ error: err.message });
     }
 });
 
