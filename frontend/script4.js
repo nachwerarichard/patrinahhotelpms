@@ -2518,22 +2518,19 @@ async function markAllChargesPaid() {
     }
 }
 async function printReceipt(bookingCustomId) {
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
+    // We can remove the manual sessionData/token/hotelId variables here 
+    // because authenticatedFetch handles them.
 
     try {
-        // 1. Fetch Booking (Scoped to Hotel)
-        const bRes = await fetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}?hotelId=${hotelId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        // 1. Fetch Booking
+        // Note: authenticatedFetch already appends x-hotel-id header, 
+        // but keeping the query param is fine if your backend requires both.
+        const bRes = await authenticatedFetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}`);
         if (!bRes.ok) throw new Error(`Booking fetch failed: ${bRes.status}`);
         const booking = await bRes.json();
 
-        // 2. Fetch Incidentals (Scoped to Hotel)
-        const cRes = await fetch(`${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}?hotelId=${hotelId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        // 2. Fetch Incidentals
+        const cRes = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`);
         if (!cRes.ok) throw new Error(`Charges fetch failed: ${cRes.status}`);
         const incidentalCharges = await cRes.json();
 
@@ -2548,13 +2545,13 @@ async function printReceipt(bookingCustomId) {
         });
 
         receiptNightsSpan.textContent = booking.nights;
-        receiptAmtPerNightSpan.textContent = Number(booking.amtPerNight).toLocaleString();
-        receiptRoomTotalDueSpan.textContent = Number(booking.totalDue).toLocaleString();
+        receiptAmtPerNightSpan.textContent = Number(booking.amtPerNight || 0).toLocaleString();
+        receiptRoomTotalDueSpan.textContent = Number(booking.totalDue || 0).toLocaleString();
 
         receiptIncidentalChargesTableBody.innerHTML = '';
         let totalIncidentalAmount = 0;
 
-        if (incidentalCharges.length === 0) {
+        if (!incidentalCharges || incidentalCharges.length === 0) {
             receiptIncidentalChargesTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No incidental charges.</td></tr>';
         } else {
             incidentalCharges.forEach(charge => {
@@ -2565,7 +2562,7 @@ async function printReceipt(bookingCustomId) {
                     <td>${new Date(charge.date).toLocaleDateString()}</td>
                     <td>${Number(charge.amount).toLocaleString()}</td>
                 `;
-                // Only count unpaid charges toward the final balance due
+                // Logic: Only add to "Balance Due" if the charge hasn't been paid yet
                 if (!charge.isPaid) totalIncidentalAmount += charge.amount;
             });
         }
@@ -2573,10 +2570,13 @@ async function printReceipt(bookingCustomId) {
         /* ---------- TOTALS CALCULATION ---------- */
         const roomSubtotal = parseFloat(booking.totalDue) || 0;
         const totalAmountPaid = parseFloat(booking.amountPaid) || 0;
+        
+        // The "Total Bill" usually reflects the Sum of everything (Room + All Incidentals)
+        // But the "Balance Due" should only show what is still outstanding.
         const totalBill = roomSubtotal + totalIncidentalAmount;
         let finalBalanceDue = Math.max(0, totalBill - totalAmountPaid);
 
-        receiptPaymentStatusSpan.textContent = (finalBalanceDue <= 0) ? 'Paid' : booking.paymentStatus;
+        receiptPaymentStatusSpan.textContent = (finalBalanceDue <= 0) ? 'Paid' : (booking.paymentStatus || 'Pending');
         receiptSubtotalRoomSpan.textContent = roomSubtotal.toLocaleString();
         receiptSubtotalIncidentalsSpan.textContent = totalIncidentalAmount.toLocaleString();
         receiptTotalBillSpan.textContent = totalBill.toLocaleString();
