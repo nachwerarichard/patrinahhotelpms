@@ -5466,7 +5466,7 @@ const addCharge = async (description, number, department) => {
 
         // 2. If Guest Folio exists, update the account
         if (activeAccountId) {
-            const folioRes = await authenticatedFetch(`${API_BASE_URL}/api/pos/client/account/${activeAccountId}/charge`, {
+            const folioRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}/charge`, {
                 method: 'POST',
                 body: JSON.stringify({
                     description: `${description} (x${qtyValue})`,
