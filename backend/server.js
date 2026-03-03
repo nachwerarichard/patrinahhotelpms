@@ -580,6 +580,7 @@ app.post('/api/rooms', auth, async (req, res) => {
     try {
         const rooms = await Room.find({ hotelId: req.user.hotelId })
                                 .populate('roomTypeId');
+                                .sort({ number: 1 }); // Optional: sort by room number
         res.json(rooms);
     } catch (err) {
         res.status(500).json({ error: err.message });
