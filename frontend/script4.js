@@ -9872,6 +9872,6 @@ async function loadRoomDatalist() {
 }
 window.addEventListener('DOMContentLoaded', () => {
     loadRoomTypes();
-    fetchRooms();
+    fetchRoomsV2(); 
 });
 
