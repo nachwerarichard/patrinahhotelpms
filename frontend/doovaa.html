@@ -10,194 +10,191 @@
     <style>
         body { font-family: 'Montserrat', sans-serif; background-color: #0A0A0A; color: #FFFFFF; }
         .serif { font-family: 'Playfair Display', serif; }
-        .gold-gradient { background: linear-gradient(135deg, #C8A165 0%, #A68044 100%); }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .sticky-nav { transition: all 0.3s ease; }
-        .product-card:hover img { transform: scale(1.05); }
+        .gold-gradient { background: linear-gradient(45deg, #C8A165, #A6804A); }
+        .nike-input { @apply bg-[#1A1A1A] border-none p-4 rounded-md focus:ring-2 focus:ring-[#C8A165] outline-none; }
     </style>
 </head>
 <body class="overflow-x-hidden">
 
-    <nav id="navbar" class="fixed w-full z-50 px-6 py-4 flex justify-between items-center bg-transparent sticky-nav">
-        <div class="flex items-center gap-8">
-            <h1 class="text-2xl font-bold tracking-tighter serif uppercase text-white">DOOVAA</h1>
-            <div class="hidden md:flex gap-6 text-xs font-semibold uppercase tracking-widest">
-                <a href="#" class="hover:text-gray-400 transition">Suits</a>
-                <a href="#" class="hover:text-gray-400 transition">Afro-Fusion</a>
-                <a href="#" class="hover:text-gray-400 transition">Curated</a>
-                <a href="#" class="hover:text-gray-400 transition">Outfit Builder</a>
-            </div>
-        </div>
-        <div class="flex items-center gap-5">
+    <nav class="fixed w-full z-50 bg-black/90 backdrop-blur-md border-b border-white/10 px-6 py-4 flex justify-between items-center">
+        <div class="text-2xl font-bold tracking-tighter serif">DOOVAA</div>
+        
+        <ul class="hidden md:flex space-x-8 font-medium text-sm uppercase tracking-widest">
+            <li><a href="#" class="hover:text-[#C8A165] transition">Suits</a></li>
+            <li><a href="#" class="hover:text-[#C8A165] transition">Afro-Fusion</a></li>
+            <li><a href="#outfit-builder" class="hover:text-[#C8A165] transition">Outfit Builder</a></li>
+            <li><a href="#" class="hover:text-[#C8A165] transition">Bespoke</a></li>
+        </ul>
+
+        <div class="flex items-center space-x-6">
             <i data-lucide="search" class="w-5 h-5 cursor-pointer"></i>
-            <div class="relative cursor-pointer" onclick="toggleDrawer('cartDrawer')">
-                <i data-lucide="shopping-bag" class="w-5 h-5"></i>
-                <span class="absolute -top-1 -right-1 bg-[#7B2525] text-[10px] rounded-full w-4 h-4 flex items-center justify-center">0</span>
-            </div>
+            <i data-lucide="shopping-bag" class="w-5 h-5 cursor-pointer"></i>
             <i data-lucide="menu" class="md:hidden w-6 h-6"></i>
         </div>
     </nav>
 
     <section class="relative h-screen w-full flex items-center justify-center overflow-hidden">
-        <div class="absolute inset-0 bg-black/40 z-10"></div>
-        <img src="https://images.unsplash.com/photo-1593032465175-481ac7f401a0?auto=format&fit=crop&q=80&w=2000" 
-             class="absolute inset-0 w-full h-full object-cover" alt="Bespoke Suit">
-        
-        <div class="relative z-20 text-center px-4">
-            <h2 class="text-5xl md:text-8xl serif mb-4 tracking-tight">Tailored for Presence.</h2>
-            <p class="text-lg md:text-xl font-light mb-8 max-w-2xl mx-auto text-gray-200">
-                Experience the intersection of African heritage and modern craftsmanship.
-            </p>
+        <img src="https://images.unsplash.com/photo-1594932224456-80693673ef4a?auto=format&fit=crop&q=80&w=2000" 
+             class="absolute inset-0 w-full h-full object-cover opacity-60" alt="Hero">
+        <div class="relative z-10 text-center px-4">
+            <h1 class="text-6xl md:text-8xl font-bold serif mb-4 tracking-tight">TAILORED FOR LEADERS.</h1>
+            <p class="text-lg md:text-xl font-light mb-8 max-w-2xl mx-auto">Premium Bespoke Suits & Afro-Fusion Craftsmanship.</p>
             <div class="flex flex-col md:flex-row gap-4 justify-center">
                 <button class="bg-white text-black px-10 py-4 rounded-full font-bold hover:bg-gray-200 transition">Shop Collections</button>
-                <button onclick="openBespokeModal()" class="border border-white text-white px-10 py-4 rounded-full font-bold hover:bg-white hover:text-black transition">Customize Bespoke</button>
+                <button class="border border-white px-10 py-4 rounded-full font-bold hover:bg-white hover:text-black transition">Book Measurement</button>
             </div>
         </div>
     </section>
 
-    <section class="py-20 px-6">
-        <div class="flex justify-between items-end mb-10">
-            <h3 class="text-3xl serif">The Essentials</h3>
-            <div class="flex gap-2">
-                <button class="p-3 bg-[#2E2E2E] rounded-full"><i data-lucide="chevron-left"></i></button>
-                <button class="p-3 bg-[#2E2E2E] rounded-full"><i data-lucide="chevron-right"></i></button>
-            </div>
-        </div>
-
-        <div class="flex gap-6 overflow-x-auto hide-scrollbar snap-x">
-            <div class="min-w-[300px] md:min-w-[450px] snap-start product-card group cursor-pointer">
-                <div class="overflow-hidden bg-[#1A1A1A] mb-4">
-                    <img src="https://images.unsplash.com/photo-1594932224828-b4b05a832974?auto=format&fit=crop&q=80&w=800" 
-                         class="w-full h-[550px] object-cover transition duration-700">
-                </div>
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h4 class="font-bold text-lg text-white uppercase">Obsidian Heritage Suit</h4>
-                        <p class="text-gray-400">Afro-Fusion Bespoke</p>
-                    </div>
-                    <p class="font-bold text-[#C8A165]">$850</p>
+    <section class="py-20 px-6 max-w-7xl mx-auto">
+        <h2 class="text-3xl font-bold mb-12 serif text-center">THE COLLECTIONS</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="group cursor-pointer overflow-hidden relative">
+                <img src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80&w=800" class="w-full h-[500px] object-cover transition duration-700 group-hover:scale-105">
+                <div class="absolute bottom-6 left-6">
+                    <h3 class="text-xl font-bold">Bespoke Excellence</h3>
+                    <p class="text-sm text-gray-300">Hand-tailored precision</p>
                 </div>
             </div>
-
-            <div class="min-w-[300px] md:min-w-[450px] snap-start product-card group cursor-pointer">
-                <div class="overflow-hidden bg-[#1A1A1A] mb-4">
-                    <img src="https://images.unsplash.com/photo-1617130863739-9c47e86480cc?auto=format&fit=crop&q=80&w=800" 
-                         class="w-full h-[550px] object-cover transition duration-700">
+            <div class="group cursor-pointer overflow-hidden relative border-2 border-[#7B2525]">
+                <img src="https://images.unsplash.com/photo-1617130863154-964ff6e415b9?auto=format&fit=crop&q=80&w=800" class="w-full h-[500px] object-cover transition duration-700 group-hover:scale-105">
+                <div class="absolute bottom-6 left-6">
+                    <h3 class="text-xl font-bold text-[#C8A165]">Afro-Fusion</h3>
+                    <p class="text-sm text-gray-300">Modern Tradition</p>
                 </div>
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h4 class="font-bold text-lg text-white uppercase">Midnight Velvet Blazer</h4>
-                        <p class="text-gray-400">Curated Evening Wear</p>
-                    </div>
-                    <p class="font-bold text-[#C8A165]">$420</p>
+            </div>
+            <div class="group cursor-pointer overflow-hidden relative">
+                <img src="https://images.unsplash.com/photo-1598411037848-d306f693952d?auto=format&fit=crop&q=80&w=800" class="w-full h-[500px] object-cover transition duration-700 group-hover:scale-105">
+                <div class="absolute bottom-6 left-6">
+                    <h3 class="text-xl font-bold">Essentials</h3>
+                    <p class="text-sm text-gray-300">Curated Menswear</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <div id="bespokeModal" class="fixed inset-0 z-[60] hidden bg-black items-center justify-center p-4">
-        <div class="w-full max-w-4xl bg-[#1A1A1A] max-h-[90vh] overflow-y-auto rounded-lg relative border border-gray-800">
-            <button onclick="closeBespokeModal()" class="absolute top-6 right-6 text-white"><i data-lucide="x"></i></button>
+    <section id="outfit-builder" class="py-20 bg-[#111111]">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold serif text-[#C8A165]">THE OUTFIT BUILDER</h2>
+                <p class="text-gray-400 mt-2">Mix and match to find your signature look.</p>
+            </div>
             
-            <div class="p-8 md:p-12">
-                <h2 class="text-4xl serif mb-2 text-[#C8A165]">Custom Measurement Profile</h2>
-                <p class="text-gray-400 mb-10 text-sm">Every millimeter matters. Fill in your details for a master-crafted fit.</p>
-                
-                <form id="measurementForm" class="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
-                    <div class="space-y-6">
-                        <div>
-                            <label class="block uppercase tracking-widest text-[10px] mb-2 font-bold">Full Name</label>
-                            <input type="text" class="w-full bg-transparent border-b border-gray-700 py-2 focus:border-[#C8A165] outline-none transition" placeholder="John Doe">
+            <div class="flex flex-col lg:flex-row gap-12 items-start">
+                <div class="w-full lg:w-1/2 bg-black rounded-3xl p-8 flex justify-center items-center min-h-[600px] border border-white/5 relative">
+                    <div id="preview-mannequin" class="relative">
+                        <img id="layer-suit" src="https://i.ibb.co/L5M0kKq/suit-base.png" class="w-80 transition-all duration-500" alt="Suit Base">
                         </div>
-                        <div>
-                            <label class="block uppercase tracking-widest text-[10px] mb-2 font-bold">Neck Size (cm)</label>
-                            <input type="number" class="w-full bg-transparent border-b border-gray-700 py-2 outline-none" placeholder="38">
-                        </div>
-                        <div>
-                            <label class="block uppercase tracking-widest text-[10px] mb-2 font-bold">Chest (cm)</label>
-                            <input type="number" class="w-full bg-transparent border-b border-gray-700 py-2 outline-none" placeholder="102">
-                        </div>
-                    </div>
-                    <div class="space-y-6">
-                        <div>
-                            <label class="block uppercase tracking-widest text-[10px] mb-2 font-bold">Shoulder Width (cm)</label>
-                            <input type="number" class="w-full bg-transparent border-b border-gray-700 py-2 outline-none" placeholder="45">
-                        </div>
-                        <div>
-                            <label class="block uppercase tracking-widest text-[10px] mb-2 font-bold">Sleeve Length (cm)</label>
-                            <input type="number" class="w-full bg-transparent border-b border-gray-700 py-2 outline-none" placeholder="64">
-                        </div>
-                        <div>
-                            <label class="block uppercase tracking-widest text-[10px] mb-2 font-bold">Fit Preference</label>
-                            <select class="w-full bg-transparent border-b border-gray-700 py-2 outline-none appearance-none cursor-pointer">
-                                <option class="bg-black">Slim Fit (Modern)</option>
-                                <option class="bg-black">Classic Fit (Regular)</option>
-                                <option class="bg-black">Relaxed Fit</option>
-                            </select>
+                </div>
+
+                <div class="w-full lg:w-1/2 space-y-10">
+                    <div>
+                        <h4 class="text-sm uppercase tracking-widest text-gray-500 mb-4">1. Select Base Suit</h4>
+                        <div class="flex gap-4" id="suit-options">
+                            <div onclick="updateOutfit('suit', 'Midnight Black', '#0A0A0A')" class="w-12 h-12 rounded-full border-2 border-white cursor-pointer bg-black"></div>
+                            <div onclick="updateOutfit('suit', 'Charcoal Gray', '#2E2E2E')" class="w-12 h-12 rounded-full border-2 border-transparent cursor-pointer bg-gray-700"></div>
+                            <div onclick="updateOutfit('suit', 'Deep Maroon', '#7B2525')" class="w-12 h-12 rounded-full border-2 border-transparent cursor-pointer bg-[#7B2525]"></div>
                         </div>
                     </div>
 
-                    <div class="md:col-span-2 pt-6">
-                        <button type="submit" class="w-full gold-gradient text-black font-bold py-4 rounded hover:opacity-90 transition uppercase tracking-widest">Save Measurements & Continue</button>
+                    <div>
+                        <h4 class="text-sm uppercase tracking-widest text-gray-500 mb-4">2. Shirt Style</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button class="nike-input text-left hover:bg-[#252525] transition border border-white/10">Classic White Poplin</button>
+                            <button class="nike-input text-left hover:bg-[#252525] transition border border-white/10">Black Satin</button>
+                        </div>
                     </div>
-                </form>
+
+                    <div class="bg-[#1A1A1A] p-6 rounded-2xl">
+                        <h3 class="text-xl font-bold mb-2" id="outfit-name">The Obsidian Executive</h3>
+                        <p class="text-[#C8A165] font-bold text-2xl mb-4">$1,250.00</p>
+                        <button class="w-full gold-gradient text-black font-black py-4 rounded-full tracking-tighter">ADD OUTFIT TO BAG</button>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <div id="cartDrawer" class="fixed top-0 right-0 w-full md:w-[450px] h-full bg-[#0A0A0A] z-[70] translate-x-full transition-transform duration-500 border-l border-gray-800 p-8 flex flex-col">
-        <div class="flex justify-between items-center mb-10">
-            <h2 class="text-2xl font-bold uppercase tracking-tighter serif">Your Selection</h2>
-            <button onclick="toggleDrawer('cartDrawer')" class="hover:rotate-90 transition duration-300"><i data-lucide="x"></i></button>
+    <section class="py-20 px-6 max-w-4xl mx-auto">
+        <div class="bg-white text-black p-10 rounded-3xl shadow-2xl">
+            <h2 class="text-3xl font-bold serif mb-6">Bespoke Measurements</h2>
+            <form id="measurementForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-2">Chest (cm)</label>
+                    <input type="number" placeholder="102" class="w-full border-b-2 border-gray-200 p-2 outline-none focus:border-black transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-2">Waist (cm)</label>
+                    <input type="number" placeholder="88" class="w-full border-b-2 border-gray-200 p-2 outline-none focus:border-black transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-2">Shoulder Width (cm)</label>
+                    <input type="number" placeholder="48" class="w-full border-b-2 border-gray-200 p-2 outline-none focus:border-black transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-2">Arm Length (cm)</label>
+                    <input type="number" placeholder="65" class="w-full border-b-2 border-gray-200 p-2 outline-none focus:border-black transition">
+                </div>
+                <div class="md:col-span-2">
+                    <button type="submit" class="w-full bg-black text-white py-4 rounded-full font-bold mt-4 hover:opacity-90 transition">Save Measurements</button>
+                </div>
+            </form>
         </div>
-        
-        <div class="flex-grow flex items-center justify-center text-gray-600 italic">
-            Your shopping bag is empty.
-        </div>
+    </section>
 
-        <div class="border-t border-gray-800 pt-6">
-            <div class="flex justify-between mb-4">
-                <span>Subtotal</span>
-                <span class="font-bold">$0.00</span>
+    <footer class="bg-black py-20 px-6 border-t border-white/5">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-12">
+            <div>
+                <h4 class="font-bold mb-6 tracking-widest uppercase text-sm">Help</h4>
+                <ul class="space-y-4 text-gray-500 text-sm">
+                    <li><a href="#">Order Status</a></li>
+                    <li><a href="#">Shipping & Delivery</a></li>
+                    <li><a href="#">Returns</a></li>
+                    <li><a href="#">Contact Us</a></li>
+                </ul>
             </div>
-            <button class="w-full bg-white text-black py-4 rounded-full font-bold uppercase tracking-widest text-xs">Checkout</button>
+            <div>
+                <h4 class="font-bold mb-6 tracking-widest uppercase text-sm">About DOOVAA</h4>
+                <ul class="space-y-4 text-gray-500 text-sm">
+                    <li><a href="#">Our Story</a></li>
+                    <li><a href="#">Careers</a></li>
+                    <li><a href="#">Sustainability</a></li>
+                </ul>
+            </div>
+            <div class="col-span-2">
+                <h4 class="font-bold mb-6 tracking-widest uppercase text-sm">Join Our Newsletter</h4>
+                <div class="flex">
+                    <input type="email" placeholder="Email Address" class="bg-white/5 border border-white/10 p-3 flex-grow outline-none focus:border-[#C8A165]">
+                    <button class="bg-white text-black px-6 font-bold uppercase text-xs">Join</button>
+                </div>
+            </div>
         </div>
-    </div>
+    </footer>
 
     <script>
         // Initialize Icons
         lucide.createIcons();
 
-        // Navbar Scroll Effect
-        window.onscroll = function() {
-            const nav = document.getElementById('navbar');
-            if (window.pageYOffset > 50) {
-                nav.classList.add('bg-black/90', 'backdrop-blur-md', 'py-2');
-            } else {
-                nav.classList.remove('bg-black/90', 'backdrop-blur-md', 'py-2');
-            }
-        };
-
-        // Modal/Drawer Logic
-        function openBespokeModal() {
-            document.getElementById('bespokeModal').classList.remove('hidden');
-            document.getElementById('bespokeModal').classList.add('flex');
-            document.body.style.overflow = 'hidden';
+        // Outfit Builder Logic
+        function updateOutfit(part, name, color) {
+            const outfitName = document.getElementById('outfit-name');
+            const previewLayer = document.getElementById('layer-suit');
+            
+            // UI Feedback
+            outfitName.innerText = `The ${name} Collection`;
+            previewLayer.style.filter = `drop-shadow(0 0 10px ${color})`;
+            
+            // Highlight selected color circle (Vanilla JS)
+            const circles = document.querySelectorAll('#suit-options div');
+            circles.forEach(c => c.classList.remove('border-white'));
+            event.target.classList.add('border-white');
         }
 
-        function closeBespokeModal() {
-            document.getElementById('bespokeModal').classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        }
-
-        function toggleDrawer(id) {
-            const drawer = document.getElementById(id);
-            if (drawer.classList.contains('translate-x-full')) {
-                drawer.classList.remove('translate-x-full');
-            } else {
-                drawer.classList.add('translate-x-full');
-            }
-        }
+        // Form Handling
+        document.getElementById('measurementForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert('Measurements saved to your DOOVAA profile!');
+        });
     </script>
 </body>
 </html>
