@@ -4171,6 +4171,24 @@ app.get('/reports/low-stock-items', auth, async (req, res) => {
     }
 });
 
+// --- TEMPORARY CLEANUP SCRIPT ---
+mongoose.connection.once('open', async () => {
+    try {
+        const hotelId = "6997167228b872b7fa4f2a99"; // Your Hotel ID from logs
+        
+        // 1. Delete all rooms for this hotel to clear the "Already Exists" error
+        const deleted = await mongoose.model('Room').deleteMany({ 
+            hotelId: new mongoose.Types.ObjectId(hotelId) 
+        });
+        console.log(`🧹 Database Cleaned: Removed ${deleted.deletedCount} ghost rooms.`);
+
+        // 2. Re-sync indexes (This fixes the "Already Exists" bug)
+        await mongoose.model('Room').syncIndexes();
+        console.log("✅ Room Indexes Synchronized.");
+    } catch (err) {
+        console.error("❌ Cleanup failed:", err);
+    }
+});
 
 const port = process.env.PORT || 3000;
 
