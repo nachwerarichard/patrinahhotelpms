@@ -326,7 +326,7 @@ const walkInChargeSchema = new mongoose.Schema({
 const WalkInCharge = mongoose.model('WalkInCharge', walkInChargeSchema);
 const roomTypeSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
-    name: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
     basePrice: { type: Number, required: true },
     imageUrls: [{ type: String }], 
     defaultImage: { type: String, default: 'room_.webp' },
