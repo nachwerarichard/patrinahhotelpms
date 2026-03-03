@@ -541,23 +541,22 @@ app.put('/api/room-types/:id', auth, async (req, res) => {
 });
 
 // Create a physical Roomapp.post('/api/rooms', auth, async (req, res) => {
+const mongoose = require('mongoose');
+
 app.post('/api/rooms', auth, async (req, res) => {
-    console.log("Incoming Payload:", req.body);
-    
     try {
         const { number, roomTypeId, status, hotelId } = req.body;
-        
-        // Use the ID from body if the user object doesn't have it
         const finalHotelId = hotelId || req.user?.hotelId;
 
         if (!number || !roomTypeId || !finalHotelId) {
-            return res.status(400).json({ error: "Missing number, roomTypeId, or hotelId" });
+            return res.status(400).json({ error: "Required: number, roomTypeId, and hotelId." });
         }
 
         const room = new Room({
+            // Explicitly cast strings to ObjectIds
+            hotelId: new mongoose.Types.ObjectId(finalHotelId),
+            roomTypeId: new mongoose.Types.ObjectId(roomTypeId),
             number: number.trim(),
-            roomTypeId: roomTypeId, 
-            hotelId: finalHotelId,
             status: status || 'clean'
         });
 
@@ -565,14 +564,15 @@ app.post('/api/rooms', auth, async (req, res) => {
         res.status(201).json(room);
 
     } catch (err) {
-        console.error("❌ Room Creation Failed:", err.message);
+        console.error("❌ Room Creation Failed:", err);
         
-        // Handle Duplicate Room Number for this specific hotel
+        // Detailed error reporting
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({ error: Object.values(err.errors).map(e => e.message).join(', ') });
+        }
         if (err.code === 11000) {
             return res.status(400).json({ error: "Room number already exists in this hotel." });
         }
-
-        // Send the specific Mongoose error back to the frontend
         res.status(400).json({ error: err.message });
     }
 });
