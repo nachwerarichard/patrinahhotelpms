@@ -1197,30 +1197,37 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
 
     try {
         const account = await ClientAccount.findOne({ _id: accountId, hotelId });
-        if (!account || account.isClosed) return res.status(400).json({ message: 'Invalid account' });
+        if (!account || account.isClosed) {
+            return res.status(400).json({ message: 'Invalid or already closed account' });
+        }
 
         if (roomPost && account.roomNumber) {
-    const booking = await Booking.findOne({
-        room: account.roomNumber,
-        hotelId: hotelId,
-        gueststatus: 'checkedin'
-    }).sort({ checkIn: -1 });
+            // Use Regex for flexible room matching (ignores accidental spaces)
+            const booking = await Booking.findOne({
+                room: { $regex: new RegExp(`^${account.roomNumber.trim()}$`, 'i') },
+                hotelId: hotelId,
+                gueststatus: 'checkedin'
+            }).sort({ createdAt: -1 });
 
-    // FIX: Case-insensitive and trimmed comparison
-    const accountName = (account.guestName || "").trim().toLowerCase();
-    const bookingName = (booking?.name || "").trim().toLowerCase();
+            const accountName = (account.guestName || "").trim().toLowerCase();
+            const bookingName = (booking?.name || "").trim().toLowerCase();
 
-    if (!booking || accountName !== bookingName) {
-        return res.status(400).json({ 
-            message: `No active booking for ${account.guestName} in Room ${account.roomNumber}` 
-        });
-    }
+            // Relaxed check: Logic fails if booking doesn't exist 
+            // OR if names are wildly different (optional: remove name check if room match is enough)
+            if (!booking || !accountName.includes(bookingName.split(' ')[0])) { 
+                return res.status(400).json({ 
+                    message: `No active booking found for ${account.guestName} in Room ${account.roomNumber}` 
+                });
+            }
 
             const newCharges = account.charges.map(charge => ({
-                ...charge,
-                hotelId, // Tag the incidental charge
+                description: charge.description,
+                amount: charge.amount,
+                type: charge.type,
+                hotelId,
                 bookingId: booking._id,
-                bookingCustomId: booking.id,
+                bookingCustomId: booking.id, // Your 'BKG001' style ID
+                guestName: account.guestName, // Ensure this is passed
                 date: new Date()
             }));
 
@@ -1228,12 +1235,15 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
 
         } else if (paymentMethod) {
             const walkInCharges = account.charges.map(charge => ({
-                ...charge,
-                hotelId, // Tag the walk-in revenue
-                receiptId: `POS-${hotelId.slice(-3)}-${Date.now()}`, 
+                description: charge.description,
+                amount: charge.amount,
+                type: charge.type,
+                hotelId,
+                guestName: account.guestName, // REQUIRED by your schema
+                receiptId: `POS-${hotelId.toString().slice(-3)}-${Date.now()}`, 
                 paymentMethod,
-                source: 'POS Walk-In',
-                isPaid: true
+                isPaid: true,
+                date: new Date()
             }));
 
             await WalkInCharge.insertMany(walkInCharges);
@@ -1241,10 +1251,12 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
 
         account.isClosed = true;
         await account.save();
+        
         res.status(200).json({ message: 'Successfully settled' });
 
     } catch (error) {
-        res.status(500).json({ message: 'Settlement failed' });
+        console.error("Settlement Error:", error); // This logs the ACTUAL error to your console
+        res.status(500).json({ message: 'Settlement failed', details: error.message });
     }
 });
 // Audit Log Schema
