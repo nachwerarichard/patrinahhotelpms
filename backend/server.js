@@ -77,7 +77,7 @@ app.post('/api/public/hotel', async (req, res) => {
 
     try {
         // 1. Enhanced Validation
-        if (!name || !location || !phoneNumber || !email || !domainName || !password) {
+        if (!name || !location || !phoneNumber || !email|| !password) {
             return res.status(400).json({ error: "All fields are required." });
         }
 
