@@ -1398,23 +1398,36 @@
         </div>
 
         <div class="lg:col-span-3 space-y-6">
-            <div id="createAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">New In-house guest</h2>
-                <form id="createAccountForm" class="space-y-4">
-                    <input type="text" name="guestName" id="guestname" required placeholder="Guest Full Name" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                    <input type="text" name="roomNumber" id="roomNumber" placeholder="Room Number" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                    <button type="submit" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl text-sm">Open Account</button>
-                </form>
+    <div id="createAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">New In-house guest</h2>
+        
+        <form id="createAccountForm" class="space-y-4">
+            <div class="relative">
+                <input type="text" name="guestName" id="guestname" autocomplete="off" required 
+                       placeholder="Guest Full Name" 
+                       class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                
+                <div id="bookingSuggestions" 
+                     class="hidden absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                </div>
             </div>
-            <div id="searchAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-3">Search Accounts</label>
-                <form id="searchAccountForm" class="relative">
-                    <input type="text" id="searchQuery" required placeholder="Name or Room..." class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
-                    <button type="submit" class="absolute right-2 top-2 p-1.5 bg-indigo-600 text-white rounded-lg"><i class="fas fa-search"></i></button>
-                </form>
-                <div id="searchResults" class="mt-4 space-y-2 max-h-48 overflow-y-auto"></div>
-            </div>
-        </div>
+
+            <input type="text" name="roomNumber" id="roomNumber" placeholder="Room Number" 
+                   class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+            
+            <button type="submit" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl text-sm">Open Account</button>
+        </form>
+    </div>
+
+    <div id="searchAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <label class="block text-xs font-bold text-slate-400 uppercase mb-3">Search Accounts</label>
+        <form id="searchAccountForm" class="relative">
+            <input type="text" id="searchQuery" required placeholder="Name or Room..." class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+            <button type="submit" class="absolute right-2 top-2 p-1.5 bg-indigo-600 text-white rounded-lg"><i class="fas fa-search"></i></button>
+        </form>
+        <div id="searchResults" class="mt-4 space-y-2 max-h-48 overflow-y-auto"></div>
+    </div>
+</div>
     </div>
 
     <div id="activeAccountsSection" class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
