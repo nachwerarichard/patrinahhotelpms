@@ -4794,6 +4794,7 @@ document.getElementById('seasonForm').addEventListener('submit', async (e) => {
 document.getElementById('roomForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const hotelId = getSessionHotelId();
+  console.log("Sending Hotel ID:", hotelId); // Check your browser console!
     const roomTypeId = document.getElementById('roomTypeSelect').value;
 
     if (!roomTypeId) {
