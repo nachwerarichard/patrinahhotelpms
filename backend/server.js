@@ -1251,8 +1251,17 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
 
         account.isClosed = true;
         await account.save();
-        
-        res.status(200).json({ message: 'Successfully settled' });
+        const receiptData = {
+    guestName: account.guestName,
+    hotelId: hotelId,
+    charges: account.charges, // This fixes the 'undefined' error
+    total: account.totalCharges || account.charges.reduce((sum, c) => sum + c.amount, 0)
+};
+
+        res.status(200).json({ 
+    message: 'Successfully settled', 
+    receipt: receiptData // Now the frontend has something to read!
+});
 
     } catch (error) {
         console.error("Settlement Error:", error); // This logs the ACTUAL error to your console
