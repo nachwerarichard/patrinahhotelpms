@@ -4801,7 +4801,6 @@ document.getElementById('roomForm').addEventListener('submit', async (e) => {
         showMessage("Please select a Room Type first.", true);
         return;
     }
-
     const roomData = {
         hotelId,
         number: document.getElementById('roomNumber').value,
