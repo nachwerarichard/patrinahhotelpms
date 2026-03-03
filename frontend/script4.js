@@ -4733,7 +4733,7 @@ document.getElementById('typeForm').addEventListener('submit', async (e) => {
     }
 
 try {
-    const res = await authenticatedFetch(`${API_BASE_URL}/api/room-types`, {
+    const res = await authenticatedFetch(`${API_BASE_URL}/room-types`, {
         method: 'POST',
         body: formData 
     });
