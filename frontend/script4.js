@@ -2276,12 +2276,23 @@ async function viewCharges(bookingCustomId) {
                 if (!charge.isPaid) hasUnpaidCharges = true;
 
                 const row = incidentalChargesTableBody.insertRow();
-                row.innerHTML = `
-                    <td class="px-4 py-2">${charge.type}</td>
-                    <td class="px-4 py-2">${charge.description || '-'}</td>
-                    <td class="px-4 py-2">${Number(charge.amount).toLocaleString()}</td>
-                    <td class="px-4 py-2">${new Date(charge.date).toLocaleDateString()}</td>
-                `;
+const isPaid = charge.isPaid; // Assuming your schema has this field
+
+row.innerHTML = `
+    <td class="px-4 py-2">${charge.type}</td>
+    <td class="px-4 py-2">${charge.description || '-'}</td>
+    <td class="px-4 py-2">${Number(charge.amount).toLocaleString()}</td>
+    <td class="px-4 py-2">${new Date(charge.date).toLocaleDateString()}</td>
+    <td class="px-4 py-2">
+        ${isPaid 
+            ? '<span class="text-green-600 font-bold">Paid</span>' 
+            : `<button onclick="confirmPayIncidentalCharge('${charge._id}', '${bookingCustomId}')" 
+                class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs transition">
+                Mark Paid
+               </button>`
+        }
+    </td>
+`;
 
                 totalChargesAmount += Number(charge.amount);
             });
@@ -2454,24 +2465,21 @@ function confirmDeleteIncidentalCharge(chargeId, bookingCustomId) {
 
 async function confirmPayIncidentalCharge(chargeId, bookingCustomId) {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
-
+    
     try {
-        const response = await fetch(`${API_BASE_URL}/incidental-charges/${chargeId}/pay`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/${chargeId}/pay`, {
             method: 'PATCH',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` ,
-                    'x-hotel-id': sessionData?.hotelId
-
-            },
-            body: JSON.stringify({ username: sessionData?.username, hotelId })
+            body: JSON.stringify({ 
+                username: sessionData?.username, 
+                hotelId: localStorage.getItem('hotelId') 
+            })
         });
 
         if (!response.ok) throw new Error('Payment update failed');
 
         showMessageBox('Success', 'Incidental charge paid successfully!');
+        
+        // Refresh the UI
         viewCharges(bookingCustomId); 
         if (typeof renderAuditLogs === 'function') renderAuditLogs();
     } catch (error) {
@@ -2479,10 +2487,7 @@ async function confirmPayIncidentalCharge(chargeId, bookingCustomId) {
     }
 }
 async function markAllChargesPaid() {
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
-
+    const hotelId = localStorage.getItem('hotelId');
     const currentBookingCustomId = viewChargesModal.style.display === 'flex' ?
                                    chargeBookingCustomIdInput.value : 
                                    receiptBookingIdSpan.textContent;   
@@ -2490,21 +2495,18 @@ async function markAllChargesPaid() {
     if (!currentBookingCustomId) return showMessageBox('Error', 'No Booking ID found.', true);
 
     try {
-        // Fetch specific booking within hotel scope
-        const bRes = await fetch(`${API_BASE_URL}/bookings/id/${currentBookingCustomId}?hotelId=${hotelId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        // 1. Get the booking details to find the internal MongoDB _id
+        const bRes = await authenticatedFetch(`${API_BASE_URL}/bookings/id/${currentBookingCustomId}?hotelId=${hotelId}`);
+        if (!bRes.ok) throw new Error('Could not find booking');
         const booking = await bRes.json();
 
-        const response = await fetch(`${API_BASE_URL}/incidental-charges/pay-all/${booking._id}`, {
+        // 2. Mark all as paid using the internal _id
+        const response = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/pay-all/${booking._id}`, {
             method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                    'x-hotel-id': sessionData?.hotelId
-
-            },
-            body: JSON.stringify({ username: sessionData?.username, hotelId }) 
+            body: JSON.stringify({ 
+                username: JSON.parse(localStorage.getItem('loggedInUser'))?.username, 
+                hotelId 
+            }) 
         });
 
         if (!response.ok) throw new Error('Failed to mark charges as paid');
