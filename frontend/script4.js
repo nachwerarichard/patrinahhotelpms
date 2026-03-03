@@ -4858,22 +4858,30 @@ async function fetchRoomsV2() {
             return;
         }
 
-        tbody.innerHTML = rooms.map(room => `
-            <tr class="hover:bg-slate-50 transition-colors">
-                <td class="px-8 py-5 font-bold text-slate-700">${room.number}</td>
-                <td class="px-8 py-5 text-slate-600">${room.roomTypeId?.name || 'Uncategorized'}</td>
-                <td class="px-8 py-5 font-mono text-sm text-indigo-600">$${room.roomTypeId?.basePrice?.toLocaleString() || '0'}</td>
-                <td class="px-8 py-5">
-                    <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        room.status === 'clean' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
-                    }">${room.status}</span>
-                </td>
-                <td class="px-8 py-5 text-center flex justify-center gap-2">
-                    <button onclick="editRoom('${room._id}')" class="p-2 text-slate-400 hover:text-indigo-600"><i class="fas fa-edit"></i></button>
-                    <button onclick="deleteRoom('${room._id}')" class="p-2 text-slate-400 hover:text-rose-600"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>
-        `).join('');
+// Inside fetchRoomsV2 in script4.js
+tbody.innerHTML = rooms.map(room => {
+    // 🛡️ Safety Check: Handle missing categories or prices
+    const categoryName = room.roomTypeId?.name || '<span class="text-rose-400">Missing Category</span>';
+    const rate = room.roomTypeId?.basePrice ? room.roomTypeId.basePrice.toLocaleString() : '0.00';
+    
+    return `
+        <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
+            <td class="px-8 py-5 font-bold text-slate-700">${room.number}</td>
+            <td class="px-8 py-5 text-slate-500">${categoryName}</td>
+            <td class="px-8 py-5 font-mono text-sm text-indigo-600">$${rate}</td>
+            <td class="px-8 py-5">
+                <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
+                    room.status === 'clean' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                }">${room.status}</span>
+            </td>
+            <td class="px-8 py-5 text-center flex justify-center gap-2">
+                <button onclick="deleteRoom('${room._id}')" class="p-2 text-slate-300 hover:text-rose-600 transition-colors">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `;
+}).join('');
 
     } catch (err) {
         console.error("Table Refresh Error:", err);
