@@ -5515,7 +5515,7 @@ const settleAccount = async (method) => {
 
     try {
 const res = await authenticatedFetch(
-    `${API_BASE_URL}/api/pos/client/account/${activeAccountId}/settle`,
+    `${API_BASE_URL}/pos/client/account/${activeAccountId}/settle`,
     {
         method: 'POST',
         body: JSON.stringify(payload)
