@@ -4957,7 +4957,7 @@ document.getElementById('editRoomForm').addEventListener('submit', async (e) => 
         if (roomRes.ok && typeRes.ok) {
             showMessage("Room and Type updated successfully!");
             closeModal();
-            fetchRooms();
+            fetchRoomsV2(); 
             loadRoomTypes();
         }
     } catch (err) {
