@@ -542,60 +542,35 @@ app.put('/api/room-types/:id', auth, async (req, res) => {
 
 // Create a physical Room
 app.post('/api/rooms', auth, async (req, res) => {
-    console.log("========== CREATE ROOM REQUEST ==========");
-    console.log("Incoming body:", req.body);
-    console.log("Authenticated user:", req.user);
-    console.log("HotelId from user:", req.user?.hotelId);
-
     try {
         const { number, roomTypeId, status } = req.body;
 
-        console.log("Extracted values:");
-        console.log("number:", number);
-        console.log("roomTypeId:", roomTypeId);
-        console.log("status:", status);
-
-        if (!roomTypeId) {
-            console.log("❌ roomTypeId is missing or empty");
-            return res.status(400).json({ 
-                error: "Please select a valid Room Type." 
-            });
+        if (!roomTypeId || !number) {
+            return res.status(400).json({ error: "Missing required fields." });
         }
 
-        if (!number) {
-            console.log("❌ room number is missing");
-            return res.status(400).json({
-                error: "Room number is required."
-            });
-        }
-         const room = new Room({
-    // Removed the 'id' line
-    number: number.trim(), // Always trim strings!
-    roomTypeId,
-    hotelId: req.user.hotelId,
-    status: status || 'clean'
-});
+        const room = new Room({
+            // Ensure these are converted to proper ObjectIds
+            hotelId: new mongoose.Types.ObjectId(req.user.hotelId),
+            roomTypeId: new mongoose.Types.ObjectId(roomTypeId),
+            number: number.trim(),
+            status: status || 'clean'
+        });
+
         console.log("Room object before save:", room);
         await room.save();
-
-        console.log("✅ Room saved successfully:", room);
-
         res.status(201).json(room);
 
     } catch (err) {
-        console.error("❌ ERROR CREATING ROOM");
-        console.error("Error message:", err.message);
-        console.error("Full error object:", err);
-
-        if (err.code === 11000) {
-            console.error("Duplicate key error details:", err.keyValue);
-            return res.status(400).json({ 
-                error: "Room number already exists in your hotel!" 
-            });
+        console.error("❌ ERROR CREATING ROOM:", err.message);
+        
+        // Handle the specific error where the ID format is wrong
+        if (err.name === 'CastError') {
+            return res.status(400).json({ error: `Invalid ID format for ${err.path}` });
         }
 
-        if (err.errors) {
-            console.error("Validation errors:", err.errors);
+        if (err.code === 11000) {
+            return res.status(400).json({ error: "Room number already exists in this hotel." });
         }
 
         res.status(500).json({ error: err.message });
