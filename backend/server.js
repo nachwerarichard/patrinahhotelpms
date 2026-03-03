@@ -1623,14 +1623,14 @@ app.post('/api/room-types/:typeId/seasons', auth, async (req, res) => {
 });
 
 // Get all rooms for the logged-in hotel
-app.get('/api/rooms', auth, async (req, res) => {
+/*app.get('/api/rooms', auth, async (req, res) => {
     try {
         const rooms = await Room.find({ hotelId: req.user.hotelId });
         res.json(rooms);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching rooms' });
     }
-});
+});*/
 
 // Update room status (Tenant Scoped)
 app.put('/api/rooms/:id', auth, async (req, res) => {
