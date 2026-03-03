@@ -1234,17 +1234,20 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
             await IncidentalCharge.insertMany(newCharges);
 
         } else if (paymentMethod) {
-            const walkInCharges = account.charges.map(charge => ({
-                description: charge.description,
-                amount: charge.amount,
-                type: charge.type,
-                hotelId,
-                guestName: account.guestName, // REQUIRED by your schema
-                receiptId: `POS-${hotelId.toString().slice(-3)}-${Date.now()}`, 
-                paymentMethod,
-                isPaid: true,
-                date: new Date()
-            }));
+          const walkInCharges = account.charges.map(charge => ({
+        hotelId: hotelId,
+        guestName: account.guestName,
+        type: charge.type || 'Other', // FALLBACK: If charge.type is missing, it crashes without this
+        description: charge.description,
+        amount: charge.amount,
+        receiptId: `POS-${hotelId.toString().slice(-3)}-${Date.now()}-${Math.floor(Math.random() * 1000)}`, // Added random to ensure uniqueness
+        paymentMethod: paymentMethod,
+        isPaid: true,
+        date: new Date()
+    }));
+            if (walkInCharges.length > 0) {
+        await WalkInCharge.insertMany(walkInCharges);
+    }
 
             await WalkInCharge.insertMany(walkInCharges);
         }
