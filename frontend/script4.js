@@ -145,7 +145,7 @@ async function authenticatedFetch(url, options = {}) {
     let token = localStorage.getItem('token');
     const params = new URLSearchParams(window.location.search);
     
-    // 1. Wait for token if auto-login is active
+    // 1. Wait for token logic (kept as is)
     if (!token && params.get('autoLogin') === 'true') {
         await new Promise((resolve) => {
             let attempts = 0;
@@ -160,29 +160,28 @@ async function authenticatedFetch(url, options = {}) {
         });
     }
 
-    // 2. Check if we finally have a token
     if (!token) {
-        console.error("Authentication required. Redirecting...");
         window.location.replace('https://novouscloudpms-tz4s.onrender.com/login.html');
         return null;
     }
 
-    // 3. DEFINE HEADERS (This is where your error was!)
+    // 2. Start with standard headers
     const headers = {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
         'x-hotel-id': localStorage.getItem('hotelId') || 'global',
-        ...options.headers // This merges any extra headers you pass in
+        ...options.headers 
     };
-   if (!(options.body instanceof FormData)) {
+
+    // 3. Smart Content-Type Assignment
+    // If the body is NOT FormData, we assume it's JSON.
+    // If it IS FormData, we delete the header to let the browser handle boundaries.
+    if (options.body instanceof FormData) {
+        delete headers['Content-Type']; 
+    } else if (options.body) { 
+        // Only set JSON if there is actually a body to describe
         headers['Content-Type'] = 'application/json';
     }
-  if (options.body instanceof FormData) {
-    delete headers['Content-Type']; 
-} else {
-    headers['Content-Type'] = 'application/json';
-}
-    // 4. Return the fetch call using the defined headers
+
     return fetch(url, { ...options, headers: headers });
 }
 // IMPROVED FRONTEND FETCH
