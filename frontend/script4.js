@@ -4791,74 +4791,10 @@ document.getElementById('seasonForm').addEventListener('submit', async (e) => {
 });
 
 // --- D. ADD NEW ROOM ---
-document.getElementById('roomForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const hotelId = getSessionHotelId();
-  console.log("Sending Hotel ID:", hotelId); // Check your browser console!
-    const roomTypeId = document.getElementById('roomTypeSelect').value;
 
-    if (!roomTypeId) {
-        showMessage("Please select a Room Type first.", true);
-        return;
-    }
-    const roomData = {
-        hotelId,
-        number: document.getElementById('roomNumber').value,
-        roomTypeId: roomTypeId 
-    };
-
-   try {
-    const res = await authenticatedFetch(`${API_BASE_URL}/rooms`, {
-        method: 'POST',
-        body: JSON.stringify(roomData)
-    });
-
-    const data = await res.json(); // Get the error message from the backend
-
-    if (res.ok) {
-        showMessage("Room added successfully! 🎉");
-        e.target.reset();
-        fetchRooms();
-    } else {
-        // THIS WILL TELL YOU EXACTLY WHAT IS WRONG (e.g., "Invalid Room Type ID")
-        showMessage(data.error || "Failed to add room", true);
-        console.error("Server Error:", data.error);
-    }
-} catch (err) {
-    console.error("Network/Parsing error:", err);
-}
-});
 
 // --- E. FETCH & RENDER ROOMS TABLE ---
-async function fetchRooms() {
-    const hotelId = getSessionHotelId();
-    try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/rooms?hotelId=${hotelId}`);
-        if (!res) return;
-        
-        const rooms = await res.json();
-        const tbody = document.getElementById('roomTableBody');
-        
-        tbody.innerHTML = rooms.map(room => `
-            <tr class="border-b hover:bg-gray-50">
-                <td class="px-4 py-3 font-medium text-slate-700">${room.number}</td>
-                <td class="px-4 py-3">${room.roomTypeId ? room.roomTypeId.name : '<span class="text-red-400 italic">Unassigned</span>'}</td>
-                <td class="px-4 py-3 font-mono text-sm">${room.roomTypeId ? room.roomTypeId.basePrice.toLocaleString() : 0}</td>
-                <td class="px-4 py-3">
-                    <span class="px-2 py-1 rounded text-xs font-bold uppercase ${room.status === 'clean' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">
-                        ${room.status}
-                    </span>
-                </td>
-                <td class="px-4 py-3 text-center space-x-2">
-                    <button onclick="editRoom('${room._id}')" class="text-blue-600 hover:text-blue-800 transition"><i class="fas fa-edit"></i></button>
-                    <button onclick="deleteRoom('${room._id}')" class="text-red-600 hover:text-red-800 transition"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>
-        `).join('');
-    } catch (err) {
-        console.error("Error fetching rooms:", err);
-    }
-}
+
 
 // --- F. DELETE ROOM ---
 async function deleteRoom(id) {
@@ -4870,7 +4806,83 @@ async function deleteRoom(id) {
         fetchRooms();
     }
 }
+// --- NEW V2 REGISTRY LOGIC ---
 
+document.getElementById('roomForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    // 1. Get Values using NEW Unique ID
+    const number = document.getElementById('regRoomNumber').value;
+    const roomTypeId = document.getElementById('roomTypeSelect').value;
+
+    if (!number || !roomTypeId) {
+        return showMessage("Please fill in all fields.", true);
+    }
+
+    const roomData = { number, roomTypeId };
+
+    try {
+        // Use the NEW V2 Endpoint
+        const res = await authenticatedFetch(`${API_BASE_URL}/v2/rooms`, {
+            method: 'POST',
+            body: JSON.stringify(roomData)
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            showMessage(`Room ${data.number} registered successfully!`);
+            e.target.reset();
+            // Refresh the table immediately
+            fetchRoomsV2(); 
+        } else {
+            showMessage(data.error || "Registry failed", true);
+        }
+    } catch (err) {
+        console.error("Submission Error:", err);
+    }
+});
+
+async function fetchRoomsV2() {
+    const tbody = document.getElementById('roomTableBody');
+    if (!tbody) return;
+
+    try {
+        const res = await authenticatedFetch(`${API_BASE_URL}/v2/rooms`);
+        const rooms = await res.json();
+
+        if (!res.ok) throw new Error(rooms.error);
+
+        if (rooms.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-slate-400">No rooms found in registry.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = rooms.map(room => `
+            <tr class="hover:bg-slate-50 transition-colors">
+                <td class="px-8 py-5 font-bold text-slate-700">${room.number}</td>
+                <td class="px-8 py-5 text-slate-600">${room.roomTypeId?.name || 'Uncategorized'}</td>
+                <td class="px-8 py-5 font-mono text-sm text-indigo-600">$${room.roomTypeId?.basePrice?.toLocaleString() || '0'}</td>
+                <td class="px-8 py-5">
+                    <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        room.status === 'clean' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                    }">${room.status}</span>
+                </td>
+                <td class="px-8 py-5 text-center flex justify-center gap-2">
+                    <button onclick="editRoom('${room._id}')" class="p-2 text-slate-400 hover:text-indigo-600"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteRoom('${room._id}')" class="p-2 text-slate-400 hover:text-rose-600"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch (err) {
+        console.error("Table Refresh Error:", err);
+        tbody.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-rose-500">Error loading inventory.</td></tr>`;
+    }
+}
+
+// Run on page load
+fetchRoomsV2();
 // --- G. EDIT ROOM MODAL LOGIC ---
 async function editRoom(roomId) {
     try {
