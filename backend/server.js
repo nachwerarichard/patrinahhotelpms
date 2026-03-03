@@ -4246,6 +4246,20 @@ app.put('/api/incidental-charges/pay-all/:bookingId', auth, async (req, res) => 
         res.status(500).json({ message: 'Failed to update charges' });
     }
 });
+// Example of what the backend should look like
+app.get('/api/bookings/id/:id', auth, async (req, res) => {
+    try {
+        const booking = await Booking.findOne({ 
+            id: req.params.id, // This matches 'BKG93430'
+            hotelId: req.user.hotelId // This comes from the 'auth' middleware/header
+        });
+
+        if (!booking) return res.status(404).json({ message: 'Booking not found' });
+        res.json(booking);
+    } catch (err) {
+        res.status(400).json({ message: 'Invalid request' });
+    }
+});
 const port = process.env.PORT || 3000;
 
 // --- 8. Start the Server ---
