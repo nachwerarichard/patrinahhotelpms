@@ -737,7 +737,7 @@ async function showDashboard(username, role) {
     }
 }
 
-async function authenticatedFetch(url, options = {}) {
+/*async function authenticatedFetch(url, options = {}) {
     let token = localStorage.getItem('token');
     let hotelId = localStorage.getItem('hotelId'); // Pull current tenant ID
 
@@ -754,7 +754,7 @@ async function authenticatedFetch(url, options = {}) {
     };
 
     return fetch(url, { ...options, headers });
-}
+}*/
 /**
  * Handles navigation clicks, showing/hiding sections and re-rendering content.
  * @param {Event} event - The click event.
