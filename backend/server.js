@@ -410,7 +410,7 @@ app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) =>
 
         const newType = new RoomType({
             hotelId: req.user.hotelId, // Ensure your 'auth' middleware provides this
-            name: name,
+            name: name.trim(), 
             basePrice: parseFloat(basePrice),
             imageUrls: uploadedUrls,
             // Fallback to default if no images provided
@@ -420,12 +420,23 @@ app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) =>
         await newType.save();
         res.status(201).json(newType);
 
-    } catch (err) {
-        console.error("❌ RoomType creation failed:", err);
-        // This catch block is likely what was sending the 400 status
-        res.status(400).json({ error: err.message });
+   } catch (err) {
+    console.error("❌ RoomType creation failed:", err);
+    
+    // Check if it's a duplicate key error
+    if (err.code === 11000) {
+        return res.status(400).json({ 
+            error: "A room category with this name already exists for your hotel." 
+        });
     }
+    
+    res.status(400).json({ error: err.message });
+}
 });
+RoomType.collection.dropIndex('name_1')
+  .then(() => console.log('Old index dropped'))
+  .catch(err => console.log('Index might not exist, moving on...'));
+
 app.post('/api/bookings/:id/add-payment', auth, async (req, res) => {
     const { id } = req.params;
     const { amount, method, recordedBy } = req.body;
