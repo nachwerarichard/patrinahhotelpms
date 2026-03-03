@@ -4759,6 +4759,7 @@ try {
 } catch (error) {
     console.error("Connection/Parsing Error:", error);
 }
+  }); 
 
 // --- C. APPLY SEASONAL RATES ---
 document.getElementById('seasonForm').addEventListener('submit', async (e) => {
