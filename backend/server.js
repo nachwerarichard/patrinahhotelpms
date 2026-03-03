@@ -433,9 +433,9 @@ app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) =>
     res.status(400).json({ error: err.message });
 }
 });
-RoomType.collection.dropIndex('name_1')
+/*RoomType.collection.dropIndex('name_1')
   .then(() => console.log('Old index dropped'))
-  .catch(err => console.log('Index might not exist, moving on...'));
+  .catch(err => console.log('Index might not exist, moving on...'));*/
 
 app.post('/api/bookings/:id/add-payment', auth, async (req, res) => {
     const { id } = req.params;
