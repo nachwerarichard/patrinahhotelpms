@@ -4807,20 +4807,26 @@ document.getElementById('roomForm').addEventListener('submit', async (e) => {
         roomTypeId: roomTypeId 
     };
 
-    try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/rooms`, {
-            method: 'POST',
-            body: JSON.stringify(roomData)
-        });
+   try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/rooms`, {
+        method: 'POST',
+        body: JSON.stringify(roomData)
+    });
 
-        if (res && res.ok) {
-            showMessage("Room added successfully!");
-            e.target.reset();
-            fetchRooms(); // Refresh the table
-        }
-    } catch (err) {
-        console.error("Network error:", err);
+    const data = await res.json(); // Get the error message from the backend
+
+    if (res.ok) {
+        showMessage("Room added successfully! 🎉");
+        e.target.reset();
+        fetchRooms();
+    } else {
+        // THIS WILL TELL YOU EXACTLY WHAT IS WRONG (e.g., "Invalid Room Type ID")
+        showMessage(data.error || "Failed to add room", true);
+        console.error("Server Error:", data.error);
     }
+} catch (err) {
+    console.error("Network/Parsing error:", err);
+}
 });
 
 // --- E. FETCH & RENDER ROOMS TABLE ---
