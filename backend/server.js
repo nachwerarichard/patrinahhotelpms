@@ -1200,16 +1200,21 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
         if (!account || account.isClosed) return res.status(400).json({ message: 'Invalid account' });
 
         if (roomPost && account.roomNumber) {
-            // CRITICAL: Find booking in the SAME hotel
-            const booking = await Booking.findOne({
-                room: account.roomNumber,
-                hotelId: hotelId, 
-                status: 'Checked-In' // Optional but recommended
-            }).sort({ checkIn: -1 });
+    const booking = await Booking.findOne({
+        room: account.roomNumber,
+        hotelId: hotelId,
+        status: 'Checked-In'
+    }).sort({ checkIn: -1 });
 
-            if (!booking || account.guestName !== booking.name) {
-                return res.status(400).json({ message: 'No matching active booking found in your hotel.' });
-            }
+    // FIX: Case-insensitive and trimmed comparison
+    const accountName = (account.guestName || "").trim().toLowerCase();
+    const bookingName = (booking?.name || "").trim().toLowerCase();
+
+    if (!booking || accountName !== bookingName) {
+        return res.status(400).json({ 
+            message: `No active booking for ${account.guestName} in Room ${account.roomNumber}` 
+        });
+    }
 
             const newCharges = account.charges.map(charge => ({
                 ...charge,
