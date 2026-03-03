@@ -3443,6 +3443,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (displayName && userData) {
         displayName.textContent = userData.hotelName;
     }
+   const displayrhName = document.getElementById('receipt-hotel-name');
+    if (displayrhName && userData) {
+        displayrhName.textContent = userData.hotelName;
+    }
             // Function to initialize the UI based on the user's hotel and role
             if (typeof showDashboard === 'function') {
                 await showDashboard(userData.username, userData.role);
