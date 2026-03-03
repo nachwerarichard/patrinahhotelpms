@@ -395,16 +395,26 @@ app.delete('/api/admin/hotel/:id', auth, authorizeRole('super-admin'), async (re
 // Add 'upload.array('images', 5)' as a second middleware after 'auth'
 app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) => {
     try {
-        // req.files is populated by multer-storage-cloudinary with the final URLs
-        const uploadedUrls = req.files ? req.files.map(file => file.path) : [];
+        // 1. Safely handle if no files were uploaded
+        const uploadedUrls = (req.files && req.files.length > 0) 
+            ? req.files.map(file => file.path) 
+            : [];
+
+        // 2. Extract fields from req.body (Multer populates this)
+        const { name, basePrice } = req.body;
+
+        // 3. Basic validation to catch issues before the database does
+        if (!name || !basePrice) {
+            return res.status(400).json({ error: "Name and Base Price are required." });
+        }
 
         const newType = new RoomType({
-            hotelId: req.user.hotelId,
-            name: req.body.name,
-            basePrice: parseFloat(req.body.basePrice),
+            hotelId: req.user.hotelId, // Ensure your 'auth' middleware provides this
+            name: name,
+            basePrice: parseFloat(basePrice),
             imageUrls: uploadedUrls,
-            // If images were uploaded, use the first one as default
-            defaultImage: uploadedUrls.length > 0 ? uploadedUrls[0] : 'room_default.webp'
+            // Fallback to default if no images provided
+            defaultImage: uploadedUrls.length > 0 ? uploadedUrls[0] : 'room_.webp'
         });
 
         await newType.save();
@@ -412,10 +422,10 @@ app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) =>
 
     } catch (err) {
         console.error("❌ RoomType creation failed:", err);
+        // This catch block is likely what was sending the 400 status
         res.status(400).json({ error: err.message });
     }
 });
-
 app.post('/api/bookings/:id/add-payment', auth, async (req, res) => {
     const { id } = req.params;
     const { amount, method, recordedBy } = req.body;
