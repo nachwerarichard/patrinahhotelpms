@@ -281,12 +281,7 @@ let currentHotel = userData ? userData.hotelName : 'Property Mnagement System';
 
 
 // 4. Update the UI immediately on page load
-document.addEventListener('DOMContentLoaded', () => {
-   const displayName = document.getElementById('hotel-name-display');
-    if (displayName && userData) {
-        displayName.textContent = userData.hotelName;
-    }
-});
+
 
 /*document.addEventListener('DOMContentLoaded', () => {
     const navItems = document.querySelectorAll('aside nav ul li');
@@ -3442,7 +3437,10 @@ window.addEventListener('DOMContentLoaded', async () => {
             // UI logic to show the main app
             loginContainer.style.display = 'none';
             mainContent.style.display = 'flex';
-
+   const displayName = document.getElementById('hotel-name-display');
+    if (displayName && userData) {
+        displayName.textContent = userData.hotelName;
+    }
             // Function to initialize the UI based on the user's hotel and role
             if (typeof showDashboard === 'function') {
                 await showDashboard(userData.username, userData.role);
