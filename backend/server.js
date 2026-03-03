@@ -4199,8 +4199,53 @@ app.get('/reports/low-stock-items', auth, async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch low stock items' });
     }
 });
+// PATCH: Pay a single incidental charge
+app.patch('/api/incidental-charges/:chargeId/pay', auth, async (req, res) => {
+    const { chargeId } = req.params;
+    const hotelId = req.user.hotelId; // From auth middleware
 
+    try {
+        const charge = await IncidentalCharge.findOneAndUpdate(
+            { _id: chargeId, hotelId: hotelId }, // Security: Must match hotelId
+            { $set: { isPaid: true } },
+            { new: true }
+        );
 
+        if (!charge) {
+            return res.status(404).json({ message: 'Incidental charge not found' });
+        }
+
+        res.status(200).json({ message: 'Charge marked as paid', charge });
+    } catch (error) {
+        console.error("Payment Error:", error);
+        res.status(500).json({ message: 'Failed to update payment status' });
+    }
+});
+
+// PUT: Pay ALL incidental charges for a specific booking
+app.put('/api/incidental-charges/pay-all/:bookingId', auth, async (req, res) => {
+    const { bookingId } = req.params;
+    const hotelId = req.user.hotelId;
+
+    try {
+        const result = await IncidentalCharge.updateMany(
+            { 
+                bookingId: bookingId, 
+                hotelId: hotelId, 
+                isPaid: false 
+            },
+            { $set: { isPaid: true } }
+        );
+
+        res.status(200).json({ 
+            message: `Successfully updated ${result.modifiedCount} charges`,
+            count: result.modifiedCount 
+        });
+    } catch (error) {
+        console.error("Bulk Payment Error:", error);
+        res.status(500).json({ message: 'Failed to update charges' });
+    }
+});
 const port = process.env.PORT || 3000;
 
 // --- 8. Start the Server ---
