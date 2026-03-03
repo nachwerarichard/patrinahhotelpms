@@ -541,37 +541,29 @@ app.put('/api/room-types/:id', auth, async (req, res) => {
 });
 
 // Create a physical Roomapp.post('/api/rooms', auth, async (req, res) => {
+ // Ensure 'async' is right here! --------v
+app.post('/api/rooms', auth, async (req, res) => {
     try {
-        const { number, roomTypeId, status, hotelId } = req.body; // Add hotelId here
-
-        // 1. Determine which Hotel ID to use (Body or User object)
+        const { number, roomTypeId, status, hotelId } = req.body;
         const finalHotelId = hotelId || req.user?.hotelId;
 
         if (!number || !roomTypeId || !finalHotelId) {
-            console.log("❌ Missing fields:", { number, roomTypeId, finalHotelId });
-            return res.status(400).json({ 
-                error: "Room number, Type, and Hotel ID are all required." 
-            });
+            return res.status(400).json({ error: "Missing fields" });
         }
 
         const room = new Room({
             number: number.trim(),
-            roomTypeId: roomTypeId, // Mongoose usually handles string to ObjectId conversion automatically
+            roomTypeId: roomTypeId,
             hotelId: finalHotelId,
             status: status || 'clean'
         });
 
-        await room.save();
+        // This 'await' is only allowed if the function above has 'async'
+        await room.save(); 
+
         res.status(201).json(room);
-
     } catch (err) {
-        console.error("❌ ERROR CREATING ROOM:", err.message);
-        
-        // Handle Duplicate Room Number within same hotel
-        if (err.code === 11000) {
-            return res.status(400).json({ error: "This room number already exists." });
-        }
-
+        console.error("❌ ERROR:", err.message);
         res.status(400).json({ error: err.message });
     }
 });
