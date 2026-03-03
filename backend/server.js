@@ -541,7 +541,61 @@ app.put('/api/room-types/:id', auth, async (req, res) => {
 });
 
 // Create a physical Roomapp.post('/api/rooms', auth, async (req, res) => {
+// --- NEW DATA REGISTRY ENDPOINTS ---
 
+// 1. GET: Fetch with deep population
+app.get('/api/v2/rooms', auth, async (req, res) => {
+    try {
+        const hotelId = req.user.hotelId; // Priority to the authenticated hotel
+        console.log(`[V2] Fetching rooms for Hotel: ${hotelId}`);
+
+        const rooms = await Room.find({ hotelId })
+            .populate({
+                path: 'roomTypeId',
+                select: 'name basePrice' // Ensure we grab these specific fields
+            })
+            .sort({ number: 1 })
+            .lean(); // Faster execution, returns plain JS objects
+
+        res.json(rooms);
+    } catch (err) {
+        console.error("[V2 GET Error]:", err);
+        res.status(500).json({ error: "Failed to retrieve inventory." });
+    }
+});
+
+// 2. POST: Create with explicit validation
+app.post('/api/v2/rooms', auth, async (req, res) => {
+    try {
+        const { number, roomTypeId } = req.body;
+        const hotelId = req.user.hotelId;
+
+        // Strict field check
+        if (!number || !roomTypeId || !hotelId) {
+            return res.status(400).json({ error: "Room number and Category are required." });
+        }
+
+        const newRoom = new Room({
+            number: number.trim(),
+            roomTypeId: new mongoose.Types.ObjectId(roomTypeId),
+            hotelId: new mongoose.Types.ObjectId(hotelId),
+            status: 'clean'
+        });
+
+        await newRoom.save();
+        
+        // Return the room with populated type so it can be added to table immediately
+        const populatedRoom = await Room.findById(newRoom._id).populate('roomTypeId');
+        res.status(201).json(populatedRoom);
+
+    } catch (err) {
+        console.error("[V2 POST Error]:", err);
+        if (err.code === 11000) {
+            return res.status(400).json({ error: `Room ${req.body.number} already exists in your registry.` });
+        }
+        res.status(400).json({ error: err.message });
+    }
+});
 app.post('/api/rooms', auth, async (req, res) => {
     try {
         const { number, roomTypeId, status, hotelId } = req.body;
