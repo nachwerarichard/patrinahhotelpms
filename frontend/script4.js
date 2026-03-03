@@ -4677,10 +4677,7 @@ function closeMessageBox() {
  */
 
 // 1. Initialize Page Data
-window.addEventListener('DOMContentLoaded', () => {
-    loadRoomTypes();
-    fetchRooms();
-});
+
 
 // Helper for multi-tenant context
 const getSessionHotelId = () => {
@@ -9873,3 +9870,8 @@ async function loadRoomDatalist() {
         console.error("Could not load room list", err);
     }
 }
+window.addEventListener('DOMContentLoaded', () => {
+    loadRoomTypes();
+    fetchRooms();
+});
+
