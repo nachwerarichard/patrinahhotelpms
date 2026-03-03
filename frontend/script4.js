@@ -5364,7 +5364,7 @@ const createAccount = async (guestName, roomNumber) => {
     showMessage('Initializing account...', 'info');
     
     try {
-      const res = await authenticatedFetch(`${API_BASE_URL}/api/pos/client/account`, {
+      const res = await authenticatedFetch(`${API_BASE_URL}/pos/client/account`, {
     method: 'POST',
     body: JSON.stringify({ guestName, roomNumber, hotelId })
 });
