@@ -177,6 +177,11 @@ async function authenticatedFetch(url, options = {}) {
    if (!(options.body instanceof FormData)) {
         headers['Content-Type'] = 'application/json';
     }
+  if (options.body instanceof FormData) {
+    delete headers['Content-Type']; 
+} else {
+    headers['Content-Type'] = 'application/json';
+}
     // 4. Return the fetch call using the defined headers
     return fetch(url, { ...options, headers: headers });
 }
