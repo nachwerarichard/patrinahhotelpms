@@ -174,7 +174,9 @@ async function authenticatedFetch(url, options = {}) {
         'x-hotel-id': localStorage.getItem('hotelId') || 'global',
         ...options.headers // This merges any extra headers you pass in
     };
-
+   if (!(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+    }
     // 4. Return the fetch call using the defined headers
     return fetch(url, { ...options, headers: headers });
 }
