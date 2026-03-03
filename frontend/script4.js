@@ -5385,7 +5385,7 @@ const searchAccounts = async (query) => {
     
     try {
         const res = await authenticatedFetch(
-    `${API_BASE_URL}/pos/client/search?query=${encodeURIComponent(query)}`,
+    `${API_BASE_URL}/pos/client/search/in-house?query=${encodeURIComponent(query)}`,
     {
         method: 'GET'
     }
