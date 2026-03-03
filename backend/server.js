@@ -1203,7 +1203,7 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
     const booking = await Booking.findOne({
         room: account.roomNumber,
         hotelId: hotelId,
-        status: 'Checked-In'
+        status: 'checkedin'
     }).sort({ checkIn: -1 });
 
     // FIX: Case-insensitive and trimmed comparison
