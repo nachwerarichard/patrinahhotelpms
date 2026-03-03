@@ -9504,14 +9504,14 @@ suggestInput.addEventListener('input', () => {
 
     suggestTimer = setTimeout(async () => {
         try {
-const res = await authenticatedFetch(`${API_BASE_URL}/pos/suggestions/bookings?name=${val}`);        
-        if (!res.ok) throw new Error(`Server responded with ${res.status}`);
-        
-        const bookings = await res.json();
+            const res = await authenticatedFetch(`${API_BASE_URL}/pos/suggestions/bookings?name=${val}`);
+            if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+
+            const bookings = await res.json();
             if (bookings.length > 0) {
                 suggestionBox.innerHTML = bookings.map(b => `
                     <div class="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0"
-                         onclick="fillBooking('${b.name}', '${b.room}')">
+                         onclick="fillBooking('${b.name.replace(/'/g, "\\'")}', '${b.room}')">
                         <p class="text-sm font-medium text-slate-700">${b.name}</p>
                         <p class="text-xs text-slate-400">Room ${b.room}</p>
                     </div>
@@ -9526,7 +9526,6 @@ const res = await authenticatedFetch(`${API_BASE_URL}/pos/suggestions/bookings?n
     }, 300);
 });
 
-// Function to auto-fill the form
 window.fillBooking = (name, room) => {
     suggestInput.value = name;
     roomInput.value = room;
@@ -9535,10 +9534,7 @@ window.fillBooking = (name, room) => {
 
 // Close suggestions if user clicks outside
 document.addEventListener('click', (e) => {
-    const suggestionBox = document.getElementById('suggestionBox'); // Or however you define it
-    const suggestInput = document.getElementById('suggestInput');
-
-    // Only run logic if both elements actually exist on the current page
+    // FIX: Use the correct IDs 'bookingSuggestions' and 'guestname'
     if (suggestionBox && suggestInput) {
         if (!suggestionBox.contains(e.target) && e.target !== suggestInput) {
             suggestionBox.classList.add('hidden');
