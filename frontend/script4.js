@@ -4732,25 +4732,33 @@ document.getElementById('typeForm').addEventListener('submit', async (e) => {
         }
     }
 
-    try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/room-types`, {
-            method: 'POST',
-            body: formData 
-        });
+try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/api/room-types`, {
+        method: 'POST',
+        body: formData 
+    });
 
-        // Parse JSON safely
-        const data = await res.json().catch(() => ({ error: "Server returned non-JSON response" }));
-
+    // Check if the response is actually JSON
+    const contentType = res.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+        const data = await res.json();
         if (res.ok) {
             showMessage("Room Type Created! 🎉");
             e.target.reset();
         } else {
+            console.error("Server Logic Error:", data);
             showMessage(data.error || "Upload failed", true);
         }
-    } catch (error) {
-        showMessage("Connection Error", true);
+    } else {
+        // This captures the HTML error from Render/Express
+        const htmlError = await res.text();
+        console.error("The server sent HTML instead of JSON. Check the network tab or server logs.");
+        console.log("HTML Response:", htmlError); 
+        showMessage("Server Configuration Error", true);
     }
-});
+} catch (error) {
+    console.error("Connection/Parsing Error:", error);
+}
 
 // --- C. APPLY SEASONAL RATES ---
 document.getElementById('seasonForm').addEventListener('submit', async (e) => {
