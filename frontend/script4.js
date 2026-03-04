@@ -302,24 +302,37 @@ let currentHotel = userData ? userData.hotelName : 'Property Mnagement System';
  * @param {boolean} isError - True if it's an error message, false for success/info.
  */
 function showMessageBox(title, message, isError = false) {
+    // 1. Find the elements right now
+    const overlay = document.getElementById('messageBoxOverlay');
+    const modal = document.getElementById('messageBox');
+    const titleEl = document.getElementById('messageBoxTitle');
+    const contentEl = document.getElementById('messageBoxContent');
+
+    // 2. Safety Check: If they still aren't found, stop and show a clear error
+    if (!modal || !overlay || !titleEl || !contentEl) {
+        console.error("Could not find the Message Box HTML elements. Check your IDs!");
+        return;
+    }
+
+    // 3. Set the content
     titleEl.textContent = title;
     contentEl.textContent = message;
 
-    // Toggle Colors based on error status
+    // 4. Toggle Colors
     if (isError) {
         titleEl.className = 'text-xl font-bold mb-2 text-red-600';
     } else {
         titleEl.className = 'text-xl font-bold mb-2 text-indigo-600';
     }
 
+    // 5. Reveal (Removing 'hidden' from both)
     overlay.classList.remove('hidden');
     modal.classList.remove('hidden');
 }
 
-// 3. The only function you need to hide it
 function closeMessageBox() {
-    overlay.classList.add('hidden');
-    modal.classList.add('hidden');
+    document.getElementById('messageBoxOverlay').classList.add('hidden');
+    document.getElementById('messageBox').classList.add('hidden');
 }
 
 // Optional: Close if user clicks the dark overlay area
