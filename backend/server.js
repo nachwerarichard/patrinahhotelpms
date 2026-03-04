@@ -4209,9 +4209,9 @@ app.post('/api/public/hotel', async (req, res) => {
     let savedHotelId = null;
 
     try {
-        // 1. Enhanced Validation
+        // 1️⃣ Basic Validation
         if (!name || !location || !phoneNumber || !email || !password) {
-            return res.status(400).json({ error: "All fields are required." });
+            return res.status(400).json({ error: "All required fields must be provided." });
         }
 
         if (password !== confirmPassword) {
@@ -4222,66 +4222,68 @@ app.post('/api/public/hotel', async (req, res) => {
             return res.status(400).json({ error: "Password must be at least 6 characters long." });
         }
 
-        // 2. Domain Sanitization & Optional Logic
+        const existingUser = await User.findOne({ username: email });
+        if (existingUser) {
+            return res.status(400).json({ error: "Email already in use." });
+        }
+
+        // 2️⃣ Domain Handling
         let sanitizedDomain = null;
 
         if (domainName && domainName.trim() !== "") {
+            // Clean provided domain
             sanitizedDomain = domainName.toLowerCase()
                 .replace(/^https?:\/\//, '')
                 .replace(/\/$/, '')
                 .split('/')[0];
 
-            // Only check for duplicate domains if the user actually provided one
             const domainExists = await Hotel.findOne({ domainName: sanitizedDomain });
             if (domainExists) {
-                return res.status(400).json({ error: "This domain is already registered to another property." });
+                return res.status(400).json({ error: "Domain already registered." });
             }
+
+        } else {
+            // 🔥 If no domain provided → assign shared default domain
+            sanitizedDomain = "shared-domain";
+
+            // OPTIONAL: If you want all no-domain hotels grouped under one shared value
+            // No uniqueness check required here unless you enforce unique index
         }
 
-        // Check if user email already exists across the system
-        const existingUser = await User.findOne({ username: email });
-        if (existingUser) return res.status(400).json({ error: "Email already in use." });
-
-        // 3. Save Hotel
-        const newHotel = new Hotel({ 
-            name, 
-            location, 
-            phoneNumber, 
-            email, 
-            domainName: sanitizedDomain // Will be null if empty, allowing multiple "no-domain" hotels
+        // 3️⃣ Save Hotel
+        const newHotel = new Hotel({
+            name,
+            location,
+            phoneNumber,
+            email,
+            domainName: sanitizedDomain // can now be shared
         });
-        const savedHotel = await newHotel.save();
-        savedHotelId = savedHotel._id; 
 
-        // 4. Save User with PREFERRED Password
+        const savedHotel = await newHotel.save();
+        savedHotelId = savedHotel._id;
+
+        // 4️⃣ Create Admin User
         const newUser = new User({
             hotelId: savedHotel._id,
-            username: email, 
-            password: password, // Note: Ensure your User model has a pre-save hook for bcrypt hashing!
+            username: email,
+            password: password, // Assume model hashes
             role: 'admin',
-            isInitial: false 
+            isInitial: false
         });
 
         await newUser.save();
 
-        res.status(201).json({ 
+        res.status(201).json({
             message: "Property & Admin Account Created ✅",
             hotelId: savedHotel._id
         });
 
-} catch (err) {
-    console.error("DETAILED ERROR:", err); // This WILL show in Render logs now
-    
-    // Cleanup if hotel was created
-    if (savedHotelId) await Hotel.findByIdAndDelete(savedHotelId);
-
-    // Send the REAL error message back to the frontend alert
-    res.status(500).json({ 
-        error: "Onboarding failed", 
-        details: err.message,
-        mongoCode: err.code // Will show 11000 if it's a duplicate
-    });
-}
+    } catch (err) {
+        if (savedHotelId) {
+            await Hotel.findByIdAndDelete(savedHotelId);
+        }
+        res.status(500).json({ error: "Onboarding failed", details: err.message });
+    }
 });
 
 const port = process.env.PORT || 3000;
