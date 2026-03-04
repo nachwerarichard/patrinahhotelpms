@@ -4228,10 +4228,6 @@ async function normalizeHotelDomains() {
 }
 
 async function createDomainIndex() {
-    // Wait for db to be ready
-    const db = mongoose.connection.db;
-    if (!db) throw new Error("MongoDB connection not ready");
-
     await db.collection('hotels').createIndex(
         { domainName: 1 },
         { unique: true, sparse: true }
