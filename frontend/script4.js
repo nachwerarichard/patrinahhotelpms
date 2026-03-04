@@ -302,32 +302,18 @@ let currentHotel = userData ? userData.hotelName : 'Property Mnagement System';
  * @param {boolean} isError - True if it's an error message, false for success/info.
  */
 function showMessageBox(title, message, isError = false) {
-    // 1. Find the elements right now
     const overlay = document.getElementById('messageBoxOverlay');
     const modal = document.getElementById('messageBox');
-    const titleEl = document.getElementById('messageBoxTitle');
-    const contentEl = document.getElementById('messageBoxContent');
+    
+    // Check if these actually exist in your HTML
+    if (!overlay || !modal) return console.error("Missing IDs");
 
-    // 2. Safety Check: If they still aren't found, stop and show a clear error
-    if (!modal || !overlay || !titleEl || !contentEl) {
-        console.error("Could not find the Message Box HTML elements. Check your IDs!");
-        return;
-    }
-
-    // 3. Set the content
-    titleEl.textContent = title;
-    contentEl.textContent = message;
-
-    // 4. Toggle Colors
-    if (isError) {
-        titleEl.className = 'text-xl font-bold mb-2 text-red-600';
-    } else {
-        titleEl.className = 'text-xl font-bold mb-2 text-indigo-600';
-    }
-
-    // 5. Reveal (Removing 'hidden' from both)
+    // YOU MUST REMOVE HIDDEN FROM BOTH
     overlay.classList.remove('hidden');
     modal.classList.remove('hidden');
+
+    document.getElementById('messageBoxTitle').textContent = title;
+    document.getElementById('messageBoxContent').textContent = message;
 }
 
 function closeMessageBox() {
