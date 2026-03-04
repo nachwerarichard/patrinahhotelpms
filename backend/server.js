@@ -4315,43 +4315,32 @@ mongoose.connection.once('open', async () => {
     }
 });
 
-
-async function normalizeHotelDomains() {
+async function fixDomainsAndIndex() {
     try {
-        // Convert empty string ("") to null
+        // 1️⃣ Fix duplicates / nulls / empty strings
         await Hotel.updateMany(
-            { domainName: "" },
-            { $set: { domainName: null } }
+            { domainName: { $in: ["", "null", null] } },
+            { $set: { domainName: `shared-${new Date().getTime()}-${Math.floor(Math.random()*1000)}` } }
         );
+        console.log("✅ Existing hotel domains normalized with placeholders");
 
-        // Convert string "null" to real null
-        await Hotel.updateMany(
-            { domainName: "null" },
-            { $set: { domainName: null } }
+        // 2️⃣ Create sparse unique index
+        await mongoose.connection.db.collection('hotels').createIndex(
+            { domainName: 1 },
+            { unique: true, sparse: true }
         );
-
-        console.log("✅ Hotel domains normalized");
+        console.log("✅ Sparse unique index created successfully");
     } catch (err) {
-        console.error("Error normalizing hotel domains:", err);
+        console.error("❌ Error fixing domains or creating index:", err);
+        throw err; // stop server start if index fails
     }
 }
-mongoose.connection.once('open', async () => {
-    console.log("MongoDB connected");
 
-    // Normalize old domain data
-    await normalizeHotelDomains();
-
-    // Sync indexes to ensure sparse unique works
-    await Hotel.syncIndexes();
-
-    app.listen(process.env.PORT || 5000, () => {
-        console.log("🚀 Server running");
-    });
-});
 const port = process.env.PORT || 3000;
 
 // --- 8. Start the Server ---
 app.listen(port, () => {
+    await fixDomainsAndIndex();
     console.log(`Server running on http://localhost:${port}`);
     console.log('Backend API Endpoints:');
     console.log(`- POST /api/login`);
