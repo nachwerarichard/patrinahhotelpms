@@ -4278,12 +4278,16 @@ app.post('/api/public/hotel', async (req, res) => {
             hotelId: savedHotel._id
         });
 
-    } catch (err) {
-        if (savedHotelId) {
-            await Hotel.findByIdAndDelete(savedHotelId);
-        }
-        res.status(500).json({ error: "Onboarding failed", details: err.message });
+    }catch (err) {
+    console.error("🚨 ONBOARDING ERROR:");
+    console.error(err);
+
+    if (savedHotelId) {
+        await Hotel.findByIdAndDelete(savedHotelId);
     }
+
+    res.status(500).json({ error: err.message });
+}
 });
 
 const port = process.env.PORT || 3000;
