@@ -195,7 +195,8 @@ const mongoURI = 'mongodb+srv://nachwerarichard:hotelpms@cluster0.g4cjpwg.mongod
 mongoose.connect(mongoURI)
    .then(async () => { // <--- MAKE SURE 'async' IS HERE
         console.log('Connected to MongoDB');
-
+       await normalizeHotelDomains();
+    await createDomainIndex();
         try {
             const adminExists = await User.findOne({ username: 'admin' });
             if (!adminExists) {
@@ -4227,7 +4228,13 @@ async function normalizeHotelDomains() {
     console.log("✅ Existing hotel domains normalized");
 }
 
+// ----------------------
+// 2️⃣ Create sparse unique index
+// ----------------------
 async function createDomainIndex() {
+    const db = mongoose.connection.db; // ✅ only available after connection
+    if (!db) throw new Error("MongoDB connection not ready");
+
     await db.collection('hotels').createIndex(
         { domainName: 1 },
         { unique: true, sparse: true }
@@ -4235,7 +4242,6 @@ async function createDomainIndex() {
 
     console.log("✅ Sparse unique index created successfully");
 }
-
 
 // ----------------------
 // 3️⃣ Hotel onboarding route
@@ -4314,11 +4320,7 @@ app.post('/api/public/hotel', async (req, res) => {
 // ----------------------
 
 
-        // Normalize old domainNames first
-        normalizeHotelDomains();
-
-        // Then create sparse unique index
-        createDomainIndex();
+        
 
         
 
