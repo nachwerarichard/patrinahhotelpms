@@ -5754,7 +5754,7 @@ function exportTableToExcel(tableId, filename) { console.log(`Exporting table ${
         }
     }
     modal.addEventListener('click', outsideClick);
-}
+
 
 /**
  * Clears user state, local storage, and updates UI to show the login screen.
