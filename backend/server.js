@@ -4269,11 +4269,19 @@ app.post('/api/public/hotel', async (req, res) => {
             hotelId: savedHotel._id
         });
 
-    } catch (err) {
-        // Cleanup: If hotel was created but user creation failed, delete the hotel
-        if (savedHotelId) await Hotel.findByIdAndDelete(savedHotelId);
-        res.status(500).json({ error: "Onboarding failed", details: err.message });
-    }
+} catch (err) {
+    console.error("DETAILED ERROR:", err); // This WILL show in Render logs now
+    
+    // Cleanup if hotel was created
+    if (savedHotelId) await Hotel.findByIdAndDelete(savedHotelId);
+
+    // Send the REAL error message back to the frontend alert
+    res.status(500).json({ 
+        error: "Onboarding failed", 
+        details: err.message,
+        mongoCode: err.code // Will show 11000 if it's a duplicate
+    });
+}
 });
 
 const port = process.env.PORT || 3000;
