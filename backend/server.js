@@ -4206,6 +4206,38 @@ app.get('/api/bookings/id/:id', auth, async (req, res) => {
         res.status(400).json({ message: 'Invalid request' });
     }
 });
+
+const fixHotelIndexes = async () => {
+    try {
+        console.log("🛠️ Starting database sanitization...");
+        
+        // 1. Convert any empty strings or whitespace domains to actual NULL
+        // This allows the 'sparse' index to ignore them
+        await Hotel.updateMany(
+            { $or: [{ domainName: "" }, { domainName: /^\s*$/ }] },
+            { $set: { domainName: null } }
+        );
+
+        // 2. Drop the old index that might be corrupted or not 'sparse'
+        try {
+            await Hotel.collection.dropIndex("domainName_1");
+            console.log("🗑️ Old index dropped.");
+        } catch (e) {
+            console.log("ℹ️ No existing index to drop or already dropped.");
+        }
+
+        // 3. Re-sync indexes based on your new Schema (with sparse: true)
+        await Hotel.syncIndexes();
+        
+        console.log("✅ Database indexes fixed and sanitized!");
+    } catch (err) {
+        console.error("❌ Error fixing indexes:", err);
+    }
+};
+
+// Call it
+fixHotelIndexes();
+
 app.post('/api/public/hotel', async (req, res) => {
     const { name, location, phoneNumber, email, domainName, password, confirmPassword } = req.body;
     
