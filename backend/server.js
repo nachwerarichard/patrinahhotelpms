@@ -4227,16 +4227,19 @@ async function normalizeHotelDomains() {
     console.log("✅ Existing hotel domains normalized");
 }
 
-// ----------------------
-// 2️⃣ Ensure sparse unique index
-// ----------------------
 async function createDomainIndex() {
-    await mongoose.connection.db.collection('hotels').createIndex(
+    // Wait for db to be ready
+    const db = mongoose.connection.db;
+    if (!db) throw new Error("MongoDB connection not ready");
+
+    await db.collection('hotels').createIndex(
         { domainName: 1 },
         { unique: true, sparse: true }
     );
+
     console.log("✅ Sparse unique index created successfully");
 }
+
 
 // ----------------------
 // 3️⃣ Hotel onboarding route
