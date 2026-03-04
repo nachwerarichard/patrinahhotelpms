@@ -4251,6 +4251,7 @@ if (typeof domainName === "string") {
     }
 }
     }
+}
 else {
             // 🔥 If no domain provided → assign shared default domain
             sanitizedDomain = null;
