@@ -40,7 +40,7 @@ const housekeepingRoomGrid = document.getElementById('housekeepingRoomGrid');
 const messageBox = document.getElementById('messageBox');
 const messageBoxTitle = document.getElementById('messageBoxTitle');
 const messageBoxContent = document.getElementById('messageBoxContent');
-const messageBoxOverlay = document.getElementById('messageBoxOverlay'); // Added this
+const overlay = document.getElementById('messageBoxOverlay');
 const logoutBtn = document.getElementById('logoutBtn');
 
 // Pagination elements
