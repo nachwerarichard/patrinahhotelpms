@@ -5764,12 +5764,6 @@ function exportTableToExcel(tableId, filename) { console.log(`Exporting table ${
     };
     closeButton.addEventListener('click', handleClose);*/
 
-    function outsideClick(event) {
-        if (event.target === modal) {
-            handleClose();
-        }
-    }
-    modal.addEventListener('click', outsideClick);
 
 
 /**
