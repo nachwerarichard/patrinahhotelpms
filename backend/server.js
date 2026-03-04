@@ -195,8 +195,6 @@ const mongoURI = 'mongodb+srv://nachwerarichard:hotelpms@cluster0.g4cjpwg.mongod
 mongoose.connect(mongoURI)
    .then(async () => { // <--- MAKE SURE 'async' IS HERE
         console.log('Connected to MongoDB');
-       await normalizeHotelDomains();
-    await createDomainIndex();
         try {
             const adminExists = await User.findOne({ username: 'admin' });
             if (!adminExists) {
