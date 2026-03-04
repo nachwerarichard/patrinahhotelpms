@@ -138,11 +138,12 @@ app.post('/api/public/hotel', async (req, res) => {
             hotelId: savedHotel._id
         });
 
-    } catch (err) {
-        // Cleanup if hotel was created but user creation failed
-        if (savedHotelId) await Hotel.findByIdAndDelete(savedHotelId);
-        res.status(500).json({ error: "Onboarding failed", details: err.message });
-    }
+        } catch (err) {
+    console.error("FULL ERROR LOG:", err); // ADD THIS LINE
+    if (savedHotelId) await Hotel.findByIdAndDelete(savedHotelId);
+    res.status(500).json({ error: "Onboarding failed", details: err.message });
+}
+    
 });
 
 async function auth(req, res, next) {
@@ -4280,33 +4281,7 @@ app.get('/api/bookings/id/:id', auth, async (req, res) => {
     }
 });
 
-const cleanUpDomains = async () => {
-    try {
-        // 1. Convert all empty strings or whitespace-only domains to null
-        const result = await Hotel.updateMany(
-            { 
-                $or: [
-                    { domainName: "" }, 
-                    { domainName: { $exists: false } },
-                    { domainName: /^\s*$/ } 
-                ] 
-            },
-            { $set: { domainName: null } }
-        );
 
-        console.log(`✅ Cleaned up ${result.modifiedCount} hotels with empty domains.`);
-
-        // 2. Force sync the indexes to ensure 'sparse' is active
-        await Hotel.syncIndexes();
-        console.log("✅ Indexes synchronized successfully.");
-        
-    } catch (err) {
-        console.error("❌ Cleanup failed:", err.message);
-    }
-};
-
-// Call this function once
-cleanUpDomains();
 const port = process.env.PORT || 3000;
 
 // --- 8. Start the Server ---
