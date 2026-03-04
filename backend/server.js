@@ -4206,14 +4206,13 @@ app.get('/api/bookings/id/:id', auth, async (req, res) => {
         res.status(400).json({ message: 'Invalid request' });
     }
 });
-
+// --- 3️⃣ Onboarding Route ---
 app.post('/api/public/hotel', async (req, res) => {
     const { name, location, phoneNumber, email, domainName, password, confirmPassword } = req.body;
-    
     let savedHotelId = null;
 
     try {
-        // 1️⃣ Basic Validation
+        // --- Validation ---
         if (!name || !location || !phoneNumber || !email || !password) {
             return res.status(400).json({ error: "All required fields must be provided." });
         }
@@ -4231,52 +4230,42 @@ app.post('/api/public/hotel', async (req, res) => {
             return res.status(400).json({ error: "Email already in use." });
         }
 
-        // 2️⃣ Domain Handling
-            let sanitizedDomain = null;
+        // --- Domain Handling ---
+        let sanitizedDomain = null;
+        if (typeof domainName === "string") {
+            const trimmed = domainName.trim();
 
-if (typeof domainName === "string") {
-    const trimmed = domainName.trim();
+            if (trimmed.length > 0) {
+                sanitizedDomain = trimmed
+                    .toLowerCase()
+                    .replace(/^https?:\/\//, '')
+                    .replace(/\/$/, '')
+                    .split('/')[0];
 
-    if (trimmed.length > 0) {
-        sanitizedDomain = trimmed
-            .toLowerCase()
-            .replace(/^https?:\/\//, '')
-            .replace(/\/$/, '')
-            .split('/')[0];
-
-        const domainExists = await Hotel.findOne({ domainName: sanitizedDomain });
-        if (domainExists) {
-            return res.status(400).json({ error: "Domain already registered." });
-        }
-    }
-}
-    }
-}
-else {
-            // 🔥 If no domain provided → assign shared default domain
-            sanitizedDomain = null;
-
-            // OPTIONAL: If you want all no-domain hotels grouped under one shared value
-            // No uniqueness check required here unless you enforce unique index
+                const domainExists = await Hotel.findOne({ domainName: sanitizedDomain });
+                if (domainExists) {
+                    return res.status(400).json({ error: "Domain already registered." });
+                }
+            }
         }
 
-        // 3️⃣ Save Hotel
+        // --- Save Hotel ---
         const newHotel = new Hotel({
             name,
             location,
             phoneNumber,
             email,
-            domainName: sanitizedDomain // can now be shared
+            domainName: sanitizedDomain
         });
 
         const savedHotel = await newHotel.save();
         savedHotelId = savedHotel._id;
 
-        // 4️⃣ Create Admin User
+        // --- Create Admin User ---
         const newUser = new User({
             hotelId: savedHotel._id,
             username: email,
-            password: password, // Assume model hashes
+            password: password, // User model should handle hashing
             role: 'admin',
             isInitial: false
         });
@@ -4288,17 +4277,18 @@ else {
             hotelId: savedHotel._id
         });
 
-    }catch (err) {
-    console.error("🚨 ONBOARDING ERROR:");
-    console.error(err);
+    } catch (err) {
+        console.error("🚨 ONBOARDING ERROR:", err);
 
-    if (savedHotelId) {
-        await Hotel.findByIdAndDelete(savedHotelId);
+        if (savedHotelId) {
+            await Hotel.findByIdAndDelete(savedHotelId);
+        }
+
+        res.status(500).json({ error: err.message });
     }
-
-    res.status(500).json({ error: err.message });
-}
 });
+
+
 
 mongoose.connection.once('open', async () => {
     console.log("✅ MongoDB connected");
