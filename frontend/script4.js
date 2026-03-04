@@ -9890,4 +9890,3 @@ window.addEventListener('DOMContentLoaded', () => {
     fetchRoomsV2();
 });
 
-showMessageBox("Hello!", "This is a test message.");
