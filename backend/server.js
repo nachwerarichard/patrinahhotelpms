@@ -70,81 +70,7 @@ const userSchema = new mongoose.Schema({
 userSchema.index({ hotelId: 1, username: 1 }, { unique: true });
 const User = mongoose.model('User', userSchema);
 
-app.post('/api/public/hotel', async (req, res) => {
-    const { name, location, phoneNumber, email, domainName, password, confirmPassword } = req.body;
-    
-    let savedHotelId = null;
 
-    try {
-        // 1. Enhanced Validation
-        if (!name || !location || !phoneNumber || !email || !password) {
-            return res.status(400).json({ error: "All fields are required." });
-        }
-
-        if (password !== confirmPassword) {
-            return res.status(400).json({ error: "Passwords do not match." });
-        }
-
-        if (password.length < 6) {
-            return res.status(400).json({ error: "Password must be at least 6 characters long." });
-        }
-
-        // 2. Conditional Domain Sanitization & Check
-        let sanitizedDomain = null;
-        
-        if (domainName && domainName.trim() !== "") {
-            sanitizedDomain = domainName.toLowerCase()
-                .replace(/^https?:\/\//, '')
-                .replace(/\/$/, '')
-                .split('/')[0]
-                .trim();
-
-            // Only check uniqueness if a domain was actually provided
-            const domainExists = await Hotel.findOne({ domainName: sanitizedDomain });
-            if (domainExists) {
-                return res.status(400).json({ error: "This domain is already registered to another hotel." });
-            }
-        }
-
-        // Check for existing user email
-        const existingUser = await User.findOne({ username: email });
-        if (existingUser) return res.status(400).json({ error: "Email already in use." });
-
-        // 3. Save Hotel
-        const newHotel = new Hotel({ 
-            name, 
-            location, 
-            phoneNumber, 
-            email, 
-            domainName: sanitizedDomain // Will be null if empty
-        });
-        
-        const savedHotel = await newHotel.save();
-        savedHotelId = savedHotel._id; 
-
-        // 4. Save User
-        const newUser = new User({
-            hotelId: savedHotel._id,
-            username: email, 
-            password: password, 
-            role: 'admin',
-            isInitial: false 
-        });
-
-        await newUser.save();
-
-        res.status(201).json({ 
-            message: "Property & Admin Account Created ✅",
-            hotelId: savedHotel._id
-        });
-
-        } catch (err) {
-    console.error("FULL ERROR LOG:", err); // ADD THIS LINE
-    if (savedHotelId) await Hotel.findByIdAndDelete(savedHotelId);
-    res.status(500).json({ error: "Onboarding failed", details: err.message });
-}
-    
-});
 
 async function auth(req, res, next) {
     const authHeader = req.headers.authorization;
@@ -4280,7 +4206,81 @@ app.get('/api/bookings/id/:id', auth, async (req, res) => {
         res.status(400).json({ message: 'Invalid request' });
     }
 });
+app.post('/api/public/hotel', async (req, res) => {
+    const { name, location, phoneNumber, email, domainName, password, confirmPassword } = req.body;
+    
+    let savedHotelId = null;
 
+    try {
+        // 1. Enhanced Validation
+        if (!name || !location || !phoneNumber || !email || !password) {
+            return res.status(400).json({ error: "All fields are required." });
+        }
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({ error: "Passwords do not match." });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({ error: "Password must be at least 6 characters long." });
+        }
+
+        // 2. Conditional Domain Sanitization & Check
+        let sanitizedDomain = null;
+        
+        if (domainName && domainName.trim() !== "") {
+            sanitizedDomain = domainName.toLowerCase()
+                .replace(/^https?:\/\//, '')
+                .replace(/\/$/, '')
+                .split('/')[0]
+                .trim();
+
+            // Only check uniqueness if a domain was actually provided
+            const domainExists = await Hotel.findOne({ domainName: sanitizedDomain });
+            if (domainExists) {
+                return res.status(400).json({ error: "This domain is already registered to another hotel." });
+            }
+        }
+
+        // Check for existing user email
+        const existingUser = await User.findOne({ username: email });
+        if (existingUser) return res.status(400).json({ error: "Email already in use." });
+
+        // 3. Save Hotel
+        const newHotel = new Hotel({ 
+            name, 
+            location, 
+            phoneNumber, 
+            email, 
+            domainName: sanitizedDomain // Will be null if empty
+        });
+        
+        const savedHotel = await newHotel.save();
+        savedHotelId = savedHotel._id; 
+
+        // 4. Save User
+        const newUser = new User({
+            hotelId: savedHotel._id,
+            username: email, 
+            password: password, 
+            role: 'admin',
+            isInitial: false 
+        });
+
+        await newUser.save();
+
+        res.status(201).json({ 
+            message: "Property & Admin Account Created ✅",
+            hotelId: savedHotel._id
+        });
+
+        } catch (err) {
+    console.error("FULL ERROR LOG:", err); // ADD THIS LINE
+    if (savedHotelId) await Hotel.findByIdAndDelete(savedHotelId);
+    res.status(500).json({ error: "Onboarding failed", details: err.message });
+}
+    
+});
 
 const port = process.env.PORT || 3000;
 
