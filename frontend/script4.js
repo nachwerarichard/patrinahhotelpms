@@ -5697,8 +5697,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('itemDesc').addEventListener('input', (e) => autoFillPrices(e.target.value));
     document.getElementById('postToRoomBtn').onclick = () => settleAccount('room');
-    document.getElementById('issueReceiptBtn').onclick = () => settleAccount('receipt');
-});
+  });
+    /*document.getElementById('issueReceiptBtn').onclick = () => settleAccount('receipt');*/
+
 //bar.js code 
 
 
