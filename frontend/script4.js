@@ -302,27 +302,44 @@ let currentHotel = userData ? userData.hotelName : 'Property Mnagement System';
  * @param {boolean} isError - True if it's an error message, false for success/info.
  */
 function showMessageBox(title, message, isError = false) {
+    // 1. Grab elements only when the function is called
     const overlay = document.getElementById('messageBoxOverlay');
     const modal = document.getElementById('messageBox');
-    
-    // Check if these actually exist in your HTML
-    if (!overlay || !modal) return console.error("Missing IDs");
+    const titleEl = document.getElementById('messageBoxTitle');
+    const contentEl = document.getElementById('messageBoxContent');
 
-    // YOU MUST REMOVE HIDDEN FROM BOTH
+    // 2. Safety check - stop if HTML is missing
+    if (!overlay || !modal || !titleEl || !contentEl) {
+        console.error("Error: Message box elements not found in the HTML.");
+        return;
+    }
+
+    // 3. Set the text
+    titleEl.textContent = title;
+    contentEl.textContent = message;
+
+    // 4. Set the color based on error status
+    if (isError) {
+        titleEl.classList.add('text-red-600');
+        titleEl.classList.remove('text-indigo-600', 'text-gray-900');
+    } else {
+        titleEl.classList.add('text-indigo-600');
+        titleEl.classList.remove('text-red-600', 'text-gray-900');
+    }
+
+    // 5. SHOW BOTH: This is the key part!
     overlay.classList.remove('hidden');
     modal.classList.remove('hidden');
-
-    document.getElementById('messageBoxTitle').textContent = title;
-    document.getElementById('messageBoxContent').textContent = message;
 }
 
 function closeMessageBox() {
-    document.getElementById('messageBoxOverlay').classList.add('hidden');
-    document.getElementById('messageBox').classList.add('hidden');
+    const overlay = document.getElementById('messageBoxOverlay');
+    const modal = document.getElementById('messageBox');
+    
+    if (overlay) overlay.classList.add('hidden');
+    if (modal) modal.classList.add('hidden');
 }
 
-// Optional: Close if user clicks the dark overlay area
-overlay.addEventListener('click', closeMessageBox);
 async function updateDashboard() {
   try {
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
