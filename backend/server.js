@@ -4308,19 +4308,22 @@ app.post('/api/public/hotel', async (req, res) => {
 
 async function fixDomainsAndIndex() {
     try {
-        // 1️⃣ Fix duplicates / nulls / empty strings
-        await Hotel.updateMany(
-            { domainName: { $in: ["", "null", null] } },
-            { $set: { domainName: `shared-${new Date().getTime()}-${Math.floor(Math.random()*1000)}` } }
-        );
-        console.log("✅ Existing hotel domains normalized with placeholders");
+        // 1️⃣ Fix all null/empty domainNames
+const hotels = await Hotel.find({ domainName: { $in: ["", "null", null] } });
 
-        // 2️⃣ Create sparse unique index
-        await mongoose.connection.db.collection('hotels').createIndex(
-            { domainName: 1 },
-            { unique: true, sparse: true }
-        );
-        console.log("✅ Sparse unique index created successfully");
+for (const hotel of hotels) {
+    hotel.domainName = `shared-${hotel._id.toString()}`;
+    await hotel.save();
+}
+
+console.log("✅ Existing hotel domains normalized");
+
+// 2️⃣ Now create sparse unique index safely
+await mongoose.connection.db.collection('hotels').createIndex(
+    { domainName: 1 },
+    { unique: true, sparse: true }
+);
+console.log("✅ Sparse unique index created successfully");
     } catch (err) {
         console.error("❌ Error fixing domains or creating index:", err);
         throw err; // stop server start if index fails
