@@ -41,6 +41,8 @@ const messageBox = document.getElementById('messageBox');
 const messageBoxTitle = document.getElementById('messageBoxTitle');
 const messageBoxContent = document.getElementById('messageBoxContent');
 const overlay = document.getElementById('messageBoxOverlay');
+const titleEl = document.getElementById('messageBoxTitle');     // This was missing!
+const contentEl = document.getElementById('messageBoxContent');
 const logoutBtn = document.getElementById('logoutBtn');
 
 // Pagination elements
