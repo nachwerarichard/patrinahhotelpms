@@ -4324,6 +4324,39 @@ mongoose.connection.once('open', async () => {
     }
 });
 
+
+async function normalizeHotelDomains() {
+    try {
+        // Convert empty string ("") to null
+        await Hotel.updateMany(
+            { domainName: "" },
+            { $set: { domainName: null } }
+        );
+
+        // Convert string "null" to real null
+        await Hotel.updateMany(
+            { domainName: "null" },
+            { $set: { domainName: null } }
+        );
+
+        console.log("✅ Hotel domains normalized");
+    } catch (err) {
+        console.error("Error normalizing hotel domains:", err);
+    }
+}
+mongoose.connection.once('open', async () => {
+    console.log("MongoDB connected");
+
+    // Normalize old domain data
+    await normalizeHotelDomains();
+
+    // Sync indexes to ensure sparse unique works
+    await Hotel.syncIndexes();
+
+    app.listen(process.env.PORT || 5000, () => {
+        console.log("🚀 Server running");
+    });
+});
 const port = process.env.PORT || 3000;
 
 // --- 8. Start the Server ---
