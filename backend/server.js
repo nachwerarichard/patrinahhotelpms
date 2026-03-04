@@ -4244,7 +4244,7 @@ app.post('/api/public/hotel', async (req, res) => {
 
         } else {
             // 🔥 If no domain provided → assign shared default domain
-            sanitizedDomain = "shared-domain";
+            sanitizedDomain = "null";
 
             // OPTIONAL: If you want all no-domain hotels grouped under one shared value
             // No uniqueness check required here unless you enforce unique index
