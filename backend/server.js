@@ -4209,33 +4209,59 @@ app.get('/api/bookings/id/:id', auth, async (req, res) => {
 // --- 3️⃣ Onboarding Route ---
 // --- /api/public/hotel route ---
 
+// server.js or relevant backend file
+
+
+// ----------------------
+// 1️⃣ Normalize existing domainNames safely
+// ----------------------
+async function normalizeHotelDomains() {
+    const hotels = await Hotel.find({ domainName: { $in: ["", "null", null] } });
+
+    for (const hotel of hotels) {
+        // Use _id to guarantee uniqueness
+        hotel.domainName = `shared-${hotel._id.toString()}`;
+        await hotel.save();
+    }
+
+    console.log("✅ Existing hotel domains normalized");
+}
+
+// ----------------------
+// 2️⃣ Ensure sparse unique index
+// ----------------------
+async function createDomainIndex() {
+    await mongoose.connection.db.collection('hotels').createIndex(
+        { domainName: 1 },
+        { unique: true, sparse: true }
+    );
+    console.log("✅ Sparse unique index created successfully");
+}
+
+// ----------------------
+// 3️⃣ Hotel onboarding route
+// ----------------------
 app.post('/api/public/hotel', async (req, res) => {
     const { name, location, phoneNumber, email, domainName, password, confirmPassword } = req.body;
-
     let savedHotelId = null;
 
     try {
-        // Validation
-        if (!name || !location || !phoneNumber || !email || !password) {
+        // Basic Validation
+        if (!name || !location || !phoneNumber || !email || !password)
             return res.status(400).json({ error: "All required fields must be provided." });
-        }
 
-        if (password !== confirmPassword) {
+        if (password !== confirmPassword)
             return res.status(400).json({ error: "Passwords do not match." });
-        }
 
-        if (password.length < 6) {
+        if (password.length < 6)
             return res.status(400).json({ error: "Password must be at least 6 characters long." });
-        }
 
-        // Check for existing user
         const existingUser = await User.findOne({ username: email });
         if (existingUser) return res.status(400).json({ error: "Email already in use." });
 
         // Domain handling
         let sanitizedDomain = null;
-
-        if (typeof domainName === "string" && domainName.trim().length > 0) {
+        if (typeof domainName === "string" && domainName.trim() !== "") {
             sanitizedDomain = domainName
                 .trim()
                 .toLowerCase()
@@ -4265,7 +4291,7 @@ app.post('/api/public/hotel', async (req, res) => {
         const newUser = new User({
             hotelId: savedHotel._id,
             username: email,
-            password: password,
+            password: password, // model should hash
             role: 'admin',
             isInitial: false
         });
@@ -4279,39 +4305,23 @@ app.post('/api/public/hotel', async (req, res) => {
 
     } catch (err) {
         console.error("🚨 ONBOARDING ERROR:", err);
-
         if (savedHotelId) await Hotel.findByIdAndDelete(savedHotelId);
-
         res.status(500).json({ error: err.message });
     }
 });
 
+// ----------------------
+// 4️⃣ Start server with normalization + index creation
+// ----------------------
 
-async function fixDomainsAndIndex() {
-    try {
-        // 1️⃣ Fix all null/empty domainNames
-// Find all hotels with empty/null/"null" domainNames
-const hotels = await Hotel.find({ domainName: { $in: ["", "null", null] } });
 
-// Assign a unique value per document using _id
-for (const hotel of hotels) {
-    hotel.domainName = `shared-${hotel._id.toString()}`; // guaranteed unique
-    await hotel.save();
-}
+        // Normalize old domainNames first
+        normalizeHotelDomains();
 
-console.log("✅ Existing hotel domains normalized with unique values");
-// 2️⃣ Now create sparse unique index safely
-await mongoose.connection.db.collection('hotels').createIndex(
-    { domainName: 1 },
-    { unique: true, sparse: true }
-);
-console.log("✅ Sparse unique index created successfully");
-    } catch (err) {
-        console.error("❌ Error fixing domains or creating index:", err);
-        throw err; // stop server start if index fails
-    }
-}
- fixDomainsAndIndex();
+        // Then create sparse unique index
+        createDomainIndex();
+
+        
 
 
 const port = process.env.PORT || 3000;
