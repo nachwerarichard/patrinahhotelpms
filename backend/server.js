@@ -77,7 +77,7 @@ app.post('/api/public/hotel', async (req, res) => {
 
     try {
         // 1. Enhanced Validation
-        if (!name || !location || !phoneNumber || !email|| !password) {
+        if (!name || !location || !phoneNumber || !email || !password) {
             return res.status(400).json({ error: "All fields are required." });
         }
 
@@ -89,33 +89,46 @@ app.post('/api/public/hotel', async (req, res) => {
             return res.status(400).json({ error: "Password must be at least 6 characters long." });
         }
 
-        // 2. Domain Sanitization
-        let sanitizedDomain = domainName.toLowerCase()
-            .replace(/^https?:\/\//, '')
-            .replace(/\/$/, '')
-            .split('/')[0];
+        // 2. Conditional Domain Sanitization & Check
+        let sanitizedDomain = null;
+        
+        if (domainName && domainName.trim() !== "") {
+            sanitizedDomain = domainName.toLowerCase()
+                .replace(/^https?:\/\//, '')
+                .replace(/\/$/, '')
+                .split('/')[0]
+                .trim();
 
-        const domainExists = await Hotel.findOne({ domainName: sanitizedDomain });
-        if (domainExists) return res.status(400).json({ error: "Domain already registered." });
+            // Only check uniqueness if a domain was actually provided
+            const domainExists = await Hotel.findOne({ domainName: sanitizedDomain });
+            if (domainExists) {
+                return res.status(400).json({ error: "This domain is already registered to another hotel." });
+            }
+        }
 
+        // Check for existing user email
         const existingUser = await User.findOne({ username: email });
         if (existingUser) return res.status(400).json({ error: "Email already in use." });
 
         // 3. Save Hotel
         const newHotel = new Hotel({ 
-            name, location, phoneNumber, email, 
-            domainName: sanitizedDomain 
+            name, 
+            location, 
+            phoneNumber, 
+            email, 
+            domainName: sanitizedDomain // Will be null if empty
         });
+        
         const savedHotel = await newHotel.save();
         savedHotelId = savedHotel._id; 
 
-        // 4. Save User with PREFERRED Password
+        // 4. Save User
         const newUser = new User({
             hotelId: savedHotel._id,
             username: email, 
-            password: password, // The User model should handle hashing!
+            password: password, 
             role: 'admin',
-            isInitial: false // Setting to false because they just set their password
+            isInitial: false 
         });
 
         await newUser.save();
@@ -126,6 +139,7 @@ app.post('/api/public/hotel', async (req, res) => {
         });
 
     } catch (err) {
+        // Cleanup if hotel was created but user creation failed
         if (savedHotelId) await Hotel.findByIdAndDelete(savedHotelId);
         res.status(500).json({ error: "Onboarding failed", details: err.message });
     }
@@ -1281,11 +1295,16 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
 // --- New Hotel Schema ---
 const hotelSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    // NEW: The domain where the booking engine will be hosted
-    domainName: { type: String, unique: true, sparse: true }, 
+    domainName: { 
+        type: String, 
+        unique: true, 
+        sparse: true, 
+        lowercase: true, // Automatically converts to lowercase
+        trim: true       // Removes accidental whitespace
+    }, 
     location: String,
     phoneNumber: String,
-    email: String,
+    email: { type: String, lowercase: true, trim: true },
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -4260,6 +4279,34 @@ app.get('/api/bookings/id/:id', auth, async (req, res) => {
         res.status(400).json({ message: 'Invalid request' });
     }
 });
+
+const cleanUpDomains = async () => {
+    try {
+        // 1. Convert all empty strings or whitespace-only domains to null
+        const result = await Hotel.updateMany(
+            { 
+                $or: [
+                    { domainName: "" }, 
+                    { domainName: { $exists: false } },
+                    { domainName: /^\s*$/ } 
+                ] 
+            },
+            { $set: { domainName: null } }
+        );
+
+        console.log(`✅ Cleaned up ${result.modifiedCount} hotels with empty domains.`);
+
+        // 2. Force sync the indexes to ensure 'sparse' is active
+        await Hotel.syncIndexes();
+        console.log("✅ Indexes synchronized successfully.");
+        
+    } catch (err) {
+        console.error("❌ Cleanup failed:", err.message);
+    }
+};
+
+// Call this function once
+cleanUpDomains();
 const port = process.env.PORT || 3000;
 
 // --- 8. Start the Server ---
