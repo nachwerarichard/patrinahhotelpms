@@ -40,6 +40,7 @@ const housekeepingRoomGrid = document.getElementById('housekeepingRoomGrid');
 const messageBox = document.getElementById('messageBox');
 const messageBoxTitle = document.getElementById('messageBoxTitle');
 const messageBoxContent = document.getElementById('messageBoxContent');
+const messageBoxOverlay = document.getElementById('messageBoxOverlay'); // Added this
 const logoutBtn = document.getElementById('logoutBtn');
 
 // Pagination elements
@@ -161,7 +162,7 @@ async function authenticatedFetch(url, options = {}) {
     }
 
     if (!token) {
-        window.location.replace('https://novouscloudpms-tz4s.onrender.com/login.html');
+        window.location.replace('https://elegant-pasca-cea136.netlify.app/frontend/login.html');
         return null;
     }
 
@@ -301,15 +302,23 @@ let currentHotel = userData ? userData.hotelName : 'Property Mnagement System';
 function showMessageBox(title, message, isError = false) {
     messageBoxTitle.textContent = title;
     messageBoxContent.textContent = message;
-    messageBox.classList.remove('error-message', 'success-message'); // Clear previous states
+    
+    // Remove the 'hidden' class to make them visible
+    messageBox.classList.remove('hidden');
+    messageBoxOverlay.classList.remove('hidden');
+
+    // Optional: Logic for error colors
     if (isError) {
-        messageBox.classList.add('error-message');
+        messageBoxTitle.classList.add('text-red-600');
     } else {
-        messageBox.classList.add('success-message');
+        messageBoxTitle.classList.add('text-indigo-600');
     }
-    messageBox.style.display = 'flex'; // Use flex for centering
 }
 
+function closeMessageBox() {
+    messageBox.classList.add('hidden');
+    messageBoxOverlay.classList.add('hidden');
+}
 async function updateDashboard() {
   try {
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
@@ -5262,7 +5271,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     } else {
         if (!localStorage.getItem('token')) {
-            window.location.href = 'https://novouscloudpms-tz4s.onrender.com/login.html';
+            window.location.href = 'https://elegant-pasca-cea136.netlify.app/frontend/login.html';
         }
     }
 });
@@ -9867,3 +9876,5 @@ window.addEventListener('DOMContentLoaded', () => {
     loadRoomTypes();
     fetchRoomsV2();
 });
+
+showMessageBox("Hello!", "This is a test message.");
