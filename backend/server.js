@@ -4232,19 +4232,26 @@ app.post('/api/public/hotel', async (req, res) => {
         }
 
         // 2️⃣ Domain Handling
-let sanitizedDomain = null;
+            let sanitizedDomain = null;
 
-if (typeof domainName === "string" && domainName.trim() !== "") {
-    sanitizedDomain = domainName.toLowerCase()
-        .replace(/^https?:\/\//, '')
-        .replace(/\/$/, '')
-        .split('/')[0];
+if (typeof domainName === "string") {
+    const trimmed = domainName.trim();
 
-    const domainExists = await Hotel.findOne({ domainName: sanitizedDomain });
-    if (domainExists) {
-        return res.status(400).json({ error: "Domain already registered." });
+    if (trimmed.length > 0) {
+        sanitizedDomain = trimmed
+            .toLowerCase()
+            .replace(/^https?:\/\//, '')
+            .replace(/\/$/, '')
+            .split('/')[0];
+
+        const domainExists = await Hotel.findOne({ domainName: sanitizedDomain });
+        if (domainExists) {
+            return res.status(400).json({ error: "Domain already registered." });
+        }
     }
-}else {
+}
+    }
+else {
             // 🔥 If no domain provided → assign shared default domain
             sanitizedDomain = null;
 
