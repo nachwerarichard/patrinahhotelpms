@@ -100,7 +100,8 @@
                     <input type="text" id="editDomain" placeholder="Domain" class="p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-400 col-span-2">
                     <input type="email" id="editEmail" placeholder="Email" class="p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-amber-400">
                     <input type="tel" id="editPhone" placeholder="Phone" class="p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-amber-400">
-                </div>
+                    <input type="text" id="editPassword" placeholder="Password" class="p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-amber-400">
+                </div> 
                 <button type="submit" class="w-full py-5 gold-gradient text-white rounded-2xl font-bold mt-4">Save Changes</button>
             </form>
         </div>
@@ -248,9 +249,9 @@
             document.getElementById('editEmail').value = hotel.email;
             document.getElementById('editPhone').value = hotel.phoneNumber || '';
             document.getElementById('editDomain').value = hotel.domainName || '';
+            document.getElementById('editPassword').value = hotel.password;
             openModal('editModal');
         }
-
         document.getElementById('editForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('editHotelId').value;
@@ -259,9 +260,9 @@
                 location: document.getElementById('editLocation').value,
                 email: document.getElementById('editEmail').value,
                 phoneNumber: document.getElementById('editPhone').value,
-                domainName: document.getElementById('editDomain').value
+                domainName: document.getElementById('editDomain').value,
+                password: document.getElementById('editPassword').value
             };
-
             try {
                 const response = await fetch(`${API_BASE_URL}/admin/hotel/${id}`, {
                     method: 'PUT',
