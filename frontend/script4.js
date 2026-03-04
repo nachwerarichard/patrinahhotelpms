@@ -300,25 +300,28 @@ let currentHotel = userData ? userData.hotelName : 'Property Mnagement System';
  * @param {boolean} isError - True if it's an error message, false for success/info.
  */
 function showMessageBox(title, message, isError = false) {
-    messageBoxTitle.textContent = title;
-    messageBoxContent.textContent = message;
-    
-    // Remove the 'hidden' class to make them visible
-    messageBox.classList.remove('hidden');
-    messageBoxOverlay.classList.remove('hidden');
+    titleEl.textContent = title;
+    contentEl.textContent = message;
 
-    // Optional: Logic for error colors
+    // Toggle Colors based on error status
     if (isError) {
-        messageBoxTitle.classList.add('text-red-600');
+        titleEl.className = 'text-xl font-bold mb-2 text-red-600';
     } else {
-        messageBoxTitle.classList.add('text-indigo-600');
+        titleEl.className = 'text-xl font-bold mb-2 text-indigo-600';
     }
+
+    overlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
 }
 
+// 3. The only function you need to hide it
 function closeMessageBox() {
-    messageBox.classList.add('hidden');
-    messageBoxOverlay.classList.add('hidden');
+    overlay.classList.add('hidden');
+    modal.classList.add('hidden');
 }
+
+// Optional: Close if user clicks the dark overlay area
+overlay.addEventListener('click', closeMessageBox);
 async function updateDashboard() {
   try {
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
@@ -4659,14 +4662,14 @@ document.addEventListener('DOMContentLoaded', () => {
        });
     }});
     
-    function showMessageBox(title, content) {
+    /*function showMessageBox(title, content) {
     document.getElementById('messageBoxTitle').textContent = title;
     document.getElementById('messageBoxContent').textContent = content;
 
     // Show both the overlay and the box
     document.getElementById('messageBoxOverlay').classList.remove('hidden');
     document.getElementById('messageBox').classList.remove('hidden');
-}
+}*/
 
 function closeMessageBox() {
     // Hide both
@@ -5720,7 +5723,7 @@ function exportTableToExcel(tableId, filename) { console.log(`Exporting table ${
  * @param {string} message The message to display.
  * @param {function} [callback] Optional callback function to execute after the message is dismissed.
  */
-function showMessage(message, callback = null) {
+/*function showMessage(message, callback = null) {
     const modal = document.getElementById('message-modal');
     const messageText = document.getElementById('message-text');
     const closeButton = document.getElementById('message-close-button');
@@ -5743,7 +5746,7 @@ function showMessage(message, callback = null) {
             callback();
         }
     };
-    closeButton.addEventListener('click', handleClose);
+    closeButton.addEventListener('click', handleClose);*/
 
     function outsideClick(event) {
         if (event.target === modal) {
