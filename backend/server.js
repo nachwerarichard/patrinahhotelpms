@@ -4306,10 +4306,21 @@ app.post('/api/public/hotel', async (req, res) => {
             hotelId: savedHotel._id
         });
 
-        } catch (err) {
-    console.error("FULL ERROR LOG:", err); // ADD THIS LINE
-    if (savedHotelId) await Hotel.findByIdAndDelete(savedHotelId);
-    res.status(500).json({ error: "Onboarding failed", details: err.message });
+   } catch (err) {
+    console.error("--- REGISTRATION ERROR ---");
+    console.error("Code:", err.code); // Look for 11000 (Duplicate)
+    console.error("Message:", err.message);
+    
+    if (savedHotelId) {
+        await Hotel.findByIdAndDelete(savedHotelId);
+        console.log("Cleaned up failed hotel ID:", savedHotelId);
+    }
+    
+    res.status(500).json({ 
+        error: "Server Error during onboarding", 
+        details: err.message,
+        isDuplicate: err.code === 11000 
+    });
 }
     
 });
