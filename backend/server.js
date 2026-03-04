@@ -4292,10 +4292,29 @@ if (typeof domainName === "string" && domainName.trim() !== "") {
 }
 });
 
-await Hotel.syncIndexes();
 mongoose.connection.once('open', async () => {
-    await Hotel.syncIndexes();
-    console.log("Indexes synced");
+    console.log("✅ MongoDB connected");
+
+    try {
+        // 1️⃣ Drop old index
+        await mongoose.connection.db.collection('hotels')
+            .dropIndex('domainName_1')
+            .catch(() => console.log("Old index did not exist"));
+
+        console.log("🗑 Old domainName index removed");
+
+        // 2️⃣ Create new sparse unique index
+        await mongoose.connection.db.collection('hotels')
+            .createIndex(
+                { domainName: 1 },
+                { unique: true, sparse: true }
+            );
+
+        console.log("✅ New sparse unique index created");
+
+    } catch (err) {
+        console.error("Index update error:", err);
+    }
 });
 
 const port = process.env.PORT || 3000;
