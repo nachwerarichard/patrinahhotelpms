@@ -4207,12 +4207,16 @@ app.get('/api/bookings/id/:id', auth, async (req, res) => {
     }
 });
 // --- 3️⃣ Onboarding Route ---
+// --- /api/public/hotel route ---
 app.post('/api/public/hotel', async (req, res) => {
     const { name, location, phoneNumber, email, domainName, password, confirmPassword } = req.body;
+
     let savedHotelId = null;
 
     try {
-        // --- Validation ---
+        // -------------------------------
+        // 1️⃣ Basic validation
+        // -------------------------------
         if (!name || !location || !phoneNumber || !email || !password) {
             return res.status(400).json({ error: "All required fields must be provided." });
         }
@@ -4225,31 +4229,38 @@ app.post('/api/public/hotel', async (req, res) => {
             return res.status(400).json({ error: "Password must be at least 6 characters long." });
         }
 
+        // Check if user already exists
         const existingUser = await User.findOne({ username: email });
         if (existingUser) {
             return res.status(400).json({ error: "Email already in use." });
         }
 
-        // --- Domain Handling ---
+        // -------------------------------
+        // 2️⃣ Handle domainName
+        // -------------------------------
         let sanitizedDomain = null;
-        if (typeof domainName === "string") {
-            const trimmed = domainName.trim();
 
-            if (trimmed.length > 0) {
-                sanitizedDomain = trimmed
-                    .toLowerCase()
-                    .replace(/^https?:\/\//, '')
-                    .replace(/\/$/, '')
-                    .split('/')[0];
+        if (typeof domainName === "string" && domainName.trim().length > 0) {
+            sanitizedDomain = domainName
+                .trim()
+                .toLowerCase()
+                .replace(/^https?:\/\//, '')
+                .replace(/\/$/, '')
+                .split('/')[0];
 
-                const domainExists = await Hotel.findOne({ domainName: sanitizedDomain });
-                if (domainExists) {
-                    return res.status(400).json({ error: "Domain already registered." });
-                }
+            // Check if sanitized domain already exists
+            const domainExists = await Hotel.findOne({ domainName: sanitizedDomain });
+            if (domainExists) {
+                return res.status(400).json({ error: "Domain already registered." });
             }
+        } else {
+            // If no domain provided → store as null
+            sanitizedDomain = null;
         }
 
-        // --- Save Hotel ---
+        // -------------------------------
+        // 3️⃣ Create the hotel
+        // -------------------------------
         const newHotel = new Hotel({
             name,
             location,
@@ -4261,17 +4272,22 @@ app.post('/api/public/hotel', async (req, res) => {
         const savedHotel = await newHotel.save();
         savedHotelId = savedHotel._id;
 
-        // --- Create Admin User ---
+        // -------------------------------
+        // 4️⃣ Create admin user
+        // -------------------------------
         const newUser = new User({
             hotelId: savedHotel._id,
             username: email,
-            password: password, // User model should handle hashing
+            password: password, // User model should hash password
             role: 'admin',
             isInitial: false
         });
 
         await newUser.save();
 
+        // -------------------------------
+        // 5️⃣ Respond success
+        // -------------------------------
         res.status(201).json({
             message: "Property & Admin Account Created ✅",
             hotelId: savedHotel._id
@@ -4280,6 +4296,7 @@ app.post('/api/public/hotel', async (req, res) => {
     } catch (err) {
         console.error("🚨 ONBOARDING ERROR:", err);
 
+        // Clean up partially created hotel if error occurs
         if (savedHotelId) {
             await Hotel.findByIdAndDelete(savedHotelId);
         }
@@ -4288,32 +4305,6 @@ app.post('/api/public/hotel', async (req, res) => {
     }
 });
 
-
-
-mongoose.connection.once('open', async () => {
-    console.log("✅ MongoDB connected");
-
-    try {
-        // 1️⃣ Drop old index
-        await mongoose.connection.db.collection('hotels')
-            .dropIndex('domainName_1')
-            .catch(() => console.log("Old index did not exist"));
-
-        console.log("🗑 Old domainName index removed");
-
-        // 2️⃣ Create new sparse unique index
-        await mongoose.connection.db.collection('hotels')
-            .createIndex(
-                { domainName: 1 },
-                { unique: true, sparse: true }
-            );
-
-        console.log("✅ New sparse unique index created");
-
-    } catch (err) {
-        console.error("Index update error:", err);
-    }
-});
 
 async function fixDomainsAndIndex() {
     try {
@@ -4335,12 +4326,13 @@ async function fixDomainsAndIndex() {
         throw err; // stop server start if index fails
     }
 }
+ fixDomainsAndIndex();
+
 
 const port = process.env.PORT || 3000;
 
 // --- 8. Start the Server ---
 app.listen(port, () => {
-    await fixDomainsAndIndex();
     console.log(`Server running on http://localhost:${port}`);
     console.log('Backend API Endpoints:');
     console.log(`- POST /api/login`);
