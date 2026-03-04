@@ -1222,8 +1222,12 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
 // --- New Hotel Schema ---
 const hotelSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    // sparse: true allows multiple null/undefined values to bypass the unique constraint
-    domainName: { type: String, unique: true, sparse: true, default: null }, 
+    domainName: { 
+        type: String, 
+        unique: true, 
+        sparse: true, 
+        default: null 
+    },
     location: String,
     phoneNumber: String,
     email: String,
@@ -4288,29 +4292,10 @@ if (typeof domainName === "string" && domainName.trim() !== "") {
 }
 });
 
+await Hotel.syncIndexes();
 mongoose.connection.once('open', async () => {
-    console.log("✅ MongoDB connected");
-
-    try {
-        // 1️⃣ Drop old index
-        await mongoose.connection.db.collection('hotels')
-            .dropIndex('domainName_1')
-            .catch(() => console.log("Old index did not exist"));
-
-        console.log("🗑 Old domainName index removed");
-
-        // 2️⃣ Create new sparse unique index
-        await mongoose.connection.db.collection('hotels')
-            .createIndex(
-                { domainName: 1 },
-                { unique: true, sparse: true }
-            );
-
-        console.log("✅ New sparse unique index created");
-
-    } catch (err) {
-        console.error("Index update error:", err);
-    }
+    await Hotel.syncIndexes();
+    console.log("Indexes synced");
 });
 
 const port = process.env.PORT || 3000;
