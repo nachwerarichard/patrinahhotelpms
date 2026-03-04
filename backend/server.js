@@ -4208,6 +4208,7 @@ app.get('/api/bookings/id/:id', auth, async (req, res) => {
 });
 // --- 3️⃣ Onboarding Route ---
 // --- /api/public/hotel route ---
+
 app.post('/api/public/hotel', async (req, res) => {
     const { name, location, phoneNumber, email, domainName, password, confirmPassword } = req.body;
 
@@ -4289,83 +4290,16 @@ app.post('/api/public/hotel', async (req, res) => {
 async function fixDomainsAndIndex() {
     try {
         // 1️⃣ Fix all null/empty domainNames
-app.post('/api/public/hotel', async (req, res) => {
-    const { name, location, phoneNumber, email, domainName, password, confirmPassword } = req.body;
+// Find all hotels with empty/null/"null" domainNames
+const hotels = await Hotel.find({ domainName: { $in: ["", "null", null] } });
 
-    let savedHotelId = null;
+// Assign a unique value per document using _id
+for (const hotel of hotels) {
+    hotel.domainName = `shared-${hotel._id.toString()}`; // guaranteed unique
+    await hotel.save();
+}
 
-    try {
-        // Validation
-        if (!name || !location || !phoneNumber || !email || !password) {
-            return res.status(400).json({ error: "All required fields must be provided." });
-        }
-
-        if (password !== confirmPassword) {
-            return res.status(400).json({ error: "Passwords do not match." });
-        }
-
-        if (password.length < 6) {
-            return res.status(400).json({ error: "Password must be at least 6 characters long." });
-        }
-
-        // Check for existing user
-        const existingUser = await User.findOne({ username: email });
-        if (existingUser) return res.status(400).json({ error: "Email already in use." });
-
-        // Domain handling
-        let sanitizedDomain = null;
-
-        if (typeof domainName === "string" && domainName.trim().length > 0) {
-            sanitizedDomain = domainName
-                .trim()
-                .toLowerCase()
-                .replace(/^https?:\/\//, '')
-                .replace(/\/$/, '')
-                .split('/')[0];
-
-            const domainExists = await Hotel.findOne({ domainName: sanitizedDomain });
-            if (domainExists) return res.status(400).json({ error: "Domain already registered." });
-        } else {
-            sanitizedDomain = null; // okay, sparse index allows multiple nulls
-        }
-
-        // Save hotel
-        const newHotel = new Hotel({
-            name,
-            location,
-            phoneNumber,
-            email,
-            domainName: sanitizedDomain
-        });
-
-        const savedHotel = await newHotel.save();
-        savedHotelId = savedHotel._id;
-
-        // Create admin user
-        const newUser = new User({
-            hotelId: savedHotel._id,
-            username: email,
-            password: password,
-            role: 'admin',
-            isInitial: false
-        });
-
-        await newUser.save();
-
-        res.status(201).json({
-            message: "Property & Admin Account Created ✅",
-            hotelId: savedHotel._id
-        });
-
-    } catch (err) {
-        console.error("🚨 ONBOARDING ERROR:", err);
-
-        if (savedHotelId) await Hotel.findByIdAndDelete(savedHotelId);
-
-        res.status(500).json({ error: err.message });
-    }
-});
-
+console.log("✅ Existing hotel domains normalized with unique values");
 // 2️⃣ Now create sparse unique index safely
 await mongoose.connection.db.collection('hotels').createIndex(
     { domainName: 1 },
