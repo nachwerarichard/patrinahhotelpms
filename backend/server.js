@@ -1222,8 +1222,8 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
 // --- New Hotel Schema ---
 const hotelSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    // NEW: The domain where the booking engine will be hosted
-    domainName: { type: String, unique: true, sparse: true }, 
+    // sparse: true allows multiple null/undefined values to bypass the unique constraint
+    domainName: { type: String, unique: true, sparse: true, default: null }, 
     location: String,
     phoneNumber: String,
     email: String,
@@ -4210,7 +4210,7 @@ app.post('/api/public/hotel', async (req, res) => {
 
     try {
         // 1. Enhanced Validation
-        if (!name || !location || !phoneNumber || !email|| !password) {
+        if (!name || !location || !phoneNumber || !email || !password) {
             return res.status(400).json({ error: "All fields are required." });
         }
 
@@ -4222,22 +4222,33 @@ app.post('/api/public/hotel', async (req, res) => {
             return res.status(400).json({ error: "Password must be at least 6 characters long." });
         }
 
-        // 2. Domain Sanitization
-        let sanitizedDomain = domainName.toLowerCase()
-            .replace(/^https?:\/\//, '')
-            .replace(/\/$/, '')
-            .split('/')[0];
+        // 2. Domain Sanitization & Optional Logic
+        let sanitizedDomain = null;
 
-        const domainExists = await Hotel.findOne({ domainName: sanitizedDomain });
-        if (domainExists) return res.status(400).json({ error: "Domain already registered." });
+        if (domainName && domainName.trim() !== "") {
+            sanitizedDomain = domainName.toLowerCase()
+                .replace(/^https?:\/\//, '')
+                .replace(/\/$/, '')
+                .split('/')[0];
 
+            // Only check for duplicate domains if the user actually provided one
+            const domainExists = await Hotel.findOne({ domainName: sanitizedDomain });
+            if (domainExists) {
+                return res.status(400).json({ error: "This domain is already registered to another property." });
+            }
+        }
+
+        // Check if user email already exists across the system
         const existingUser = await User.findOne({ username: email });
         if (existingUser) return res.status(400).json({ error: "Email already in use." });
 
         // 3. Save Hotel
         const newHotel = new Hotel({ 
-            name, location, phoneNumber, email, 
-            domainName: sanitizedDomain 
+            name, 
+            location, 
+            phoneNumber, 
+            email, 
+            domainName: sanitizedDomain // Will be null if empty, allowing multiple "no-domain" hotels
         });
         const savedHotel = await newHotel.save();
         savedHotelId = savedHotel._id; 
@@ -4246,9 +4257,9 @@ app.post('/api/public/hotel', async (req, res) => {
         const newUser = new User({
             hotelId: savedHotel._id,
             username: email, 
-            password: password, // The User model should handle hashing!
+            password: password, // Note: Ensure your User model has a pre-save hook for bcrypt hashing!
             role: 'admin',
-            isInitial: false // Setting to false because they just set their password
+            isInitial: false 
         });
 
         await newUser.save();
@@ -4259,6 +4270,7 @@ app.post('/api/public/hotel', async (req, res) => {
         });
 
     } catch (err) {
+        // Cleanup: If hotel was created but user creation failed, delete the hotel
         if (savedHotelId) await Hotel.findByIdAndDelete(savedHotelId);
         res.status(500).json({ error: "Onboarding failed", details: err.message });
     }
