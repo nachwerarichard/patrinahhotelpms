@@ -140,44 +140,71 @@
         </div>
     </section>
 
-    <section id="dining" class="py-32 bg-stone-100 text-stone-900">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="grid lg:grid-cols-2 gap-16 items-center">
+   <section id="dining" class="py-32 bg-stone-100 text-stone-900">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="grid lg:grid-cols-2 gap-20 items-center">
+            
+            <div class="relative">
                 <div class="grid grid-cols-2 gap-4">
-                    <img src="https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=600&q=80" class="rounded-lg shadow-lg">
-                    <img src="https://images.unsplash.com/photo-1604315534277-2d93708f37bc?auto=format&fit=crop&w=600&q=80" class="rounded-lg shadow-lg mt-12">
+                    <img src="https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=600&q=80" class="rounded-lg shadow-lg hover:scale-105 transition duration-500" alt="Plated Meal">
+                    <img src="https://images.unsplash.com/photo-1604315534277-2d93708f37bc?auto=format&fit=crop&w=600&q=80" class="rounded-lg shadow-lg mt-12 hover:scale-105 transition duration-500" alt="Restaurant Interior">
                 </div>
-                <div>
-                    <span class="text-orange-700 uppercase tracking-widest text-xs">The Bamboo Grill & Lounge</span>
-                    <h2 class="text-5xl font-serif mt-4 mb-8">A Fusion of Flavors</h2>
-                    <div class="space-y-8">
-                        <div class="flex gap-6">
-                            <div class="text-orange-700 font-serif text-3xl">01</div>
-                            <div>
-                                <h4 class="font-bold uppercase text-sm">Traditional Malewa Delicacy</h4>
-                                <p class="text-stone-500 text-sm">Smoked bamboo shoots prepared with groundnut sauce—the soul of Gisu cuisine.</p>
-                            </div>
+                <div class="absolute -z-10 -bottom-6 -left-6 w-64 h-64 bg-orange-200/50 rounded-full blur-3xl"></div>
+            </div>
+
+            <div>
+                <span class="text-orange-700 uppercase tracking-widest text-[10px] font-bold">The Bamboo Grill & Lounge</span>
+                <h2 class="text-5xl font-serif mt-4 mb-10">A Fusion of Flavors</h2>
+                
+                <div class="space-y-10">
+                    <div class="flex items-center gap-6 group">
+                        <div class="flex-shrink-0 w-24 h-24 overflow-hidden rounded-full border-2 border-orange-700/20 group-hover:border-orange-700 transition">
+                            <img src="https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=300&q=80" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" alt="Malewa">
                         </div>
-                        <div class="flex gap-6">
-                            <div class="text-orange-700 font-serif text-3xl">02</div>
-                            <div>
-                                <h4 class="font-bold uppercase text-sm">Bugisu Arabica Steaks</h4>
-                                <p class="text-stone-500 text-sm">Prime Ugandan beef infused with a coffee-rub from the slopes of Mt. Elgon.</p>
+                        <div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-orange-700 font-serif text-xl italic">01.</span>
+                                <h4 class="font-bold uppercase text-sm tracking-tighter">Traditional Malewa Delicacy</h4>
                             </div>
-                        </div>
-                        <div class="flex gap-6">
-                            <div class="text-orange-700 font-serif text-3xl">03</div>
-                            <div>
-                                <h4 class="font-bold uppercase text-sm">International Classics</h4>
-                                <p class="text-stone-500 text-sm">From handmade Italian pasta to fresh Tilapia from Lake Victoria.</p>
-                            </div>
+                            <p class="text-stone-500 text-sm mt-1">Smoked bamboo shoots prepared with groundnut sauce—the soul of Gisu cuisine.</p>
                         </div>
                     </div>
-                    <button class="mt-10 bg-black text-white px-10 py-4 uppercase text-[10px] tracking-widest">Reserve a Table</button>
+
+                    <div class="flex items-center gap-6 group">
+                        <div class="flex-shrink-0 w-24 h-24 overflow-hidden rounded-full border-2 border-orange-700/20 group-hover:border-orange-700 transition">
+                            <img src="https://images.unsplash.com/photo-1546241072-48010ad28c2c?auto=format&fit=crop&w=300&q=80" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" alt="Bugisu Steak">
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-orange-700 font-serif text-xl italic">02.</span>
+                                <h4 class="font-bold uppercase text-sm tracking-tighter">Bugisu Arabica Steaks</h4>
+                            </div>
+                            <p class="text-stone-500 text-sm mt-1">Prime Ugandan beef infused with a coffee-rub from the slopes of Mt. Elgon.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-6 group">
+                        <div class="flex-shrink-0 w-24 h-24 overflow-hidden rounded-full border-2 border-orange-700/20 group-hover:border-orange-700 transition">
+                            <img src="https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=300&q=80" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" alt="Fresh Tilapia">
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-orange-700 font-serif text-xl italic">03.</span>
+                                <h4 class="font-bold uppercase text-sm tracking-tighter">International Classics</h4>
+                            </div>
+                            <p class="text-stone-500 text-sm mt-1">From handmade Italian pasta to fresh grilled Tilapia sourced from the Nile.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-12 flex items-center gap-8">
+                    <button class="bg-black text-white px-10 py-4 uppercase text-[10px] tracking-widest hover:bg-orange-700 transition duration-500 shadow-lg">Reserve a Table</button>
+                    <a href="#" class="text-[10px] uppercase tracking-widest border-b border-stone-400 pb-1 hover:text-orange-700 hover:border-orange-700 transition">Download Menu (PDF)</a>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
     <section id="experiences" class="py-32 bg-[#0f0f0f] text-white">
         <div class="max-w-7xl mx-auto px-6">
