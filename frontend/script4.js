@@ -5023,6 +5023,8 @@ const submitBtn = document.getElementById('modalSubmitBtn');
 function closeUserModal() {
     const modal = document.getElementById('userModal');
     modal.classList.add('hidden');
+      document.body.classList.remove('modal-active');
+
 }
 
 /**
@@ -5033,7 +5035,7 @@ window.onclick = function(event) {
         closeModal();
     }
 }
-function openModal(editData = null) {
+function openUserModal(editData = null) {
     const modal = document.getElementById('userModal');
     modal.classList.remove('hidden');
     document.body.classList.add('modal-active');
@@ -5048,10 +5050,6 @@ function openModal(editData = null) {
     }
 }
 
-function closeModal() {
-    document.getElementById('userModal').classList.add('hidden');
-    document.body.classList.remove('modal-active');
-}
 
 async function fetchUsers() {
     try {
