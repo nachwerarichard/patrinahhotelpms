@@ -4995,7 +4995,7 @@ document.getElementById('editRoomForm').addEventListener('submit', async (e) => 
 /**
  * Opens the modal and ensures it's in "Add" mode
  */
-function openModal() {
+function openUserModal() {
   // Get references to the elements
 const modal = document.getElementById('userModal');
 const modalTitle = document.getElementById('modalTitle');
