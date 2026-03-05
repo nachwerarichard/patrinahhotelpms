@@ -4991,6 +4991,47 @@ document.getElementById('editRoomForm').addEventListener('submit', async (e) => 
     }
 });
 
+
+/**
+ * Opens the modal and ensures it's in "Add" mode
+ */
+function openModal() {
+  // Get references to the elements
+const modal = document.getElementById('userModal');
+const modalTitle = document.getElementById('modalTitle');
+const submitBtn = document.getElementById('modalSubmitBtn');
+    // 1. Reset the form values (clears previous inputs)
+    document.getElementById('staffId').value = '';
+    document.getElementById('staffusername').value = '';
+    document.getElementById('staffpassword').value = '';
+    document.getElementById('staffrole').value = 'Front office';
+
+    // 2. Set the UI text for a new entry
+    modalTitle.innerText = "Staff Registration";
+    submitBtn.innerHTML = `<i data-lucide="save" class="w-5 h-5"></i> Confirm and Save Staff`;
+
+    // 3. Remove the 'hidden' class to show it
+    modal.classList.remove('hidden');
+    
+    // Optional: Re-initialize Lucide icons if you're using the library
+    if (window.lucide) lucide.createIcons();
+}
+
+/**
+ * Closes the modal
+ */
+function closeModal() {
+    modal.classList.add('hidden');
+}
+
+/**
+ * Close modal if the user clicks the dark backdrop outside the white box
+ */
+window.onclick = function(event) {
+    if (event.target == modal) {
+        closeModal();
+    }
+}
 function openModal(editData = null) {
     const modal = document.getElementById('userModal');
     modal.classList.remove('hidden');
