@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elgon Heights Resort | Gateway to the East</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@300;400;600&display=swap');
+        
+        body { font-family: 'Montserrat', sans-serif; }
+        h1, h2, h3, .font-serif { font-family: 'Cormorant Garamond', serif; }
+
+        .earth-gradient {
+            background: linear-gradient(to right, #4a5d23, #a3b18a, #588157);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .card-hover:hover { transform: translateY(-5px); transition: all 0.3s ease; }
+    </style>
+</head>
+<body class="bg-[#1a1a15] text-stone-200">
+
+    <nav class="fixed w-full z-50 bg-[#1a1a15]/90 border-b border-stone-800 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+            <div class="text-2xl font-serif tracking-[0.1em] font-bold text-white uppercase">Elgon <span class="text-emerald-500">Heights</span></div>
+            <div class="hidden lg:flex space-x-10 text-[11px] uppercase tracking-[0.3em] font-light">
+                <a href="#hero" class="hover:text-emerald-400 transition">Heritage</a>
+                <a href="#experiences" class="hover:text-emerald-400 transition">Experiences</a>
+                <a href="#rooms" class="hover:text-emerald-400 transition">Lodges</a>
+                <a href="#dining" class="hover:text-emerald-400 transition">Malewa Grill</a>
+                <a href="#culture" class="hover:text-emerald-400 transition">Culture</a>
+            </div>
+            <button class="bg-emerald-700 px-8 py-2 text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-600 transition duration-500">Book Stay</button>
+        </div>
+    </nav>
+
+    <section id="hero" class="relative h-screen flex items-center justify-start overflow-hidden">
+        <img src="https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?auto=format&fit=crop&w=1920&q=80" class="absolute inset-0 w-full h-full object-cover opacity-50" alt="Mount Elgon Foothills">
+        <div class="relative z-10 max-w-7xl mx-auto px-6">
+            <span class="text-emerald-400 uppercase tracking-[0.5em] text-xs mb-4 block">Mbale • Eastern Uganda</span>
+            <h1 class="text-6xl md:text-8xl font-serif mb-8 leading-tight">Ancient Peaks.<br><span class="italic text-stone-400">Sacred Traditions.</span></h1>
+            <div class="flex flex-col md:flex-row gap-8 items-center">
+                <a href="#experiences" class="bg-white text-black px-10 py-4 uppercase text-xs tracking-[0.2em] hover:bg-emerald-500 hover:text-white transition">Explore the Mountain</a>
+                <p class="text-stone-400 max-w-sm text-sm border-l border-emerald-800 pl-6">Experience the mist of Sipi Falls and the majesty of the world's largest volcanic base.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="experiences" class="py-32 bg-[#24241e]">
+        <div class="max-w-7xl mx-auto px-6">
+            <h2 class="text-5xl font-serif mb-16 text-center">The Soul of the East</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="group cursor-pointer">
+                    <div class="relative overflow-hidden aspect-video mb-6">
+                        <img src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
+                    </div>
+                    <h3 class="text-2xl font-serif mb-2">Sipi Falls Abseiling</h3>
+                    <p class="text-stone-400 text-sm">Chase the triple waterfalls of Sipi. We organize guided hikes and world-class abseiling experiences.</p>
+                </div>
+                <div class="group cursor-pointer">
+                    <div class="relative overflow-hidden aspect-video mb-6">
+                        <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
+                    </div>
+                    <h3 class="text-2xl font-serif mb-2">Mount Elgon Summit</h3>
+                    <p class="text-stone-400 text-sm">Conquer Wagagai Peak. Explore the caldera and the unique afro-montane flora of the national park.</p>
+                </div>
+                <div class="group cursor-pointer">
+                    <div class="relative overflow-hidden aspect-video mb-6">
+                        <img src="https://images.unsplash.com/photo-1523805081446-ed9a7bb84994?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
+                    </div>
+                    <h3 class="text-2xl font-serif mb-2">Imbalu Heritage</h3>
+                    <p class="text-stone-400 text-sm">Witness the sacred Bagisu circumcision ceremonies—a powerful display of courage and culture.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="dining" class="py-32 bg-stone-100 text-stone-900">
+        <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-12 gap-12 items-center">
+            <div class="lg:col-span-5">
+                <span class="text-emerald-700 uppercase tracking-widest text-xs font-bold">Culinary Journey</span>
+                <h2 class="text-5xl font-serif mt-4 mb-8">The Malewa Kitchen</h2>
+                <p class="text-lg text-stone-600 mb-8 italic">"Authentic bamboo shoot delicacies paired with the world's finest Arabica coffee, grown right on our slopes."</p>
+                <div class="space-y-4 mb-8">
+                    <div class="flex items-center gap-4">
+                        <i class="fa-solid fa-mug-hot text-emerald-700"></i>
+                        <span>Fresh Mt. Elgon Arabica Brewing</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <i class="fa-solid fa-leaf text-emerald-700"></i>
+                        <span>Traditional Malewa & Matooke</span>
+                    </div>
+                </div>
+                <button class="bg-stone-900 text-white px-8 py-3 uppercase text-[10px] tracking-[0.2em]">View Menu</button>
+            </div>
+            <div class="lg:col-span-7">
+                <img src="https://images.unsplash.com/photo-1544333346-64e4fe182547?auto=format&fit=crop&w=1200&q=80" class="w-full h-[500px] object-cover rounded-sm shadow-2xl">
+            </div>
+        </div>
+    </section>
+
+    <section id="culture" class="py-32 max-w-3xl mx-auto px-6">
+        <h2 class="text-4xl font-serif text-center mb-16">Traveler's Guide</h2>
+        <div class="space-y-4">
+            <details class="group bg-stone-800/30 border border-stone-700 rounded-lg overflow-hidden transition">
+                <summary class="flex justify-between items-center p-6 cursor-pointer list-none">
+                    <span class="font-medium">When is the Imbalu (Circumcision) Season?</span>
+                    <span class="text-emerald-500 group-open:rotate-180 transition-transform"><i class="fa-solid fa-chevron-down"></i></span>
+                </summary>
+                <div class="px-6 pb-6 text-stone-400 text-sm">
+                    The ceremony happens every even year (2024, 2026, etc.), typically peaking in August. We provide respectful, guided cultural tours to witness this rite of passage.
+                </div>
+            </details>
+            <details class="group bg-stone-800/30 border border-stone-700 rounded-lg overflow-hidden transition">
+                <summary class="flex justify-between items-center p-6 cursor-pointer list-none">
+                    <span class="font-medium">How far is the hotel from Sipi Falls?</span>
+                    <span class="text-emerald-500 group-open:rotate-180 transition-transform"><i class="fa-solid fa-chevron-down"></i></span>
+                </summary>
+                <div class="px-6 pb-6 text-stone-400 text-sm">
+                    We are located in Mbale City, approximately a 1-hour scenic drive to the Sipi trailhead. We provide daily shuttle services for our guests.
+                </div>
+            </details>
+        </div>
+    </section>
+
+    <footer class="py-20 bg-[#0d0d0b] border-t border-stone-900">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-12">
+            <div class="text-2xl font-serif tracking-[0.1em] font-bold text-white uppercase">Elgon <span class="text-emerald-500">Heights</span></div>
+            <div class="text-center md:text-left">
+                <p class="text-xs text-stone-500 uppercase tracking-widest mb-2">Plot 12, Pallisa Road, Mbale, Uganda</p>
+                <p class="text-[10px] text-stone-600 uppercase tracking-widest">&copy; 2026 Elgon Heights Resort. Pride of the East.</p>
+            </div>
+            <div class="flex space-x-8">
+                <a href="#" class="text-stone-500 hover:text-white transition"><i class="fa-brands fa-facebook"></i></a>
+                <a href="#" class="text-stone-500 hover:text-white transition"><i class="fa-brands fa-whatsapp"></i></a>
+                <a href="#" class="text-stone-500 hover:text-white transition"><i class="fa-brands fa-instagram"></i></a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
