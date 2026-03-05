@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elgon Heights Manor | Mbale's Premier Boutique Stay</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;600&display=swap');
+        
+        body { font-family: 'Montserrat', sans-serif; }
+        h1, h2, h3, .font-serif { font-family: 'Cormorant Garamond', serif; }
+
+        .safari-gradient {
+            background: linear-gradient(to right, #8B4513, #D2B48C, #DAA520);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .bg-pattern {
+            background-color: #0f0f0f;
+            background-image: url("https://www.transparenttextures.com/patterns/carbon-fibre.png");
+        }
+    </style>
+</head>
+<body class="bg-[#0f0f0f] text-stone-200">
+
+    <nav class="fixed w-full z-50 bg-[#0f0f0f]/95 border-b border-stone-800 backdrop-blur-sm">
+        <div class="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+            <div class="text-2xl font-serif tracking-[0.1em] font-bold text-white uppercase">Elgon Heights <span class="text-orange-600">Manor</span></div>
+            <div class="hidden lg:flex space-x-8 text-[11px] uppercase tracking-[0.2em] font-light">
+                <a href="#about" class="hover:text-orange-500 transition">Heritage</a>
+                <a href="#rooms" class="hover:text-orange-500 transition">Suites</a>
+                <a href="#dining" class="hover:text-orange-500 transition">Cuisine</a>
+                <a href="#experiences" class="hover:text-orange-500 transition">Experiences</a>
+                <a href="#contact" class="hover:text-orange-500 transition">Contact</a>
+            </div>
+            <button class="bg-orange-700 px-6 py-2 text-[10px] uppercase tracking-[0.2em] hover:bg-white hover:text-black transition duration-500">Book Your Stay</button>
+        </div>
+    </nav>
+
+    <section id="hero" class="relative h-screen flex items-center justify-center overflow-hidden">
+        <img src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1920&q=80" class="absolute inset-0 w-full h-full object-cover opacity-50" alt="Hotel Exterior">
+        <div class="relative z-10 text-center px-6">
+            <span class="text-orange-500 uppercase tracking-[0.5em] text-xs mb-4 block">Gateway to the East • Uganda</span>
+            <h1 class="text-6xl md:text-9xl font-serif mb-8 leading-tight">Majestic Peaks.<br><span class="italic text-orange-100">Impeccable Grace.</span></h1>
+            <div class="flex flex-col md:flex-row gap-8 justify-center items-center">
+                <p class="max-w-md text-stone-300 text-sm leading-relaxed border-r border-orange-900/50 pr-8 hidden md:block text-right">
+                    Nestled at the foothills of Mt. Elgon, where international luxury meets the heart of Bamasaaba culture.
+                </p>
+                <a href="#rooms" class="bg-white text-black px-12 py-5 uppercase text-xs tracking-[0.2em] hover:bg-orange-600 hover:text-white transition">Explore the Manor</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="about" class="py-32 px-6 bg-stone-50 text-stone-900">
+        <div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-20 items-center">
+            <div>
+                <span class="text-orange-700 font-bold uppercase tracking-widest text-xs">Our Story</span>
+                <h2 class="text-5xl font-serif mt-6 mb-8">Where the Sun First Rises in Uganda</h2>
+                <p class="text-lg text-stone-600 mb-6">Elgon Heights Manor is more than a hotel; it is a sanctuary for the discerning traveler. Established to showcase the beauty of Mbale, we provide an international standard of hospitality while remaining deeply rooted in the local traditions of Eastern Uganda.</p>
+                <p class="text-stone-500 mb-8">From the aroma of fresh Bugisu Arabica coffee in the morning to the breathtaking views of Wanale Ridge at sunset, every moment here is curated for excellence.</p>
+                <div class="grid grid-cols-2 gap-6 border-t border-stone-200 pt-8">
+                    <div>
+                        <h4 class="font-bold text-2xl font-serif">45</h4>
+                        <p class="text-xs uppercase text-stone-400">Luxury Suites</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-2xl font-serif">24/7</h4>
+                        <p class="text-xs uppercase text-stone-400">Concierge</p>
+                    </div>
+                </div>
+            </div>
+            <div class="relative">
+                <img src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=800&q=80" class="w-full h-[500px] object-cover rounded-sm shadow-2xl" alt="Lobby Lounge">
+                <div class="absolute -bottom-10 -left-10 bg-orange-700 p-10 text-white hidden md:block">
+                    <p class="italic font-serif text-xl">"The finest hospitality in the Pearl of Africa."</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="rooms" class="py-32 px-6 bg-[#0a0a0a]">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-20">
+                <h2 class="text-5xl font-serif mb-4 text-white">The Living Collection</h2>
+                <p class="text-orange-500 uppercase tracking-widest text-[10px]">Rest in the lap of the mountain</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-stone-900 border border-stone-800 hover:border-orange-500/50 transition duration-500">
+                    <img src="https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80" class="w-full h-64 object-cover">
+                    <div class="p-8">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-xl font-serif text-white">Deluxe Terrace Room</h3>
+                            <span class="text-orange-500 font-bold">$150<small class="text-[10px] text-stone-500">/night</small></span>
+                        </div>
+                        <p class="text-stone-400 text-sm mb-6">Featuring private balconies with direct views of the Wanale cliffs.</p>
+                        <ul class="text-[11px] uppercase tracking-tighter text-stone-500 space-y-2 mb-8">
+                            <li><i class="fa-solid fa-check text-orange-500 mr-2"></i> King Size Bed</li>
+                            <li><i class="fa-solid fa-check text-orange-500 mr-2"></i> Rain Shower</li>
+                            <li><i class="fa-solid fa-check text-orange-500 mr-2"></i> High Speed Wi-Fi</li>
+                        </ul>
+                        <button class="w-full border border-stone-700 py-3 text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition">View Details</button>
+                    </div>
+                </div>
+                <div class="bg-stone-900 border border-stone-800 hover:border-orange-500/50 transition duration-500 transform scale-105 shadow-2xl z-10">
+                    <img src="https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=800&q=80" class="w-full h-64 object-cover">
+                    <div class="p-8">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-xl font-serif text-white">Wanale Executive Suite</h3>
+                            <span class="text-orange-500 font-bold">$280<small class="text-[10px] text-stone-500">/night</small></span>
+                        </div>
+                        <p class="text-stone-400 text-sm mb-6">A spacious haven designed for business leaders and luxury seekers.</p>
+                        <ul class="text-[11px] uppercase tracking-tighter text-stone-500 space-y-2 mb-8">
+                            <li><i class="fa-solid fa-check text-orange-500 mr-2"></i> Private Lounge Area</li>
+                            <li><i class="fa-solid fa-check text-orange-500 mr-2"></i> Minibar with Local Treats</li>
+                            <li><i class="fa-solid fa-check text-orange-500 mr-2"></i> 24h Personal Butler</li>
+                        </ul>
+                        <button class="w-full bg-orange-700 py-3 text-[10px] uppercase tracking-widest hover:bg-orange-600 transition">Book Most Popular</button>
+                    </div>
+                </div>
+                <div class="bg-stone-900 border border-stone-800 hover:border-orange-500/50 transition duration-500">
+                    <img src="https://images.unsplash.com/photo-1591088398332-8a77d4932854?auto=format&fit=crop&w=800&q=80" class="w-full h-64 object-cover">
+                    <div class="p-8">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-xl font-serif text-white">The Presidential Peak</h3>
+                            <span class="text-orange-500 font-bold">$550<small class="text-[10px] text-stone-500">/night</small></span>
+                        </div>
+                        <p class="text-stone-400 text-sm mb-6">The ultimate Elgon experience. 360-degree views and artisan décor.</p>
+                        <ul class="text-[11px] uppercase tracking-tighter text-stone-500 space-y-2 mb-8">
+                            <li><i class="fa-solid fa-check text-orange-500 mr-2"></i> Private Jacuzzi</li>
+                            <li><i class="fa-solid fa-check text-orange-500 mr-2"></i> Kitchenette & Dining</li>
+                            <li><i class="fa-solid fa-check text-orange-500 mr-2"></i> Airport Pickup Inc.</li>
+                        </ul>
+                        <button class="w-full border border-stone-700 py-3 text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition">View Details</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="dining" class="py-32 bg-stone-100 text-stone-900">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid lg:grid-cols-2 gap-16 items-center">
+                <div class="grid grid-cols-2 gap-4">
+                    <img src="https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=600&q=80" class="rounded-lg shadow-lg">
+                    <img src="https://images.unsplash.com/photo-1604315534277-2d93708f37bc?auto=format&fit=crop&w=600&q=80" class="rounded-lg shadow-lg mt-12">
+                </div>
+                <div>
+                    <span class="text-orange-700 uppercase tracking-widest text-xs">The Bamboo Grill & Lounge</span>
+                    <h2 class="text-5xl font-serif mt-4 mb-8">A Fusion of Flavors</h2>
+                    <div class="space-y-8">
+                        <div class="flex gap-6">
+                            <div class="text-orange-700 font-serif text-3xl">01</div>
+                            <div>
+                                <h4 class="font-bold uppercase text-sm">Traditional Malewa Delicacy</h4>
+                                <p class="text-stone-500 text-sm">Smoked bamboo shoots prepared with groundnut sauce—the soul of Gisu cuisine.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-6">
+                            <div class="text-orange-700 font-serif text-3xl">02</div>
+                            <div>
+                                <h4 class="font-bold uppercase text-sm">Bugisu Arabica Steaks</h4>
+                                <p class="text-stone-500 text-sm">Prime Ugandan beef infused with a coffee-rub from the slopes of Mt. Elgon.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-6">
+                            <div class="text-orange-700 font-serif text-3xl">03</div>
+                            <div>
+                                <h4 class="font-bold uppercase text-sm">International Classics</h4>
+                                <p class="text-stone-500 text-sm">From handmade Italian pasta to fresh Tilapia from Lake Victoria.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="mt-10 bg-black text-white px-10 py-4 uppercase text-[10px] tracking-widest">Reserve a Table</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="experiences" class="py-32 bg-[#0f0f0f] text-white">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-16">
+                <div class="max-w-xl">
+                    <h2 class="text-5xl font-serif mb-6">Beyond the Manor Walls</h2>
+                    <p class="text-stone-400">We curate exclusive excursions that allow you to witness the power and heritage of Eastern Uganda.</p>
+                </div>
+                <a href="#" class="text-orange-500 uppercase tracking-widest text-xs mb-2 hover:underline">All Activities &rarr;</a>
+            </div>
+            <div class="grid md:grid-cols-4 gap-4">
+                <div class="relative group overflow-hidden h-96">
+                    <img src="https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition duration-700">
+                    <div class="absolute inset-0 bg-black/40 p-6 flex flex-col justify-end">
+                        <h4 class="font-serif text-xl">Sipi Falls Hike</h4>
+                        <p class="text-[10px] uppercase text-orange-400 mt-2">Guided Waterfall Tours</p>
+                    </div>
+                </div>
+                <div class="relative group overflow-hidden h-96">
+                    <img src="https://images.unsplash.com/photo-1447078806655-40579c2520d6?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition duration-700">
+                    <div class="absolute inset-0 bg-black/40 p-6 flex flex-col justify-end">
+                        <h4 class="font-serif text-xl">Imbalu Heritage</h4>
+                        <p class="text-[10px] uppercase text-orange-400 mt-2">Cultural Circumcision Ceremonies</p>
+                    </div>
+                </div>
+                <div class="relative group overflow-hidden h-96">
+                    <img src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition duration-700">
+                    <div class="absolute inset-0 bg-black/40 p-6 flex flex-col justify-end">
+                        <h4 class="font-serif text-xl">Mt. Elgon Park</h4>
+                        <p class="text-[10px] uppercase text-orange-400 mt-2">Birding & Nature Walks</p>
+                    </div>
+                </div>
+                <div class="relative group overflow-hidden h-96">
+                    <img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition duration-700">
+                    <div class="absolute inset-0 bg-black/40 p-6 flex flex-col justify-end">
+                        <h4 class="font-serif text-xl">Coffee Cupping</h4>
+                        <p class="text-[10px] uppercase text-orange-400 mt-2">Farm-to-Cup Experience</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-32 bg-stone-900 border-y border-stone-800">
+        <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-12 text-center">
+            <div>
+                <i class="fa-solid fa-person-swimming text-orange-600 text-3xl mb-6"></i>
+                <h5 class="uppercase text-xs tracking-widest mb-2">Infinity Pool</h5>
+                <p class="text-stone-500 text-xs">Overlooking the valley with temperature control.</p>
+            </div>
+            <div>
+                <i class="fa-solid fa-spa text-orange-600 text-3xl mb-6"></i>
+                <h5 class="uppercase text-xs tracking-widest mb-2">Wanale Spa</h5>
+                <p class="text-stone-500 text-xs">Organic treatments using local shea butter and herbs.</p>
+            </div>
+            <div>
+                <i class="fa-solid fa-briefcase text-orange-600 text-3xl mb-6"></i>
+                <h5 class="uppercase text-xs tracking-widest mb-2">Conference Hub</h5>
+                <p class="text-stone-500 text-xs">State-of-the-art facilities for up to 200 guests.</p>
+            </div>
+            <div>
+                <i class="fa-solid fa-van-shuttle text-orange-600 text-3xl mb-6"></i>
+                <h5 class="uppercase text-xs tracking-widest mb-2">Airport Shuttle</h5>
+                <p class="text-stone-500 text-xs">Seamless transfers to Entebbe or Kisumu Airports.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-32 bg-white text-stone-900">
+        <div class="max-w-4xl mx-auto px-6 text-center">
+            <div class="flex justify-center mb-8 text-orange-500 space-x-1">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+            </div>
+            <p class="text-3xl font-serif italic mb-10 leading-relaxed">"Waking up to the mist rolling off Mt. Elgon while sipping the best coffee I've ever had—Elgon Heights Manor is a hidden gem that rivals the best boutiques in London or Dubai."</p>
+            <span class="uppercase tracking-[0.3em] text-[10px] font-bold">— Sarah Thompson, Luxury Travel Blogger</span>
+        </div>
+    </section>
+
+    <section id="contact" class="py-32 bg-stone-50 text-stone-900">
+        <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-20">
+            <div>
+                <h2 class="text-5xl font-serif mb-12">Visit Mbale</h2>
+                <div class="space-y-8">
+                    <div class="flex items-start gap-4">
+                        <i class="fa-solid fa-location-dot text-orange-700 mt-1"></i>
+                        <div>
+                            <h4 class="font-bold uppercase text-xs tracking-widest">Address</h4>
+                            <p class="text-stone-500 text-sm">Plot 12, Pallisa Road, Mbale City, Uganda</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <i class="fa-solid fa-phone text-orange-700 mt-1"></i>
+                        <div>
+                            <h4 class="font-bold uppercase text-xs tracking-widest">Inquiries</h4>
+                            <p class="text-stone-500 text-sm">+256 700 000 000 | +256 770 000 000</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <i class="fa-solid fa-envelope text-orange-700 mt-1"></i>
+                        <div>
+                            <h4 class="font-bold uppercase text-xs tracking-widest">Email</h4>
+                            <p class="text-stone-500 text-sm">stay@elgonheightsmanor.com</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-10 shadow-2xl border border-stone-100">
+                <h3 class="text-2xl font-serif mb-8">Send a Request</h3>
+                <form class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="text" placeholder="Full Name" class="w-full bg-stone-50 border-stone-200 border p-4 text-sm focus:ring-1 focus:ring-orange-500 outline-none">
+                        <input type="email" placeholder="Email" class="w-full bg-stone-50 border-stone-200 border p-4 text-sm focus:ring-1 focus:ring-orange-500 outline-none">
+                    </div>
+                    <select class="w-full bg-stone-50 border-stone-200 border p-4 text-sm focus:ring-1 focus:ring-orange-500 outline-none">
+                        <option>Interested in...</option>
+                        <option>Room Booking</option>
+                        <option>Cultural Experience (Imbalu)</option>
+                        <option>Mt. Elgon Trekking</option>
+                        <option>Event/Wedding</option>
+                    </select>
+                    <textarea placeholder="Your Message" rows="4" class="w-full bg-stone-50 border-stone-200 border p-4 text-sm focus:ring-1 focus:ring-orange-500 outline-none"></textarea>
+                    <button class="w-full bg-orange-700 text-white py-4 uppercase tracking-[0.3em] text-[10px] hover:bg-black transition duration-500">Inquire Now</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <footer class="py-20 bg-[#050505] border-t border-stone-900">
+        <div class="max-w-7xl mx-auto px-6 text-center">
+            <div class="text-2xl font-serif tracking-[0.1em] font-bold text-white uppercase mb-8">Elgon Heights <span class="text-orange-600">Manor</span></div>
+            <div class="flex justify-center space-x-8 mb-12">
+                <a href="#" class="text-stone-500 hover:text-white transition"><i class="fa-brands fa-instagram"></i></a>
+                <a href="#" class="text-stone-500 hover:text-white transition"><i class="fa-brands fa-facebook"></i></a>
+                <a href="#" class="text-stone-500 hover:text-white transition"><i class="fa-brands fa-tripadvisor"></i></a>
+            </div>
+            <p class="text-[10px] text-stone-600 uppercase tracking-widest">&copy; 2026 Elgon Heights Manor. Mbale, Uganda. Designed for the Global Traveler.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
