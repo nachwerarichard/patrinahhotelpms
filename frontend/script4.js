@@ -5020,7 +5020,8 @@ const submitBtn = document.getElementById('modalSubmitBtn');
 /**
  * Closes the modal
  */
-function closeModal() {
+function closeUserModal() {
+    const modal = document.getElementById('userModal');
     modal.classList.add('hidden');
 }
 
