@@ -5527,7 +5527,7 @@ const addCharge = async (description, number, department) => {
 
         // --- KITCHEN ALERT ---
         if (department === 'Restaurant') {
-            showMessage(`Kitchen order for Table ${tableNum} has been sent!`, "success");
+            showMessageBox(`Kitchen order for Table ${tableNum} has been sent!`, "success");
         }
 
         // 2. If Guest Folio exists, update the account
@@ -5548,13 +5548,13 @@ const addCharge = async (description, number, department) => {
                 
                 // Avoid double alerting if kitchen message already showed
                 if (department !== 'Restaurant') {
-                    showMessage("Charged to Guest Folio!", "success");
+                    showMessageBox("Charged to Guest Folio!", "success");
                 }
             }
         } else {
             // Standard direct sale message
             if (department !== 'Restaurant') {
-                showMessage("Direct Sale Recorded!", "success");
+                showMessageBox("Direct Sale Recorded!", "success");
             }
         }
 
@@ -5562,7 +5562,7 @@ const addCharge = async (description, number, department) => {
 
     } catch (err) {
         console.error("Add Charge Error:", err);
-        showMessage(err.message, "error");
+        showMessageBox(err.message, "error");
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
