@@ -4889,7 +4889,7 @@ tbody.innerHTML = rooms.map(room => {
         <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
             <td class="px-8 py-5 font-bold text-slate-700">${room.number}</td>
             <td class="px-8 py-5 text-slate-500">${categoryName}</td>
-            <td class="px-8 py-5 font-mono text-sm text-indigo-600">$${rate}</td>
+            <td class="px-8 py-5 font-mono text-sm text-indigo-600">UGX ${rate}</td>
             <td class="px-8 py-5">
                 <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
                     room.status === 'clean' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
