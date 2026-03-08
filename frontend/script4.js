@@ -1302,7 +1302,7 @@ document.getElementById('confirmCancelBtn').addEventListener('click', async () =
     const currentUsername = sessionData?.username;
 
     const reason = document.getElementById('cancelReasonInput').value;
-    if (!reason) return alert("Please provide a reason.");
+    if (!reason) return showMessage("Please provide a reason.");
 
     try {
         // 2. Add Authorization header and include hotelId in the payload
@@ -1346,7 +1346,7 @@ document.getElementById('confirmVoidBtn').addEventListener('click', async () => 
     const currentUsername = sessionData?.username;
 
     const reason = document.getElementById('voidReasonInput').value;
-    if (!reason) return alert("Please provide a reason.");
+    if (!reason) return showMessage("Please provide a reason.");
 
     try {
         // 2. Add Authorization and hotelId validation
@@ -4056,7 +4056,7 @@ filterInputs.forEach(id => {
 
 // 3. EXPORT FUNCTIONS
 function exportToExcel() {
-    if (currentData.length === 0) return alert("No data to export");
+    if (currentData.length === 0) return showMessage("No data to export");
     const ws = XLSX.utils.json_to_sheet(currentData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Hotel_Report");
@@ -5146,7 +5146,7 @@ async function handleSaveUser() {
 
     // Validation: Password only strictly required for NEW users
     if (!username || (!staffId && !password)) {
-        return alert("Please fill in all required credentials");
+        return showMessage("Please fill in all required credentials");
     }
 
     // Determine if we are updating or creating
@@ -5174,18 +5174,18 @@ async function handleSaveUser() {
         if (!res) return;
 
         if (res.ok) {
-            alert(isEdit ? "User updated successfully!" : "User created successfully!");
+            showMessage(isEdit ? "User updated successfully!" : "User created successfully!");
             closeModal();
             // Reset the hidden ID for next time
             document.getElementById('staffId').value = ""; 
             fetchUsers(); 
         } else {
             const data = await res.json();
-            alert(`Action failed: ${data.message || 'Check connection'}`);
+            showMessage(`Action failed: ${data.message || 'Check connection'}`);
         }
     } catch (err) {
         console.error("Error saving user:", err);
-        alert("System error. Check console.");
+        showMessage("System error. Check console.");
     }
 }
 async function deleteUser(id) {
@@ -5202,11 +5202,11 @@ async function deleteUser(id) {
             fetchUsers(); // Refresh the table after deletion
         } else {
             const data = await res.json();
-            alert(`Failed to delete user: ${data.message || 'Unknown error'}`);
+            showMessage(`Failed to delete user: ${data.message || 'Unknown error'}`);
         }
     } catch (err) {
         console.error("Error deleting user:", err);
-        alert("Failed to delete user. Check console for details.");
+        showMessage("Failed to delete user. Check console for details.");
     }
 }
 
@@ -5223,11 +5223,11 @@ async function updateRole(id, newRole) {
             fetchUsers(); // Refresh after role update
         } else {
             const data = await res.json();
-            alert(`Failed to update role: ${data.message || 'Unknown error'}`);
+            showMessage(`Failed to update role: ${data.message || 'Unknown error'}`);
         }
     } catch (err) {
         console.error("Error updating role:", err);
-        alert("Failed to update role. Check console for details.");
+        showMessage("Failed to update role. Check console for details.");
     }
 }
 
@@ -5525,7 +5525,7 @@ const addCharge = async (description, number, department) => {
         if (!res) return;
         if (!res.ok) throw new Error("Failed to record primary sale.");
 
-        // --- KITCHEN ALERT ---
+        // --- KITCHEN showMessage ---
         if (department === 'Restaurant') {
             showMessage(`Kitchen order for Table ${tableNum} has been sent!`, "success");
         }
@@ -5546,7 +5546,7 @@ const addCharge = async (description, number, department) => {
                 const updatedAccount = await folioRes.json();
                 updateActiveAccountUI(updatedAccount);
                 
-                // Avoid double alerting if kitchen message already showed
+                // Avoid double showMessageing if kitchen message already showed
                 if (department !== 'Restaurant') {
                     showMessage("Charged to Guest Folio!", "success");
                 }
@@ -5777,7 +5777,7 @@ function exportTableToExcel(tableId, filename) { console.log(`Exporting table ${
 
 
 /**
- * Displays a custom alert message to the user.
+ * Displays a custom showMessage message to the user.
  * (Requires #message-modal, #message-text, #message-close-button in HTML)
  * @param {string} message The message to display.
  * @param {function} [callback] Optional callback function to execute after the message is dismissed.
@@ -5872,7 +5872,7 @@ function exportTableToExcel(tableId, filename) { console.log(`Exporting table ${
             if (typeof showMessage === 'function') {
                 showMessage('Session Expired', 'Your session has timed out. Please login again.', true);
             } else {
-                alert('Session expired. Logging out.');
+                showMessage('Session expired. Logging out.');
             }
 
             // Trigger the logout function we just updated
@@ -6016,7 +6016,7 @@ dropdown.querySelector('.delete-opt').onclick = () => {
     if (item._id) { 
         deleteInventoryItem(item._id);
     } else {
-        alert("Cannot delete a placeholder. This item hasn't been saved for this date yet.");
+        showMessage("Cannot delete a placeholder. This item hasn't been saved for this date yet.");
     }
 };
             actionsCell.appendChild(dropdown);
@@ -6037,7 +6037,7 @@ async function deleteInventoryItem(id) {
         });
 
         if (response.ok) {
-            alert("Deleted successfully! ✅");
+            showMessage("Deleted successfully! ✅");
             // 3. Refresh the inventory table
             if (typeof fetchInventory === "function") {
                 fetchInventory();
@@ -6048,7 +6048,7 @@ async function deleteInventoryItem(id) {
         }
     } catch (err) {
         console.error("Delete Error:", err);
-        alert("Error: " + err.message);
+        showMessage("Error: " + err.message);
     }
 }
 function renderPagination(current, totalPages) {
@@ -6204,7 +6204,7 @@ async function handleUpdateSubmit(event) {
 
     const hotelId = getHotelId();
     if (!hotelId || hotelId === 'global') {
-        alert('Please select a hotel context before saving.');
+        showMessage('Please select a hotel context before saving.');
         return;
     }
 
@@ -6266,7 +6266,7 @@ const response = await authenticatedFetch(url, {
         if (!response) throw new Error("No response from server");
 
         if (response.ok) {
-            alert(idValue ? 'Stock updated! ✅' : 'New record created! ✅');
+            showMessage(idValue ? 'Stock updated! ✅' : 'New record created! ✅');
             if (typeof closeEditModal === "function") closeEditModal();
             if (typeof fetchInventory === "function") fetchInventory(); 
         } else {
@@ -6282,7 +6282,7 @@ const response = await authenticatedFetch(url, {
         }
     } catch (err) {
         console.error("Submit Error:", err);
-        alert("Inventory Error: " + err.message);
+        showMessage("Inventory Error: " + err.message);
     } finally {
         if (submitBtn) submitBtn.disabled = false;
         if (defaultText) defaultText.classList.remove('hidden');
@@ -6393,7 +6393,7 @@ function renderInventoryTable(inventory) {
     if (item._id) { 
         deleteInventoryItem(item._id);
     } else {
-        alert("Cannot delete a placeholder. This item hasn't been saved for this date yet.");
+        showMessage("Cannot delete a placeholder. This item hasn't been saved for this date yet.");
     }
 };
 
@@ -6535,7 +6535,7 @@ async function submitInventory() {
             const idField = document.getElementById('inventory-id');
             if (idField) idField.value = '';
 
-            alert('Success', `${data.item} saved successfully! ✅`);
+            showMessage('Success', `${data.item} saved successfully! ✅`);
             
             // Refresh the list if the function exists
             if (typeof fetchInventory === 'function') fetchInventory(); 
@@ -6544,7 +6544,7 @@ async function submitInventory() {
         }
     } catch (error) {
         console.error('Submission Error:', error);
-        alert('Error', error.message, true);
+        showMessage('Error', error.message, true);
     } finally {
         setLoadingState(false);
     }
@@ -8541,14 +8541,14 @@ function openEditModal(item) {
     const authorizedRoles = ['admin', 'super-admin', 'manager'];
     if (!authorizedRoles.includes(currentUserRole)) {
         if (typeof showMessage === 'function') showMessage('Permission Denied', true);
-        else alert('Permission Denied');
+        else showMessage('Permission Denied');
         return;
     }
 
     // 2. Data Validation - Only error if item name is missing
     if (!item || !item.item) {
         console.error("Item object is invalid:", item);
-        alert("Error: Could not identify the inventory item.");
+        showMessage("Error: Could not identify the inventory item.");
         return;
     }
 
@@ -9518,7 +9518,7 @@ async function markAsServed(orderId) {
         }
     } catch (err) {
         console.error("markAsServed Error:", err);
-        alert("Failed to update status: " + err.message);
+        showMessage("Failed to update status: " + err.message);
     }
 }
     function startNewTransaction() {
@@ -9751,7 +9751,7 @@ document.getElementById('statusReportForm').onsubmit = async (e) => {
         });
 
         if (response.ok) {
-            alert(reportId ? "Report updated! ✅" : "Report created! ✅");
+            showMessage(reportId ? "Report updated! ✅" : "Report created! ✅");
             closeReportModal();
             fetchStatusReports();
         } else {
@@ -9759,7 +9759,7 @@ document.getElementById('statusReportForm').onsubmit = async (e) => {
             throw new Error(err.error || "Save failed");
         }
     } catch (err) {
-        alert("Error: " + err.message);
+        showMessage("Error: " + err.message);
     }
 };
 
@@ -9783,11 +9783,11 @@ async function deleteReport(id) {
             method: 'DELETE'
         });
         if (response.ok) {
-            alert("Report deleted");
+            showMessage("Report deleted");
             fetchStatusReports();
         }
     } catch (err) {
-        alert("Delete failed: " + err.message);
+        showMessage("Delete failed: " + err.message);
     }
 }
 
@@ -9832,7 +9832,7 @@ async function filterStatusReportsByDate() {
     const selectedDate = dateInput ? dateInput.value : '';
 
     if (!selectedDate) {
-        alert("Please select a date to filter.");
+        showMessage("Please select a date to filter.");
         return;
     }
 
@@ -9852,7 +9852,7 @@ async function filterStatusReportsByDate() {
         console.log(`Filtered results for ${selectedDate}: ${reports.length} found.`);
     } catch (err) {
         console.error("Filter Error:", err);
-        alert("Could not filter reports: " + err.message);
+        showMessage("Could not filter reports: " + err.message);
     }
 }
 document.addEventListener('DOMContentLoaded', () => {
