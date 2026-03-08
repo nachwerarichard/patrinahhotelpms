@@ -2042,34 +2042,30 @@ function confirmDeleteBooking(id) {
 }
 async function checkoutBooking(id) {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const currentUsername = sessionData?.username;
+    const currentUsername = sessionData?.username || 'Unknown User';
 
     try {
-        const response = await fetch(
+        // authenticatedFetch automatically adds the Authorization header and stringifies the body
+        const response = await authenticatedFetch(
             `${API_BASE_URL}/bookings/${id}/checkout`,
             {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    username: currentUsername || 'Unknown User'
-                })
+                body: { username: currentUsername }
             }
         );
 
-        if (!response.ok) {
-            const text = await response.text(); // safer than .json()
-            console.error("Server returned:", text);
-            throw new Error(`HTTP error! status: ${response.status}`);
+        // Check if authenticatedFetch returned a null or failed response
+        if (!response || !response.ok) {
+            const errorText = response ? await response.text() : "No response from server";
+            console.error("Server returned:", errorText);
+            throw new Error(`Checkout failed: ${response ? response.status : 'Network Error'}`);
         }
 
         const data = await response.json();
 
         showMessage('Success', data.message || 'Guest checked out successfully');
 
+        // Refresh UI components
         await Promise.all([
             renderBookings(currentPage, currentSearchTerm),
             renderHousekeepingRooms(),
@@ -2082,7 +2078,6 @@ async function checkoutBooking(id) {
         showMessage('Error', `Failed to process checkout: ${error.message}`, true);
     }
 }
-
 async function checkinBooking(id) {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const currentUsername = sessionData?.username;
