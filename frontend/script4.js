@@ -2046,14 +2046,14 @@ async function checkoutBooking(id) {
 
     try {
         // authenticatedFetch automatically adds the Authorization header and stringifies the body
-        const response = await authenticatedFetch(
-            `${API_BASE_URL}/bookings/${id}/checkout`,
-            {
-                method: 'POST',
-                body: { username: currentUsername }
-            }
-        );
-
+      const response = await authenticatedFetch(
+    `${API_BASE_URL}/bookings/${id}/checkout`,
+    {
+        method: 'POST',
+        // Change this line:
+        body: JSON.stringify({ username: currentUsername }) 
+    }
+);
         // Check if authenticatedFetch returned a null or failed response
         if (!response || !response.ok) {
             const errorText = response ? await response.text() : "No response from server";
