@@ -8384,7 +8384,19 @@ async function loadOrders() {
                 </div>
             </div>`;
         }).join('');
+        const audio = document.getElementById('orderDing');
         
+        // If we have more orders than last time, someone just placed a new one!
+        if (orders.length > lastOrderCount && lastOrderCount !== 0) {
+            console.log("🔔 New order detected! Playing sound...");
+            audio.play().catch(err => {
+                console.warn("Audio play blocked: Interaction required.", err);
+            });
+        }
+
+        // Update the count for the next check
+        lastOrderCount = orders.length;
+        // -----------------------------
         console.log("7. Render Complete");
 
     } catch (err) {
