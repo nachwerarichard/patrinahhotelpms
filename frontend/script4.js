@@ -9941,7 +9941,7 @@ async function loadRoomDatalist() {
     }
 }
 
-const KITCHEN_REFRESH_RATE = 5000; 
+const KITCHEN_REFRESH_RATE = 15000; 
 
 setInterval(async () => {
     console.log("⏱️ Interval triggered: Refreshing orders...");
