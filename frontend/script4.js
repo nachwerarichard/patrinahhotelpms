@@ -301,7 +301,7 @@ let currentHotel = userData ? userData.hotelName : 'Property Mnagement System';
  * @param {string} message - The content message.
  * @param {boolean} isError - True if it's an error message, false for success/info.
  */
-function showMessageBox(title, message, isError = false) {
+function showMessage(title, message, isError = false) {
     // 1. Grab elements only when the function is called
     const overlay = document.getElementById('messageBoxOverlay');
     const modal = document.getElementById('messageBox');
@@ -501,7 +501,7 @@ function closeDeletionReasonModal() {
 confirmDeletionBtn.addEventListener('click', () => {
     const reason = deletionReasonInput.value.trim();
     if (!reason) {
-        showMessageBox('Input Required', 'Please provide a reason for this action.', true);
+        showMessage('Input Required', 'Please provide a reason for this action.', true);
         return;
     }
     if (pendingDeletionAction) {
@@ -698,7 +698,7 @@ roomTypes[typeName].push(room);
         }
     } catch (error) {
         console.error('Error populating room dropdown:', error);
-        showMessageBox('Error', 'Failed to load rooms for dropdown. Please try again.', true);
+        showMessage('Error', 'Failed to load rooms for dropdown. Please try again.', true);
     }
 }
      // 2. SAVE to LocalStorage
@@ -814,14 +814,14 @@ event.preventDefault();
     
     // Prevent navigation if the user's role doesn't permit it
     if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping') {
-        showMessageBox('Access Denied', 'Housekeepers can only access the Housekeeping section.', true);
+        showMessage('Access Denied', 'Housekeepers can only access the Housekeeping section.', true);
         return;
     }
     
     // Block 'bar' user from accessing sections they don't have permission for
     const barRestrictedSections = ['housekeeping', 'reports', 'service-reports', 'audit-logs','dashboard'];
     if (currentUserRole === 'bar' && barRestrictedSections.includes(targetId)) {
-        showMessageBox('Access Denied', 'You do not have permission to access this section.', true);
+        showMessage('Access Denied', 'You do not have permission to access this section.', true);
         return;
     }
 
@@ -1126,7 +1126,7 @@ async function viewBooking(id) {
         const booking = await response.json();
 
         if (!booking) {
-            showMessageBox('Error', 'Booking not found.', true);
+            showMessage('Error', 'Booking not found.', true);
             return;
         }
 
@@ -1193,7 +1193,7 @@ document.getElementById('declarations').value = booking.declarations || '';
 
     } catch (error) {
         console.error('Error fetching booking:', error);
-        showMessageBox('Error', `Failed to load details: ${error.message}`, true);
+        showMessage('Error', `Failed to load details: ${error.message}`, true);
     }
 }
 
@@ -1328,14 +1328,14 @@ document.getElementById('confirmCancelBtn').addEventListener('click', async () =
 
         const data = await response.json();
         closeCancelModal();
-        showMessageBox('Cancelled', data.message);
+        showMessage('Cancelled', data.message);
         
         // Refresh the table to see the status change
         renderBookings(currentPage, currentSearchTerm);
         
     } catch (error) {
         console.error('Cancellation error:', error);
-        showMessageBox('Error', error.message, true);
+        showMessage('Error', error.message, true);
     }
 });
 document.getElementById('confirmVoidBtn').addEventListener('click', async () => {
@@ -1372,13 +1372,13 @@ document.getElementById('confirmVoidBtn').addEventListener('click', async () => 
 
         const data = await response.json();
         closeVoidModal();
-        showMessageBox('Voided', data.message);
+        showMessage('Voided', data.message);
         
         // Refresh the table
         renderBookings(currentPage, currentSearchTerm);
     } catch (error) {
         console.error('Void error:', error);
-        showMessageBox('Error', error.message, true);
+        showMessage('Error', error.message, true);
     }
 });
 async function moveBooking(id) {
@@ -1423,7 +1423,7 @@ async function moveBooking(id) {
         console.log("✅ Available rooms:", availableRoomsForMove);
 
         if (availableRoomsForMove.length === 0) {
-            return showMessageBox('No Rooms', 'No vacant rooms available for move.', true);
+            return showMessage('No Rooms', 'No vacant rooms available for move.', true);
         }
 
         // 3️⃣ Populate dropdown
@@ -1440,7 +1440,7 @@ async function moveBooking(id) {
 
     } catch (error) {
         console.error('🔥 Move booking error:', error);
-        showMessageBox('Error', 'Could not load available rooms.', true);
+        showMessage('Error', 'Could not load available rooms.', true);
     }
 }
 
@@ -1474,11 +1474,11 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
 
     try {
         if (!selectedBookingId || !newRoomNumber) {
-            return showMessageBox('Error', 'Please select a room.', true);
+            return showMessage('Error', 'Please select a room.', true);
         }
 
         if (!moveReason) {
-            return showMessageBox('Error', 'Please provide a reason for the room move.', true);
+            return showMessage('Error', 'Please provide a reason for the room move.', true);
         }
 
         // 2. Add Authorization and include hotelId in the payload
@@ -1508,7 +1508,7 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
         
         modal.classList.add('hidden');
         modal.classList.remove('flex'); // Ensure flex is removed if you use it for centering
-        showMessageBox('Success', data.message);
+        showMessage('Success', data.message);
 
         // Refresh UI
         renderBookings(currentPage, currentSearchTerm);
@@ -1517,7 +1517,7 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
 
     } catch (error) {
         console.error('Move error:', error);
-        showMessageBox('Move Failed', error.message, true);
+        showMessage('Move Failed', error.message, true);
     }
 });
 
@@ -1587,26 +1587,26 @@ async function sendConfirmationEmail(bookingId) {
         }
         bookingToSend = await response.json();
         if (!bookingToSend) {
-            showMessageBox('Error', 'Booking not found for email sending.', true);
+            showMessage('Error', 'Booking not found for email sending.', true);
             return;
         }
     } catch (error) {
         console.error('Error fetching booking for email:', error);
-        showMessageBox('Message', `Failed to retrieve booking details for email: ${error.message}`, true);
+        showMessage('Message', `Failed to retrieve booking details for email: ${error.message}`, true);
         return;
     }
     const recipientEmail = bookingToSend.guestEmail ? bookingToSend.guestEmail.trim() : '';  // Use email from fetched booking
     if (!recipientEmail) {
-        showMessageBox('Message', `Guest checkedout but no email address found for  "${bookingToSend.name}". Email not sent.`, true);
+        showMessage('Message', `Guest checkedout but no email address found for  "${bookingToSend.name}". Email not sent.`, true);
         return;
     }
 
     if (!/\S+@\S+\.\S+/.test(recipientEmail)) {
-        showMessageBox('Error', `Invalid email format for guest "${bookingToSend.name}". Guest Checked but email not sent`, true);
+        showMessage('Error', `Invalid email format for guest "${bookingToSend.name}". Guest Checked but email not sent`, true);
         return;
     }
 
-    showMessageBox('Message', 'Attempting to send confirmation email...', false);
+    showMessage('Message', 'Attempting to send confirmation email...', false);
 
     // 2. API Call and Robust Error Handling
     try {
@@ -1626,7 +1626,7 @@ async function sendConfirmationEmail(bookingId) {
 
     
 
-            showMessageBox('Message', errorMessage, true);
+            showMessage('Message', errorMessage, true);
 
             // Audit log for failed email sending due to unexpected response
             await fetch(`${API_BASE_URL}/audit-log/action`, {
@@ -1652,7 +1652,7 @@ async function sendConfirmationEmail(bookingId) {
         const data = await response.json(); // Safely parse JSON after checks
 
         if (response.ok) {
-            showMessageBox('Message', data.message || 'Confirmation email sent successfully!', false);
+            showMessage('Message', data.message || 'Confirmation email sent successfully!', false);
             // Audit log for successful email sending
             await fetch(`${API_BASE_URL}/audit-log/action`, {
                 method: 'POST',
@@ -1671,7 +1671,7 @@ async function sendConfirmationEmail(bookingId) {
         } else {
             // This block will now only be reached if response.ok is false but it *was* JSON
             // (e.g., a server-side validation error that returns JSON with an error message)
-            showMessageBox('Email Sending Failed', data.message || 'Failed to send confirmation email. Please try again.', true);
+            showMessage('Email Sending Failed', data.message || 'Failed to send confirmation email. Please try again.', true);
             // Audit log for failed email sending (server-side logic error, but still JSON)
             await fetch(`${API_BASE_URL}/audit-log/action`, {
                 method: 'POST',
@@ -1692,7 +1692,7 @@ async function sendConfirmationEmail(bookingId) {
     } catch (error) {
         // 3. Network and Client-Side Errors
         console.error('Error sending confirmation email:', error);
-        showMessageBox('Network Error', 'Could not connect to the server to send email. Please check your internet connection and try again.', true);
+        showMessage('Network Error', 'Could not connect to the server to send email. Please check your internet connection and try again.', true);
         // Audit log for network errors
         await fetch(`${API_BASE_URL}/audit-log/action`, {
             method: 'POST',
@@ -1891,7 +1891,7 @@ bookingForm.addEventListener('submit', async function(event) {
             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
 
-        showMessageBox('Success', message);
+        showMessage('Success', message);
         
         // Refresh UI components
         renderBookings(currentPage, currentSearchTerm);
@@ -1901,7 +1901,7 @@ bookingForm.addEventListener('submit', async function(event) {
 
     } catch (error) {
         console.error('Error saving booking:', error);
-        showMessageBox('Error', `Failed to save booking: ${error.message}`, true);
+        showMessage('Error', `Failed to save booking: ${error.message}`, true);
     } finally {
         saveBtn.disabled = false;
         saveBtn.innerHTML = id ? 'Update Booking' : 'Add Booking';
@@ -1930,7 +1930,7 @@ async function editBooking(id) {
         const booking = await response.json();
 
         if (!booking) {
-            showMessageBox('Error', 'Booking not found for editing.', true);
+            showMessage('Error', 'Booking not found for editing.', true);
             return;
         }
 
@@ -1994,7 +1994,7 @@ async function editBooking(id) {
         bookingModal.style.display = 'flex';
     } catch (error) {
         console.error('Error fetching booking for edit:', error);
-        showMessageBox('Error', `Failed to load booking for editing: ${error.message}`, true);
+        showMessage('Error', `Failed to load booking for editing: ${error.message}`, true);
     }
 }
 
@@ -2029,14 +2029,14 @@ function confirmDeleteBooking(id) {
                 throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
 
-            showMessageBox('Success', 'Booking and associated charges deleted successfully!');
+            showMessage('Success', 'Booking and associated charges deleted successfully!');
             renderBookings(currentPage, currentSearchTerm);
             renderHousekeepingRooms();
             if (typeof renderCalendar === 'function') renderCalendar();
             if (typeof renderAuditLogs === 'function') renderAuditLogs();
         } catch (error) {
             console.error('Error deleting booking:', error);
-            showMessageBox('Error', `Failed to delete booking: ${error.message}`, true);
+            showMessage('Error', `Failed to delete booking: ${error.message}`, true);
         }
     });
 }
@@ -2068,7 +2068,7 @@ async function checkoutBooking(id) {
 
         const data = await response.json();
 
-        showMessageBox('Success', data.message || 'Guest checked out successfully');
+        showMessage('Success', data.message || 'Guest checked out successfully');
 
         await Promise.all([
             renderBookings(currentPage, currentSearchTerm),
@@ -2079,7 +2079,7 @@ async function checkoutBooking(id) {
 
     } catch (error) {
         console.error('Error during checkout:', error);
-        showMessageBox('Error', `Failed to process checkout: ${error.message}`, true);
+        showMessage('Error', `Failed to process checkout: ${error.message}`, true);
     }
 }
 
@@ -2108,7 +2108,7 @@ async function checkinBooking(id) {
 
         const data = await response.json();
 
-        showMessageBox('Success', data.message || 'Guest checked in successfully.');
+        showMessage('Success', data.message || 'Guest checked in successfully.');
 
         await Promise.all([
             renderBookings(currentPage, currentSearchTerm),
@@ -2120,7 +2120,7 @@ async function checkinBooking(id) {
 
     } catch (error) {
         console.error('Error during checkin:', error);
-        showMessageBox('Error', `Failed to process checkin: ${error.message}`, true);
+        showMessage('Error', `Failed to process checkin: ${error.message}`, true);
     }
 }
 
@@ -2198,7 +2198,7 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
     const amount = parseFloat(chargeAmountInput.value);
 
     if (isNaN(amount) || amount <= 0) {
-        showMessageBox('Error', 'Please enter a valid amount for the charge.', true);
+        showMessage('Error', 'Please enter a valid amount for the charge.', true);
         return;
     }
 
@@ -2212,7 +2212,7 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
         const booking = await bookingResponse.json();
 
         if (!booking) {
-            showMessageBox('Error', 'Booking not found for adding charge.', true);
+            showMessage('Error', 'Booking not found for adding charge.', true);
             return;
         }
 
@@ -2243,13 +2243,13 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
 
-        showMessageBox('Success', 'Incidental charge added successfully!');
+        showMessage('Success', 'Incidental charge added successfully!');
         closeIncidentalChargeModal();
         if (typeof renderAuditLogs === 'function') renderAuditLogs();
         
     } catch (error) {
         console.error('Error adding incidental charge:', error);
-        showMessageBox('Error', `Failed to add charge: ${error.message}`, true);
+        showMessage('Error', `Failed to add charge: ${error.message}`, true);
     }
 });
 async function viewCharges(bookingCustomId) {
@@ -2338,7 +2338,7 @@ row.innerHTML = `
 
     } catch (error) {
         console.error("🔥 View charges error:", error);
-        showMessageBox('Error', error.message, true);
+        showMessage('Error', error.message, true);
         incidentalChargesTableBody.innerHTML =
             '<tr><td colspan="6" style="text-align:center;color:red;">Error loading charges.</td></tr>';
     }
@@ -2352,7 +2352,7 @@ document.getElementById('payAllChargesBtn').addEventListener('click', async () =
     const currentUsername = sessionData?.username || 'FrontDesk';
 
     if (!currentBookingObjectId) {
-        showMessageBox('Error', 'Booking ID not found', true);
+        showMessage('Error', 'Booking ID not found', true);
         return;
     }
 
@@ -2377,11 +2377,11 @@ document.getElementById('payAllChargesBtn').addEventListener('click', async () =
         const data = await response.json();
 
         if (!response.ok) {
-            showMessageBox('Error', data.message || 'Failed to pay charges', true);
+            showMessage('Error', data.message || 'Failed to pay charges', true);
             return;
         }
 
-        showMessageBox('Success', data.message);
+        showMessage('Success', data.message);
 
         // 3. UI Update: Disable buttons and mark as paid
         document.querySelectorAll('.mark-paid-btn').forEach(btn => {
@@ -2397,7 +2397,7 @@ document.getElementById('payAllChargesBtn').addEventListener('click', async () =
 
     } catch (err) {
         console.error(err);
-        showMessageBox('Error', 'Server error while paying charges', true);
+        showMessage('Error', 'Server error while paying charges', true);
     }
 });
 document.addEventListener('click', async (e) => {
@@ -2410,7 +2410,7 @@ document.addEventListener('click', async (e) => {
     const currentUsername = sessionData?.username;
 
     const chargeId = e.target.dataset.id;
-    if (!chargeId) return showMessageBox('Error', 'Invalid charge ID', true);
+    if (!chargeId) return showMessage('Error', 'Invalid charge ID', true);
 
     if (!confirm('Mark this charge as paid?')) return;
 
@@ -2433,7 +2433,7 @@ document.addEventListener('click', async (e) => {
         const data = await response.json();
 
         if (!response.ok) {
-            showMessageBox('Error', data.message || 'Failed to mark as paid', true);
+            showMessage('Error', data.message || 'Failed to mark as paid', true);
             return;
         }
 
@@ -2446,7 +2446,7 @@ document.addEventListener('click', async (e) => {
 
     } catch (err) {
         console.error(err);
-        showMessageBox('Error', 'Server error while processing payment', true);
+        showMessage('Error', 'Server error while processing payment', true);
     }
 });
 /**
@@ -2484,11 +2484,11 @@ function confirmDeleteIncidentalCharge(chargeId, bookingCustomId) {
 
             if (!response.ok) throw new Error('Failed to delete charge');
 
-            showMessageBox('Success', 'Incidental charge deleted successfully!');
+            showMessage('Success', 'Incidental charge deleted successfully!');
             viewCharges(bookingCustomId); 
             if (typeof renderAuditLogs === 'function') renderAuditLogs();
         } catch (error) {
-            showMessageBox('Error', error.message, true);
+            showMessage('Error', error.message, true);
         }
     });
 }
@@ -2507,13 +2507,13 @@ async function confirmPayIncidentalCharge(chargeId, bookingCustomId) {
 
         if (!response.ok) throw new Error('Payment update failed');
 
-        showMessageBox('Success', 'Incidental charge paid successfully!');
+        showMessage('Success', 'Incidental charge paid successfully!');
         
         // Refresh the UI
         viewCharges(bookingCustomId); 
         if (typeof renderAuditLogs === 'function') renderAuditLogs();
     } catch (error) {
-        showMessageBox('Error', error.message, true);
+        showMessage('Error', error.message, true);
     }
 }
 async function markAllChargesPaid() {
@@ -2522,7 +2522,7 @@ async function markAllChargesPaid() {
                                    chargeBookingCustomIdInput.value : 
                                    receiptBookingIdSpan.textContent;   
 
-    if (!currentBookingCustomId) return showMessageBox('Error', 'No Booking ID found.', true);
+    if (!currentBookingCustomId) return showMessage('Error', 'No Booking ID found.', true);
 
     try {
         // 1. Get the booking details to find the internal MongoDB _id
@@ -2541,10 +2541,10 @@ async function markAllChargesPaid() {
 
         if (!response.ok) throw new Error('Failed to mark charges as paid');
 
-        showMessageBox('Success', 'All charges marked as paid.');
+        showMessage('Success', 'All charges marked as paid.');
         viewCharges(currentBookingCustomId); 
     } catch (error) {
-        showMessageBox('Error', error.message, true);
+        showMessage('Error', error.message, true);
     }
 }
 async function printReceipt(bookingCustomId) {
@@ -2617,7 +2617,7 @@ async function printReceipt(bookingCustomId) {
 
     } catch (error) {
         console.error('Receipt Error:', error);
-        showMessageBox('Error', `Receipt generation failed: ${error.message}`, true);
+        showMessage('Error', `Receipt generation failed: ${error.message}`, true);
     }
 }
 /**
@@ -2643,7 +2643,7 @@ async function generateReport() {
 
     const selectedDateStr = reportDateInput.value;
     if (!selectedDateStr) {
-        showMessageBox('Error', 'Please select a date for the report.', true);
+        showMessage('Error', 'Please select a date for the report.', true);
         return;
     }
 
@@ -2667,7 +2667,7 @@ async function generateReport() {
         rooms = await roomsResponse.json();
     } catch (error) {
         console.error('Report generation error:', error);
-        showMessageBox('Error', 'Failed to load report data.', true);
+        showMessage('Error', 'Failed to load report data.', true);
         return;
     }
 
@@ -2811,7 +2811,7 @@ function exportReport() {
 
     // 2. Check if data exists
     if (!reportData || reportData.length === 0) {
-        showMessageBox('Info', 'Please generate the report before exporting.', true);
+        showMessage('Info', 'Please generate the report before exporting.', true);
         return;
     }
 
@@ -3009,11 +3009,11 @@ async function updateRoomStatus(roomMongoId, newStatus) {
 
         if (!response.ok) throw new Error("Update failed");
 
-        showMessageBox('Success', `Room status updated successfully.`);
+        showMessage('Success', `Room status updated successfully.`);
         renderHousekeepingRooms();
         if (typeof renderCalendar === 'function') renderCalendar();
     } catch (error) {
-        showMessageBox('Error', error.message, true);
+        showMessage('Error', error.message, true);
     }
 }
 
@@ -3108,7 +3108,7 @@ const allBookings = bookingsData.bookings || [];
 
     } catch (error) {
         console.error('Calendar Error:', error);
-        showMessageBox('Error', 'Failed to load calendar.', true);
+        showMessage('Error', 'Failed to load calendar.', true);
     }
 }
 
@@ -3218,7 +3218,7 @@ async function renderServiceReports() {
 
     } catch (error) {
         console.error('Service Report Error:', error);
-        showMessageBox('Error', `Failed to load reports: ${error.message}`, true);
+        showMessage('Error', `Failed to load reports: ${error.message}`, true);
     }
 }
 
@@ -3387,7 +3387,7 @@ async function simulateChannelManagerSync() {
     const hotelId = sessionData?.hotelId;
     const currentUsername = sessionData?.username;
 
-    showMessageBox('Syncing...', 'Initiating sync with external booking engines (Booking.com, Expedia, etc.). Please wait...');
+    showMessage('Syncing...', 'Initiating sync with external booking engines (Booking.com, Expedia, etc.). Please wait...');
 
     try {
         const response = await fetch(`${API_BASE_URL}/channel-manager/sync`, {
@@ -3410,7 +3410,7 @@ async function simulateChannelManagerSync() {
         }
 
         const data = await response.json();
-        showMessageBox('Sync Complete', `${data.message} for ${sessionData?.hotelName || 'your property'}.`);
+        showMessage('Sync Complete', `${data.message} for ${sessionData?.hotelName || 'your property'}.`);
 
         // Refresh all components to show updated availability/bookings
         if (typeof renderBookings === 'function') renderBookings(currentPage, currentSearchTerm);
@@ -3420,7 +3420,7 @@ async function simulateChannelManagerSync() {
 
     } catch (error) {
         console.error('Channel manager sync error:', error);
-        showMessageBox('Sync Failed', `Failed to sync: ${error.message}`, true);
+        showMessage('Sync Failed', `Failed to sync: ${error.message}`, true);
     }
 }
 
@@ -3519,7 +3519,7 @@ async function markNoShow(bookingId) {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || "Failed to update status");
 
-        showMessageBox("Success", data.message);
+        showMessage("Success", data.message);
         
         // Refresh UI
         renderBookings(currentPage, currentSearchTerm);
@@ -3527,7 +3527,7 @@ async function markNoShow(bookingId) {
         
     } catch (err) {
         console.error(err);
-        showMessageBox("Error", err.message, true);
+        showMessage("Error", err.message, true);
     }
 }
 
@@ -3555,7 +3555,7 @@ async function Confirm(bookingId) {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || "Failed to confirm");
 
-        showMessageBox("Success", data.message);
+        showMessage("Success", data.message);
         
         // Refresh UI
         renderBookings(currentPage, currentSearchTerm);
@@ -3563,7 +3563,7 @@ async function Confirm(bookingId) {
 
     } catch (err) {
         console.error(err);
-        showMessageBox("Error", err.message, true);
+        showMessage("Error", err.message, true);
     }
 }
 
@@ -3754,17 +3754,17 @@ async function submitPayment() {
 
     // 1. Validation
     if (!bookingId) {
-        showMessageBox("Error", "No booking selected", true);
+        showMessage("Error", "No booking selected", true);
         return;
     }
 
     if (!amount || amount <= 0) {
-        showMessageBox("Error", "Please enter a valid amount greater than 0", true);
+        showMessage("Error", "Please enter a valid amount greater than 0", true);
         return;
     }
 
     if (!method) {
-        showMessageBox("Error", "Please select a payment method", true);
+        showMessage("Error", "Please select a payment method", true);
         return;
     }
 
@@ -3801,7 +3801,7 @@ const result = await response.json();
 
         if (response && response.ok) {
             // 5. Success Flow
-            showMessageBox("Success", `Payment of UGX ${amount.toLocaleString()} recorded successfully! ✅`);
+            showMessage("Success", `Payment of UGX ${amount.toLocaleString()} recorded successfully! ✅`);
             
             // Reset fields and close modal
             amountInput.value = '';
@@ -3822,7 +3822,7 @@ const result = await response.json();
 
     } catch (err) {
         console.error("Payment Submission Error:", err);
-        showMessageBox("Error", err.message || "Connection lost. Please try again.", true);
+        showMessage("Error", err.message || "Connection lost. Please try again.", true);
     } finally {
         // 7. Restore Button State
         if (submitBtn) {
@@ -4680,7 +4680,7 @@ document.addEventListener('DOMContentLoaded', () => {
        });
     }});
     
-    /*function showMessageBox(title, content) {
+    /*function showMessage(title, content) {
     document.getElementById('messageBoxTitle').textContent = title;
     document.getElementById('messageBoxContent').textContent = content;
 
@@ -5527,7 +5527,7 @@ const addCharge = async (description, number, department) => {
 
         // --- KITCHEN ALERT ---
         if (department === 'Restaurant') {
-            showMessageBox(`Kitchen order for Table ${tableNum} has been sent!`, "success");
+            showMessage(`Kitchen order for Table ${tableNum} has been sent!`, "success");
         }
 
         // 2. If Guest Folio exists, update the account
@@ -5548,13 +5548,13 @@ const addCharge = async (description, number, department) => {
                 
                 // Avoid double alerting if kitchen message already showed
                 if (department !== 'Restaurant') {
-                    showMessageBox("Charged to Guest Folio!", "success");
+                    showMessage("Charged to Guest Folio!", "success");
                 }
             }
         } else {
             // Standard direct sale message
             if (department !== 'Restaurant') {
-                showMessageBox("Direct Sale Recorded!", "success");
+                showMessage("Direct Sale Recorded!", "success");
             }
         }
 
@@ -5562,7 +5562,7 @@ const addCharge = async (description, number, department) => {
 
     } catch (err) {
         console.error("Add Charge Error:", err);
-        showMessageBox(err.message, "error");
+        showMessage(err.message, "error");
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
@@ -5868,9 +5868,9 @@ function exportTableToExcel(tableId, filename) { console.log(`Exporting table ${
         if (response.status === 401 || response.status === 403) {
             console.error(`Auth failure (Status: ${response.status}). Cleaning up session.`);
             
-            // If the UI has a showMessageBox function, use it
-            if (typeof showMessageBox === 'function') {
-                showMessageBox('Session Expired', 'Your session has timed out. Please login again.', true);
+            // If the UI has a showMessage function, use it
+            if (typeof showMessage === 'function') {
+                showMessage('Session Expired', 'Your session has timed out. Please login again.', true);
             } else {
                 alert('Session expired. Logging out.');
             }
@@ -6419,7 +6419,7 @@ window.addEventListener('click', () => {
 async function deleteInventory(id) {
     // 1. Validation
     if (!id || typeof id !== 'string' || id.trim() === '') {
-        showMessageBox('Error', 'Cannot delete item. A valid ID was not provided.', true);
+        showMessage('Error', 'Cannot delete item. A valid ID was not provided.', true);
         return;
     }
 
@@ -6428,7 +6428,7 @@ async function deleteInventory(id) {
     const hotelId = sessionData?.hotelId;
 
     if (!hotelId) {
-        showMessageBox('Security Error', 'Session context missing. Please log in again.', true);
+        showMessage('Security Error', 'Session context missing. Please log in again.', true);
         return;
     }
 
@@ -6444,7 +6444,7 @@ async function deleteInventory(id) {
         // 4. Handle Response
         // Most APIs return 204 (No Content) or 200 (Success) for successful deletions
         if (response && (response.status === 204 || response.status === 200)) {
-            showMessageBox('Deleted', 'Inventory item has been permanently removed. ✅');
+            showMessage('Deleted', 'Inventory item has been permanently removed. ✅');
             
             // Close the delete confirmation modal if it's open
             if (typeof hideDeleteModal === 'function') hideDeleteModal();
@@ -6457,7 +6457,7 @@ async function deleteInventory(id) {
         }
     } catch (error) {
         console.error('Delete operation failed:', error);
-        showMessageBox('Delete Failed', error.message, true);
+        showMessage('Delete Failed', error.message, true);
     }
 }
 
@@ -6490,7 +6490,7 @@ function getInventoryFormData() {
     const hotelId = localStorage.getItem('hotelId');
     
     if (!hotelId) {
-        showMessageBox('Error', 'No hotel selected. Please log in again.', true);
+        showMessage('Error', 'No hotel selected. Please log in again.', true);
         return null;
     }
 
@@ -6553,7 +6553,7 @@ async function submitInventory() {
 async function updateExistingItem(id) {
     const adminRoles = ['admin', 'super-admin'];
     if (!adminRoles.includes(currentUserRole)) {
-        return showMessageBox('Access Restricted', 'Only administrators can modify existing inventory records.', true);
+        return showMessage('Access Restricted', 'Only administrators can modify existing inventory records.', true);
     }
 
     const data = getInventoryFormData();
@@ -6565,14 +6565,14 @@ async function updateExistingItem(id) {
         });
 
         if (response.ok) {
-            showMessageBox('Success', 'Inventory record updated! ✅');
+            showMessage('Success', 'Inventory record updated! ✅');
             fetchInventory();
         } else {
             const errorData = await response.json();
             throw new Error(errorData.message || 'Update failed');
         }
     } catch (error) {
-        showMessageBox('Error', error.message, true);
+        showMessage('Error', error.message, true);
     } finally {
         setLoadingState(false);
     }
@@ -6859,7 +6859,7 @@ async function submitSaleForm(event) {
     const allowedRoles = ['cashier', 'manager', 'bar', 'super-admin', 'admin'];
 
     if (!allowedRoles.includes(currentUserRole)) {
-        return showMessageBox('Access Denied', 'You do not have permission to record sales.', true);
+        return showMessage('Access Denied', 'You do not have permission to record sales.', true);
     }
 
     // 2. UI Elements & Validation
@@ -6878,7 +6878,7 @@ async function submitSaleForm(event) {
     };
 
     if (!saleData.item || isNaN(saleData.number) || isNaN(saleData.bp) || isNaN(saleData.sp) || !saleData.date) {
-        return showMessageBox('Incomplete Form', 'Please fill all fields with valid data.', true);
+        return showMessage('Incomplete Form', 'Please fill all fields with valid data.', true);
     }
 
     // 3. Logic Calculations
@@ -6892,10 +6892,10 @@ async function submitSaleForm(event) {
 
         if (id) {
             await updateSale(id, saleData);
-            showMessageBox('Success', 'Sale updated! ✅');
+            showMessage('Success', 'Sale updated! ✅');
         } else {
             await createSale(saleData);
-            showMessageBox('Success', 'Sale recorded! ✅');
+            showMessage('Success', 'Sale recorded! ✅');
         }
 
         // Cleanup
@@ -6904,7 +6904,7 @@ async function submitSaleForm(event) {
         fetchSales(); 
 
     } catch (error) {
-        showMessageBox('Error', error.message, true);
+        showMessage('Error', error.message, true);
     } finally {
         submitButton.innerHTML = originalText;
         submitButton.disabled = false;
@@ -6912,7 +6912,7 @@ async function submitSaleForm(event) {
 }
 async function deleteSale(id) {
     if (!['admin', 'super-admin'].includes(currentUserRole)) {
-        return showMessageBox('Restricted', 'Only administrators can delete sales records.', true);
+        return showMessage('Restricted', 'Only administrators can delete sales records.', true);
     }
 
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
@@ -6926,11 +6926,11 @@ async function deleteSale(id) {
             });
 
             if (response && (response.status === 204 || response.status === 200)) {
-                showMessageBox('Deleted', 'Record removed successfully.');
+                showMessage('Deleted', 'Record removed successfully.');
                 fetchSales();
             }
         } catch (error) {
-            showMessageBox('Error', 'Deletion failed: ' + error.message, true);
+            showMessage('Error', 'Deletion failed: ' + error.message, true);
         }
     }
 }
