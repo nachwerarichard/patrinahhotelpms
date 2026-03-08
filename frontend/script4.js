@@ -397,7 +397,7 @@ const response = await authenticatedFetch(`${API_BASE_URL}/bookings/all?limit=50
     updateText('today-balance', `UGX ${kpis.balance.toLocaleString()}`);
 
     const statusCounts = { 'confirmed': 0, 'cancelled': 0, 'no show': 0, 'checkedin': 0, 'reserved': 0 };
-    const sourceCounts = { 'Walk in': 0, 'Booking.com': 0, 'Expedia': 0, 'Trip': 0, 'Hotel Website': 0, 'Airbnb': 0 };
+    const sourceCounts = { 'Walk in': 0, 'Booking.com': 0, 'Expedia': 0, 'Trip': 0, 'Hotel Website': 0 };
 
     todayArrivals.forEach(b => {
       if (statusCounts.hasOwnProperty(b.gueststatus)) statusCounts[b.gueststatus]++;
