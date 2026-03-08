@@ -9940,6 +9940,13 @@ async function loadRoomDatalist() {
         console.error("Could not load room list", err);
     }
 }
+
+const KITCHEN_REFRESH_RATE = 5000; 
+
+setInterval(async () => {
+    console.log("⏱️ Interval triggered: Refreshing orders...");
+    await loadOrders();
+}, KITCHEN_REFRESH_RATE);
 window.addEventListener('DOMContentLoaded', () => {
     loadRoomTypes();
     fetchRoomsV2();
