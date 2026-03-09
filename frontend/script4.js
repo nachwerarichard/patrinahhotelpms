@@ -4738,48 +4738,57 @@ async function loadRoomTypes() {
 // --- B. CREATE NEW ROOM TYPE ---
 document.getElementById('typeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const formData = new FormData();
     
+    // 1. Get references to button elements
+    const submitBtn = document.getElementById('submitTypeBtn');
+    const btnText = document.getElementById('btnText');
+    
+    // 2. Set Loading State
+    submitBtn.disabled = true;
+    submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+    btnText.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Processing...`;
+
+    const formData = new FormData();
     formData.append('name', document.getElementById('typeName').value);
     formData.append('basePrice', document.getElementById('basePrice').value);
     
     const imageInput = document.getElementById('roomImage'); 
-    
-    // Only append if the user actually picked files
     if (imageInput.files && imageInput.files.length > 0) {
         for (let i = 0; i < imageInput.files.length; i++) {
             formData.append('images', imageInput.files[i]); 
         }
     }
 
-try {
-    const res = await authenticatedFetch(`${API_BASE_URL}/room-types`, {
-        method: 'POST',
-        body: formData 
-    });
+    try {
+        const res = await authenticatedFetch(`${API_BASE_URL}/room-types`, {
+            method: 'POST',
+            body: formData 
+        });
 
-    // Check if the response is actually JSON
-    const contentType = res.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-        const data = await res.json();
-        if (res.ok) {
-            showMessage("Room Type Created! 🎉");
-            e.target.reset();
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            const data = await res.json();
+            if (res.ok) {
+                showMessage("Room Type Created! 🎉");
+                e.target.reset();
+                // Optionally refresh a list here
+                if(typeof fetchRoomTypes === 'function') fetchRoomTypes();
+            } else {
+                showMessage(data.error || "Upload failed", true);
+            }
         } else {
-            console.error("Server Logic Error:", data);
-            showMessage(data.error || "Upload failed", true);
+            showMessage("Server Configuration Error", true);
         }
-    } else {
-        // This captures the HTML error from Render/Express
-        const htmlError = await res.text();
-        console.error("The server sent HTML instead of JSON. Check the network tab or server logs.");
-        console.log("HTML Response:", htmlError); 
-        showMessage("Server Configuration Error", true);
+    } catch (error) {
+        console.error("Connection/Parsing Error:", error);
+        showMessage("Connection Error", true);
+    } finally {
+        // 3. Reset Button State (Always runs regardless of success or error)
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+        btnText.innerHTML = `Create Room Type`;
     }
-} catch (error) {
-    console.error("Connection/Parsing Error:", error);
-}
-  }); 
+});
 
 // --- C. APPLY SEASONAL RATES ---
 document.getElementById('seasonForm').addEventListener('submit', async (e) => {
