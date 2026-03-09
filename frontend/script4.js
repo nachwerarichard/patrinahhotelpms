@@ -9500,7 +9500,7 @@ async function loadWaiterTracker() {
 }
 
 // Auto-refresh every 15 seconds to keep the waiter updated
-setInterval(loadWaiterTracker, 5000);
+setInterval(loadWaiterTracker, 15000);
 loadWaiterTracker();
 
 async function markAsServed(orderId) {
