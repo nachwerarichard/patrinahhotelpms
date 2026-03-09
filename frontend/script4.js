@@ -8300,7 +8300,7 @@ async function loadOrders() {
         console.log("3. Orders received:", orders.length);
         
         const cardContainer = document.getElementById('kitchenOrders');
-        const tableBody = document.getElementById('waiterTrackerBody');
+       /* const tableBody = document.getElementById('waiterTrackerBody');
 
         // --- RENDER TABLE ---
         if (tableBody) {
@@ -8323,7 +8323,7 @@ async function loadOrders() {
                     </tr>`;
             }).join('');
         }
-
+*/
         // --- RENDER CARDS ---
         if (!cardContainer) {
             console.error("5. Error: kitchenOrders div not found!");
@@ -9500,8 +9500,8 @@ async function loadWaiterTracker() {
 }
 
 // Auto-refresh every 15 seconds to keep the waiter updated
-//setInterval(loadWaiterTracker, 15000);
-//loadWaiterTracker();
+setInterval(loadWaiterTracker, 15000);
+loadWaiterTracker();
 
 async function markAsServed(orderId) {
     if (!confirm("Confirm this order has been delivered to the table?")) return;
