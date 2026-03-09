@@ -5191,8 +5191,11 @@ async function handleSaveUser() {
 
     // UI References
     const submitBtn = document.getElementById('modalSubmitBtn');
-    const btnText = document.getElementById('btnText');
-    const btnIcon = document.getElementById('btnIcon');
+    const submitBtn = document.getElementById('modalSubmitBtn');
+const btnIcon = submitBtn.querySelector('i'); 
+const btnText = submitBtn.querySelector('span');
+
+// Now you only need one ID on the button!
 
     if (!username || (!staffId && !password)) {
         return showMessage("Please fill in all required credentials");
