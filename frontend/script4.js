@@ -5183,42 +5183,39 @@ async function fetchUsers() {
     }
 }
 
+
+
 async function handleSaveUser() {
-    // UI References
+    // 1. Find the button first
     const submitBtn = document.getElementById('modalSubmitBtn');
-    const btnText = document.getElementById('btnText');
-    const btnIcon = document.getElementById('btnIcon');
-
-    // 1. Double-Submission Guard
-    if (!submitBtn || submitBtn.disabled) return; 
-
-    // 2. Element Existence Check
-    if (!btnText || !btnIcon) {
-        console.error("UI elements not found inside the button.");
+    if (!submitBtn) {
+        console.error("Could not find the submit button!");
         return;
     }
 
-    const staffId = document.getElementById('staffId').value;
-    const username = document.getElementById('staffusername').value;
-    const password = document.getElementById('staffpassword').value;
-    const role = document.getElementById('staffrole').value;
+    // 2. Find the Icon and Text INSIDE this specific button
+    const btnIcon = submitBtn.querySelector('i');
+    const btnText = submitBtn.querySelector('span');
 
-    if (!username || (!staffId && !password)) {
-        return showMessage("Please fill in all required credentials");
+    // DEBUG: This will tell us exactly which one is missing
+    if (!btnIcon || !btnText) {
+        console.error("Missing internal elements:", { btnIcon, btnText });
+        return;
     }
 
-    // 3. Set Loading State
+    // 3. Double-Submission Guard
+    if (submitBtn.disabled) return;
+
+    // ... (rest of your existing logic for getting staffId, username, etc.)
+
+    // 4. Set Loading State
     submitBtn.disabled = true;
     submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
     btnText.innerText = "Processing...";
     btnIcon.className = "fa-solid fa-circle-notch fa-spin";
 
-    const isEdit = staffId && staffId !== "";
-    const url = isEdit ? `${API_BASE_URL}/admin/users/${staffId}` : `${API_BASE_URL}/admin/manage-user`;
-    const method = isEdit ? 'PUT' : 'POST';
-
     try {
-        const payload = { targetUsername: username, newRole: role };
+const payload = { targetUsername: username, newRole: role };
         if (password) payload.newPassword = password;
 
         const res = await authenticatedFetch(url, {
@@ -5237,18 +5234,14 @@ async function handleSaveUser() {
         }
     } catch (err) {
         console.error("Error saving user:", err);
-        showMessage("System error. Check console.");
-    } finally {
-        // 4. Reset Button State
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-            if (btnText) btnText.innerText = "Save Staff";
-            if (btnIcon) btnIcon.className = "fa-solid fa-save";
-        }
+        showMessage("System error. Check console.");    } finally {
+        // 5. Reset State
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+        btnText.innerText = "Save Staff";
+        btnIcon.className = "fa-solid fa-save";
     }
 }
-
 async function deleteUser(id) {
     if (!confirm('Delete this account permanently?')) return;
 
