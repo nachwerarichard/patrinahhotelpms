@@ -5184,62 +5184,53 @@ async function fetchUsers() {
 }
 
 async function handleSaveUser() {
-    // 1. Get the main button
-    const submitBtn = document.getElementById('modalSubmitBtn');
-    
-    // 2. Get the icon and text by their OWN IDs (more reliable)
-    const btnIcon = document.getElementById('btnIcon');
-    const btnText = document.getElementById('btnText');
+    const staffId = document.getElementById('staffId').value; // Hidden field
+    const username = document.getElementById('staffusername').value;
+    const password = document.getElementById('staffpassword').value;
+    const role = document.getElementById('staffrole').value;
 
-    // 3. Prevent double-clicks
-    if (submitBtn && submitBtn.disabled) return;
-
-    // --- YOUR DATA GATHERING ---
-    const staffId = document.getElementById('staffId')?.value || "";
-    const username = document.getElementById('staffusername')?.value;
-    const password = document.getElementById('staffpassword')?.value;
-    const role = document.getElementById('staffrole')?.value;
-
+    // Validation: Password only strictly required for NEW users
     if (!username || (!staffId && !password)) {
         return showMessage("Please fill in all required credentials");
     }
 
-    // 4. Set Loading State (with Safety Checks)
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
-    }
-    if (btnText) btnText.innerText = "Processing...";
-    if (btnIcon) btnIcon.className = "fa-solid fa-circle-notch fa-spin";
+    // Determine if we are updating or creating
+    const isEdit = staffId && staffId !== "";
+    const url = isEdit 
+        ? `${API_BASE_URL}/admin/users/${staffId}`  // URL for editing
+        : `${API_BASE_URL}/admin/manage-user`;      // URL for creating
+
+    const method = isEdit ? 'PUT' : 'POST';
 
     try {
-        const payload = { targetUsername: username, newRole: role };
+        const payload = { 
+            targetUsername: username, 
+            newRole: role 
+        };
+        
+        // Only send password if it's provided (important for edits)
         if (password) payload.newPassword = password;
 
-        const res = await authenticatedFetch(`${API_BASE_URL}/admin/manage-user`, {
-            method: staffId ? 'PUT' : 'POST',
-            headers: { 'Content-Type': 'application/json' },
+        const res = await authenticatedFetch(url, {
+            method: method,
             body: JSON.stringify(payload)
         });
 
-        if (res && res.ok) {
-            showMessage("Staff saved successfully!");
-            closeUserModal();
-            if (typeof fetchUsers === 'function') fetchUsers();
+        if (!res) return;
+
+        if (res.ok) {
+            showMessage(isEdit ? "User updated successfully!" : "User created successfully!");
+            closeModal();
+            // Reset the hidden ID for next time
+            document.getElementById('staffId').value = ""; 
+            fetchUsers(); 
         } else {
-            const data = res ? await res.json() : {};
-            showMessage(`Error: ${data.message || 'Could not save'}`);
+            const data = await res.json();
+            showMessage(`Action failed: ${data.message || 'Check connection'}`);
         }
     } catch (err) {
-        console.error("Save Error:", err);
-    } finally {
-        // 5. Reset everything back to normal
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-        }
-        if (btnText) btnText.innerText = "Save Staff";
-        if (btnIcon) btnIcon.className = "fa-solid fa-save";
+        console.error("Error saving user:", err);
+        showMessage("System error. Check console.");
     }
 }
 
