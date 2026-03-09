@@ -4836,7 +4836,9 @@ async function deleteRoom(id) {
 document.getElementById('roomForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    // 1. Get Values using NEW Unique ID
+    // 1. Get UI References
+    const submitBtn = document.getElementById('regRoomBtn');
+    const btnText = document.getElementById('regRoomBtnText');
     const number = document.getElementById('regRoomNumber').value;
     const roomTypeId = document.getElementById('roomTypeSelect').value;
 
@@ -4844,10 +4846,14 @@ document.getElementById('roomForm').addEventListener('submit', async (e) => {
         return showMessage("Please fill in all fields.", true);
     }
 
+    // 2. Set Loading State
+    submitBtn.disabled = true;
+    submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+    btnText.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Registering...`;
+
     const roomData = { number, roomTypeId };
 
     try {
-        // Use the NEW V2 Endpoint
         const res = await authenticatedFetch(`${API_BASE_URL}/v2/rooms`, {
             method: 'POST',
             body: JSON.stringify(roomData)
@@ -4858,13 +4864,18 @@ document.getElementById('roomForm').addEventListener('submit', async (e) => {
         if (res.ok) {
             showMessage(`Room ${data.number} registered successfully!`);
             e.target.reset();
-            // Refresh the table immediately
-            fetchRoomsV2(); 
+            if (typeof fetchRoomsV2 === 'function') fetchRoomsV2(); 
         } else {
             showMessage(data.error || "Registry failed", true);
         }
     } catch (err) {
         console.error("Submission Error:", err);
+        showMessage("Connection error. Please try again.", true);
+    } finally {
+        // 3. Reset Button State
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+        btnText.innerHTML = `Register Room`;
     }
 });
 
