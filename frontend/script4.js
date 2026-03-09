@@ -5134,49 +5134,48 @@ async function fetchUsers() {
     }
 }
 async function handleSaveUser() {
-    const staffId = document.getElementById('staffId').value; // Hidden field
+    const staffId = document.getElementById('staffId').value;
     const username = document.getElementById('staffusername').value;
     const password = document.getElementById('staffpassword').value;
     const role = document.getElementById('staffrole').value;
 
-    // Validation: Password only strictly required for NEW users
     if (!username || (!staffId && !password)) {
         return showMessage("Please fill in all required credentials");
     }
 
-    // Determine if we are updating or creating
     const isEdit = staffId && staffId !== "";
     const url = isEdit 
-        ? `${API_BASE_URL}/admin/users/${staffId}`  // URL for editing
-        : `${API_BASE_URL}/admin/manage-user`;      // URL for creating
+        ? `${API_BASE_URL}/admin/users/${staffId}` 
+        : `${API_BASE_URL}/admin/manage-user`;
 
     const method = isEdit ? 'PUT' : 'POST';
 
     try {
+        // Create a plain object (NOT stringified yet)
         const payload = { 
             targetUsername: username, 
             newRole: role 
         };
         
-        // Only send password if it's provided (important for edits)
         if (password) payload.newPassword = password;
 
         const res = await authenticatedFetch(url, {
             method: method,
-            body: JSON.stringify(payload)
+            // PASS THE OBJECT DIRECTLY
+            body: JSON.stringify(payload) 
         });
 
         if (!res) return;
 
+        const data = await res.json(); // Get data early to check messages
+
         if (res.ok) {
             showMessage(isEdit ? "User updated successfully!" : "User created successfully!");
             closeModal();
-            // Reset the hidden ID for next time
             document.getElementById('staffId').value = ""; 
-            fetchUsers(); 
+            if (typeof fetchUsers === 'function') fetchUsers(); 
         } else {
-            const data = await res.json();
-            showMessage(`Action failed: ${data.message || 'Check connection'}`);
+            showMessage(`Action failed: ${data.message || 'Error'}`);
         }
     } catch (err) {
         console.error("Error saving user:", err);
