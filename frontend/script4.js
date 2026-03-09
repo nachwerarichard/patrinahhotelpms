@@ -9887,34 +9887,54 @@ function getStatusColor(status) {
     };
     return colors[status] || 'bg-gray-100 text-gray-700';
 }
+
 async function filterStatusReportsByDate() {
     const dateInput = document.getElementById('statusReportFilterDate');
     const selectedDate = dateInput ? dateInput.value : '';
+    
+    // UI References
+    const filterBtn = document.getElementById('filterBtn');
+    const filterBtnText = document.getElementById('filterBtnText');
 
     if (!selectedDate) {
         showMessage("Please select a date to filter.");
         return;
     }
 
+    // 1. Set Loading State
+    filterBtn.disabled = true;
+    filterBtn.classList.add('opacity-70', 'cursor-not-allowed');
+    filterBtnText.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>`;
+
     try {
-        // Construct URL with query parameter
         const url = `${API_BASE_URL}/status-reports?date=${selectedDate}`;
-        
         const response = await authenticatedFetch(url);
+        
         if (!response.ok) throw new Error("Failed to filter reports");
 
         const reports = await response.json();
         
-        // Use your existing render function to update the table
-        renderStatusTable(reports);
+        // 2. Render logic + Empty state feedback
+        if (reports && reports.length > 0) {
+            renderStatusTable(reports);
+            console.log(`Filtered results for ${selectedDate}: ${reports.length} found.`);
+        } else {
+            // Render an empty table so the user sees it cleared
+            renderStatusTable([]); 
+            showMessage(`No reports found for ${selectedDate}.`);
+        }
         
-        // Optional: show a "Clear Filter" button
-        console.log(`Filtered results for ${selectedDate}: ${reports.length} found.`);
     } catch (err) {
         console.error("Filter Error:", err);
         showMessage("Could not filter reports: " + err.message);
+    } finally {
+        // 3. Reset Button State
+        filterBtn.disabled = false;
+        filterBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+        filterBtnText.innerHTML = `Apply`;
     }
 }
+
 document.addEventListener('DOMContentLoaded', () => {
     loadOrders();
 });
