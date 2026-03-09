@@ -5246,6 +5246,8 @@ async function deleteUser(id) {
 
         if (res.ok) {
             fetchUsers(); // Refresh the table after deletion
+                  showMessage("Staff Deleted");
+
         } else {
             const data = await res.json();
             showMessage(`Failed to delete user: ${data.message || 'Unknown error'}`);
