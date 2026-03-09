@@ -4793,8 +4793,22 @@ document.getElementById('typeForm').addEventListener('submit', async (e) => {
 // --- C. APPLY SEASONAL RATES ---
 document.getElementById('seasonForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    // 1. Get UI References
+    const submitBtn = document.getElementById('seasonBtn');
+    const btnText = document.getElementById('seasonBtnText');
     const typeId = document.getElementById('targetType').value;
     const hotelId = getSessionHotelId();
+
+    // Safety check to prevent "Cannot set properties of null" error
+    if (!submitBtn || !btnText) {
+        console.error("Button elements not found. Check your HTML IDs.");
+        return;
+    }
+
+    if (!typeId) {
+        return showMessage("Please select a Room Type first.", true);
+    }
 
     const data = {
         hotelId,
@@ -4804,14 +4818,34 @@ document.getElementById('seasonForm').addEventListener('submit', async (e) => {
         rate: parseFloat(document.getElementById('seasonRate').value)
     };
 
-    const res = await authenticatedFetch(`${API_BASE_URL}/room-types/${typeId}/seasons`, {
-        method: 'POST',
-        body: JSON.stringify(data)
-    });
+    // 2. Set Loading State
+    submitBtn.disabled = true;
+    submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+    btnText.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Updating Rates...`;
 
-    if(res && res.ok) {
-        showMessage("Seasonal rate applied successfully!");
-        e.target.reset();
+    try {
+        const res = await authenticatedFetch(`${API_BASE_URL}/room-types/${typeId}/seasons`, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+
+        if (res && res.ok) {
+            showMessage("Seasonal rate applied successfully! 📈");
+            e.target.reset();
+            // Refresh logic if you have a table for seasons
+            if (typeof fetchSeasons === 'function') fetchSeasons();
+        } else {
+            const errorData = await res.json();
+            showMessage(errorData.error || "Failed to apply rate", true);
+        }
+    } catch (err) {
+        console.error("Seasonal Rate Error:", err);
+        showMessage("Connection error. Please try again.", true);
+    } finally {
+        // 3. Reset Button State (Always runs)
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+        btnText.innerHTML = `Apply Market Rate`;
     }
 });
 
