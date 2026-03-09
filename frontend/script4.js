@@ -5522,7 +5522,7 @@ const addCharge = async (description, number, department) => {
 
         // --- KITCHEN showMessage ---
         if (department === 'Restaurant') {
-            showMessage(`Kitchen order for Table ${tableNum} has been sent!`, "success");
+            showMessage(`Kitchen order  has been sent!`, "success");
         }
 
         // 2. If Guest Folio exists, update the account
