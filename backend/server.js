@@ -847,65 +847,56 @@ app.put('/api/admin/users/:id', auth, async (req, res) => {
         res.status(500).json({ message: "Error updating user", error: err.message });
     }
 });
+
 app.post('/api/admin/manage-user', auth, async (req, res) => {
-    console.log("=== CREATE USER ROUTE HIT ===");
-
     try {
-        console.log("Request body:", req.body);
-        console.log("Authenticated user:", req.user);
-
         const { targetUsername, newPassword, newRole } = req.body;
 
+        // 1. Validate Input
         if (!targetUsername || !newPassword || !newRole) {
-            console.log("❌ Missing required fields");
-            return res.status(400).json({ message: "All fields required" });
+            return res.status(400).json({ message: "Username, password, and role are required" });
         }
 
-        const hotelId = req.user?.hotelId;
-        console.log("Hotel ID from token:", hotelId);
-
-        if (!hotelId) {
-            console.log("❌ hotelId missing from token");
-            return res.status(400).json({ message: "Hotel ID missing in token" });
+        // 2. Validate Hotel ID (From auth middleware or header)
+        const hotelId = req.user?.hotelId || req.headers['x-hotel-id'];
+        
+        if (!hotelId || hotelId === 'global') {
+            return res.status(400).json({ message: "You must be assigned to a hotel to create users." });
         }
 
-        console.log("Checking if user already exists...");
-        const existing = await User.findOne({
-            username: targetUsername,
-            hotelId
+        // 3. Check for existing user IN THIS HOTEL
+        const existing = await User.findOne({ 
+            username: targetUsername, 
+            hotelId: hotelId 
         });
-
-        console.log("Existing user result:", existing);
 
         if (existing) {
-            console.log("❌ User already exists in this hotel");
-            return res.status(400).json({ message: "User already exists in this hotel" });
+            return res.status(400).json({ message: "Username already taken in this hotel" });
         }
 
-        console.log("Creating user with data:", {
+        // 4. Create User
+        // Note: Ensure your User model has a pre-save hook for password hashing!
+        const newUser = new User({
             username: targetUsername,
+            password: newPassword, 
             role: newRole,
-            hotelId
+            hotelId: hotelId
         });
 
-        const createdUser = await User.create({
-            username: targetUsername,
-            password: newPassword,  // (we'll hash later)
-            role: newRole,
-            hotelId
-        });
+        await newUser.save();
 
-        console.log("✅ User created successfully:", createdUser);
-
-        res.json({ message: "User created successfully" });
+        res.status(201).json({ message: "User created successfully" });
 
     } catch (err) {
-        console.error("🚨 CREATE USER ERROR FULL OBJECT:", err);
-        console.error("🚨 ERROR MESSAGE:", err.message);
-        console.error("🚨 ERROR STACK:", err.stack);
+        console.error("🚨 CREATE USER ERROR:", err.message);
+        
+        // Handle Mongoose Unique Index errors specifically
+        if (err.code === 11000) {
+            return res.status(400).json({ message: "Username already exists." });
+        }
 
         res.status(500).json({ 
-            message: "Error creating user", 
+            message: "Internal server error during user creation",
             error: err.message 
         });
     }
