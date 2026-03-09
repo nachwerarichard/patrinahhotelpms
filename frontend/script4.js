@@ -5184,23 +5184,24 @@ async function fetchUsers() {
 }
 
 async function handleSaveUser() {
-    // 1. Get Form Values
-    // Using optional chaining (?.) prevents a crash if the element is missing
-    const staffId = document.getElementById('staffId')?.value || "";
-    const username = document.getElementById('staffusername')?.value;
-    const password = document.getElementById('staffpassword')?.value;
-    const role = document.getElementById('staffrole')?.value;
-
-    // 2. UI References - Target the IDs directly
+    // UI References
     const submitBtn = document.getElementById('modalSubmitBtn');
     const btnText = document.getElementById('btnText');
     const btnIcon = document.getElementById('btnIcon');
 
-    // Safety Check: If these don't exist, stop here and log an error
-    if (!submitBtn || !btnText || !btnIcon) {
-        console.error("Missing UI elements! Check if IDs 'modalSubmitBtn', 'btnText', and 'btnIcon' exist in your HTML.");
+    // 1. Double-Submission Guard
+    if (!submitBtn || submitBtn.disabled) return; 
+
+    // 2. Element Existence Check
+    if (!btnText || !btnIcon) {
+        console.error("UI elements not found inside the button.");
         return;
     }
+
+    const staffId = document.getElementById('staffId').value;
+    const username = document.getElementById('staffusername').value;
+    const password = document.getElementById('staffpassword').value;
+    const role = document.getElementById('staffrole').value;
 
     if (!username || (!staffId && !password)) {
         return showMessage("Please fill in all required credentials");
@@ -5226,15 +5227,12 @@ async function handleSaveUser() {
             body: JSON.stringify(payload)
         });
 
-        if (!res) return;
-        const data = await res.json();
-
-        if (res.ok) {
+        if (res && res.ok) {
             showMessage(isEdit ? "User updated successfully!" : "User created successfully!");
-            if (typeof closeModal === 'function') closeModal();
-            if (document.getElementById('staffId')) document.getElementById('staffId').value = "";
+            closeUserModal(); // Use your specific close function name
             if (typeof fetchUsers === 'function') fetchUsers();
         } else {
+            const data = res ? await res.json() : {};
             showMessage(`Action failed: ${data.message || 'Error'}`);
         }
     } catch (err) {
@@ -5242,10 +5240,12 @@ async function handleSaveUser() {
         showMessage("System error. Check console.");
     } finally {
         // 4. Reset Button State
-        submitBtn.disabled = false;
-        submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-        btnText.innerText = "Save Staff"; 
-        btnIcon.className = "fa-solid fa-save";
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+            if (btnText) btnText.innerText = "Save Staff";
+            if (btnIcon) btnIcon.className = "fa-solid fa-save";
+        }
     }
 }
 
