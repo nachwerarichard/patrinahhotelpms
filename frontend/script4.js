@@ -9931,7 +9931,7 @@ async function filterStatusReportsByDate() {
         // 3. Reset Button State
         filterBtn.disabled = false;
         filterBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-        filterBtnText.innerHTML = `Apply`;
+        filterBtnText.innerHTML = `Search`;
     }
 }
 
