@@ -5184,27 +5184,33 @@ async function fetchUsers() {
 }
 
 async function handleSaveUser() {
-    const staffId = document.getElementById('staffId').value;
-    const username = document.getElementById('staffusername').value;
-    const password = document.getElementById('staffpassword').value;
-    const role = document.getElementById('staffrole').value;
+    // 1. Get Form Values
+    // Using optional chaining (?.) prevents a crash if the element is missing
+    const staffId = document.getElementById('staffId')?.value || "";
+    const username = document.getElementById('staffusername')?.value;
+    const password = document.getElementById('staffpassword')?.value;
+    const role = document.getElementById('staffrole')?.value;
 
-    // UI References
+    // 2. UI References - Target the IDs directly
     const submitBtn = document.getElementById('modalSubmitBtn');
-const btnIcon = submitBtn.querySelector('i'); 
-const btnText = submitBtn.querySelector('span');
+    const btnText = document.getElementById('btnText');
+    const btnIcon = document.getElementById('btnIcon');
 
-// Now you only need one ID on the button!
+    // Safety Check: If these don't exist, stop here and log an error
+    if (!submitBtn || !btnText || !btnIcon) {
+        console.error("Missing UI elements! Check if IDs 'modalSubmitBtn', 'btnText', and 'btnIcon' exist in your HTML.");
+        return;
+    }
 
     if (!username || (!staffId && !password)) {
         return showMessage("Please fill in all required credentials");
     }
 
-    // 1. Set Loading State
+    // 3. Set Loading State
     submitBtn.disabled = true;
     submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
     btnText.innerText = "Processing...";
-    btnIcon.className = "fa-solid fa-circle-notch fa-spin"; // This adds the spinning animation
+    btnIcon.className = "fa-solid fa-circle-notch fa-spin";
 
     const isEdit = staffId && staffId !== "";
     const url = isEdit ? `${API_BASE_URL}/admin/users/${staffId}` : `${API_BASE_URL}/admin/manage-user`;
@@ -5216,17 +5222,17 @@ const btnText = submitBtn.querySelector('span');
 
         const res = await authenticatedFetch(url, {
             method: method,
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
         if (!res) return;
-
         const data = await res.json();
 
         if (res.ok) {
             showMessage(isEdit ? "User updated successfully!" : "User created successfully!");
-            closeModal();
-            document.getElementById('staffId').value = "";
+            if (typeof closeModal === 'function') closeModal();
+            if (document.getElementById('staffId')) document.getElementById('staffId').value = "";
             if (typeof fetchUsers === 'function') fetchUsers();
         } else {
             showMessage(`Action failed: ${data.message || 'Error'}`);
@@ -5235,11 +5241,11 @@ const btnText = submitBtn.querySelector('span');
         console.error("Error saving user:", err);
         showMessage("System error. Check console.");
     } finally {
-        // 2. Reset Button State (Runs even if an error occurs)
+        // 4. Reset Button State
         submitBtn.disabled = false;
         submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
         btnText.innerText = "Save Staff"; 
-        btnIcon.className = "fa-solid fa-save"; // Returns to the save icon
+        btnIcon.className = "fa-solid fa-save";
     }
 }
 
