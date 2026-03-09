@@ -5183,65 +5183,66 @@ async function fetchUsers() {
     }
 }
 
-
-
 async function handleSaveUser() {
-    // 1. Find the button first
+    // 1. Get the main button
     const submitBtn = document.getElementById('modalSubmitBtn');
-    if (!submitBtn) {
-        console.error("Could not find the submit button!");
-        return;
+    
+    // 2. Get the icon and text by their OWN IDs (more reliable)
+    const btnIcon = document.getElementById('btnIcon');
+    const btnText = document.getElementById('btnText');
+
+    // 3. Prevent double-clicks
+    if (submitBtn && submitBtn.disabled) return;
+
+    // --- YOUR DATA GATHERING ---
+    const staffId = document.getElementById('staffId')?.value || "";
+    const username = document.getElementById('staffusername')?.value;
+    const password = document.getElementById('staffpassword')?.value;
+    const role = document.getElementById('staffrole')?.value;
+
+    if (!username || (!staffId && !password)) {
+        return showMessage("Please fill in all required credentials");
     }
 
-    // 2. Find the Icon and Text INSIDE this specific button
-    const btnIcon = submitBtn.querySelector('i');
-    const btnText = submitBtn.querySelector('span');
-
-    // DEBUG: This will tell us exactly which one is missing
-    if (!btnIcon || !btnText) {
-        console.error("Missing internal elements:", { btnIcon, btnText });
-        return;
+    // 4. Set Loading State (with Safety Checks)
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
     }
-
-    // 3. Double-Submission Guard
-    if (submitBtn.disabled) return;
-
-    // ... (rest of your existing logic for getting staffId, username, etc.)
-
-    // 4. Set Loading State
-    submitBtn.disabled = true;
-    submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
-    btnText.innerText = "Processing...";
-    btnIcon.className = "fa-solid fa-circle-notch fa-spin";
+    if (btnText) btnText.innerText = "Processing...";
+    if (btnIcon) btnIcon.className = "fa-solid fa-circle-notch fa-spin";
 
     try {
-const payload = { targetUsername: username, newRole: role };
+        const payload = { targetUsername: username, newRole: role };
         if (password) payload.newPassword = password;
 
-        const res = await authenticatedFetch(url, {
-            method: method,
+        const res = await authenticatedFetch(`${API_BASE_URL}/admin/manage-user`, {
+            method: staffId ? 'PUT' : 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
         if (res && res.ok) {
-            showMessage(isEdit ? "User updated successfully!" : "User created successfully!");
-            closeUserModal(); // Use your specific close function name
+            showMessage("Staff saved successfully!");
+            closeUserModal();
             if (typeof fetchUsers === 'function') fetchUsers();
         } else {
             const data = res ? await res.json() : {};
-            showMessage(`Action failed: ${data.message || 'Error'}`);
+            showMessage(`Error: ${data.message || 'Could not save'}`);
         }
     } catch (err) {
-        console.error("Error saving user:", err);
-        showMessage("System error. Check console.");    } finally {
-        // 5. Reset State
-        submitBtn.disabled = false;
-        submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-        btnText.innerText = "Save Staff";
-        btnIcon.className = "fa-solid fa-save";
+        console.error("Save Error:", err);
+    } finally {
+        // 5. Reset everything back to normal
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+        }
+        if (btnText) btnText.innerText = "Save Staff";
+        if (btnIcon) btnIcon.className = "fa-solid fa-save";
     }
 }
+
 async function deleteUser(id) {
     if (!confirm('Delete this account permanently?')) return;
 
