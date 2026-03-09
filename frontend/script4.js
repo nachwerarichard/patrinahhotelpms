@@ -5207,7 +5207,7 @@ async function handleSaveUser() {
     submitBtn.disabled = true;
    // submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
     btnText.innerText = "Processing...";
-    btnIcon.className = "fa-solid fa-circle-notch fa-spin";
+    //btnIcon.className = "fa-solid fa-circle-notch fa-spin";
 
     const isEdit = staffId && staffId !== "";
     const url = isEdit ? `${API_BASE_URL}/admin/users/${staffId}` : `${API_BASE_URL}/admin/manage-user`;
