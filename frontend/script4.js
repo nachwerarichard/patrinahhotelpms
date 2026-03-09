@@ -5205,7 +5205,7 @@ async function handleSaveUser() {
 
     // 1. Set Loading State
     submitBtn.disabled = true;
-    submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+   // submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
     btnText.innerText = "Processing...";
     btnIcon.className = "fa-solid fa-circle-notch fa-spin";
 
