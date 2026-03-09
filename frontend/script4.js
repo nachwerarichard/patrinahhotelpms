@@ -5049,21 +5049,16 @@ function openUserModal() {
 const modal = document.getElementById('userModal');
 const modalTitle = document.getElementById('modalTitle');
 const submitBtn = document.getElementById('modalSubmitBtn');
-    // 1. Reset the form values (clears previous inputs)
-    document.getElementById('staffId').value = '';
-    document.getElementById('staffusername').value = '';
-    document.getElementById('staffpassword').value = '';
-    document.getElementById('staffrole').value = 'Front office';
-
+  document.getElementById('staffId').value = ""; // Clear ID for new users
+    document.getElementById('userForm').reset();    // Clear all inputs    
     // 2. Set the UI text for a new entry
     modalTitle.innerText = "Staff Registration";
-    submitBtn.innerHTML = `<i data-lucide="save" class="w-5 h-5"></i> Confirm and Save Staff`;
+    submitBtn.innerHTML = `<i data-lucide="save" class="w-5 h-5"></i>  Save Staff`;
 
     // 3. Remove the 'hidden' class to show it
     modal.classList.remove('hidden');
     
     // Optional: Re-initialize Lucide icons if you're using the library
-    if (window.lucide) lucide.createIcons();
 }
 
 /**
