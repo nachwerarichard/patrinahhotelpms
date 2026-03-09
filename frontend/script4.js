@@ -5205,9 +5205,9 @@ async function handleSaveUser() {
 
     // 1. Set Loading State
     submitBtn.disabled = true;
-   // submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+    submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
     btnText.innerText = "Processing...";
-    //btnIcon.className = "fa-solid fa-circle-notch fa-spin";
+    btnIcon.className = "fa-solid fa-circle-notch fa-spin"; // This adds the spinning animation
 
     const isEdit = staffId && staffId !== "";
     const url = isEdit ? `${API_BASE_URL}/admin/users/${staffId}` : `${API_BASE_URL}/admin/manage-user`;
@@ -5238,11 +5238,11 @@ async function handleSaveUser() {
         console.error("Error saving user:", err);
         showMessage("System error. Check console.");
     } finally {
-        // 2. Reset Button State (Always runs)
+        // 2. Reset Button State (Runs even if an error occurs)
         submitBtn.disabled = false;
         submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-        btnText.innerText = "Confirm and Save Staff";
-        btnIcon.className = "fa-solid fa-save";
+        btnText.innerText = "Save Staff"; 
+        btnIcon.className = "fa-solid fa-save"; // Returns to the save icon
     }
 }
 
