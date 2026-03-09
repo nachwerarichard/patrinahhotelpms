@@ -5187,55 +5187,65 @@ async function fetchUsers() {
         }
     }
 }
+
 async function handleSaveUser() {
     const staffId = document.getElementById('staffId').value;
     const username = document.getElementById('staffusername').value;
     const password = document.getElementById('staffpassword').value;
     const role = document.getElementById('staffrole').value;
 
+    // UI References
+    const submitBtn = document.getElementById('modalSubmitBtn');
+    const btnText = document.getElementById('btnText');
+    const btnIcon = document.getElementById('btnIcon');
+
     if (!username || (!staffId && !password)) {
         return showMessage("Please fill in all required credentials");
     }
 
-    const isEdit = staffId && staffId !== "";
-    const url = isEdit 
-        ? `${API_BASE_URL}/admin/users/${staffId}` 
-        : `${API_BASE_URL}/admin/manage-user`;
+    // 1. Set Loading State
+    submitBtn.disabled = true;
+    submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+    btnText.innerText = "Processing...";
+    btnIcon.className = "fa-solid fa-circle-notch fa-spin";
 
+    const isEdit = staffId && staffId !== "";
+    const url = isEdit ? `${API_BASE_URL}/admin/users/${staffId}` : `${API_BASE_URL}/admin/manage-user`;
     const method = isEdit ? 'PUT' : 'POST';
 
     try {
-        // Create a plain object (NOT stringified yet)
-        const payload = { 
-            targetUsername: username, 
-            newRole: role 
-        };
-        
+        const payload = { targetUsername: username, newRole: role };
         if (password) payload.newPassword = password;
 
         const res = await authenticatedFetch(url, {
             method: method,
-            // PASS THE OBJECT DIRECTLY
-            body: JSON.stringify(payload) 
+            body: JSON.stringify(payload)
         });
 
         if (!res) return;
 
-        const data = await res.json(); // Get data early to check messages
+        const data = await res.json();
 
         if (res.ok) {
             showMessage(isEdit ? "User updated successfully!" : "User created successfully!");
             closeModal();
-            document.getElementById('staffId').value = ""; 
-            if (typeof fetchUsers === 'function') fetchUsers(); 
+            document.getElementById('staffId').value = "";
+            if (typeof fetchUsers === 'function') fetchUsers();
         } else {
             showMessage(`Action failed: ${data.message || 'Error'}`);
         }
     } catch (err) {
         console.error("Error saving user:", err);
         showMessage("System error. Check console.");
+    } finally {
+        // 2. Reset Button State (Always runs)
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+        btnText.innerText = "Confirm and Save Staff";
+        btnIcon.className = "fa-solid fa-save";
     }
 }
+
 async function deleteUser(id) {
     if (!confirm('Delete this account permanently?')) return;
 
