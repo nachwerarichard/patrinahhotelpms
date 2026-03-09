@@ -5191,7 +5191,6 @@ async function handleSaveUser() {
 
     // UI References
     const submitBtn = document.getElementById('modalSubmitBtn');
-    const submitBtn = document.getElementById('modalSubmitBtn');
 const btnIcon = submitBtn.querySelector('i'); 
 const btnText = submitBtn.querySelector('span');
 
