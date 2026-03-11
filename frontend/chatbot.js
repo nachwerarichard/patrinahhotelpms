@@ -1,5 +1,4 @@
 let chatWindow, userInput, typingIndicator, toggleBtn;
-        const API_BASE = 'https://novouscloudpms-tz4s.onrender.com/api';
 
         window.addEventListener('DOMContentLoaded', () => {
             chatWindow = document.getElementById('chat-window');
