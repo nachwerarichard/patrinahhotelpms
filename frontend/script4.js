@@ -814,8 +814,8 @@ event.preventDefault();
     
     // Prevent navigation if the user's role doesn't permit it
     if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping') {
-        showMessage('Access Denied', 'Housekeepers can only access the Housekeeping section.', true);
-        return;
+        //showMessage('Access Denied', 'Housekeepers can only access the Housekeeping section.', true);
+        //return;
     }
     
     // Block 'bar' user from accessing sections they don't have permission for
