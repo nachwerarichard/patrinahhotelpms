@@ -813,8 +813,15 @@ event.preventDefault();
 
     
     // Prevent navigation if the user's role doesn't permit it
-    if (currentUserRole === 'housekeeper') {
+  if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping') {
         showMessage('Access Denied', 'Housekeepers can only access the Housekeeping section.', true);
+        return;
+    }
+    
+    // Block 'bar' user from accessing sections they don't have permission for
+    const barRestrictedSections = ['housekeeping', 'reports', 'service-reports', 'audit-logs','dashboard'];
+    if (currentUserRole === 'bar' && barRestrictedSections.includes(targetId)) {
+        showMessage('Access Denied', 'You do not have permission to access this section.', true);
         return;
     }
     
