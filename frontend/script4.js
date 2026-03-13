@@ -813,7 +813,7 @@ event.preventDefault();
 
     
     // Prevent navigation if the user's role doesn't permit it
-  if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping') {
+    if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping') {
         showMessage('Access Denied', 'Housekeepers can only access the Housekeeping section.', true);
         return;
     }
@@ -824,8 +824,6 @@ event.preventDefault();
         showMessage('Access Denied', 'You do not have permission to access this section.', true);
         return;
     }
-    
-    // Block 'bar' user from accessing sections they don't have permission for
 
     // Remove 'active' class from all nav links and sections
     navLinks.forEach(link => link.classList.remove('active'));
@@ -944,7 +942,8 @@ function applyRoleAccess(role) {
     document.getElementById('nav-salereport').style.display = 'list-item';
             break;
         case 'housekeeper':
-            
+            document.getElementById('booking-management').style.display = 'none';
+            // Housekeepers only see housekeeping and logout
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             document.getElementById('nav-housekeepingreports').style.display = 'list-item';
 
@@ -952,18 +951,10 @@ function applyRoleAccess(role) {
 
             break;
         case 'bar':
-            document.getElementById('nav-sales').style.display = 'list-item';
-
-            break;
-        case 'cashier':
-document.getElementById('nav-sales').style.display = 'list-item';
-    document.getElementById('nav-expenses').style.display = 'list-item';
-    document.getElementById('nav-cash').style.display = 'list-item';
-    document.getElementById('nav-posreports').style.display = 'list-item';
-    document.getElementById('nav-salereport').style.display = 'list-item';
-            break;
-        case 'Front office':
+             document.getElementById('nav-booking').style.display = 'none';
+            // Bar staff only see booking management and logout
             document.getElementById('nav-booking').style.display = 'list-item';
+            document.getElementById('nav-sales').style.display = 'list-item';
 
             break;
         default:
@@ -10028,4 +10019,3 @@ window.addEventListener('DOMContentLoaded', () => {
     loadRoomTypes();
     fetchRoomsV2();
 });
-
