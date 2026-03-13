@@ -813,17 +813,12 @@ event.preventDefault();
 
     
     // Prevent navigation if the user's role doesn't permit it
-    if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping') {
+    if (currentUserRole === 'housekeeper') {
         showMessage('Access Denied', 'Housekeepers can only access the Housekeeping section.', true);
         return;
     }
     
     // Block 'bar' user from accessing sections they don't have permission for
-    const barRestrictedSections = ['housekeeping', 'reports', 'service-reports', 'audit-logs','dashboard'];
-    if (currentUserRole === 'bar' && barRestrictedSections.includes(targetId)) {
-        showMessage('Access Denied', 'You do not have permission to access this section.', true);
-        return;
-    }
 
     // Remove 'active' class from all nav links and sections
     navLinks.forEach(link => link.classList.remove('active'));
