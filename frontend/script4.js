@@ -942,8 +942,7 @@ function applyRoleAccess(role) {
     document.getElementById('nav-salereport').style.display = 'list-item';
             break;
         case 'housekeeper':
-            document.getElementById('booking-management').style.display = 'none';
-            // Housekeepers only see housekeeping and logout
+            
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             document.getElementById('nav-housekeepingreports').style.display = 'list-item';
 
@@ -951,10 +950,18 @@ function applyRoleAccess(role) {
 
             break;
         case 'bar':
-             document.getElementById('nav-booking').style.display = 'none';
-            // Bar staff only see booking management and logout
-            document.getElementById('nav-booking').style.display = 'list-item';
             document.getElementById('nav-sales').style.display = 'list-item';
+
+            break;
+        case 'cashier':
+document.getElementById('nav-sales').style.display = 'list-item';
+    document.getElementById('nav-expenses').style.display = 'list-item';
+    document.getElementById('nav-cash').style.display = 'list-item';
+    document.getElementById('nav-posreports').style.display = 'list-item';
+    document.getElementById('nav-salereport').style.display = 'list-item';
+            break;
+        case 'Front office':
+            document.getElementById('nav-booking').style.display = 'list-item';
 
             break;
         default:
