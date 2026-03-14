@@ -945,6 +945,7 @@ function applyRoleAccess(role) {
             break;
 
         case 'Front office':
+            document.getElementById('frontofficedropdown').style.display = 'list-item';
             document.getElementById('nav-booking').style.display = 'list-item';
             break;
     }
