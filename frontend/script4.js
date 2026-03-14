@@ -900,81 +900,55 @@ event.preventDefault();
  * @param {string} role - The role of the currently logged-in user ('admin', 'housekeeper', 'bar').
  */
 function applyRoleAccess(role) {
-    // Hide all navigation links by default
-    document.getElementById('nav-booking').style.display = 'none';
-    document.getElementById('nav-dashboard').style.display = 'none';
-    document.getElementById('nav-housekeeping').style.display = 'none';
-      document.getElementById('nav-inventory').style.display = 'none';
-    document.getElementById('nav-sales').style.display = 'none';
-    document.getElementById('nav-posinventory').style.display = 'none';
-    document.getElementById('nav-kds').style.display = 'none';
-    document.getElementById('frontofficedropdown').style.display = 'none';
-    document.getElementById('housekeepdropdown').style.display = 'none';
-    document.getElementById('posdropdown').style.display = 'none';
-    document.getElementById('nav-expenses').style.display = 'none';
-    document.getElementById('nav-cash').style.display = 'none';
-    document.getElementById('nav-posreports').style.display = 'none';
-    document.getElementById('nav-salereport').style.display = 'none';
-      document.getElementById('nav-housekeepingreports').style.display = 'none';
-        document.getElementById('nav-inventory').style.display = 'none';
-        document.getElementById('nav-staff').style.display = 'none';
+    // 1. Select all nav items (using a class is cleaner, but keeping your ID method for now)
+    const navIds = [
+        'nav-booking', 'nav-dashboard', 'nav-housekeeping', 'nav-inventory', 
+        'nav-sales', 'nav-posinventory', 'nav-kds', 'frontofficedropdown', 
+        'housekeepdropdown', 'posdropdown', 'nav-expenses', 'nav-cash', 
+        'nav-posreports', 'nav-salereport', 'nav-housekeepingreports', 
+        'nav-staff', 'nav-reports', 'nav-calendar', 'nav-audit-logs'
+    ];
 
-    document.getElementById('nav-reports').style.display = 'none';
-    document.getElementById('nav-calendar').style.display = 'none';
-    document.getElementById('nav-audit-logs').style.display = 'none';
+    // Hide everything first
+    navIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
 
-    // Show navigation links based on role
+    // 2. Show based on role
     switch (role) {
-        case 'admin' || 'super-admin':
-            // Admins see everything
-            document.getElementById('nav-booking').style.display = 'list-item';
-            document.getElementById('nav-dashboard').style.display = 'list-item';
-            document.getElementById('nav-inventory').style.display = 'list-item';
-            document.getElementById('nav-staff').style.display = 'list-item';
-           document.getElementById('nav-kds').style.display = 'list-item';
-            document.getElementById('nav-housekeepingreports').style.display = 'list-item';
-            document.getElementById('nav-housekeeping').style.display = 'list-item';
-            document.getElementById('nav-reports').style.display = 'list-item';
-            document.getElementById('nav-calendar').style.display = 'list-item';
-            document.getElementById('nav-audit-logs').style.display = 'list-item';
-            document.getElementById('nav-posinventory').style.display = 'list-item';
-        document.getElementById('nav-inventory').style.display = 'list-item';
-    document.getElementById('nav-sales').style.display = 'list-item';
-    document.getElementById('nav-expenses').style.display = 'list-item';
-    document.getElementById('nav-cash').style.display = 'list-item';
-    document.getElementById('nav-posreports').style.display = 'list-item';
-    document.getElementById('nav-salereport').style.display = 'list-item';
-        document.getElementById('frontofficedropdown').style.display = 'list-item';
-    document.getElementById('housekeepdropdown').style.display = 'list-item';
-    document.getElementById('posdropdown').style.display = 'list-item';
+        case 'admin':
+        case 'super-admin': // Correct way to handle multiple cases
+            // Admins see everything, including the dashboard
+            navIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'list-item';
+            });
             break;
- case 'housekeeper':
-           document.getElementById('housekeepdropdown').style.display = 'list-item';
+
+        case 'housekeeper':
+            document.getElementById('housekeepdropdown').style.display = 'list-item';
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             document.getElementById('nav-housekeepingreports').style.display = 'list-item';
-
-            renderHousekeepingRooms() ;
-
+            renderHousekeepingRooms();
             break;
+
         case 'bar':
             document.getElementById('posdropdown').style.display = 'list-item';
             document.getElementById('nav-sales').style.display = 'list-item';
-
             break;
+
         case 'cashier':
             document.getElementById('posdropdown').style.display = 'list-item';
-document.getElementById('nav-sales').style.display = 'list-item';
-    document.getElementById('nav-expenses').style.display = 'list-item';
-    document.getElementById('nav-cash').style.display = 'list-item';
-    document.getElementById('nav-posreports').style.display = 'list-item';
-    document.getElementById('nav-salereport').style.display = 'list-item';
+            document.getElementById('nav-sales').style.display = 'list-item';
+            document.getElementById('nav-expenses').style.display = 'list-item';
+            document.getElementById('nav-cash').style.display = 'list-item';
+            document.getElementById('nav-posreports').style.display = 'list-item';
+            document.getElementById('nav-salereport').style.display = 'list-item';
             break;
+
         case 'Front office':
             document.getElementById('nav-booking').style.display = 'list-item';
-
-            break;
-        default:
-            // For any other undefined role, hide everything
             break;
     }
 }
