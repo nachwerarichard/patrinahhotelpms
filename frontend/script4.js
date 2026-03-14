@@ -846,7 +846,7 @@ event.preventDefault();
             document.getElementById('housekeeping').classList.add('active');
             document.getElementById('nav-housekeeping').classList.add('active');
             document.getElementById('booking-management').style.display='none';
-            renderHousekeepingRooms(); // Ensure it renders if fallback
+            //renderHousekeepingRooms(); // Ensure it renders if fallback
         } else if (currentUserRole === 'bar') {
             document.getElementById('booking-management').classList.add('active');
             document.getElementById('nav-booking').classList.add('active');
