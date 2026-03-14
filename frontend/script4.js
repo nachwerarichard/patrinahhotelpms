@@ -758,12 +758,6 @@ async function showDashboard(username, role) {
             secEl.classList.add('active');
             secEl.style.display = 'block'; // Ensure it's visible
 
-            // Load specific data
-            if (initialSectionId === 'housekeeping') {
-                await renderHousekeepingRooms();
-            } else if (initialSectionId === 'booking-management') {
-                // await loadBookings(1, ''); 
-            }
         }
     }
 }
