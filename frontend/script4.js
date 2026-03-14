@@ -2923,7 +2923,7 @@ async function renderHousekeepingRooms() {
         sectionHeader.innerHTML = `
             <h3 class="text-sm font-black uppercase tracking-[0.3em] text-slate-400 whitespace-nowrap">${typeName}</h3>
             <div class="h-px bg-slate-200 w-full"></div>
-            <span class="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-bold">${groupedRooms[typeName].length} Units</span>
+            <span class="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-bold">${groupedRooms[typeName].length} Rooms</span>
         `;
         housekeepingRoomGrid.appendChild(sectionHeader);
 
