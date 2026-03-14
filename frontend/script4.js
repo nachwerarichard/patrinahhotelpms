@@ -927,7 +927,7 @@ function applyRoleAccess(role) {
             document.getElementById('housekeepdropdown').style.display = 'list-item';
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             document.getElementById('nav-housekeepingreports').style.display = 'list-item';
-            renderHousekeepingRooms();
+            //renderHousekeepingRooms();
             break;
 
         case 'bar':
