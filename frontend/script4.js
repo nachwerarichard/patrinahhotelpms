@@ -733,14 +733,17 @@ async function showDashboard(username, role) {
     else if (role === 'housekeeper') {
         initialSectionId = 'housekeeping';
         initialNavLinkId = 'nav-housekeeping';
+        document.getElementById('dashboard').style.display = 'none';
     } 
     else if (role === 'cashier' || role === 'bar') {
         initialSectionId = 'sales-records'; // Change this to your POS section ID
         initialNavLinkId = 'nav-sales';
+        document.getElementById('dashboard').style.display = 'none';
     }
     else if (role === 'frontoffice') {
         initialSectionId = 'booking-management';
         initialNavLinkId = 'nav-booking';
+        document.getElementById('dashboard').style.display = 'none';
     }
 
     // Reset current active states
