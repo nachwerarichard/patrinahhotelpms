@@ -727,7 +727,7 @@ async function showDashboard(username, role) {
 
     // LOGIC: Only Admins/Super-Admins go to the dashboard
     if (role === 'admin' || role === 'super-admin') {
-        initialSectionId = 'dashbaord'; // Keeping your specific spelling
+        initialSectionId = 'dashboard'; // Keeping your specific spelling
         initialNavLinkId = 'nav-dashboard';
     } 
     else if (role === 'housekeeper') {
@@ -735,10 +735,10 @@ async function showDashboard(username, role) {
         initialNavLinkId = 'nav-housekeeping';
     } 
     else if (role === 'cashier' || role === 'bar') {
-        initialSectionId = 'pos-section'; // Change this to your POS section ID
-        initialNavLinkId = 'posdropdown';
+        initialSectionId = 'sales-records'; // Change this to your POS section ID
+        initialNavLinkId = 'nav-sales';
     }
-    else if (role === 'Front office') {
+    else if (role === 'frontoffice') {
         initialSectionId = 'booking-management';
         initialNavLinkId = 'nav-booking';
     }
