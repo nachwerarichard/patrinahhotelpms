@@ -904,9 +904,11 @@ function applyRoleAccess(role) {
     document.getElementById('nav-housekeeping').style.display = 'none';
       document.getElementById('nav-inventory').style.display = 'none';
     document.getElementById('nav-sales').style.display = 'none';
-          document.getElementById('nav-posinventory').style.display = 'none';
+    document.getElementById('nav-posinventory').style.display = 'none';
     document.getElementById('nav-kds').style.display = 'none';
-
+    document.getElementById('frontofficedropdown').style.display = 'none';
+    document.getElementById('housekeepdropdown').style.display = 'none';
+    document.getElementById('posdropdown').style.display = 'none';
     document.getElementById('nav-expenses').style.display = 'none';
     document.getElementById('nav-cash').style.display = 'none';
     document.getElementById('nav-posreports').style.display = 'none';
@@ -940,9 +942,12 @@ function applyRoleAccess(role) {
     document.getElementById('nav-cash').style.display = 'list-item';
     document.getElementById('nav-posreports').style.display = 'list-item';
     document.getElementById('nav-salereport').style.display = 'list-item';
+        document.getElementById('frontofficedropdown').style.display = 'list-item';
+    document.getElementById('housekeepdropdown').style.display = 'list-item';
+    document.getElementById('posdropdown').style.display = 'list-item';
             break;
  case 'housekeeper':
-            
+           document.getElementById('housekeepdropdown').style.display = 'list-item';
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             document.getElementById('nav-housekeepingreports').style.display = 'list-item';
 
@@ -950,10 +955,12 @@ function applyRoleAccess(role) {
 
             break;
         case 'bar':
+            document.getElementById('posdropdown').style.display = 'list-item';
             document.getElementById('nav-sales').style.display = 'list-item';
 
             break;
         case 'cashier':
+            document.getElementById('posdropdown').style.display = 'list-item';
 document.getElementById('nav-sales').style.display = 'list-item';
     document.getElementById('nav-expenses').style.display = 'list-item';
     document.getElementById('nav-cash').style.display = 'list-item';
