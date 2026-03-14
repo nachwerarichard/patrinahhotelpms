@@ -708,42 +708,45 @@ roomTypes[typeName].push(room);
     
 // --- Login and Role Management ---
 async function showDashboard(username, role) {
-    // 1. Set global/storage variables correctly
     currentUserRole = role;
-    // Use the 'username' variable passed into the function!
     localStorage.setItem('hotel_username', username);
 
-    // Update the display immediately
     const displayElement = document.getElementById('display-user-name');
-    if (displayElement) {
-        displayElement.textContent = username;
-    }
+    if (displayElement) displayElement.textContent = username;
+
     const displayName = document.getElementById('display-user-role');
-    if (displayName) {
-        displayName.textContent = currentUserRole;
-    }
+    if (displayName) displayName.textContent = currentUserRole;
 
-
-    // 2. Switch the UI
     loginContainer.style.display = 'none';
     mainContent.style.display = 'flex';
+    
     applyRoleAccess(role);
 
-    // 3. Determine section (Fixing the 'dashbaord' typo too)
     let initialSectionId = '';
     let initialNavLinkId = '';
 
-    if (role === 'admin' || role === 'super-admin' || role === 'manager') {
-        initialSectionId = 'dashbaord'; // Check if your HTML ID is 'dashboard' or 'dashbaord'
+    // LOGIC: Only Admins/Super-Admins go to the dashboard
+    if (role === 'admin' || role === 'super-admin') {
+        initialSectionId = 'dashbaord'; // Keeping your specific spelling
         initialNavLinkId = 'nav-dashboard';
-    } else if (role === 'housekeeper') {
+    } 
+    else if (role === 'housekeeper') {
         initialSectionId = 'housekeeping';
-        const bookingMgmt = document.getElementById('booking-management');
-        if (bookingMgmt) bookingMgmt.style.display = 'none';
         initialNavLinkId = 'nav-housekeeping';
+    } 
+    else if (role === 'cashier' || role === 'bar') {
+        initialSectionId = 'pos-section'; // Change this to your POS section ID
+        initialNavLinkId = 'posdropdown';
+    }
+    else if (role === 'Front office') {
+        initialSectionId = 'booking-management';
+        initialNavLinkId = 'nav-booking';
     }
 
-    // 4. Set active link and Load data
+    // Reset current active states
+    document.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
+
+    // Set new active section
     if (initialNavLinkId) {
         const navEl = document.getElementById(initialNavLinkId);
         if (navEl) navEl.classList.add('active');
@@ -753,14 +756,13 @@ async function showDashboard(username, role) {
         const secEl = document.getElementById(initialSectionId);
         if (secEl) {
             secEl.classList.add('active');
-            
-            if (initialSectionId === 'booking-management') {
-                currentPage = 1;
-                currentSearchTerm = '';
-                // Ensure your function call here is correct (you had await(page, search) which is empty)
-                // await loadBookings(currentPage, currentSearchTerm); 
-            } else if (initialSectionId === 'housekeeping') {
+            secEl.style.display = 'block'; // Ensure it's visible
+
+            // Load specific data
+            if (initialSectionId === 'housekeeping') {
                 await renderHousekeepingRooms();
+            } else if (initialSectionId === 'booking-management') {
+                // await loadBookings(1, ''); 
             }
         }
     }
