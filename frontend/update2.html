@@ -310,14 +310,14 @@
         </div>
 
     </div>
-    <aside class="w-72 bg-slate-900 text-slate-300 shadow-2xl flex flex-col min-h-screen border-r border-slate-800">
+  <aside class="w-72 bg-slate-900 text-slate-300 shadow-2xl flex flex-col min-h-screen border-r border-slate-800">
     
     <div class="p-8 border-b border-slate-800/50">
         <div class="text-[10px] font-bold uppercase tracking-[0.3em] text-indigo-400 mb-1">Management</div>
         <h1 class="text-xl font-light text-white tracking-tight"> Concierge<span class="font-semibold">Portal</span></h1>
     </div>
 
-    <nav class="flex-grow p-4 mt-4 overflow-y-auto">
+    <nav class="flex-grow p-4 mt-4 overflow-y-auto custom-scrollbar">
         <ul class="space-y-1.5">
             
             <li id="nav-dashboard">
@@ -341,8 +341,8 @@
                 </button>
                 <ul id="front-office-menu" class="hidden pl-14 space-y-1">
                     <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Reservations</a></li>
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Check-in / Check-out</a></li>
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Guests</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Calendar</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Guest Management</a></li>
                 </ul>
             </li>
 
@@ -350,7 +350,7 @@
                 <button onclick="toggleDropdown('ops-menu', 'ops-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
                     <div class="flex items-center">
                         <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <i class="fas fa-tasks text-slate-400 group-hover:text-white"></i>
+                            <i class="fas fa-microchip text-slate-400 group-hover:text-white"></i>
                         </div>
                         <span class="ml-4 font-medium text-[15px]">Operations</span>
                     </div>
@@ -358,8 +358,8 @@
                 </button>
                 <ul id="ops-menu" class="hidden pl-14 space-y-1">
                     <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Housekeeping</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Room Status</a></li>
                     <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Maintenance</a></li>
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Kitchen Display (KDS)</a></li>
                 </ul>
             </li>
 
@@ -367,7 +367,7 @@
                 <button onclick="toggleDropdown('commerce-menu', 'comm-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
                     <div class="flex items-center">
                         <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <i class="fas fa-shopping-cart text-slate-400 group-hover:text-white"></i>
+                            <i class="fas fa-shopping-bag text-slate-400 group-hover:text-white"></i>
                         </div>
                         <span class="ml-4 font-medium text-[15px]">Commerce</span>
                     </div>
@@ -376,6 +376,7 @@
                 <ul id="commerce-menu" class="hidden pl-14 space-y-1">
                     <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">POS</a></li>
                     <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Inventory</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Sales</a></li>
                 </ul>
             </li>
 
@@ -383,16 +384,16 @@
                 <button onclick="toggleDropdown('finance-menu', 'fin-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
                     <div class="flex items-center">
                         <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <i class="fas fa-wallet text-slate-400 group-hover:text-white"></i>
+                            <i class="fas fa-file-invoice-dollar text-slate-400 group-hover:text-white"></i>
                         </div>
                         <span class="ml-4 font-medium text-[15px]">Finance</span>
                     </div>
                     <i id="fin-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
                 </button>
                 <ul id="finance-menu" class="hidden pl-14 space-y-1">
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Payments</a></li>
                     <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Expenses</a></li>
                     <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Cash Management</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Payments</a></li>
                 </ul>
             </li>
 
@@ -400,16 +401,16 @@
                 <button onclick="toggleDropdown('reports-menu', 'rep-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
                     <div class="flex items-center">
                         <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <i class="fas fa-file-invoice-dollar text-slate-400 group-hover:text-white"></i>
+                            <i class="fas fa-chart-bar text-slate-400 group-hover:text-white"></i>
                         </div>
                         <span class="ml-4 font-medium text-[15px]">Reports</span>
                     </div>
                     <i id="rep-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
                 </button>
                 <ul id="reports-menu" class="hidden pl-14 space-y-1">
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Front Office Reports</a></li>
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">POS Reports</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Operational Reports</a></li>
                     <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Financial Reports</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Sales Reports</a></li>
                 </ul>
             </li>
 
@@ -419,21 +420,38 @@
                         <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
                             <i class="fas fa-user-shield text-slate-400 group-hover:text-white"></i>
                         </div>
-                        <span class="ml-4 font-medium text-[15px]">Admin</span>
+                        <span class="ml-4 font-medium text-[15px]">Administration</span>
                     </div>
                     <i id="adm-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
                 </button>
                 <ul id="admin-menu" class="hidden pl-14 space-y-1">
                     <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Staff Management</a></li>
                     <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Audit Logs</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Roles & Permissions</a></li>
+                </ul>
+            </li>
+
+            <li class="space-y-1">
+                <button onclick="toggleDropdown('system-menu', 'sys-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                            <i class="fas fa-cog text-slate-400 group-hover:text-white"></i>
+                        </div>
+                        <span class="ml-4 font-medium text-[15px]">System</span>
+                    </div>
+                    <i id="sys-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+                </button>
+                <ul id="system-menu" class="hidden pl-14 space-y-1">
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Settings</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Integrations</a></li>
                 </ul>
             </li>
 
         </ul>
     </nav>
 
-    <div class="p-6 border-t border-slate-800 mt-auto">
-        <a href="#" onclick="logout()" class="flex items-center justify-center space-x-3 p-4 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 group">
+    <div class="p-6 border-t border-slate-800">
+        <a href="#" onclick="logout()" class="flex items-center justify-center space-x-3 p-4 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-50 hover:text-white transition-all duration-300 group">
             <i class="fas fa-sign-out-alt transition-transform group-hover:-translate-x-1"></i>
             <span class="font-bold text-sm uppercase tracking-widest">Log Out</span>
         </a>
