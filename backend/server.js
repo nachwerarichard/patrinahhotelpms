@@ -3222,23 +3222,38 @@ app.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
     try {
+        // Find user by username only
         const user = await User.findOne({ username });
 
+        // 1. Check if user exists and password matches
         if (!user || user.password !== password) {
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
-        // Token now includes hotelId to assist with backend verification
+        // 2. Strict Role Check: Only allow 'super-admin'
+        if (user.role !== 'super-admin') {
+            return res.status(403).json({ 
+                error: 'Access denied. This portal is reserved for Super-Admins only.' 
+            });
+        }
+
+        // 3. Generate Token (Base64)
         const authToken = Buffer.from(`${username}:${password}`).toString('base64');
 
+        // 4. Clean Success Response (Removed hotelId requirement)
         res.status(200).json({ 
             token: authToken, 
             username: user.username, 
-            role: user.role,
-            hotelId: user.hotelId // NEW: Essential for frontend tenant scoping
+            role: user.role
         });
+
     } catch (err) {
-        res.status(500).json({ error: 'Internal server error' });
+        // Detailed logging to debug that 500 error
+        console.error("Super-Admin Login Error Detail:", err); 
+        res.status(500).json({ 
+            error: 'Internal server error', 
+            message: err.message 
+        });
     }
 });
 
