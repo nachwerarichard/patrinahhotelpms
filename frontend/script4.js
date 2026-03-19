@@ -900,8 +900,8 @@ function applyRoleAccess(role) {
     // 1. Select all nav items (using a class is cleaner, but keeping your ID method for now)
     const navIds = [
         'nav-booking', 'nav-dashboard', 'nav-housekeeping', 'nav-inventory', 
-        'nav-sales', 'nav-posinventory', 'nav-kds', 'frontofficedropdown', 
-        'housekeepdropdown', 'posdropdown', 'nav-expenses', 'nav-cash', 
+        'nav-sales', 'nav-posinventory', 'nav-kds', 
+         'nav-expenses', 'nav-cash', 
         'nav-posreports', 'nav-salereport', 'nav-housekeepingreports', 
         'nav-staff', 'nav-reports', 'nav-calendar', 'nav-audit-logs'
     ];
@@ -924,19 +924,15 @@ function applyRoleAccess(role) {
             break;
 
         case 'housekeeper':
-            document.getElementById('housekeepdropdown').style.display = 'list-item';
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             document.getElementById('nav-housekeepingreports').style.display = 'list-item';
-            //renderHousekeepingRooms();
             break;
 
         case 'bar':
-            document.getElementById('posdropdown').style.display = 'list-item';
             document.getElementById('nav-sales').style.display = 'list-item';
             break;
 
         case 'cashier':
-            document.getElementById('posdropdown').style.display = 'list-item';
             document.getElementById('nav-sales').style.display = 'list-item';
             document.getElementById('nav-expenses').style.display = 'list-item';
             document.getElementById('nav-cash').style.display = 'list-item';
@@ -945,7 +941,6 @@ function applyRoleAccess(role) {
             break;
 
         case 'Front office':
-            document.getElementById('frontofficedropdown').style.display = 'list-item';
             document.getElementById('nav-booking').style.display = 'list-item';
             break;
     }
