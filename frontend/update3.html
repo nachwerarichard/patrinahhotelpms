@@ -1,0 +1,3093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Management System</title>
+<link rel="stylesheet" href="styles4.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        /*.glass-morphism { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }*/
+
+    .spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 0.8s linear infinite;
+    margin-right: 8px; /* Space between spinner and text */
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+    animation: spin 1s linear infinite;
+}
+    /* Custom Scrollbar for the Audit Table */
+.custom-scrollbar::-webkit-scrollbar {
+    height: 12px; /* Height of horizontal scrollbar */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #3b82f6; /* Blue-600 */
+    border-radius: 10px;
+    border: 3px solid #f1f1f1;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #2563eb;
+}
+    .radial-btn {
+        position: absolute;
+        z-index: 40;
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transform: translate(0, 0) scale(0.5);
+    }
+
+    /* This class is added via JS to trigger the "pop out" */
+    .radial-btn.show {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translate(var(--tw-translate-x), var(--tw-translate-y)) scale(1);
+    }
+        @keyframes bounce-in {
+        0% { transform: scale(0.9); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-bounce-in { animation: bounce-in 0.2s ease-out forwards; }
+        .hidden{display:none;}
+    /* Ensure the container stays inside the table cell */
+.action-buttons-container {
+    position: relative; 
+    display: inline-block;
+}
+
+/* Ensure the dropdown menu moves WITH the row */
+.hidden-action-buttons {
+    position: absolute;
+    right: 0;
+    top: 100%; /* Appears exactly below the button */
+    z-index: 50; /* Sits on top of other rows */
+    min-width: 150px;
+    white-space: nowrap; /* Prevents text wrapping */
+}
+
+/* Optional: If your table has 'overflow-hidden', the menu might get cut off. 
+   Apply this to the table wrapper if needed: */
+.overflow-x-auto {
+    position: relative;
+    overflow: visible !important;
+}
+    @media print {
+    /* 1. Hide everything you don't want on paper */
+    nav, .sidebar, .filter-section, button, .no-print {
+        display: none !important;
+    }
+
+    /* 2. Ensure the table takes up the full page width */
+    body {
+        background: white;
+        padding: 0;
+        margin: 0;
+    }
+
+    .report-container {
+        width: 100%;
+        box-shadow: none;
+        padding: 0;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10pt; /* Smaller font for printing */
+    }
+
+    th, td {
+        border: 1px solid #ddd !important; /* Force borders to show on print */
+        padding: 8px;
+    }
+
+    /* 3. Keep summary cards visible but style them for black & white printers */
+    .summary-card {
+        border: 1px solid #000;
+        margin-bottom: 20px;
+    }
+}
+    @media print {
+    /* Hide everything except the receipt modal */
+    body * {
+        visibility: hidden;
+    }
+    #receiptModal, #receiptModal * {
+        visibility: visible;
+    }
+    #receiptModal {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: white !important;
+        display: block !important;
+    }
+    /* Reset scrollable containers so all content shows */
+    .max-h-\[90vh\] {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+    .overflow-y-auto {
+        overflow: visible !important;
+    }
+    /* Avoid cutting text/tables in half */
+    h4, .flex.flex-col.items-end {
+        break-inside: avoid;
+    }
+    table {
+        break-inside: auto;
+    }
+    tr {
+        break-inside: avoid;
+        break-after: auto;
+    }
+}
+    </style>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen flex flex-col">
+    <div
+  id="login-container"
+  class=" hidden min-h-screen flex items-center justify-center hidden"
+>
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
+            <h2 class="text-2xl font-bold mb-6 text-center text-blue-600"><i class="fas fa-sign-in-alt"></i> Login</h2>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label for="username" class="block text-gray-700 font-semibold mb-2"><i class="fas fa-user"></i> Username:</label>
+                    <input type="text" id="username" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-gray-700 font-semibold mb-2"><i class="fas fa-lock"></i> Password:</label>
+                    <input type="password" id="password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 transition duration-300"><i class="fas fa-sign-in-alt"></i> Login</button>
+                <p class="text-sm text-gray-500 mt-4 text-center">Admin: user/password | Housekeeper: hk/hkpass</p>
+            </form>
+            <div id="loginMessageBox" class="mt-6 p-4 rounded-lg text-white font-bold hidden" style="display: none;">
+                <h3 id="loginMessageBoxTitle" class="text-lg mb-2"></h3>
+                <p id="loginMessageBoxContent" class="text-sm"></p>
+                <button onclick="closeLoginMessageBox()" class="mt-4 bg-white text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-200 transition duration-300">OK</button>
+            </div>
+        </div>
+    </div>
+<div id="dashboard-wrapper" style="display: none;" class="flex flex-col min-h-screen overflow-x-hidden">    
+ <header class="bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-200 py-3 px-6 flex justify-between items-center sticky top-0 z-50">
+    <div class="flex items-center space-x-4 h-12">
+        <div class="bg-white p-1 rounded-lg">
+            <img src="/novuscloud.png" alt="Novus Cloud PMS" class="h-10 w-auto object-contain" />
+        </div>
+        <div class="hidden md:block border-l border-slate-200 pl-4">
+            <div id="hotel-name-display" class="text-sm font-bold uppercase text-slate-600"></div>
+            <span class="text-xs font-semibold uppercase tracking-widest text-slate-400">NOVUS CLOUD PMS</span>
+        </div>
+    </div>
+
+    <div class="flex items-center space-x-6">
+        <div class="flex items-center space-x-3 p-1.5 pr-4 rounded-full bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all duration-200 cursor-pointer group">
+            <div class="relative">
+                <img id="user-profile-pic" src="/bar&rest/user.png" alt="User Profile" class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm group-hover:border-indigo-300">
+                <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
+            </div>
+            <div class="flex flex-col">
+                <span id="display-user-name" class="username-display text-[15px] font-bold text-slate-700 leading-tight"></span>
+                <span id="display-user-role" class="text-[12px] font-medium text-slate-500 group-hover:text-indigo-500 transition-colors"></span>
+            </div>
+        </div>
+
+        <button id="menu-toggle-open" class="text-slate-600 hover:text-indigo-600 text-2xl p-2.5 rounded-xl bg-slate-100 hover:bg-indigo-50 transition-all lg:hidden focus:ring-2 focus:ring-indigo-500 outline-none">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+</header>
+
+<div class="bg-slate-50/50 border-b border-slate-200 px-6 py-4">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div class="bg-white border-b-2 border-blue-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
+            <p class="text-[10px] uppercase font-bold text-blue-600 tracking-wider">Occupied</p>
+            <p class="text-xl font-bold text-slate-800" id="stat-occupied">0</p>
+        </div>
+
+        <div class="bg-white border-b-2 border-green-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
+            <p class="text-[10px] uppercase font-bold text-green-600 tracking-wider">Clean</p>
+            <p class="text-xl font-bold text-slate-800" id="stat-clean">0</p>
+        </div>
+
+        <div class="bg-white border-b-2 border-orange-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
+            <p class="text-[10px] uppercase font-bold text-orange-600 tracking-wider">Dirty</p>
+            <p class="text-xl font-bold text-slate-800" id="stat-dirty">0</p>
+        </div>
+
+        <div class="bg-white border-b-2 border-indigo-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
+            <p class="text-[10px] uppercase font-bold text-indigo-600 tracking-wider">Arrivals</p>
+            <p class="text-xl font-bold text-slate-800" id="arrivals">0</p>
+        </div>
+
+        <div class="bg-white border-b-2 border-purple-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
+            <p class="text-[10px] uppercase font-bold text-purple-600 tracking-wider">Departures</p>
+            <p class="text-xl font-bold text-slate-800" id="departures">0</p>
+        </div>
+
+        <div class="bg-white border-b-2 border-red-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
+            <p class="text-[10px] uppercase font-bold text-red-600 tracking-wider">Maintenance</p>
+            <p class="text-xl font-bold text-slate-800" id="stat-maintenance">0</p>
+        </div>
+    </div>
+</div>
+<div id="main-content" class="flex flex-1 overflow-hidden">
+
+          <div class="fixed inset-0 z-[9999] pointer-events-none flex flex-col items-end justify-end p-6">
+        
+        <div id="chat-container" class="hidden pointer-events-auto w-full max-w-[400px] h-[70vh] bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300 mb-20">
+            <nav class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/80 backdrop-blur-md">
+                <div>
+                    <h1 class="text-md font-bold text-white">HotelOS <span class="text-indigo-500">AI</span></h1>
+                    <p class="text-[9px] text-slate-500 font-mono uppercase tracking-widest">Patrinah PMS Node</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="executeAction('sync')" class="text-[9px] bg-indigo-600/10 border border-indigo-500/50 text-indigo-400 px-2 py-1 rounded-md">Sync</button>
+                </div>
+            </nav>
+
+            <div id="chat-window" class="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
+                <div class="flex justify-start">
+                    <div class="max-w-[85%] bg-slate-800 border border-slate-700 p-3 rounded-2xl rounded-tl-none text-xs text-slate-300">
+                        System connected to Patrinah PMS. Ask me about **Forecasts**, **Room Availability**, or **Audit Logs**.
+                    </div>
+                </div>
+            </div>
+
+            <div id="typing" class="hidden px-4 py-1 text-[9px] font-mono text-indigo-400 animate-pulse uppercase">
+                Fetching_Data...
+            </div>
+
+            <div class="p-4 bg-slate-900 border-t border-slate-800">
+                <div class="flex flex-wrap gap-1 mb-3">
+                    <button onclick="setInput('Forecast')" class="text-[9px] bg-slate-800 px-2 py-1 rounded border border-slate-700 hover:border-indigo-500 transition-colors">Forecast</button>
+                    <button onclick="setInput('Rooms')" class="text-[9px] bg-slate-800 px-2 py-1 rounded border border-slate-700 hover:border-indigo-500 transition-colors">Rooms</button>
+                </div>
+
+                <div class="relative group">
+                    <input id="user-input" type="text" 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-4 pr-12 text-xs focus:outline-none focus:border-indigo-500 transition-all text-white"
+                        placeholder="Type a command...">
+                    <button onclick="handleSend()" 
+                        class="absolute right-1.5 top-1.5 bottom-1.5 aspect-square bg-indigo-600 rounded-lg flex items-center justify-center hover:bg-indigo-500 transition-all active:scale-95 shadow-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+<aside class="w-72 bg-slate-900 text-slate-300 shadow-2xl flex flex-col min-h-screen border-r border-slate-800">
+    
+    <div class="p-8 border-b border-slate-800/50">
+        <div class="text-[10px] font-bold uppercase tracking-[0.3em] text-indigo-400 mb-1">Management</div>
+        <h1 class="text-xl font-light text-white tracking-tight"> Concierge<span class="font-semibold">Portal</span></h1>
+    </div>
+
+    <nav class="flex-grow p-4 mt-4 overflow-y-auto custom-scrollbar">
+        <ul class="space-y-1.5">
+            
+            <li id="nav-dashboard">
+                <a href="#" class="flex items-center group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                    <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                        <i class="fas fa-chart-line text-slate-400 group-hover:text-white"></i>
+                    </div>
+                    <span class="ml-4 font-medium text-[15px]">Dashboard</span>
+                </a>
+            </li>
+
+            <li class="space-y-1">
+                <button onclick="toggleDropdown('front-office-menu', 'fo-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                            <i class="fas fa-concierge-bell text-slate-400 group-hover:text-white"></i>
+                        </div>
+                        <span class="ml-4 font-medium text-[15px]">Front Office</span>
+                    </div>
+                    <i id="fo-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+                </button>
+                <ul id="front-office-menu" class="hidden pl-14 space-y-1">
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Reservations</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Calendar</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Check-in/out</a></li>
+                </ul>
+            </li>
+
+            <li class="space-y-1">
+                <button onclick="toggleDropdown('revenue-menu', 'rev-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                            <i class="fas fa-hand-holding-usd text-slate-400 group-hover:text-white"></i>
+                        </div>
+                        <span class="ml-4 font-medium text-[15px]">Revenue</span>
+                    </div>
+                    <i id="rev-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+                </button>
+                <ul id="revenue-menu" class="hidden pl-14 space-y-1">
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Rates & Pricing</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Rate Plans</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Availability</a></li>
+                </ul>
+            </li>
+
+            <li class="space-y-1">
+                <button onclick="toggleDropdown('dist-menu', 'dist-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                            <i class="fas fa-network-wired text-slate-400 group-hover:text-white"></i>
+                        </div>
+                        <span class="ml-4 font-medium text-[15px]">Distribution</span>
+                    </div>
+                    <i id="dist-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+                </button>
+                <ul id="dist-menu" class="hidden pl-14 space-y-1">
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Channel Manager</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">OTA Integrations</a></li>
+                </ul>
+            </li>
+
+            <li class="space-y-1">
+                <button onclick="toggleDropdown('ops-menu', 'ops-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                            <i class="fas fa-tasks text-slate-400 group-hover:text-white"></i>
+                        </div>
+                        <span class="ml-4 font-medium text-[15px]">Operations</span>
+                    </div>
+                    <i id="ops-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+                </button>
+                <ul id="ops-menu" class="hidden pl-14 space-y-1">
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Housekeeping</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Maintenance</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Room Status</a></li>
+                </ul>
+            </li>
+
+            <li class="space-y-1">
+                <button onclick="toggleDropdown('commerce-menu', 'comm-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                            <i class="fas fa-shopping-bag text-slate-400 group-hover:text-white"></i>
+                        </div>
+                        <span class="ml-4 font-medium text-[15px]">Commerce</span>
+                    </div>
+                    <i id="comm-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+                </button>
+                <ul id="commerce-menu" class="hidden pl-14 space-y-1">
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">POS</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Inventory</a></li>
+                </ul>
+            </li>
+
+            <li class="space-y-1">
+                <button onclick="toggleDropdown('finance-menu', 'fin-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                            <i class="fas fa-file-invoice-dollar text-slate-400 group-hover:text-white"></i>
+                        </div>
+                        <span class="ml-4 font-medium text-[15px]">Finance</span>
+                    </div>
+                    <i id="fin-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+                </button>
+                <ul id="finance-menu" class="hidden pl-14 space-y-1">
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Payments</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Expenses</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Invoices</a></li>
+                </ul>
+            </li>
+
+            <li class="space-y-1">
+                <button onclick="toggleDropdown('guest-menu', 'gst-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                            <i class="fas fa-user-friends text-slate-400 group-hover:text-white"></i>
+                        </div>
+                        <span class="ml-4 font-medium text-[15px]">Guests</span>
+                    </div>
+                    <i id="gst-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+                </button>
+                <ul id="guest-menu" class="hidden pl-14 space-y-1">
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">CRM</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Guest History</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Messaging</a></li>
+                </ul>
+            </li>
+
+            <li class="space-y-1">
+                <button onclick="toggleDropdown('reports-menu', 'rep-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                            <i class="fas fa-chart-bar text-slate-400 group-hover:text-white"></i>
+                        </div>
+                        <span class="ml-4 font-medium text-[15px]">Analytics</span>
+                    </div>
+                    <i id="rep-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+                </button>
+                <ul id="reports-menu" class="hidden pl-14 space-y-1">
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Reports</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">KPIs</a></li>
+                </ul>
+            </li>
+
+            <li class="space-y-1">
+                <button onclick="toggleDropdown('admin-menu', 'adm-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                            <i class="fas fa-user-shield text-slate-400 group-hover:text-white"></i>
+                        </div>
+                        <span class="ml-4 font-medium text-[15px]">Administration</span>
+                    </div>
+                    <i id="adm-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+                </button>
+                <ul id="admin-menu" class="hidden pl-14 space-y-1">
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Staff</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Roles</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Audit Logs</a></li>
+                </ul>
+            </li>
+
+            <li class="space-y-1">
+                <button onclick="toggleDropdown('system-menu', 'sys-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                            <i class="fas fa-cog text-slate-400 group-hover:text-white"></i>
+                        </div>
+                        <span class="ml-4 font-medium text-[15px]">System</span>
+                    </div>
+                    <i id="sys-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+                </button>
+                <ul id="system-menu" class="hidden pl-14 space-y-1">
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Settings</a></li>
+                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Integrations</a></li>
+                </ul>
+            </li>
+
+        </ul>
+    </nav>
+
+    <div class="p-6 border-t border-slate-800">
+        <a href="#" onclick="logout()" class="flex items-center justify-center space-x-3 p-4 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 group">
+            <i class="fas fa-sign-out-alt transition-transform group-hover:-translate-x-1"></i>
+            <span class="font-bold text-sm uppercase tracking-widest">Log Out</span>
+        </a>
+    </div>
+</aside>
+        <main class="flex-1 p-8 overflow-y-auto">
+            <section id="booking-management" class="section  bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+                <h2 class="text-2xl font-bold mb-4 text-blue-600">Guest Management</h2>
+                <div class="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0 mb-6">
+    <div class="relative flex items-center w-full md:w-auto">
+        <i class="fas fa-search absolute left-3 text-gray-400"></i>
+        <input type="text" id="bookingSearch" placeholder="Search bookings..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+        
+        
+        <button class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-300" onclick="openBookingModal()">
+            <i class="fas fa-plus"></i> Add New Guest
+        </button>
+    </div>
+</div>
+                <div class="overflow-x-auto">
+                  <!--  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded shadow-sm">
+        <p class="text-xs uppercase font-bold text-blue-600">Occupied</p>
+        <p class="text-2xl font-semibold text-gray-800" id="stat-occupied">0</p>
+    </div>
+
+    <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded shadow-sm">
+        <p class="text-xs uppercase font-bold text-green-600">Clean</p>
+        <p class="text-2xl font-semibold text-gray-800" id="stat-clean">0</p>
+    </div>
+
+    <div class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded shadow-sm">
+        <p class="text-xs uppercase font-bold text-orange-600">Dirty</p>
+        <p class="text-2xl font-semibold text-gray-800" id="stat-dirty">0</p>
+    </div>
+
+    <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded shadow-sm">
+        <p class="text-xs uppercase font-bold text-indigo-600">Arrivals</p>
+        <p class="text-2xl font-semibold text-gray-800" id="arrivals">0</p>
+    </div>
+
+    <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded shadow-sm">
+        <p class="text-xs uppercase font-bold text-purple-600">Departures</p>
+        <p class="text-2xl font-semibold text-gray-800" id="departures">0</p>
+    </div>
+
+    <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded shadow-sm">
+        <p class="text-xs uppercase font-bold text-red-600">Maintenance</p>
+        <p class="text-2xl font-semibold text-gray-800" id="stat-maintenance">0</p>
+    </div>
+</div>-->
+                    <table id="bookingsTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                        <thead>
+                            <tr class="bg-gray-200 text-gray-800 uppercase text-sm leading-normal">
+                                <th class="py-3 px-6 text-left">Name</th>
+                                <th class="py-3 px-6 text-left">Room</th>
+                                <th class="py-3 px-6 text-left">Check-in</th>
+                                <th class="py-3 px-6 text-left">Check-out</th>
+                                <th class="py-3 px-6 text-left">Payment Status</th>
+                                <th class="py-3 px-6 text-left">Guest Status</th>
+                                <th class="py-3 px-6 text-left">Guest Source</th>
+                                <th class="py-3 px-6 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-600 text-sm font-medium">
+                        </tbody>
+                    </table>
+                </div>
+                <div class="flex items-center justify-between mt-6">
+    <button id="prevPageBtn" class="bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-400 transition duration-300" disabled>
+        <i class="fas fa-arrow-left"></i> Previous
+    </button>
+
+    <span id="pageInfoSpan" class="text-gray-700 font-medium">Page 0 of 0</span>
+
+    <button id="nextPageBtn" class="bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-400 transition duration-300" disabled>
+        Next <i class="fas fa-arrow-right"></i>
+    </button>
+</div>
+            </section>
+
+           <section id="dashboard" class="section active bg-gray-50 p-4 md:p-8 rounded-2xl shadow-sm mb-8">
+    <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <div>
+            <h2 class="text-3xl font-extrabold text-gray-800 tracking-tight flex items-center gap-3">
+                
+             Dashboard
+            </h2>
+            <p class="text-gray-500 mt-1 ml-12">Real-time property performance and guest activity.</p>
+        </div>
+        <div class="flex items-center gap-2 self-start md:self-center bg-white shadow-sm border border-gray-100 px-4 py-2 rounded-full">
+            <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+            </span>
+            <span class="text-sm font-semibold text-gray-600">Today's Overview</span>
+        </div>
+    </div>
+
+    <div class="space-y-10">
+        <div>
+            <div class="flex items-center gap-2 mb-5">
+                <div class="h-1 w-8 bg-blue-500 rounded-full"></div>
+                <h3 class="text-lg font-bold text-gray-700 uppercase tracking-wide text-sm">Operations Overview</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all group">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 uppercase">Arrivals</p>
+                            <p id="total-arrivals" class="text-4xl font-black text-gray-900 mt-2">0</p>
+                        </div>
+                        <div class="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                            <i class="fas fa-sign-in-alt fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all group">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 uppercase">Departures</p>
+                            <p id="total-departures" class="text-4xl font-black text-gray-900 mt-2">0</p>
+                        </div>
+                        <div class="p-3 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                            <i class="fas fa-sign-out-alt fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all group">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 uppercase">No Shows</p>
+                            <p id="no-show-count" class="text-4xl font-black text-gray-900 mt-2">0</p>
+                        </div>
+                        <div class="p-3 bg-red-50 text-red-600 rounded-xl group-hover:bg-red-600 group-hover:text-white transition-colors">
+                            <i class="fas fa-user-times fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+            <div class="flex items-center gap-2 mb-6">
+                <div class="h-1 w-8 bg-green-500 rounded-full"></div>
+                <h3 class="text-lg font-bold text-gray-700 uppercase tracking-wide text-sm">Front office room Revenue & Payments</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="relative">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Expected</p>
+                    <p id="today-revenue" class="text-xl font-bold text-gray-900 mt-1">UGX 0</p>
+                    <div class="absolute -left-4 top-0 h-full w-1 bg-green-500 rounded-full"></div>
+                </div>
+                <div class="relative">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Collected</p>
+                    <p id="today-amountpaid" class="text-xl font-bold text-gray-900 mt-1 text-green-600">UGX 0</p>
+                    <div class="absolute -left-4 top-0 h-full w-1 bg-blue-500 rounded-full"></div>
+                </div>
+                <div class="relative">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Balance</p>
+                    <p id="today-balance" class="text-xl font-bold text-gray-900 mt-1 text-red-500">UGX 0</p>
+                    <div class="absolute -left-4 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
+                </div>
+                <div class="relative">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pending Invoices</p>
+                    <p id="pending-count" class="text-xl font-bold text-gray-900 mt-1">0</p>
+                    <div class="absolute -left-4 top-0 h-full w-1 bg-yellow-500 rounded-full"></div>
+                </div>
+            </div>
+        </div>
+
+             <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+            <div class="flex items-center gap-2 mb-6">
+                <div class="h-1 w-8 bg-green-500 rounded-full"></div>
+                <h3 class="text-lg font-bold text-gray-700 uppercase tracking-wide text-sm"> Point of Sale </h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="relative">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Revenue</p>
+                    <p id="postoday-revenue" class="text-xl font-bold text-gray-900 mt-1">UGX 0</p>
+                    <div class="absolute -left-4 top-0 h-full w-1 bg-green-500 rounded-full"></div>
+                </div>
+                <div class="relative">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Gross Profit</p>
+                    <p id="postoday-profit" class="text-xl font-bold text-gray-900 mt-1 text-green-600">UGX 0</p>
+                    <div class="absolute -left-4 top-0 h-full w-1 bg-blue-500 rounded-full"></div>
+                </div>
+                <div class="relative">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Expense</p>
+                    <p id="postoday-expense" class="text-xl font-bold text-gray-900 mt-1 text-red-500">UGX 0</p>
+                    <div class="absolute -left-4 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
+                </div>
+                <div class="relative">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Net Balance</p>
+                    <p id="postoday-balance" class="text-xl font-bold text-gray-900 mt-1">0</p>
+                    <div class="absolute -left-4 top-0 h-full w-1 bg-yellow-500 rounded-full"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="stats-container" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fas fa-chart-pie text-blue-500"></i> Guest Status
+                    </h3>
+                    <button class="text-gray-400 hover:text-gray-600"><i class="fas fa-ellipsis-h"></i></button>
+                </div>
+                <div class="h-64">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fas fa-globe text-indigo-500"></i> Booking Sources
+                    </h3>
+                    <button class="text-gray-400 hover:text-gray-600"><i class="fas fa-ellipsis-h"></i></button>
+                </div>
+                <div class="h-64">
+                    <canvas id="sourceChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</section>
+                  <section id="staff" class="section bg-slate-50 min-h-screen rounded-lg shadow-inner mb-8 hidden">
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 h-20 flex items-center justify-between px-10 sticky top-0 z-10 shadow-sm">
+        <div class="flex items-center gap-6">
+            <h2 class="font-extrabold text-2xl text-slate-800 tracking-tight">Staff Control Panel</h2>
+           <!-- <div id="connectionStatus" class="flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full border border-slate-200">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+                </span>
+                Checking Connection
+            </div>-->
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <button onclick="openUserModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-indigo-200">
+                <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                Add New Staff
+            </button>
+        </div>
+    </header>
+
+    <div class="p-8 max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all hover:border-indigo-300 group">
+                <div class="flex items-center justify-between mb-4">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Active Staff</p>
+                    <div class="p-2.5 bg-indigo-50 rounded-xl text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                         <i data-lucide="users-2" class="w-5 h-5"></i>
+                    </div>
+                </div>
+                <h3 id="totalStaffCount" class="text-4xl font-black text-slate-900">0</h3>
+            </div>
+            </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4 bg-white">
+                <div>
+                    <h3 class="font-bold text-slate-900 text-xl tracking-tight">Active Personnel</h3>
+                    <p class="text-sm text-slate-400 mt-0.5">Manage credentials and system permissions</p>
+                </div>
+                <button onclick="fetchUsers()" class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 rounded-lg transition text-slate-600 font-bold text-xs border border-slate-200 uppercase tracking-wider" title="Refresh">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                    Sync Data
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-separate border-spacing-0">
+                    <thead>
+                        <tr class="bg-slate-50/50 text-slate-500 uppercase text-[11px] font-black tracking-widest">
+                            <th class="px-8 py-4 border-b border-slate-100">Personnel Name</th>
+                            <th class="px-8 py-4 border-b border-slate-100">Designated Role</th>
+                            <th class="px-8 py-4 border-b border-slate-100">Access Tier</th>
+                            <th class="px-8 py-4 border-b border-slate-100 text-right">Administrative Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody" class="divide-y divide-slate-100">
+                        <tr class="hover:bg-slate-50/80 transition-colors">
+                            <td class="px-8 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600">JD</div>
+                                    <span class="font-semibold text-slate-700">John Doe</span>
+                                </div>
+                            </td>
+                            <td class="px-8 py-4 text-slate-600 text-sm italic">System Architect</td>
+                            <td class="px-8 py-4">
+                                <span class="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-[11px] font-bold uppercase border border-emerald-100">Admin</span>
+                            </td>
+                            <td class="px-8 py-4 text-right">
+                                <button class="text-slate-400 hover:text-indigo-600 transition-colors px-2"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                                <button class="text-slate-400 hover:text-red-600 transition-colors px-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+            <section id="inventory" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+                <div class="p-4 md:p-12">
+    <div class="max-w-5xl mx-auto space-y-10">
+        
+        <div class="border-b border-slate-200 pb-6">
+            <h1 class="text-3xl font-light text-slate-800 tracking-tight">Rate & Inventory <span class="font-bold text-indigo-600">Control</span></h1>
+            <p class="text-slate-500 text-sm mt-1">Configure room types, seasonal pricing, and physical assets.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <section class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 transition-all hover:shadow-md">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                        <i class="fa-solid fa-bed text-lg"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-800">1. Room Types</h2>
+                </div>
+                <form id="typeForm" class="space-y-4">
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Type</label>
+                            <input type="text" id="typeName" placeholder="e.g. Presidential Suite" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all shadow-inner">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Standard Rate (UGX)</label>
+                            <input type="number" id="basePrice" placeholder="0.00" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all shadow-inner font-mono">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Category Image(Optional)</label>
+                            <input type="file" id="roomImage" multiple accept="image/*" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        </div>
+                    </div>
+<button type="submit" id="submitTypeBtn" class="w-full bg-slate-900 text-white font-bold py-4 px-4 rounded-2xl hover:bg-indigo-600 transition-all shadow-lg shadow-slate-200 active:scale-95 uppercase text-xs tracking-widest flex items-center justify-center gap-2">
+    <span id="btnText">Create Room Type</span>
+</button>
+                </form>
+            </section>
+
+            <section class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 transition-all hover:shadow-md">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+                        <i class="fa-solid fa-calendar-day text-lg"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-800">2. Seasonal Rules</h2>
+                </div>
+                <form id="seasonForm" class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2 space-y-1">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Type</label>
+                        <select id="targetType" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 appearance-none font-medium"></select>
+                    </div>
+                    <div class="col-span-2 space-y-1">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Season Label</label>
+                        <input type="text" id="seasonName" placeholder="e.g. Peak Summer" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">From</label>
+                        <input type="date" id="startDate" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">To</label>
+                        <input type="date" id="endDate" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none">
+                    </div>
+                    <div class="col-span-2 space-y-1">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Adjusted Price (UGX)</label>
+                        <input type="number" id="seasonRate" placeholder="0.00" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-mono focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+<button type="submit" id="seasonBtn" class="col-span-2 bg-indigo-600 text-white font-bold py-4 px-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95 uppercase text-xs tracking-widest mt-2 flex items-center justify-center gap-2">
+    <span id="seasonBtnText">Apply Market Rate</span>
+</button>
+                </form>
+            </section>
+        </div>
+<section class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 transition-all hover:shadow-md">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+            <i class="fa-solid fa-bed text-lg"></i>
+        </div>
+        <h2 class="text-xl font-bold text-slate-800">Room Registry</h2>
+    </div>
+
+    <form id="roomForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="space-y-1">
+            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Number</label>
+            <input type="text" id="regRoomNumber" placeholder="e.g. 101" 
+                class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+        </div>
+
+        <div class="space-y-1">
+            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Type</label>
+            <select id="roomTypeSelect" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 appearance-none font-medium">
+                <option value="">Select Room Type...</option>
+            </select>
+        </div>
+
+        <button type="submit" id="regRoomBtn" 
+            class="md:col-span-2 bg-indigo-600 text-white font-bold py-4 px-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95 uppercase text-xs tracking-widest mt-2 flex items-center justify-center gap-2">
+            <span id="regRoomBtnText">Register Room</span>
+        </button>
+    </form>
+</section>
+
+        <section class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                <h2 class="text-xl font-bold text-slate-800"> Room Inventory </h2>
+                <div class="flex gap-2">
+                    <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wider">Live View</span>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-400 uppercase text-[10px] font-bold tracking-[0.2em]">
+                            <th class="px-8 py-5 text-left">Room Number</th>
+                            <th class="px-8 py-5 text-left">Room Type</th>
+                            <th class="px-8 py-5 text-left">Base Rate</th>
+                            <th class="px-8 py-5 text-left">Status</th>
+                            <th class="px-8 py-5 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roomTableBody" class="divide-y divide-slate-100">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+        <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center z-50">
+            <div class="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-md w-full mx-4 border border-white/20">
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Modify Asset</h2>
+                    <p class="text-slate-400 text-xs uppercase tracking-widest font-bold mt-1">Room Records Department</p>
+                </div>
+                
+                <form id="editRoomForm" class="space-y-6">
+                    <input type="hidden" id="editRoomId">
+                    <input type="hidden" id="editTypeId">
+
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Room Number</label>
+                        <input type="text" id="editRoomNumber" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Current Type (Immutable)</label>
+                        <input type="text" id="editTypeName" class="w-full p-4 bg-slate-100 border border-slate-100 rounded-2xl text-slate-400 outline-none cursor-not-allowed font-medium">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Override Base Price ($)</label>
+                        <input type="number" id="editBasePrice" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner font-mono">
+                    </div>
+
+                    <div class="flex gap-4 mt-10">
+                        <button type="button" onclick="closeModal()" class="flex-1 py-4 text-slate-400 hover:text-slate-600 font-bold uppercase text-[10px] tracking-widest transition-colors">Discard</button>
+                        <button type="submit" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all active:scale-95 uppercase text-[10px] tracking-widest">Update Record</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+     </section>
+<section id="housekeepingreports" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-blue-600">Housekeeping Reports</h2>
+        <button onclick="openReportModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+            <i class="fas fa-plus"></i> New Status Report
+        </button>
+    </div>
+
+    <div id="reportsTable">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <label for="filterDate" style="font-weight: 600; color: #1e3d59;">Search by Date:</label>
+                <input type="date" id="statusReportFilterDate" style="width: 180px;">
+                <button id="filterBtn" onclick="filterStatusReportsByDate()" 
+    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 active:scale-95">
+    <i class="fa-solid fa-search"></i>
+    <span id="filterBtnText">Search</span>
+</button>
+               <!-- <button onclick="filterStatusReportsByDate()" style="background-color: #9b59b6; color: white; padding: 5px 15px; rounded: 5px;"><i class="fa-solid fa-filter"></i> Apply</button>-->
+                <button onclick="clearStatusDateFilter()" style="background-color: #95a5a6; color: white; padding: 5px 15px; rounded: 5px;">Clear</button>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="exportStatusReportsToExcel()" style="background-color: #ffc300; color: #1e3d59; padding: 5px 15px; rounded: 5px;"><i class="fa-solid fa-file-export"></i> Export</button>
+                <button onclick="printStatusReports()" style="background-color: #3498db; color: white; padding: 5px 15px; rounded: 5px;"><i class="fa-solid fa-print"></i> Print</button>
+            </div>
+        </div>
+
+        <div class="table-wrapper overflow-x-auto">
+            <table id="statusReportTable" class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50">
+                        <th class="p-3 border-b">Room</th>
+                        <th class="p-3 border-b">Category</th>
+                        <th class="p-3 border-b">Status</th>
+                        <th class="p-3 border-b">Remarks</th>
+                        <th class="p-3 border-b">Date & Time</th>
+                        <th class="p-3 border-b">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="statusReportTableBody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
+            <h3 class="text-lg font-semibold">Housekeeping Room Status Report Form</h3>
+            <button onclick="closeReportModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        
+        <div class="p-6">
+            <form id="statusReportForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" id="reportId" name="_id">
+<div>
+    <label class="block text-sm font-medium mb-1" for="reportRoom">Room Name/Number:</label>
+    <input type="text" id="reportRoom" name="room" list="roomOptions" required placeholder="e.g., 101" class="w-full border p-2 rounded">
+    <datalist id="roomOptions">
+        </datalist>
+</div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1" for="reportCategory">Category:</label>
+                        <input type="text" id="reportCategory" name="category" required placeholder="Delux" class="w-full border p-2 rounded">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1" for="reportStatus">Status:</label>
+                        <select id="reportStatus" name="status" required class="w-full border p-2 rounded">
+                            <option value="">-- Select Status --</option>
+                            <option value="blocked">Occupied</option>
+                            <option value="under-maintenance">Out of order</option>
+                            <option value="clean">Ready to assign</option>
+                            <option value="dirty">Needs Cleaning</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1" for="reportDateTime">Date and Time:</label>
+                        <input type="datetime-local" id="reportDateTime" name="dateTime" required class="w-full border p-2 rounded">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-1" for="reportRemarks">Remarks:</label>
+                    <textarea id="reportRemarks" name="remarks" rows="3" placeholder="Any additional notes..." class="w-full border p-2 rounded"></textarea>
+                </div>
+                
+                <div class="flex justify-end gap-3 mt-6">
+                    <button type="button" onclick="closeReportModal()" class="px-4 py-2 bg-slate-200 rounded-lg hover:bg-slate-300">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                        <i class="fa-solid fa-upload mr-2"></i> Submit Report
+                    </button>
+                </div>
+            </form>
+            <p id="statusMessage" class="text-center mt-4 font-bold text-blue-500"></p>
+        </div>
+    </div>
+</div>
+<section id="kds" class="section bg-slate-900 p-6 rounded-2xl shadow-2xl mb-8 hidden min-h-[80vh]">
+    <div class="flex justify-between items-center mb-8 border-b border-slate-700 pb-6">
+        <div>
+            <h2 class="text-3xl font-black text-white flex items-center gap-3">
+                <span class="relative flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+                Kitchen Display System
+            </h2>
+            <p class="text-slate-400 font-medium">Real-time order management & prep tracking</p>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <div id="kdsSummary" class="hidden md:flex gap-4"></div>
+            <button onclick="loadOrders()" class="bg-slate-800 hover:bg-slate-700 text-white p-3 rounded-xl transition-all border border-slate-600">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+    </div>
+
+
+    <div class="bg-white rounded-[1.5rem] shadow-lg border border-slate-200 overflow-hidden mb-8">
+        <div class="bg-slate-800 px-8 py-5 flex justify-between items-center">
+            <h3 class="text-white font-bold flex items-center gap-3 uppercase tracking-tighter text-sm">
+                <span class="flex h-2 w-2 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                </span>
+                Active Prep List
+            </h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 text-[10px] uppercase text-slate-500 font-black border-b border-slate-100">
+                    <tr>
+                        <th class="px-8 py-4">Time</th>
+                        <th class="px-8 py-4">Description</th>
+                        <th class="px-8 py-4 text-center">Qty</th>
+                        <th class="px-8 py-4">KDS Status</th>
+                        <th class="px-8 py-4 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="waiterTrackerBody" class="divide-y divide-slate-100 text-sm">
+                </tbody>
+            </table>
+        </div>
+    </div>
+<div id="kitchenOrders" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-8">
+        </div>
+
+    <audio id="orderDing" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+</section>
+           <section id="cash" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+    <div class="flex justify-between items-center mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-blue-600">Cash Journal</h2>
+            <p class="text-sm text-gray-500">Monitor cash at hand, mobile money, and bank deposits</p>
+        </div>
+        <button onclick="toggleCashModal(true)" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 flex items-center space-x-2 shadow-md">
+            <i class="fas fa-plus-circle"></i>
+            <span>Record Cash Entry</span>
+        </button>
+    </div>
+
+    <div id="cash-records">
+        <div class="filter-controls flex flex-wrap gap-4 mb-6 items-end bg-gray-50 p-4 rounded-xl border border-gray-100">
+            <div class="flex flex-col">
+                <label for="cash-filter-date" class="text-xs font-bold text-gray-500 uppercase mb-1">Search by Date</label>
+                <input type="date" id="cash-filter-date" class="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            
+            <button id="cash-search-button" onclick="fetchCashJournal()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition flex items-center gap-2">
+                <i class="fas fa-search"></i>
+                <span id="cash-search-button-text">Search Journal</span>
+            </button>
+        </div>
+
+        <div class="table-responsive overflow-x-auto">
+            <table id="cash-journal-table" class="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Cash At Hand</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Cash Banked</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Cash On Phone</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Bank Receipt ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<div id="cash-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center z-[80] p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate__animated animate__fadeInUp">
+        <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+            <div class="flex items-center gap-2 text-emerald-600">
+                <i class="fas fa-wallet text-xl"></i>
+                <h3 class="text-lg font-bold">New Cash Entry</h3>
+            </div>
+            <button onclick="toggleCashModal(false)" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        </div>
+
+       <form id="cash-journal-form" class="p-6" onsubmit="handleCashFormSubmit(event)">
+    <input type="hidden" id="cash-journal-id"> <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div>
+            <label for="cash-at-hand" class="block text-xs font-bold text-gray-500 uppercase mb-1">Physical Cash (Hand)</label>
+            <div class="relative">
+                <span class="absolute left-3 top-2.5 text-gray-400 text-sm">UGX</span>
+                <input type="number" id="cash-at-hand" step="0.01" min="0" required class="w-full pl-12 p-2.5 border border-gray-300 rounded-xl outline-none font-semibold">
+            </div>
+        </div>
+
+        <div>
+            <label for="cash-on-phone" class="block text-xs font-bold text-gray-500 uppercase mb-1">Mobile Money (Phone)</label>
+            <div class="relative">
+                <span class="absolute left-3 top-2.5 text-gray-400 text-sm">UGX</span>
+                <input type="number" id="cash-on-phone" step="0.01" min="0" required class="w-full pl-12 p-2.5 border border-gray-300 rounded-xl outline-none font-semibold">
+            </div>
+        </div>
+
+        <div>
+            <label for="cash-banked" class="block text-xs font-bold text-gray-500 uppercase mb-1">Cash Banked</label>
+            <div class="relative">
+                <span class="absolute left-3 top-2.5 text-gray-400 text-sm">UGX</span>
+                <input type="number" id="cash-banked" step="0.01" min="0" required class="w-full pl-12 p-2.5 border border-gray-300 rounded-xl outline-none font-semibold">
+            </div>
+        </div>
+
+        <div>
+            <label for="bank-receipt-id" class="block text-xs font-bold text-gray-500 uppercase mb-1">Bank Receipt / Ref ID</label>
+            <input type="text" id="bank-receipt-id" required placeholder="Slip Number" class="w-full p-2.5 border border-gray-300 rounded-xl outline-none">
+        </div>
+
+        <div class="md:col-span-2">
+            <label for="cash-date" class="block text-xs font-bold text-gray-500 uppercase mb-1">Transaction Date</label>
+            <input type="date" id="cash-date" required class="w-full p-2.5 border border-gray-300 rounded-xl outline-none">
+        </div>
+    </div>
+
+    <div class="flex justify-end gap-3 mt-8">
+        <button type="button" onclick="toggleCashModal(false)" class="px-6 py-2.5 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition">
+            Discard
+        </button>
+        <button type="submit" id="cash-submit-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-8 rounded-xl transition-all shadow-lg flex items-center gap-2">
+            <i class="fas fa-check-double"></i>
+            <span id="cash-submit-text">Save Cash Entry</span>
+        </button>
+    </div>
+</form>
+    </div>
+</div>
+
+            <section id="posinventory" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-bold text-blue-600">Inventory Management</h2>
+    <button onclick="toggleInventoryModal(true)" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 flex items-center space-x-2">
+      <i class="fas fa-plus"></i>
+      <span>Add New Item</span>
+    </button>
+  </div>
+
+  <div id="inventory-records" class="mt-6">
+    <div class="filter-controls flex flex-wrap gap-4 mb-4 items-end">
+      <input type="text" id="search-inventory-item" placeholder="Search item name..." class="p-2 border border-gray-300 rounded-md">
+      <input type="date" id="search-inventory-date" class="p-2 border border-gray-300 rounded-md">
+      <button onclick="fetchInventory()" id="inventory-search-button" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">
+        <i class="fas fa-search"></i> <span>Search</span>
+      </button>
+    </div>
+
+    <div class="table-responsive py-4" id="table-responsive">
+      <button class="export-button bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg mb-3" onclick="exportTableToExcel('inventory-table', 'Inventory_Report')">
+        Export to Excel
+      </button>
+      <table id="inventory-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opening</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purchases</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sales</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Spoilage</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Closing</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BP</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SP</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<div id="inventory-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate__animated animate__fadeInDown">
+    <div class="p-6 border-b flex justify-between items-center bg-gray-50">
+      <h3 id="modal-title" class="text-xl font-bold text-gray-800">Add Inventory Item</h3>
+      <button onclick="toggleInventoryModal(false)" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+    </div>
+    <form id="inventory-form" class="p-6" onsubmit="event.preventDefault(); submitInventory();">
+      <input type="hidden" id="inventory-id">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="item" class="block text-sm font-medium text-gray-700">Item Name:</label>
+          <input type="text" id="item" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500">
+        </div>
+
+        <div>
+          <label for="opening" class="block text-sm font-medium text-gray-700">Opening Stock:</label>
+          <input type="number" id="opening" min="0" class="mt-1 p-2 block w-full border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500">
+        </div>
+
+        <div>
+          <label for="purchases" class="block text-sm font-medium text-gray-700">Purchases:</label>
+          <input type="number" id="purchases" min="0" class="mt-1 p-2 block w-full border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500">
+        </div>
+
+        <div>
+          <label for="inventory-sales" class="block text-sm font-medium text-gray-700">Sales:</label>
+          <input type="number" id="inventory-sales" min="0" class="mt-1 p-2 block w-full border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500">
+        </div>
+
+        <div>
+          <label for="spoilage" class="block text-sm font-medium text-gray-700">Spoilage:</label>
+          <input type="number" id="spoilage" min="0" class="mt-1 p-2 block w-full border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500">
+        </div>
+
+        <div>
+          <label for="buyingprice" class="block text-sm font-medium text-gray-700">Buying Price:</label>
+          <input type="number" id="buyingprice" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500">
+        </div>
+
+        <div>
+          <label for="sellingprice" class="block text-sm font-medium text-gray-700">Selling Price:</label>
+          <input type="number" id="sellingprice" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500">
+        </div>
+
+        <div class="flex items-center space-x-3 pt-6">
+          <input type="checkbox" id="trackInventory" checked class="h-5 w-5 text-emerald-600 border-gray-300 rounded">
+          <label for="trackInventory" class="text-sm font-medium text-gray-700">Track Stock Levels</label>
+        </div>
+      </div>
+
+      <div class="flex justify-end mt-6 space-x-3">
+        <button type="button" onclick="toggleInventoryModal(false)" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition">Cancel</button>
+        <button type="submit" id="inventor-save-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-6 rounded-lg transition flex items-center space-x-2">
+          <i class="fas fa-save"></i>
+          <span id="inventory-submit-text">Save Inventory</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+            <section id="sale" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-blue-600">Sales</h2>
+        <!--<button onclick="toggleSaleModal(true)" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 flex items-center space-x-2">
+            <i class="fas fa-plus-circle"></i>
+            <span>Manual Sale Entry</span>
+        </button>-->
+    </div>
+
+   <!-- <div id="messageBox" class="fixed top-20 right-4 z-50 transition-all duration-300 transform translate-x-full"></div>-->
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div class="lg:col-span-9 space-y-6">
+            <div id="activeAccountSection" class="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div class="bg-slate-900 rounded-[2rem] p-8 text-white flex flex-col md:flex-row justify-between items-center shadow-xl relative overflow-hidden">
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="px-2 py-0.5 bg-emerald-500 text-[10px] font-black rounded uppercase">Active Folio</span>
+                            <span id="currentRoomNumber" class="text-indigo-300 text-sm font-bold tracking-widest"></span>
+                        </div>
+                        <h2 id="currentGuestName" class="text-3xl font-black">New Sale</h2>
+                    </div>
+                    <div class="text-center md:text-right mt-6 md:mt-0 relative z-10">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-tighter mb-1">Unpaid Balance</p>
+                        <div class="flex items-baseline justify-center md:justify-end gap-1">
+                            <span class="text-slate-400 text-lg font-medium">UGX</span>
+                            <span id="totalCharges" class="text-5xl font-black text-white">0.00</span>
+                        </div>
+                    </div>
+                    <div class="absolute right-0 top-0 w-64 h-64 bg-indigo-500 opacity-10 rounded-full -mr-20 -mt-20"></div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase mb-6 flex items-center gap-2">
+                            <i class="fas fa-cart-plus text-indigo-500"></i> POS Terminal
+                        </h3>
+                        <form id="addChargeForm" class="space-y-5">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Department</label>
+                                <select name="department" id="deptSelect" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700">
+                                    <option value="">Select Department</option>
+                                    <option value="Bar">Bar</option>
+                                    <option value="Restaurant">Restaurant</option>
+                                </select>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Search Inventory</label>
+                                <input list="inventoryItems" name="description" id="itemDesc" onchange="autoFillPrices(this.value)" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Type item name...">
+                                <datalist id="inventoryItems"></datalist>
+                            </div>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div class="col-span-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Qty</label>
+                                    <input type="number" name="number" id="number" value="1" min="1" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Selling Price</label>
+                                    <input type="number" name="amount" id="itemPrice" class="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl outline-none text-slate-600 font-bold">
+                                </div>
+                            </div>
+                            <button type="submit" id="submitBtn" class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg transition-all uppercase tracking-widest text-sm">Submit Item</button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Live Folio</h3>
+                            <span class="text-[10px] font-bold text-indigo-500 px-2 py-0.5 bg-indigo-50 rounded">AUTO-SAVING</span>
+                        </div>
+                        <div class="flex-grow overflow-y-auto max-h-[250px] custom-scroll">
+                            <table class="w-full text-left">
+                                <thead class="sticky top-0 bg-white shadow-sm">
+                                    <tr class="text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
+                                        <th class="px-6 py-3">Time</th>
+                                        <th class="px-6 py-3">Item</th>
+                                        <th class="px-6 py-3 text-right">Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="chargesList" class="divide-y divide-slate-50">
+                                    <tr><td colspan="3" class="px-6 py-10 text-center text-slate-400 italic text-sm">No items posted yet</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-6 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-3">
+                            <button id="postToRoomBtn" class="flex flex-col items-center justify-center p-3 border-2 border-indigo-100 bg-white text-indigo-600 rounded-2xl hover:border-indigo-600 transition-all group">
+                                <i class="fas fa-bed mb-1 group-hover:scale-110"></i>
+                                <span class="text-[10px] font-extrabold uppercase">Post to Room</span>
+                            </button>
+                            <!--<button id="issueReceiptBtn" class="flex flex-col items-center justify-center p-3 bg-slate-900 text-white rounded-2xl hover:bg-black transition-all group">
+                                <i class="fas fa-print mb-1 group-hover:scale-110"></i>
+                                <span class="text-[10px] font-extrabold uppercase">Settle Bill</span>
+                            </button>-->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-3 space-y-6">
+    <div id="createAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">New In-house guest</h2>
+        
+        <form id="createAccountForm" class="space-y-4">
+            <div class="relative">
+                <input type="text" name="guestName" id="guestname" autocomplete="off" required 
+                       placeholder="Guest Full Name" 
+                       class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                
+                <div id="bookingSuggestions" 
+                     class="hidden absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                </div>
+            </div>
+
+            <input type="text" name="roomNumber" id="roomNumber" placeholder="Room Number" 
+                   class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+            
+            <button type="submit" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl text-sm">Open Account</button>
+        </form>
+    </div>
+
+    <div id="searchAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <label class="block text-xs font-bold text-slate-400 uppercase mb-3">Search Accounts</label>
+        <form id="searchAccountForm" class="relative">
+            <input type="text" id="searchQuery" required placeholder="Name or Room..." class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+            <button type="submit" class="absolute right-2 top-2 p-1.5 bg-indigo-600 text-white rounded-lg"><i class="fas fa-search"></i></button>
+        </form>
+        <div id="searchResults" class="mt-4 space-y-2 max-h-48 overflow-y-auto"></div>
+    </div>
+</div>
+    </div>
+
+    <div id="activeAccountsSection" class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-lg font-bold text-slate-800">In-House Accounts</h2>
+            <button onclick="fetchActiveAccounts()" class="p-2 hover:bg-slate-100 rounded-full"><i class="fas fa-sync-alt text-slate-400"></i></button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="border-b border-slate-100">
+                        <th class="pb-3 text-xs font-bold text-slate-400 uppercase">Guest / Room</th>
+                        <th class="pb-3 text-xs font-bold text-slate-400 uppercase">Total Charges</th>
+                        <th class="pb-3 text-xs font-bold text-slate-400 uppercase">Last Updated</th>
+                        <th class="pb-3 text-xs font-bold text-slate-400 uppercase text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="activeAccountsTableBody" class="divide-y divide-slate-50"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="sales-records" class="mt-12 pt-8 border-t border-slate-200">
+        <h3 class="text-xl font-medium mb-4 text-gray-800">Historical Sales Records</h3>
+        <div class="filter-controls flex flex-wrap gap-4 mb-4 items-end">
+            <div>
+                <label for="sales-date-filter" class="block text-xs font-bold text-gray-500 uppercase mb-1">Search by Date:</label>
+                <input type="date" id="sales-date-filter" class="p-2 border border-gray-300 rounded-md">
+            </div>
+            <button id="sales-search-button" onclick="fetchSales()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">
+                <i class="fas fa-search"></i> Search
+            </button>
+            <button class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg" onclick="exportTableToExcel('sales-table', 'Sales_Report')">Export Excel</button>
+        </div>
+        <div class="table-responsive">
+            <table id="sales-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
+                <thead class="bg-gray-50">
+                    <tr class="text-[10px] text-gray-500 uppercase">
+                        <th class="px-6 py-3 text-left">Dept</th>
+                        <th class="px-6 py-3 text-left">Item</th>
+                        <th class="px-6 py-3 text-left">Qty</th>
+                        <th class="px-6 py-3 text-left">BP</th>
+                        <th class="px-6 py-3 text-left">SP</th>
+                        <th class="px-6 py-3 text-left">Profit</th>
+                        <th class="px-6 py-3 text-left">%</th>
+                        <th class="px-6 py-3 text-left">Date</th>
+                        <th class="px-6 py-3 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200"></tbody>
+            </table>
+            <div id="sales-summary" class="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200 font-semibold text-gray-700"></div>
+        </div>
+    </div>
+</section>
+
+<div id="sale-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center z-[60] p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+            <h3 class="text-lg font-bold text-gray-800">Manual Sale Entry</h3>
+            <button onclick="toggleSaleModal(false)" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        </div>
+        <form id="sale-form" class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="hidden" id="sale-id">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase">Department</label>
+                <select id="department-item" required class="mt-1 p-2.5 block w-full border border-gray-300 rounded-xl bg-white text-sm">
+                    <option value="" disabled selected>Select...</option>
+                    <option value="Bar">Bar</option>
+                    <option value="Restaurant">Restaurant</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase">Item</label>
+                <input type="text" id="sale-item" list="item-suggestions" required class="mt-1 p-2.5 block w-full border border-gray-300 rounded-xl text-sm" placeholder="Search item...">
+                <datalist id="item-suggestions"></datalist>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase">Qty Sold</label>
+                <input type="number" id="sale-number" min="1" required class="mt-1 p-2.5 block w-full border border-gray-300 rounded-xl text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase">Buying Price</label>
+                <input type="number" id="sale-bp" step="0.01" min="0" required class="mt-1 p-2.5 block w-full border border-gray-300 rounded-xl text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase">Selling Price</label>
+                <input type="number" id="sale-sp" step="0.01" min="0" required class="mt-1 p-2.5 block w-full border border-gray-300 rounded-xl text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase">Date</label>
+                <input type="date" id="sales-date" required class="mt-1 p-2.5 block w-full border border-gray-300 rounded-xl text-sm">
+            </div>
+            <div class="md:col-span-2 flex justify-end gap-3 mt-4">
+                <button type="button" onclick="toggleSaleModal(false)" class="px-6 py-2 text-gray-600 font-bold">Cancel</button>
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-8 rounded-xl transition-all shadow-lg">
+                    Record Sale
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+            <section id="expense" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+    <div class="flex justify-between items-center mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-blue-600">Expense Management</h2>
+            <p class="text-sm text-gray-500">Track and monitor departmental expenditures</p>
+        </div>
+        <button onclick="toggleExpenseModal(true)" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 flex items-center space-x-2 shadow-sm">
+            <i class="fas fa-file-invoice-dollar"></i>
+            <span>Record New Expense</span>
+        </button>
+    </div>
+
+    <div id="expenses-records">
+        <div class="filter-controls flex flex-wrap gap-4 mb-6 items-end bg-gray-50 p-4 rounded-xl border border-gray-100">
+            <div class="flex flex-col">
+                <label for="expenses-date-filter" class="text-xs font-bold text-gray-500 uppercase mb-1">Search by Date</label>
+                <input type="date" id="expenses-date-filter" class="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            
+            <button id="expenses-search-button" onclick="fetchExpenses()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition flex items-center gap-2">
+                <i class="fas fa-search"></i>
+                <span id="expenses-search-button-text">Search Records</span>
+            </button>
+
+            <button class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition" onclick="exportTableToExcel('expenses-table', 'Expense_Report')">
+                <i class="fas fa-file-excel mr-1"></i> Export
+            </button>
+        </div>
+
+        <div class="table-responsive overflow-x-auto">
+            <table id="expenses-table" class="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Department</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Description</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Amount</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Receipt ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Source</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<div id="expense-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center z-[70] p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all">
+        <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+            <div class="flex items-center gap-2 text-red-600">
+                <i class="fas fa-minus-circle text-xl"></i>
+                <h3 class="text-lg font-bold">Record Expense</h3>
+            </div>
+            <button onclick="toggleExpenseModal(false)" class="text-gray-400 hover:text-gray-600 text-2xl transition">&times;</button>
+        </div>
+        <form id="expense-form" class="p-6" onsubmit="submitExpenseForm(event)">
+            <input type="hidden" id="expense-id">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <label for="expense-department" class="block text-xs font-bold text-gray-500 uppercase mb-1">Department</label>
+                    <select id="expense-department" required class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none bg-white">
+                        <option value="" disabled selected>Select department...</option>
+                        <option value="Bar">Bar</option>
+                        <option value="Restaurant">Restaurant</option>
+                        <option value="Housekeeping">Housekeeping</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="expense-amount" class="block text-xs font-bold text-gray-500 uppercase mb-1">Amount (UGX)</label>
+                    <input type="number" id="expense-amount" step="0.01" min="0" required placeholder="0.00" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-bold">
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="expense-description" class="block text-xs font-bold text-gray-500 uppercase mb-1">Description / Purpose</label>
+                    <input type="text" id="expense-description" required placeholder="e.g., Purchase of cleaning supplies" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
+                </div>
+
+                <div>
+                    <label for="expense-date" class="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
+                    <input type="date" id="expense-date" required class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
+                </div>
+
+                <div>
+                    <label for="expense-receiptId" class="block text-xs font-bold text-gray-500 uppercase mb-1">Receipt / Voucher ID</label>
+                    <input type="text" id="expense-receiptId" required placeholder="Enter ID number" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="expense-source" class="block text-xs font-bold text-gray-500 uppercase mb-1">Source of Funds</label>
+                    <input type="text" id="expense-source" required placeholder="e.g., Petty Cash, Director, Sales" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-8">
+                <button type="button" onclick="toggleExpenseModal(false)" class="px-6 py-2.5 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition">
+                    Cancel
+                </button>
+                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-8 rounded-xl transition-all shadow-lg flex items-center gap-2">
+                    <i class="fas fa-save"></i>
+                    <span id="expense-submit-text">Record Expense</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+            <section id="salereport" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+    <div class="flex justify-between items-center mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-blue-600">Financial Reports</h2>
+            <p class="text-sm text-gray-500">Analyze departmental performance and net profitability</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="exportTableToExcel('overall-reports-table', 'Financial_Summary')" class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition shadow-sm flex items-center gap-2">
+                <i class="fas fa-file-export"></i> Export Report
+            </button>
+        </div>
+    </div>
+
+    <div class="filter-controls grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 items-end p-5 bg-slate-50 rounded-2xl border border-slate-100">
+        <div class="flex flex-col">
+            <label for="report-start-date" class="text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
+            <input type="date" id="report-start-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+        <div class="flex flex-col">
+            <label for="report-end-date" class="text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
+            <input type="date" id="report-end-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+        <button id="generate-report-btn" onclick="generateReports()" class="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
+            <i class="fas fa-sync-alt"></i> Generate & Refresh Reports
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm relative overflow-hidden">
+            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Sales</p>
+            <div class="flex items-baseline gap-2">
+                <span class="text-slate-400 font-medium">UGX</span>
+                <span id="overall-sales-card" class="text-3xl font-black text-slate-800">0</span>
+            </div>
+            <div class="absolute -right-4 -bottom-4 opacity-5">
+                <i class="fas fa-cash-register text-7xl text-emerald-600"></i>
+            </div>
+        </div>
+        
+        <div class="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm relative overflow-hidden">
+            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Expenses</p>
+            <div class="flex items-baseline gap-2">
+                <span class="text-slate-400 font-medium">UGX</span>
+                <span id="overall-expenses-card" class="text-3xl font-black text-red-600">0</span>
+            </div>
+            <div class="absolute -right-4 -bottom-4 opacity-5">
+                <i class="fas fa-file-invoice-dollar text-7xl text-red-600"></i>
+            </div>
+        </div>
+
+        <div id="net-balance-container" class="bg-slate-900 border border-slate-800 p-6 rounded-[2rem] shadow-xl relative overflow-hidden">
+            <p class="text-xs font-black text-indigo-300 uppercase tracking-widest mb-1">Net Balance</p>
+            <div class="flex items-baseline gap-2">
+                <span class="text-indigo-400 font-medium">UGX</span>
+                <span id="overall-balance-card" class="text-3xl font-black text-white">0</span>
+            </div>
+            <div class="absolute -right-4 -bottom-4 opacity-10">
+                <i class="fas fa-chart-line text-7xl text-indigo-400"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
+            <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Departmental Breakdown</h3>
+        </div>
+        <div class="table-responsive">
+            <table id="department-table" class="min-w-full text-left">
+                <thead>
+                    <tr class="bg-white text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
+                        <th class="px-6 py-4">Department</th>
+                        <th class="px-6 py-4">Revenue (Sales)</th>
+                        <th class="px-6 py-4">Costs (Expenses)</th>
+                        <th class="px-6 py-4 text-right">Net Position</th>
+                    </tr>
+                </thead>
+                <tbody id="department-report-tbody" class="divide-y divide-slate-50">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <table id="overall-reports-table" class="hidden">
+        <thead>
+            <tr><th>Metric</th><th>Amount (UGX)</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Total Sales</td><td id="overall-sales">0</td></tr>
+            <tr><td>Total Expenses</td><td id="overall-expenses">0</td></tr>
+            <tr><td>Net Balance</td><td id="overall-balance">0</td></tr>
+        </tbody>
+    </table>
+</section>
+           <section id="posreport" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+    <div class="flex justify-between items-center mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-blue-600">Room Charges</h2>
+            <p class="text-sm text-gray-500">View detailed room charge revenue breakdownsS</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div id="posreportsPanel" class="lg:col-span-1 space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Report Filters</h2>
+                <form id="posdailyReportForm" class="space-y-4" onsubmit="generatePOSReport(event)">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Select Date</label>
+                        <input type="date" id="reportDate" required class="w-full mt-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transform active:scale-95 transition-all shadow-md flex items-center justify-center gap-2">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Generate Summary</span>
+                    </button>
+                </form>
+            </div>
+
+            <div class="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-5 text-white shadow-lg">
+                <p class="text-indigo-100 text-xs font-bold uppercase tracking-wider">Note</p>
+                <p class="text-sm mt-2 opacity-90">This report includes  Restaurant and  Bar transactions for the selected period.</p>
+            </div>
+        </div>
+
+        <div id="posreportResults" class="lg:col-span-3 animate-in fade-in slide-in-from-right-4 duration-500">
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-8 py-8 bg-indigo-50 border-b border-indigo-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div>
+                        <h2 class="text-indigo-900 font-black text-xl">Daily Summary: <span id="posreportDateDisplay" class="text-indigo-600 font-normal ml-2">---</span></h2>
+                        <p class="text-indigo-600 text-sm flex items-center gap-2">
+                            <span class="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></span>
+                            Revenue generated across all POS points
+                        </p>
+                    </div>
+                    <div class="text-center md:text-right bg-white px-6 py-3 rounded-2xl shadow-inner border border-indigo-100">
+                        <p class="text-[10px] font-bold text-indigo-400 uppercase">Total Revenue</p>
+                        <p class="text-3xl font-black text-indigo-600">UGX <span id="posreportTotalRevenue">0</span></p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-100">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-8 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Guest / Room</th>
+                                <th class="px-8 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Description</th>
+                                <th class="px-8 py-4 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">Source</th>
+                                <th class="px-8 py-4 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="posreportTableBody" class="divide-y divide-slate-100 text-sm text-slate-600">
+                            <tr>
+                                <td colspan="4" class="px-8 py-10 text-center text-slate-400 italic">
+                                    Please select a date and click "Generate Summary" to view data.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="p-6 bg-slate-50 border-t border-slate-100">
+                    <button id="exportposReportBtn" class="flex items-center justify-center space-x-2 w-full md:w-max px-8 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-lg ml-auto">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span>Export CSV Sheet</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+  <section id="housekeeping" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+                <h2 class="text-2xl font-bold mb-4 text-blue-600">Room Management</h2>
+              <div class="mb-6">
+ <!--<a href="https://elegant-pasca-cea136.netlify.app/housekeep/home.html" 
+     target="_blank" 
+     rel="noopener noreferrer"
+     class="inline-flex items-center bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300">
+    <span>View checklists & room reports</span>
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+      <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+    </svg>
+  </a> -->
+</div>
+                
+                <div id="housekeepingRoomGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+            </section>
+
+            <div id="reportModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+                <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl relative">
+                    <span class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800">&times;</span>
+                    <h3 id="reportTitle" class="text-xl font-bold mb-4"></h3>
+                    <div id="reportContent">
+                        <h4 class="text-lg font-semibold mt-4 mb-2">Clean Rooms:</h4>
+                        <ul id="cleanRoomList" class="list-disc list-inside space-y-1"></ul>
+                        <h4 class="text-lg font-semibold mt-4 mb-2">Dirty Rooms:</h4>
+                        <ul id="dirtyRoomList" class="list-disc list-inside space-y-1"></ul>
+                    </div>
+                </div>
+            </div>
+<section id="calendar" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+    <h2 class="text-2xl font-bold mb-4 text-blue-600">
+        </i> Calendar View
+    </h2>
+    <div class="flex items-center justify-between mb-6">
+        <button id="prevMonthBtn" class="bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-300">
+            <i class="fas fa-chevron-left"></i> Previous Month
+        </button>
+        <h3 id="calendarMonthYear" class="text-lg font-bold"></h3>
+        <button id="nextMonthBtn" class="bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-300">
+            Next Month <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+    <div id="calendarGrid" class="calendar-grid">
+                    </div>
+    
+</section>
+
+           <section id="reports" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+               
+<div class="p-6 bg-gray-50 min-h-screen">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="bg-green-100 p-4 rounded-lg shadow border-l-4 border-green-500">
+            <h3 class="text-sm font-bold text-green-700 uppercase">Total Amount Paid</h3>
+            <p id="sumPaid" class="text-2xl font-bold">UGX 0.00</p>
+        </div>
+        <div class="bg-red-100 p-4 rounded-lg shadow border-l-4 border-red-500">
+            <h3 class="text-sm font-bold text-red-700 uppercase">Total Balance</h3>
+            <p id="sumBalance" class="text-2xl font-bold">UGX 0.00</p>
+        </div>
+    </div>
+
+    <div class="bg-white p-4 rounded-lg shadow mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="flex gap-2 mb-4">
+    <button onclick="setDateFilter('today')" class="bg-gray-200 px-3 py-1 rounded text-sm hover:bg-gray-300">Today</button>
+    <button onclick="setDateFilter('month')" class="bg-gray-200 px-3 py-1 rounded text-sm hover:bg-gray-300">This Month</button>
+</div>
+        <input type="text" id="filterSearch" placeholder="Search Guest/Room..." class="border p-2 rounded">
+        <select id="filterPaymentStatus"placeholder="Payment Status" class="border p-2 rounded">
+            <option value="">All Payment Status</option>
+            <option value="Paid">Paid</option>
+            <option value="Pending">Pending</option>
+            <option value="Partially Paid">Partially Paid</option>
+        </select>
+        <select id="filterGuestStatus" placeholder="Guest Status"class="border p-2 rounded">
+            <option value="">All Guest Status</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="checkedin">Checked In</option>
+            <option value="reserved">Reserved</option>
+            <option value="checkedout">Checkedout</option>
+            <option value="no show">No Show</option>
+            <option value="cancelled">Cancelled</option>
+        </select>
+        <select id="filterGuestSource" placeholder="Guest Source"class="border p-2 rounded">
+            <option value="">All Guest Source</option>
+            <option value="Walk in">Walk In</option>
+            <option value="Hotel Website">Hotel Website</option>
+            <option value="Booking.com">Booking.com</option>
+            <option value="Expedia">Expedia Group</option>
+            <option value="Airbnd">Airbnd</option>
+             <option value="Trip">Trip</option>
+        </select>
+        <select id="filterPaymentMethod" placeholder="Payment Method" class="border p-2 rounded">
+            <option value="">Payment  Method</option>
+            <option value="Cash">Cash</option>
+            <option value="MTN Momo">MTN Momo</option>
+            <option value="Airtel Pay">Airtel Pay</option>
+            <option value="Bank">Bank</option>
+        </select>
+        <div class="flex flex-col">
+    <label for="filterDate" class="text-xs font-bold text-gray-600 uppercase mb-1">Check-In Date</label>
+    <input type="date" id="filterDate" class="border p-2 rounded w-full">
+</div>
+
+<div class="flex flex-col">
+    <label for="endDate" class="text-xs font-bold text-gray-600 uppercase mb-1">Check-Out Date</label>
+    <input type="date" id="endDate" class="border p-2 rounded w-full">
+</div>
+
+        
+        <div class="md:col-span-4 flex gap-2">
+            <button onclick="exportToExcel()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Export Excel</button>
+            <button onclick="exportToPDF()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Print PDF</button>
+            
+        </div>
+    </div>
+
+    <div class="overflow-x-auto bg-white rounded-lg shadow">
+        <table class="w-full text-left border-collapse" id="reportsTable">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="p-3 border">Guest</th>
+                    <th class="p-3 border">Room</th>
+                    <th class="p-3 border">Check In</th>
+                    <th class="p-3 border">Paid</th>
+                    <th class="p-3 border">Balance</th>
+                    <th class="p-3 border">Payment Status</th>
+                    <th class="p-3 border"> Guest Status</th>
+                    <th class="p-3 border"> Payment Method</th>
+                    <th class="p-3 border">Guest Source</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+</div>
+</section>
+            <section id="service-reports" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+                <h2 class="text-2xl font-bold mb-4 text-blue-600"><i class="fas fa-concierge-bell"></i> Service Reports (Incidental Charges)</h2>
+                <div class="flex flex-wrap items-center gap-4 mb-6">
+                    <div class="flex items-center space-x-2">
+                        <label for="serviceReportStartDate" class="text-gray-700 font-semibold"><i class="fas fa-calendar-day"></i> Start Date:</label>
+                        <input type="date" id="serviceReportStartDate" class="border border-gray-300 rounded-lg px-3 py-2">
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <label for="serviceReportEndDate" class="text-gray-700 font-semibold"><i class="fas fa-calendar-day"></i> End Date:</label>
+                        <input type="date" id="serviceReportEndDate" class="border border-gray-300 rounded-lg px-3 py-2">
+                    </div>
+                    <button class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300" id="generateServiceReportBtn"><i class="fas fa-file-invoice-dollar"></i> Generate Service Report</button>
+                    <button class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-300 hidden" id="exportServiceReportBtn"><i class="fas fa-file-excel"></i> Export to Excel</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="serviceReportsTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                        <thead>
+                            <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                                <th class="py-3 px-6 text-left">Service Type</th>
+                                <th class="py-3 px-6 text-left">Number of Charges</th>
+                                <th class="py-3 px-6 text-left">Total Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-600 text-sm font-light"></tbody>
+                        <tfoot>
+                            <tr class="bg-gray-100 text-gray-800 font-bold">
+                                <td colspan="2" class="py-3 px-6 text-right">Grand Total:</td>
+                                <td class="py-3 px-6"><span id="totalServiceRevenue">0.00</span></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    <h3 id="detailed-report-title" class="text-xl font-bold mt-8 mb-4 hidden">Detailed Service Charges</h3>
+                    <table id="serviceReportsDetailsTable" class="min-w-full bg-white border border-gray-200 rounded-lg hidden">
+                        <thead>
+                            <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                                <th class="py-3 px-6 text-left">Guest Name</th>
+                                <th class="py-3 px-6 text-left">Service Type</th>
+                                <th class="py-3 px-6 text-left">Total Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-600 text-sm font-light"></tbody>
+                        <tfoot>
+                            <tr class="bg-gray-100 text-gray-800 font-bold">
+                                <td colspan="2" class="py-3 px-6 text-right">Grand Total:</td>
+                                <td class="py-3 px-6"><span id="totalDetailedServiceRevenue">0.00</span></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </section>
+
+            <section id="audit-logs" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden  min-w-[2600px] overflow-hidden">
+    
+    <h2 class="text-2xl font-bold mb-4 text-blue-600">Audit Logs</h2>
+    
+    <div class="sticky top-0 z-30 bg-white pb-4">
+        <div class="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100 shadow-sm">
+            <div class="flex items-center space-x-2">
+                <label for="auditLogUserFilter" class="text-gray-700 font-semibold text-sm">User:</label>
+                <input type="text" id="auditLogUserFilter" placeholder="Username" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <label for="auditLogActionFilter" class="text-gray-700 font-semibold text-sm">Action:</label>
+                <input type="text" id="auditLogActionFilter" placeholder="Action" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <label for="auditLogStartDateFilter" class="text-gray-700 font-semibold text-sm">Start:</label>
+                <input type="date" id="auditLogStartDateFilter" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <label for="auditLogEndDateFilter" class="text-gray-700 font-semibold text-sm">End:</label>
+                <input type="date" id="auditLogEndDateFilter" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            
+            <button class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition" id="applyAuditLogFiltersBtn">
+                Apply
+            </button>
+        </div>
+    </div>
+
+    <div class="relative border border-gray-200 rounded-lg overflow-x-auto overflow-y-auto  shadow-inner">
+        <table id="auditLogTable" class="table-fixed min-w-[2600px] bg-white">
+            <thead class="sticky top-0 z-20 shadow-sm">
+                <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
+                    <th class="py-4 px-6 text-left w-48 bg-gray-100">Timestamp</th>
+                    <th class="py-4 px-6 text-left w-32 bg-gray-100">User</th>
+                    <th class="py-4 px-6 text-left w-48 bg-gray-100">Action</th>
+                    <th class="py-4 px-6 text-left w-64 bg-gray-100">Reasons</th>
+                    <th class="py-4 px-6 text-left w-auto bg-gray-100">Details</th>
+                </tr>
+            </thead>
+            <tbody class="text-gray-600 text-sm divide-y divide-gray-100">
+                </tbody>
+        </table>
+    </div>
+
+    <div class="flex justify-between items-center mt-6 bg-white py-2">
+        <button id="prevAuditPage" class="bg-gray-100 px-4 py-2 rounded-lg disabled:opacity-50">Previous</button>
+        <span id="auditPageIndicator" class="font-medium">Page 1</span>
+        <button id="nextAuditPage" class="bg-gray-100 px-4 py-2 rounded-lg disabled:opacity-50">Next</button>
+    </div>
+</section>
+
+            <section id="channel-manager" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+                <h2 class="text-2xl font-bold mb-4 text-blue-600"><i class="fas fa-exchange-alt"></i> Channel Manager</h2>
+                <p class="text-gray-700 mb-4">This section would typically integrate with external booking engines (e.g., Booking.com, Expedia) to sync room availability and bookings.</p>
+                <p class="text-gray-700 mb-6">For this demonstration, clicking the button below will simulate a sync operation.</p>
+                <button class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300" onclick="simulateChannelManagerSync()"><i class="fas fa-sync-alt"></i> Simulate Sync</button>
+            </section>
+        </main>
+    </div>
+
+    <div id="bookingModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center p-4 z-50 hidden transition-opacity duration-300">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl relative max-h-[92vh] flex flex-col overflow-hidden">
+        
+        <div class="px-8 py-4 bg-green-600 flex justify-between items-center">
+            <h2 id="modalTitle" class="text-xl font-bold text-white flex items-center gap-2">
+Add Guest Details            </h2>
+            <button class="text-white hover:text-gray-200 text-2xl font-bold transition" onclick="closeBookingModal()">&times;</button>
+        </div>
+
+        <div class="p-8 overflow-y-auto">
+            <form id="bookingForm" class="space-y-8">
+                <input type="hidden" id="bookingId">
+
+                <section>
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-blue-500 border-b border-blue-100 mb-4 pb-1">1. Guest Personal Information</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        <div class="flex flex-col">
+                            <label for="name" class="text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
+                            <input type="text" id="name" required class="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="nationality" class="text-xs font-bold text-gray-500 uppercase mb-1">Nationality</label>
+                            <input type="text" id="nationality" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="nationalIdNo" class="text-xs font-bold text-gray-500 uppercase mb-1">Passport / ID No.</label>
+                            <input type="text" id="nationalIdNo" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="guestEmail" class="text-xs font-bold text-gray-500 uppercase mb-1">Email Address</label>
+                            <input type="email" id="guestEmail" placeholder="guest@example.com" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="phoneNo" class="text-xs font-bold text-gray-500 uppercase mb-1">Phone Number</label>
+                            <input type="text" id="phoneNo" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="occupation" class="text-xs font-bold text-gray-500 uppercase mb-1">Occupation</label>
+                            <input type="text" id="occupation" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="md:col-span-2 lg:col-span-3 flex flex-col">
+                            <label for="address" class="text-xs font-bold text-gray-500 uppercase mb-1">Permanent Address</label>
+                            <input type="text" id="address" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-blue-500 border-b border-blue-100 mb-4 pb-1">2. Room & Stay Details</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                        <div class="flex flex-col">
+                            <label for="room" class="text-xs font-bold text-gray-500 uppercase mb-1">Room Number</label>
+                            <select id="room" class="px-3 py-2 border border-gray-300 rounded-md bg-white">
+                                <option value="">Select Room</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="checkIn" class="text-xs font-bold text-gray-500 uppercase mb-1">Check-In Date</label>
+                            <input type="date" id="checkIn" required class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="checkIntime" class="text-xs font-bold text-gray-500 uppercase mb-1">Check-In Time</label>
+                            <input type="time" id="checkIntime" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="checkOut" class="text-xs font-bold text-gray-500 uppercase mb-1">Check-Out Date</label>
+                            <input type="date" id="checkOut" required class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="checkOuttime" class="text-xs font-bold text-gray-500 uppercase mb-1">Check-Out Time</label>
+                            <input type="time" id="checkOuttime" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="nights" class="text-xs font-bold text-gray-500 uppercase mb-1">Total Nights</label>
+                            <input type="number" id="nights" readonly class="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500 font-bold">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="people" class="text-xs font-bold text-gray-500 uppercase mb-1">No. of People</label>
+                            <input type="number" id="people" required class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="extraperson" class="text-xs font-bold text-gray-500 uppercase mb-1">Extra Person Name</label>
+                            <input type="text" id="extraperson" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-blue-50 p-6 rounded-xl border border-blue-100">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-blue-700 mb-4">3. Financial Information</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                        <div class="flex flex-col">
+                            <label for="amtPerNight" class="text-xs font-bold text-blue-800 uppercase mb-1">Rate Per Night</label>
+                            <input type="number" id="amtPerNight" step="0.01" required class="px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="totalDue" class="text-xs font-bold text-blue-800 uppercase mb-1">Total Due</label>
+                            <input type="number" id="totalDue" step="0.01" readonly class="px-3 py-2 border border-blue-200 rounded-md bg-white font-bold text-blue-900">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="amountPaid" class="text-xs font-bold text-blue-800 uppercase mb-1">Amount Paid</label>
+                            <input type="number" id="amountPaid" step="0.01" class="px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="balance" class="text-xs font-bold text-red-700 uppercase mb-1">Balance</label>
+                            <input type="number" id="balance" step="0.01" readonly class="px-3 py-2 border border-blue-200 rounded-md bg-white font-bold text-red-600">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="paymentMethod" class="text-xs font-bold text-blue-800 uppercase mb-1">Payment Method</label>
+                            <select id="paymentMethod" class="px-3 py-2 border border-blue-200 rounded-md bg-white">
+                                <option value="Cash">Cash</option>
+                                <option value="MTN Momo">MTN Momo</option>
+                                <option value="Airtel Pay">Airtel Pay</option>
+                                <option value="Bank">Bank</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="transactionid" class="text-xs font-bold text-blue-800 uppercase mb-1">Transaction ID</label>
+                            <input type="text" id="transactionid" class="px-3 py-2 border border-blue-200 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="paymentStatus" class="text-xs font-bold text-blue-800 uppercase mb-1">Payment Status</label>
+                            <select id="paymentStatus" class="px-3 py-2 border border-blue-200 rounded-md bg-white">
+                                <option value="Pending">Pending</option>
+                                <option value="Partially Paid">Partially Paid</option>
+                                <option value="Paid">Paid</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="gueststatus" class="text-xs font-bold text-blue-800 uppercase mb-1">Guest Status</label>
+                            <select id="gueststatus" class="px-3 py-2 border border-blue-200 rounded-md bg-white font-bold text-blue-600">
+                                <option value="reserved">Reservation</option>
+                                <option value="confirmed">Confirmed</option>
+                                <option value="checkedin">Checked In</option>
+                                <option value="checkedout">Checked Out</option>
+                                <option value="cancelled">Cancelled</option>
+                                <option value="no show">No show</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-blue-500 border-b border-blue-100 mb-4 pb-1">4. Travel & Emergency</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        <div class="flex flex-col">
+                            <label for="vehno" class="text-xs font-bold text-gray-500 uppercase mb-1">Vehicle No.</label>
+                            <input type="text" id="vehno" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="destination" class="text-xs font-bold text-gray-500 uppercase mb-1">Next Destination</label>
+                            <input type="text" id="destination" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="guestsource" class="text-xs font-bold text-gray-500 uppercase mb-1">Booking Source</label>
+                            <select id="guestsource" class="px-3 py-2 border border-gray-300 rounded-md bg-white">
+                                 <option value="Walk in">Walk In</option>
+            <option value="Hotel Website">Hotel Website</option>
+            <option value="Booking.com">Booking.com</option>
+            <option value="Expedia">Expedia Group</option>
+            <option value="Airbnd">Airbnd</option>
+             <option value="Trip">Trip</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="kin" class="text-xs font-bold text-gray-500 uppercase mb-1">Next of Kin Name</label>
+                            <input type="text" id="kin" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="kintel" class="text-xs font-bold text-gray-500 uppercase mb-1">Kin Tel Contact</label>
+                            <input type="text" id="kintel" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="flex flex-col">
+                            <label for="purpose" class="text-xs font-bold text-gray-500 uppercase mb-1">Purpose of Visit</label>
+                            <input type="text" id="purpose" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="md:col-span-3 flex flex-col">
+                            <label for="declarations" class="text-xs font-bold text-gray-500 uppercase mb-1">Guest Declarations</label>
+                            <textarea id="declarations" rows="2" class="px-3 py-2 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                        </div>
+                    </div>
+                </section>
+            </form>
+        </div>
+
+        <div class="px-8 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+            <button type="button" onclick="closeBookingModal()" class="px-6 py-2 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-100 transition">
+                Cancel
+            </button>
+            <button type="submit" form="bookingForm" id="saveBookingBtn" class="px-8 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition">
+                Save Booking
+            </button>
+        </div>
+    </div>
+</div>
+    <div id="incidentalChargeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md relative">
+            <span class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800" onclick="closeIncidentalChargeModal()">&times;</span>
+            <h2 class="text-2xl font-bold mb-6 text-blue-600"><i class="fas fa-cash-register"></i> Add Incidental Charge</h2>
+            <form id="incidentalChargeForm">
+                <input type="hidden" id="chargeBookingCustomId">
+                <div class="mb-4">
+                    <label for="chargeGuestName" class="block text-gray-700 font-semibold mb-1"><i class="fas fa-user"></i> Guest Name:</label>
+                    <input type="text" id="chargeGuestName" readonly class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
+                </div>
+                <div class="mb-4">
+                    <label for="chargeRoomNumber" class="block text-gray-700 font-semibold mb-1"><i class="fas fa-door-open"></i> Room Number:</label>
+                    <input type="text" id="chargeRoomNumber" readonly class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
+                </div>
+                <div class="mb-4">
+                    <label for="chargeType" class="block text-gray-700 font-semibold mb-1"><i class="fas fa-cogs"></i> Charge Type:</label>
+                    <select id="chargeType" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select Type</option>
+                        <option value="Bar">Bar</option>
+                        <option value="Restaurant">Restaurant</option>
+                        <option value="Laundry">Laundry</option>
+                        <option value="Spa">Spa</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="chargeDescription" class="block text-gray-700 font-semibold mb-1"><i class="fas fa-info-circle"></i> Description (Optional):</label>
+                    <input type="text" id="chargeDescription" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="mb-6">
+                    <label for="chargeAmount" class="block text-gray-700 font-semibold mb-1"><i class="fas fa-dollar-sign"></i> Amount:</label>
+                    <input type="number" id="chargeAmount" step="0.01" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="text-center">
+                    <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300"><i class="fas fa-plus-circle"></i> Add Charge</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="viewChargesModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-3xl relative max-h-[90vh] overflow-y-auto">
+            <div class="mt-4 flex justify-right">
+        <button type="button" class="bg-gray-300 text-gray-700 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition duration-300" onclick="closeViewChargesModal()">
+          Close
+        </button>
+      </div>
+            <button class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800" onclick="closeViewChargesModal()">&times;</button>
+            <h2 class="text-2xl font-bold mb-6 text-blue-600"><i class="fas fa-file-invoice"></i> Incidental Charges for <span id="viewChargesGuestName" class="font-normal"></span> (Room <span id="viewChargesRoomNumber" class="font-normal"></span>)</h2>
+            <div class="overflow-x-auto">
+                <table id="incidentalChargesTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                            <th class="py-3 px-6 text-left">Type</th>
+                            <th class="py-3 px-6 text-left">Description</th>
+                            <th class="py-3 px-6 text-left">Amount</th>
+                            <th class="py-3 px-6 text-left">Date</th>
+                            <th class="py-3 px-6 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-600 text-sm font-light"></tbody>
+                </table>
+            </div>
+            <div class="mt-6 text-lg font-bold text-right">
+                <p>Total Incidental Charges: <span id="totalIncidentalCharges" class="text-blue-600">0.00</span></p>
+            </div>
+            <button
+  id="payAllChargesBtn"
+  class="btn btn-success"
+  style="margin-top:10px;"
+>
+  Pay All Incidental Charges
+</button>
+
+        </div>
+    </div>
+
+    <div id="receiptModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden print:p-0 print:block print:static">
+    
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-3xl relative max-h-[90vh] overflow-y-auto print:max-w-none print:shadow-none print:rounded-none print:overflow-visible">
+        
+        <span class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800 print:hidden" onclick="closeReceiptModal()">&times;</span>
+        
+        <div class="receipt-content print:p-4">
+            <div class="flex flex-col items-center text-center mb-6">
+                <h2 class="text-2xl font-bold mb-2 text-blue-600" id="receipt-hotel-name">Hotel Name</h2>
+                <h3 class="text-2xl font-bold mb-2 text-blue-600"> Receipt</h3>
+                
+                <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-700 w-full border-b pb-4">
+                    <p class="text-left"><strong>Guest:</strong> <span id="receiptGuestName"></span></p>
+                    <p class="text-right"><strong>Room:</strong> <span id="receiptRoomNumber"></span></p>
+                    <p class="text-left"><strong>Booking ID:</strong> <span id="receiptBookingId"></span></p>
+                    <p class="text-right"><strong>Date:</strong> <span id="receiptPrintDate"></span></p>
+                    <p class="text-left col-span-2"><strong>Stay:</strong> <span id="receiptCheckIn"></span> to <span id="receiptCheckOut"></span></p>
+                </div>
+            </div>
+
+            <h4 class="text-lg font-bold mb-3 text-gray-800 border-l-4 border-blue-600 pl-2">Room Charges</h4>
+            <table class="w-full text-left text-sm mb-6 border-collapse">
+                <thead>
+                    <tr class="bg-gray-100 border-b-2 border-gray-200">
+                        <th class="py-2 px-2">Description</th>
+                        <th class="py-2 px-2 text-center">Nights</th>
+                        <th class="py-2 px-2 text-right">Rate</th>
+                        <th class="py-2 px-2 text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr>
+                        <td class="py-3 px-2">Room Stay</td>
+                        <td id="receiptNights" class="py-3 px-2 text-center"></td>
+                        <td id="receiptAmtPerNight" class="py-3 px-2 text-right"></td>
+                        <td id="receiptRoomTotalDue" class="py-3 px-2 text-right font-semibold"></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4 class="text-lg font-bold mb-3 text-gray-800 border-l-4 border-blue-600 pl-2">Incidental Charges</h4>
+            <table id="receiptIncidentalChargesTable" class="w-full text-left text-sm mb-8 border-collapse">
+                <thead>
+                    <tr class="bg-gray-100 border-b-2 border-gray-200">
+                        <th class="py-2 px-2">Type</th>
+                        <th class="py-2 px-2">Description</th>
+                        <th class="py-2 px-2 text-right">Date</th>
+                        <th class="py-2 px-2 text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 text-gray-600">
+                    </tbody>
+            </table>
+
+            <div class="flex justify-end">
+                <div class="w-full md:w-64 space-y-2 border-t pt-4">
+                    <div class="flex justify-between text-gray-600">
+                        <span>Room Subtotal:</span>
+                        <span id="receiptSubtotalRoom">0.00</span>
+                    </div>
+                    <div class="flex justify-between text-gray-600">
+                        <span>Incidentals:</span>
+                        <span id="receiptSubtotalIncidentals">0.00</span>
+                    </div>
+                    <div class="flex justify-between text-xl font-bold text-black border-t pt-2">
+                        <span>Total Bill:</span>
+                        <span id="receiptTotalBill">0.00</span>
+                    </div>
+                    <div class="flex justify-between text-green-700 font-semibold">
+                        <span>Amount Paid:</span>
+                        <span id="receiptAmountPaid">0.00</span>
+                    </div>
+                    <div class="flex justify-between text-red-600 font-bold border-double border-t-4 mt-2">
+                        <span>Balance Due:</span>
+                        <span id="receiptBalanceDue">0.00</span>
+                    </div>
+                    <p class="text-right text-xs italic text-gray-500 pt-2">Status: <span id="receiptPaymentStatus"></span></p>
+                </div>
+            </div>
+
+            <div class="flex justify-center space-x-4 mt-12 print:hidden">
+                <button class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition" onclick="window.print()">
+                    <i class="fas fa-print"></i> Print Receipt
+                </button>
+                <button class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 transition" onclick="closeReceiptModal()">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <div id="deletionReasonModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg relative">
+            <span class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800" onclick="closeDeletionReasonModal()">&times;</span>
+            <h2 class="text-2xl font-bold mb-4 text-red-600"><i class="fas fa-exclamation-triangle"></i> Provide Reason for Action</h2>
+            <div class="mb-6">
+                <label for="deletionReason" class="block text-gray-700 font-semibold mb-2">Reason:</label>
+                <textarea id="deletionReason" rows="4" required placeholder="Please explain why this action is being performed (e.g., 'Customer cancelled booking', 'Room status changed due to unexpected maintenance')." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
+            </div>
+            <div class="flex justify-end space-x-4">
+                <button class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 transition duration-300" id="confirmDeletionBtn"><i class="fas fa-check-circle"></i> Confirm Action</button>
+                <button class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition duration-300" id="cancelDeletionBtn"><i class="fas fa-times-circle"></i> Cancel</button>
+            </div>
+        </div>
+    </div>
+
+<div id="messageBoxOverlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999] hidden"></div>
+
+<div id="messageBox" class="fixed inset-0 flex items-center justify-center z-[100000] hidden">
+    <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full mx-4 transform transition-all border border-gray-100">
+        <h3 id="messageBoxTitle" class="text-2xl font-bold mb-3 text-gray-900"></h3>
+        <p id="messageBoxContent" class="text-gray-700 leading-relaxed"></p>
+        <div class="flex justify-end mt-6">
+            <button onclick="closeMessageBox()" class="w-full sm:w-auto bg-indigo-600 text-white font-bold py-2 px-8 rounded-lg hover:bg-indigo-700 transition-colors shadow-lg">
+                OK
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="viewBookingModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-10 mx-auto p-6 border w-full max-w-md shadow-2xl rounded-xl bg-white transition-all transform">
+        <div class="flex justify-between items-center border-b pb-3 mb-4">
+            <h3 class="text-xl font-bold text-gray-800">Guest Information</h3>
+            <button onclick="closeViewModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        </div>
+        
+        <div id="viewBookingContent" class="space-y-4">
+            </div>
+
+        <div class="mt-6 flex justify-end">
+            <button onclick="closeViewModal()" class="px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-black transition">Close</button>
+        </div>
+    </div>
+</div>
+
+    <div id="cancelBookingOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] hidden"></div>
+<div id="cancelBookingModal" class="fixed inset-0 flex items-center justify-center z-[10000] hidden">
+    <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full mx-4 transform transition-all">
+        <h3 id="cancelModalTitle" class="text-xl font-bold mb-2 text-red-600">Cancel Booking</h3>
+        <div class="mt-4">
+            <p class="text-gray-600 mb-3 text-sm">Please provide a reason for cancellation:</p>
+            <textarea id="cancelReasonInput" 
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all" 
+                      rows="3" 
+                      placeholder="e.g., Guest changed plans"></textarea>
+        </div>
+        
+        <div class="flex items-center justify-end mt-6 space-x-3">
+            <button onclick="closeCancelModal()" 
+                    class="py-2.5 px-6 rounded-lg text-gray-600 font-semibold hover:bg-gray-100 transition duration-300">
+                Back
+            </button>
+            <button id="confirmCancelBtn" 
+                    class="bg-red-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-red-700 transition duration-300 shadow-md">
+                Confirm Cancellation
+            </button>
+        </div>
+    </div>
+</div>
+    <div id="voidBookingOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] hidden"></div>
+<div id="voidBookingModal" class="fixed inset-0 flex items-center justify-center z-[10000] hidden">
+    <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full mx-4 transform transition-all">
+        <h3 id="voidModalTitle" class="text-xl font-bold mb-2 text-orange-600">Void Booking</h3>
+        <div class="mt-4">
+            <p class="text-gray-600 mb-3 text-sm">Please provide a reason for voiding the stay:</p>
+            <textarea id="voidReasonInput" 
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all" 
+                      rows="3" 
+                      placeholder="e.g., Entry mistake / Clerical error"></textarea>
+        </div>
+        
+        <div class="flex items-center justify-end mt-6 space-x-3">
+            <button onclick="closeVoidModal()" 
+                    class="py-2.5 px-6 rounded-lg text-gray-600 font-semibold hover:bg-gray-100 transition duration-300">
+                Back
+            </button>
+            <button id="confirmVoidBtn" 
+                    class="bg-orange-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-orange-700 transition duration-300 shadow-md">
+                Confirm Void
+            </button>
+        </div>
+    </div>
+</div>
+    
+    
+<!--<div class="fixed bottom-12 left-[20%] z-50 flex items-center justify-center w-16 h-16">
+    
+    <button onclick="toggleSwitchMenu()" id="main-switch-btn" class="relative z-50 bg-indigo-600 hover:bg-indigo-700 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all transform active:scale-95">
+        <span class="text-2xl transition-transform duration-300" id="menu-icon">🔄</span>
+    </button>
+    
+    <div id="available-modules" class="absolute inset-0 flex items-center justify-center">
+        </div>
+</div>-->
+
+<div id="moveRoomModal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center overflow-y-auto z-50 transition-opacity duration-300">
+  <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-transform duration-300 scale-95">
+    
+    <div class="flex justify-between items-center border-b pb-3">
+      <h3 class="text-xl font-semibold text-gray-900">Move Guest to New Room</h3>
+      <button onclick="closeMoveRoomModal()" class="text-gray-400 hover:text-red-600 text-2xl font-bold">&times;</button>
+    </div>
+
+    <div class="mt-4 space-y-4">
+      <div>
+          <p class="text-gray-600 mb-2 font-medium">Select available room:</p>
+          <select id="availableRoomsSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" onchange="updateMovePricePreview()">
+            </select>
+      </div>
+
+      <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+          <div class="flex justify-between items-center mb-2">
+              <span class="text-sm text-blue-800">New Room Rate:</span>
+              <span id="moveRoomBasePriceDisplay" class="font-bold text-blue-900">$0.00</span>
+          </div>
+          <div class="space-y-1">
+              <label class="text-xs text-blue-700 font-bold uppercase">Agreed Rate (Negotiable):</label>
+              <input type="number" id="moveRoomNegotiatedPrice" class="w-full px-3 py-2 border border-blue-200 rounded text-lg font-semibold" placeholder="Enter agreed price">
+              <p class="text-[10px] text-blue-500 italic">This will update the guest's remaining nights' total.</p>
+          </div>
+      </div>
+
+      <div>
+          <label for="moveRoomReason" class="block text-sm font-medium text-gray-700 mb-1">Reason for Move:</label>
+          <textarea 
+            id="moveRoomReason" 
+            rows="2" 
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 placeholder-gray-400 text-sm" 
+            placeholder="e.g., AC malfunction, guest upgrade, etc."></textarea>
+      </div>
+    </div>
+
+    <div class="mt-6 flex justify-end space-x-3">
+      <button onclick="closeMoveRoomModal()" id="cancelMoveBtn" class="px-5 py-2 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300">Cancel</button>
+      <button id="confirmMoveBtn" class="px-5 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-lg">Confirm Move</button>
+    </div>
+  </div>
+</div>
+    
+    <div id="userModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
+            <h3 id="modalTitle" class="text-lg font-semibold">Staff Registration Form</h3>
+            <button onclick="closeUserModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        
+        <div class="p-6">
+
+            <form id="userForm" class="space-y-4" onsubmit="event.preventDefault(); handleSaveUser();">
+                            <input type="hidden" id="staffId" value="">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1" for="staffusername">Full Name / Alias:</label>
+                        <input type="text" id="staffusername" required placeholder="John Doe" 
+                            class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1" for="staffpassword">System Password:</label>
+                        <input type="password" id="staffpassword" placeholder="••••••••" 
+                            class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-1" for="staffrole">Role Assignment:</label>
+                        <select id="staffrole" required class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <option value="">-- Select Role --</option>
+                            <option value="Front office">Front Office</option>
+                            <option value="bar">Bar Staff</option>
+                            <option value="cashier">Cashier</option>
+                            <option value="housekeeper">Housekeeper</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                </div>
+
+<div class="flex justify-end gap-3 mt-6 pt-4 border-t">
+        <button type="button" onclick="closeUserModal()" 
+            class="px-4 py-2 bg-slate-200 rounded-lg hover:bg-slate-300">
+            Close
+        </button>
+ <button type="button" onclick="handleSaveUser()" id="modalSubmitBtn" 
+    class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2">
+    <i id="btnIcon" class="fa-solid fa-save"></i>
+    <span id="btnText">Save Staff</span>
+</button>
+    </div>
+            </form>
+            
+            <p id="userStatusMessage" class="text-center mt-4 font-bold text-blue-500"></p>
+        </div>
+    </div>
+</div>
+
+<div id="edit-inventory-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl p-6 relative">
+    <h2 class="text-xl font-bold text-emerald-600 mb-6">Edit Inventory Item</h2>
+    
+    <form id="edit-inventory-form"  onsubmit="handleUpdateSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <input type="hidden" id="edit-inventory-id">
+      
+      <div class="md:col-span-2">
+        <label for="edit-item" class="block text-sm font-medium text-gray-700">Item:</label>
+        <input type="text" id="edit-item" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-opening" class="block text-sm font-medium text-gray-700">Opening Stock:</label>
+        <input type="number" id="edit-opening" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-purchases" class="block text-sm font-medium text-gray-700">Purchases:</label>
+        <input type="number" id="edit-purchases" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-inventory-sales" class="block text-sm font-medium text-gray-700">Sales (deducted from inventory):</label>
+        <input type="number" id="edit-inventory-sales" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-spoilage" class="block text-sm font-medium text-gray-700">Spoilage:</label>
+        <input type="number" id="edit-spoilage" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+            <div>
+        <label for="edit-spoilage" class="block text-sm font-medium text-gray-700">Buying Price:</label>
+        <input type="number" id="edit-buyingprice" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+            <div>
+        <label for="edit-spoilage" class="block text-sm font-medium text-gray-700">Selling Price:</label>
+        <input type="number" id="edit-sellingprice" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div class="md:col-span-2 flex items-center space-x-3 p-2 bg-gray-50 rounded-md border border-gray-200">
+    <input type="checkbox" id="edit-trackInventory" class="h-5 w-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500">
+    <label for="edit-trackInventory" class="text-sm font-medium text-gray-700">
+        Track Stock Levels 
+        <span class="text-xs text-gray-400 font-normal block">(Uncheck for Kitchen/Restaurant items to allow sales regardless of stock)</span>
+    </label>
+</div>
+      <div class="md:col-span-2 flex justify-end space-x-3 mt-4">
+        <button type="button" onclick="closeEditModal()" class="bg-gray-400 hover:bg-gray-500 text-white py-2 px-4 rounded-lg">Cancel</button>
+<button type="submit" id="edit-inventory-submit-btn"
+    class="relative bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg flex items-center justify-center min-w-[120px]">
+    
+    <span id="edit-inventory-btn-default" class="inline-flex items-center gap-2">
+        <span>Save Changes</span>
+    </span>
+
+    <span id="edit-inventory-btn-loading" class="hidden items-center gap-2"> 
+        <span>Saving...</span>
+        <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+    </span>
+</button>
+
+      </div>
+    </form>
+  </div>
+</div>
+
+
+    <div id="edit-sale-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white w-full max-w-2xl rounded-xl shadow-lg p-6 relative">
+    <h2 class="text-xl font-bold text-emerald-600 mb-4">Edit Sale Record</h2>
+    <form id="edit-sale-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <input type="hidden" id="edit-sale-id">
+       <div>
+  <label for="department-item" class="block text-sm font-medium text-gray-700">Department:</label>
+  <select 
+    id="edit-sale-department" 
+    required 
+    class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+  >
+    <option value="" disabled selected>Select a department...</option>
+    <option value="Bar">Bar</option>
+    <option value="Restaurant">Restaurant</option>
+     </select>
+</div>
+      <div>
+  <label for="sale-item" class="block text-sm font-medium text-gray-700">Item:</label>
+  <input 
+    type="text" 
+    id="edit-sale-item" 
+    list="item-suggestions" 
+    autocomplete="off"
+    placeholder="Type to search..."
+    class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm"
+  >
+  <datalist id="item-suggestions"></datalist>
+</div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Number Sold:</label>
+        <input type="number" id="edit-sale-number" min="1" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Buying Price (BP):</label>
+        <input type="number" id="edit-sale-bp" step="0.01" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Selling Price (SP):</label>
+        <input type="number" id="edit-sale-sp" step="0.01" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+       <div>
+        <label for="edit-sale-date" class="block text-sm font-medium text-gray-700">Date:</label>
+        <input type="date" id="edit-sale-date" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+      <div class="md:col-span-2 flex justify-end space-x-3 mt-4">
+  <button type="button" onclick="closeModal('edit-sale-modal')" class="bg-gray-400 hover:bg-gray-500 text-white py-2 px-4 rounded-lg">Cancel</button>
+  
+  <button type="submit" id="edit-sale-submit-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg flex items-center justify-center">
+    
+    <span id="edit-sale-btn-default" class="flex items-center">
+      <span>Save Changes</span>
+    </span>
+
+    <span id="edit-sale-btn-loading" class="hidden items-center">
+      <span class="mr-2">Saving...</span>
+      <div id="edit-sale-spinner" class="w-4 h-4 border-2 border-white border-t-transparent border-solid rounded-full animate-spin"></div>
+    </span>
+  </button>
+</div>
+    </form>
+  </div>
+</div>
+  
+<!-- Edit Expense Modal -->
+<div id="edit-expense-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white w-full max-w-2xl rounded-xl shadow-lg p-6 relative">
+    <h2 class="text-2xl font-bold mb-4 text-emerald-600">Expenses — Edit</h2>
+    <form id="edit-expense-form" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <input type="hidden" id="edit-expense-id">
+                              <div>
+  <label for="department-item" class="block text-sm font-medium text-gray-700">Department:</label>
+  <select 
+    id="edit-expense-department" 
+    required 
+    class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+  >
+    <option value="" disabled selected>Select a department...</option>
+    <option value="Bar">Bar</option>
+    <option value="Restaurant">Restaurant</option>
+     </select>
+</div>
+
+      
+      <div>
+        <label for="edit-expense-description" class="block text-sm font-medium text-gray-700">Description:</label>
+        <input type="text" id="edit-expense-description" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-expense-amount" class="block text-sm font-medium text-gray-700">Amount:</label>
+        <input type="number" id="edit-expense-amount" step="0.01" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-expense-date" class="block text-sm font-medium text-gray-700">Date:</label>
+        <input type="date" id="edit-expense-date" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-expense-receiptId" class="block text-sm font-medium text-gray-700">Receipt ID:</label>
+        <input type="number" id="edit-expense-receiptId" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+      
+      <div>
+        <label for="edit-expense-source" class="block text-sm font-medium text-gray-700">Source:</label>
+        <input type="text" id="edit-expense-source" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md">
+      </div>
+
+           <div class="md:col-span-2 flex justify-end space-x-3 pt-4">
+  <button type="button" onclick="closeModal('edit-expense-modal')" class="bg-gray-400 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg">
+    Cancel
+  </button>
+  <button type="submit" id="edit-expense-submit-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center">
+    
+    <span id="edit-expense-btn-default" class="flex items-center">
+      <i class="fas fa-save mr-2"></i> <span>Save Changes</span>
+    </span>
+
+    <span id="edit-expense-btn-loading" class="hidden flex items-center">
+      <span class="mr-2">Saving...</span>
+      <div id="edit-expense-spinner" class="w-4 h-4 border-2 border-white border-t-transparent border-solid rounded-full animate-spin"></div>
+    </span>
+  </button>
+</div>
+      
+    </form>
+  </div>
+</div>
+ <div id="delete-confirmation-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-gray-900 opacity-75"></div>
+
+    <div class="flex items-center justify-center min-h-screen p-4">
+        
+        <div class="bg-white rounded-lg shadow-2xl max-w-sm w-full z-10 p-6 transform transition-all scale-100 opacity-100">
+            
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Confirm Deletion</h3>
+            
+            <p class="text-gray-700 mb-6 break-words">
+                Are you sure you want to delete this inventory item? This action cannot be undone.
+            </p>
+
+            <div class="flex justify-end space-x-3">
+                <button id="cancel-delete-btn" type="button" 
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none transition duration-150">
+                    Cancel
+                </button>
+                
+                <button id="confirm-delete-btn" type="button" 
+                    class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+    
+<!-- Edit Cash Modal -->
+<div id="edit-cash-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white w-full max-w-2xl rounded-xl shadow-lg p-6 relative">
+    <h2 class="text-xl font-bold text-emerald-600 mb-4">Edit Cash Record</h2>
+    <form id="edit-cash-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <input type="hidden" id="edit-cash-id">
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Cash At Hand:</label>
+        <input type="number" id="edit-cash-at-hand" step="0.01" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Cash Banked:</label>
+        <input type="number" id="edit-cash-banked" step="0.01" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Cash On Phone:</label>
+        <input type="number" id="edit-cash-on-phone" step="0.01" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Bank Receipt ID:</label>
+        <input type="text" id="edit-bank-receipt-id" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Date:</label>
+        <input type="date" id="edit-cash-date" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+      <div class="md:col-span-2 flex justify-end space-x-3 mt-4">
+  <button type="button" onclick="closeModal('edit-cash-modal')" class="bg-gray-400 hover:bg-gray-500 text-white py-2 px-4 rounded-lg">Cancel</button>
+  
+  <button type="submit" id="edit-cash-submit-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg flex items-center justify-center">
+    
+    <span id="edit-cash-btn-default" class="flex items-center">
+      <span>Save Changes</span>
+    </span>
+
+    <span id="edit-cash-btn-loading" class="hidden items-center">
+      <span class="mr-2">Saving...</span>
+      <div class="w-4 h-4 border-2 border-white border-t-transparent border-solid rounded-full animate-spin"></div>
+    </span>
+  </button>
+</div>
+    </form>
+  </div>
+</div>
+
+    <div id="receipt-print">
+  <div id="receipt-details"></div>
+  <span id="receipt-date"></span>
+</div>
+    <div id="addPaymentModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-xl w-96 p-6 shadow-xl">
+
+    <h2 class="text-lg font-semibold mb-4">Add Payment</h2>
+
+    <input type="hidden" id="paymentBookingId">
+
+    <!-- Balance -->
+    <div class="mb-3">
+      <label class="text-sm text-gray-600">Current Balance</label>
+      <input type="text" id="currentBalance" id="balance"
+             class="border p-2 w-full rounded bg-gray-100" disabled>
+    </div>
+
+    <!-- Amount -->
+    <div class="mb-3">
+      <label class="text-sm text-gray-600">Amount to Add</label>
+      <input type="number" id="paymentAmount" 
+             class="border p-2 w-full rounded" placeholder="Enter amount">
+    </div>
+
+    <!-- Method -->
+    <div class="mb-4">
+      <label class="text-sm text-gray-600">Payment Method</label>
+      <select id="payMethod" class="border p-2 w-full rounded">
+        <option value="">Select method</option>
+        <option value="Cash">Cash</option>
+        <option value="MTN Momo">MTN Momo</option>
+        <option value="Airtel Pay">Airtel Pay</option>
+        <option value="Bank">Bank</option>
+      </select>
+    </div>
+
+    <div class="flex justify-end gap-2">
+      <button onclick="closePaymentModal()" 
+              class="px-4 py-2 bg-gray-400 rounded">
+        Cancel
+      </button>
+      <button onclick="submitPayment()" 
+              class="px-4 py-2 bg-green-600 text-white rounded">
+        Save Payment
+      </button>
+    </div>
+
+  </div>
+</div>
+    
+<script>
+    function toggleDropdown(menuId, arrowId) {
+    const menu = document.getElementById(menuId);
+    const arrow = document.getElementById(arrowId);
+    
+    // Toggle the 'hidden' class
+    menu.classList.toggle('hidden');
+    
+    // Rotate arrow icon
+    arrow.classList.toggle('rotate-180');
+}
+    function toggleInventoryModal(show) {
+    const modal = document.getElementById('inventory-modal');
+    if (show) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        // Optional: Reset form when closing
+        document.getElementById('inventory-form').reset();
+        document.getElementById('inventory-id').value = '';
+    }
+}
+
+// Close modal if user clicks outside of the white box
+window.onclick = function(event) {
+    const modal = document.getElementById('inventory-modal');
+    if (event.target == modal) {
+        toggleInventoryModal(false);
+    }
+}
+    function toggleSaleModal(show) {
+    const modal = document.getElementById('sale-modal');
+    if (show) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        // Pre-fill today's date
+        document.getElementById('sales-date').valueAsDate = new Date();
+    } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.getElementById('sale-form').reset();
+    }
+}
+
+// Close on outside click
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('sale-modal');
+    if (e.target === modal) toggleSaleModal(false);
+});
+
+    function toggleExpenseModal(show) {
+    const modal = document.getElementById('expense-modal');
+    if (show) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        // Default to today's date
+        document.getElementById('expense-date').valueAsDate = new Date();
+    } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.getElementById('expense-form').reset();
+        document.getElementById('expense-id').value = '';
+        document.getElementById('expense-submit-text').innerText = 'Record Expense';
+    }
+}
+
+// Close modal when clicking on the dark backdrop
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('expense-modal');
+    if (e.target === modal) toggleExpenseModal(false);
+});
+
+    function toggleCashModal(show) {
+    const modal = document.getElementById('cash-modal');
+    if (show) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        // Auto-set date to today
+        document.getElementById('cash-date').valueAsDate = new Date();
+    } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.getElementById('cash-journal-form').reset();
+        document.getElementById('cash-journal-id').value = '';
+        document.getElementById('cash-submit-text').innerText = 'Save Cash Entry';
+    }
+}
+
+// Close modal when clicking outside of the content
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('cash-modal');
+    if (e.target === modal) toggleCashModal(false);
+});
+</script>
+    <script src="housekeep.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="script4.js"></script>
+</body>
+</html>
