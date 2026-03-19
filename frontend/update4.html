@@ -1016,89 +1016,168 @@
         </div>
     </div>
 </div>
-            <section  id="settings" class="hidden max-w-6xl mx-auto my-10 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px]">
+<section id="settings" class="max-w-7xl mx-auto my-10 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[750px]">
     
-    <!--<aside class="w-full md:w-64 bg-slate-900/50 border-r border-slate-800 p-6">
-        <h2 class="text-xl font-semibold text-white mb-6 px-2">Settings</h2>
-        <nav class="space-y-1">
-            <a href="#" class="flex items-center space-x-3 p-3 rounded-xl bg-indigo-600/10 text-indigo-400 font-medium">
-                <i class="fas fa-hotel text-sm"></i>
-                <span>Property Profile</span>
+    <!-- Settings Sidebar -->
+    <aside class="w-full md:w-72 bg-slate-900/50 border-r border-slate-800 p-6 flex flex-col">
+        <div class="mb-8 px-2">
+            <h2 class="text-xl font-bold text-white tracking-tight">System Settings</h2>
+            <p class="text-xs text-slate-500 uppercase tracking-widest mt-1">Concierge Portal v1.0</p>
+        </div>
+        
+        <nav class="space-y-1 flex-grow">
+            <!-- 1. General -->
+            <a href="#" class="flex items-center space-x-3 p-3 rounded-xl bg-indigo-600/10 text-indigo-400 font-medium border border-indigo-500/20">
+                <i class="fas fa-hotel w-5 text-center"></i>
+                <span class="text-sm">Property Profile</span>
             </a>
+            <!-- 2. RBAC -->
             <a href="#" class="flex items-center space-x-3 p-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-all">
-                <i class="fas fa-users-cog text-sm"></i>
-                <span>Staff & Roles</span>
+                <i class="fas fa-user-shield w-5 text-center"></i>
+                <span class="text-sm">Users & Permissions</span>
             </a>
+            <!-- 3. Finance -->
             <a href="#" class="flex items-center space-x-3 p-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-all">
-                <i class="fas fa-receipt text-sm"></i>
-                <span>Tax & Billing</span>
+                <i class="fas fa-file-invoice-dollar w-5 text-center"></i>
+                <span class="text-sm">Finance & Tax</span>
             </a>
+            <!-- 4. Hardware -->
             <a href="#" class="flex items-center space-x-3 p-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-all">
-                <i class="fas fa-bell text-sm"></i>
-                <span>Notifications</span>
+                <i class="fas fa-print w-5 text-center"></i>
+                <span class="text-sm">Hardware & POS</span>
+            </a>
+            <!-- 5. Communications -->
+            <a href="#" class="flex items-center space-x-3 p-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-all">
+                <i class="fas fa-envelope-open-text w-5 text-center"></i>
+                <span class="text-sm">Communications</span>
+            </a>
+            <!-- 6. Maintenance -->
+            <a href="#" class="flex items-center space-x-3 p-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-all">
+                <i class="fas fa-database w-5 text-center"></i>
+                <span class="text-sm">System Maintenance</span>
             </a>
         </nav>
-    </aside>-->
+    </aside>
 
-    <div class="flex-grow p-8 bg-slate-900">
-        <div class="mb-8 border-b border-slate-800 pb-6">
-            <h3 class="text-lg font-medium text-white">Property Profile</h3>
-            <p class="text-slate-400 text-sm">Update your hotel's public information and localization settings.</p>
+    <!-- Content Area -->
+    <div class="flex-grow p-8 bg-slate-900 flex flex-col">
+        
+        <!-- Header -->
+        <div class="mb-8 border-b border-slate-800 pb-6 flex justify-between items-end">
+            <div>
+                <h3 class="text-2xl font-semibold text-white">General Configuration</h3>
+                <p class="text-slate-400 text-sm mt-1">Manage property identity, branding, and localization.</p>
+            </div>
+            <span class="text-[10px] bg-slate-800 text-slate-400 px-3 py-1 rounded-full border border-slate-700">Property ID: #UG-4421</span>
         </div>
 
-        <form class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="flex flex-col space-y-2">
-                    <label class="text-sm font-medium text-slate-300">Property Name</label>
-                    <input type="text" placeholder="e.g. Grand Imperial Hotel" 
-                        class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600">
+        <form class="space-y-8 overflow-y-auto pr-2 custom-scrollbar">
+            
+            <!-- Group 1: Identity & Branding -->
+            <div class="space-y-6">
+                <h4 class="text-sm font-semibold text-indigo-400 uppercase tracking-wider">Property Identity</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="flex flex-col space-y-2">
+                        <label class="text-sm font-medium text-slate-300">Hotel/Business Name</label>
+                        <input type="text" value="Grand Imperial Hotel" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600">
+                    </div>
+                    <div class="flex flex-col space-y-2">
+                        <label class="text-sm font-medium text-slate-300">Tax ID (TIN)</label>
+                        <input type="text" placeholder="Enter TIN Number" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                    </div>
                 </div>
 
-                <div class="flex flex-col space-y-2">
-                    <label class="text-sm font-medium text-slate-300">Primary Currency</label>
-                    <select class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
-                        <option>UGX - Ugandan Shilling</option>
-                        <option>USD - US Dollar</option>
-                        <option>KES - Kenyan Shilling</option>
-                    </select>
-                </div>
-
-                <div class="flex flex-col space-y-2">
-                    <label class="text-sm font-medium text-slate-300">Contact Email</label>
-                    <input type="email" placeholder="admin@hotel.com" 
-                        class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600">
-                </div>
-
-                <div class="flex flex-col space-y-2">
-                    <label class="text-sm font-medium text-slate-300">Phone Number</label>
-                    <input type="tel" placeholder="+256..." 
-                        class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600">
+                <!-- Branding: Logo Upload -->
+                <div class="flex flex-col md:flex-row gap-6 items-start">
+                    <div class="flex-grow space-y-2 w-full">
+                        <label class="text-sm font-medium text-slate-300">System Logo</label>
+                        <div class="border-2 border-dashed border-slate-700 rounded-xl p-4 flex flex-col items-center justify-center bg-slate-800/30 hover:bg-slate-800/50 transition-colors cursor-pointer">
+                            <i class="fas fa-cloud-upload-alt text-slate-500 mb-2"></i>
+                            <p class="text-xs text-slate-400">Click to upload PNG or JPG (Max 2MB)</p>
+                        </div>
+                    </div>
+                    <div class="flex-grow space-y-2 w-full">
+                        <label class="text-sm font-medium text-slate-300">Invoice/PDF Branding</label>
+                        <div class="border-2 border-dashed border-slate-700 rounded-xl p-4 flex flex-col items-center justify-center bg-slate-800/30 hover:bg-slate-800/50 transition-colors cursor-pointer">
+                            <i class="fas fa-file-invoice text-slate-500 mb-2"></i>
+                            <p class="text-xs text-slate-400">High-res logo for receipts</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="flex flex-col space-y-2">
-                <label class="text-sm font-medium text-slate-300">Physical Address</label>
-                <textarea rows="3" placeholder="Street, City, Country" 
-                    class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600"></textarea>
+            <!-- Group 2: Localization -->
+            <div class="pt-6 border-t border-slate-800 space-y-6">
+                <h4 class="text-sm font-semibold text-indigo-400 uppercase tracking-wider">Localization</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="flex flex-col space-y-2">
+                        <label class="text-sm font-medium text-slate-300">Base Currency</label>
+                        <select class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option>UGX (Ugandan Shilling)</option>
+                            <option>USD (US Dollar)</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col space-y-2">
+                        <label class="text-sm font-medium text-slate-300">Time Zone</label>
+                        <select class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option>(GMT+03:00) Nairobi/Kampala</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col space-y-2">
+                        <label class="text-sm font-medium text-slate-300">Date Format</label>
+                        <select class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option>DD/MM/YYYY</option>
+                            <option>MM/DD/YYYY</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            <div class="pt-4 space-y-4">
-                <div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
-                    <div>
-                        <p class="text-sm font-medium text-white">Enable Automatic Backups</p>
-                        <p class="text-xs text-slate-500">Secure your database every 24 hours.</p>
+            <!-- Group 3: Global System Health Toggles -->
+            <div class="pt-6 border-t border-slate-800 space-y-4">
+                <h4 class="text-sm font-semibold text-indigo-400 uppercase tracking-wider">System Preferences</h4>
+                
+                <!-- Notification Alert -->
+                <div class="flex items-center justify-between p-4 bg-indigo-500/5 rounded-xl border border-indigo-500/10">
+                    <div class="flex items-center space-x-4">
+                        <div class="p-3 bg-indigo-600/20 rounded-lg text-indigo-400">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-white">High Value Void Alerts</p>
+                            <p class="text-xs text-slate-500">Notify manager if a void exceeds 100,000 UGX.</p>
+                        </div>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" checked class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                    </label>
+                </div>
+
+                <!-- Backup Switch -->
+                <div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
+                    <div class="flex items-center space-x-4">
+                        <div class="p-3 bg-slate-700 rounded-lg text-slate-400">
+                            <i class="fas fa-history"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-white">Daily Cloud Backup</p>
+                            <p class="text-xs text-slate-500">Automated secure backup at 02:00 AM.</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" checked class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                     </label>
                 </div>
             </div>
 
-            <div class="pt-6 border-t border-slate-800 flex justify-end space-x-4">
-                <button type="button" class="px-6 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors">Discard</button>
-                <button type="submit" class="px-6 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-lg shadow-indigo-500/20 transition-all active:scale-95">
-                    Save Changes
+            <!-- Form Actions -->
+            <div class="pt-8 mt-4 border-t border-slate-800 flex justify-end items-center space-x-4">
+                <span class="text-xs text-slate-500 italic mr-auto">Last updated: Today at 10:45 AM</span>
+                <button type="button" class="px-6 py-2.5 text-sm font-medium text-slate-400 hover:text-white transition-colors">Discard changes</button>
+                <button type="submit" class="px-8 py-2.5 text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95">
+                    Save Configuration
                 </button>
             </div>
         </form>
