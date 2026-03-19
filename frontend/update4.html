@@ -339,43 +339,10 @@
                     </div>
                     <i id="booking-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
                 </button>
-                <ul id="booking-menu" class="hidden pl-14 space-y-1">
-                    <li id="nav-booking"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Reservations</a></li>
+                <ul id="booking-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
+                    <li id="nav-booking"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Booking Management</a></li>
                     <li id="nav-calendar"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Calendar</a></li>
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Check-in/out</a></li>
-                </ul>
-            </li>
-
-            <li class="space-y-1">
-                <button onclick="toggleDropdown('revenue-menu', 'rev-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <i class="fas fa-hand-holding-usd text-slate-400 group-hover:text-white"></i>
-                        </div>
-                        <span class="ml-4 font-medium text-[15px]">Revenue</span>
-                    </div>
-                    <i id="rev-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
-                </button>
-                <ul id="revenue-menu" class="hidden pl-14 space-y-1">
-                    <li id="nav-inventory"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Rates & Pricing</a></li>
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Rate Plans</a></li>
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Availability</a></li>
-                </ul>
-            </li>
-
-            <li class="space-y-1">
-                <button onclick="toggleDropdown('dist-menu', 'dist-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <i class="fas fa-network-wired text-slate-400 group-hover:text-white"></i>
-                        </div>
-                        <span class="ml-4 font-medium text-[15px]">Distribution</span>
-                    </div>
-                    <i id="dist-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
-                </button>
-                <ul id="dist-menu" class="hidden pl-14 space-y-1">
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Channel Manager</a></li>
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">OTA Integrations</a></li>
+                    <li id="nav-inventory"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Inventory & Pricing</a></li>
                 </ul>
             </li>
 
@@ -389,10 +356,9 @@
                     </div>
                     <i id="housekeeping-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
                 </button>
-                <ul id="housekeeping-menu" class="hidden pl-14 space-y-1">
+                <ul id="housekeeping-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
                     <li id="nav-housekeeping"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Housekeeping</a></li>
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Maintenance</a></li>
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Room Status</a></li>
+                    <li id="nav-housekeepingreports"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Housekeeping Reports</a></li>
                 </ul>
             </li>
 
@@ -406,60 +372,37 @@
                     </div>
                     <i id="pos-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
                 </button>
-                <ul id="pos-menu" class="hidden pl-14 space-y-1">
-                    <li id="nav-posinventory"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">POS</a></li>
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Inventory</a></li>
-                    <li id="nav-kds"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">KDS</a></li>
-                </ul>
-            </li>
-
-            <li class="space-y-1">
-                <button onclick="toggleDropdown('finance-menu', 'fin-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <i class="fas fa-file-invoice-dollar text-slate-400 group-hover:text-white"></i>
-                        </div>
-                        <span class="ml-4 font-medium text-[15px]">Finance</span>
-                    </div>
-                    <i id="fin-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
-                </button>
-                <ul id="finance-menu" class="hidden pl-14 space-y-1">
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Payments</a></li>
+                <ul id="pos-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
+                    <li id="nav-posinventory"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Inventory</a></li>
+                    <li id="nav-sales"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Sales</a></li>
                     <li id="nav-expenses"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Expenses</a></li>
-                    <li id="nav-cash"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Invoices</a></li>
+                    <li id="nav-cash"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Cash Management</a></li>
                 </ul>
             </li>
 
-            <li class="space-y-1">
-                <button onclick="toggleDropdown('guest-menu', 'gst-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <i class="fas fa-user-friends text-slate-400 group-hover:text-white"></i>
-                        </div>
-                        <span class="ml-4 font-medium text-[15px]">Guests</span>
+            <li id="nav-kds">
+                <a href="#" class="flex items-center group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                    <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                        <i class="fas fa-list-check text-slate-400 group-hover:text-white"></i>
                     </div>
-                    <i id="gst-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
-                </button>
-                <ul id="guest-menu" class="hidden pl-14 space-y-1">
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">CRM</a></li>
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Guest History</a></li>
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Messaging</a></li>
-                </ul>
+                    <span class="ml-4 font-medium text-[15px]">Kitchen Display System</span>
+                </a>
             </li>
 
             <li class="space-y-1">
-                <button onclick="toggleDropdown('analytics-menu', 'ana-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                <button onclick="toggleDropdown('reports-menu', 'rep-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
                     <div class="flex items-center">
                         <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
                             <i class="fas fa-chart-bar text-slate-400 group-hover:text-white"></i>
                         </div>
                         <span class="ml-4 font-medium text-[15px]">Analytics</span>
                     </div>
-                    <i id="ana-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+                    <i id="rep-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
                 </button>
-                <ul id="analytics-menu" class="hidden pl-14 space-y-1">
-                    <li id="nav-reports"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Reports</a></li>
-                    <li id="nav-salereport"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">KPIs</a></li>
+                <ul id="reports-menu" class="hidden pl-14 space-y-1">
+                    <li id="nav-reports"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Front Office Reports</a></li>
+                    <li id="nav-posreports"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Room Charge Reports</a></li>
+                    <li id="nav-salereport"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Sale & Expense Reports</a></li>
                 </ul>
             </li>
 
@@ -474,25 +417,8 @@
                     <i id="adm-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
                 </button>
                 <ul id="admin-menu" class="hidden pl-14 space-y-1">
-                    <li id="nav-staff"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Staff</a></li>
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Roles</a></li>
+                    <li id="nav-staff"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Staff Management</a></li>
                     <li id="nav-audit-logs"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Audit Logs</a></li>
-                </ul>
-            </li>
-
-            <li class="space-y-1">
-                <button onclick="toggleDropdown('system-menu', 'sys-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <i class="fas fa-cog text-slate-400 group-hover:text-white"></i>
-                        </div>
-                        <span class="ml-4 font-medium text-[15px]">System</span>
-                    </div>
-                    <i id="sys-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
-                </button>
-                <ul id="system-menu" class="hidden pl-14 space-y-1">
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Settings</a></li>
-                    <li><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Integrations</a></li>
                 </ul>
             </li>
 
