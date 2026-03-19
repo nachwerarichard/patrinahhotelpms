@@ -3239,13 +3239,13 @@ app.post('/login', async (req, res) => {
 
         // 3. Generate Token (Base64)
         const authToken = Buffer.from(`${username}:${password}`).toString('base64');
-
-        // 4. Clean Success Response (Removed hotelId requirement)
-        res.status(200).json({ 
-            token: authToken, 
-            username: user.username, 
-            role: user.role
-        });
+res.status(200).json({ 
+    token: authToken, 
+    user: {             // Wrap in a 'user' object to match your frontend 'data.user.role'
+        username: user.username, 
+        role: user.role 
+    }
+});
 
     } catch (err) {
         // Detailed logging to debug that 500 error
