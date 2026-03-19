@@ -1016,172 +1016,171 @@
         </div>
     </div>
 </div>
-<section id="settings" class="max-w-7xl mx-auto my-10 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[750px]">
+<section id="settings" class="max-w-5xl mx-auto my-10 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col min-h-[850px]">
     
-    <!-- Settings Sidebar -->
-    <aside class="w-full md:w-72 bg-slate-900/50 border-r border-slate-800 p-6 flex flex-col">
-        <div class="mb-8 px-2">
-            <h2 class="text-xl font-bold text-white tracking-tight">System Settings</h2>
-            <p class="text-xs text-slate-500 uppercase tracking-widest mt-1">Concierge Portal v1.0</p>
+    <!-- Unified Header -->
+    <div class="p-8 border-b border-slate-800 bg-slate-900/50 sticky top-0 z-10 backdrop-blur-md flex justify-between items-center">
+        <div>
+            <h2 class="text-2xl font-bold text-white tracking-tight">System Configuration</h2>
+            <p class="text-slate-400 text-sm">Manage all aspects of ConciergePortal from one place.</p>
         </div>
-        
-        <nav class="space-y-1 flex-grow">
-            <!-- 1. General -->
-            <a href="#" class="flex items-center space-x-3 p-3 rounded-xl bg-indigo-600/10 text-indigo-400 font-medium border border-indigo-500/20">
-                <i class="fas fa-hotel w-5 text-center"></i>
-                <span class="text-sm">Property Profile</span>
-            </a>
-            <!-- 2. RBAC -->
-            <a href="#" class="flex items-center space-x-3 p-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-all">
-                <i class="fas fa-user-shield w-5 text-center"></i>
-                <span class="text-sm">Users & Permissions</span>
-            </a>
-            <!-- 3. Finance -->
-            <a href="#" class="flex items-center space-x-3 p-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-all">
-                <i class="fas fa-file-invoice-dollar w-5 text-center"></i>
-                <span class="text-sm">Finance & Tax</span>
-            </a>
-            <!-- 4. Hardware -->
-            <a href="#" class="flex items-center space-x-3 p-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-all">
-                <i class="fas fa-print w-5 text-center"></i>
-                <span class="text-sm">Hardware & POS</span>
-            </a>
-            <!-- 5. Communications -->
-            <a href="#" class="flex items-center space-x-3 p-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-all">
-                <i class="fas fa-envelope-open-text w-5 text-center"></i>
-                <span class="text-sm">Communications</span>
-            </a>
-            <!-- 6. Maintenance -->
-            <a href="#" class="flex items-center space-x-3 p-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-all">
-                <i class="fas fa-database w-5 text-center"></i>
-                <span class="text-sm">System Maintenance</span>
-            </a>
-        </nav>
-    </aside>
+        <div class="flex space-x-3">
+            <button type="button" class="px-5 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors">Discard changes</button>
+            <button type="submit" form="global-settings-form" class="px-6 py-2 text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-lg shadow-indigo-500/20 transition-all active:scale-95">
+                Save All Settings
+            </button>
+        </div>
+    </div>
 
-    <!-- Content Area -->
-    <div class="flex-grow p-8 bg-slate-900 flex flex-col">
+    <!-- Main Content Form -->
+    <form id="global-settings-form" class="p-8 space-y-16 overflow-y-auto max-h-[700px] custom-scrollbar">
         
-        <!-- Header -->
-        <div class="mb-8 border-b border-slate-800 pb-6 flex justify-between items-end">
-            <div>
-                <h3 class="text-2xl font-semibold text-white">General Configuration</h3>
-                <p class="text-slate-400 text-sm mt-1">Manage property identity, branding, and localization.</p>
+        <!-- 1. General Property Configuration -->
+        <div class="space-y-6">
+            <div class="flex items-center space-x-3 border-b border-slate-800 pb-4">
+                <div class="w-10 h-10 rounded-lg bg-indigo-600/20 flex items-center justify-center text-indigo-400">
+                    <i class="fas fa-hotel"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-white">1. General Property Configuration</h3>
             </div>
-            <span class="text-[10px] bg-slate-800 text-slate-400 px-3 py-1 rounded-full border border-slate-700">Property ID: #UG-4421</span>
-        </div>
-
-        <form class="space-y-8 overflow-y-auto pr-2 custom-scrollbar">
             
-            <!-- Group 1: Identity & Branding -->
-            <div class="space-y-6">
-                <h4 class="text-sm font-semibold text-indigo-400 uppercase tracking-wider">Property Identity</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="flex flex-col space-y-2">
-                        <label class="text-sm font-medium text-slate-300">Hotel/Business Name</label>
-                        <input type="text" value="Grand Imperial Hotel" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600">
-                    </div>
-                    <div class="flex flex-col space-y-2">
-                        <label class="text-sm font-medium text-slate-300">Tax ID (TIN)</label>
-                        <input type="text" placeholder="Enter TIN Number" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
-                    </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="flex flex-col space-y-2">
+                    <label class="text-sm font-medium text-slate-400">Hotel Name</label>
+                    <input type="text" value="Grand Imperial Hotel" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
                 </div>
-
-                <!-- Branding: Logo Upload -->
-                <div class="flex flex-col md:flex-row gap-6 items-start">
-                    <div class="flex-grow space-y-2 w-full">
-                        <label class="text-sm font-medium text-slate-300">System Logo</label>
-                        <div class="border-2 border-dashed border-slate-700 rounded-xl p-4 flex flex-col items-center justify-center bg-slate-800/30 hover:bg-slate-800/50 transition-colors cursor-pointer">
-                            <i class="fas fa-cloud-upload-alt text-slate-500 mb-2"></i>
-                            <p class="text-xs text-slate-400">Click to upload PNG or JPG (Max 2MB)</p>
+                <div class="flex flex-col space-y-2">
+                    <label class="text-sm font-medium text-slate-400">Tax ID (TIN)</label>
+                    <input type="text" placeholder="Enter TIN Number" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="flex flex-col space-y-2 md:col-span-2">
+                    <label class="text-sm font-medium text-slate-400">Branding Logos</label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="border-2 border-dashed border-slate-700 rounded-xl p-6 text-center bg-slate-800/30 hover:bg-slate-800/50 transition-all cursor-pointer">
+                            <i class="fas fa-image text-slate-500 mb-2"></i>
+                            <p class="text-xs text-slate-400">Dashboard Logo (PNG)</p>
                         </div>
-                    </div>
-                    <div class="flex-grow space-y-2 w-full">
-                        <label class="text-sm font-medium text-slate-300">Invoice/PDF Branding</label>
-                        <div class="border-2 border-dashed border-slate-700 rounded-xl p-4 flex flex-col items-center justify-center bg-slate-800/30 hover:bg-slate-800/50 transition-colors cursor-pointer">
-                            <i class="fas fa-file-invoice text-slate-500 mb-2"></i>
-                            <p class="text-xs text-slate-400">High-res logo for receipts</p>
+                        <div class="border-2 border-dashed border-slate-700 rounded-xl p-6 text-center bg-slate-800/30 hover:bg-slate-800/50 transition-all cursor-pointer">
+                            <i class="fas fa-file-pdf text-slate-500 mb-2"></i>
+                            <p class="text-xs text-slate-400">Invoice Branding (High-Res)</p>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Group 2: Localization -->
-            <div class="pt-6 border-t border-slate-800 space-y-6">
-                <h4 class="text-sm font-semibold text-indigo-400 uppercase tracking-wider">Localization</h4>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="flex flex-col space-y-2">
-                        <label class="text-sm font-medium text-slate-300">Base Currency</label>
-                        <select class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option>UGX (Ugandan Shilling)</option>
-                            <option>USD (US Dollar)</option>
-                        </select>
+        <!-- 2. User & Access Management (RBAC) -->
+        <div class="space-y-6">
+            <div class="flex items-center space-x-3 border-b border-slate-800 pb-4">
+                <div class="w-10 h-10 rounded-lg bg-emerald-600/20 flex items-center justify-center text-emerald-400">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-white">2. User & Access Management</h3>
+            </div>
+            
+            <div class="bg-slate-800/40 rounded-xl p-6 border border-slate-800">
+                <p class="text-sm font-medium text-slate-300 mb-4 text-indigo-400 uppercase tracking-tighter">Permission Matrix Quick-Toggles</p>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between py-2 border-b border-slate-800/50">
+                        <span class="text-sm text-slate-300">Allow Receptionists to issue refunds</span>
+                        <input type="checkbox" class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500">
                     </div>
-                    <div class="flex flex-col space-y-2">
-                        <label class="text-sm font-medium text-slate-300">Time Zone</label>
-                        <select class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option>(GMT+03:00) Nairobi/Kampala</option>
-                        </select>
-                    </div>
-                    <div class="flex flex-col space-y-2">
-                        <label class="text-sm font-medium text-slate-300">Date Format</label>
-                        <select class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option>DD/MM/YYYY</option>
-                            <option>MM/DD/YYYY</option>
-                        </select>
+                    <div class="flex items-center justify-between py-2">
+                        <span class="text-sm text-slate-300">Allow Managers to delete audit logs</span>
+                        <input type="checkbox" class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500">
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Group 3: Global System Health Toggles -->
-            <div class="pt-6 border-t border-slate-800 space-y-4">
-                <h4 class="text-sm font-semibold text-indigo-400 uppercase tracking-wider">System Preferences</h4>
-                
-                <!-- Notification Alert -->
-                <div class="flex items-center justify-between p-4 bg-indigo-500/5 rounded-xl border border-indigo-500/10">
-                    <div class="flex items-center space-x-4">
-                        <div class="p-3 bg-indigo-600/20 rounded-lg text-indigo-400">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-white">High Value Void Alerts</p>
-                            <p class="text-xs text-slate-500">Notify manager if a void exceeds 100,000 UGX.</p>
-                        </div>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" checked class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                    </label>
+        <!-- 3. Financial & Tax Settings -->
+        <div class="space-y-6">
+            <div class="flex items-center space-x-3 border-b border-slate-800 pb-4">
+                <div class="w-10 h-10 rounded-lg bg-amber-600/20 flex items-center justify-center text-amber-400">
+                    <i class="fas fa-file-invoice-dollar"></i>
                 </div>
-
-                <!-- Backup Switch -->
-                <div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
-                    <div class="flex items-center space-x-4">
-                        <div class="p-3 bg-slate-700 rounded-lg text-slate-400">
-                            <i class="fas fa-history"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-white">Daily Cloud Backup</p>
-                            <p class="text-xs text-slate-500">Automated secure backup at 02:00 AM.</p>
-                        </div>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" checked class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                    </label>
+                <h3 class="text-lg font-semibold text-white">3. Financial & Tax Settings</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="flex flex-col space-y-2">
+                    <label class="text-sm font-medium text-slate-400">VAT Percentage (%)</label>
+                    <input type="number" value="18" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex flex-col space-y-2">
+                    <label class="text-sm font-medium text-slate-400">Fiscal Year End</label>
+                    <input type="date" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex flex-col space-y-2">
+                    <label class="text-sm font-medium text-slate-400">Payment API (M-Pesa/Stripe)</label>
+                    <input type="password" value="********" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
             </div>
+        </div>
 
-            <!-- Form Actions -->
-            <div class="pt-8 mt-4 border-t border-slate-800 flex justify-end items-center space-x-4">
-                <span class="text-xs text-slate-500 italic mr-auto">Last updated: Today at 10:45 AM</span>
-                <button type="button" class="px-6 py-2.5 text-sm font-medium text-slate-400 hover:text-white transition-colors">Discard changes</button>
-                <button type="submit" class="px-8 py-2.5 text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95">
-                    Save Configuration
+        <!-- 4. Hardware & Integration -->
+        <div class="space-y-6">
+            <div class="flex items-center space-x-3 border-b border-slate-800 pb-4">
+                <div class="w-10 h-10 rounded-lg bg-blue-600/20 flex items-center justify-center text-blue-400">
+                    <i class="fas fa-print"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-white">4. Hardware & POS Integration</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                    <label class="text-xs font-bold text-slate-500 uppercase">Kitchen Printer IP</label>
+                    <input type="text" placeholder="192.168.1.50" class="w-full bg-transparent border-b border-slate-700 text-white py-2 outline-none focus:border-indigo-500 transition-colors">
+                </div>
+                <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                    <label class="text-xs font-bold text-slate-500 uppercase">Bar Printer IP</label>
+                    <input type="text" placeholder="192.168.1.51" class="w-full bg-transparent border-b border-slate-700 text-white py-2 outline-none focus:border-indigo-500 transition-colors">
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Automated Communications -->
+        <div class="space-y-6">
+            <div class="flex items-center space-x-3 border-b border-slate-800 pb-4">
+                <div class="w-10 h-10 rounded-lg bg-pink-600/20 flex items-center justify-center text-pink-400">
+                    <i class="fas fa-envelope-open-text"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-white">5. Automated Communications</h3>
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label class="text-sm font-medium text-slate-400">Booking Confirmation Email Template</label>
+                <textarea rows="4" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Dear [Guest Name], your booking is confirmed..."></textarea>
+            </div>
+        </div>
+
+        <!-- 6. System Health & Maintenance -->
+        <div class="space-y-6">
+            <div class="flex items-center space-x-3 border-b border-slate-800 pb-4">
+                <div class="w-10 h-10 rounded-lg bg-red-600/20 flex items-center justify-center text-red-400">
+                    <i class="fas fa-database"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-white">6. System Health & Maintenance</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="flex items-center justify-between p-4 bg-slate-800/30 rounded-xl border border-slate-800">
+                    <div>
+                        <p class="text-sm font-medium text-white">Audit Log Retention</p>
+                        <p class="text-xs text-slate-500">How long history is stored.</p>
+                    </div>
+                    <select class="bg-slate-700 text-white text-xs rounded-md p-1 outline-none border-none">
+                        <option>90 Days</option>
+                        <option>1 Year</option>
+                        <option>Forever</option>
+                    </select>
+                </div>
+                <button type="button" class="flex items-center justify-center space-x-2 p-4 bg-indigo-600/10 border border-indigo-600/30 text-indigo-400 rounded-xl hover:bg-indigo-600 hover:text-white transition-all">
+                    <i class="fas fa-cloud-download-alt"></i>
+                    <span class="text-sm font-bold">Trigger Manual Backup</span>
                 </button>
             </div>
-        </form>
-    </div>
+        </div>
+
+        <!-- Footer spacing -->
+        <div class="h-10"></div>
+    </form>
 </section>
 <section id="kds" class="section bg-slate-900 p-6 rounded-2xl shadow-2xl mb-8 hidden min-h-[80vh]">
     <div class="flex justify-between items-center mb-8 border-b border-slate-700 pb-6">
