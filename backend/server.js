@@ -3218,42 +3218,38 @@ app.post('/logout', auth, async (req, res) => {
 });
 
 
-app.post('/login', async (req, res) => {
+app.post('/api/login', async (req, res) => {
+    // 1. Check if the database is actually connected before querying
+    if (mongoose.connection.readyState !== 1) {
+        return res.status(503).json({ 
+            error: "Database Connection Error", 
+            message: "The server cannot reach MongoDB. Please check Atlas IP whitelisting." 
+        });
+    }
+
     const { username, password } = req.body;
 
     try {
-        // Find user by username only
         const user = await User.findOne({ username });
 
-        // 1. Check if user exists and password matches
         if (!user || user.password !== password) {
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
-        // 2. Strict Role Check: Only allow 'super-admin'
         if (user.role !== 'super-admin') {
-            return res.status(403).json({ 
-                error: 'Access denied. This portal is reserved for Super-Admins only.' 
-            });
+            return res.status(403).json({ error: 'Access denied. Super-Admins only.' });
         }
 
-        // 3. Generate Token (Base64)
         const authToken = Buffer.from(`${username}:${password}`).toString('base64');
-res.status(200).json({ 
-    token: authToken, 
-    user: {             // Wrap in a 'user' object to match your frontend 'data.user.role'
-        username: user.username, 
-        role: user.role 
-    }
-});
+        
+        res.status(200).json({ 
+            token: authToken, 
+            user: { username: user.username, role: user.role } 
+        });
 
     } catch (err) {
-        // Detailed logging to debug that 500 error
         console.error("Super-Admin Login Error Detail:", err); 
-        res.status(500).json({ 
-            error: 'Internal server error', 
-            message: err.message 
-        });
+        res.status(500).json({ error: 'Internal server error', message: err.message });
     }
 });
 
