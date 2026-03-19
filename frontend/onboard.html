@@ -122,27 +122,39 @@
         function showMessage(msg) { alert(msg); }
 
         // --- AUTH ---
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('loginUser').value;
-            const password = document.getElementById('loginPass').value;
-            
-            try {
-                const response = await fetch(`${API_BASE}/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                const data = await response.json();
-                
-                if (response.ok && data.user.role === 'super-admin') {
-                    localStorage.setItem('superToken', data.token);
-                    initDashboard();
-                } else {
-                    showMessage("Access Denied: Super Admin only.");
-                }
-            } catch (err) { showMessage("Server error."); }
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('loginUser').value;
+    const password = document.getElementById('loginPass').value;
+    
+    try {
+        const response = await fetch(`${API_BASE}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
         });
+
+        const data = await response.json();
+        
+        // Check if the request was successful
+        if (!response.ok) {
+            return showMessage(data.error || "Login failed");
+        }
+
+        // Check if data.user exists before checking role
+        if (data.user && data.user.role === 'super-admin') {
+            localStorage.setItem('superToken', data.token);
+            // Optional: Store the role/user too
+            localStorage.setItem('role', data.user.role);
+            initDashboard();
+        } else {
+            showMessage("Access Denied: Super Admin only.");
+        }
+    } catch (err) { 
+        console.error(err);
+        showMessage("Connection error. Is the server awake?"); 
+    }
+});
 
         function initDashboard() {
             document.getElementById('loginSection').classList.add('hidden');
