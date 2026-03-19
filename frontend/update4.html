@@ -1016,170 +1016,149 @@
         </div>
     </div>
 </div>
-<section id="settings" class="max-w-5xl mx-auto my-10 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col min-h-[850px]">
+<section id="settings" class="max-w-6xl mx-auto my-10 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden flex flex-col min-h-[850px]">
     
-    <!-- Unified Header -->
-    <div class="p-8 border-b border-slate-800 bg-slate-900/50 sticky top-0 z-10 backdrop-blur-md flex justify-between items-center">
+    <!-- Unified Header (Sticky) -->
+    <div class="p-8 border-b border-slate-100 bg-white/90 sticky top-0 z-10 backdrop-blur-md flex justify-between items-center">
         <div>
-            <h2 class="text-2xl font-bold text-white tracking-tight">System Configuration</h2>
-            <p class="text-slate-400 text-sm">Manage all aspects of ConciergePortal from one place.</p>
+            <h2 class="text-2xl font-bold text-slate-900 tracking-tight">System Configuration</h2>
+            <p class="text-slate-500 text-sm">Manage all aspects of ConciergePortal from one place.</p>
         </div>
         <div class="flex space-x-3">
-            <button type="button" class="px-5 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors">Discard changes</button>
-            <button type="submit" form="global-settings-form" class="px-6 py-2 text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-lg shadow-indigo-500/20 transition-all active:scale-95">
+            <button type="button" class="px-5 py-2 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">Discard changes</button>
+            <button type="submit" form="global-settings-form" class="px-6 py-2 text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-md shadow-indigo-200 transition-all active:scale-95">
                 Save All Settings
             </button>
         </div>
     </div>
 
-    <!-- Main Content Form -->
-    <form id="global-settings-form" class="p-8 space-y-16 overflow-y-auto max-h-[700px] custom-scrollbar">
+    <!-- Main Content Form: Grid Layout -->
+    <form id="global-settings-form" class="p-8 grid grid-cols-1 lg:grid-cols-2 gap-8 overflow-y-auto max-h-[750px] bg-slate-50/50 custom-scrollbar">
         
-        <!-- 1. General Property Configuration -->
-        <div class="space-y-6">
-            <div class="flex items-center space-x-3 border-b border-slate-800 pb-4">
-                <div class="w-10 h-10 rounded-lg bg-indigo-600/20 flex items-center justify-center text-indigo-400">
+        <!-- 1. General Property Configuration (Spans 2 columns for prominence) -->
+        <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+            <div class="flex items-center space-x-3 border-b border-slate-100 pb-4">
+                <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
                     <i class="fas fa-hotel"></i>
                 </div>
-                <h3 class="text-lg font-semibold text-white">1. General Property Configuration</h3>
+                <h3 class="text-lg font-bold text-slate-800">1. General Property Configuration</h3>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="flex flex-col space-y-2">
-                    <label class="text-sm font-medium text-slate-400">Hotel Name</label>
-                    <input type="text" value="Grand Imperial Hotel" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <label class="text-sm font-semibold text-slate-600">Hotel Name</label>
+                    <input type="text" value="Grand Imperial Hotel" class="bg-white border border-slate-300 text-slate-900 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                 </div>
                 <div class="flex flex-col space-y-2">
-                    <label class="text-sm font-medium text-slate-400">Tax ID (TIN)</label>
-                    <input type="text" placeholder="Enter TIN Number" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <label class="text-sm font-semibold text-slate-600">Tax ID (TIN)</label>
+                    <input type="text" placeholder="Enter TIN Number" class="bg-white border border-slate-300 text-slate-900 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
                 </div>
                 <div class="flex flex-col space-y-2 md:col-span-2">
-                    <label class="text-sm font-medium text-slate-400">Branding Logos</label>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="border-2 border-dashed border-slate-700 rounded-xl p-6 text-center bg-slate-800/30 hover:bg-slate-800/50 transition-all cursor-pointer">
-                            <i class="fas fa-image text-slate-500 mb-2"></i>
-                            <p class="text-xs text-slate-400">Dashboard Logo (PNG)</p>
+                        <div class="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center bg-slate-50/50 hover:bg-white hover:border-indigo-300 transition-all cursor-pointer group">
+                            <i class="fas fa-image text-slate-400 group-hover:text-indigo-500 mb-2"></i>
+                            <p class="text-xs font-medium text-slate-500">Dashboard Logo</p>
                         </div>
-                        <div class="border-2 border-dashed border-slate-700 rounded-xl p-6 text-center bg-slate-800/30 hover:bg-slate-800/50 transition-all cursor-pointer">
-                            <i class="fas fa-file-pdf text-slate-500 mb-2"></i>
-                            <p class="text-xs text-slate-400">Invoice Branding (High-Res)</p>
+                        <div class="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center bg-slate-50/50 hover:bg-white hover:border-indigo-300 transition-all cursor-pointer group">
+                            <i class="fas fa-file-pdf text-slate-400 group-hover:text-indigo-500 mb-2"></i>
+                            <p class="text-xs font-medium text-slate-500">Invoice Branding</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 2. User & Access Management (RBAC) -->
-        <div class="space-y-6">
-            <div class="flex items-center space-x-3 border-b border-slate-800 pb-4">
-                <div class="w-10 h-10 rounded-lg bg-emerald-600/20 flex items-center justify-center text-emerald-400">
+        <!-- 2. User & Access Management -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6 flex flex-col justify-between">
+            <div class="flex items-center space-x-3 border-b border-slate-100 pb-4">
+                <div class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
                     <i class="fas fa-user-shield"></i>
                 </div>
-                <h3 class="text-lg font-semibold text-white">2. User & Access Management</h3>
+                <h3 class="text-lg font-bold text-slate-800">2. User Access</h3>
             </div>
-            
-            <div class="bg-slate-800/40 rounded-xl p-6 border border-slate-800">
-                <p class="text-sm font-medium text-slate-300 mb-4 text-indigo-400 uppercase tracking-tighter">Permission Matrix Quick-Toggles</p>
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between py-2 border-b border-slate-800/50">
-                        <span class="text-sm text-slate-300">Allow Receptionists to issue refunds</span>
-                        <input type="checkbox" class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500">
-                    </div>
-                    <div class="flex items-center justify-between py-2">
-                        <span class="text-sm text-slate-300">Allow Managers to delete audit logs</span>
-                        <input type="checkbox" class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500">
-                    </div>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                    <span class="text-sm font-medium text-slate-700">Receptionist Refunds</span>
+                    <input type="checkbox" class="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                </div>
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                    <span class="text-sm font-medium text-slate-700">Delete Audit Logs</span>
+                    <input type="checkbox" class="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
                 </div>
             </div>
         </div>
 
         <!-- 3. Financial & Tax Settings -->
-        <div class="space-y-6">
-            <div class="flex items-center space-x-3 border-b border-slate-800 pb-4">
-                <div class="w-10 h-10 rounded-lg bg-amber-600/20 flex items-center justify-center text-amber-400">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+            <div class="flex items-center space-x-3 border-b border-slate-100 pb-4">
+                <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
                     <i class="fas fa-file-invoice-dollar"></i>
                 </div>
-                <h3 class="text-lg font-semibold text-white">3. Financial & Tax Settings</h3>
+                <h3 class="text-lg font-bold text-slate-800">3. Financials</h3>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="flex flex-col space-y-2">
-                    <label class="text-sm font-medium text-slate-400">VAT Percentage (%)</label>
-                    <input type="number" value="18" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
+            <div class="space-y-4">
+                <div class="flex flex-col space-y-1">
+                    <label class="text-xs font-bold text-slate-400 uppercase">VAT (%)</label>
+                    <input type="number" value="18" class="bg-slate-50 border-none text-slate-900 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500">
                 </div>
-                <div class="flex flex-col space-y-2">
-                    <label class="text-sm font-medium text-slate-400">Fiscal Year End</label>
-                    <input type="date" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-                <div class="flex flex-col space-y-2">
-                    <label class="text-sm font-medium text-slate-400">Payment API (M-Pesa/Stripe)</label>
-                    <input type="password" value="********" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
+                <div class="flex flex-col space-y-1">
+                    <label class="text-xs font-bold text-slate-400 uppercase">API Key</label>
+                    <input type="password" value="********" class="bg-slate-50 border-none text-slate-900 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500">
                 </div>
             </div>
         </div>
 
-        <!-- 4. Hardware & Integration -->
-        <div class="space-y-6">
-            <div class="flex items-center space-x-3 border-b border-slate-800 pb-4">
-                <div class="w-10 h-10 rounded-lg bg-blue-600/20 flex items-center justify-center text-blue-400">
+        <!-- 4. Hardware & POS Integration -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+            <div class="flex items-center space-x-3 border-b border-slate-100 pb-4">
+                <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
                     <i class="fas fa-print"></i>
                 </div>
-                <h3 class="text-lg font-semibold text-white">4. Hardware & POS Integration</h3>
+                <h3 class="text-lg font-bold text-slate-800">4. POS Hardware</h3>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
-                    <label class="text-xs font-bold text-slate-500 uppercase">Kitchen Printer IP</label>
-                    <input type="text" placeholder="192.168.1.50" class="w-full bg-transparent border-b border-slate-700 text-white py-2 outline-none focus:border-indigo-500 transition-colors">
+            <div class="grid grid-cols-1 gap-4">
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Kitchen Printer IP</label>
+                    <input type="text" placeholder="192.168.1.50" class="w-full bg-transparent border-none text-sm text-slate-800 py-1 outline-none">
                 </div>
-                <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
-                    <label class="text-xs font-bold text-slate-500 uppercase">Bar Printer IP</label>
-                    <input type="text" placeholder="192.168.1.51" class="w-full bg-transparent border-b border-slate-700 text-white py-2 outline-none focus:border-indigo-500 transition-colors">
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Bar Printer IP</label>
+                    <input type="text" placeholder="192.168.1.51" class="w-full bg-transparent border-none text-sm text-slate-800 py-1 outline-none">
                 </div>
             </div>
         </div>
 
         <!-- 5. Automated Communications -->
-        <div class="space-y-6">
-            <div class="flex items-center space-x-3 border-b border-slate-800 pb-4">
-                <div class="w-10 h-10 rounded-lg bg-pink-600/20 flex items-center justify-center text-pink-400">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+            <div class="flex items-center space-x-3 border-b border-slate-100 pb-4">
+                <div class="w-10 h-10 rounded-lg bg-pink-100 flex items-center justify-center text-pink-600">
                     <i class="fas fa-envelope-open-text"></i>
                 </div>
-                <h3 class="text-lg font-semibold text-white">5. Automated Communications</h3>
+                <h3 class="text-lg font-bold text-slate-800">5. Messaging</h3>
             </div>
-            <div class="flex flex-col space-y-2">
-                <label class="text-sm font-medium text-slate-400">Booking Confirmation Email Template</label>
-                <textarea rows="4" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Dear [Guest Name], your booking is confirmed..."></textarea>
-            </div>
+            <textarea rows="3" class="w-full bg-slate-50 border-none text-slate-900 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 shadow-inner" placeholder="Email Template..."></textarea>
         </div>
 
-        <!-- 6. System Health & Maintenance -->
-        <div class="space-y-6">
-            <div class="flex items-center space-x-3 border-b border-slate-800 pb-4">
-                <div class="w-10 h-10 rounded-lg bg-red-600/20 flex items-center justify-center text-red-400">
-                    <i class="fas fa-database"></i>
-                </div>
-                <h3 class="text-lg font-semibold text-white">6. System Health & Maintenance</h3>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="flex items-center justify-between p-4 bg-slate-800/30 rounded-xl border border-slate-800">
-                    <div>
-                        <p class="text-sm font-medium text-white">Audit Log Retention</p>
-                        <p class="text-xs text-slate-500">How long history is stored.</p>
+        <!-- 6. System Health & Maintenance (Spans 2 columns at bottom) -->
+        <div class="lg:col-span-2 bg-indigo-900 p-8 rounded-2xl border border-indigo-800 shadow-lg space-y-6 text-white">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-indigo-200">
+                        <i class="fas fa-server text-xl"></i>
                     </div>
-                    <select class="bg-slate-700 text-white text-xs rounded-md p-1 outline-none border-none">
-                        <option>90 Days</option>
-                        <option>1 Year</option>
-                        <option>Forever</option>
-                    </select>
+                    <div>
+                        <h3 class="text-lg font-bold">6. Maintenance & Backup</h3>
+                        <p class="text-indigo-300 text-sm">Last backup performed: 2 hours ago</p>
+                    </div>
                 </div>
-                <button type="button" class="flex items-center justify-center space-x-2 p-4 bg-indigo-600/10 border border-indigo-600/30 text-indigo-400 rounded-xl hover:bg-indigo-600 hover:text-white transition-all">
-                    <i class="fas fa-cloud-download-alt"></i>
-                    <span class="text-sm font-bold">Trigger Manual Backup</span>
+                <button type="button" class="px-6 py-3 bg-white text-indigo-900 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-sm">
+                    Run Manual Backup
                 </button>
             </div>
         </div>
 
-        <!-- Footer spacing -->
-        <div class="h-10"></div>
+        <!-- Extra padding for the bottom scroll -->
+        <div class="lg:col-span-2 h-4"></div>
     </form>
 </section>
 <section id="kds" class="section bg-slate-900 p-6 rounded-2xl shadow-2xl mb-8 hidden min-h-[80vh]">
