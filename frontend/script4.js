@@ -10002,3 +10002,98 @@ window.addEventListener('DOMContentLoaded', () => {
     loadRoomTypes();
     fetchRoomsV2();
 });
+
+    function toggleDropdown(menuId, arrowId) {
+    const menu = document.getElementById(menuId);
+    const arrow = document.getElementById(arrowId);
+    
+    // Toggle the 'hidden' class
+    menu.classList.toggle('hidden');
+    
+    // Rotate arrow icon
+    arrow.classList.toggle('rotate-180');
+}
+    function toggleInventoryModal(show) {
+    const modal = document.getElementById('inventory-modal');
+    if (show) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        // Optional: Reset form when closing
+        document.getElementById('inventory-form').reset();
+        document.getElementById('inventory-id').value = '';
+    }
+}
+
+// Close modal if user clicks outside of the white box
+window.onclick = function(event) {
+    const modal = document.getElementById('inventory-modal');
+    if (event.target == modal) {
+        toggleInventoryModal(false);
+    }
+}
+    function toggleSaleModal(show) {
+    const modal = document.getElementById('sale-modal');
+    if (show) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        // Pre-fill today's date
+        document.getElementById('sales-date').valueAsDate = new Date();
+    } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.getElementById('sale-form').reset();
+    }
+}
+
+// Close on outside click
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('sale-modal');
+    if (e.target === modal) toggleSaleModal(false);
+});
+
+    function toggleExpenseModal(show) {
+    const modal = document.getElementById('expense-modal');
+    if (show) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        // Default to today's date
+        document.getElementById('expense-date').valueAsDate = new Date();
+    } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.getElementById('expense-form').reset();
+        document.getElementById('expense-id').value = '';
+        document.getElementById('expense-submit-text').innerText = 'Record Expense';
+    }
+}
+
+// Close modal when clicking on the dark backdrop
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('expense-modal');
+    if (e.target === modal) toggleExpenseModal(false);
+});
+
+    function toggleCashModal(show) {
+    const modal = document.getElementById('cash-modal');
+    if (show) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        // Auto-set date to today
+        document.getElementById('cash-date').valueAsDate = new Date();
+    } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.getElementById('cash-journal-form').reset();
+        document.getElementById('cash-journal-id').value = '';
+        document.getElementById('cash-submit-text').innerText = 'Save Cash Entry';
+    }
+}
+
+// Close modal when clicking outside of the content
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('cash-modal');
+    if (e.target === modal) toggleCashModal(false);
+});
