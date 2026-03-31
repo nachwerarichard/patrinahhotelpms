@@ -3218,7 +3218,7 @@ app.post('/logout', auth, async (req, res) => {
 });
 
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/adminlogin', async (req, res) => {
     // 1. Check if the database is actually connected before querying
     if (mongoose.connection.readyState !== 1) {
         return res.status(503).json({ 
