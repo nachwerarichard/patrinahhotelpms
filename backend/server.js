@@ -218,24 +218,11 @@ function authorize(roles = []) {
 // IMPORTANT: Replace '<YOUR_MONGODB_CONNECTION_STRING>' with your actual MongoDB Atlas
 // connection string or a local MongoDB connection string (e.g., 'mongodb://localhost:27017/hoteldb').
 // Make sure your MongoDB user has read/write access to the database.
-const mongoURI = 'mongodb+srv://nachwerarichard:hotelpms@cluster0.g4cjpwg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'; // Your MongoDB Atlas connection string
+//const mongoURI = 'mongodb+srv://nachwerarichard:hotelpms@cluster0.g4cjpwg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'; // Your MongoDB Atlas connection string
 
-mongoose.connect(mongoURI)
+mongoose.connect(MONGO_URI)
    .then(async () => { // <--- MAKE SURE 'async' IS HERE
         console.log('Connected to MongoDB');
-        try {
-            const adminExists = await User.findOne({ username: 'admin' });
-            if (!adminExists) {
-                await User.create({ 
-                    username: 'administrator', 
-                    password: '1234', 
-                    role: 'admin' 
-                });
-                console.log('Initial admin created: admin/123');
-            }
-        } catch (error) {
-            console.error('Error seeding admin user:', error);
-        }
     })
     .catch(err => {
         console.error('MongoDB connection error:', err);
