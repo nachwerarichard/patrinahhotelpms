@@ -1384,11 +1384,14 @@ app.post('/api/login', async (req, res) => {
                 hotelName: hotelName
             } 
         });
-
-    } catch (error) {
-        console.error("Unified Login Error:", error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
+        } catch (error) {
+    // This will show up in your Render "Logs" tab
+    console.error("FULL LOGIN ERROR:", error.message, error.stack); 
+    res.status(500).json({ 
+        message: 'Internal server error', 
+        details: error.message // Only do this during debugging!
+    });
+}
 });
 // Admin Route: Create or Update users (Accessible only by Admins)
 // Multi-client aware route for creating/updating staff
