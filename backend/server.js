@@ -69,35 +69,7 @@ const userSchema = new mongoose.Schema({
 });
 userSchema.index({ hotelId: 1, username: 1 }, { unique: true });
 const User = mongoose.model('User', userSchema);
-async function createSuperAdmin() {
-    try {
-        await mongoose.connect(MONGO_URI);
-        console.log("Connected to MongoDB...");
 
-        const adminData = {
-            username: 'admin',
-            password: 'password', // Match the plain text check in your route
-            role: 'super-admin',
-            isInitial: true
-            // hotelId is optional in your schema, so we can leave it out for a global super-admin
-        };
-
-        const existingUser = await User.findOne({ username: adminData.username });
-        if (existingUser) {
-            console.log("User already exists!");
-        } else {
-            await User.create(adminData);
-            console.log("Super-admin created successfully!");
-        }
-
-    } catch (err) {
-        console.error("Error creating user:", err);
-    } finally {
-        mongoose.connection.close();
-    }
-}
-
-createSuperAdmin();
 
 
 async function auth(req, res, next) {
@@ -4320,7 +4292,36 @@ app.post('/api/public/hotel', async (req, res) => {
 // ----------------------
 
 
-        
+        async function createSuperAdmin() {
+    try {
+        await mongoose.connect(MONGO_URI);
+        console.log("Connected to MongoDB...");
+
+        const adminData = {
+            username: 'admin',
+            password: 'password', // Match the plain text check in your route
+            role: 'super-admin',
+            isInitial: true
+            // hotelId is optional in your schema, so we can leave it out for a global super-admin
+        };
+
+        const existingUser = await User.findOne({ username: adminData.username });
+        if (existingUser) {
+            console.log("User already exists!");
+        } else {
+            await User.create(adminData);
+            console.log("Super-admin created successfully!");
+        }
+
+    } catch (err) {
+        console.error("Error creating user:", err);
+    } finally {
+        mongoose.connection.close();
+    }
+}
+
+createSuperAdmin();
+
 
         
 
