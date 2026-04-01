@@ -4347,7 +4347,7 @@ app.post('/api/public/hotel', async (req, res) => {
     }
 }
 
-createSuperAdmin();
+//createSuperAdmin();
 
 
         
