@@ -69,35 +69,7 @@ const userSchema = new mongoose.Schema({
 });
 userSchema.index({ hotelId: 1, username: 1 }, { unique: true });
 const User = mongoose.model('User', userSchema);
-async function createSuperAdmin() {
-    try {
-        await mongoose.connect(MONGO_URI);
-        console.log("Connected to MongoDB...");
 
-        const adminData = {
-            username: 'admin',
-            password: 'password', // Match the plain text check in your route
-            role: 'super-admin',
-            isInitial: true
-            // hotelId is optional in your schema, so we can leave it out for a global super-admin
-        };
-
-        const existingUser = await User.findOne({ username: adminData.username });
-        if (existingUser) {
-            console.log("User already exists!");
-        } else {
-            await User.create(adminData);
-            console.log("Super-admin created successfully!");
-        }
-
-    } catch (err) {
-        console.error("Error creating user:", err);
-    } finally {
-        mongoose.connection.close();
-    }
-}
-
-createSuperAdmin();
 
 
 async function auth(req, res, next) {
@@ -228,12 +200,30 @@ mongoose.connect(MONGO_URI)
     });
 // --- 5. Define Mongoose Schemas and Models ---
 const auditLogSchema = new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
-    timestamp: { type: Date, default: Date.now }, // Ensure this is a separate line
-    action: { type: String, required: true },
-    user: { type: String, required: true },
-    details: { type: mongoose.Schema.Types.Mixed }
+    // Change: required: false allows Super Admin logs to save without a hotelId
+    hotelId: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Hotel', 
+        required: false 
+    }, 
+    timestamp: { 
+        type: Date, 
+        default: Date.now 
+    },
+    action: { 
+        type: String, 
+        required: true 
+    },
+    user: { 
+        type: String, 
+        required: true 
+    },
+    // Useful for storing raw JSON data about the event
+    details: { 
+        type: mongoose.Schema.Types.Mixed 
+    }
 });
+
 const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 
 async function addAuditLog(action, username, hotelId, details = {}) {
@@ -241,13 +231,22 @@ async function addAuditLog(action, username, hotelId, details = {}) {
         const log = new AuditLog({
             action,
             user: username,
-            hotelId: hotelId, // CRITICAL: Link log to the specific hotel
+            // Check if the hotelId is a valid MongoDB ObjectId before saving.
+            // If it's "system", null, or undefined, it saves as null in the DB.
+            hotelId: mongoose.Types.ObjectId.isValid(hotelId) ? hotelId : null,
             details: details
         });
+
         await log.save();
-        console.log(`Audit Logged: ${action} by ${username} for Hotel ${hotelId}`);
+        
+        const target = hotelId && mongoose.Types.ObjectId.isValid(hotelId) 
+            ? `Hotel ${hotelId}` 
+            : 'Global/System';
+            
+        console.log(`Audit Logged: ${action} by ${username} for ${target}`);
     } catch (error) {
-        console.error('Error adding audit log:', error);
+        // We use .message to keep the console clean but informative
+        console.error('CRITICAL: Audit Log failed to save:', error.message);
     }
 }
 
@@ -4320,7 +4319,36 @@ app.post('/api/public/hotel', async (req, res) => {
 // ----------------------
 
 
-        
+        async function createSuperAdmin() {
+    try {
+        await mongoose.connect(MONGO_URI);
+        console.log("Connected to MongoDB...");
+
+        const adminData = {
+            username: 'admin',
+            password: 'password', // Match the plain text check in your route
+            role: 'super-admin',
+            isInitial: true
+            // hotelId is optional in your schema, so we can leave it out for a global super-admin
+        };
+
+        const existingUser = await User.findOne({ username: adminData.username });
+        if (existingUser) {
+            console.log("User already exists!");
+        } else {
+            await User.create(adminData);
+            console.log("Super-admin created successfully!");
+        }
+
+    } catch (err) {
+        console.error("Error creating user:", err);
+    } finally {
+        mongoose.connection.close();
+    }
+}
+
+//createSuperAdmin();
+
 
         
 
