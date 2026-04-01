@@ -328,19 +328,19 @@ const Room = mongoose.model('Room', roomSchema);
 });*/
 
 // GET ALL HOTELS
-app.get('/api/admin/hotels', auth, authorizeRole('super-admin'), async (req, res) => {
+app.get('/api/admin/hotels', auth, authorize('super-admin'), async (req, res) => {
     const hotels = await Hotel.find();
     res.json(hotels);
 });
 
 // EDIT HOTEL
-app.put('/api/admin/hotel/:id', auth, authorizeRole('super-admin'), async (req, res) => {
+app.put('/api/admin/hotel/:id', auth, authorize('super-admin'), async (req, res) => {
     await Hotel.findByIdAndUpdate(req.params.id, req.body);
     res.json({ message: "Updated" });
 });
 
 // DELETE HOTEL
-app.delete('/api/admin/hotel/:id', auth, authorizeRole('super-admin'), async (req, res) => {
+app.delete('/api/admin/hotel/:id', auth, authorize('super-admin'), async (req, res) => {
     // Note: Ideally, you'd also delete users associated with this hotelId here
     await Hotel.findByIdAndDelete(req.params.id);
     await User.deleteMany({ hotelId: req.params.id }); 
