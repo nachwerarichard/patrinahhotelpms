@@ -190,7 +190,7 @@ function authorize(roles = []) {
 // IMPORTANT: Replace '<YOUR_MONGODB_CONNECTION_STRING>' with your actual MongoDB Atlas
 // connection string or a local MongoDB connection string (e.g., 'mongodb://localhost:27017/hoteldb').
 // Make sure your MongoDB user has read/write access to the database.
-const MONGO_URI = 'mongodb+srv://novuspms:novuspms@cluster0.rocgqhj.mongodb.net/?appName=Cluster0'; // Your MongoDB Atlas connection string
+const MONGO_URI = 'mongodb+srv://nachwerarichard:hotelpms@cluster0.g4cjpwg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'; // Your MongoDB Atlas connection string
 mongoose.connect(MONGO_URI)
    .then(async () => { // <--- MAKE SURE 'async' IS HERE
         console.log('Connected to MongoDB');
