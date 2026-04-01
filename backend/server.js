@@ -218,9 +218,7 @@ function authorize(roles = []) {
 // IMPORTANT: Replace '<YOUR_MONGODB_CONNECTION_STRING>' with your actual MongoDB Atlas
 // connection string or a local MongoDB connection string (e.g., 'mongodb://localhost:27017/hoteldb').
 // Make sure your MongoDB user has read/write access to the database.
-const MONGO_URI  = 'mongodb+srv://nachwerarichard:hotelpms@cluster0.g4cjpwg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'; // Your MongoDB Atlas connection string
-//const MONGO_URI = 'mongodb+srv://novuspms:novuspms@cluster0.rocgqhj.mongodb.net/?appName=Cluster0'; // Your MongoDB Atlas connection string
-
+const MONGO_URI = 'mongodb+srv://novuspms:novuspms@cluster0.rocgqhj.mongodb.net/?appName=Cluster0'; // Your MongoDB Atlas connection string
 mongoose.connect(MONGO_URI)
    .then(async () => { // <--- MAKE SURE 'async' IS HERE
         console.log('Connected to MongoDB');
@@ -1344,39 +1342,58 @@ function authorizeRole(requiredRole) {
 // Updated Login Route
 app.post('/api/login', async (req, res) => {
     try {
+        // 1. Health Check
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ message: "Database connection error." });
+        }
+
         const { username, password } = req.body;
 
+        // 2. Find user
         const user = await User.findOne({ username }).populate('hotelId');
         
         if (!user || user.password !== password) {
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(401).json({ message: 'Invalid username or password' });
         }
 
+        // 3. Generate Auth Token
         const authToken = Buffer.from(`${username}:${password}`).toString('base64');
 
-        // SAFE AUDIT LOG: Use ?. to prevent crashing if hotelId is null
-        const safeHotelId = user.hotelId?._id || user.hotelId || 'no-hotel-id';
-        await addAuditLog('User Logged In', user.username, safeHotelId, { role: user.role });
+        // 4. Handle Null Safety
+        const isSuperAdmin = user.role === 'super-admin';
+        const hotelId = user.hotelId?._id || user.hotelId || null;
+        const hotelName = user.hotelId?.name || (isSuperAdmin ? 'Global Administration' : 'Unknown Hotel');
 
-        // SAFE RESPONSE
-        res.json({ 
+        // 5. Conditional Audit Logging
+        // Skip logging ONLY if the role is 'super-admin'
+        if (!isSuperAdmin) {
+            await addAuditLog(
+                'User Logged In', 
+                user.username, 
+                hotelId || 'system', 
+                { role: user.role }
+            );
+        }
+
+        // 6. Unified Response
+        res.status(200).json({ 
             token: authToken, 
             user: { 
                 username: user.username, 
                 role: user.role, 
-                // If populated, hotelId is an object. If not, it's just the ID.
-                hotelId: user.hotelId?._id || user.hotelId, 
-                // This is where your frontend gets the name!
-                hotelName: user.hotelId?.name || 'Unknown Hotel'
+                hotelId: hotelId, 
+                hotelName: hotelName
             } 
         });
 
     } catch (error) {
-        console.error("Login Error:", error);
-        res.status(500).json({ message: 'Server Error' });
+        console.error("FULL LOGIN ERROR:", error.message, error.stack); 
+        res.status(500).json({ 
+            message: 'Internal server error', 
+            details: error.message 
+        });
     }
 });
-
 // Admin Route: Create or Update users (Accessible only by Admins)
 // Multi-client aware route for creating/updating staff
 
@@ -3234,40 +3251,7 @@ app.post('/logout', auth, async (req, res) => {
 });
 
 
-app.post('/api/adminlogin', async (req, res) => {
-    // 1. Check if the database is actually connected before querying
-    if (mongoose.connection.readyState !== 1) {
-        return res.status(503).json({ 
-            error: "Database Connection Error", 
-            message: "The server cannot reach MongoDB. Please check Atlas IP whitelisting." 
-        });
-    }
 
-    const { username, password } = req.body;
-
-    try {
-        const user = await User.findOne({ username });
-
-        if (!user || user.password !== password) {
-            return res.status(401).json({ error: 'Invalid username or password' });
-        }
-
-        if (user.role !== 'super-admin') {
-            return res.status(403).json({ error: 'Access denied. Super-Admins only.' });
-        }
-
-        const authToken = Buffer.from(`${username}:${password}`).toString('base64');
-        
-        res.status(200).json({ 
-            token: authToken, 
-            user: { username: user.username, role: user.role } 
-        });
-
-    } catch (err) {
-        console.error("Super-Admin Login Error Detail:", err); 
-        res.status(500).json({ error: 'Internal server error', message: err.message });
-    }
-});
 
 // DELETE (or Mark as Served) Multi-tenant route
 app.delete('/api/kitchen/order/:id/served', auth, async (req, res) => {
