@@ -138,16 +138,15 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         
         // Check if the request was successful
         if (!response.ok) {
-            return showMessage(data.error || "Login failed");
+            return showMessage(data.message || "Login failed");
         }
 
         // Check if data.user exists before checking role
-        if (data.user && data.user.role === 'super-admin') {
-            localStorage.setItem('superToken', data.token);
-            // Optional: Store the role/user too
-            localStorage.setItem('role', data.user.role);
-            initDashboard();
-        } else {
+if (data.user && data.user.role === 'super-admin') {
+    localStorage.setItem('superToken', data.token);
+    localStorage.setItem('role', data.user.role);
+    initDashboard();
+}else {
             showMessage("Access Denied: Super Admin only.");
         }
     } catch (err) { 
