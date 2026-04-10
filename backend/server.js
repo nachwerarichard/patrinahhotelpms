@@ -1324,9 +1324,9 @@ function authorizeRole(requiredRole) {
 app.post('/api/login', async (req, res) => {
     try {
         // 1. Health Check
-        if (mongoose.connection.readyState !== 1) {
-            return res.status(503).json({ message: "Database connection error." });
-        }
+        //if (mongoose.connection.readyState !== 1) {
+           // return res.status(503).json({ message: "Database connection error." });
+       // }
 
         const { username, password } = req.body;
 
