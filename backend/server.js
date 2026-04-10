@@ -307,42 +307,6 @@ roomSchema.index({ hotelId: 1, number: 1 }, { unique: true });
 const Room = mongoose.model('Room', roomSchema);
 // Create a Room Type (Tied to the hotel)
 
-// DELETE THIS AFTER RUNNING IT ONCE
-
-
-const setupMasterAdmin = async () => {
-    try {
-        // 1. Connect to the Database
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log("Connected to database...");
-
-        // 2. Check for existing admin
-        const existingAdmin = await User.findOne({ role: 'super-admin' });
-        if (existingAdmin) {
-            console.log("Super-admin already exists. Skipping...");
-            process.exit(0);
-        }
-
-        // 3. Create the master admin
-        const master = new User({
-            username: 'novuspms',
-            password: 'admin', // Ideally, use a hashed password here!
-            role: 'super-admin'
-        });
-
-        await master.save();
-        console.log("Super-admin created successfully!");
-        
-        // 4. Close connection and exit
-        process.exit(0);
-    } catch (err) {
-        console.error("Error creating admin:", err.message);
-        process.exit(1);
-    }
-};
-
-setupMasterAdmin();
-
 // GET ALL HOTELS
 app.get('/api/admin/hotels', auth, authorize('super-admin'), async (req, res) => {
     const hotels = await Hotel.find();
@@ -4365,7 +4329,7 @@ app.post('/api/public/hotel', async (req, res) => {
     }
 }
 
-//createSuperAdmin();
+createSuperAdmin();
 
 
         
