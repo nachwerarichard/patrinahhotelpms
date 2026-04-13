@@ -198,25 +198,25 @@ mongoose.connect(MONGO_URI)
         console.log('Connected to MongoDB');
 
         // Logic to create Super Admin starts here
-        try {
-            const adminData = {
-                username: 'admin',
-                password: 'password', // Matching your plain text check
-                role: 'super-admin',
-                isInitial: true
-            };
+       // try {
+           // const adminData = {
+              //  username: 'admin',
+               // password: 'password', // Matching your plain text check
+               // role: 'super-admin',
+               // isInitial: true
+           // };
 
-            const existingUser = await User.findOne({ username: adminData.username });
+            //const existingUser = await User.findOne({ username: adminData.username });
             
-            if (existingUser) {
-                console.log("Super-admin already exists in database.");
-            } else {
-                await User.create(adminData);
-                console.log("Super-admin created successfully!");
-            }
-        } catch (err) {
-            console.error("Error during Super-admin initialization:", err);
-        }
+            //if (existingUser) {
+                //console.log("Super-admin already exists in database.");
+           // } else {
+               // await User.create(adminData);
+               // console.log("Super-admin created successfully!");
+           // }
+        //} catch (err) {
+          //  console.error("Error during Super-admin initialization:", err);
+       // }
         // Note: We do NOT close the connection here because your 
         // Express server needs to keep it open to handle logins!
     })
