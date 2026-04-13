@@ -1319,51 +1319,42 @@ function authorizeRole(requiredRole) {
     };
 }
 
-
- app.post('/api/login', async (req, res) => {
+app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        // 1. Find user and attempt to populate hotel details
-        // We use .lean() to make the object easier to handle if it's just for reading
+        // 1. Find user (don't worry if populate fails for super-admin)
         const user = await User.findOne({ username }).populate('hotelId');
         
-        // 2. Validate User existence and Password
+        // 2. Validate existence and password (Plain text as per your current setup)
         if (!user || user.password !== password) {
             return res.status(401).json({ message: 'Invalid username or password' });
         }
 
-        // 3. Determine Identity & Scope
+        // 3. Setup Identity Variables
         const isSuperAdmin = user.role === 'super-admin';
         
-        // Safely extract Hotel ID and Name
-        // If super-admin, these will default to 'system' or 'Global'
+        // Safely extract IDs (Super admin won't have a hotelId)
         const hotelId = user.hotelId?._id || user.hotelId || null;
-        const hotelName = user.hotelId?.name || (isSuperAdmin ? 'Global Administration' : 'Unknown Property');
+        const hotelName = user.hotelId?.name || (isSuperAdmin ? 'Global Administration' : 'Unknown Hotel');
 
-        // 4. Generate Auth Token (Base64)
+        // 4. Token Generation
         const authToken = Buffer.from(`${username}:${password}`).toString('base64');
 
-        // 5. Audit Logging (Skip for Super Admin to prevent errors)
+        // 5. Audit Logging (CRITICAL: Guard this to prevent 500 errors)
         if (!isSuperAdmin) {
             try {
-                // Ensure addAuditLog exists before calling it
-                if (typeof addAuditLog === 'function') {
-                    await addAuditLog(
-                        'User Logged In', 
-                        user.username, 
-                        hotelId || 'system', 
-                        { role: user.role }
-                    );
+                // Only attempt to log if the function exists and hotelId is present
+                if (typeof addAuditLog === 'function' && hotelId) {
+                    await addAuditLog('User Logged In', user.username, hotelId, { role: user.role });
                 }
-            } catch (logError) {
-                console.error("Non-critical Audit Log Error:", logError.message);
-                // We don't block login just because the log failed
+            } catch (auditError) {
+                console.error("Audit log failed, but login continues:", auditError.message);
             }
         }
 
-        // 6. Final Response
-        return res.status(200).json({ 
+        // 6. Response (Matches what your frontend expects)
+        res.status(200).json({ 
             token: authToken, 
             user: { 
                 username: user.username, 
@@ -1374,14 +1365,8 @@ function authorizeRole(requiredRole) {
         });
 
     } catch (error) {
-        // Detailed error logging for Render
-        console.error("CRITICAL LOGIN ERROR:", error.message);
-        console.error(error.stack);
-        
-        res.status(500).json({ 
-            message: 'Internal server error', 
-            details: error.message 
-        });
+        console.error("FULL LOGIN ERROR:", error.message);
+        res.status(500).json({ message: 'Internal server error', details: error.message });
     }
 });
 
