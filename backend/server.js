@@ -4361,8 +4361,7 @@ app.post('/api/public/hotel', async (req, res) => {
         mongoose.connection.close();
     }
 }
-
-//createSuperAdmin();
+createSuperAdmin();
 
 
         
