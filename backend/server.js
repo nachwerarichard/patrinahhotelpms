@@ -1319,37 +1319,54 @@ function authorizeRole(requiredRole) {
     };
 }
 
-// Dedicated Super Admin Login
 app.post('/api/super-admin/login', async (req, res) => {
+    // 1. Log the attempt to Render logs so you can see it's hitting the server
+    console.log("Super-admin login attempt for:", req.body.username);
+
     try {
         const { username, password } = req.body;
 
-        // 1. Find user - we explicitly filter by role to prevent regular users 
-        // from using this "backdoor"
-        const user = await User.findOne({ username, role: 'super-admin' });
-
-        // 2. Simple check (using your current plain text logic)
-        if (!user || user.password !== password) {
-            return res.status(401).json({ message: 'Invalid Super Admin credentials' });
+        // 2. Validate input to prevent null pointer errors
+        if (!username || !password) {
+            return res.status(400).json({ message: "Username and password are required" });
         }
 
-        // 3. Simple Token (Base64)
+        // 3. Find user (Crucial: ensure 'User' model is imported in this file)
+        const user = await User.findOne({ username: username }).lean();
+
+        // 4. Check if user exists
+        if (!user) {
+            console.log("User not found in database");
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        // 5. Verify role and password
+        if (user.role !== 'super-admin' || user.password !== password) {
+            console.log("Role mismatch or password incorrect");
+            return res.status(401).json({ message: 'Access denied' });
+        }
+
+        // 6. Generate Token
         const authToken = Buffer.from(`${username}:${password}`).toString('base64');
 
-        // 4. Return the specific structure your frontend expects
-        res.status(200).json({
+        // 7. Send Response
+        return res.status(200).json({
             token: authToken,
             user: {
                 username: user.username,
                 role: user.role,
-                hotelId: null, // Super admins don't have hotels
+                hotelId: null,
                 hotelName: 'Global Administration'
             }
         });
 
     } catch (error) {
-        console.error("SUPER ADMIN LOGIN ERROR:", error);
-        res.status(500).json({ message: 'Internal server error' });
+        // This will print the EXACT line number and reason in your Render logs
+        console.error("CRITICAL SUPER-ADMIN ERROR:", error);
+        return res.status(500).json({ 
+            message: 'Internal server error', 
+            error: error.message 
+        });
     }
 });
 
