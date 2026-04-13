@@ -1320,51 +1320,48 @@ function authorizeRole(requiredRole) {
 }
 
 app.post('/api/super-admin/login', async (req, res) => {
-    // 1. Log the attempt to Render logs so you can see it's hitting the server
-    console.log("Super-admin login attempt for:", req.body.username);
-
+    console.log("--- LOGIN START ---");
     try {
+        console.log("Body received:", req.body);
+        
         const { username, password } = req.body;
-
-        // 2. Validate input to prevent null pointer errors
         if (!username || !password) {
-            return res.status(400).json({ message: "Username and password are required" });
+            console.log("Error: Missing fields");
+            return res.status(400).json({ message: "Username/Password missing" });
         }
 
-        // 3. Find user (Crucial: ensure 'User' model is imported in this file)
-        const user = await User.findOne({ username: username }).lean();
-
-        // 4. Check if user exists
+        console.log("Searching for user in DB...");
+        // Use .lean() to avoid Mongoose document overhead for this check
+        const user = await User.findOne({ username, role: 'super-admin' }).lean();
+        
         if (!user) {
-            console.log("User not found in database");
-            return res.status(401).json({ message: 'Invalid credentials' });
+            console.log("Error: Super-admin user not found in database");
+            return res.status(401).json({ message: "Invalid credentials" });
         }
 
-        // 5. Verify role and password
-        if (user.role !== 'super-admin' || user.password !== password) {
-            console.log("Role mismatch or password incorrect");
-            return res.status(401).json({ message: 'Access denied' });
+        console.log("User found, checking password...");
+        if (user.password !== password) {
+            console.log("Error: Password mismatch");
+            return res.status(401).json({ message: "Invalid credentials" });
         }
 
-        // 6. Generate Token
+        console.log("Success! Generating token...");
         const authToken = Buffer.from(`${username}:${password}`).toString('base64');
 
-        // 7. Send Response
         return res.status(200).json({
             token: authToken,
             user: {
                 username: user.username,
-                role: user.role,
-                hotelId: null,
-                hotelName: 'Global Administration'
+                role: user.role
             }
         });
 
     } catch (error) {
-        // This will print the EXACT line number and reason in your Render logs
-        console.error("CRITICAL SUPER-ADMIN ERROR:", error);
+        console.error("--- LOG ERROR ---");
+        console.error("Message:", error.message);
+        console.error("Stack:", error.stack);
         return res.status(500).json({ 
-            message: 'Internal server error', 
+            message: "Internal Server Error", 
             error: error.message 
         });
     }
@@ -4365,7 +4362,7 @@ app.post('/api/public/hotel', async (req, res) => {
     }
 }
 
-createSuperAdmin();
+//createSuperAdmin();
 
 
         
