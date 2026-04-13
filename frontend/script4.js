@@ -413,7 +413,7 @@ const response = await authenticatedFetch(`${API_BASE_URL}/bookings/all?limit=50
   }
 }
 // --- 1. GLOBAL CONFIGURATION ---
-const API_BASE_URL = 'https://novouscloudpms-tz4s.onrender.com/api';
+const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
 
 // --- 2. THE MISSING FETCH FUNCTION ---
 /**
