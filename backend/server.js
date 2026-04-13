@@ -1319,6 +1319,40 @@ function authorizeRole(requiredRole) {
     };
 }
 
+// Dedicated Super Admin Login
+app.post('/api/super-admin/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        // 1. Find user - we explicitly filter by role to prevent regular users 
+        // from using this "backdoor"
+        const user = await User.findOne({ username, role: 'super-admin' });
+
+        // 2. Simple check (using your current plain text logic)
+        if (!user || user.password !== password) {
+            return res.status(401).json({ message: 'Invalid Super Admin credentials' });
+        }
+
+        // 3. Simple Token (Base64)
+        const authToken = Buffer.from(`${username}:${password}`).toString('base64');
+
+        // 4. Return the specific structure your frontend expects
+        res.status(200).json({
+            token: authToken,
+            user: {
+                username: user.username,
+                role: user.role,
+                hotelId: null, // Super admins don't have hotels
+                hotelName: 'Global Administration'
+            }
+        });
+
+    } catch (error) {
+        console.error("SUPER ADMIN LOGIN ERROR:", error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
