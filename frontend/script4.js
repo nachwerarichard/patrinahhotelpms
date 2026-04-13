@@ -8313,7 +8313,7 @@ function showSection(sectionId) {
 
 
 
-        const API_BASE = "https://novouscloudpms-tz4s.onrender.com";
+        const API_BASE = "https://patrinahhotelpms.onrender.com";
 
 
 
