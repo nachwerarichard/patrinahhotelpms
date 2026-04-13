@@ -194,8 +194,31 @@ function authorize(roles = []) {
 const MONGO_URI = 'mongodb+srv://nachwerarichard:TQ4VX7zQZIxjCVzU@novuscloud.z4w1k8c.mongodb.net/novuspms?appName=novuscloud'; // Your MongoDB Atlas connection string
 
 mongoose.connect(MONGO_URI)
-   .then(async () => { // <--- MAKE SURE 'async' IS HERE
+    .then(async () => { 
         console.log('Connected to MongoDB');
+
+        // Logic to create Super Admin starts here
+        try {
+            const adminData = {
+                username: 'admin',
+                password: 'password', // Matching your plain text check
+                role: 'super-admin',
+                isInitial: true
+            };
+
+            const existingUser = await User.findOne({ username: adminData.username });
+            
+            if (existingUser) {
+                console.log("Super-admin already exists in database.");
+            } else {
+                await User.create(adminData);
+                console.log("Super-admin created successfully!");
+            }
+        } catch (err) {
+            console.error("Error during Super-admin initialization:", err);
+        }
+        // Note: We do NOT close the connection here because your 
+        // Express server needs to keep it open to handle logins!
     })
     .catch(err => {
         console.error('MongoDB connection error:', err);
@@ -4332,36 +4355,6 @@ app.post('/api/public/hotel', async (req, res) => {
 // ----------------------
 // 4️⃣ Start server with normalization + index creation
 // ----------------------
-
-
-        async function createSuperAdmin() {
-    try {
-        await mongoose.connect(MONGO_URI);
-        console.log("Connected to MongoDB...");
-
-        const adminData = {
-            username: 'admin',
-            password: 'password', // Match the plain text check in your route
-            role: 'super-admin',
-            isInitial: true
-            // hotelId is optional in your schema, so we can leave it out for a global super-admin
-        };
-
-        const existingUser = await User.findOne({ username: adminData.username });
-        if (existingUser) {
-            console.log("User already exists!");
-        } else {
-            await User.create(adminData);
-            console.log("Super-admin created successfully!");
-        }
-
-    } catch (err) {
-        console.error("Error creating user:", err);
-    } finally {
-        mongoose.connection.close();
-    }
-}
-createSuperAdmin();
 
 
         
