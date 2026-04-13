@@ -127,7 +127,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     const password = document.getElementById('loginPass').value;
     
     try {
-        const response = await fetch(`${API_BASE_URL}/login`, {
+        // CHANGED: hitting the specific super-admin endpoint
+        const response = await fetch(`${API_BASE_URL}/super-admin/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
@@ -135,19 +136,15 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
         const data = await response.json();
         
-        // Check if the request was successful
         if (!response.ok) {
-            return showMessage(data.message || "Login failed");
+            return showMessage(data.message || "Authentication failed");
         }
 
-        // Check if data.user exists before checking role
-if (data.user && data.user.role === 'super-admin') {
-    localStorage.setItem('superToken', data.token);
-    localStorage.setItem('role', data.user.role);
-    initDashboard();
-}else {
-            showMessage("Access Denied: Super Admin only.");
-        }
+        // Now we know it's a super-admin because of the route used
+        localStorage.setItem('superToken', data.token);
+        localStorage.setItem('role', data.user.role);
+        initDashboard();
+
     } catch (err) { 
         console.error(err);
         showMessage("Connection error. Is the server awake?"); 
