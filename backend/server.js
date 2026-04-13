@@ -1320,44 +1320,50 @@ function authorizeRole(requiredRole) {
 }
 
 
-// Updated Login Route
-app.post('/api/login', async (req, res) => {
+ app.post('/api/login', async (req, res) => {
     try {
-        // 1. Health Check
-        //if (mongoose.connection.readyState !== 1) {
-           // return res.status(503).json({ message: "Database connection error." });
-       // }
-
         const { username, password } = req.body;
 
-        // 2. Find user
+        // 1. Find user and attempt to populate hotel details
+        // We use .lean() to make the object easier to handle if it's just for reading
         const user = await User.findOne({ username }).populate('hotelId');
         
+        // 2. Validate User existence and Password
         if (!user || user.password !== password) {
             return res.status(401).json({ message: 'Invalid username or password' });
         }
 
-        // 3. Generate Auth Token
+        // 3. Determine Identity & Scope
+        const isSuperAdmin = user.role === 'super-admin';
+        
+        // Safely extract Hotel ID and Name
+        // If super-admin, these will default to 'system' or 'Global'
+        const hotelId = user.hotelId?._id || user.hotelId || null;
+        const hotelName = user.hotelId?.name || (isSuperAdmin ? 'Global Administration' : 'Unknown Property');
+
+        // 4. Generate Auth Token (Base64)
         const authToken = Buffer.from(`${username}:${password}`).toString('base64');
 
-        // 4. Handle Null Safety
-        const isSuperAdmin = user.role === 'super-admin';
-        const hotelId = user.hotelId?._id || user.hotelId || null;
-        const hotelName = user.hotelId?.name || (isSuperAdmin ? 'Global Administration' : 'Unknown Hotel');
-
-        // 5. Conditional Audit Logging
-        // Skip logging ONLY if the role is 'super-admin'
+        // 5. Audit Logging (Skip for Super Admin to prevent errors)
         if (!isSuperAdmin) {
-            await addAuditLog(
-                'User Logged In', 
-                user.username, 
-                hotelId || 'system', 
-                { role: user.role }
-            );
+            try {
+                // Ensure addAuditLog exists before calling it
+                if (typeof addAuditLog === 'function') {
+                    await addAuditLog(
+                        'User Logged In', 
+                        user.username, 
+                        hotelId || 'system', 
+                        { role: user.role }
+                    );
+                }
+            } catch (logError) {
+                console.error("Non-critical Audit Log Error:", logError.message);
+                // We don't block login just because the log failed
+            }
         }
 
-        // 6. Unified Response
-        res.status(200).json({ 
+        // 6. Final Response
+        return res.status(200).json({ 
             token: authToken, 
             user: { 
                 username: user.username, 
@@ -1368,22 +1374,16 @@ app.post('/api/login', async (req, res) => {
         });
 
     } catch (error) {
-        console.error("FULL LOGIN ERROR:", error.message, error.stack); 
+        // Detailed error logging for Render
+        console.error("CRITICAL LOGIN ERROR:", error.message);
+        console.error(error.stack);
+        
         res.status(500).json({ 
             message: 'Internal server error', 
             details: error.message 
         });
     }
 });
-// Admin Route: Create or Update users (Accessible only by Admins)
-// Multi-client aware route for creating/updating staff
-
-/**
- * Helper function to add an entry to the audit log.
- * @param {string} action - The action performed (e.g., "Booking Created").
- * @param {string} username - The username of the actor.
- * @param {object} [details={}] - Additional details to store.
- */
 
 // GET: Find active booking for a room (Scoped to Hotel)
 app.get('/api/pos/room/:roomNumber/latest-booking', auth, async (req, res) => {
