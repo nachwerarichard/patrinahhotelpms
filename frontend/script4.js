@@ -5399,7 +5399,7 @@ window.onclick = function(event) {
  * Handles Guest Folios, Kitchen Orders, and Inventory Lookup
  */
 
-const BASE_URL = 'https://novouscloudpms-tz4s.onrender.com/api';
+const BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
 let activeAccountId = null;
 let activeAccountData = null;
 let inventoryData = [];
