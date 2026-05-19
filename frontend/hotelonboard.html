@@ -14,10 +14,81 @@
         
         .success-animation { animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+    /* 1. Hide the ugly "Powered by Google" branding and text noise */
+.goog-logo-link, 
+.goog-te-gadget span, 
+.goog-te-banner-frame,
+#goog-gt-tt {
+    display: none !important;
+}
+.goog-te-gadget {
+    color: transparent !important;
+    font-size: 0 !important;
+}
+
+/* 2. Style the actual dropdown element injected by Google */
+#google_translate_element select.goog-te-combo {
+    background-color: transparent !important;
+    border: none !important;
+    color: #334155 !important; /* Tailwind's text-slate-700 */
+    font-family: inherit !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    padding: 0 28px 0 4px !important; /* Spacing for custom arrow */
+    margin: 0 !important;
+    outline: none !important;
+    cursor: pointer !important;
+    appearance: none !important; /* Strips default browser styling */
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+}
+
+/* 3. Handle the dynamic positioning of the wrapper box */
+.translate-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* 4. Inject a clean, modern chevron arrow next to the text */
+.translate-wrapper::after {
+    content: "";
+    position: absolute;
+    right: 12px;
+    top: 51%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='3' stroke='%2364748b' %3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    pointer-events: none;
+    transition: all 0.2s;
+}
+
+/* Turn the arrow Indigo when hovering the widget box */
+.translate-wrapper:hover::after {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='3' stroke='%236366f1' %3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E");
+}
+
+/* Prevent Google from pushing the top of your page layout down */
+body {
+    top: 0 !important;
+}
+.skiptranslate {
+    display: none !important;
+}
+.skiptranslate.goog-te-gadget {
+    display: block !important;
+}
+    
     </style>
 </head>
 <body class="bg-[#fcfaf7] text-slate-900 min-h-screen flex items-center justify-center p-6">
-
+<div class="translate-wrapper h-11 bg-slate-50 border border-slate-200 hover:border-indigo-200 hover:bg-indigo-50 rounded-xl px-3 transition-all duration-200 group">
+        <i class="fas fa-globe text-slate-400 mr-1.5 text-sm pointer-events-none group-hover:text-indigo-500 transition-colors"></i>
+        <div id="google_translate_element"></div>
+    </div>
     <div id="registrationContainer" class="max-w-2xl w-full glass-card rounded-[2.5rem] shadow-2xl overflow-hidden">
         <div class="bg-slate-900 p-10 text-center">
             <h1 class="luxury-title text-4xl text-amber-400 tracking-tight"> Novous Cloud PMS</h1>
@@ -158,6 +229,18 @@
             btn.textContent = "Create Partner Account";
         }
     });
+</script>
+ <script>
+function googleTranslateElementInit() {
+    new google.translate.TranslateElement(
+        {
+            pageLanguage: 'en',
+            includedLanguages: 'fr,es,de,sw,ar,en,zh-CN'
+            // Removed the InlineLayout.SIMPLE line to allow custom styling
+        },
+        'google_translate_element'
+    );
+}
 </script>
 </body>
 </html>
