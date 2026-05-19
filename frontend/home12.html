@@ -227,6 +227,7 @@
             <i class="fas fa-bars"></i>
         </button>
     </div>
+    <div id="google_translate_element"></div>
 </header>
 
 <div class="bg-slate-50/50 border-b border-slate-200 px-6 py-4">
@@ -2920,5 +2921,21 @@ Add Guest Details            </h2>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="script4.js"></script>
+    <script>
+function googleTranslateElementInit() {
+    new google.translate.TranslateElement(
+        {
+            pageLanguage: 'en',
+            includedLanguages: 'fr,es,de,sw,ar,zh-CN',
+            layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+        },
+        'google_translate_element'
+    );
+}
+</script>
+
+<script type="text/javascript"
+src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
+</script>
 </body>
 </html>
