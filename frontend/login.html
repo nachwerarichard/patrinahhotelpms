@@ -5,15 +5,96 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hotel Systems Login | Patrinah</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for the Globe Icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         .login-bg {
             background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1549488349-e09b9f1d8c06?q=80&w=2670&auto=format&fit=crop');
             background-size: cover;
             background-position: center;
         }
+
+        /* 1. Hide the ugly "Powered by Google" branding and text noise */
+        .goog-logo-link, 
+        .goog-te-gadget span, 
+        .goog-te-banner-frame,
+        #goog-gt-tt {
+            display: none !important;
+        }
+        .goog-te-gadget {
+            color: transparent !important;
+            font-size: 0 !important;
+        }
+
+        /* 2. Style the actual dropdown element injected by Google */
+        #google_translate_element select.goog-te-combo {
+            background-color: transparent !important;
+            border: none !important;
+            color: #334155 !important; /* text-slate-700 */
+            font-family: inherit !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            padding: 0 24px 0 4px !important; /* Spacing for custom arrow */
+            margin: 0 !important;
+            outline: none !important;
+            cursor: pointer !important;
+            appearance: none !important; /* Strips default browser styling */
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+        }
+
+        /* 3. Handle the dynamic positioning of the wrapper box */
+        .translate-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        /* 4. Inject a clean, modern chevron arrow next to the text */
+        .translate-wrapper::after {
+            content: "";
+            position: absolute;
+            right: 12px;
+            top: 51%;
+            transform: translateY(-50%);
+            width: 10px;
+            height: 10px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='3' stroke='%2364748b' %3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            pointer-events: none;
+            transition: all 0.2s;
+        }
+
+        /* Turn the arrow Indigo on hover to match login theme styling */
+        .translate-wrapper:hover::after {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='3' stroke='%236366f1' %3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E");
+        }
+
+        /* Prevent Google from pushing the top of your page layout down */
+        body {
+            top: 0 !important;
+        }
+        .skiptranslate {
+            display: none !important;
+        }
+        .skiptranslate.goog-te-gadget {
+            display: block !important;
+        }
     </style>
 </head>
-<body class="min-h-screen login-bg flex items-center justify-center p-4 font-sans text-slate-900">
+<body class="min-h-screen login-bg flex items-center justify-center p-4 font-sans text-slate-900 relative">
+
+    <!-- Top Floating Translation Anchor Container -->
+    <div class="absolute top-6 right-6 z-50">
+        <div class="translate-wrapper h-10 bg-white/95 backdrop-blur-md border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 rounded-xl px-3 transition-all duration-200 group shadow-sm">
+            <i class="fas fa-globe text-slate-400 mr-1.5 text-xs pointer-events-none group-hover:text-indigo-600 transition-colors"></i>
+            <div id="google_translate_element"></div>
+        </div>
+    </div>
+
+    <!-- Login Authentication Card Box -->
     <div id="auth-container" class="w-full max-w-md bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl p-8 transition-all duration-500 border border-white/20">
     
         <div class="text-center mb-8">
@@ -48,80 +129,22 @@
         </form>
     </div>
 
-<script>
-    const API_URL = 'https://patrinahhotelpms.onrender.com/api';
-    // The single destination for all users
-    const MAIN_SYSTEM_URL = 'https://elegant-pasca-cea136.netlify.app/frontend/home12.html';
+    <script src="login.js"></script>
 
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById('login-button');
-        const err = document.getElementById('error-message');
-        
-        btn.disabled = true;
-        btn.innerHTML = `<span class="flex items-center justify-center gap-2">Verifying Credentials...</span>`;
-        err.classList.add('hidden');
-
-        const username = document.getElementById('username').value.trim();
-        const password = document.getElementById('password').value.trim();
-
-        try {
-            const response = await fetch(`${API_URL}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }) 
-            });
-
-            const result = await response.json();
-
-         // INSIDE YOUR LOGIN PAGE SCRIPT
-if (response.ok) {
-    const user = result.user; // Data from your Node.js res.json
-    const token = result.token; // Your Base64 token
-    
-    // 1. LOGGING: Very important for debugging the "null" issue
-    console.log("Full User Object from Backend:", user);
-
-    // 2. EXTRACTION: Get the specific fields
-    const username = user.username;
-    const role = (user.role || '').toLowerCase();
-    const hotelId = user.hotelId || "";
-    
-    // This is the key field we added to the backend
-    const hotelName = user.hotelName || "Our Hotel"; 
-
-    // 3. URL CONSTRUCTION: Encode everything to handle spaces/special characters
-    const secureParams = `?autoLogin=true` +
-        `&u=${encodeURIComponent(username)}` +
-        `&t=${encodeURIComponent(token)}` +
-        `&n=${encodeURIComponent(hotelName)}` + // 'n' is for Name
-        `&r=${encodeURIComponent(role)}` +
-        `&h=${encodeURIComponent(hotelId)}`;
-
-    // 4. FEEDBACK: Show the user something is happening
-    const btn = document.getElementById('login-button');
-    if (btn) {
-        btn.innerHTML = `<span class="flex items-center justify-center gap-2">Access Granted. Redirecting...</span>`;
-        btn.classList.replace('bg-slate-900', 'bg-emerald-600');
-    }
-
-    // 5. REDIRECT: Send to the dashboard
-    console.log("Redirecting to:", `${MAIN_SYSTEM_URL}${secureParams}`);
-    window.location.replace(`${MAIN_SYSTEM_URL}${secureParams}`);
-}else {
-                err.textContent = result.message || 'Authentication failed.';
-                err.classList.remove('hidden');
-            }
-        } catch (error) {
-            err.textContent = 'Server unreachable. Check your connection.';
-            err.classList.remove('hidden');
-        } finally {
-            if (!response?.ok) {
-                btn.disabled = false;
-                btn.textContent = 'Secure Login';
-            }
+    <!-- Google Translate Initialization Trigger Setup -->
+    <script>
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement(
+                {
+                    pageLanguage: 'en',
+                    includedLanguages: 'fr,es,de,sw,ar,zh-CN'
+                },
+                'google_translate_element'
+            );
         }
-    });
-</script>
+    </script>
+    <!-- Essential Google Translate Script Engine -->
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
 </body>
 </html>
