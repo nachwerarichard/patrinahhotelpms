@@ -4521,8 +4521,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const navServiceReports = document.getElementById('nav-service-reports');
     const navCalendar = document.getElementById('nav-calendar');
     const navAuditLogs = document.getElementById('nav-audit-logs');
+    const navPaymentGateway = document.getElementById('nav-paymentgateway');
     const navChannelManager = document.getElementById('nav-channel-manager');
-        const navPOSInventory = document.getElementById('nav-posinventory');
+    const navPOSInventory = document.getElementById('nav-posinventory');
       const navCash = document.getElementById('nav-cash');
       const navInventory = document.getElementById('nav-inventory');
         const navExpense = document.getElementById('nav-expenses');
@@ -4648,6 +4649,13 @@ document.addEventListener('DOMContentLoaded', () => {
         navAuditLogs.addEventListener('click', (e) => {
             e.preventDefault();
             showSection('audit-logs');
+        });
+    }
+
+     if (navPaymentGateway) {
+        navPaymentGateway.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection('paymentgateway');
         });
     }
 
