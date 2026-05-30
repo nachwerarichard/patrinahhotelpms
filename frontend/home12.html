@@ -2042,384 +2042,203 @@ body {
                 </div>
             </section>
 
-<section id="paymentgateway"
-    class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+<section id="paymentgateway" class="section bg-white p-6 rounded-lg shadow-md mb-8">
 
-    <!-- Header -->
     <div class="flex justify-between items-center mb-6">
         <div>
-            <h2 class="text-2xl font-bold text-blue-600">
-                Payment Gateways
-            </h2>
+            <h2 class="text-2xl font-bold text-blue-600">Payment Gateways</h2>
             <p class="text-gray-500 text-sm mt-1">
                 Manage payment providers used for guest payments and invoices.
             </p>
         </div>
     </div>
 
-    <!-- Default Gateway -->
     <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <label class="block text-sm font-medium text-gray-700 mb-2">
             Default Payment Gateway
         </label>
-
-        <select id="defaultGateway"
-            class="w-full md:w-80 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+        <select id="defaultGateway" onchange="handleGlobalDefaultChange(this.value)"
+            class="w-full md:w-80 border rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 font-medium text-gray-800">
             <option value="pesapal">Pesapal</option>
             <option value="flutterwave">Flutterwave</option>
             <option value="stripe">Stripe</option>
         </select>
-
         <p class="text-xs text-gray-500 mt-2">
             This gateway will be used by default when generating payment links and QR codes.
         </p>
     </div>
 
-    <!-- Payment Gateway Table -->
     <div class="overflow-x-auto">
-
-        <table class="w-full border border-gray-200 rounded-lg overflow-hidden">
-
-            <thead class="bg-gray-100">
+        <table class="w-full border border-gray-200 rounded-lg overflow-hidden" id="gatewayTable">
+            <thead class="bg-gray-100 text-gray-700 font-medium text-sm">
                 <tr>
                     <th class="text-left px-4 py-3">Gateway</th>
                     <th class="text-left px-4 py-3">Status</th>
                     <th class="text-left px-4 py-3">Environment</th>
                     <th class="text-left px-4 py-3">Default</th>
-                    <th class="text-left px-4 py-3">Actions</th>
+                    <th class="text-left px-4 py-3 text-right pr-6">Actions</th>
                 </tr>
             </thead>
+            <tbody class="divide-y divide-gray-200 text-sm text-gray-700">
 
-            <tbody>
-
-                <!-- Pesapal -->
-                <tr class="border-t">
+                <tr id="row-pesapal" class="border-t hover:bg-gray-50">
                     <td class="px-4 py-4">
-                        <div class="font-semibold">Pesapal</div>
-                        <div class="text-sm text-gray-500">
-                            Mobile Money, Cards & Bank Payments
-                        </div>
+                        <div class="font-semibold text-gray-900">Pesapal</div>
+                        <div class="text-xs text-gray-500">Mobile Money, Cards & Bank Payments</div>
                     </td>
-
-                    <td class="px-4 py-4">
-                        <span
-                            class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">
+                    <td class="px-4 py-4 status-cell">
+                        <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium inline-block">
                             Connected
                         </span>
                     </td>
-
-                    <td class="px-4 py-4">
-                        Live
-                    </td>
-
-                    <td class="px-4 py-4">
-                        <span
-                            class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm">
+                    <td class="px-4 py-4 env-cell font-mono text-xs">Live</td>
+                    <td class="px-4 py-4 default-cell">
+                        <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-medium inline-block default-badge">
                             Default
                         </span>
                     </td>
-
-                    <td class="px-4 py-4">
-                        <div class="flex gap-2">
-                            <button
-                                class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                                Configure
-                            </button>
-
-                            <button
-                                class="border border-red-500 text-red-500 px-4 py-2 rounded hover:bg-red-50">
-                                Disconnect
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-
-                <!-- Flutterwave -->
-                <tr class="border-t">
-                    <td class="px-4 py-4">
-                        <div class="font-semibold">Flutterwave</div>
-                        <div class="text-sm text-gray-500">
-                            Cards, Mobile Money & Bank Transfers
-                        </div>
-                    </td>
-
-                    <td class="px-4 py-4">
-                        <span
-                            class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
-                            Not Connected
-                        </span>
-                    </td>
-
-                    <td class="px-4 py-4">
-                        —
-                    </td>
-
-                    <td class="px-4 py-4">
-                        —
-                    </td>
-
-                    <td class="px-4 py-4">
-                        <button
-                            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                            Connect
+                    <td class="px-4 py-4 relative text-right pr-6">
+                        <button onclick="toggleGatewayMenu('pesapalMenu', event)" class="p-2 rounded-full hover:bg-gray-200 focus:outline-none transition-colors font-bold text-gray-600 text-lg">
+                            ⋮
                         </button>
+                        <div id="pesapalMenu" class="hidden absolute right-4 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50 text-left divide-y divide-gray-100">
+                            <div class="py-1">
+                                <button onclick="openConfigureModal('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Configure</button>
+                                <button onclick="openTestModal('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Test Connection</button>
+                                <button onclick="setAsDefaultGateway('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-600 font-medium">Set as Default</button>
+                            </div>
+                            <div class="py-1">
+                                <button onclick="openDisconnectModal('pesapal')" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Disconnect</button>
+                            </div>
+                        </div>
                     </td>
                 </tr>
 
-                <!-- Stripe -->
-                <tr class="border-t">
+                <tr id="row-flutterwave" class="border-t hover:bg-gray-50">
                     <td class="px-4 py-4">
-                        <div class="font-semibold">Stripe</div>
-                        <div class="text-sm text-gray-500">
-                            Cards & International Payments
-                        </div>
+                        <div class="font-semibold text-gray-900">Flutterwave</div>
+                        <div class="text-xs text-gray-500">Cards, Mobile Money & Bank Transfers</div>
                     </td>
-
-                    <td class="px-4 py-4">
-                        <span
-                            class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
+                    <td class="px-4 py-4 status-cell">
+                        <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-medium inline-block">
                             Not Connected
                         </span>
                     </td>
-
-                    <td class="px-4 py-4">
-                        —
+                    <td class="px-4 py-4 env-cell font-mono text-xs">—</td>
+                    <td class="px-4 py-4 default-cell">—</td>
+                    <td class="px-4 py-4 relative text-right pr-6">
+                        <button onclick="toggleGatewayMenu('flutterwaveMenu', event)" class="p-2 rounded-full hover:bg-gray-200 focus:outline-none transition-colors font-bold text-gray-600 text-lg">
+                            ⋮
+                        </button>
+                        <div id="flutterwaveMenu" class="hidden absolute right-4 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50 text-left divide-y divide-gray-100">
+                            <div class="py-1">
+                                <button onclick="openConfigureModal('flutterwave')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Connect & Setup</button>
+                                <button onclick="openTestModal('flutterwave')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-400 cursor-not-allowed dynamic-test-btn" disabled>Test Connection</button>
+                                <button onclick="setAsDefaultGateway('flutterwave')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-400 cursor-not-allowed dynamic-default-btn" disabled>Set as Default</button>
+                            </div>
+                        </div>
                     </td>
+                </tr>
 
+                <tr id="row-stripe" class="border-t hover:bg-gray-50">
                     <td class="px-4 py-4">
-                        —
+                        <div class="font-semibold text-gray-900">Stripe</div>
+                        <div class="text-xs text-gray-500">Cards & International Payments</div>
                     </td>
-
-                        <td class="px-4 py-4 relative">
-
-    <button
-        onclick="toggleGatewayMenu('pesapalMenu')"
-        class="p-2 rounded-full hover:bg-gray-100">
-        ⋮
-    </button>
-
-    <!-- Dropdown Menu -->
-    <div id="pesapalMenu"
-        class="hidden absolute right-4 mt-2 w-48 bg-white border rounded-lg shadow-lg z-50">
-
-        <button
-            onclick="openModal('configurePesapalModal')"
-            class="w-full text-left px-4 py-3 hover:bg-gray-50">
-            Configure
-        </button>
-
-        <button
-            onclick="openModal('testConnectionModal')"
-            class="w-full text-left px-4 py-3 hover:bg-gray-50">
-            Test Connection
-        </button>
-
-        <button
-            class="w-full text-left px-4 py-3 hover:bg-gray-50">
-            Set as Default
-        </button>
-
-        <button
-            onclick="openModal('disconnectGatewayModal')"
-            class="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50">
-            Disconnect
-        </button>
-
-    </div>
-
-
+                    <td class="px-4 py-4 status-cell">
+                        <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-medium inline-block">
+                            Not Connected
+                        </span>
+                    </td>
+                    <td class="px-4 py-4 env-cell font-mono text-xs">—</td>
+                    <td class="px-4 py-4 default-cell">—</td>
+                    <td class="px-4 py-4 relative text-right pr-6">
+                        <button onclick="toggleGatewayMenu('stripeMenu', event)" class="p-2 rounded-full hover:bg-gray-200 focus:outline-none transition-colors font-bold text-gray-600 text-lg">
+                            ⋮
+                        </button>
+                        <div id="stripeMenu" class="hidden absolute right-4 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50 text-left divide-y divide-gray-100">
+                            <div class="py-1">
+                                <button onclick="openConfigureModal('stripe')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Connect & Setup</button>
+                                <button onclick="openTestModal('stripe')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-400 cursor-not-allowed dynamic-test-btn" disabled>Test Connection</button>
+                                <button onclick="setAsDefaultGateway('stripe')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-400 cursor-not-allowed dynamic-default-btn" disabled>Set as Default</button>
+                            </div>
+                        </div>
                     </td>
                 </tr>
 
             </tbody>
-
         </table>
-
     </div>
-
 </section>
-<div id="configurePesapalModal"
-    class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 
-    <div class="bg-white w-full max-w-lg rounded-xl shadow-xl p-6">
-
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-bold">
-                Configure Pesapal
-            </h3>
-
-            <button
-                onclick="closeModal('configurePesapalModal')"
-                class="text-gray-500 text-xl">
-                ×
-            </button>
+<div id="configureGatewayModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white w-full max-w-lg rounded-xl shadow-2xl p-6 transform transition-all">
+        <div class="flex justify-between items-center mb-4 border-b pb-3">
+            <h3 class="text-xl font-bold text-gray-800" id="configModalTitle">Configure Gateway</h3>
+            <button onclick="closeModal('configureGatewayModal')" class="text-gray-400 hover:text-gray-600 text-2xl font-semibold">&times;</button>
         </div>
-
-        <div class="space-y-4">
-
-            <div>
-                <label class="block text-sm font-medium mb-2">
-                    Consumer Key
-                </label>
-
-                <input
-                    type="text"
-                    class="w-full border rounded-lg px-3 py-2">
+        <form id="gatewayConfigForm" onsubmit="saveGatewayCredentials(event)">
+            <input type="hidden" id="configTargetGateway" value="">
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1" id="lblKeyOne">Public Key / Client ID</label>
+                    <input type="text" id="inputKeyOne" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1" id="lblKeyTwo">Secret Key / Secret Token</label>
+                    <input type="password" id="inputKeyTwo" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Target Environment Deployment</label>
+                    <select id="inputEnv" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 bg-white outline-none">
+                        <option value="Sandbox">Sandbox (Testing / Demo Simulation)</option>
+                        <option value="Live">Live (Real-time Merchant Processing)</option>
+                    </select>
+                </div>
             </div>
 
-            <div>
-                <label class="block text-sm font-medium mb-2">
-                    Consumer Secret
-                </label>
-
-                <input
-                    type="password"
-                    class="w-full border rounded-lg px-3 py-2">
+            <div class="flex justify-end gap-3 mt-6 pt-3 border-t">
+                <button type="button" onclick="closeModal('configureGatewayModal')" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">Cancel</button>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium shadow-sm transition-colors">Save Configuration</button>
             </div>
-
-            <div>
-                <label class="block text-sm font-medium mb-2">
-                    Environment
-                </label>
-
-                <select
-                    class="w-full border rounded-lg px-3 py-2">
-
-                    <option>Sandbox</option>
-                    <option>Live</option>
-
-                </select>
-            </div>
-
-        </div>
-
-        <div class="flex justify-end gap-3 mt-6">
-
-            <button
-                onclick="closeModal('configurePesapalModal')"
-                class="px-4 py-2 border rounded-lg">
-                Cancel
-            </button>
-
-            <button
-                class="bg-blue-600 text-white px-4 py-2 rounded-lg">
-                Save Configuration
-            </button>
-
-        </div>
-
+        </form>
     </div>
-
 </div>
 
-<div id="connectGatewayModal"
-    class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-
-    <div class="bg-white w-full max-w-lg rounded-xl shadow-xl p-6">
-
-        <h3 class="text-xl font-bold mb-4">
-            Connect Gateway
-        </h3>
-
-        <p class="text-gray-600 mb-6">
-            Enter your API credentials to activate this payment provider.
+<div id="testConnectionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white p-6 rounded-xl max-w-md w-full shadow-2xl">
+        <h3 class="text-xl font-bold text-gray-800 mb-2">Connection Verification</h3>
+        <p class="text-gray-600 text-sm mb-4">
+            Pinging servers to verify authorization payloads for <span id="testGatewayName" class="font-bold text-blue-600">Gateway</span> execution wrappers.
         </p>
-
-        <div class="space-y-4">
-
-            <input
-                type="text"
-                placeholder="Public/API Key"
-                class="w-full border rounded-lg px-3 py-2">
-
-            <input
-                type="password"
-                placeholder="Secret Key"
-                class="w-full border rounded-lg px-3 py-2">
-
+        
+        <div id="testConsoleLog" class="hidden mb-4 p-3 bg-gray-900 rounded-lg font-mono text-xs text-green-400 space-y-1 h-24 overflow-y-auto">
+            <p class="text-gray-400">> Initiating handshake request...</p>
+            <p class="text-yellow-400">> Passing verification tokens...</p>
+            <p class="text-green-400">> Success: HTTP 200 Connection Verified!</p>
         </div>
 
         <div class="flex justify-end gap-3 mt-6">
-
-            <button
-                onclick="closeModal('connectGatewayModal')"
-                class="border px-4 py-2 rounded-lg">
-                Cancel
-            </button>
-
-            <button
-                class="bg-blue-600 text-white px-4 py-2 rounded-lg">
-                Connect Gateway
-            </button>
-
+            <button id="testCancelBtn" onclick="closeModal('testConnectionModal')" class="border border-gray-300 px-4 py-2 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">Close</button>
+            <button id="testRunBtn" onclick="executeDiagnosticMock()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors">Run Diagnostics</button>
         </div>
-
     </div>
-
 </div>
 
-<div id="testConnectionModal"
-    class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-
-    <div class="bg-white p-6 rounded-xl max-w-md w-full">
-
-        <h3 class="text-xl font-bold mb-4">
-            Test Connection
-        </h3>
-
-        <p class="text-gray-600">
-            Verify that the payment gateway credentials are valid.
+<div id="disconnectGatewayModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white p-6 rounded-xl max-w-md w-full shadow-2xl">
+        <h3 class="text-xl font-bold text-red-600 mb-2">Disconnect Gateway Confirmation</h3>
+        <p class="text-gray-600 text-sm">
+            Are you sure you want to isolate <span id="disconnectGatewayTarget" class="font-bold text-gray-900">this provider</span>? Active checkout options, links, and automated booking receipts tied to this account will fail immediately.
         </p>
-
         <div class="flex justify-end gap-3 mt-6">
-
-            <button
-                onclick="closeModal('testConnectionModal')"
-                class="border px-4 py-2 rounded-lg">
-                Cancel
-            </button>
-
-            <button
-                class="bg-blue-600 text-white px-4 py-2 rounded-lg">
-                Run Test
-            </button>
-
+            <button onclick="closeModal('disconnectGatewayModal')" class="border border-gray-300 px-4 py-2 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">Cancel Operations</button>
+            <button onclick="executeDisconnectPipeline()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors">Confirm Disconnect</button>
         </div>
-
     </div>
-
 </div>
-<div id="disconnectGatewayModal"
-    class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 
-    <div class="bg-white p-6 rounded-xl max-w-md w-full">
-
-        <h3 class="text-xl font-bold text-red-600 mb-4">
-            Disconnect Gateway
-        </h3>
-
-        <p class="text-gray-600">
-            Are you sure you want to disconnect this payment gateway?
-        </p>
-
-        <div class="flex justify-end gap-3 mt-6">
-
-            <button
-                onclick="closeModal('disconnectGatewayModal')"
-                class="border px-4 py-2 rounded-lg">
-                Cancel
-            </button>
-
-            <button
-                class="bg-red-600 text-white px-4 py-2 rounded-lg">
-                Disconnect
-            </button>
-
-        </div>
-
-    </div>
-
-</div>
 
             <section id="audit-logs" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden  min-w-[2600px] overflow-hidden">
     
@@ -3379,44 +3198,210 @@ Add Guest Details            </h2>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="script4.js"></script>
     <script>
-        function openModal(id) {
+// Track active state across actions
+let activeGatewayContext = '';
+
+/** Modals System Open Toggles */
+function openModal(id) {
     document.getElementById(id).classList.remove("hidden");
 }
 
 function closeModal(id) {
     document.getElementById(id).classList.add("hidden");
+    // Clear log screen metrics if closing test verification module
+    if(id === 'testConnectionModal') {
+        document.getElementById('testConsoleLog').classList.add('hidden');
+        document.getElementById('testRunBtn').disabled = false;
+        document.getElementById('testRunBtn').innerText = "Run Diagnostics";
+    }
 }
 
-function toggleGatewayMenu(id) {
+/** Toggles Dropdown actions per gateway row context safely */
+function toggleGatewayMenu(id, event) {
+    if (event) event.stopPropagation();
 
-    document
-        .querySelectorAll('[id$="Menu"]')
-        .forEach(menu => {
-            if (menu.id !== id) {
-                menu.classList.add('hidden');
-            }
-        });
+    document.querySelectorAll('[id$="Menu"]').forEach(menu => {
+        if (menu.id !== id) menu.classList.add('hidden');
+    });
 
-    document
-        .getElementById(id)
-        .classList
-        .toggle("hidden");
+    document.getElementById(id).classList.toggle("hidden");
 }
 
-document.addEventListener("click", (e) => {
+/** Prepares configuration context before showing modal UI frame */
+function openConfigureModal(gatewayKey) {
+    activeGatewayContext = gatewayKey;
+    document.getElementById('configTargetGateway').value = gatewayKey;
+    
+    const title = document.getElementById('configModalTitle');
+    const lblOne = document.getElementById('lblKeyOne');
+    const lblTwo = document.getElementById('lblKeyTwo');
+    
+    // Clear fields
+    document.getElementById('inputKeyOne').value = '';
+    document.getElementById('inputKeyTwo').value = '';
 
-    if (!e.target.closest("td")) {
+    if (gatewayKey === 'pesapal') {
+        title.innerText = "Configure Pesapal (API V3)";
+        lblOne.innerText = "Consumer Key";
+        lblTwo.innerText = "Consumer Secret";
+    } else if (gatewayKey === 'flutterwave') {
+        title.innerText = "Configure Flutterwave Integration";
+        lblOne.innerText = "Public Key";
+        lblTwo.innerText = "Secret Key";
+    } else if (gatewayKey === 'stripe') {
+        title.innerText = "Configure Stripe Connect Elements";
+        lblOne.innerText = "Publishable Key";
+        lblTwo.innerText = "Secret Key Key";
+    }
+    
+    document.querySelectorAll('[id$="Menu"]').forEach(m => m.classList.add('hidden'));
+    openModal('configureGatewayModal');
+}
 
-        document
-            .querySelectorAll('[id$="Menu"]')
-            .forEach(menu => {
-                menu.classList.add("hidden");
-            });
+/** Dynamic processing of client form credential setup */
+function saveGatewayCredentials(event) {
+    event.preventDefault();
+    const gateway = document.getElementById('configTargetGateway').value;
+    const environment = document.getElementById('inputEnv').value;
 
+    // Grab target references inside our standard tabular grid structure
+    const targetRow = document.getElementById(`row-${gateway}`);
+    
+    if (targetRow) {
+        // 1. Update Connection Status Badge View
+        const statusCell = targetRow.querySelector('.status-cell');
+        statusCell.innerHTML = `<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium inline-block">Connected</span>`;
+        
+        // 2. Set Active Running Environment Deployment Key
+        const envCell = targetRow.querySelector('.env-cell');
+        envCell.innerText = environment;
+
+        // 3. Unlock internal specific contextual row actions inside standard loop wrapper
+        const actionMenu = document.getElementById(`${gateway}Menu`);
+        actionMenu.innerHTML = `
+            <div class="py-1">
+                <button onclick="openConfigureModal('${gateway}')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Configure</button>
+                <button onclick="openTestModal('${gateway}')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Test Connection</button>
+                <button onclick="setAsDefaultGateway('${gateway}')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-600 font-medium">Set as Default</button>
+            </div>
+            <div class="py-1">
+                <button onclick="openModal('disconnectGatewayModal')" onclick="openDisconnectModal('${gateway}')" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Disconnect</button>
+            </div>
+        `;
     }
 
+    closeModal('configureGatewayModal');
+}
+
+/** Prepares Diagnostics Context Wrapper */
+function openTestModal(gatewayKey) {
+    activeGatewayContext = gatewayKey;
+    const displayNames = { pesapal: 'Pesapal V3', flutterwave: 'Flutterwave Mainframe', stripe: 'Stripe International' };
+    document.getElementById('testGatewayName').innerText = displayNames[gatewayKey] || gatewayKey;
+    
+    document.querySelectorAll('[id$="Menu"]').forEach(m => m.classList.add('hidden'));
+    openModal('testConnectionModal');
+}
+
+/** Simulation engine execution workflow */
+function executeDiagnosticMock() {
+    const runBtn = document.getElementById('testRunBtn');
+    const logConsole = document.getElementById('testConsoleLog');
+    
+    runBtn.disabled = true;
+    runBtn.innerText = "Processing Ping...";
+    logConsole.classList.remove('hidden');
+    
+    // Simulate API delay context loop safely
+    setTimeout(() => {
+        runBtn.innerText = "Connection Stable";
+    }, 1800);
+}
+
+/** Setup Disconnect contextual payload pointers */
+function openDisconnectModal(gatewayKey) {
+    activeGatewayContext = gatewayKey;
+    document.getElementById('disconnectGatewayTarget').innerText = gatewayKey.toUpperCase();
+    document.querySelectorAll('[id$="Menu"]').forEach(m => m.classList.add('hidden'));
+    openModal('disconnectGatewayModal');
+}
+
+/** Tears down internal memory allocations, cleans system row templates back to baseline standards */
+function executeDisconnectPipeline() {
+    const gateway = activeGatewayContext;
+    const targetRow = document.getElementById(`row-${gateway}`);
+    
+    if (targetRow) {
+        // Reset row UI to original offline metrics status loops
+        targetRow.querySelector('.status-cell').innerHTML = `<span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-medium inline-block">Not Connected</span>`;
+        targetRow.querySelector('.env-cell').innerText = '—';
+        
+        // If it was default, clear it out safely
+        const defaultCell = targetRow.querySelector('.default-cell');
+        if(defaultCell.innerHTML.includes('Default')) {
+            defaultCell.innerText = '—';
+            document.getElementById('defaultGateway').value = '';
+        } else {
+            defaultCell.innerText = '—';
+        }
+
+        // Lock individual inner methods components back to safety bounds
+        const actionMenu = document.getElementById(`${gateway}Menu`);
+        actionMenu.innerHTML = `
+            <div class="py-1">
+                <button onclick="openConfigureModal('${gateway}')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Connect & Setup</button>
+                <button onclick="openTestModal('${gateway}')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-400 cursor-not-allowed dynamic-test-btn" disabled>Test Connection</button>
+                <button onclick="setAsDefaultGateway('${gateway}')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-400 cursor-not-allowed dynamic-default-btn" disabled>Set as Default</button>
+            </div>
+        `;
+    }
+    closeModal('disconnectGatewayModal');
+}
+
+/** Mutator updates absolute reference defaults visually */
+function setAsDefaultGateway(gatewayKey) {
+    // 1. Synchronize drop-down selector value
+    document.getElementById('defaultGateway').value = gatewayKey;
+    
+    // 2. Loop through table instances updating visual status structures completely
+    const gateways = ['pesapal', 'flutterwave', 'stripe'];
+    gateways.forEach(g => {
+        const row = document.getElementById(`row-${g}`);
+        if(!row) return;
+        
+        const defCell = row.querySelector('.default-cell');
+        const statusCell = row.querySelector('.status-cell');
+        
+        if (g === gatewayKey) {
+            defCell.innerHTML = `<span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-medium inline-block default-badge">Default</span>`;
+            // Safety Check: Force connection status awake if forced engine choice default assignment happens
+            if(statusCell.innerText.includes('Not Connected')) {
+                statusCell.innerHTML = `<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium inline-block">Connected</span>`;
+                row.querySelector('.env-cell').innerText = 'Sandbox';
+            }
+        } else {
+            defCell.innerText = '—';
+        }
+    });
+    
+    document.querySelectorAll('[id$="Menu"]').forEach(m => m.classList.add('hidden'));
+}
+
+/** Handles updates starting directly via standard drop down selector engine components */
+function handleGlobalDefaultChange(selectedValue) {
+    if(!selectedValue) return;
+    setAsDefaultGateway(selectedValue);
+}
+
+/** Global Global Event Click interceptor logic to sweep and shut dropdown menus dynamically */
+document.addEventListener("click", (e) => {
+    if (!e.target.closest("td")) {
+        document.querySelectorAll('[id$="Menu"]').forEach(menu => {
+            menu.classList.add("hidden");
+        });
+    }
 });
-    </script>
+</script>
 <script>
 function googleTranslateElementInit() {
     new google.translate.TranslateElement(
