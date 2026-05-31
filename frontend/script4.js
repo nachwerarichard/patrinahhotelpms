@@ -3721,93 +3721,134 @@ document.getElementById('addPaymentModal')?.addEventListener('click', function(e
  * SUBMIT PAYMENT
  * Updates the booking balance and records the transaction.
  */
+/** Toggles context validation fields based on selected method */
+function toggleDigitalPaymentFields(method) {
+    const pesapalBox = document.getElementById('pesapalFields');
+    if (method === 'MTN Momo' || method === 'Airtel Pay') {
+        pesapalBox.classList.remove('hidden');
+        
+        // Attempt to auto-extract existing customer information out of dashboard context if available
+        const currentGuestPhone = document.getElementById('guestPhoneField')?.innerText || '';
+        const currentGuestEmail = document.getElementById('guestEmailField')?.innerText || '';
+        
+        if(currentGuestPhone) document.getElementById('pesapalPhone').value = currentGuestPhone;
+        if(currentGuestEmail) document.getElementById('pesapalEmail').value = currentGuestEmail;
+    } else {
+        pesapalBox.classList.add('hidden');
+    }
+}
+
+/** Aborts active digital session frames */
+function abortPesapalCheckout() {
+    document.getElementById('pesapalIframeContainer').classList.add('hidden');
+    document.getElementById('paymentFormInputs').classList.remove('hidden');
+    document.getElementById('modalActionButtons').classList.remove('hidden');
+    document.getElementById('pesapalIframe').src = '';
+}
+
+/** Fully Refactored Submission Engine */
 async function submitPayment() {
     const bookingId = document.getElementById('paymentBookingId').value;
     const amountInput = document.getElementById('paymentAmount');
     const methodInput = document.getElementById('payMethod');
-    const submitBtn = document.querySelector('button[onclick="submitPayment()"]');
+    const submitBtn = document.getElementById('submitPaymentBtn');
 
     const amount = parseFloat(amountInput.value);
     const method = methodInput.value;
 
-    // 1. Validation
-    if (!bookingId) {
-        showMessage("Error", "No booking selected", true);
-        return;
-    }
+    // 1. Core Validations
+    if (!bookingId) return showMessage("Error", "No booking context linked.", true);
+    if (!amount || amount <= 0) return showMessage("Error", "Please enter a valid amount.", true);
+    if (!method) return showMessage("Error", "Select a payment channel.", true);
 
-    if (!amount || amount <= 0) {
-        showMessage("Error", "Please enter a valid amount greater than 0", true);
-        return;
-    }
-
-    if (!method) {
-        showMessage("Error", "Please select a payment method", true);
-        return;
-    }
-
-    // 2. Multi-Tenant Context
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelId = user ? user.hotelId : null;
 
+    // 2. Identify Routing Path: Digital Gateway vs Offline Processing
+    const isPesapalGateway = (method === 'MTN Momo' || method === 'Airtel Pay');
+
+    let payload = { 
+        amount, 
+        method,
+        hotelId, 
+        recordedBy: user ? user.username : 'system' 
+    };
+
+    if (isPesapalGateway) {
+        const phone = document.getElementById('pesapalPhone').value.trim();
+        const email = document.getElementById('pesapalEmail').value.trim();
+
+        if (!phone && !email) {
+            showMessage("Error", "Pesapal checkout requires either a phone number or an email address.", true);
+            return;
+        }
+        payload.phone = phone;
+        payload.email = email;
+    }
+
     try {
-        // 3. UI Loading State (Prevent double-submission)
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+            submitBtn.innerHTML = '<svg class="animate-spin h-4 w-4 inline mr-2 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing Payment...';
         }
 
-        // 4. Execute API Call using authenticatedFetch
-        const response = await authenticatedFetch(`${API_BASE_URL}/bookings/${bookingId}/add-payment`, {
+        // Determine destination target endpoint route
+        const endpoint = isPesapalGateway 
+            ? `${API_BASE_URL}/bookings/${bookingId}/initiate-pesapal-payment`
+            : `${API_BASE_URL}/bookings/${bookingId}/add-payment`;
+
+        const response = await authenticatedFetch(endpoint, {
             method: "POST",
-            body: JSON.stringify({ 
-                amount, 
-                method,
-                hotelId, // Ensure the backend verifies this payment belongs to the right hotel
-                recordedBy: user ? user.username : 'system' // Audit trail
-            })
+            body: JSON.stringify(payload)
         });
-        if (!response) return;
 
-if (!response.ok) {
-    const text = await response.text();
-    console.error("Server returned:", text);
-    throw new Error("Failed to add payment");
-}
+        if (!response || !response.ok) {
+            const errBody = await response.json().catch(() => ({ message: "Server connection crash." }));
+            throw new Error(errBody.message || "Failed execution pipeline.");
+        }
 
-const result = await response.json();
+        const result = await response.json();
 
-        if (response && response.ok) {
-            // 5. Success Flow
-            showMessage("Success", `Payment of UGX ${amount.toLocaleString()} recorded successfully! ✅`);
-            
-            // Reset fields and close modal
+        if (isPesapalGateway) {
+            // STEP 3: Handle the Live Pesapal V3 Gateway Response Link
+            if (result.success && result.redirectUrl) {
+                // Swap layout containers visibility views inside modal panel context safely
+                document.getElementById('paymentFormInputs').classList.add('hidden');
+                document.getElementById('modalActionButtons').classList.add('hidden');
+                
+                const container = document.getElementById('pesapalIframeContainer');
+                const iframe = document.getElementById('pesapalIframe');
+                
+                container.classList.remove('hidden');
+                iframe.src = result.redirectUrl; 
+                
+                showMessage("Iframe Loaded", "Please complete payment inside the secure gateway frame.", false);
+            } else {
+                throw new Error(result.message || "Failed initializing digital gateway.");
+            }
+        } else {
+            // Step 4: Fallback to standard success pipeline for native paths (Cash)
+            showMessage("Success", `Payment of UGX ${amount.toLocaleString()} recorded to ledger! ✅`);
             amountInput.value = '';
             closePaymentModal();
-
-            // 6. Refresh Data across the UI
-            if (typeof updateDashboard === 'function') updateDashboard();
-            if (typeof renderBookings === 'function') {
-                renderBookings(currentPage, currentSearchTerm);
-            }
-            // If you are on the Reports page, refresh that too
-            if (typeof fetchReport === 'function') fetchReport();
-
-        } else {
-            // Server-side validation error (e.g., amount exceeds balance)
-            throw new Error(result.message || "Failed to add payment");
+            refreshDashboardViews();
         }
 
     } catch (err) {
-        console.error("Payment Submission Error:", err);
-        showMessage("Error", err.message || "Connection lost. Please try again.", true);
+        console.error("Critical Execution Fault:", err);
+        showMessage("Error", err.message, true);
     } finally {
-        // 7. Restore Button State
         if (submitBtn) {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = 'Confirm Payment';
+            submitBtn.innerHTML = 'Save Payment';
         }
     }
+}
+
+function refreshDashboardViews() {
+    if (typeof updateDashboard === 'function') updateDashboard();
+    if (typeof renderBookings === 'function') renderBookings(currentPage, currentSearchTerm);
+    if (typeof fetchReport === 'function') fetchReport();
 }
 
    // 1. Standardize your URL configuration

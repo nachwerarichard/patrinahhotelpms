@@ -1,6 +1,7 @@
 
 const express = require('express');
 const mongoose = require('mongoose');
+const axios = require('axios'); // Ensure you have run: npm install axios
 const cors = require('cors'); // Required for Cross-Origin Resource Sharing
 const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
 const cloudinary = require('cloudinary').v2;
@@ -1327,12 +1328,173 @@ app.post('/api/admin/onboard-hotel', async (req, res) => {
 });
 // Middleware to check authentication (simple hardcoded check)
 
+//adding payments  through pesapal
+// =========================================================================
+// HELPER METHOD: GENERATE TEMPORARY LIVE ACCESS TOKENS PER MULTI-TENANT CONTEXT
+// =========================================================================
+async function getPesapalAccessToken(hotelId) {
+    // Look up the unique tenant configurations stored securely inside your database
+    const config = await mongoose.model('Gateway').findOne({ gatewayId: 'pesapal' });
+    if (!config || !config.isConnected) {
+        throw new Error("Pesapal gateway configurations are missing or inactive for this system.");
+    }
+
+    const baseUrl = config.environment === 'Live' ? 'https://pay.pesapal.com/v3' : 'https://cybqa.pesapal.com/v3';
+    
+    // Stage 1 Signature Handshake verification call loops
+    const authResponse = await axios.post(`${baseUrl}/api/Auth/RegisterInteraction`, {
+        consumer_key: config.consumerKey,
+        consumer_secret: config.consumerSecret
+    }, {
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+    });
+
+    if (!authResponse.data || !authResponse.data.token) {
+        throw new Error("Failed to authenticate with Pesapal merchant core framework.");
+    }
+
+    return { token: authResponse.data.token, baseUrl, environment: config.environment };
+}
+
+// =========================================================================
+// ROUTE 1: INITIALIZE LIVE SECURE CHECKOUT SESSIONS
+// =========================================================================
+app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) => {
+    const { id } = req.params;
+    const { amount, method, phone, email, recordedBy } = req.body;
+
+    try {
+        // Multi-tenant isolation query logic check
+        const booking = await Booking.findOne({ id, hotelId: req.user.hotelId });
+        if (!booking) return res.status(404).json({ message: 'Target booking schema record not found' });
+
+        // Generate dynamic payload tokens matching corporate credentials parameters
+        const { token, baseUrl, environment } = await getPesapalAccessToken(req.user.hotelId);
+
+        // A fallback target is necessary. You can change this to match your live hosted web application domain path
+        const APP_DOMAIN = "https://yourpmshosting.com"; 
+
+        // Assemble strict Pesapal structural SubmitOrder request metrics
+        const merchantReference = `TXN-${id}-${Date.now()}`;
+        const orderPayload = {
+            id: merchantReference,
+            currency: "UGX",
+            amount: parseFloat(amount),
+            description: `Payment Room Service Booking Code Ref: ${booking.id}`,
+            callback_url: `${APP_DOMAIN}/pesapal-payment-success.html`,
+            notification_id: "YOUR_REGISTERED_PESAPAL_IPN_ID", // Input generated string identifier from Pesapal Dashboard setup
+            billing_address: {
+                email_address: email || "guest@novuspms.com",
+                phone_number: phone || "0000000000",
+                first_name: booking.name.split(" ")[0] || "Guest",
+                last_name: booking.name.split(" ")[1] || "Client"
+            }
+        };
+
+        const orderResponse = await axios.post(`${baseUrl}/api/Transactions/SubmitOrderRequest`, orderPayload, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        });
+
+        if (orderResponse.data && orderResponse.data.order_tracking_id) {
+            
+            // Log reference indicators securely into database arrays to keep tracking metrics clean
+            booking.transactionid = orderResponse.data.order_tracking_id; 
+            await booking.save();
+
+            return res.json({
+                success: true,
+                redirectUrl: orderResponse.data.redirect_url,
+                orderTrackingId: orderResponse.data.order_tracking_id
+            });
+        } else {
+            return res.status(400).json({ success: false, message: "Pesapal rejected generation profiles wrapper." });
+        }
+
+    } catch (error) {
+        console.error("PESAPAL INITIALIZE ROUTE FAILED:", error.response?.data || error.message);
+        return res.status(500).json({ message: "Failed processing gateway checkout frameworks link endpoints." });
+    }
+});
+
+// =========================================================================
+// ROUTE 2: PUBLIC INSTANT PAYMENT NOTIFICATION (IPN) BACKGROUND WEBHOOK
+// =========================================================================
+app.post('/api/payments/pesapal-ipn-callback', async (req, res) => {
+    // Pesapal drops structural monitoring updates parameter inputs over payload bodies
+    const { OrderTrackingId, OrderMerchantReference, OrderNotificationType } = req.body;
+
+    console.log(`>> Incoming Background IPN Call Received for tracking token reference: [${OrderTrackingId}]`);
+
+    try {
+        // 1. Trace the tracking identifier back to our active tenant parameters wrapper records
+        const booking = await Booking.findOne({ transactionid: OrderTrackingId });
+        if (!booking) {
+            return res.status(404).json({ message: "Tracking verification context reference unmatched inside internal systems." });
+        }
+
+        // 2. Query configurations to run authenticated confirmation calls
+        const { token, baseUrl } = await getPesapalAccessToken(booking.hotelId);
+
+        // 3. Confirm transaction state directly with official servers to prevent client-side spoofing
+        const statusCheck = await axios.get(`${baseUrl}/api/Transactions/GetTransactionStatus?orderTrackingId=${OrderTrackingId}`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+        });
+
+        const transactionData = statusCheck.data;
+
+        // Pesapal V3 Status codes mappings: 1 means Completed / Success
+        if (transactionData && transactionData.status_code === 1) {
+            const paymentAmount = Number(transactionData.amount);
+
+            // Re-verify payment bounds limits directly from the updated document values safely
+            const totalDue = Number(booking.totalDue) || 0;
+            const alreadyPaid = Number(booking.amountPaid) || 0;
+
+            const newAmountPaid = alreadyPaid + paymentAmount;
+            const newBalance = Math.max(0, totalDue - newAmountPaid);
+
+            booking.amountPaid = newAmountPaid;
+            booking.balance = newBalance;
+            booking.paymentMethod = transactionData.payment_method || 'MTN Momo';
+            booking.paymentStatus = newBalance === 0 ? 'Paid' : 'Partially Paid';
+
+            await booking.save();
+
+            // Commit record transformations directly into the multi-tenant system Audit Trail logs
+            await addAuditLog(
+                'Pesapal Verification Complete',
+                'Pesapal Core Network Gateway',
+                {
+                    bookingId: booking.id,
+                    trackingId: OrderTrackingId,
+                    amount: paymentAmount,
+                    status: 'COMPLETED'
+                },
+                booking.hotelId
+            );
+
+            // CRITICAL REQUIREMENT: Pesapal requires a specific acknowledgment response to stop retrying the webhook
+            return res.status(200).json({
+                orderNotificationType: "IPNCHANGE",
+                orderTrackingId: OrderTrackingId,
+                orderMerchantReference: OrderMerchantReference,
+                status: 200
+            });
+        }
+
+        return res.status(200).json({ message: "Webhook processed. Status not completed yet." });
+
+    } catch (error) {
+        console.error("IPN BACKGROUND PROCESSING FAULT PIPELINE ERROR:", error);
+        return res.status(500).json({ message: "Internal background parsing engine errors structural failure codes." });
+    }
+});
+
 //payment gateway
-
-const axios = require('axios'); // Ensure you have run: npm install axios
-
-
-
 // ==========================================
 // MONGODB DATA MODEL DEFINITION
 // ==========================================
