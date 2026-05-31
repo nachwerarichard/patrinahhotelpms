@@ -1333,25 +1333,20 @@ app.post('/api/admin/onboard-hotel', async (req, res) => {
 // HELPER METHOD: GENERATE TEMPORARY LIVE ACCESS TOKENS PER MULTI-TENANT CONTEXT
 // =========================================================================
 async function getPesapalAccessToken(hotelId) {
-    // Look up the unique tenant configurations stored securely inside your database
-    const config = await mongoose.model('Gateway').findOne({ gatewayId: 'pesapal' });
+    // Scopes search parameters specifically by the current active hotel context
+    const config = await mongoose.model('Gateway').findOne({ hotelId: hotelId, gatewayId: 'pesapal' });
     if (!config || !config.isConnected) {
-        throw new Error("Pesapal gateway configurations are missing or inactive for this system.");
+        throw new Error("Pesapal gateway configurations are missing or inactive for this property.");
     }
-
+    
     const baseUrl = config.environment === 'Live' ? 'https://pay.pesapal.com/v3' : 'https://cybqa.pesapal.com/v3';
     
-    // Stage 1 Signature Handshake verification call loops
     const authResponse = await axios.post(`${baseUrl}/api/Auth/RegisterInteraction`, {
         consumer_key: config.consumerKey,
         consumer_secret: config.consumerSecret
     }, {
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
     });
-
-    if (!authResponse.data || !authResponse.data.token) {
-        throw new Error("Failed to authenticate with Pesapal merchant core framework.");
-    }
 
     return { token: authResponse.data.token, baseUrl, environment: config.environment };
 }
@@ -1498,8 +1493,13 @@ app.post('/api/payments/pesapal-ipn-callback', async (req, res) => {
 // ==========================================
 // MONGODB DATA MODEL DEFINITION
 // ==========================================
+// =========================================================================
+// MULTI-TENANT MONGODB DATA MODEL DEFINITION
+// =========================================================================
 const GatewaySchema = new mongoose.Schema({
-    gatewayId: { type: String, required: true, unique: true }, // 'pesapal', 'flutterwave', etc.
+    // 🔒 Links this specific gateway configuration to a single tenant hotel
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, 
+    gatewayId: { type: String, required: true }, // 'pesapal', 'flutterwave'
     consumerKey: { type: String, required: true },
     consumerSecret: { type: String, required: true },
     environment: { type: String, enum: ['Sandbox', 'Live'], required: true },
@@ -1508,29 +1508,36 @@ const GatewaySchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
 });
 
+// 🔥 CRITICAL FOR MULTI-TENANCY: A hotel can only configure one instance of each gateway type
+GatewaySchema.index({ hotelId: 1, gatewayId: 1 }, { unique: true });
+
 const Gateway = mongoose.model('Gateway', GatewaySchema);
 
-// ==========================================
-// VERIFY & SAVE GATEWAY ROUTE
-// ==========================================
-app.post('/api/gateways/configure', async (req, res) => {
+// =========================================================================
+// TENANT-ISOLATED VERIFY & SAVE ROUTE
+// =========================================================================
+// Added your custom 'auth' middleware to protect the route and extract req.user
+app.post('/api/gateways/configure', auth, async (req, res) => {
     try {
         const { gateway, keyOne, keyTwo, environment } = req.body;
+        const tenantHotelId = req.user.hotelId; // Secured via auth middleware token layer
 
-        // Validation bounds check
+        if (!tenantHotelId) {
+            return res.status(401).json({ success: false, message: "Unauthorized: Missing tenant context identifier." });
+        }
+
         if (!gateway || !keyOne || !keyTwo || !environment) {
             return res.status(400).json({ success: false, message: "Missing required parameters." });
         }
 
         // Only isolate verification logic if the target is Pesapal
         if (gateway === 'pesapal') {
-            // Determine Pesapal Base API Server Endpoint
             const pesapalBaseUrl = environment === 'Live' 
                 ? 'https://pay.pesapal.com/v3' 
                 : 'https://cybqa.pesapal.com/v3';
 
             try {
-                // Post signature handshake request to official Pesapal Auth API V3 Engine
+                // Post test handshake to Pesapal using the keys provided for this hotel
                 const pesapalResponse = await axios.post(`${pesapalBaseUrl}/api/Auth/RegisterInteraction`, {
                     consumer_key: keyOne,
                     consumer_secret: keyTwo
@@ -1539,10 +1546,9 @@ app.post('/api/gateways/configure', async (req, res) => {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    timeout: 8000 // 8 second lifecycle safety timeout limit
+                    timeout: 8000
                 });
 
-                // Pesapal returns token metrics on successful execution loops
                 if (!pesapalResponse.data || !pesapalResponse.data.token) {
                     return res.status(400).json({ 
                         success: false, 
@@ -1550,20 +1556,20 @@ app.post('/api/gateways/configure', async (req, res) => {
                     });
                 }
                 
-                console.log(`>> Pesapal Handshake Verified Successfully for [${environment}] Environment`);
+                console.log(`>> Handshake Verified for Hotel [${tenantHotelId}] on [${environment}] Environment`);
 
             } catch (apiError) {
-                console.error("Pesapal API Handshake Exception Error:", apiError.response?.data || apiError.message);
+                console.error("Pesapal Auth Error:", apiError.response?.data || apiError.message);
                 return res.status(401).json({ 
                     success: false, 
-                    message: "Failed to authenticate keys with Pesapal. Please double-check your keys and chosen environment." 
+                    message: "Failed to authenticate keys with Pesapal. Please verify keys and environment." 
                 });
             }
         }
 
-        // Upsert operations pipeline: Update or Insert configuration parameters dynamically
+        // 🔒 Tenant-Scoped Upsert Pipeline: Update or insert credentials strictly for THIS hotel
         const updatedGateway = await Gateway.findOneAndUpdate(
-            { gatewayId: gateway },
+            { hotelId: tenantHotelId, gatewayId: gateway },
             {
                 consumerKey: keyOne,
                 consumerSecret: keyTwo,
@@ -1576,7 +1582,7 @@ app.post('/api/gateways/configure', async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: `${gateway.toUpperCase()} verified and committed securely to the database.`,
+            message: `${gateway.toUpperCase()} verified and committed securely for your hotel property.`,
             data: {
                 gateway: updatedGateway.gatewayId,
                 environment: updatedGateway.environment,
@@ -1585,7 +1591,7 @@ app.post('/api/gateways/configure', async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Database Save Execution Pipeline Failure:", error);
+        console.error("Database Save Failure:", error);
         return res.status(500).json({ success: false, message: "Internal server deployment exception error." });
     }
 });

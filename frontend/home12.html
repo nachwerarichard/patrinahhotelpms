@@ -3274,6 +3274,7 @@ function openConfigureModal(gatewayKey) {
 
 /** Dynamic processing of client form credential setup */
 /** Dynamic processing of client form credential setup with live API checking functionality */
+/** Dynamic processing of client form credential setup with tenant validation checks */
 function saveGatewayCredentials(event) {
     event.preventDefault();
 
@@ -3282,11 +3283,9 @@ function saveGatewayCredentials(event) {
     const keyTwo = document.getElementById('inputKeyTwo').value.trim();
     const environment = document.getElementById('inputEnv').value;
 
-    // Isolate UI targeting buttons context variables
     const submitBtn = event.target.querySelector('button[type="submit"]');
     const originalBtnText = submitBtn.innerText;
 
-    // Inject active UI Processing State Indicators
     submitBtn.disabled = true;
     submitBtn.innerHTML = `
         <span class="inline-flex items-center gap-2">
@@ -3294,10 +3293,9 @@ function saveGatewayCredentials(event) {
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            Verifying API Signatures...
+            Verifying Tenant Credentials...
         </span>`;
 
-    // Package request payload metrics mapping to backend expectations
     const payload = {
         gateway: gateway,
         keyOne: keyOne,
@@ -3305,36 +3303,30 @@ function saveGatewayCredentials(event) {
         environment: environment
     };
 
-    // Execute server-side pipeline dispatch call
-    fetch('/api/gateways/configure', {
+    // 🔥 FIX: Changed to authenticatedFetch to transmit the JWT containing the hotelId payload context safely
+    authenticatedFetch(`${API_BASE_URL}/gateways/configure`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
         body: JSON.stringify(payload)
     })
     .then(async response => {
+        if (!response) throw new Error("Connection failed.");
         const result = await response.json();
         if (!response.ok) {
-            throw new Error(result.message || "Network confirmation workflow failed execution mappings.");
+            throw new Error(result.message || "Credential configuration verification failed.");
         }
         return result;
     })
     .then(serverPayload => {
-        // SUCCESS HANDLING: Update local DOM properties dynamically
         alert(serverPayload.message);
         
         const targetRow = document.getElementById(`row-${gateway}`);
         if (targetRow) {
-            // Update Connection Status Badge View
             const statusCell = targetRow.querySelector('.status-cell');
             statusCell.innerHTML = `<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium inline-block">Connected</span>`;
             
-            // Set Active Running Environment Deployment Key
             const envCell = targetRow.querySelector('.env-cell');
             envCell.innerText = serverPayload.data.environment;
 
-            // Unlock and inject context menus components back into standard loop structures
             const actionMenu = document.getElementById(`${gateway}Menu`);
             actionMenu.innerHTML = `
                 <div class="py-1">
@@ -3350,12 +3342,10 @@ function saveGatewayCredentials(event) {
         closeModal('configureGatewayModal');
     })
     .catch(error => {
-        // ERROR HANDLING: Surface precise validation failures safely back to users
-        console.error("Gateway Modification Setup Fault Code Loop Response:", error);
+        console.error("Tenant Gateway Error:", error);
         alert(`Configuration Failed: ${error.message}`);
     })
     .finally(() => {
-        // Reset processing indicators back to native view state models
         submitBtn.disabled = false;
         submitBtn.innerText = originalBtnText;
     });
