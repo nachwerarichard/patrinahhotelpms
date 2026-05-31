@@ -1327,6 +1327,107 @@ app.post('/api/admin/onboard-hotel', async (req, res) => {
 });
 // Middleware to check authentication (simple hardcoded check)
 
+//payment gateway
+
+const axios = require('axios'); // Ensure you have run: npm install axios
+
+
+
+// ==========================================
+// MONGODB DATA MODEL DEFINITION
+// ==========================================
+const GatewaySchema = new mongoose.Schema({
+    gatewayId: { type: String, required: true, unique: true }, // 'pesapal', 'flutterwave', etc.
+    consumerKey: { type: String, required: true },
+    consumerSecret: { type: String, required: true },
+    environment: { type: String, enum: ['Sandbox', 'Live'], required: true },
+    isConnected: { type: Boolean, default: false },
+    isDefault: { type: Boolean, default: false },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+const Gateway = mongoose.model('Gateway', GatewaySchema);
+
+// ==========================================
+// VERIFY & SAVE GATEWAY ROUTE
+// ==========================================
+app.post('/api/gateways/configure', async (req, res) => {
+    try {
+        const { gateway, keyOne, keyTwo, environment } = req.body;
+
+        // Validation bounds check
+        if (!gateway || !keyOne || !keyTwo || !environment) {
+            return res.status(400).json({ success: false, message: "Missing required parameters." });
+        }
+
+        // Only isolate verification logic if the target is Pesapal
+        if (gateway === 'pesapal') {
+            // Determine Pesapal Base API Server Endpoint
+            const pesapalBaseUrl = environment === 'Live' 
+                ? 'https://pay.pesapal.com/v3' 
+                : 'https://cybqa.pesapal.com/v3';
+
+            try {
+                // Post signature handshake request to official Pesapal Auth API V3 Engine
+                const pesapalResponse = await axios.post(`${pesapalBaseUrl}/api/Auth/RegisterInteraction`, {
+                    consumer_key: keyOne,
+                    consumer_secret: keyTwo
+                }, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    timeout: 8000 // 8 second lifecycle safety timeout limit
+                });
+
+                // Pesapal returns token metrics on successful execution loops
+                if (!pesapalResponse.data || !pesapalResponse.data.token) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: "Invalid credentials. Pesapal authentication failed to produce an access token." 
+                    });
+                }
+                
+                console.log(`>> Pesapal Handshake Verified Successfully for [${environment}] Environment`);
+
+            } catch (apiError) {
+                console.error("Pesapal API Handshake Exception Error:", apiError.response?.data || apiError.message);
+                return res.status(401).json({ 
+                    success: false, 
+                    message: "Failed to authenticate keys with Pesapal. Please double-check your keys and chosen environment." 
+                });
+            }
+        }
+
+        // Upsert operations pipeline: Update or Insert configuration parameters dynamically
+        const updatedGateway = await Gateway.findOneAndUpdate(
+            { gatewayId: gateway },
+            {
+                consumerKey: keyOne,
+                consumerSecret: keyTwo,
+                environment: environment,
+                isConnected: true,
+                updatedAt: new Date()
+            },
+            { new: true, upsert: true }
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: `${gateway.toUpperCase()} verified and committed securely to the database.`,
+            data: {
+                gateway: updatedGateway.gatewayId,
+                environment: updatedGateway.environment,
+                isConnected: updatedGateway.isConnected
+            }
+        });
+
+    } catch (error) {
+        console.error("Database Save Execution Pipeline Failure:", error);
+        return res.status(500).json({ success: false, message: "Internal server deployment exception error." });
+    }
+});
+
 // Authorization: Check if the logged-in user has the right role
 function authorizeRole(requiredRole) {
     return (req, res, next) => {
