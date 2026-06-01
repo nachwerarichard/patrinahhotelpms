@@ -4548,16 +4548,18 @@ app.post('/api/public/hotel', async (req, res) => {
 // 4️⃣ Start server with normalization + index creation
 // ----------------------
 
-app.post('/api/gateways/configure',auth, async (req, res) => {
+app.post('/api/gateways/configure', auth, async (req, res) => {
     try {
         const { gateway, keyOne, keyTwo, environment } = req.body;
-        const tenantHotelId = req.user.hotelId; // Secured via auth middleware token layer
+        const tenantHotelId = req.user?.hotelId; // Secured via auth middleware token layer
 
         if (!tenantHotelId) {
+            console.error("❌ [CONFIG ERROR] Missing req.user.hotelId. Is your auth middleware passing user details?");
             return res.status(401).json({ success: false, message: "Unauthorized: Missing tenant context identifier." });
         }
 
         if (!gateway || !keyOne || !keyTwo || !environment) {
+            console.error("❌ [CONFIG ERROR] Validation Failed. Payload received:", { gateway, keyOne: !!keyOne, keyTwo: !!keyTwo, environment });
             return res.status(400).json({ success: false, message: "Missing required parameters." });
         }
 
@@ -4568,6 +4570,8 @@ app.post('/api/gateways/configure',auth, async (req, res) => {
                 : 'https://cybqa.pesapal.com/v3';
 
             try {
+                console.log(`⏳ Attempting handshake with Pesapal (${environment})... URL: ${pesapalBaseUrl}/api/Auth/RegisterInteraction`);
+                
                 // Post test handshake to Pesapal using the keys provided for this hotel
                 const pesapalResponse = await axios.post(`${pesapalBaseUrl}/api/Auth/RegisterInteraction`, {
                     consumer_key: keyOne,
@@ -4581,22 +4585,42 @@ app.post('/api/gateways/configure',auth, async (req, res) => {
                 });
 
                 if (!pesapalResponse.data || !pesapalResponse.data.token) {
+                    console.error("❌ [PESAPAL AUTH ERROR] No token returned. Response format:", pesapalResponse.data);
                     return res.status(400).json({ 
                         success: false, 
                         message: "Invalid credentials. Pesapal authentication failed to produce an access token." 
                     });
                 }
                 
-                console.log(`>> Handshake Verified for Hotel [${tenantHotelId}] on [${environment}] Environment`);
+                console.log(`>> ✅ Handshake Verified for Hotel [${tenantHotelId}] on [${environment}] Environment`);
 
             } catch (apiError) {
-                console.error("Pesapal Auth Error:", apiError.response?.data || apiError.message);
+                // 🔥 CRITICAL DEBUG LOGS FOR PESAPAL RESPONSE
+                console.error("====================================================");
+                console.error("❌ [PESAPAL API HANDSHAKE EXCEPTION]");
+                if (apiError.response) {
+                    // The server responded with a status code out of the 2xx range
+                    console.error(`Status Code Given By Pesapal: ${apiError.response.status}`);
+                    console.error("Pesapal Server Error Data:", JSON.stringify(apiError.response.data, null, 2));
+                    console.error("Headers Sent By Pesapal:", apiError.response.headers);
+                } else if (apiError.request) {
+                    // The request was made but no response was received
+                    console.error("No response received from Pesapal. Network/Timeout issue.");
+                    console.error("Request Configuration Profile:", apiError.request);
+                } else {
+                    // Something happened in setting up the request that triggered an Error
+                    console.error("Axios Setup Error Message:", apiError.message);
+                }
+                console.error("====================================================");
+
                 return res.status(401).json({ 
                     success: false, 
-                    message: "Failed to authenticate keys with Pesapal. Please verify keys and environment." 
+                    message: `Failed to authenticate keys with Pesapal: ${apiError.response?.data?.error?.message || apiError.message}` 
                 });
             }
         }
+
+        console.log(`💾 Attempting Mongoose Upsert for Hotel: ${tenantHotelId}, Gateway: ${gateway}`);
 
         // 🔒 Tenant-Scoped Upsert Pipeline: Update or insert credentials strictly for THIS hotel
         const updatedGateway = await Gateway.findOneAndUpdate(
@@ -4622,8 +4646,18 @@ app.post('/api/gateways/configure',auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Database Save Failure:", error);
-        return res.status(500).json({ success: false, message: "Internal server deployment exception error." });
+        // 🔥 CRITICAL DEBUG LOGS FOR MONGOOSE / SYSTEM FAILURES
+        console.error("====================================================");
+        console.error("❌ [MAIN ROUTE CRASH - 500 INTERNAL SERVER ERROR]");
+        console.error("Error Message:", error.message);
+        console.error("Full Stack Trace:", error.stack);
+        console.error("====================================================");
+        
+        return res.status(500).json({ 
+            success: false, 
+            message: "Internal server deployment exception error.",
+            debugError: error.message // Temporarily pass error back to frontend to read it easily
+        });
     }
 });
         
