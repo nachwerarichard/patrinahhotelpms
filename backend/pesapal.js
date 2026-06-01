@@ -4553,82 +4553,94 @@ app.post('/api/gateways/configure', auth, async (req, res) => {
         const { gateway, keyOne, keyTwo, environment } = req.body;
         const tenantHotelId = req.user?.hotelId; // Secured via auth middleware token layer
 
+        // 1. Initial Multi-Tenant Access Validation
         if (!tenantHotelId) {
-            console.error("❌ [CONFIG ERROR] Missing req.user.hotelId. Is your auth middleware passing user details?");
+            console.error("❌ [CONFIG ERROR] Missing req.user.hotelId. Ensure your auth middleware passes user context.");
             return res.status(401).json({ success: false, message: "Unauthorized: Missing tenant context identifier." });
         }
 
+        // 2. Structural Parameter Bounds Check
         if (!gateway || !keyOne || !keyTwo || !environment) {
-            console.error("❌ [CONFIG ERROR] Validation Failed. Payload received:", { gateway, keyOne: !!keyOne, keyTwo: !!keyTwo, environment });
-            return res.status(400).json({ success: false, message: "Missing required parameters." });
+            console.error("❌ [CONFIG ERROR] Validation Failed. Payload missing fields:", { gateway, keyOne: !!keyOne, keyTwo: !!keyTwo, environment });
+            return res.status(400).json({ success: false, message: "Missing required configuration parameters." });
         }
 
-        // Only isolate verification logic if the target is Pesapal
-        if (gateway === 'pesapal') {
-            const pesapalBaseUrl = environment === 'Live' 
-                ? 'https://pay.pesapal.com/v3' 
-                : 'https://cybqa.pesapal.com/v3';
+        // 3. Normalize strings to keep input casing bulletproof and prevent trailing white space bugs
+        const targetGateway = gateway.trim().toLowerCase();
+        const normalizedEnv = environment.trim().toLowerCase();
+        const cleanKey = keyOne.trim();
+        const cleanSecret = keyTwo.trim();
 
+        // Enforce DB Enum matching capitalization standards ('Live' or 'Sandbox')
+        let dbEnvironmentValue = 'Sandbox'; 
+        let pesapalBaseUrl = 'https://cybqa.pesapal.com/v3'; // Default fallback to Sandbox
+
+        if (normalizedEnv === 'live') {
+            dbEnvironmentValue = 'Live';
+            pesapalBaseUrl = 'https://pay.pesapal.com/v3';
+        } else if (normalizedEnv !== 'sandbox') {
+            console.error(`❌ [CONFIG ERROR] Unsupported environment value string passed: "${environment}"`);
+            return res.status(400).json({ success: false, message: "Invalid environment selection. Choose Sandbox or Live." });
+        }
+
+        // 4. Handle Gateway Validation Routing
+        if (targetGateway === 'pesapal') {
             try {
-                console.log(`⏳ Attempting handshake with Pesapal (${environment})... URL: ${pesapalBaseUrl}/api/Auth/RegisterInteraction`);
+                console.log(`⏳ Querying Pesapal verification server... Env: [${dbEnvironmentValue}] URL: ${pesapalBaseUrl}/api/Auth/RegisterInteraction`);
                 
-                // Post test handshake to Pesapal using the keys provided for this hotel
+                // Dispatches test verification handshake call
                 const pesapalResponse = await axios.post(`${pesapalBaseUrl}/api/Auth/RegisterInteraction`, {
-                    consumer_key: keyOne,
-                    consumer_secret: keyTwo
+                    consumer_key: cleanKey,
+                    consumer_secret: cleanSecret
                 }, {
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    timeout: 8000
+                    timeout: 10000 // 10-second request duration safety ceiling 
                 });
 
                 if (!pesapalResponse.data || !pesapalResponse.data.token) {
-                    console.error("❌ [PESAPAL AUTH ERROR] No token returned. Response format:", pesapalResponse.data);
+                    console.error("❌ [PESAPAL REJECTION] Handshake successful but no token payload profile returned:", pesapalResponse.data);
                     return res.status(400).json({ 
                         success: false, 
                         message: "Invalid credentials. Pesapal authentication failed to produce an access token." 
                     });
                 }
                 
-                console.log(`>> ✅ Handshake Verified for Hotel [${tenantHotelId}] on [${environment}] Environment`);
+                console.log(`>> ✅ Handshake Verified for Hotel [${tenantHotelId}] on [${dbEnvironmentValue}] Environment`);
 
             } catch (apiError) {
-                // 🔥 CRITICAL DEBUG LOGS FOR PESAPAL RESPONSE
                 console.error("====================================================");
-                console.error("❌ [PESAPAL API HANDSHAKE EXCEPTION]");
+                console.error("❌ [PESAPAL API HANDSHAKE EXCEPTION TRACE]");
                 if (apiError.response) {
-                    // The server responded with a status code out of the 2xx range
-                    console.error(`Status Code Given By Pesapal: ${apiError.response.status}`);
-                    console.error("Pesapal Server Error Data:", JSON.stringify(apiError.response.data, null, 2));
-                    console.error("Headers Sent By Pesapal:", apiError.response.headers);
+                    console.error(`Pesapal Server HTTP Status Code: ${apiError.response.status}`);
+                    console.error("Pesapal Server Error Payload Data:", JSON.stringify(apiError.response.data, null, 2));
                 } else if (apiError.request) {
-                    // The request was made but no response was received
-                    console.error("No response received from Pesapal. Network/Timeout issue.");
-                    console.error("Request Configuration Profile:", apiError.request);
+                    console.error("No active response feedback returned from Pesapal servers. Network Timeout.");
                 } else {
-                    // Something happened in setting up the request that triggered an Error
-                    console.error("Axios Setup Error Message:", apiError.message);
+                    console.error("Axios Internal Compilation Error Message:", apiError.message);
                 }
                 console.error("====================================================");
 
-                return res.status(401).json({ 
+                // Send back 422 Unprocessable Entity to represent third-party API verification fault cleanly
+                const feedbackMessage = apiError.response?.data?.error?.message || "Invalid credentials or environment profile mismatch.";
+                return res.status(422).json({ 
                     success: false, 
-                    message: `Failed to authenticate keys with Pesapal: ${apiError.response?.data?.error?.message || apiError.message}` 
+                    message: `Failed to validate keys with Pesapal: ${feedbackMessage}` 
                 });
             }
         }
 
-        console.log(`💾 Attempting Mongoose Upsert for Hotel: ${tenantHotelId}, Gateway: ${gateway}`);
+        console.log(`💾 Committing tenant upsert record to DB... Hotel: ${tenantHotelId}, Gateway: ${targetGateway}`);
 
-        // 🔒 Tenant-Scoped Upsert Pipeline: Update or insert credentials strictly for THIS hotel
+        // 5. Secure Tenant-Isolated Upsert Engine
         const updatedGateway = await Gateway.findOneAndUpdate(
-            { hotelId: tenantHotelId, gatewayId: gateway },
+            { hotelId: tenantHotelId, gatewayId: targetGateway },
             {
-                consumerKey: keyOne,
-                consumerSecret: keyTwo,
-                environment: environment,
+                consumerKey: cleanKey,
+                consumerSecret: cleanSecret,
+                environment: dbEnvironmentValue,
                 isConnected: true,
                 updatedAt: new Date()
             },
@@ -4637,7 +4649,7 @@ app.post('/api/gateways/configure', auth, async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: `${gateway.toUpperCase()} verified and committed securely for your hotel property.`,
+            message: `${gateway.toUpperCase()} configuration parameters verified and committed cleanly.`,
             data: {
                 gateway: updatedGateway.gatewayId,
                 environment: updatedGateway.environment,
@@ -4646,17 +4658,16 @@ app.post('/api/gateways/configure', auth, async (req, res) => {
         });
 
     } catch (error) {
-        // 🔥 CRITICAL DEBUG LOGS FOR MONGOOSE / SYSTEM FAILURES
         console.error("====================================================");
-        console.error("❌ [MAIN ROUTE CRASH - 500 INTERNAL SERVER ERROR]");
-        console.error("Error Message:", error.message);
-        console.error("Full Stack Trace:", error.stack);
+        console.error("❌ [MAIN ROUTE PIPELINE CRASH - 500 INTERNAL SERVER ERROR]");
+        console.error("System Error Message:", error.message);
+        console.error("Full Execution Stack Trace:", error.stack);
         console.error("====================================================");
         
         return res.status(500).json({ 
             success: false, 
-            message: "Internal server deployment exception error.",
-            debugError: error.message // Temporarily pass error back to frontend to read it easily
+            message: "Internal ledger processing crash. Check server architecture logs.",
+            debugError: error.message 
         });
     }
 });
