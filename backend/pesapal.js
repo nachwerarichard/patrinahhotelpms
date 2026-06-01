@@ -4548,7 +4548,7 @@ app.post('/api/public/hotel', async (req, res) => {
 // 4️⃣ Start server with normalization + index creation
 // ----------------------
 
-app.post('/api/gateways/configure', async (req, res) => {
+app.post('/api/gateways/configure',auth, async (req, res) => {
     try {
         const { gateway, keyOne, keyTwo, environment } = req.body;
         const tenantHotelId = req.user.hotelId; // Secured via auth middleware token layer
