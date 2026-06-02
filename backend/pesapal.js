@@ -1333,20 +1333,31 @@ app.post('/api/admin/onboard-hotel', async (req, res) => {
 // HELPER METHOD: GENERATE TEMPORARY LIVE ACCESS TOKENS PER MULTI-TENANT CONTEXT
 // =========================================================================
 async function getPesapalAccessToken(hotelId) {
-    // Scopes search parameters specifically by the current active hotel context
+    // Locate gateway configurations for this exact multi-tenant hotel
     const config = await mongoose.model('Gateway').findOne({ hotelId: hotelId, gatewayId: 'pesapal' });
     if (!config || !config.isConnected) {
         throw new Error("Pesapal gateway configurations are missing or inactive for this property.");
     }
     
-    const baseUrl = config.environment === 'Live' ? 'https://pay.pesapal.com/v3/api/Auth/RequestToken' : 'https://cybqa.pesapal.com/pesapalv3/api/Auth/RequestToken';
+    // 🔥 FIX 1: Keep the base URL clean without appending the endpoint routes here
+    const baseUrl = config.environment === 'Live' 
+        ? 'https://pay.pesapal.com/v3' 
+        : 'https://cybqa.pesapal.com/pesapalv3';
     
-    const authResponse = await axios.post(`${baseUrl}/api/Auth/RegisterInteraction`, {
+    // 🔥 FIX 2: Combine the clean baseUrl with the correct /api/Auth/RequestToken endpoint path
+    const authResponse = await axios.post(`${baseUrl}/api/Auth/RequestToken`, {
         consumer_key: config.consumerKey,
         consumer_secret: config.consumerSecret
     }, {
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+        headers: { 
+            'Content-Type': 'application/json', 
+            'Accept': 'application/json' 
+        }
     });
+
+    if (!authResponse.data || !authResponse.data.token) {
+        throw new Error("Pesapal auth credentials failed to produce an active session token.");
+    }
 
     return { token: authResponse.data.token, baseUrl, environment: config.environment };
 }
@@ -1410,9 +1421,23 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         }
 
     } catch (error) {
-        console.error("PESAPAL INITIALIZE ROUTE FAILED:", error.response?.data || error.message);
-        return res.status(500).json({ message: "Failed processing gateway checkout frameworks link endpoints." });
+    console.error("====================================================");
+    console.error("❌ [PESAPAL INITIALIZE ROUTE FAILED]");
+    // This logs the precise reason from Pesapal if the request left your server
+    if (error.response) {
+        console.error("Status:", error.response.status);
+        console.error("Data:", JSON.stringify(error.response.data, null, 2));
+    } else {
+        console.error("System Error Message:", error.message);
     }
+    console.error("====================================================");
+    
+    return res.status(500).json({ 
+        success: false,
+        message: "Failed processing gateway checkout frameworks link endpoints.",
+        debug: error.response?.data?.message || error.message
+    });
+}
 });
 
 // =========================================================================
