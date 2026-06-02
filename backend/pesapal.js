@@ -5,7 +5,6 @@ const axios = require('axios'); // Ensure you have run: npm install axios
 const cors = require('cors'); // Required for Cross-Origin Resource Sharing
 const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
 const cloudinary = require('cloudinary').v2;
-const crypto = require('crypto');
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 //CLOUDINARY_URL=cloudinary://986177637794957:**********@dckvyguun
