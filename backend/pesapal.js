@@ -1389,7 +1389,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         console.log(`>> Requesting dynamic IPN registration for url: ${IPN_CALLBACK_URL}`);
         
         const ipnRegistrationResponse = await axios.post(
-            `${baseUrl}/api/URLSetup/RegisterURL`, 
+            `${baseUrl}/api/URLSetup/RegisterIPN`, 
             {
                 url: IPN_CALLBACK_URL,
                 ipn_notification_type: "GET" // Pesapal V3 URL registration standard
