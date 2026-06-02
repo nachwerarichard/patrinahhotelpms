@@ -1377,23 +1377,40 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         // Generate dynamic payload tokens matching corporate credentials parameters
         const { token, baseUrl, environment } = await getPesapalAccessToken(req.user.hotelId);
 
-        // A fallback target is necessary. You can change this to match your live hosted web application domain path
-        const APP_DOMAIN = "https://elegant-pasca-cea136.netlify.app/frontend/pesapal.html"; 
+        const APP_DOMAIN = "https://elegant-pasca-cea136.netlify.app/frontend"; 
 
-        // Assemble strict Pesapal structural SubmitOrder request metrics
+        // Clean name parsing fallback arrays safely
+        const guestName = booking.name ? booking.name.trim() : "Hotel Guest";
+        const nameParts = guestName.split(" ");
+        const firstName = nameParts[0] || "Guest";
+        const lastName = nameParts.slice(1).join(" ") || "Client";
+
+        // Clean up phone number: remove spaces/special characters
+        const cleanPhone = phone ? phone.replace(/[^0-9+]/g, '') : "0700000000";
+
         const merchantReference = `TXN-${id}-${Date.now()}`;
+        
+        // 🔥 FIX: Assemble complete, structurally validated Pesapal SubmitOrder payload
         const orderPayload = {
             id: merchantReference,
             currency: "UGX",
             amount: parseFloat(amount),
-            description: `Payment Room Service Booking Code Ref: ${booking.id}`,
+            description: `Room Booking Payment Ref: ${booking.id || id}`.substring(0, 100), // Max 100 chars
             callback_url: `${APP_DOMAIN}/pesapal-payment-success.html`,
-            notification_id: "YOUR_REGISTERED_PESAPAL_IPN_ID", // Input generated string identifier from Pesapal Dashboard setup
+            redirect_mode: "TOP_WINDOW", // 🔥 FIX: Required for clean breakout navigation from inner iframes
+            notification_id: "YOUR_REGISTERED_PESAPAL_IPN_ID", // ⚠️ Ensure this is replaced with your GUID from Pesapal
             billing_address: {
-                email_address: email || "guest@novuspms.com",
-                phone_number: phone || "0000000000",
-                first_name: booking.name.split(" ")[0] || "Guest",
-                last_name: booking.name.split(" ")[1] || "Client"
+                email_address: email && email.includes('@') ? email.trim() : "guest@novuspms.com",
+                phone_number: cleanPhone,
+                first_name: firstName,
+                last_name: lastName,
+                country_code: "UG", // 🔥 FIX: Pass structural 2-character ISO identifier strings
+                line_1: "Kampala",
+                line_2: "",
+                city: "Kampala",
+                state: "UG",
+                postal_code: "",
+                zip_code: ""
             }
         };
 
@@ -1406,8 +1423,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         });
 
         if (orderResponse.data && orderResponse.data.order_tracking_id) {
-            
-            // Log reference indicators securely into database arrays to keep tracking metrics clean
+            // Log reference indicators securely into database arrays
             booking.transactionid = orderResponse.data.order_tracking_id; 
             await booking.save();
 
@@ -1417,27 +1433,28 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
                 orderTrackingId: orderResponse.data.order_tracking_id
             });
         } else {
+            console.error("❌ [PESAPAL REJECTION PAYLOAD]:", orderResponse.data);
             return res.status(400).json({ success: false, message: "Pesapal rejected generation profiles wrapper." });
         }
 
     } catch (error) {
-    console.error("====================================================");
-    console.error("❌ [PESAPAL INITIALIZE ROUTE FAILED]");
-    // This logs the precise reason from Pesapal if the request left your server
-    if (error.response) {
-        console.error("Status:", error.response.status);
-        console.error("Data:", JSON.stringify(error.response.data, null, 2));
-    } else {
-        console.error("System Error Message:", error.message);
+        // 🔥 diagnostic enhancement to pinpoint exact payload failure lines
+        console.error("====================================================");
+        console.error("❌ PESAPAL INITIALIZE ROUTE FAILED:");
+        if (error.response) {
+            console.error("Status Code Returned:", error.response.status);
+            console.error("Native Pesapal Response Data:", JSON.stringify(error.response.data, null, 2));
+        } else {
+            console.error("Error Fallback Message:", error.message);
+        }
+        console.error("====================================================");
+        
+        return res.status(500).json({ 
+            success: false, 
+            message: "Failed processing gateway checkout frameworks link endpoints.",
+            debug: error.response?.data || error.message
+        });
     }
-    console.error("====================================================");
-    
-    return res.status(500).json({ 
-        success: false,
-        message: "Failed processing gateway checkout frameworks link endpoints.",
-        debug: error.response?.data?.message || error.message
-    });
-}
 });
 
 // =========================================================================
