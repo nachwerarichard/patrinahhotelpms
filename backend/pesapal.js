@@ -4573,7 +4573,7 @@ app.post('/api/gateways/configure', auth, async (req, res) => {
 
         // Enforce DB Enum matching capitalization standards ('Live' or 'Sandbox')
         let dbEnvironmentValue = 'Sandbox'; 
-        let pesapalBaseUrl = 'https://cybqa.pesapal.com/v3'; // Default fallback to Sandbox
+        let pesapalBaseUrl = 'https://cybqa.pesapal.com/pesapalv3'; // Default fallback to Sandbox
 
         if (normalizedEnv === 'live') {
             dbEnvironmentValue = 'Live';
