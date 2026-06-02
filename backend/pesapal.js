@@ -1402,7 +1402,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             description: `Room Booking Payment Ref: ${id}`.substring(0, 100), 
             callback_url: `${APP_DOMAIN}/pesapal-payment-success.html`,
             redirect_mode: "TOP_WINDOW", 
-            merchant_notification_id: "YOUR_REGISTERED_PESAPAL_IPN_ID", // 🔥 FIX: Key must be merchant_notification_id
+            merchant_notification_id: "8b9ed180-cb41-424e-ab8e-da4f279f89e0", // 🔥 FIX: Key must be merchant_notification_id
             billing_address: {
                 email_address: email && email.includes('@') ? email.trim() : "guest@novuspms.com",
                 phone_number: cleanPhone,
