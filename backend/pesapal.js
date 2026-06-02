@@ -1339,7 +1339,7 @@ async function getPesapalAccessToken(hotelId) {
         throw new Error("Pesapal gateway configurations are missing or inactive for this property.");
     }
     
-    const baseUrl = config.environment === 'Live' ? 'https://pay.pesapal.com/v3' : 'https://cybqa.pesapal.com/v3';
+    const baseUrl = config.environment === 'Live' ? 'https://pay.pesapal.com/v3/api/Auth/RequestToken' : 'https://cybqa.pesapal.com/pesapalv3/api/Auth/RequestToken';
     
     const authResponse = await axios.post(`${baseUrl}/api/Auth/RegisterInteraction`, {
         consumer_key: config.consumerKey,
@@ -1367,7 +1367,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         const { token, baseUrl, environment } = await getPesapalAccessToken(req.user.hotelId);
 
         // A fallback target is necessary. You can change this to match your live hosted web application domain path
-        const APP_DOMAIN = "https://yourpmshosting.com"; 
+        const APP_DOMAIN = "https://elegant-pasca-cea136.netlify.app/frontend/pesapal.html"; 
 
         // Assemble strict Pesapal structural SubmitOrder request metrics
         const merchantReference = `TXN-${id}-${Date.now()}`;
@@ -4589,7 +4589,7 @@ app.post('/api/gateways/configure', auth, async (req, res) => {
                 console.log(`⏳ Querying Pesapal verification server... Env: [${dbEnvironmentValue}] URL: ${pesapalBaseUrl}/api/Auth/RegisterInteraction`);
                 
                 // Dispatches test verification handshake call
-                const pesapalResponse = await axios.post(`${pesapalBaseUrl}/api/Auth/RegisterInteraction`, {
+                const pesapalResponse = await axios.post(`${pesapalBaseUrl}/api/Auth/RequestToken`, {
                     consumer_key: cleanKey,
                     consumer_secret: cleanSecret
                 }, {
