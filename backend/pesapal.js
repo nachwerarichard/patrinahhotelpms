@@ -1438,7 +1438,6 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         const lastName = nameParts.slice(1).join(" ") || "Client";
         const cleanPhone = phone ? phone.replace(/[^0-9+]/g, '') : "0700000000";
 
-        // Generate a reference tied to this unique booking session timeline
         const finalMerchantReference = `BK-${id}-${Date.now()}`;
 
         const buildPayload = (ipnId) => ({
@@ -1463,49 +1462,43 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             }
         });
 
-        let orderResponse;
-        try {
-            console.log(`🚀 Submitting order request with IPN ID: [${dynamicIpnId}]`);
-            orderResponse = await axios.post(
-                `${baseUrl}/api/Transactions/SubmitOrderRequest`,
-                buildPayload(dynamicIpnId),
+        console.log(`🚀 Submitting order request with IPN ID: [${dynamicIpnId}]`);
+        let orderResponse = await axios.post(
+            `${baseUrl}/api/Transactions/SubmitOrderRequest`,
+            buildPayload(dynamicIpnId),
+            { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
+        );
+
+        // CHECK 1: Did Pesapal return a hidden error payload inside a successful 200 response?
+        let embeddedError = orderResponse.data?.error;
+        
+        if (embeddedError && embeddedError.code === 'InvalidIpnId') {
+            console.warn("⚠️ Pesapal returned an InvalidIpnId error inside response body. Forcing a dynamic registration string and retrying context...");
+            
+            // Create an entirely distinct endpoint tracking variable string
+            const FRESH_IPN_URL = `${TARGET_IPN_URL}?sync_token=${Date.now()}`;
+            
+            const forcedRegResponse = await axios.post(
+                `${baseUrl}/api/URLSetup/RegisterIPN`,
+                { url: FRESH_IPN_URL, ipn_notification_type: "GET" },
                 { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
             );
-        } catch (orderError) {
-            // CRITICAL FIX: Extract the server response inside the Axios error object cleanly
-            const errorPayload = orderError.response?.data?.error;
             
-            if (errorPayload && errorPayload.code === 'InvalidIpnId') {
-                console.warn("⚠️ Pesapal rejected the cached IPN ID. Forcing a unique registration string and retrying context...");
-                
-                // Formulate a dynamic variant string to bypass internal provider caching mechanisms
-                const FRESH_IPN_URL = `${TARGET_IPN_URL}?sync_token=${Date.now()}`;
-                
-                const forcedRegResponse = await axios.post(
-                    `${baseUrl}/api/URLSetup/RegisterIPN`,
-                    { url: FRESH_IPN_URL, ipn_notification_type: "GET" },
-                    { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
-                );
-                
-                const brandNewIpnId = forcedRegResponse.data?.ipn_id;
-                console.log(`🔄 Fresh IPN Config registered: [${brandNewIpnId}]. Syncing pipeline...`);
-                
-                // Give the cloud gateway gateway cluster a brief moment to update tables globally
-                await new Promise(resolve => setTimeout(resolve, 2000));
+            const brandNewIpnId = forcedRegResponse.data?.ipn_id;
+            console.log(`🔄 Fresh IPN Config registered: [${brandNewIpnId}]. Syncing pipeline...`);
+            
+            // Give their distributed gateway database cluster a clean window to catch up
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
-                console.log(`🔄 Retrying order submission with newly minted configuration ID...`);
-                orderResponse = await axios.post(
-                    `${baseUrl}/api/Transactions/SubmitOrderRequest`,
-                    buildPayload(brandNewIpnId),
-                    { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
-                );
-            } else {
-                // Not an IPN error, bubble up to global handler
-                throw orderError;
-            }
+            console.log(`🔄 Retrying order submission with newly minted configuration ID...`);
+            orderResponse = await axios.post(
+                `${baseUrl}/api/Transactions/SubmitOrderRequest`,
+                buildPayload(brandNewIpnId),
+                { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
+            );
         }
 
-        // 3. Handle success pipeline redirection mapping
+        // 3. Final evaluation of the payment process response context
         if (orderResponse?.data && orderResponse.data.order_tracking_id) {
             booking.transactionid = orderResponse.data.order_tracking_id;
             await booking.save();
@@ -1518,7 +1511,8 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             });
         }
 
-        console.error("❌ [PESAPAL SEVERE ERROR]: Payload response structural mismatch.");
+        // If it falls through here, log whatever wild payload structure came back
+        console.error("❌ [PESAPAL REJECTION PAYLOAD]:", JSON.stringify(orderResponse?.data, null, 2));
         return res.status(400).json({
             success: false,
             message: "Pesapal rejected generation profiles wrapper."
