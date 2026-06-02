@@ -1365,6 +1365,9 @@ async function getPesapalAccessToken(hotelId) {
 // =========================================================================
 // ROUTE 1: INITIALIZE LIVE SECURE CHECKOUT SESSIONS
 // =========================================================================
+// =========================================================================
+// ROUTE 1: INITIALIZE LIVE SECURE CHECKOUT SESSIONS (UPDATED & COMPLIANT)
+// =========================================================================
 app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) => {
     const { id } = req.params;
     const { amount, method, phone, email, recordedBy } = req.body;
@@ -1388,29 +1391,30 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         // Clean up phone number: remove spaces/special characters
         const cleanPhone = phone ? phone.replace(/[^0-9+]/g, '') : "0700000000";
 
-        const merchantReference = `TXN-${id}-${Date.now()}`;
-        
-        // 🔥 FIX: Assemble complete, structurally validated Pesapal SubmitOrder payload
+        // Generate a true Unique alphanumeric GUID for this specific attempt
+        const uniqueTransactionId = crypto?.randomUUID ? crypto.randomUUID() : `TXN-${id}-${Date.now()}`;
+
+        // 🔥 FIX: Assemble structurally validated Pesapal V3 SubmitOrder payload
         const orderPayload = {
-            id: merchantReference,
+            id: uniqueTransactionId,                       // 🔥 FIX: Must be a unique tracking GUID string
             currency: "UGX",
             amount: parseFloat(amount),
-            description: `Room Booking Payment Ref: ${booking.id || id}`.substring(0, 100), // Max 100 chars
+            description: `Room Booking Payment Ref: ${id}`.substring(0, 100), 
             callback_url: `${APP_DOMAIN}/pesapal-payment-success.html`,
-            redirect_mode: "TOP_WINDOW", // 🔥 FIX: Required for clean breakout navigation from inner iframes
-            notification_id: "YOUR_REGISTERED_PESAPAL_IPN_ID", // ⚠️ Ensure this is replaced with your GUID from Pesapal
+            redirect_mode: "TOP_WINDOW", 
+            merchant_notification_id: "YOUR_REGISTERED_PESAPAL_IPN_ID", // 🔥 FIX: Key must be merchant_notification_id
             billing_address: {
                 email_address: email && email.includes('@') ? email.trim() : "guest@novuspms.com",
                 phone_number: cleanPhone,
                 first_name: firstName,
                 last_name: lastName,
-                country_code: "UG", // 🔥 FIX: Pass structural 2-character ISO identifier strings
+                country_code: "UG", // Ensure two-character ISO country code wrapper
                 line_1: "Kampala",
-                line_2: "",
+                line_2: "Central Region",
                 city: "Kampala",
                 state: "UG",
-                postal_code: "",
-                zip_code: ""
+                postal_code: "00000",
+                zip_code: "00000"
             }
         };
 
@@ -1423,7 +1427,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         });
 
         if (orderResponse.data && orderResponse.data.order_tracking_id) {
-            // Log reference indicators securely into database arrays
+            // Log reference indicators securely into database tracking fields
             booking.transactionid = orderResponse.data.order_tracking_id; 
             await booking.save();
 
@@ -1438,7 +1442,6 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         }
 
     } catch (error) {
-        // 🔥 diagnostic enhancement to pinpoint exact payload failure lines
         console.error("====================================================");
         console.error("❌ PESAPAL INITIALIZE ROUTE FAILED:");
         if (error.response) {
