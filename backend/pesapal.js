@@ -1373,42 +1373,70 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
     const { amount, method, phone, email, recordedBy } = req.body;
 
     try {
-        // Multi-tenant isolation query logic check
         const booking = await Booking.findOne({ id, hotelId: req.user.hotelId });
         if (!booking) return res.status(404).json({ message: 'Target booking schema record not found' });
 
-        // Generate dynamic payload tokens matching corporate credentials parameters
         const { token, baseUrl, environment } = await getPesapalAccessToken(req.user.hotelId);
 
         const APP_DOMAIN = "https://elegant-pasca-cea136.netlify.app/frontend"; 
+        
+        // This is your live Render API endpoint webhook route
+        const IPN_CALLBACK_URL = "https://patrinahhotelpms-ew8d.onrender.com/api/payments/pesapal-ipn-callback";
 
-        // Clean name parsing fallback arrays safely
+        // =========================================================================
+        // 🔥 STEP 1: PROGRAMMATICALLY GENERATE A GUARANTEED VALID IPN ID
+        // =========================================================================
+        console.log(`>> Requesting dynamic IPN registration for url: ${IPN_CALLBACK_URL}`);
+        
+        const ipnRegistrationResponse = await axios.post(
+            `${baseUrl}/api/URLSetup/RegisterURL`, 
+            {
+                url: IPN_CALLBACK_URL,
+                ipn_notification_type: "GET" // Pesapal V3 URL registration standard
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            }
+        );
+
+        let dynamicIpnId = ipnRegistrationResponse.data?.ipn_id;
+
+        if (!dynamicIpnId) {
+            console.error("❌ Failed to auto-register IPN URL with Pesapal:", ipnRegistrationResponse.data);
+            // Fall back to your hardcoded one if the programmatic registration returns empty
+            dynamicIpnId = "8b9ed180-cb41-424e-ab8e-da4f279f89e0";
+        } else {
+            console.log(`✅ Dynamically generated a verified IPN ID: [${dynamicIpnId}]`);
+        }
+
+        // =========================================================================
+        // STEP 2: BUILD AND SUBMIT THE TRANSACTION ORDER
+        // =========================================================================
         const guestName = booking.name ? booking.name.trim() : "Hotel Guest";
         const nameParts = guestName.split(" ");
         const firstName = nameParts[0] || "Guest";
         const lastName = nameParts.slice(1).join(" ") || "Client";
-
-        // Clean up phone number: remove spaces/special characters
         const cleanPhone = phone ? phone.replace(/[^0-9+]/g, '') : "0700000000";
-
-        // Generate a true Unique alphanumeric GUID for this specific attempt
         const uniqueTransactionId = crypto?.randomUUID ? crypto.randomUUID() : `TXN-${id}-${Date.now()}`;
 
-        // 🔥 FIX: Assemble structurally validated Pesapal V3 SubmitOrder payload
         const orderPayload = {
-            id: uniqueTransactionId,                       // 🔥 FIX: Must be a unique tracking GUID string
+            id: uniqueTransactionId,
             currency: "UGX",
             amount: parseFloat(amount),
             description: `Room Booking Payment Ref: ${id}`.substring(0, 100), 
             callback_url: `${APP_DOMAIN}/pesapal-payment-success.html`,
             redirect_mode: "TOP_WINDOW", 
-            merchant_notification_id: "8b9ed180-cb41-424e-ab8e-da4f279f89e0", // 🔥 FIX: Key must be merchant_notification_id
+            merchant_notification_id: dynamicIpnId, // 🔥 Now uses the fresh, guaranteed ID
             billing_address: {
                 email_address: email && email.includes('@') ? email.trim() : "guest@novuspms.com",
                 phone_number: cleanPhone,
                 first_name: firstName,
                 last_name: lastName,
-                country_code: "UG", // Ensure two-character ISO country code wrapper
+                country_code: "UG",
                 line_1: "Kampala",
                 line_2: "Central Region",
                 city: "Kampala",
@@ -1427,7 +1455,6 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         });
 
         if (orderResponse.data && orderResponse.data.order_tracking_id) {
-            // Log reference indicators securely into database tracking fields
             booking.transactionid = orderResponse.data.order_tracking_id; 
             await booking.save();
 
