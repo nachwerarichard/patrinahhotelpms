@@ -1377,14 +1377,11 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         if (!booking) return res.status(404).json({ message: 'Target booking schema record not found' });
 
         const { token, baseUrl, environment } = await getPesapalAccessToken(req.user.hotelId);
-
         const APP_DOMAIN = "https://elegant-pasca-cea136.netlify.app/frontend"; 
-        
-        // This is your live Render API endpoint webhook route
         const IPN_CALLBACK_URL = "https://patrinahhotelpms-ew8d.onrender.com/api/payments/pesapal-ipn-callback";
 
         // =========================================================================
-        // 🔥 STEP 1: PROGRAMMATICALLY GENERATE A GUARANTEED VALID IPN ID
+        // STEP 1: PROGRAMMATICALLY GENERATE DYNAMIC IPN ID
         // =========================================================================
         console.log(`>> Requesting dynamic IPN registration for url: ${IPN_CALLBACK_URL}`);
         
@@ -1392,7 +1389,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             `${baseUrl}/api/URLSetup/RegisterIPN`, 
             {
                 url: IPN_CALLBACK_URL,
-                ipn_notification_type: "GET" // Pesapal V3 URL registration standard
+                ipn_notification_type: "GET"
             },
             {
                 headers: {
@@ -1406,12 +1403,16 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         let dynamicIpnId = ipnRegistrationResponse.data?.ipn_id;
 
         if (!dynamicIpnId) {
-            console.error("❌ Failed to auto-register IPN URL with Pesapal:", ipnRegistrationResponse.data);
-            // Fall back to your hardcoded one if the programmatic registration returns empty
-            dynamicIpnId = "8b9ed180-cb41-424e-ab8e-da4f279f89e0";
-        } else {
-            console.log(`✅ Dynamically generated a verified IPN ID: [${dynamicIpnId}]`);
+            throw new Error("Pesapal did not return a valid IPN configuration token.");
         }
+
+        console.log(`✅ Dynamically generated a verified IPN ID: [${dynamicIpnId}]`);
+
+        // =========================================================================
+        // 🔥 FIX: DELAY FOR CACHE PROPAGATION (Allow Pesapal to register the ID)
+        // =========================================================================
+        console.log("⏱️ Pausing for 2 seconds to allow Pesapal internal systems to sync...");
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         // =========================================================================
         // STEP 2: BUILD AND SUBMIT THE TRANSACTION ORDER
@@ -1430,7 +1431,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             description: `Room Booking Payment Ref: ${id}`.substring(0, 100), 
             callback_url: `${APP_DOMAIN}/pesapal-payment-success.html`,
             redirect_mode: "TOP_WINDOW", 
-            merchant_notification_id: dynamicIpnId, // 🔥 Now uses the fresh, guaranteed ID
+            merchant_notification_id: dynamicIpnId, 
             billing_address: {
                 email_address: email && email.includes('@') ? email.trim() : "guest@novuspms.com",
                 phone_number: cleanPhone,
@@ -1446,6 +1447,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             }
         };
 
+        console.log("🚀 Submitting final order request to Pesapal...");
         const orderResponse = await axios.post(`${baseUrl}/api/Transactions/SubmitOrderRequest`, orderPayload, {
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -1458,6 +1460,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             booking.transactionid = orderResponse.data.order_tracking_id; 
             await booking.save();
 
+            console.log("🎯 Success! Redirect URL generated.");
             return res.json({
                 success: true,
                 redirectUrl: orderResponse.data.redirect_url,
