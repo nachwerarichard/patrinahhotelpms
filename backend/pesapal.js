@@ -5,6 +5,7 @@ const axios = require('axios'); // Ensure you have run: npm install axios
 const cors = require('cors'); // Required for Cross-Origin Resource Sharing
 const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
 const cloudinary = require('cloudinary').v2;
+const crypto = require('crypto');
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 //CLOUDINARY_URL=cloudinary://986177637794957:**********@dckvyguun
@@ -1368,51 +1369,57 @@ async function getPesapalAccessToken(hotelId) {
 // =========================================================================
 // ROUTE 1: INITIALIZE LIVE SECURE CHECKOUT SESSIONS (UPDATED & COMPLIANT)
 // =========================================================================
+const crypto = require('crypto'); // Ensure this is imported at the top of your file
+const axios = require('axios');   // Ensure this is imported at the top of your file
+
 app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) => {
     const { id } = req.params;
-    const { amount, method, phone, email, recordedBy } = req.body;
+    const { amount, phone, email } = req.body; // Removed unused variables
 
     try {
-        const booking = await Booking.findOne({ id, hotelId: req.user.hotelId });
-        if (!booking) return res.status(404).json({ message: 'Target booking schema record not found' });
+        // 1. Fetch and validate booking
+        const booking = await Booking.findOne({
+            id,
+            hotelId: req.user.hotelId
+        });
 
-        const { token, baseUrl, environment } = await getPesapalAccessToken(req.user.hotelId);
-        const APP_DOMAIN = "https://elegant-pasca-cea136.netlify.app/frontend"; 
-        const IPN_CALLBACK_URL = "https://patrinahhotelpms-ew8d.onrender.com/api/payments/pesapal-ipn-callback";
+        if (!booking) {
+            return res.status(404).json({
+                message: 'Target booking schema record not found'
+            });
+        }
+
+        // 2. Fetch authenticated tokens from your helper
+        const { token, baseUrl } = await getPesapalAccessToken(req.user.hotelId);
+        
+        const APP_DOMAIN = "https://elegant-pasca-cea136.netlify.app/frontend";
 
         // =========================================================================
-        // STEP 1: PROGRAMMATICALLY GENERATE DYNAMIC IPN ID
+        // STEP 1: GET THE IPN ID 
         // =========================================================================
-        console.log(`>> Requesting dynamic IPN registration for url: ${IPN_CALLBACK_URL}`);
+        // RECOMMENDATION: Store this in your DB or Env vars instead of hitting the endpoint on every request.
+        const STATIC_IPN_URL = "https://patrinahhotelpms-ew8d.onrender.com/api/payments/pesapal-ipn-callback";
         
         const ipnRegistrationResponse = await axios.post(
-            `${baseUrl}/api/URLSetup/RegisterIPN`, 
+            `${baseUrl}/api/URLSetup/RegisterIPN`,
             {
-                url: IPN_CALLBACK_URL,
+                url: STATIC_IPN_URL,
                 ipn_notification_type: "GET"
             },
             {
                 headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                    Accept: "application/json"
                 }
             }
         );
 
-        let dynamicIpnId = ipnRegistrationResponse.data?.ipn_id;
+        const dynamicIpnId = ipnRegistrationResponse.data?.ipn_id;
 
         if (!dynamicIpnId) {
             throw new Error("Pesapal did not return a valid IPN configuration token.");
         }
-
-        console.log(`✅ Dynamically generated a verified IPN ID: [${dynamicIpnId}]`);
-
-        // =========================================================================
-        // 🔥 FIX: DELAY FOR CACHE PROPAGATION (Allow Pesapal to register the ID)
-        // =========================================================================
-        console.log("⏱️ Pausing for 2 seconds to allow Pesapal internal systems to sync...");
-        await new Promise(resolve => setTimeout(resolve, 2000));
 
         // =========================================================================
         // STEP 2: BUILD AND SUBMIT THE TRANSACTION ORDER
@@ -1421,17 +1428,18 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         const nameParts = guestName.split(" ");
         const firstName = nameParts[0] || "Guest";
         const lastName = nameParts.slice(1).join(" ") || "Client";
+        
         const cleanPhone = phone ? phone.replace(/[^0-9+]/g, '') : "0700000000";
-        const uniqueTransactionId = crypto?.randomUUID ? crypto.randomUUID() : `TXN-${id}-${Date.now()}`;
+        const uniqueTransactionId = crypto.randomUUID(); // Safe to use with crypto imported
 
         const orderPayload = {
-            id: uniqueTransactionId,
+            id: uniqueTransactionId, // This is returned as MerchantReference in the IPN
             currency: "UGX",
             amount: parseFloat(amount),
-            description: `Room Booking Payment Ref: ${id}`.substring(0, 100), 
+            description: `Room Booking Payment Ref: ${id}`.substring(0, 100),
             callback_url: `${APP_DOMAIN}/pesapal-payment-success.html`,
-            redirect_mode: "TOP_WINDOW", 
-            merchant_notification_id: dynamicIpnId, 
+            redirect_mode: "TOP_WINDOW",
+            merchant_notification_id: dynamicIpnId,
             billing_address: {
                 email_address: email && email.includes('@') ? email.trim() : "guest@novuspms.com",
                 phone_number: cleanPhone,
@@ -1447,43 +1455,41 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             }
         };
 
-        console.log("🚀 Submitting final order request to Pesapal...");
-        const orderResponse = await axios.post(`${baseUrl}/api/Transactions/SubmitOrderRequest`, orderPayload, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
+        const orderResponse = await axios.post(
+            `${baseUrl}/api/Transactions/SubmitOrderRequest`,
+            orderPayload,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                    Accept: "application/json"
+                }
             }
-        });
+        );
 
         if (orderResponse.data && orderResponse.data.order_tracking_id) {
-            booking.transactionid = orderResponse.data.order_tracking_id; 
+            // Save tracking ID to allow verification during the callback/IPN process
+            booking.transactionid = orderResponse.data.order_tracking_id;
             await booking.save();
 
-            console.log("🎯 Success! Redirect URL generated.");
             return res.json({
                 success: true,
                 redirectUrl: orderResponse.data.redirect_url,
                 orderTrackingId: orderResponse.data.order_tracking_id
             });
-        } else {
-            console.error("❌ [PESAPAL REJECTION PAYLOAD]:", orderResponse.data);
-            return res.status(400).json({ success: false, message: "Pesapal rejected generation profiles wrapper." });
         }
 
+        console.error("❌ [PESAPAL REJECTION PAYLOAD]:", orderResponse.data);
+        return res.status(400).json({
+            success: false,
+            message: "Pesapal rejected generation profiles wrapper."
+        });
+
     } catch (error) {
-        console.error("====================================================");
-        console.error("❌ PESAPAL INITIALIZE ROUTE FAILED:");
-        if (error.response) {
-            console.error("Status Code Returned:", error.response.status);
-            console.error("Native Pesapal Response Data:", JSON.stringify(error.response.data, null, 2));
-        } else {
-            console.error("Error Fallback Message:", error.message);
-        }
-        console.error("====================================================");
-        
-        return res.status(500).json({ 
-            success: false, 
+        console.error("❌ PESAPAL INITIALIZE ROUTE FAILED:", error.response?.data || error.message);
+
+        return res.status(500).json({
+            success: false,
             message: "Failed processing gateway checkout frameworks link endpoints.",
             debug: error.response?.data || error.message
         });
