@@ -1377,41 +1377,27 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
 
     try {
         // 1. Fetch and validate booking
-        const booking = await Booking.findOne({
-            id,
-            hotelId: req.user.hotelId
-        });
-
+        const booking = await Booking.findOne({ id, hotelId: req.user.hotelId });
         if (!booking) {
-            return res.status(404).json({
-                message: 'Target booking schema record not found'
-            });
+            return res.status(404).json({ message: 'Target booking schema record not found' });
         }
 
-        // 2. Fetch authenticated tokens from your helper
+        // 2. Fetch authenticated tokens
         const { token, baseUrl } = await getPesapalAccessToken(req.user.hotelId);
-        
-        const APP_DOMAIN = "https://elegant-pasca-cea136.netlify.app/frontend";
-
-        // =========================================================================
-        // STEP 1: SMART IPN MANAGEMENT (GET EXISTING OR CREATE NEW)
-        // =========================================================================
+        const APP_DOMAIN = "https://elegant-pasca-cea136.netlify.app/frontend/home12.html";
         const TARGET_IPN_URL = "https://patrinahhotelpms-ew8d.onrender.com/api/payments/pesapal-ipn-callback";
+        
         let dynamicIpnId = null;
 
+        // =========================================================================
+        // STEP 1: SMART IPN MANAGEMENT
+        // =========================================================================
         try {
             console.log("🔍 Checking Pesapal for existing IPN registrations...");
-            const ipnListResponse = await axios.get(
-                `${baseUrl}/api/URLSetup/GetIPNList`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        Accept: "application/json"
-                    }
-                }
-            );
+            const ipnListResponse = await axios.get(`${baseUrl}/api/URLSetup/GetIPNList`, {
+                headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }
+            });
 
-            // Look through your existing Pesapal configurations for an exact URL match
             const existingIpn = Array.isArray(ipnListResponse.data) 
                 ? ipnListResponse.data.find(item => item.url === TARGET_IPN_URL)
                 : null;
@@ -1420,29 +1406,17 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
                 dynamicIpnId = existingIpn.ipn_id;
                 console.log(`ℹ️ Found existing verified IPN ID: [${dynamicIpnId}]`);
             } else {
-                console.log(`➕ No existing IPN found for ${TARGET_IPN_URL}. Registering a new one...`);
+                console.log(`➕ No existing IPN found. Registering a new one...`);
                 const ipnRegistrationResponse = await axios.post(
                     `${baseUrl}/api/URLSetup/RegisterIPN`,
-                    {
-                        url: TARGET_IPN_URL,
-                        ipn_notification_type: "GET"
-                    },
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            "Content-Type": "application/json",
-                            Accept: "application/json"
-                        }
-                    }
+                    { url: TARGET_IPN_URL, ipn_notification_type: "GET" },
+                    { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
                 );
                 dynamicIpnId = ipnRegistrationResponse.data?.ipn_id;
-                
-                // Give Pesapal 1 second to propagate the brand new registration
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
         } catch (ipnError) {
-            console.error("⚠️ IPN Check/Registration failed, attempting direct fallback registration...", ipnError.message);
-            // Fallback directly to registration if GetIPNList fails or isn't supported by your account permissions
+            console.error("⚠️ IPN Check failed, forcing fresh registration...", ipnError.message);
             const fallbackReg = await axios.post(
                 `${baseUrl}/api/URLSetup/RegisterIPN`,
                 { url: TARGET_IPN_URL, ipn_notification_type: "GET" },
@@ -1455,27 +1429,24 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             throw new Error("Pesapal did not return a valid IPN configuration token.");
         }
 
-        console.log(`✅ Final IPN ID to be used for transaction: [${dynamicIpnId}]`);
-
         // =========================================================================
-        // STEP 2: BUILD AND SUBMIT THE TRANSACTION ORDER
+        // STEP 2: BUILD AND SUBMIT THE TRANSACTION ORDER (WITH SELF-HEALING RETRY)
         // =========================================================================
         const guestName = booking.name ? booking.name.trim() : "Hotel Guest";
         const nameParts = guestName.split(" ");
         const firstName = nameParts[0] || "Guest";
         const lastName = nameParts.slice(1).join(" ") || "Client";
-        
         const cleanPhone = phone ? phone.replace(/[^0-9+]/g, '') : "0700000000";
         const uniqueTransactionId = crypto.randomUUID(); 
 
-        const orderPayload = {
+        const buildPayload = (ipnId) => ({
             id: uniqueTransactionId, 
             currency: "UGX",
             amount: parseFloat(amount),
             description: `Room Booking Payment Ref: ${id}`.substring(0, 100),
             callback_url: `${APP_DOMAIN}/pesapal-payment-success.html`,
             redirect_mode: "TOP_WINDOW",
-            merchant_notification_id: dynamicIpnId,
+            merchant_notification_id: ipnId,
             billing_address: {
                 email_address: email && email.includes('@') ? email.trim() : "guest@novuspms.com",
                 phone_number: cleanPhone,
@@ -1483,28 +1454,53 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
                 last_name: lastName,
                 country_code: "UG",
                 line_1: "Kampala",
-                line_2: "Central Region",
                 city: "Kampala",
                 state: "UG",
                 postal_code: "00000",
                 zip_code: "00000"
             }
-        };
+        });
 
-        const orderResponse = await axios.post(
-            `${baseUrl}/api/Transactions/SubmitOrderRequest`,
-            orderPayload,
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                    Accept: "application/json"
-                }
+        let orderResponse;
+        try {
+            console.log(`🚀 Submitting order request with IPN ID: [${dynamicIpnId}]`);
+            orderResponse = await axios.post(
+                `${baseUrl}/api/Transactions/SubmitOrderRequest`,
+                buildPayload(dynamicIpnId),
+                { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
+            );
+        } catch (orderError) {
+            // Check if the error is specifically due to an Invalid IPN ID
+            const errorData = orderError.response?.data?.error;
+            if (errorData && errorData.code === 'InvalidIpnId') {
+                console.warn("⚠️ Pesapal rejected the cached IPN ID. Forcing a brand-new IPN registration and retrying...");
+                
+                // 1. Force register a brand new IPN URL by adding a tiny unique cache buster parameter to it
+                const FRESH_IPN_URL = `${TARGET_IPN_URL}?forced_sync=${Date.now()}`;
+                const forcedRegResponse = await axios.post(
+                    `${baseUrl}/api/URLSetup/RegisterIPN`,
+                    { url: FRESH_IPN_URL, ipn_notification_type: "GET" },
+                    { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
+                );
+                
+                const brandNewIpnId = forcedRegResponse.data?.ipn_id;
+                console.log(`🔄 New IPN ID created: [${brandNewIpnId}]. Pausing 1.5s for Pesapal cluster synchronization...`);
+                await new Promise(resolve => setTimeout(resolve, 1500));
+
+                // 2. Retry the exact order submission with the verified new ID
+                orderResponse = await axios.post(
+                    `${baseUrl}/api/Transactions/SubmitOrderRequest`,
+                    buildPayload(brandNewIpnId),
+                    { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
+                );
+            } else {
+                // If it's a completely different error, throw it up to the global catch block
+                throw orderError;
             }
-        );
+        }
 
-        if (orderResponse.data && orderResponse.data.order_tracking_id) {
-            // Save tracking ID to allow verification during the callback/IPN process
+        // 3. Handle success response
+        if (orderResponse?.data && orderResponse.data.order_tracking_id) {
             booking.transactionid = orderResponse.data.order_tracking_id;
             await booking.save();
 
@@ -1515,7 +1511,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             });
         }
 
-        console.error("❌ [PESAPAL REJECTION PAYLOAD]:", orderResponse.data);
+        console.error("❌ [PESAPAL REJECTION PAYLOAD]:", orderResponse?.data);
         return res.status(400).json({
             success: false,
             message: "Pesapal rejected generation profiles wrapper."
@@ -1523,7 +1519,6 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
 
     } catch (error) {
         console.error("❌ PESAPAL INITIALIZE ROUTE FAILED:", error.response?.data || error.message);
-
         return res.status(500).json({
             success: false,
             message: "Failed processing gateway checkout frameworks link endpoints.",
