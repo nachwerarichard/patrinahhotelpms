@@ -5,6 +5,7 @@ const axios = require('axios'); // Ensure you have run: npm install axios
 const cors = require('cors'); // Required for Cross-Origin Resource Sharing
 const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
 const cloudinary = require('cloudinary').v2;
+const crypto = require('crypto'); // Ensure this is imported at the top of your file
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 //CLOUDINARY_URL=cloudinary://986177637794957:**********@dckvyguun
@@ -1368,8 +1369,7 @@ async function getPesapalAccessToken(hotelId) {
 // =========================================================================
 // ROUTE 1: INITIALIZE LIVE SECURE CHECKOUT SESSIONS (UPDATED & COMPLIANT)
 // =========================================================================
-const crypto = require('crypto'); // Ensure this is imported at the top of your file
-const axios = require('axios');   // Ensure this is imported at the top of your file
+   // Ensure this is imported at the top of your file
 
 app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) => {
     const { id } = req.params;
