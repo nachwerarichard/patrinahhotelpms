@@ -744,7 +744,7 @@ async function showDashboard(username, role) {
         initialSectionId = 'booking-management';
         initialNavLinkId = 'nav-booking';
         navBookingMenu.classList.remove('hidden');
-        navBooking.style.display = 'block';
+        navBooking.style.display = 'list-item';
         document.getElementById('dashboard').style.display = 'none';
     }
 
