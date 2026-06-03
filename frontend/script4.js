@@ -740,7 +740,7 @@ async function showDashboard(username, role) {
         initialNavLinkId = 'nav-sales';
         document.getElementById('dashboard').style.display = 'none';
     }
-    else if (role === 'frontoffice') {
+    else if (role === 'Front office') {
         initialSectionId = 'booking-management';
         initialNavLinkId = 'nav-booking';
         document.getElementById('dashboard').style.display = 'none';
