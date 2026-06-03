@@ -744,6 +744,7 @@ async function showDashboard(username, role) {
         initialSectionId = 'booking-management';
         initialNavLinkId = 'nav-booking';
         document.getElementById('dashboard').style.display = 'none';
+        renderBookings()
     }
 
     // Reset current active states
