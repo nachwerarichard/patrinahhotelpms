@@ -5177,7 +5177,7 @@ async function fetchUsers() {
                         <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
                         <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
                         <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
-                        <option value="reception" ${user.role === 'reception' ? 'selected' : ''}>Reception</option>
+                        <option value="front office" ${user.role === 'front office' ? 'selected' : ''}>Front Office</option>
                         <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
                     </select>
                 </td>
@@ -5384,7 +5384,7 @@ function getRoleClass(role) {
     const classes = {
         admin: 'bg-purple-50 text-purple-600 border-purple-100',
         bar: 'bg-amber-50 text-amber-600 border-amber-100',
-        reception: 'bg-blue-50 text-blue-600 border-blue-100',
+        front office: 'bg-blue-50 text-blue-600 border-blue-100',
         cashier: 'bg-cyan-50 text-cyan-600 border-cyan-100',
         housekeeper: 'bg-emerald-50 text-emerald-600 border-emerald-100'
     };
