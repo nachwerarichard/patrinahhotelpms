@@ -2,7 +2,8 @@
   Hotel App Front-End Logic (Unrestricted)
   =============================== */
 
-const backendURL = 'https://novouscloudpms-tz4s.onrender.com/api';
+const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
+const backendURL = '';
 let allStatusReports = [];
 let filteredStatusReports = [];
 
