@@ -1032,7 +1032,7 @@ async function renderBookings(page = 1, searchTerm = '') {
             let actionButtonsHtml = '';
 
             // 4. Role-based Button UI (Admin/Super-Admin)
-            if (currentUserRole === 'admin' || currentUserRole === 'super-admin') {
+            if (currentUserRole === 'admin' || currentUserRole === 'super-admin'  || currentUserRole === 'front office') {
                 if (isCancelled) {
                     actionButtonsHtml = `
                         <span class="text-xs text-red-600 font-bold block mb-2 text-center uppercase tracking-wide">Cancelled</span>
