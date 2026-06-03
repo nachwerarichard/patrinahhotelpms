@@ -2,8 +2,7 @@
   Hotel App Front-End Logic (Unrestricted)
   =============================== */
 
-const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
-const backendURL = '';
+const backendURL = 'https://patrinahhotelpms.onrender.com/api';
 let allStatusReports = [];
 let filteredStatusReports = [];
 
