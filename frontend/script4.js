@@ -743,6 +743,7 @@ async function showDashboard(username, role) {
     else if (role === 'Front office') {
         initialSectionId = 'booking-management';
         initialNavLinkId = 'nav-booking';
+        navBookingMenu.classList.remove('hidden');
         document.getElementById('dashboard').style.display = 'none';
     }
 
@@ -4549,10 +4550,10 @@ function showSection(sectionId) {
 // Add event listeners to the navigation links
 document.addEventListener('DOMContentLoaded', () => {
     const navBooking = document.getElementById('nav-booking');
-        const navDashboard = document.getElementById('nav-dashboard');
-
+    const navBookingmenu = document.getElementById('bookingmenu');
+    const navDashboard = document.getElementById('nav-dashboard');
     const navHousekeeping = document.getElementById('nav-housekeeping');
-      const navHousekeepingreports = document.getElementById('nav-housekeepingreports');
+    const navHousekeepingreports = document.getElementById('nav-housekeepingreports');
 
         const navRates = document.getElementById('nav-inventory');
         const navStaff = document.getElementById('nav-staff');
