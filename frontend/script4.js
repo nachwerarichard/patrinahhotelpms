@@ -413,7 +413,7 @@ const response = await authenticatedFetch(`${API_BASE_URL}/bookings/all?limit=50
   }
 }
 // --- 1. GLOBAL CONFIGURATION ---
-const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
+const API_BASE_URL = 'https://patrinahhotelpms-ew8d.onrender.com/api';
 
 // --- 2. THE MISSING FETCH FUNCTION ---
 /**
@@ -740,11 +740,9 @@ async function showDashboard(username, role) {
         initialNavLinkId = 'nav-sales';
         document.getElementById('dashboard').style.display = 'none';
     }
-    else if (role === 'front office') {
+    else if (role === 'frontoffice') {
         initialSectionId = 'booking-management';
         initialNavLinkId = 'nav-booking';
-        navBookingMenu.classList.remove('hidden');
-        navBooking.style.display = 'list-item';
         document.getElementById('dashboard').style.display = 'none';
     }
 
@@ -4551,10 +4549,10 @@ function showSection(sectionId) {
 // Add event listeners to the navigation links
 document.addEventListener('DOMContentLoaded', () => {
     const navBooking = document.getElementById('nav-booking');
-    const navBookingmenu = document.getElementById('bookingmenu');
-    const navDashboard = document.getElementById('nav-dashboard');
+        const navDashboard = document.getElementById('nav-dashboard');
+
     const navHousekeeping = document.getElementById('nav-housekeeping');
-    const navHousekeepingreports = document.getElementById('nav-housekeepingreports');
+      const navHousekeepingreports = document.getElementById('nav-housekeepingreports');
 
         const navRates = document.getElementById('nav-inventory');
         const navStaff = document.getElementById('nav-staff');
@@ -5177,7 +5175,7 @@ async function fetchUsers() {
                         <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
                         <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
                         <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
-                        <option value="front office" ${user.role === 'front office' ? 'selected' : ''}>Front Office</option>
+                        <option value="reception" ${user.role === 'reception' ? 'selected' : ''}>Reception</option>
                         <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
                     </select>
                 </td>
@@ -5384,7 +5382,7 @@ function getRoleClass(role) {
     const classes = {
         admin: 'bg-purple-50 text-purple-600 border-purple-100',
         bar: 'bg-amber-50 text-amber-600 border-amber-100',
-        front office: 'bg-blue-50 text-blue-600 border-blue-100',
+        reception: 'bg-blue-50 text-blue-600 border-blue-100',
         cashier: 'bg-cyan-50 text-cyan-600 border-cyan-100',
         housekeeper: 'bg-emerald-50 text-emerald-600 border-emerald-100'
     };
@@ -8364,7 +8362,7 @@ function showSection(sectionId) {
 
 
 
-const API_BASE = "https://patrinahhotelpms.onrender.com";
+        const API_BASE = "https://patrinahhotelpms.onrender.com";
 
 
 
@@ -10149,5 +10147,84 @@ window.addEventListener('click', (e) => {
     if (e.target === modal) toggleCashModal(false);
 });
 
-// Example check for the user's role (replace this with your actual role logic)
-//force it to show the booking mgt for front office
+
+
+//pesapalconfiguration
+function saveGatewayCredentials(event) {
+    event.preventDefault();
+
+    const gateway = document.getElementById('configTargetGateway').value;
+    const keyOne = document.getElementById('inputKeyOne').value.trim();
+    const keyTwo = document.getElementById('inputKeyTwo').value.trim();
+    const environment = document.getElementById('inputEnv').value;
+
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerText;
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `
+        <span class="inline-flex items-center gap-2">
+            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Verifying Tenant Credentials...
+        </span>`;
+
+    const payload = {
+        gateway: gateway,
+        keyOne: keyOne,
+        keyTwo: keyTwo,
+        environment: environment
+    };
+
+    // 🔥 FIX: Changed to authenticatedFetch to transmit the JWT containing the hotelId payload context safely
+    authenticatedFetch(`${API_BASE_URL}/gateways/configure`, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    })
+    .then(async response => {
+        if (!response) throw new Error("Connection failed.");
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.message || "Credential configuration verification failed.");
+        }
+        return result;
+    })
+    .then(serverPayload => {
+        alert(serverPayload.message);
+        
+        const targetRow = document.getElementById(`row-${gateway}`);
+        if (targetRow) {
+            const statusCell = targetRow.querySelector('.status-cell');
+            statusCell.innerHTML = `<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium inline-block">Connected</span>`;
+            
+            const envCell = targetRow.querySelector('.env-cell');
+            envCell.innerText = serverPayload.data.environment;
+
+            const actionMenu = document.getElementById(`${gateway}Menu`);
+            actionMenu.innerHTML = `
+                <div class="py-1">
+                    <button onclick="openConfigureModal('${gateway}')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Configure</button>
+                    <button onclick="openTestModal('${gateway}')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Test Connection</button>
+                    <button onclick="setAsDefaultGateway('${gateway}')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-600 font-medium">Set as Default</button>
+                </div>
+                <div class="py-1">
+                    <button onclick="openDisconnectModal('${gateway}')" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Disconnect</button>
+                </div>
+            `;
+        }
+        closeModal('configureGatewayModal');
+    })
+    .catch(error => {
+        console.error("Tenant Gateway Error:", error);
+        alert(`Configuration Failed: ${error.message}`);
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerText = originalBtnText;
+    });
+}
+
+
+
