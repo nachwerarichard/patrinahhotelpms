@@ -10148,3 +10148,29 @@ window.addEventListener('click', (e) => {
     const modal = document.getElementById('cash-modal');
     if (e.target === modal) toggleCashModal(false);
 });
+
+// Example check for the user's role (replace this with your actual role logic)
+//force it to show the booking mgt for front office
+if (role === "Front office") {
+    // 1. Target the parent menu container
+    const bookingMenu = document.getElementById('booking-menu');
+    
+    if (bookingMenu) {
+        // Remove any Tailwind or CSS classes that might be hiding the parent container
+        bookingMenu.classList.remove('hidden', 'overflow-hidden');
+        
+        // 2. Target the specific list items by their IDs
+        const itemIds = ['nav-booking', 'nav-calendar', 'nav-inventory'];
+        
+        itemIds.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                // Force display and override 'display: none' or any external CSS specificity
+                element.style.setProperty('display', 'block', 'important');
+                
+                // Optional: Remove any hidden classes if they exist on the children
+                element.classList.remove('hidden');
+            }
+        });
+    }
+}
