@@ -740,7 +740,7 @@ async function showDashboard(username, role) {
         initialNavLinkId = 'nav-sales';
         document.getElementById('dashboard').style.display = 'none';
     }
-    else if (role === 'Front office') {
+    else if (role === 'front office') {
         initialSectionId = 'booking-management';
         initialNavLinkId = 'nav-booking';
         navBookingMenu.classList.remove('hidden');
@@ -942,7 +942,7 @@ function applyRoleAccess(role) {
             document.getElementById('nav-salereport').style.display = 'list-item';
             break;
 
-        case 'Front office':
+        case 'front office':
             document.getElementById('nav-booking').style.display = 'list-item';
             break;
     }
