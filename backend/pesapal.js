@@ -1455,7 +1455,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             description: `Room Booking Payment Ref: ${id}`.substring(0, 100),
             callback_url: `${APP_DOMAIN}`,
             redirect_mode: "TOP_WINDOW",
-            merchant_notification_id: activeIpnId || "", // Default to blank string if missing
+            merchant_notification_id: activeIpnId || "",
             billing_address: {
                 email_address: email && email.includes('@') ? email.trim() : "guest@novuspms.com",
                 phone_number: cleanPhone,
@@ -1480,11 +1480,18 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         } catch (firstTryError) {
             const apiErrorData = firstTryError.response?.data;
             
-            // 🔥 CRITICAL RECOVERY: If Pesapal rejects it due to their faulty Sandbox IPN cache, strip it and try again!
-            if (apiErrorData?.error?.code === "InvalidIpnId" || apiErrorData?.message?.includes("IPN")) {
-                console.warn("⚠️ [SANDBOX RECOVERY ROUTINE TRIGGERED]: Pesapal rejected the IPN ID. Retrying payload without IPN dependency...");
+            console.warn("⚠️ Pesapal first try rejected. Checking recovery criteria...");
+            console.log("🔍 Error footprint raw payload:", JSON.stringify(apiErrorData, null, 2));
+
+            const isInvalidIpn = 
+                apiErrorData?.error?.code === "InvalidIpnId" || 
+                apiErrorData?.error?.message?.toLowerCase().includes("ipn") ||
+                firstTryError.message?.toLowerCase().includes("ipn");
+
+            if (isInvalidIpn) {
+                console.warn("🔥 [SANDBOX RECOVERY ROUTINE TRIGGERED]: Confirmed IPN ID rejection. Stripping IPN dependency and retrying instantly...");
                 
-                orderPayload.merchant_notification_id = ""; // Strip the problematic ID cleanly
+                orderPayload.merchant_notification_id = ""; // Clear out the buggy parameter cleanly
                 
                 orderResponse = await axios.post(
                     `${baseUrl}/api/Transactions/SubmitOrderRequest`,
@@ -1492,10 +1499,13 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
                     { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
                 );
             } else {
-                throw firstTryError; // Throw if it's a genuine error (like an invalid amount or auth issue)
+                throw firstTryError; 
             }
         }
 
+        // =========================================================================
+        // STEP 4: PERSIST ORDER TRACKING ID & SEND RESPONSE TO FRONTEND
+        // =========================================================================
         if (orderResponse && orderResponse.data && orderResponse.data.order_tracking_id) {
             booking.transactionid = orderResponse.data.order_tracking_id;
             await booking.save();
