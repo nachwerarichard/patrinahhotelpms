@@ -1391,11 +1391,11 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         const TARGET_IPN_URL = "https://patrinahhotelpms-ew8d.onrender.com/api/payments/pesapal-ipn-callback";
         
         let activeIpnId = ipnUrlId;
+        let requiresCooldown = false; // Flag to trace if a fresh IPN was registered
 
         // =========================================================================
         // STEP 1: RESOLVE THE EXPLICIT IPN ID (FALLBACK ONLY)
         // =========================================================================
-        // If the database has it, we instantly bypass this whole block!
         if (!activeIpnId) {
             console.log(`⚠️ IPN ID missing from DB for hotel ${req.user.hotelId}. Running emergency recovery registration...`);
             
@@ -1404,21 +1404,27 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
                 headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }
             });
 
-            if (Array.isArray(ipnListResponse.data)) {
-                let match = ipnListResponse.data.find(item => item.url && item.url.startsWith(TARGET_IPN_URL));
-                if (match) {
-                    activeIpnId = match.ipn_id;
-                }
+            const existingIpns = Array.isArray(ipnListResponse.data) ? ipnListResponse.data : [];
+            let match = existingIpns.find(item => item.url && item.url.trim().toLowerCase() === TARGET_IPN_URL.trim().toLowerCase());
+            
+            if (match) {
+                activeIpnId = match.ipn_id;
+                console.log(`>> 🎉 Found matched IPN directly on Pesapal Server: [${activeIpnId}]`);
             }
 
             // 2. Create it if it doesn't exist anywhere
             if (!activeIpnId) {
+                console.log(`⏳ Target IPN URL not found on server profile. Submitting fresh registration...`);
                 const ipnRegistrationResponse = await axios.post(
                     `${baseUrl}/api/URLSetup/RegisterIPN`,
                     { url: TARGET_IPN_URL, ipn_notification_type: "GET" },
                     { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
                 );
+                
                 activeIpnId = ipnRegistrationResponse.data?.ipn_id;
+                if (activeIpnId) {
+                    requiresCooldown = true; // Block processing execution path downstream for sandbox replication safety
+                }
             }
 
             // Self-heal your database profile so subsequent calls are instant
@@ -1428,6 +1434,12 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
                     { ipnUrlId: activeIpnId, updatedAt: new Date() }
                 );
                 console.log(`>> ✅ Self-healed missing DB ipnUrlId field for hotel: ${req.user.hotelId}`);
+                
+                // 🔥 THE MANDATORY FIX: Introduce a strict wait condition ONLY if we hit a fresh registration API call
+                if (requiresCooldown) {
+                    console.log("⏳ [SANDBOX LATENCY] Cooling down for 4 seconds to ensure remote replication clears...");
+                    await new Promise(resolve => setTimeout(resolve, 4000));
+                }
             }
         }
 
@@ -1458,9 +1470,9 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             currency: "UGX",
             amount: parseFloat(amount),
             description: `Room Booking Payment Ref: ${id}`.substring(0, 100),
-            callback_url: `${APP_DOMAIN}/pesapal-payment-success.html`,
+            callback_url: `${APP_DOMAIN}`,
             redirect_mode: "TOP_WINDOW",
-            merchant_notification_id: activeIpnId, // 🔥 Fed natively from DB or fallback registration
+            merchant_notification_id: activeIpnId, 
             billing_address: {
                 email_address: email && email.includes('@') ? email.trim() : "guest@novuspms.com",
                 phone_number: cleanPhone,
@@ -1470,7 +1482,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             }
         };
 
-        console.log(`🚀 Dispatching checkout payload to Pesapal using Cached IPN ID: [${activeIpnId}]`);
+        console.log(`🚀 Dispatching checkout payload to Pesapal using Validated IPN ID: [${activeIpnId}]`);
         const orderResponse = await axios.post(
             `${baseUrl}/api/Transactions/SubmitOrderRequest`,
             orderPayload,
