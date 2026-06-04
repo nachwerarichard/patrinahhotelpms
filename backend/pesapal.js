@@ -1374,190 +1374,236 @@ async function getPesapalAccessToken(hotelId) {
 // ROUTE 1: INITIALIZE LIVE SECURE CHECKOUT SESSIONS (OPTIMIZED)
 // =========================================================================
 app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) => {
-    const { id } = req.params;
-    const { amount, phone, email } = req.body;
+try {
+const { id } = req.params;
+const { amount, phone, email } = req.body;
 
-    try {
-        // 1. Fetch and validate booking mapping
-        const booking = await Booking.findOne({ id, hotelId: req.user.hotelId });
-        if (!booking) {
-            return res.status(404).json({ message: 'Target booking schema record not found' });
-        }
+```
+    const booking = await Booking.findOne({
+        id,
+        hotelId: req.user.hotelId
+    });
 
-        // 2. Fetch authenticated tokens explicitly scoped to this hotel tenant along with saved IPN ID
-        const { token, baseUrl, ipnUrlId } = await getPesapalAccessToken(req.user.hotelId);
-        
-        const APP_DOMAIN = "https://elegant-pasca-cea136.netlify.app/frontend/home12.html";
-        const TARGET_IPN_URL = "https://patrinahhotelpms-ew8d.onrender.com/api/payments/pesapal-ipn-callback";
-        
-        let activeIpnId = ipnUrlId;
-
-        // =========================================================================
-        // STEP 1: RESOLVE THE EXPLICIT IPN ID (LIVE VERIFICATION WITH COOLDOWN)
-        // =========================================================================
-        console.log(`🔍 Querying Pesapal live servers to verify IPN status for hotel ${req.user.hotelId}...`);
-        try {
-            const ipnListResponse = await axios.get(`${baseUrl}/api/URLSetup/GetIpnList`, {
-                headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }
-            });
-            const existingIpns = Array.isArray(ipnListResponse.data) ? ipnListResponse.data : [];
-            let match = existingIpns.find(item => item.url && item.url.trim().toLowerCase() === TARGET_IPN_URL.trim().toLowerCase());
-            
-            if (match) {
-                activeIpnId = match.ipn_id;
-                console.log(`>> 🎉 Confirmed active IPN ID on Pesapal servers: [${activeIpnId}]`);
-            } else {
-                console.log(`⏳ Target IPN URL missing from Pesapal server index. Registering fresh stream...`);
-                const ipnRegistrationResponse = await axios.post(
-                    `${baseUrl}/api/URLSetup/RegisterIPN`,
-                    { url: TARGET_IPN_URL, ipn_notification_type: "GET" },
-                    { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
-                );
-                activeIpnId = ipnRegistrationResponse.data?.ipn_id;
-                if (activeIpnId) {
-                    console.log(`>> ✅ Fresh IPN Registered. New ID: [${activeIpnId}]. Pausing for sync...`);
-                    await new Promise(resolve => setTimeout(resolve, 4000));
-                }
-            }
-
-            if (activeIpnId && activeIpnId !== ipnUrlId) {
-                await mongoose.model('Gateway').updateOne(
-                    { hotelId: req.user.hotelId, gatewayId: 'pesapal' },
-                    { ipnUrlId: activeIpnId, updatedAt: new Date() }
-                );
-            }
-        } catch (ipnCheckError) {
-            console.error("⚠️ Failed handling IPN pre-checks. Proceeding with fallback mode:", ipnCheckError.message);
-        }
-
-        // =========================================================================
-        // STEP 2: PAYLOAD EXTRACTION & VALIDATION
-        // =========================================================================
-        const guestName = booking.name ? booking.name.trim() : "Hotel Guest";
-        const nameParts = guestName.split(" ");
-        const firstName = nameParts[0] || "Guest";
-        const lastName = nameParts.slice(1).join(" ") || "Client";
-        
-        let cleanPhone = phone ? phone.replace(/[^0-9]/g, '') : "";
-        if (!cleanPhone.startsWith('256') && cleanPhone.startsWith('0')) {
-            cleanPhone = '256' + cleanPhone.substring(1);
-        }
-        if (!cleanPhone) {
-            cleanPhone = "256700000000"; 
-        }
-
-        const finalMerchantReference = `BK-${id}-${Date.now()}`;
-
-        const orderPayload = {
-            id: finalMerchantReference, 
-            currency: "UGX",
-            amount: parseFloat(amount),
-            description: `Room Booking Payment Ref: ${id}`.substring(0, 100),
-            callback_url: `${APP_DOMAIN}`,
-            redirect_mode: "TOP_WINDOW",
-            merchant_notification_id: activeIpnId || "",
-            billing_address: {
-                email_address: email && email.includes('@') ? email.trim() : "guest@novuspms.com",
-                phone_number: cleanPhone,
-                first_name: firstName,
-                last_name: lastName,
-                country_code: "UG"
-            }
-        };
-
-        // =========================================================================
-        // =========================================================================
-        // STEP 3: DISPATCH ORDER WITH AUTOMATIC SANDBOX RECOVERY
-        // =========================================================================
-        console.log(`🚀 Dispatching checkout payload to Pesapal using IPN ID: [${orderPayload.merchant_notification_id || 'OMITTED'}]`);
-        
-        let orderResponse;
-        let needsFallback = false;
-
-        try {
-            orderResponse = await axios.post(
-                `${baseUrl}/api/Transactions/SubmitOrderRequest`,
-                orderPayload,
-                { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
-            );
-
-            // Check if Pesapal returned a 200 OK but with an error body inside data
-            if (orderResponse?.data?.error?.code === "InvalidIpnId" || orderResponse?.data?.error?.message?.toLowerCase().includes("ipn")) {
-                console.warn("⚠️ Pesapal returned an error body inside a resolved promise. Flagging for recovery...");
-                needsFallback = true;
-            }
-        } catch (firstTryError) {
-            const apiErrorData = firstTryError.response?.data;
-            
-            console.warn("⚠️ Pesapal request threw an HTTP error status. Checking recovery criteria...");
-            
-            const isInvalidIpn = 
-                apiErrorData?.error?.code === "InvalidIpnId" || 
-                apiErrorData?.error?.message?.toLowerCase().includes("ipn") ||
-                firstTryError.message?.toLowerCase().includes("ipn");
-
-            if (isInvalidIpn) {
-                needsFallback = true;
-            } else {
-                throw firstTryError; // Propagating genuine validation/business logic bugs
-            }
-        }
-
-        // 🔥 RUN EMERGENCY FALLBACK WITH A FRESH SANITIZED PAYLOAD CONTAINER
-        if (needsFallback) {
-            console.warn("🔥 [SANDBOX RECOVERY ROUTINE TRIGGERED]: Bypassing faulty sandbox IPN cache. Re-building completely clean object stream...");
-            
-            // 1. Create a clean payload clone but explicitly strip the notification field out
-            const { merchant_notification_id, ...sanitizedPayload } = orderPayload;
-            
-            // 2. Generate a fresh tracking timestamp instance to avoid duplicate reference collisions on Pesapal
-            sanitizedPayload.id = `BK-${id}-${Date.now()}-RETRY`;
-
-            console.log("🚀 Re-dispatching clean payload without IPN properties...");
-
-            // 3. Fire the backup call with the new object reference
-            orderResponse = await axios.post(
-                `${baseUrl}/api/Transactions/SubmitOrderRequest`,
-                sanitizedPayload, 
-                { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
-            );
-        }
-
-        // =========================================================================
-        // STEP 4: PERSIST ORDER TRACKING ID & SEND RESPONSE TO FRONTEND
-        // =========================================================================
-        if (orderResponse && orderResponse.data && orderResponse.data.order_tracking_id) {
-            booking.transactionid = orderResponse.data.order_tracking_id;
-            await booking.save();
-
-            console.log(`>> 🎉 Order generation successful! Tracking ID: ${orderResponse.data.order_tracking_id}`);
-            return res.json({
-                success: true,
-                redirectUrl: orderResponse.data.redirect_url,
-                orderTrackingId: orderResponse.data.order_tracking_id
-            });
-        }
-
-        // If it got past the fallback and STILL doesn't have an order_tracking_id
-        console.error("❌ [PESAPAL REJECTION PAYLOAD]:", JSON.stringify(orderResponse?.data, null, 2));
-        return res.status(400).json({
+    if (!booking) {
+        return res.status(404).json({
             success: false,
-            message: "Pesapal rejected transaction payload initialization frameworks.",
-            debug: orderResponse?.data
-        });
-
-    } catch (error) {
-        // This structural error block safely catches overall endpoint dropouts
-        const structuralErrorDetail = error.response?.data || error.message;
-        console.error("❌ PESAPAL INITIALIZE ROUTE CRITICAL FAILURE:", JSON.stringify(structuralErrorDetail, null, 2));
-        
-        return res.status(500).json({
-            success: false,
-            message: "Failed processing gateway checkout frameworks link endpoints.",
-            debug: structuralErrorDetail
+            message: 'Booking not found'
         });
     }
+
+    const gateway = await mongoose.model('Gateway').findOne({
+        hotelId: req.user.hotelId,
+        gatewayId: 'pesapal'
+    });
+
+    if (!gateway) {
+        return res.status(400).json({
+            success: false,
+            message: 'Pesapal configuration not found'
+        });
+    }
+
+    const baseUrl =
+        gateway.environment === 'Live'
+            ? 'https://pay.pesapal.com/v3'
+            : 'https://cybqa.pesapal.com/pesapalv3';
+
+    // =====================================================
+    // AUTHENTICATE
+    // =====================================================
+    const authResponse = await axios.post(
+        `${baseUrl}/api/Auth/RequestToken`,
+        {
+            consumer_key: gateway.consumerKey,
+            consumer_secret: gateway.consumerSecret
+        },
+        {
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json'
+            }
+        }
+    );
+
+    const token = authResponse.data.token;
+
+    if (!token) {
+        throw new Error('Failed to obtain Pesapal token');
+    }
+
+    // =====================================================
+    // VERIFY OR REGISTER IPN
+    // =====================================================
+    const TARGET_IPN_URL =
+        'https://patrinahhotelpms-ew8d.onrender.com/api/payments/pesapal-ipn-callback';
+
+    let ipnId = gateway.ipnUrlId;
+
+    const ipnResponse = await axios.get(
+        `${baseUrl}/api/URLSetup/GetIpnList`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/json'
+            }
+        }
+    );
+
+    const ipns = Array.isArray(ipnResponse.data)
+        ? ipnResponse.data
+        : [];
+
+    const existingIpn = ipns.find(
+        ipn =>
+            ipn.url &&
+            ipn.url.trim().toLowerCase() ===
+                TARGET_IPN_URL.trim().toLowerCase()
+    );
+
+    if (existingIpn) {
+        ipnId = existingIpn.ipn_id;
+    } else {
+        const registerResponse = await axios.post(
+            `${baseUrl}/api/URLSetup/RegisterIPN`,
+            {
+                url: TARGET_IPN_URL,
+                ipn_notification_type: 'GET'
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        ipnId = registerResponse.data.ipn_id;
+
+        await mongoose.model('Gateway').updateOne(
+            {
+                hotelId: req.user.hotelId,
+                gatewayId: 'pesapal'
+            },
+            {
+                $set: {
+                    ipnUrlId: ipnId,
+                    updatedAt: new Date()
+                }
+            }
+        );
+    }
+
+    if (!ipnId) {
+        throw new Error('Failed to obtain valid Pesapal IPN ID');
+    }
+
+    // =====================================================
+    // CUSTOMER DETAILS
+    // =====================================================
+    const guestName = booking.name || 'Hotel Guest';
+
+    const nameParts = guestName.trim().split(' ');
+
+    const firstName = nameParts[0] || 'Guest';
+    const lastName = nameParts.slice(1).join(' ') || 'Customer';
+
+    let cleanPhone = (phone || '').replace(/\D/g, '');
+
+    if (
+        cleanPhone.startsWith('0') &&
+        !cleanPhone.startsWith('256')
+    ) {
+        cleanPhone = `256${cleanPhone.substring(1)}`;
+    }
+
+    if (!cleanPhone) {
+        cleanPhone = '256700000000';
+    }
+
+    // =====================================================
+    // ORDER REQUEST
+    // =====================================================
+    const merchantReference = `BK-${booking.id}-${Date.now()}`;
+
+    const orderPayload = {
+        id: merchantReference,
+        currency: 'UGX',
+        amount: Number(amount),
+        description: `Booking Payment ${booking.id}`,
+        callback_url:
+            'https://patrinahhotelpms-ew8d.onrender.com/api/payments/pesapal-callback',
+
+        notification_id: ipnId,
+
+        billing_address: {
+            email_address:
+                email || booking.email || 'guest@example.com',
+
+            phone_number: cleanPhone,
+
+            first_name: firstName,
+            last_name: lastName,
+
+            country_code: 'UG'
+        }
+    };
+
+    console.log(
+        'Submitting Pesapal order:',
+        JSON.stringify(orderPayload, null, 2)
+    );
+
+    const orderResponse = await axios.post(
+        `${baseUrl}/api/Transactions/SubmitOrderRequest`,
+        orderPayload,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/json',
+                'Content-Type': 'application/json'
+            }
+        }
+    );
+
+    if (
+        !orderResponse.data ||
+        !orderResponse.data.order_tracking_id
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: 'Pesapal rejected order',
+            debug: orderResponse.data
+        });
+    }
+
+    booking.transactionid =
+        orderResponse.data.order_tracking_id;
+
+    await booking.save();
+
+    return res.json({
+        success: true,
+        redirectUrl: orderResponse.data.redirect_url,
+        orderTrackingId:
+            orderResponse.data.order_tracking_id
+    });
+} catch (error) {
+    console.error(
+        'PESAPAL PAYMENT ERROR:',
+        error.response?.data || error.message
+    );
+
+    return res.status(500).json({
+        success: false,
+        message: 'Failed to initialize Pesapal payment',
+        error: error.response?.data || error.message
+    });
+}
+```
+
 });
+
 
 // =========================================================================
 // ROUTE 2: PUBLIC INSTANT PAYMENT NOTIFICATION (IPN) BACKGROUND WEBHOOK
