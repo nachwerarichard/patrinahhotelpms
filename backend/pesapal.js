@@ -1414,7 +1414,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             // 2. Create it if it doesn't exist anywhere
             if (!activeIpnId) {
                 const ipnRegistrationResponse = await axios.post(
-                    `${baseUrl}/api/URLRegister/RegisterIPN`,
+                    `${baseUrl}/api/URLSetup/RegisterIPN`,
                     { url: TARGET_IPN_URL, ipn_notification_type: "GET" },
                     { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
                 );
@@ -4718,7 +4718,7 @@ app.post('/api/gateways/configure', auth, async (req, res) => {
                     console.log(`⏳ No matching IPN found. Registering new IPN stream on Pesapal...`);
                     
                     // Create and register a brand new IPN reference route
-                    const registerIpnResponse = await axios.post(`${pesapalBaseUrl}/api/URLRegister/RegisterIPN`, {
+                    const registerIpnResponse = await axios.post(`${pesapalBaseUrl}/api/URLSetup/RegisterIPN`, {
                         url: expectedIpnUrl,
                         ipn_notification_type: "GET" // Pesapal executes webhook hits via GET/POST options
                     }, {
