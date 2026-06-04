@@ -1400,7 +1400,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             console.log(`⚠️ IPN ID missing from DB for hotel ${req.user.hotelId}. Running emergency recovery registration...`);
             
             // 1. Double check if it exists on their profile anyway
-            const ipnListResponse = await axios.get(`${baseUrl}/api/URLRegister/GetIPNURLs`, {
+            const ipnListResponse = await axios.get(`${baseUrl}/api/URLSetup/GetIpnList`, {
                 headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }
             });
 
@@ -4699,7 +4699,7 @@ app.post('/api/gateways/configure', auth, async (req, res) => {
                 console.log(`⏳ Checking existing IPN configurations on Pesapal...`);
                 
                 // Fetch all URLs registered under this hotel's API merchant account key
-                const ipnListResponse = await axios.get(`${pesapalBaseUrl}/api/URLRegister/GetIPNURLs`, {
+                const ipnListResponse = await axios.get(`${pesapalBaseUrl}/api/URLSetup/GetIpnList`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Accept': 'application/json'
