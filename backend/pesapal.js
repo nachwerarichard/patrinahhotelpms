@@ -1387,7 +1387,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         // 2. Fetch authenticated tokens explicitly scoped to this hotel tenant along with saved IPN ID
         const { token, baseUrl, ipnUrlId } = await getPesapalAccessToken(req.user.hotelId);
         
-        const APP_DOMAIN = "https://elegant-pasca-cea136.netlify.app/frontend";
+        const APP_DOMAIN = "https://elegant-pasca-cea136.netlify.app/frontend/home12.html";
         const TARGET_IPN_URL = "https://patrinahhotelpms-ew8d.onrender.com/api/payments/pesapal-ipn-callback";
         
         let activeIpnId = ipnUrlId;
