@@ -1471,36 +1471,49 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         console.log(`🚀 Dispatching checkout payload to Pesapal using IPN ID: [${orderPayload.merchant_notification_id || 'OMITTED'}]`);
         
         let orderResponse;
+        let needsFallback = false;
+
         try {
             orderResponse = await axios.post(
                 `${baseUrl}/api/Transactions/SubmitOrderRequest`,
                 orderPayload,
                 { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
             );
+
+            // Check if Pesapal returned a 200 OK but with an error body inside data
+            if (orderResponse?.data?.error?.code === "InvalidIpnId" || orderResponse?.data?.error?.message?.toLowerCase().includes("ipn")) {
+                console.warn("⚠️ Pesapal returned an error body inside a resolved promise. Flagging for recovery...");
+                needsFallback = true;
+            }
         } catch (firstTryError) {
             const apiErrorData = firstTryError.response?.data;
             
-            console.warn("⚠️ Pesapal first try rejected. Checking recovery criteria...");
-            console.log("🔍 Error footprint raw payload:", JSON.stringify(apiErrorData, null, 2));
-
+            console.warn("⚠️ Pesapal request threw an HTTP error status. Checking recovery criteria...");
+            
             const isInvalidIpn = 
                 apiErrorData?.error?.code === "InvalidIpnId" || 
                 apiErrorData?.error?.message?.toLowerCase().includes("ipn") ||
                 firstTryError.message?.toLowerCase().includes("ipn");
 
             if (isInvalidIpn) {
-                console.warn("🔥 [SANDBOX RECOVERY ROUTINE TRIGGERED]: Confirmed IPN ID rejection. Stripping IPN dependency and retrying instantly...");
-                
-                orderPayload.merchant_notification_id = ""; // Clear out the buggy parameter cleanly
-                
-                orderResponse = await axios.post(
-                    `${baseUrl}/api/Transactions/SubmitOrderRequest`,
-                    orderPayload,
-                    { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
-                );
+                needsFallback = true;
             } else {
-                throw firstTryError; 
+                throw firstTryError; // Real error, propagate up
             }
+        }
+
+        // 🔥 RUN EMERGENCY FALLBACK IF FLAGGED BY EITHER BLOCK
+        if (needsFallback) {
+            console.warn("🔥 [SANDBOX RECOVERY ROUTINE TRIGGERED]: Bypassing faulty sandbox IPN cache. Stripping IPN dependency and retrying instantly...");
+            
+            orderPayload.merchant_notification_id = ""; // Strip it completely
+            
+            // Re-fire directly into orderResponse
+            orderResponse = await axios.post(
+                `${baseUrl}/api/Transactions/SubmitOrderRequest`,
+                orderPayload,
+                { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
+            );
         }
 
         // =========================================================================
@@ -1518,6 +1531,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             });
         }
 
+        // If it got past the fallback and STILL doesn't have an order_tracking_id
         console.error("❌ [PESAPAL REJECTION PAYLOAD]:", JSON.stringify(orderResponse?.data, null, 2));
         return res.status(400).json({
             success: false,
@@ -1526,6 +1540,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         });
 
     } catch (error) {
+        // This structural error block safely catches overall endpoint dropouts
         const structuralErrorDetail = error.response?.data || error.message;
         console.error("❌ PESAPAL INITIALIZE ROUTE CRITICAL FAILURE:", JSON.stringify(structuralErrorDetail, null, 2));
         
