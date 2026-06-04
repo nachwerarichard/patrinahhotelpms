@@ -4800,33 +4800,7 @@ app.post('/api/gateways/configure', auth, async (req, res) => {
     }
 });
         
-// =========================================================================
-// ⚠️ TEMPORARY ONE-TIME CLEANUP BLOCK (DELETE THIS AFTER RUNNING ONCE)
-// =========================================================================
-(async () => {
-    try {
-        // Wait a split second to make sure models are loaded and connection is ready
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        console.log("🧹 [ONBOARDING FIX] Forcing IPN cache reset...");
-        
-        const result = await mongoose.model('Gateway').updateOne(
-            { 
-                hotelId: new mongoose.Types.ObjectId("69dcc20a8f97d1e3a3697045"), 
-                gatewayId: "pesapal" 
-            },
-            { 
-                $set: { ipnUrlId: null } 
-            }
-        );
-        
-        console.log(`>> ✅ Database cleanup complete. Modified ${result.modifiedCount} document(s).`);
-        console.log("⚠️ YOU CAN NOW SAFE-DELETE THIS TEMPORARY FUNCTION BLOCK FROM YOUR CODE!");
-    } catch (err) {
-        console.error("❌ Temporary cleanup function error:", err.message);
-    }
-})();
-// =========================================================================
+
 
 const port = process.env.PORT || 3000;
 
