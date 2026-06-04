@@ -10178,7 +10178,6 @@ function saveGatewayCredentials(event) {
         environment: environment
     };
 
-    // 🔥 FIX: Changed to authenticatedFetch to transmit the JWT containing the hotelId payload context safely
     authenticatedFetch(`${API_BASE_URL}/gateways/configure`, {
         method: 'POST',
         body: JSON.stringify(payload)
@@ -10196,23 +10195,34 @@ function saveGatewayCredentials(event) {
         
         const targetRow = document.getElementById(`row-${gateway}`);
         if (targetRow) {
+            // 1. Update Status Badge
             const statusCell = targetRow.querySelector('.status-cell');
             statusCell.innerHTML = `<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium inline-block">Connected</span>`;
             
+            // 2. Update Environment Text
             const envCell = targetRow.querySelector('.env-cell');
             envCell.innerText = serverPayload.data.environment;
 
+            // 3. Clear the placeholder dash from Default column if it exists
+            const defaultCell = targetRow.querySelector('.default-cell');
+            if (defaultCell && defaultCell.innerText === '—') {
+                defaultCell.innerText = ''; 
+            }
+
+            // 4. Update Dropdown Menu content dynamically safely
             const actionMenu = document.getElementById(`${gateway}Menu`);
-            actionMenu.innerHTML = `
-                <div class="py-1">
-                    <button onclick="openConfigureModal('${gateway}')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Configure</button>
-                    <button onclick="openTestModal('${gateway}')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Test Connection</button>
-                    <button onclick="setAsDefaultGateway('${gateway}')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-600 font-medium">Set as Default</button>
-                </div>
-                <div class="py-1">
-                    <button onclick="openDisconnectModal('${gateway}')" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Disconnect</button>
-                </div>
-            `;
+            if (actionMenu) {
+                actionMenu.innerHTML = `
+                    <div class="py-1">
+                        <button onclick="openConfigureModal('${gateway}')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Configure</button>
+                        <button onclick="openTestModal('${gateway}')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700 dynamic-test-btn">Test Connection</button>
+                        <button onclick="setAsDefaultGateway('${gateway}')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-600 font-medium dynamic-default-btn">Set as Default</button>
+                    </div>
+                    <div class="py-1">
+                        <button onclick="openDisconnectModal('${gateway}')" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Disconnect</button>
+                    </div>
+                `;
+            }
         }
         closeModal('configureGatewayModal');
     })
