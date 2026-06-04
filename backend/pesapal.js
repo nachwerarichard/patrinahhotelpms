@@ -1466,6 +1466,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         };
 
         // =========================================================================
+        // =========================================================================
         // STEP 3: DISPATCH ORDER WITH AUTOMATIC SANDBOX RECOVERY
         // =========================================================================
         console.log(`🚀 Dispatching checkout payload to Pesapal using IPN ID: [${orderPayload.merchant_notification_id || 'OMITTED'}]`);
@@ -1498,20 +1499,26 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             if (isInvalidIpn) {
                 needsFallback = true;
             } else {
-                throw firstTryError; // Real error, propagate up
+                throw firstTryError; // Propagating genuine validation/business logic bugs
             }
         }
 
-        // 🔥 RUN EMERGENCY FALLBACK IF FLAGGED BY EITHER BLOCK
+        // 🔥 RUN EMERGENCY FALLBACK WITH A FRESH SANITIZED PAYLOAD CONTAINER
         if (needsFallback) {
-            console.warn("🔥 [SANDBOX RECOVERY ROUTINE TRIGGERED]: Bypassing faulty sandbox IPN cache. Stripping IPN dependency and retrying instantly...");
+            console.warn("🔥 [SANDBOX RECOVERY ROUTINE TRIGGERED]: Bypassing faulty sandbox IPN cache. Re-building completely clean object stream...");
             
-            orderPayload.merchant_notification_id = ""; // Strip it completely
+            // 1. Create a clean payload clone but explicitly strip the notification field out
+            const { merchant_notification_id, ...sanitizedPayload } = orderPayload;
             
-            // Re-fire directly into orderResponse
+            // 2. Generate a fresh tracking timestamp instance to avoid duplicate reference collisions on Pesapal
+            sanitizedPayload.id = `BK-${id}-${Date.now()}-RETRY`;
+
+            console.log("🚀 Re-dispatching clean payload without IPN properties...");
+
+            // 3. Fire the backup call with the new object reference
             orderResponse = await axios.post(
                 `${baseUrl}/api/Transactions/SubmitOrderRequest`,
-                orderPayload,
+                sanitizedPayload, 
                 { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
             );
         }
