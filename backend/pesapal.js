@@ -1394,57 +1394,49 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         let requiresCooldown = false; // Flag to trace if a fresh IPN was registered
 
         // =========================================================================
-        // STEP 1: RESOLVE THE EXPLICIT IPN ID (FALLBACK ONLY)
         // =========================================================================
-        if (!activeIpnId) {
-            console.log(`⚠️ IPN ID missing from DB for hotel ${req.user.hotelId}. Running emergency recovery registration...`);
+        // STEP 1: RESOLVE THE EXPLICIT IPN ID (AIRTIGHT LIVE VERIFICATION)
+        // =========================================================================
+        console.log(`🔍 Querying Pesapal live servers to verify IPN status for hotel ${req.user.hotelId}...`);
+        
+        // 1. Fetch the absolute truth directly from Pesapal's active server profile
+        const ipnListResponse = await axios.get(`${baseUrl}/api/URLSetup/GetIpnList`, {
+            headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }
+        });
+
+        const existingIpns = Array.isArray(ipnListResponse.data) ? ipnListResponse.data : [];
+        
+        // Find if our TARGET_IPN_URL is genuinely registered and active on Pesapal right now
+        let activeIpnMatch = existingIpns.find(item => item.url && item.url.trim().toLowerCase() === TARGET_IPN_URL.trim().toLowerCase());
+
+        if (activeIpnMatch) {
+            activeIpnId = activeIpnMatch.ipn_id;
+            console.log(`>> 🎉 Confirmed active IPN ID on Pesapal servers: [${activeIpnId}]`);
+        } else {
+            // 2. If Pesapal doesn't know about it, it's dead/missing. Register a fresh one.
+            console.log(`⏳ Target IPN URL missing from Pesapal server index. Registering fresh stream...`);
+            const ipnRegistrationResponse = await axios.post(
+                `${baseUrl}/api/URLSetup/RegisterIPN`,
+                { url: TARGET_IPN_URL, ipn_notification_type: "GET" },
+                { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
+            );
             
-            // 1. Double check if it exists on their profile anyway
-            const ipnListResponse = await axios.get(`${baseUrl}/api/URLSetup/GetIpnList`, {
-                headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }
-            });
-
-            const existingIpns = Array.isArray(ipnListResponse.data) ? ipnListResponse.data : [];
-            let match = existingIpns.find(item => item.url && item.url.trim().toLowerCase() === TARGET_IPN_URL.trim().toLowerCase());
+            activeIpnId = ipnRegistrationResponse.data?.ipn_id;
             
-            if (match) {
-                activeIpnId = match.ipn_id;
-                console.log(`>> 🎉 Found matched IPN directly on Pesapal Server: [${activeIpnId}]`);
-            }
-
-            // 2. Create it if it doesn't exist anywhere
-            if (!activeIpnId) {
-                console.log(`⏳ Target IPN URL not found on server profile. Submitting fresh registration...`);
-                const ipnRegistrationResponse = await axios.post(
-                    `${baseUrl}/api/URLSetup/RegisterIPN`,
-                    { url: TARGET_IPN_URL, ipn_notification_type: "GET" },
-                    { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" } }
-                );
-                
-                activeIpnId = ipnRegistrationResponse.data?.ipn_id;
-                if (activeIpnId) {
-                    requiresCooldown = true; // Block processing execution path downstream for sandbox replication safety
-                }
-            }
-
-            // Self-heal your database profile so subsequent calls are instant
             if (activeIpnId) {
-                await mongoose.model('Gateway').updateOne(
-                    { hotelId: req.user.hotelId, gatewayId: 'pesapal' },
-                    { ipnUrlId: activeIpnId, updatedAt: new Date() }
-                );
-                console.log(`>> ✅ Self-healed missing DB ipnUrlId field for hotel: ${req.user.hotelId}`);
-                
-                // 🔥 THE MANDATORY FIX: Introduce a strict wait condition ONLY if we hit a fresh registration API call
-                if (requiresCooldown) {
-                    console.log("⏳ [SANDBOX LATENCY] Cooling down for 4 seconds to ensure remote replication clears...");
-                    await new Promise(resolve => setTimeout(resolve, 4000));
-                }
+                console.log(`>> ✅ Fresh IPN Registered. New ID: [${activeIpnId}]`);
+                console.log("⏳ [SANDBOX LATENCY] Cooling down for 4 seconds to allow global indexing...");
+                await new Promise(resolve => setTimeout(resolve, 4000));
             }
         }
 
-        if (!activeIpnId) {
-            throw new Error("Unable to map or assign an active merchant IPN ID config string context.");
+        // 3. Keep our local database in sync with reality
+        if (activeIpnId && activeIpnId !== ipnUrlId) {
+            await mongoose.model('Gateway').updateOne(
+                { hotelId: req.user.hotelId, gatewayId: 'pesapal' },
+                { ipnUrlId: activeIpnId, updatedAt: new Date() }
+            );
+            console.log(`>> 💾 Local database sync complete. Cached current ID: ${activeIpnId}`);
         }
 
         // =========================================================================
