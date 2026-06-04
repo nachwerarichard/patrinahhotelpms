@@ -10195,11 +10195,25 @@ function saveGatewayCredentials(event) {
         
         const targetRow = document.getElementById(`row-${gateway}`);
         if (targetRow) {
-            // 1. Update Status Badge
-            const statusCell = targetRow.querySelector('.status-cell');
-            statusCell.innerHTML = `<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium inline-block">Connected</span>`;
+            // 1. Fetch status dynamically from backend data (fallback to 'Connected' if undefined)
+            const backendStatus = serverPayload.data.status || 'Connected';
             
-            // 2. Update Environment Text
+            // Dynamic Tailwind badges based on backend response value
+            const statusStyles = {
+                'Connected': 'bg-green-100 text-green-700',
+                'Active': 'bg-green-100 text-green-700',
+                'Pending': 'bg-yellow-100 text-yellow-700',
+                'Not Connected': 'bg-gray-100 text-gray-600'
+            };
+            
+            // Select the style match, or default to green if it's a unique success status
+            const badgeClass = statusStyles[backendStatus] || 'bg-green-100 text-green-700';
+
+            // Update Status Badge using backend data
+            const statusCell = targetRow.querySelector('.status-cell');
+            statusCell.innerHTML = `<span class="${badgeClass} px-3 py-1 rounded-full text-xs font-medium inline-block">${backendStatus}</span>`;
+            
+            // 2. Update Environment Text from backend data
             const envCell = targetRow.querySelector('.env-cell');
             envCell.innerText = serverPayload.data.environment;
 
