@@ -1380,7 +1380,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
 
         // 1. FIXED: Changed 'id' to '_id' for standard Mongoose schema properties
         const booking = await Booking.findOne({
-            _id: id,
+            id: id,
             hotelId: req.user.hotelId
         });
 
