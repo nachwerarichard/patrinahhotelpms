@@ -1590,11 +1590,11 @@ app.get('/api/payments/pesapal-callback', async (req, res) => {
 
         // 2. Define your actual hosted frontend domain url 
         // In production, this can come from an environment variable: process.env.FRONTEND_URL
-        const FRONTEND_URL = 'https://elegant-pasca-cea136.netlify.app/frontend/success.html'; 
+        const FRONTEND_URL = 'https://elegant-pasca-cea136.netlify.app/frontend'; 
 
         // 3. Redirect the iframe viewport back to your actual frontend application space
         // We pass the tracking metrics via query parameters so the frontend can read them
-        const redirectUrl = `${FRONTEND_URL}/payment-success-frame.html?OrderTrackingId=${OrderTrackingId}&OrderMerchantReference=${OrderMerchantReference || ''}`;
+        const redirectUrl = `${FRONTEND_URL}/success.html?OrderTrackingId=${OrderTrackingId}&OrderMerchantReference=${OrderMerchantReference || ''}`;
         
         return res.redirect(redirectUrl);
 
