@@ -10252,19 +10252,27 @@ function saveGatewayCredentials(event) {
 
 
 // Add this window event listener to your Frontend Payment Page component
+// Add this window event listener to your main dashboard JavaScript / Component mount
 window.addEventListener('message', async (event) => {
-    // Ensure the message is what we are looking for
+    // Safety check: verify this is our specific payment completion message
     if (event.data && event.data.type === 'PESAPAL_PAYMENT_SUCCESS') {
-        console.log('Payment confirmed for tracking ID:', event.data.orderTrackingId);
+        console.log('Payment successful! Tracking ID:', event.data.orderTrackingId);
         
-        // 1. Close your UI Iframe Modal here
-        closePaymentModal();
+        // 1. Write your custom code here to hide/close the payment modal element
+        // Example: document.getElementById('paymentModal').style.display = 'none';
+        closePaymentModal(); 
         
-        // 2. Re-fetch the booking details from your API to show the updated balance 
-        await refreshBookingDetails();
+        // 2. Fetch the fresh data from your API to update the screen values silently
+        if (typeof refreshBookingDetails === 'function') {
+            await refreshBookingDetails();
+        }
         
-        // 3. Show a nice success notification alert to the receptionist
-        showToastNotification('Card charged successfully! Balance updated.');
+        // 3. Show a success toast or alert banner to the receptionist right on the dashboard
+        if (typeof showToastNotification === 'function') {
+            showMessage('Card charged successfully! The booking balance has updated.');
+        } else {
+            showMessage('Payment processed successfully!');
+        }
     }
 });
 

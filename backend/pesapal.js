@@ -1585,31 +1585,18 @@ app.get('/api/payments/pesapal-callback', async (req, res) => {
             return res.status(400).send('<h1>Invalid Request</h1>');
         }
 
-        // Send HTML with a script that communicates back to your main PMS frontend window
         res.setHeader('Content-Type', 'text/html');
         return res.send(`
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Payment Verification</title>
+                <title>Processing...</title>
             </head>
             <body>
-                <div style="font-family: Arial, sans-serif; text-align: center; margin-top: 40px;">
-                    <p style="color: #4CAF50; font-size: 20px; font-weight: bold;">Processing Approval...</p>
-                </div>
-
                 <script>
-                    // 1. Send a message to the parent PMS window that payment is complete
+                    // Whisper to the parent dashboard that the payment is successful
                     if (window.parent) {
                         window.parent.postMessage({
-                            type: 'PESAPAL_PAYMENT_SUCCESS',
-                            orderTrackingId: '${OrderTrackingId}'
-                        }, '*');
-                    }
-                    
-                    // 2. Fallback safety close check if running inside a popup window
-                    if (window.opener) {
-                        window.opener.postMessage({
                             type: 'PESAPAL_PAYMENT_SUCCESS',
                             orderTrackingId: '${OrderTrackingId}'
                         }, '*');
@@ -2928,7 +2915,7 @@ app.post('/public/send-booking-confirmation', async (req, res) => {
             subject: `Booking Confirmation for Room ${booking.room} at Patrinah Hotel`,
             html: `
                 <p>Dear ${booking.name},</p>
-                <p>Thank you for booking with us at Patrinah Hotel!</p>
+                <p>Thank you for booking with us !</p>
                 <p>Your booking details are as follows:</p>
                 <ul>
                     <li><strong>Booking ID:</strong> ${booking.id}</li>
@@ -3063,7 +3050,7 @@ app.post('/api/bookings/:customId/sen-email', async (req, res) => {
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                     <h2 style="color: #0056b3;">Booking Confirmation - Patrinah Hotel</h2>
                     <p>Dear ${booking.name},</p>
-                    <p>Thank you for choosing Patrinah Hotel!</p>
+                    <p>Thank you for choosing us!</p>
                     <p>Your booking details are as follows:</p>
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
                         <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Booking ID:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.id}</td></tr>
@@ -3168,7 +3155,7 @@ app.post('/api/bookings/:customId/emailconfirm', async (req, res) => {
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                     <h2 style="color: #0056b3;">Booking Confirmation - Patrinah Hotel</h2>
                     <p>Dear ${booking.name},</p>
-                    <p>Thank you for choosing Patrinah Hotel!</p>
+                    <p>Thank you for choosing us!</p>
                     <p>Your booking details are as follows:</p>
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
                         <tr><td style="padding: 8px; border: 1px solid #ddd; background-color: #f2f2f2;"><strong>Booking ID:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.id}</td></tr>
@@ -3251,7 +3238,7 @@ app.post('/api/public/send-booking-confirm', async (req, res) => {
             subject: `Booking Confirmation for Room ${booking.room} at Patrinah Hotel`,
             html: `
                 <p>Dear ${booking.name},</p>
-                <p>Thank you for booking with us at Patrinah Hotel!</p>
+                <p>Thank you for booking with us !</p>
                 <p>Your booking details are as follows:</p>
                 <ul>
                     <li><strong>Booking ID:</strong> ${booking.id}</li>
