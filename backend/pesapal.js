@@ -1524,7 +1524,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             currency: 'UGX',
             amount: Number(amount),
             description: `Booking Payment ${booking._id}`,
-            callback_url: 'https://patrinahhotelpms-ew8d.onrender.com/api/payments/pesapal-callback',
+            callback_url: 'https://elegant-pasca-cea136.netlify.app/frontend/pesapal.html',
             notification_id: ipnId,
             billing_address: {
                 email_address: email || booking.email || 'guest@example.com',
