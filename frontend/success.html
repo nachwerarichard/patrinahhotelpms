@@ -61,15 +61,19 @@
         document.getElementById('ref-val').innerText = merchantRef || 'N/A';
 
         // 2. Safely announce the payment success status straight to the parent window
-        function notifyParentToClose() {
-            if (window.parent) {
-                window.parent.postMessage({
-                    type: 'PESAPAL_PAYMENT_SUCCESS',
-                    orderTrackingId: trackingId,
-                    merchantReference: merchantRef
-                }, window.location.origin); // Using current origin enforces strict domain security matching
-            }
-        }
+         function notifyParentToClose() {
+    // Define your absolute or relative frontend dashboard URL
+    const dashboardUrl = 'https://elegant-pasca-cea136.netlify.app/frontend/pesapal.html'; 
+
+    // window.top ensures it changes the main browser tab's address bar,
+    // completely breaking out of the iframe and clearing the modal.
+    if (window.top) {
+        window.top.location.href = dashboardUrl;
+    } else {
+        // Fallback safety case
+        window.location.href = dashboardUrl;
+    }
+}
     </script>
 </body>
 </html>
