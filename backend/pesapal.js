@@ -1575,7 +1575,39 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
     }
 });
 
+app.get('/api/payments/pesapal-callback', async (req, res) => {
+    try {
+        const { OrderTrackingId, OrderMerchantReference } = req.query;
 
+        console.log('User redirected back from Pesapal payment page:', OrderTrackingId);
+
+        if (!OrderTrackingId) {
+            return res.status(400).send('<h1>Invalid Request</h1><p>Missing transaction tracking ID.</p>');
+        }
+
+        // 1. Find the booking to see if the background IPN already marked it as paid
+        const booking = await Booking.findOne({ transactionid: OrderTrackingId });
+
+        // 2. OPTIONAL: Redirect to your frontend application's success screen if you have one
+        // Example: return res.redirect(`https://yourfrontend.com/booking-success?id=${OrderTrackingId}`);
+
+        // 3. Simple fallback HTML response for the guest
+        res.setHeader('Content-Type', 'text/html');
+        return res.send(`
+            <div style="font-family: Arial, sans-serif; text-align: center; margin-top: 100px;">
+                <div style="color: #4CAF50; font-size: 48px; margin-bottom: 20px;">✔</div>
+                <h2>Payment Completed Successfully!</h2>
+                <p>Thank you for your payment. Your booking status is being updated.</p>
+                <p><strong>Tracking ID:</strong> ${OrderTrackingId}</p>
+                <p>You can close this window or return to the main application.</p>
+            </div>
+        `);
+
+    } catch (error) {
+        console.error('Error on user redirect callback:', error);
+        return res.status(500).send('<h1>Something went wrong</h1><p>We received your payment but couldn\'t load the confirmation screen.</p>');
+    }
+});
 // =========================================================================
 // ROUTE 2: PUBLIC INSTANT PAYMENT NOTIFICATION (IPN) BACKGROUND WEBHOOK
 // =========================================================================
