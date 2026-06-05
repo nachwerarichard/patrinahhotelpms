@@ -940,7 +940,7 @@ function applyRoleAccess(role) {
             document.getElementById('nav-salereport').style.display = 'list-item';
             break;
 
-        case 'Front office':
+        case 'front office':
             document.getElementById('nav-booking').style.display = 'list-item';
             break;
     }
