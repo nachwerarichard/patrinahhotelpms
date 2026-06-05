@@ -744,6 +744,8 @@ async function showDashboard(username, role) {
         initialSectionId = 'booking-management';
         initialNavLinkId = 'nav-booking';
         document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('paymentgateway').style.display = 'none';
+        document.getElementById('nav-paymentgateway').style.display = 'none';
         renderBookings()
     }
 
@@ -1034,7 +1036,7 @@ async function renderBookings(page = 1, searchTerm = '') {
             let actionButtonsHtml = '';
 
             // 4. Role-based Button UI (Admin/Super-Admin)
-            if (currentUserRole === 'admin' || currentUserRole === 'super-admin') {
+            if (currentUserRole === 'admin' || currentUserRole === 'front office' || currentUserRole === 'super-admin') {
                 if (isCancelled) {
                     actionButtonsHtml = `
                         <span class="text-xs text-red-600 font-bold block mb-2 text-center uppercase tracking-wide">Cancelled</span>
