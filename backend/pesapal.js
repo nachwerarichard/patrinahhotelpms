@@ -1579,38 +1579,33 @@ app.get('/api/payments/pesapal-callback', async (req, res) => {
     try {
         const { OrderTrackingId, OrderMerchantReference } = req.query;
 
-        console.log('Iframe completed payment loop for Tracking ID:', OrderTrackingId);
+        console.log('User redirected back from Pesapal payment page:', OrderTrackingId);
 
         if (!OrderTrackingId) {
-            return res.status(400).send('<h1>Invalid Request</h1>');
+            return res.status(400).send('<h1>Invalid Request</h1><p>Missing transaction tracking ID.</p>');
         }
 
-        // Send back a clean execution script instead of a landing page
+        // 1. Find the booking to see if the background IPN already marked it as paid
+        const booking = await Booking.findOne({ transactionid: OrderTrackingId });
+
+        // 2. OPTIONAL: Redirect to your frontend application's success screen if you have one
+        // Example: return res.redirect(`https://yourfrontend.com/booking-success?id=${OrderTrackingId}`);
+
+        // 3. Simple fallback HTML response for the guest
         res.setHeader('Content-Type', 'text/html');
         return res.send(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Processing...</title>
-            </head>
-            <body>
-                <script>
-                    // Send transaction details safely up to the parent PMS dashboard window
-                    if (window.parent) {
-                        window.parent.postMessage({
-                            type: 'PESAPAL_PAYMENT_SUCCESS',
-                            orderTrackingId: '${OrderTrackingId}',
-                            merchantReference: '${OrderMerchantReference || ""}'
-                        }, '*'); 
-                    }
-                </script>
-            </body>
-            </html>
+            <div style="font-family: Arial, sans-serif; text-align: center; margin-top: 100px;">
+                <div style="color: #4CAF50; font-size: 48px; margin-bottom: 20px;">✔</div>
+                <h2>Payment Completed Successfully!</h2>
+                <p>Thank you for your payment. Your booking status is being updated.</p>
+                <p><strong>Tracking ID:</strong> ${OrderTrackingId}</p>
+                <p>You can close this window or return to the main application.</p>
+            </div>
         `);
 
     } catch (error) {
-        console.error('Error on iframe callback handler:', error);
-        return res.status(500).send('<h1>Verification Error</h1>');
+        console.error('Error on user redirect callback:', error);
+        return res.status(500).send('<h1>Something went wrong</h1><p>We received your payment but couldn\'t load the confirmation screen.</p>');
     }
 });
 // =========================================================================
