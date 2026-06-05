@@ -967,7 +967,7 @@ async function renderBookings(page = 1, searchTerm = '') {
     }
 
     // 2. Validate Permissions (Including super-admin)
-    if (currentUserRole !== 'admin' && currentUserRole !== 'bar' && currentUserRole !== 'front office' && currentUserRole !== 'super-admin') {
+    if (currentUserRole !== 'admin' && currentUserRole !== 'front office' && currentUserRole !== 'bar' && currentUserRole !== 'front office' && currentUserRole !== 'super-admin') {
         bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px;">Access Denied. You do not have permission to view bookings.</td></tr>';
         prevPageBtn.disabled = true;
         nextPageBtn.disabled = true;
