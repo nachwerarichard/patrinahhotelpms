@@ -740,10 +740,11 @@ async function showDashboard(username, role) {
         initialNavLinkId = 'nav-sales';
         document.getElementById('dashboard').style.display = 'none';
     }
-    else if (role === 'frontoffice') {
+    else if (role === 'front office') {
         initialSectionId = 'booking-management';
         initialNavLinkId = 'nav-booking';
         document.getElementById('dashboard').style.display = 'none';
+        renderBookings()
     }
 
     // Reset current active states
@@ -942,6 +943,7 @@ function applyRoleAccess(role) {
 
         case 'front office':
             document.getElementById('nav-booking').style.display = 'list-item';
+            
             break;
     }
 }
@@ -966,7 +968,7 @@ async function renderBookings(page = 1, searchTerm = '') {
     }
 
     // 2. Validate Permissions (Including super-admin)
-    if (currentUserRole !== 'admin' && currentUserRole !== 'bar' && currentUserRole !== 'super-admin') {
+    if (currentUserRole !== 'admin' && currentUserRole !== 'bar' && currentUserRole !== 'front office' && currentUserRole !== 'super-admin') {
         bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px;">Access Denied. You do not have permission to view bookings.</td></tr>';
         prevPageBtn.disabled = true;
         nextPageBtn.disabled = true;
