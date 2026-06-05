@@ -1577,35 +1577,51 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
 
 app.get('/api/payments/pesapal-callback', async (req, res) => {
     try {
-        const { OrderTrackingId, OrderMerchantReference } = req.query;
+        const { OrderTrackingId } = req.query;
 
-        console.log('User redirected back from Pesapal payment page:', OrderTrackingId);
+        console.log('Iframe completed 3DS verification for Tracking ID:', OrderTrackingId);
 
         if (!OrderTrackingId) {
-            return res.status(400).send('<h1>Invalid Request</h1><p>Missing transaction tracking ID.</p>');
+            return res.status(400).send('<h1>Invalid Request</h1>');
         }
 
-        // 1. Find the booking to see if the background IPN already marked it as paid
-        const booking = await Booking.findOne({ transactionid: OrderTrackingId });
-
-        // 2. OPTIONAL: Redirect to your frontend application's success screen if you have one
-        // Example: return res.redirect(`https://yourfrontend.com/booking-success?id=${OrderTrackingId}`);
-
-        // 3. Simple fallback HTML response for the guest
+        // Send HTML with a script that communicates back to your main PMS frontend window
         res.setHeader('Content-Type', 'text/html');
         return res.send(`
-            <div style="font-family: Arial, sans-serif; text-align: center; margin-top: 100px;">
-                <div style="color: #4CAF50; font-size: 48px; margin-bottom: 20px;">✔</div>
-                <h2>Payment Completed Successfully!</h2>
-                <p>Thank you for your payment. Your booking status is being updated.</p>
-                <p><strong>Tracking ID:</strong> ${OrderTrackingId}</p>
-                <p>You can close this window or return to the main application.</p>
-            </div>
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Payment Verification</title>
+            </head>
+            <body>
+                <div style="font-family: Arial, sans-serif; text-align: center; margin-top: 40px;">
+                    <p style="color: #4CAF50; font-size: 20px; font-weight: bold;">Processing Approval...</p>
+                </div>
+
+                <script>
+                    // 1. Send a message to the parent PMS window that payment is complete
+                    if (window.parent) {
+                        window.parent.postMessage({
+                            type: 'PESAPAL_PAYMENT_SUCCESS',
+                            orderTrackingId: '${OrderTrackingId}'
+                        }, '*');
+                    }
+                    
+                    // 2. Fallback safety close check if running inside a popup window
+                    if (window.opener) {
+                        window.opener.postMessage({
+                            type: 'PESAPAL_PAYMENT_SUCCESS',
+                            orderTrackingId: '${OrderTrackingId}'
+                        }, '*');
+                    }
+                </script>
+            </body>
+            </html>
         `);
 
     } catch (error) {
-        console.error('Error on user redirect callback:', error);
-        return res.status(500).send('<h1>Something went wrong</h1><p>We received your payment but couldn\'t load the confirmation screen.</p>');
+        console.error('Error on iframe callback handler:', error);
+        return res.status(500).send('<h1>Verification Error</h1>');
     }
 });
 // =========================================================================
