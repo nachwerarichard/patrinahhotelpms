@@ -2904,7 +2904,7 @@ app.post('/public/send-booking-confirmation', async (req, res) => {
         const mailOptions = {
             from: process.env.EMAIL_USER, // Sender address
             to: booking.guestEmail, // Recipient email (guest's email)
-            subject: `Booking Confirmation for Room ${booking.room} at Patrinah Hotel`,
+            subject: `Booking Confirmation for Room ${booking.room} at our Hotel`,
             html: `
                 <p>Dear ${booking.name},</p>
                 <p>Thank you for booking with us !</p>
@@ -2919,7 +2919,7 @@ app.post('/public/send-booking-confirmation', async (req, res) => {
                     <li><strong>Total Amount Due:</strong> $${booking.totalDue}</li>
                 </ul>
                 <p>We look forward to welcoming you!</p>
-                <p>Sincerely,<br>The Patrinah Hotel Team</p>
+                <p>Sincerely,<br>The Hotel Team</p>
             `
         };
 
@@ -2974,17 +2974,17 @@ app.post('/api/bookings/:customId/send-email', async (req, res) => {
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: recipientEmail,
-            subject: `Patrinah Hotel - Booking Confirmation for Room ${booking.room}`,
+            subject: `Booking Confirmation for Room ${booking.room}`,
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                    <h2 style="color: #0056b3;">Booking Confirmation - Patrinah Hotel</h2>
+                    <h2 style="color: #0056b3;">Booking Confirmation</h2>
                     <p>Dear ${booking.name || 'Guest'},</p>
                     <table style="width: 100%; border-collapse: collapse;">
                         <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Booking ID:</strong></td><td>${booking.id}</td></tr>
                         <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Total Bill:</strong></td><td>UGX ${totalBill.toFixed(2)}</td></tr>
                         <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Balance Due:</strong></td><td>UGX ${balanceDue.toFixed(2)}</td></tr>
                     </table>
-                    <p>Sincerely,<br>The Patrinah Hotel Team</p>
+                    <p>Sincerely,<br>The Hotel Team</p>
                 </div>
             `
         };
@@ -3037,10 +3037,10 @@ app.post('/api/bookings/:customId/sen-email', async (req, res) => {
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: recipientEmail,
-            subject: `Patrinah Hotel - Booking Confirmation for Room ${booking.room}`,
+            subject: `Booking Confirmation for Room ${booking.room}`,
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                    <h2 style="color: #0056b3;">Booking Confirmation - Patrinah Hotel</h2>
+                    <h2 style="color: #0056b3;">Booking Confirmation </h2>
                     <p>Dear ${booking.name},</p>
                     <p>Thank you for choosing us!</p>
                     <p>Your booking details are as follows:</p>
@@ -3086,7 +3086,7 @@ app.post('/api/bookings/:customId/sen-email', async (req, res) => {
 
                     <p>We look forward to welcoming you.</p>
                     <p>Sincerely,</p>
-                    <p>The Patrinah Hotel Team</p>
+                    <p>The  Hotel Team</p>
                 </div>
             `
         };
@@ -3142,10 +3142,10 @@ app.post('/api/bookings/:customId/emailconfirm', async (req, res) => {
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: recipientEmail,
-            subject: `Patrinah Hotel - Booking Confirmation for Room ${booking.room}`,
+            subject: `Booking Confirmation for Room ${booking.room}`,
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                    <h2 style="color: #0056b3;">Booking Confirmation - Patrinah Hotel</h2>
+                    <h2 style="color: #0056b3;">Booking Confirmation </h2>
                     <p>Dear ${booking.name},</p>
                     <p>Thank you for choosing us!</p>
                     <p>Your booking details are as follows:</p>
@@ -3191,7 +3191,7 @@ app.post('/api/bookings/:customId/emailconfirm', async (req, res) => {
 
                     <p>We look forward to welcoming you.</p>
                     <p>Sincerely,</p>
-                    <p>The Patrinah Hotel Team</p>
+                    <p>The Hotel Team</p>
                 </div>
             `
         };
@@ -3227,7 +3227,7 @@ app.post('/api/public/send-booking-confirm', async (req, res) => {
         const mailOptions = {
             from: process.env.EMAIL_USER, // Sender address
             to: booking.email, // Recipient email (guest's email)
-            subject: `Booking Confirmation for Room ${booking.room} at Patrinah Hotel`,
+            subject: `Booking Confirmation for Room ${booking.room} `,
             html: `
                 <p>Dear ${booking.name},</p>
                 <p>Thank you for booking with us !</p>
@@ -3242,7 +3242,7 @@ app.post('/api/public/send-booking-confirm', async (req, res) => {
                     <li><strong>Total Amount Due:</strong> $${booking.totalDue}</li>
                 </ul>
                 <p>We look forward to welcoming you!</p>
-                <p>Sincerely,<br>The Patrinah Hotel Team</p>
+                <p>Sincerely,<br>The  Hotel Team</p>
             `
         };
 
