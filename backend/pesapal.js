@@ -1524,7 +1524,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
             currency: 'UGX',
             amount: Number(amount),
             description: `Booking Payment ${booking._id}`,
-            callback_url: 'https://elegant-pasca-cea136.netlify.app/frontend/pesapal.html',
+            callback_url: 'https://patrinahhotelpms-ew8d.onrender.com/api/payments/pesapal-callback',
             notification_id: ipnId,
             billing_address: {
                 email_address: email || booking.email || 'guest@example.com',
@@ -1577,14 +1577,15 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
 
 app.get('/api/payments/pesapal-callback', async (req, res) => {
     try {
-        const { OrderTrackingId } = req.query;
+        const { OrderTrackingId, OrderMerchantReference } = req.query;
 
-        console.log('Iframe completed 3DS verification for Tracking ID:', OrderTrackingId);
+        console.log('Iframe completed payment loop for Tracking ID:', OrderTrackingId);
 
         if (!OrderTrackingId) {
             return res.status(400).send('<h1>Invalid Request</h1>');
         }
 
+        // Send back a clean execution script instead of a landing page
         res.setHeader('Content-Type', 'text/html');
         return res.send(`
             <!DOCTYPE html>
@@ -1594,12 +1595,13 @@ app.get('/api/payments/pesapal-callback', async (req, res) => {
             </head>
             <body>
                 <script>
-                    // Whisper to the parent dashboard that the payment is successful
+                    // Send transaction details safely up to the parent PMS dashboard window
                     if (window.parent) {
                         window.parent.postMessage({
                             type: 'PESAPAL_PAYMENT_SUCCESS',
-                            orderTrackingId: '${OrderTrackingId}'
-                        }, '*');
+                            orderTrackingId: '${OrderTrackingId}',
+                            merchantReference: '${OrderMerchantReference || ""}'
+                        }, '*'); 
                     }
                 </script>
             </body>

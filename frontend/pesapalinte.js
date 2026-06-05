@@ -10253,25 +10253,40 @@ function saveGatewayCredentials(event) {
 
 // Add this window event listener to your Frontend Payment Page component
 // Add this window event listener to your main dashboard JavaScript / Component mount
+// Add this window event listener to your main frontend dashboard script or mount component
 window.addEventListener('message', async (event) => {
-    // Safety check: verify this is our specific payment completion message
+    // Confirm the message originated from our custom callback trigger
     if (event.data && event.data.type === 'PESAPAL_PAYMENT_SUCCESS') {
-        console.log('Payment successful! Tracking ID:', event.data.orderTrackingId);
+        console.log('Payment processed. Updating dashboard modal UI...', event.data.orderTrackingId);
         
-        // 1. Write your custom code here to hide/close the payment modal element
-        // Example: document.getElementById('paymentModal').style.display = 'none';
-        closePaymentModal(); 
-        
-        // 2. Fetch the fresh data from your API to update the screen values silently
-        if (typeof refreshBookingDetails === 'function') {
-            await refreshBookingDetails();
+        // 1. UPDATE YOUR MODAL DISPLAY CONTENT
+        // Instead of closing immediately, replace the inner iframe container with your visual success screen
+        const modalContainer = document.getElementById('yourPMSModalBodyId'); 
+        if (modalContainer) {
+            modalContainer.innerHTML = `
+                <div style="font-family: Arial, sans-serif; text-align: center; padding: 30px;">
+                    <div style="color: #4CAF50; font-size: 56px; margin-bottom: 15px;">✔</div>
+                    <h3 style="margin-bottom: 10px; color: #333;">Payment Completed Successfully!</h3>
+                    <p style="color: #666; font-size: 14px;">The transaction has been safely verified and recorded.</p>
+                    <div style="background: #f4f5f7; padding: 10px; border-radius: 6px; margin: 20px 0; font-size: 13px; text-align: left; max-width: 320px; margin-left: auto; margin-right: auto;">
+                        <strong>Tracking ID:</strong> <span style="font-family: monospace;">${event.data.orderTrackingId}</span><br/>
+                        <strong>Reference:</strong> <span style="font-family: monospace;">${event.data.merchantReference}</span>
+                    </div>
+                    <button onclick="closePaymentModal()" style="background: #4CAF50; color: white; border: none; padding: 10px 24px; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                        Done
+                    </button>
+                </div>
+            `;
         }
+
+        // 2. RE-FETCH DATA SILENTLY
+        // Run your existing frontend background lookup to refresh the booking balances on the main UI
+        renderBookings(currentPage, currentSearchTerm);
+
         
-        // 3. Show a success toast or alert banner to the receptionist right on the dashboard
+        // 3. Optional: Fire a fallback browser toast notification
         if (typeof showToastNotification === 'function') {
-            showMessage('Card charged successfully! The booking balance has updated.');
-        } else {
-            showMessage('Payment processed successfully!');
+            showMessage('Booking balance updated in background.');
         }
     }
 });
