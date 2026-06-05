@@ -1585,27 +1585,22 @@ app.get('/api/payments/pesapal-callback', async (req, res) => {
             return res.status(400).send('<h1>Invalid Request</h1><p>Missing transaction tracking ID.</p>');
         }
 
-        // 1. Find the booking to see if the background IPN already marked it as paid
-        const booking = await Booking.findOne({ transactionid: OrderTrackingId });
+        // 1. Optional: Find the booking if you need to run quick synchronous validation
+        // const booking = await Booking.findOne({ transactionid: OrderTrackingId });
 
-        // 2. OPTIONAL: Redirect to your frontend application's success screen if you have one
-        // Example: return res.redirect(`https://yourfrontend.com/booking-success?id=${OrderTrackingId}`);
+        // 2. Define your actual hosted frontend domain url 
+        // In production, this can come from an environment variable: process.env.FRONTEND_URL
+        const FRONTEND_URL = 'https://elegant-pasca-cea136.netlify.app/frontend/success.html'; 
 
-        // 3. Simple fallback HTML response for the guest
-        res.setHeader('Content-Type', 'text/html');
-        return res.send(`
-            <div style="font-family: Arial, sans-serif; text-align: center; margin-top: 100px;">
-                <div style="color: #4CAF50; font-size: 48px; margin-bottom: 20px;">✔</div>
-                <h2>Payment Completed Successfully!</h2>
-                <p>Thank you for your payment. Your booking status is being updated.</p>
-                <p><strong>Tracking ID:</strong> ${OrderTrackingId}</p>
-                <p>You can close this window or return to the main application.</p>
-            </div>
-        `);
+        // 3. Redirect the iframe viewport back to your actual frontend application space
+        // We pass the tracking metrics via query parameters so the frontend can read them
+        const redirectUrl = `${FRONTEND_URL}/payment-success-frame.html?OrderTrackingId=${OrderTrackingId}&OrderMerchantReference=${OrderMerchantReference || ''}`;
+        
+        return res.redirect(redirectUrl);
 
     } catch (error) {
         console.error('Error on user redirect callback:', error);
-        return res.status(500).send('<h1>Something went wrong</h1><p>We received your payment but couldn\'t load the confirmation screen.</p>');
+        return res.status(500).send('<h1>Something went wrong</h1>');
     }
 });
 // =========================================================================

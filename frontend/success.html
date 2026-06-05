@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Payment Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+            background-color: #ffffff;
+        }
+        .success-icon { color: #4CAF50; font-size: 56px; margin-bottom: 15px; }
+        h2 { color: #333; margin: 10px 0; font-size: 22px; }
+        p { color: #666; font-size: 14px; margin: 8px 0; }
+        .details-box {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            display: inline-block;
+            text-align: left;
+            margin: 15px 0;
+            font-family: monospace;
+            border: 1px solid #eef0f2;
+        }
+        .btn-close {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="success-icon">✔</div>
+    <h2>Payment Completed Successfully!</h2>
+    <p>The transaction has been safely authorized.</p>
+    
+    <div class="details-box">
+        <strong>Merchant Ref:</strong> <span id="ref-val">Loading...</span><br/>
+        <strong>Tracking ID:</strong> <span id="id-val">Loading...</span>
+    </div>
+    <br/>
+
+    <button class="btn-close" onclick="notifyParentToClose()">Return to Dashboard</button>
+
+    <script>
+        // 1. Parse out the tracking information directly from the frontend URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const trackingId = urlParams.get('OrderTrackingId');
+        const merchantRef = urlParams.get('OrderMerchantReference');
+
+        // Populate the UI text boxes dynamically
+        document.getElementById('id-val').innerText = trackingId || 'N/A';
+        document.getElementById('ref-val').innerText = merchantRef || 'N/A';
+
+        // 2. Safely announce the payment success status straight to the parent window
+        function notifyParentToClose() {
+            if (window.parent) {
+                window.parent.postMessage({
+                    type: 'PESAPAL_PAYMENT_SUCCESS',
+                    orderTrackingId: trackingId,
+                    merchantReference: merchantRef
+                }, window.location.origin); // Using current origin enforces strict domain security matching
+            }
+        }
+    </script>
+</body>
+</html>

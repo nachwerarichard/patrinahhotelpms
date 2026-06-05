@@ -10251,7 +10251,22 @@ function saveGatewayCredentials(event) {
 }
 
 
-// Add this window event listener to your Frontend Payment Page component
+window.addEventListener('message', async (event) => {
+    // Enforce domain validation check for security
+    // if (event.origin !== "https://your-frontend-domain.com") return;
+
+    if (event.data && event.data.type === 'PESAPAL_PAYMENT_SUCCESS') {
+        console.log('Payment success message captured on frontend context:', event.data.orderTrackingId);
+        
+        // Hide the payment modal container from the active window view
+        closePaymentModal(); 
+        
+        // Silently pull fresh booking documents to refresh calculations
+        if (typeof refreshBookingDetails === 'function') {
+            await refreshBookingDetails();
+        }
+    }
+});// Add this window event listener to your Frontend Payment Page component
 // Add this window event listener to your main dashboard JavaScript / Component mount
 // Add this window event listener to your main frontend dashboard script or mount component
 
