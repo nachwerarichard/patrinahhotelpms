@@ -1812,20 +1812,24 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
 
 app.post('/api/quick-sales/initiate-payment', auth, async (req, res) => {
     try {
+        const { amount, outlet, phone } = req.body;
 
-        const {
-            amount,
-            outlet,
-            phone
-        } = req.body;
-
+        // 1. Basic Parameter Input Validation
         if (!amount || amount <= 0) {
             return res.status(400).json({
                 success: false,
-                message: 'Amount is required'
+                message: 'A valid amount greater than 0 is required.'
             });
         }
 
+        if (!outlet) {
+            return res.status(400).json({
+                success: false,
+                message: 'Outlet department selection is required.'
+            });
+        }
+
+        // 2. Multi-Tenant Gateway Config Lookup
         const gateway = await Gateway.findOne({
             hotelId: req.user.hotelId,
             gatewayId: 'pesapal',
@@ -1835,13 +1839,14 @@ app.post('/api/quick-sales/initiate-payment', auth, async (req, res) => {
         if (!gateway) {
             return res.status(400).json({
                 success: false,
-                message: 'Pesapal gateway not configured'
+                message: 'Pesapal integration is not active or configured for this property.'
             });
         }
 
-        const merchantReference =
-            `QS-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+        // 3. Unique Reference Creation
+        const merchantReference = `QS-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
+        // 4. Record Intent in Transaction Log
         const payment = await PaymentTransaction.create({
             hotelId: req.user.hotelId,
             amount,
@@ -1852,46 +1857,35 @@ app.post('/api/quick-sales/initiate-payment', auth, async (req, res) => {
             status: 'Pending'
         });
 
-        // ============================================
-        // GET PESAPAL TOKEN
-        // ============================================
+        // 5. Authenticate with Pesapal Ecosystem
+        const authUrl = gateway.environment === 'Live'
+            ? 'https://pay.pesapal.com/v3/api/Auth/RequestToken'
+            : 'https://cybqa.pesapal.com/pesapalv3/api/Auth/RequestToken';
 
-        const authResponse = await axios.post(
-            `${gateway.environment === 'Live'
-                ? 'https://pay.pesapal.com/v3/api/Auth/RequestToken'
-                : 'https://cybqa.pesapal.com/pesapalv3/api/Auth/RequestToken'
-            }`,
-            {
-                consumer_key: gateway.consumerKey,
-                consumer_secret: gateway.consumerSecret
-            }
-        );
+        const authResponse = await axios.post(authUrl, {
+            consumer_key: gateway.consumerKey,
+            consumer_secret: gateway.consumerSecret
+        });
 
         const token = authResponse.data.token;
 
-        // ============================================
-        // SUBMIT ORDER
-        // ============================================
+        // 6. Request Secure Checkout Endpoint from Pesapal
+        const orderUrl = gateway.environment === 'Live'
+            ? 'https://pay.pesapal.com/v3/api/Transactions/SubmitOrderRequest'
+            : 'https://cybqa.pesapal.com/pesapalv3/api/Transactions/SubmitOrderRequest';
+
+        // Safeguard callback resolution formatting
+        const baseApiUrl = process.env.API_URL || `${req.protocol}://${req.get('host')}`;
 
         const orderResponse = await axios.post(
-            `${gateway.environment === 'Live'
-                ? 'https://pay.pesapal.com/v3/api/Transactions/SubmitOrderRequest'
-                : 'https://cybqa.pesapal.com/pesapalv3/api/Transactions/SubmitOrderRequest'
-            }`,
+            orderUrl,
             {
                 id: merchantReference,
-
                 currency: 'UGX',
-
-                amount,
-
+                amount: Number(amount),
                 description: `${outlet} Quick Sale Payment`,
-
-                callback_url:
-                    `${process.env.API_URL}/api/quick-sales/payment-callback`,
-
+                callback_url: `${baseApiUrl}/api/quick-sales/payment-callback`,
                 notification_id: gateway.ipnUrlId,
-
                 billing_address: {
                     phone_number: phone || '',
                     email_address: 'walkin@hotel.com',
@@ -1900,18 +1894,30 @@ app.post('/api/quick-sales/initiate-payment', auth, async (req, res) => {
             },
             {
                 headers: {
-                    Authorization: `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                 }
             }
         );
 
-        payment.orderTrackingId =
-            orderResponse.data.order_tracking_id;
+        console.log("RAW PESAPAL RESPONSE OBJECT:", orderResponse.data);
 
+        // 7. CRITICAL GUARD: Check for silent internal gateway setup validation failures
+        if (orderResponse.data.error || !orderResponse.data.redirect_url) {
+            const gatewayErrorMessage = orderResponse.data.error?.message || 'Gateway failed to build unique checkout URL.';
+            console.error(`Pesapal Validation Failure [${merchantReference}]:`, orderResponse.data.error);
+            
+            return res.status(422).json({
+                success: false,
+                message: `Pesapal Configuration Error: ${gatewayErrorMessage}. Please verify your IPN ID / Notification Registration setup.`
+            });
+        }
+
+        // 8. Log valid tracking data back to database instance
+        payment.orderTrackingId = orderResponse.data.order_tracking_id;
         await payment.save();
 
-        console.log("RAW PESAPAL RESPONSE:", orderResponse.data);
-
+        // 9. Send parameters clean to user interface frame
         res.json({
             success: true,
             paymentId: payment._id,
@@ -1919,16 +1925,16 @@ app.post('/api/quick-sales/initiate-payment', auth, async (req, res) => {
             redirectUrl: orderResponse.data.redirect_url
         });
 
-  } catch (error) {
-    console.error("Pesapal API Error Status:", error.response?.status);
-    console.error("Pesapal API Error Body:", error.response?.data);
+    } catch (error) {
+        console.error("Fatal System Catch Triggered:");
+        console.error("Status Reference:", error.response?.status);
+        console.error("Payload Trace:", error.response?.data);
 
-    res.status(500).json({
-        success: false,
-        message: error.response?.data?.message || error.message
-    });
-}
-
+        res.status(500).json({
+            success: false,
+            message: error.response?.data?.error?.message || error.response?.data?.message || error.message
+        });
+    }
 });
 
 app.get('/api/quick-sales/payment-callback', async (req, res) => {
