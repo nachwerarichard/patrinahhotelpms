@@ -3306,8 +3306,7 @@ Add Guest Details            </h2>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="pesapalinte.js"></script>
     <script>
-// Secured inside DOMContentLoaded to ensure elements are ready
-document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('quickPayModal');
     const openBtn = document.getElementById('openQuickPayModal');
     const closeBtn = document.getElementById('closeQuickPayModal');
@@ -3333,8 +3332,61 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    
-</script>
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Processing...';
+        messageBox.className = 'hidden';
+
+        try {
+            const payload = {
+                amount: Number(document.getElementById('amount').value),
+                outlet: document.getElementById('outlet').value,
+                phone: document.getElementById('phone').value
+            };
+
+            const response = await authenticatedFetch('/api/quick-sales/initiate-payment', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            // If user is redirected to login, stop execution.
+            if (!response) return; 
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to initiate payment');
+            }
+
+            messageBox.className = 'bg-green-50 text-green-700 border-green-200 text-sm font-medium rounded-lg p-3.5';
+            messageBox.textContent = 'Redirecting to Pesapal...';
+            messageBox.classList.remove('hidden');
+
+            setTimeout(() => {
+                window.location.href = data.redirectUrl;
+            }, 1000);
+
+        } catch (error) {
+            messageBox.className = 'bg-red-50 text-red-700 border-red-200 text-sm font-medium rounded-lg p-3.5';
+            messageBox.textContent = error.message;
+            messageBox.classList.remove('hidden');
+            
+            // Re-enable button here on early failure 
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Proceed To Payment';
+        } finally {
+            // If we successfully reached the redirect state, leave it disabled.
+            // Otherwise, if an uncaught parsing error happens, make sure it resets.
+            if (!messageBox.classList.contains('text-green-700')) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Proceed To Payment';
+            }
+        }
+    });
+}); // <--- Fixed the missing closure here!
+    </script>
     <script>
 // Track active state across actions
 let activeGatewayContext = '';
