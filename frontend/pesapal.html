@@ -3333,53 +3333,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Processing...';
-        messageBox.className = 'hidden';
-
-        try {
-            const token = localStorage.getItem('token');
-            const payload = {
-                amount: Number(document.getElementById('amount').value),
-                outlet: document.getElementById('outlet').value,
-                phone: document.getElementById('phone').value
-            };
-
-            const response = await fetch('/api/quick-sales/initiate-payment', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to initiate payment');
-            }
-
-            messageBox.className = 'bg-green-50 text-green-700 border-green-200 text-sm font-medium rounded-lg p-3.5';
-            messageBox.textContent = 'Redirecting to Pesapal...';
-            messageBox.classList.remove('hidden');
-
-            setTimeout(() => {
-                window.location.href = data.redirectUrl;
-            }, 1000);
-
-        } catch (error) {
-            messageBox.className = 'bg-red-50 text-red-700 border-red-200 text-sm font-medium rounded-lg p-3.5';
-            messageBox.textContent = error.message;
-            messageBox.classList.remove('hidden');
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Proceed To Payment';
-        }
-    });
-});
+    
 </script>
     <script>
 // Track active state across actions
