@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Booking Experience</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .glass-morphism { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="py-12 px-4">
+
+    <div class="booking-widget-container max-w-4xl mx-auto glass-morphism shadow-2xl rounded-2xl overflow-hidden border border-slate-100">
+        
+        <div class="bg-slate-900 p-8 text-center text-white">
+            <h2 class="text-3xl font-light tracking-tight">Reserve Your Stay</h2>
+            <p class="text-slate-400 mt-2 text-sm uppercase tracking-widest">Luxury Accommodations</p>
+        </div>
+
+        <div class="p-8">
+            <div id="bookingFormSection" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Check-in Date</label>
+                    <input type="date" id="checkInDate" class="w-full p-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none transition-all" required>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Check-out Date</label>
+                    <input type="date" id="checkOutDate" class="w-full p-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none transition-all" required>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Room Type</label>
+                    <select id="roomTypeSelect" class="w-full p-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none bg-white transition-all">
+                        <option value="Any">Any Type</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Number of Guests</label>
+                    <input type="number" id="numberOfPeople" min="1" value="1" class="w-full p-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none transition-all" required>
+                </div>
+                <div class="md:col-span-2 pt-4">
+                    <button id="checkAvailabilityBtn" class="w-full bg-slate-900 hover:bg-black text-white font-medium py-4 rounded-lg transition-all transform active:scale-[0.98] shadow-lg">
+                        Check Availability
+                    </button>
+                </div>
+                <div id="noAvailabilityMessage" class="hidden p-4 bg-red-50 text-red-600 rounded-lg text-center text-sm border border-red-100">
+                    No rooms available for the selected criteria.
+                </div>
+            </div>
+
+            <div id="availabilityResults" class="mt-12 space-y-6" style="display: none;">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <h3 class="text-xl font-medium text-slate-800">Available Rooms</h3>
+                </div>
+                
+                <div class="relative group">
+                    <button id="prevBtn" class="absolute left-[-20px] top-1/2 -translate-y-1/2 z-10 bg-white shadow-md rounded-full p-2 hover:bg-slate-50 border border-slate-100">&#10094;</button>
+                    
+                    <div id="availableRoomTypesContainer" class="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x">
+                        </div>
+                    
+                    <button id="nextBtn" class="absolute right-[-20px] top-1/2 -translate-y-1/2 z-10 bg-white shadow-md rounded-full p-2 hover:bg-slate-50 border border-slate-100">&#10095;</button>
+                </div>
+
+                
+            </div>
+
+            <div id="guestDetailsForm" class="mt-12 space-y-8" style="display: none;">
+                <div id="selectedRoomsCart" class="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                    <h3 class="font-semibold text-slate-800 mb-4">Your Selection</h3>
+                    <ul id="cartList" class="space-y-2 mb-4"></ul>
+                    <button id="addMoreRoomsBtn" class="text-sm font-medium text-slate-600 hover:text-slate-900 underline underline-offset-4">Add Another Room</button>
+                </div>
+
+                <div class="border-t border-slate-100 pt-8">
+                    <h3 class="text-xl font-medium mb-6 text-slate-800">Details for <span id="selectedRoomTypeDisplay" class="text-indigo-600"></span></h3>
+                    
+                    <form id="publicBookingForm" class="space-y-4">
+                        <input type="hidden" id="bookingCheckIn">
+                        <input type="hidden" id="bookingCheckOut">
+                        <input type="hidden" id="bookingTotalDue">
+                        <input type="hidden" id="bookingPeople">
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-2 md:col-span-2">
+                                <label class="text-xs font-semibold text-slate-500 uppercase">Full Name</label>
+                                <input type="text" id="guestName" class="w-full p-3 rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-slate-900" required>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-xs font-semibold text-slate-500 uppercase">Email Address</label>
+                                <input type="email" id="guestEmail" class="w-full p-3 rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-slate-900" required>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-xs font-semibold text-slate-500 uppercase">Phone Number</label>
+                                <input type="text" id="guestPhoneNo" class="w-full p-3 rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-slate-900" required>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900 p-6 rounded-xl text-white flex justify-between items-center mt-8">
+                            <span class="text-slate-400 uppercase text-xs tracking-widest">Total Investment</span>
+                            <span class="text-2xl font-light"> UGX <span id="finalTotalDue">0.00</span></span>
+                        </div>
+
+                        <div class="flex flex-col gap-3 pt-4">
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-4 rounded-lg shadow-lg transition-colors">Confirm Reservation</button>
+                            <button type="button" id="cancelBookingBtn" class="w-full text-slate-500 hover:text-slate-800 text-sm font-medium py-2 transition-colors">Cancel and Start Over</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        
+    </div>
+    <div id="publicMessageBox"
+     class=" hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    
+    <div class="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
+        <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M5 13l4 4L19 7"></path>
+            </svg>
+        </div>
+
+        <p id="publicMessageBoxContent" class="text-slate-600 mb-6 font-medium"></p>
+
+        <button onclick="closePublicMessageBox()"
+                class="w-full bg-slate-900 text-white py-3 rounded-lg hover:bg-black transition-colors">
+            Acknowledge
+        </button>
+    </div>
+</div>
+
+    <script src="book.js"></script>
+    <script>
+        // Minor helper for the Modal display toggle since your script uses style.display
+        function closePublicMessageBox() {
+            document.getElementById('publicMessageBox').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
