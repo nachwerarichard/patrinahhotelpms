@@ -3346,7 +3346,7 @@ Add Guest Details            </h2>
                 phone: document.getElementById('phone').value
             };
 
-            const response = await authenticatedFetch('https://patrinahhotelpms-ew8d.onrender.com/api/quick-sales/initiate-payment', {
+            const response = await fetch('https://patrinahhotelpms-ew8d.onrender.com/api/quick-sales/initiate-payment', {
                 method: 'POST',
                 body: JSON.stringify(payload)
             });
