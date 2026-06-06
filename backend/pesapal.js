@@ -1810,6 +1810,218 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
     }
 });
 
+app.post('/api/quick-sales/initiate-payment', auth, async (req, res) => {
+    try {
+
+        const {
+            amount,
+            outlet,
+            phone
+        } = req.body;
+
+        if (!amount || amount <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Amount is required'
+            });
+        }
+
+        const gateway = await Gateway.findOne({
+            hotelId: req.user.hotelId,
+            gatewayId: 'pesapal',
+            isConnected: true
+        });
+
+        if (!gateway) {
+            return res.status(400).json({
+                success: false,
+                message: 'Pesapal gateway not configured'
+            });
+        }
+
+        const merchantReference =
+            `QS-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+
+        const payment = await PaymentTransaction.create({
+            hotelId: req.user.hotelId,
+            amount,
+            outlet,
+            phone,
+            merchantReference,
+            createdBy: req.user.id,
+            status: 'Pending'
+        });
+
+        // ============================================
+        // GET PESAPAL TOKEN
+        // ============================================
+
+        const authResponse = await axios.post(
+            `${gateway.environment === 'Live'
+                ? 'https://pay.pesapal.com/v3/api/Auth/RequestToken'
+                : 'https://cybqa.pesapal.com/pesapalv3/api/Auth/RequestToken'
+            }`,
+            {
+                consumer_key: gateway.consumerKey,
+                consumer_secret: gateway.consumerSecret
+            }
+        );
+
+        const token = authResponse.data.token;
+
+        // ============================================
+        // SUBMIT ORDER
+        // ============================================
+
+        const orderResponse = await axios.post(
+            `${gateway.environment === 'Live'
+                ? 'https://pay.pesapal.com/v3/api/Transactions/SubmitOrderRequest'
+                : 'https://cybqa.pesapal.com/pesapalv3/api/Transactions/SubmitOrderRequest'
+            }`,
+            {
+                id: merchantReference,
+
+                currency: 'UGX',
+
+                amount,
+
+                description: `${outlet} Quick Sale Payment`,
+
+                callback_url:
+                    `${process.env.API_URL}/api/quick-sales/payment-callback`,
+
+                notification_id: gateway.ipnUrlId,
+
+                billing_address: {
+                    phone_number: phone || '',
+                    email_address: 'walkin@hotel.com',
+                    country_code: 'UG'
+                }
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+
+        payment.orderTrackingId =
+            orderResponse.data.order_tracking_id;
+
+        await payment.save();
+
+        res.json({
+            success: true,
+            paymentId: payment._id,
+            merchantReference,
+            redirectUrl: orderResponse.data.redirect_url
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+});
+
+app.get('/api/quick-sales/payment-callback', async (req, res) => {
+
+    const {
+        OrderTrackingId
+    } = req.query;
+
+    return res.redirect(
+        `/frontend/success.html?trackingId=${OrderTrackingId}`
+    );
+
+});
+
+app.post('/api/quick-sales/pesapal-ipn', async (req, res) => {
+
+    try {
+
+        const {
+            OrderTrackingId
+        } = req.body;
+
+        console.log(
+            'Quick Sale IPN Received:',
+            OrderTrackingId
+        );
+
+        const payment = await PaymentTransaction.findOne({
+            orderTrackingId: OrderTrackingId
+        });
+
+        if (!payment) {
+
+            return res.status(404).json({
+                success: false,
+                message: 'Transaction not found'
+            });
+
+        }
+
+        if (payment.status === 'Completed') {
+
+            return res.status(200).json({
+                success: true,
+                message: 'Already processed'
+            });
+
+        }
+
+        payment.status = 'Completed';
+
+        payment.completedAt = new Date();
+
+        await payment.save();
+
+        return res.status(200).json({
+            success: true
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+
+});
+
+app.get('/api/quick-sales', auth, async (req, res) => {
+
+    try {
+
+        const payments =
+            await PaymentTransaction.find({
+                hotelId: req.user.hotelId
+            })
+            .sort({ createdAt: -1 });
+
+        res.json(payments);
+
+    } catch (error) {
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+
+});
+
 
 //payment gateway
 // ==========================================
@@ -1835,6 +2047,63 @@ const GatewaySchema = new mongoose.Schema({
 GatewaySchema.index({ hotelId: 1, gatewayId: 1 }, { unique: true });
 
 const Gateway = mongoose.model('Gateway', GatewaySchema);
+
+const PaymentTransaction = mongoose.model(
+    'PaymentTransaction',
+    new mongoose.Schema({
+        hotelId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Hotel',
+            required: true
+        },
+
+        amount: {
+            type: Number,
+            required: true
+        },
+
+        outlet: {
+            type: String,
+            enum: ['Bar', 'Restaurant', 'Kitchen'],
+            required: true
+        },
+
+        merchantReference: {
+            type: String,
+            required: true,
+            unique: true
+        },
+
+        orderTrackingId: {
+            type: String,
+            default: null
+        },
+
+        paymentMethod: {
+            type: String,
+            default: 'Pesapal'
+        },
+
+        status: {
+            type: String,
+            enum: ['Pending', 'Completed', 'Failed', 'Cancelled'],
+            default: 'Pending'
+        },
+
+        phone: String,
+
+        createdBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+
+        completedAt: Date
+    }, {
+        timestamps: true
+    })
+);
+
+
 
 // =========================================================================
 // TENANT-ISOLATED VERIFY & SAVE ROUTE
@@ -3661,6 +3930,8 @@ const Sale = mongoose.model('Sale', new mongoose.Schema({
   percentageprofit: Number,
   date: { type: Date, default: Date.now }
 }));
+
+
 
 const Expense = mongoose.model('Expense', new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this

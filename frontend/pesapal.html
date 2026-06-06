@@ -1377,6 +1377,12 @@ body {
                         <h3 class="text-xs font-bold text-slate-400 uppercase mb-6 flex items-center gap-2">
                             <i class="fas fa-cart-plus text-indigo-500"></i> POS Terminal
                         </h3>
+                        <button
+    id="openQuickPayModal"
+    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium w-full md:w-auto"
+>
+    Quick Pay
+</button>
                         <form id="addChargeForm" class="space-y-5">
                             <div>
                                 <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Department</label>
@@ -3170,7 +3176,7 @@ Add Guest Details            </h2>
           <option value="Cash">Cash (Manual Reconciliation)</option>
           <option value="MTN Momo">Pesapal: Mobile Money (MTN / Airtel)</option>
           <option value="Airtel Pay">Pesapal: Card / International Transfers</option>
-          <option value="Bank">Direct Bank Transfer</option>
+          <!--<option value="Bank">Direct Bank Transfer</option>-->
         </select>
       </div>
 
@@ -3205,6 +3211,101 @@ Add Guest Details            </h2>
     </div>
 
   </div>
+</div>
+
+<!-- Quick Pay Button -->
+
+
+<!-- Modal Backdrop -->
+<div
+    id="quickPayModal"
+    class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4"
+>
+    <!-- Modal -->
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+
+        <!-- Header -->
+        <div class="flex justify-between items-center border-b px-5 py-4">
+            <h2 class="text-lg font-semibold">
+                Quick Sale Payment
+            </h2>
+
+            <button
+                id="closeQuickPayModal"
+                class="text-gray-500 hover:text-gray-700 text-xl"
+            >
+                &times;
+            </button>
+        </div>
+
+        <!-- Body -->
+        <form id="quickPayForm" class="p-5 space-y-4">
+
+            <!-- Amount -->
+            <div>
+                <label class="block text-sm font-medium mb-1">
+                    Amount (UGX)
+                </label>
+
+                <input
+                    type="number"
+                    id="amount"
+                    required
+                    min="1"
+                    placeholder="Enter amount"
+                    class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+            </div>
+
+            <!-- Outlet -->
+            <div>
+                <label class="block text-sm font-medium mb-1">
+                    Outlet
+                </label>
+
+                <select
+                    id="outlet"
+                    required
+                    class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="">Select Outlet</option>
+                    <option value="Bar">Bar</option>
+                    <option value="Restaurant">Restaurant</option>
+                    <option value="Kitchen">Kitchen</option>
+                </select>
+            </div>
+
+            <!-- Phone -->
+            <div>
+                <label class="block text-sm font-medium mb-1">
+                    Customer Phone (Optional)
+                </label>
+
+                <input
+                    type="tel"
+                    id="phone"
+                    placeholder="2567XXXXXXXX"
+                    class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+            </div>
+
+            <!-- Status -->
+            <div
+                id="quickPayMessage"
+                class="hidden text-sm rounded-lg p-3"
+            ></div>
+
+            <!-- Submit -->
+            <button
+                type="submit"
+                id="submitQuickPay"
+                class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium"
+            >
+                Proceed To Payment
+            </button>
+
+        </form>
+    </div>
 </div>
     
     <script src="housekeep.js"></script>
@@ -3397,7 +3498,103 @@ function googleTranslateElementInit() {
 }
 </script>
 <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+<script>
 
+const modal = document.getElementById('quickPayModal');
+const openBtn = document.getElementById('openQuickPayModal');
+const closeBtn = document.getElementById('closeQuickPayModal');
+
+const form = document.getElementById('quickPayForm');
+const messageBox = document.getElementById('quickPayMessage');
+const submitBtn = document.getElementById('submitQuickPay');
+
+openBtn.addEventListener('click', () => {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+});
+
+closeBtn.addEventListener('click', () => {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+});
+
+window.addEventListener('click', (e) => {
+    if (e.target === modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+});
+
+form.addEventListener('submit', async (e) => {
+
+    e.preventDefault();
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Processing...';
+
+    messageBox.classList.add('hidden');
+
+    try {
+
+        const token = localStorage.getItem('token');
+
+        const payload = {
+            amount: Number(document.getElementById('amount').value),
+            outlet: document.getElementById('outlet').value,
+            phone: document.getElementById('phone').value
+        };
+
+        const response = await fetch(
+            '/api/quick-sales/initiate-payment',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.message || 'Failed to initiate payment'
+            );
+        }
+
+        messageBox.className =
+            'bg-green-100 text-green-700 text-sm rounded-lg p-3';
+
+        messageBox.textContent =
+            'Redirecting to Pesapal...';
+
+        messageBox.classList.remove('hidden');
+
+        setTimeout(() => {
+            window.location.href = data.redirectUrl;
+        }, 1000);
+
+    } catch (error) {
+
+        messageBox.className =
+            'bg-red-100 text-red-700 text-sm rounded-lg p-3';
+
+        messageBox.textContent = error.message;
+
+        messageBox.classList.remove('hidden');
+
+    } finally {
+
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Proceed To Payment';
+
+    }
+
+});
+
+</script>
 <script type="text/javascript"
 src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
 </script>
