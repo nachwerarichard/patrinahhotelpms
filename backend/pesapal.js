@@ -3044,6 +3044,46 @@ app.get('/api/audit-logs', auth, async (req, res) => {
     }
 });
 
+async function getHotelIdFromRequest(req) {
+    // 1. Check custom tenant header, then query string parameter, then standard fallbacks
+    let sourceUrl = req.headers['x-tenant-domain'] || 
+                    req.query.tenantDomain || 
+                    req.headers.referer || 
+                    req.headers.origin;
+    
+    if (!sourceUrl) {
+        console.error("❌ Multi-Tenancy Error: No domain source found in request headers or queries.");
+        return null;
+    }
+
+    try {
+        let hostname = sourceUrl;
+        
+        // If the source URL contains a protocol (e.g., http:// or https://), strip it to get the raw hostname
+        if (sourceUrl.includes('://')) {
+            const urlObj = new URL(sourceUrl);
+            hostname = urlObj.hostname;
+        }
+
+        // Clean up formatting (remove port numbers if testing locally, e.g., localhost:3000 -> localhost)
+        hostname = hostname.split(':')[0];
+
+        console.log(`🔍 Sniffing System Identity for Hostname Target: "${hostname}"`);
+
+        // 2. MATCH CORES: Query against your actual "domainName" schema property
+        const hotelConfig = await Hotel.findOne({ domainName: hostname });
+
+        if (!hotelConfig) {
+            console.warn(`⚠️ Multi-Tenancy Warning: No registered hotel found matching domain name: "${hostname}"`);
+            return null;
+        }
+
+        return hotelConfig._id;
+    } catch (err) {
+        console.error("❌ Domain multi-tenancy parsing failure:", err);
+        return null;
+    }
+}
 // Backend: api/public/room-types
 app.get('/api/public/room-types', async (req, res) => {
     try {

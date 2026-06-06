@@ -29,6 +29,18 @@ const addMoreRoomsBtn = document.getElementById('addMoreRoomsBtn');
 const publicMessageBox = document.getElementById('publicMessageBox');
 const publicMessageBoxContent = document.getElementById('publicMessageBoxContent');
 
+// --- MULTI-TENANCY HELPERS ---
+/**
+ * Captures the current window domain to pass explicitly to the backend framework
+ */
+function getTenantHeaders() {
+    return {
+        'Content-Type': 'application/json',
+        // Pass the explicit hostname directly to bypass stripped Netlify referer variables
+        'X-Tenant-Domain': window.location.hostname 
+    };
+}
+
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     // Set min dates for calendars
@@ -57,13 +69,17 @@ async function populateRoomTypeDropdown() {
     if (!roomTypeSelect) return;
 
     try {
-        // NOTE: No hotelId in URL; Backend uses 'Referer' header to identify hotel
-        const response = await fetch(`${API_BASE_URL}/public/room-types`);
-        if (!response.ok) throw new Error(`Status: ${response.status}`);
+        const response = await fetch(`${API_BASE_URL}/public/room-types`, {
+            method: 'GET',
+            headers: getTenantHeaders() // Send multi-tenant identity verification
+        });
+        
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.message || `Status: ${response.status}`);
+        }
         
         const data = await response.json(); 
-        
-        // Save objects for price/image lookup
         roomTypeDetails = data; 
 
         roomTypeSelect.innerHTML = '<option value="Any">Any Type</option>';
@@ -76,7 +92,7 @@ async function populateRoomTypeDropdown() {
         
     } catch (error) {
         console.error('Error fetching room types:', error);
-        showPublicMessageBox('Error', 'Failed to connect to the booking server.', true);
+        showPublicMessageBox('Error', `Failed to connect to the booking server: ${error.message}`, true);
     }
 }
 
@@ -99,20 +115,38 @@ checkAvailabilityBtn.addEventListener('click', async () => {
     noAvailabilityMessage.style.display = 'none';
 
     try {
-        // The backend uses 'getHotelIdFromRequest' to find the hotel via domain
-        const response = await fetch(`${API_BASE_URL}/public/rooms/available?checkIn=${checkIn}&checkOut=${checkOut}&roomType=${roomType}&people=${people}`);
+        // Build clear endpoint string, attaching tenant domain as a query parameter fallback
+        const targetUrl = `${API_BASE_URL}/public/rooms/available?checkIn=${checkIn}&checkOut=${checkOut}&roomType=${roomType}&people=${people}&tenantDomain=${window.location.hostname}`;
+        
+        const response = await fetch(targetUrl, {
+            method: 'GET',
+            headers: getTenantHeaders()
+        });
+
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.message || `Server status returned ${response.status}`);
+        }
+
         availableRoomsBySelectedType = await response.json();
 
+        // Safe Guard: Check that the returned data is a valid mapping object before reading keys
+        if (!availableRoomsBySelectedType || typeof availableRoomsBySelectedType !== 'object') {
+            throw new Error("Invalid format received from availability logs.");
+        }
+
         const keys = Object.keys(availableRoomsBySelectedType);
+        let absoluteAvailableCount = 0;
 
         if (keys.length > 0) {
-            availabilityResultsSection.style.display = 'block';
-
             keys.forEach(typeName => {
                 const roomData = availableRoomsBySelectedType[typeName];
+                
+                // CRITICAL STRUCTURAL FIX: Guard against missing array objects
+                if (!roomData || !roomData.rooms) return;
+
                 const detail = roomTypeDetails.find(d => d.name === typeName) || {};
                 
-                // IMAGE LOGIC: 1. Cloudinary Array, 2. Default Image, 3. Placeholder
                 const imageUrl = (detail.imageUrls && detail.imageUrls.length > 0) 
                     ? detail.imageUrls[0] 
                     : (detail.defaultImage || "room_default.webp");
@@ -120,6 +154,7 @@ checkAvailabilityBtn.addEventListener('click', async () => {
                 const pricePerNight = detail.basePrice || 0;
 
                 if (roomData.rooms.length > 0) {
+                    absoluteAvailableCount += roomData.rooms.length;
                     const card = document.createElement('div');
                     card.className = 'min-w-[280px] sm:min-w-[320px] bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 snap-start flex-shrink-0 group';
                     
@@ -149,12 +184,19 @@ checkAvailabilityBtn.addEventListener('click', async () => {
                     container.appendChild(card);
                 }
             });
+        }
+
+        // Evaluate view state based on actual rooms populated
+        if (keys.length > 0 && absoluteAvailableCount > 0) {
+            availabilityResultsSection.style.display = 'block';
             availabilityResultsSection.scrollIntoView({ behavior: 'smooth' });
         } else {
             noAvailabilityMessage.style.display = 'block';
         }
+
     } catch (error) {
         console.error("Availability check failed:", error);
+        showPublicMessageBox('System Error', error.message, true);
     }
 });
 
@@ -236,7 +278,6 @@ function removeFromCart(index) {
 }
 
 // --- FORM SUBMISSION ---
-
 publicBookingForm.addEventListener('submit', async (event) => {
     event.preventDefault();
 
@@ -249,7 +290,6 @@ publicBookingForm.addEventListener('submit', async (event) => {
         roomsRequested: selectedRoomsCart 
     };
 
-    // Validations
     if (!/\S+@\S+\.\S+/.test(bookingData.guestEmail)) {
         showPublicMessageBox('Validation Error', 'Please enter a valid email address.', true);
         return;
@@ -258,13 +298,13 @@ publicBookingForm.addEventListener('submit', async (event) => {
     try {
         const response = await fetch(`${API_BASE_URL}/public/bookings`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getTenantHeaders(), // Attaches tenant parameters to the booking payload
             body: JSON.stringify(bookingData)
         });
         
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || "Booking failed");
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || "Booking creation failed");
         }
 
         showPublicMessageBox('Success!', `Your reservation is confirmed! We have sent a confirmation to ${bookingData.guestEmail}.`);
@@ -283,12 +323,10 @@ publicBookingForm.addEventListener('submit', async (event) => {
 });
 
 // --- UI HELPERS ---
-
 function showPublicMessageBox(title, message, isError = false) {
     publicMessageBox.style.display = 'flex';
     publicMessageBox.classList.remove('hidden');
     publicMessageBoxContent.textContent = message;
-    // You could also update a title element if you have publicMessageBoxTitle
 }
 
 function closePublicMessageBox() { 
