@@ -3306,33 +3306,24 @@ Add Guest Details            </h2>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="pesapalinte.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('quickPayModal');
     const openBtn = document.getElementById('openQuickPayModal');
     const closeBtn = document.getElementById('closeQuickPayModal');
     const form = document.getElementById('quickPayForm');
     const messageBox = document.getElementById('quickPayMessage');
     const submitBtn = document.getElementById('submitQuickPay');
-    
-    // Iframe Element Targets
-    const iframeContainer = document.getElementById('pesapalIframeContainer');
-    const iframe = document.getElementById('pesapalIframe');
 
+    // Open Modal
     openBtn.addEventListener('click', () => {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
     });
 
-    // Cleanly resets everything when closing the modal window
+    // Reset view variables when closing the modal window
     const closeModal = () => {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-        
-        // Wipe iframe source to stop background processes
-        iframe.src = ""; 
-        iframeContainer.classList.add('hidden');
-        form.classList.remove('hidden');
-        
         submitBtn.disabled = false;
         submitBtn.textContent = 'Proceed To Payment';
         messageBox.className = 'hidden';
@@ -3340,22 +3331,14 @@ Add Guest Details            </h2>
 
     closeBtn.addEventListener('click', closeModal);
 
+    // Close when clicking outside modal backdrop
     window.addEventListener('click', (e) => {
         if (e.target === modal) {
             closeModal();
         }
     });
 
-    // Bound to your custom cancel button inside the container element
-    window.abortPesapalCheckout = () => {
-        iframe.src = "";
-        iframeContainer.classList.add('hidden');
-        form.classList.remove('hidden');
-        
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Proceed To Payment';
-    };
-
+    // Form submission processing
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -3378,26 +3361,25 @@ Add Guest Details            </h2>
             if (!response) return; 
 
             const data = await response.json();
+            console.log("Backend Response Data:", data); 
 
             if (!response.ok) {
                 throw new Error(data.message || 'Failed to initiate payment');
             }
             
+            // Check for valid camelCase string sent from backend schema rules
             if (!data.redirectUrl) {
                 throw new Error("Payment gateway failed to provide a redirection link.");
             }
 
             messageBox.className = 'bg-green-50 text-green-700 border-green-200 text-sm font-medium rounded-lg p-3.5';
-            messageBox.textContent = 'Loading secure payment window...';
+            messageBox.textContent = 'Redirecting to secure Pesapal checkout page...';
             messageBox.classList.remove('hidden');
 
-            // Inject link data and manipulate UI containers
+            // Securely transfer whole window frame to checkout link location
             setTimeout(() => {
-                iframe.src = data.redirectUrl; // Feed URL to iframe
-                form.classList.add('hidden'); // Hide fields
-                iframeContainer.classList.remove('hidden'); // Unveil frame container
-                messageBox.classList.add('hidden'); // Clean up loading notification
-            }, 1000);
+                window.location.href = data.redirectUrl;
+            }, 1200);
 
         } catch (error) {
             messageBox.className = 'bg-red-50 text-red-700 border-red-200 text-sm font-medium rounded-lg p-3.5';
@@ -3407,9 +3389,8 @@ Add Guest Details            </h2>
             submitBtn.disabled = false;
             submitBtn.textContent = 'Proceed To Payment';
         } finally {
-            if (!iframeContainer.classList.contains('hidden')) {
-                submitBtn.disabled = true;
-            } else if (!messageBox.classList.contains('text-green-700')) {
+            // Re-enable input button only if it catches early network failure
+            if (!messageBox.classList.contains('text-green-700')) {
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Proceed To Payment';
             }

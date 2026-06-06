@@ -1877,29 +1877,35 @@ app.post('/api/quick-sales/initiate-payment', auth, async (req, res) => {
         // Safeguard callback resolution formatting
         const baseApiUrl = process.env.API_URL || `${req.protocol}://${req.get('host')}`;
 
-        const orderResponse = await axios.post(
-            orderUrl,
-            {
-                id: merchantReference,
-                currency: 'UGX',
-                amount: Number(amount),
-                description: `${outlet} Quick Sale Payment`,
-                redirect_mode: 'PARENT_WINDOW',
-                callback_url: `${baseApiUrl}/api/quick-sales/payment-callback`,
-                notification_id: gateway.ipnUrlId,
-                billing_address: {
-                    phone_number: phone || '',
-                    email_address: 'walkin@hotel.com',
-                    country_code: 'UG'
-                }
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            }
-        );
+        // ============================================
+// SUBMIT ORDER (Inside your Express App Route)
+// ============================================
+const orderResponse = await axios.post(
+    orderUrl,
+    {
+        id: merchantReference,
+        currency: 'UGX',
+        amount: Number(amount),
+        description: `${outlet} Quick Sale Payment`,
+        
+        // OPTION A OPTIMIZATION: Instructs Pesapal to load on full screen redirection layout
+        redirect_mode: 'TOP_WINDOW', 
+
+        callback_url: `${baseApiUrl}/api/quick-sales/payment-callback`,
+        notification_id: gateway.ipnUrlId,
+        billing_address: {
+            phone_number: phone || '',
+            email_address: 'walkin@hotel.com',
+            country_code: 'UG'
+        }
+    },
+    {
+        headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        }
+    }
+);
 
         console.log("RAW PESAPAL RESPONSE OBJECT:", orderResponse.data);
 
