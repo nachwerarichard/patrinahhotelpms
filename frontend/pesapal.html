@@ -3355,10 +3355,15 @@ Add Guest Details            </h2>
             if (!response) return; 
 
             const data = await response.json();
+            console.log("Backend Response Data:", data); // <--- Add this temporarily!
 
             if (!response.ok) {
                 throw new Error(data.message || 'Failed to initiate payment');
             }
+            if (!data.redirectUrl) {
+    console.error("CRITICAL: redirectUrl is missing from the server response!");
+    throw new Error("Payment gateway failed to provide a redirection link.");
+}
 
             messageBox.className = 'bg-green-50 text-green-700 border-green-200 text-sm font-medium rounded-lg p-3.5';
             messageBox.textContent = 'Redirecting to Pesapal...';

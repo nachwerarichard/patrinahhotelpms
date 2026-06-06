@@ -1917,16 +1917,16 @@ app.post('/api/quick-sales/initiate-payment', auth, async (req, res) => {
             redirectUrl: orderResponse.data.redirect_url
         });
 
-    } catch (error) {
+  } catch (error) {
+    console.error("Pesapal API Error Status:", error.response?.status);
+    console.error("Pesapal API Error Body:", error.response?.data);
 
-        console.error(error);
+    res.status(500).json({
+        success: false,
+        message: error.response?.data?.message || error.message
+    });
+}
 
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-
-    }
 });
 
 app.get('/api/quick-sales/payment-callback', async (req, res) => {
