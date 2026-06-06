@@ -1910,6 +1910,8 @@ app.post('/api/quick-sales/initiate-payment', auth, async (req, res) => {
 
         await payment.save();
 
+        console.log("RAW PESAPAL RESPONSE:", orderResponse.data);
+
         res.json({
             success: true,
             paymentId: payment._id,
