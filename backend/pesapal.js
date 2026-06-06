@@ -1884,6 +1884,7 @@ app.post('/api/quick-sales/initiate-payment', auth, async (req, res) => {
                 currency: 'UGX',
                 amount: Number(amount),
                 description: `${outlet} Quick Sale Payment`,
+                redirect_mode: 'PARENT_WINDOW',
                 callback_url: `${baseApiUrl}/api/quick-sales/payment-callback`,
                 notification_id: gateway.ipnUrlId,
                 billing_address: {
