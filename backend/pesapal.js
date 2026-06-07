@@ -3108,8 +3108,12 @@ app.get('/api/public/room-types', async (req, res) => {
 app.get('/api/public/rooms/available', async (req, res) => {
     const { checkIn, checkOut, roomType } = req.query;
 
+    if (!checkIn || !checkOut) {
+        return res.status(400).json({ message: "Check-in and Check-out dates are required query fields." });
+    }
+
     try {
-        // AUTOMATION: Get hotelId by sniffing the Domain/Referer
+        // AUTOMATION: Get hotelId by sniffing the Domain via the URL query param
         const hotelId = await getHotelIdFromRequest(req);
 
         if (!hotelId) {
@@ -3118,77 +3122,67 @@ app.get('/api/public/rooms/available', async (req, res) => {
 
         // 1. Find conflicting bookings for THIS hotel
         const conflictingBookings = await Booking.find({
-            hotelId: hotelId,
-            status: { $nin: ['cancelled', 'checked-out'] }, // Safeguard: Ignore dead bookings
+            hotelId,
             checkIn: { $lt: checkOut },
-            checkOut: { $gt: checkIn }
+            checkOut: { $gt: checkIn },
+            // Only count active bookings (don't block rooms for cancelled or void stays)
+            gueststatus: { $nin: ['cancelled', 'void'] }
         });
 
-        // 🔥 FIX 1: Support standard schema fields (checks room, roomId, and rooms array elements safely)
-        const bookedRoomNumbers = conflictingBookings.flatMap(booking => {
-            if (!booking) return [];
-            if (booking.room) return [booking.room];
-            if (booking.roomId) return [booking.roomId];
-            if (Array.isArray(booking.rooms)) return booking.rooms;
-            return [];
-        });
+        // Safe extraction: Filter out any entries where the room string field isn't explicitly defined
+        const bookedRoomNumbers = conflictingBookings
+            .map(booking => booking.room)
+            .filter(roomNum => typeof roomNum === 'string' && roomNum.trim() !== '');
 
-        // 2. Query available rooms
-        let query = {
-            hotelId: hotelId,
+        // 2. Base query criteria for finding open vacancies
+        let roomQuery = {
+            hotelId,
             status: { $nin: ['under-maintenance', 'blocked'] }
         };
 
-        // Only filter out rooms if there are active conflicting bookings
+        // If there are currently occupied rooms, exclude them from results
         if (bookedRoomNumbers.length > 0) {
-            query._id = { $nin: bookedRoomNumbers }; // Match by Object ID string structure
+            roomQuery.number = { $nin: bookedRoomNumbers };
         }
 
         // Filter by specific type if the user selected one (other than 'Any')
         if (roomType && roomType !== 'Any') {
             const rType = await RoomType.findOne({ hotelId, name: roomType });
             if (rType) {
-                // Adjust this key to match whatever your Room Schema field name is (roomTypeId or roomType)
-                query.roomTypeId = rType._id; 
+                roomQuery.roomTypeId = rType._id;
+            } else {
+                // If the requested room category name wasn't found, instantly return empty structures safely
+                return res.json({});
             }
         }
 
-        // 3. Fetch rooms matching parameters
-        // Safe Check: Fallback path if populate fails due to key mismatch
-        let availableRooms = [];
-        try {
-            availableRooms = await Room.find(query).populate('roomTypeId');
-        } catch (popError) {
-            console.warn("Populate failed, attempting clean fallback query:", popError.message);
-            availableRooms = await Room.find(query); // Fallback so system doesn't crash 500
-        }
+        // Fetch matching vacancies and populate their associated category layout profiles
+        const availableRooms = await Room.find(roomQuery).populate('roomTypeId');
         
-        // 4. 🔥 FIX 2: Grouping Logic Setup
-        // Ensure this block runs safely even if roomTypeId field reference is empty
+        // 3. SAFE GROUPING LOGIC (Prevents server crashes due to orphan database records)
         const availableRoomsByType = {};
 
         availableRooms.forEach(room => {
-            // Read type name cleanly depending on whether it was populated or remains a string ID
-            let typeName = "Standard Room"; 
-            if (room.roomTypeId && typeof room.roomTypeId === 'object') {
-                typeName = room.roomTypeId.name;
-            } else if (room.roomType) {
-                typeName = room.roomType;
-            }
+            // CRITICAL SAFEGUARD: Skip any room records missing a valid roomTypeId relation block
+            if (!room.roomTypeId) return; 
+
+            const typeName = room.roomTypeId.name;
 
             if (!availableRoomsByType[typeName]) {
                 availableRoomsByType[typeName] = {
+                    details: room.roomTypeId,
                     rooms: []
                 };
             }
+            
             availableRoomsByType[typeName].rooms.push(room);
         });
         
-        // Return structured result back to Netlify client application
+        // Return structured map back to frontend application script layer
         res.json(availableRoomsByType);
 
     } catch (error) {
-        console.error("❌ CRITICAL AVAILABILITY ROUTE CRASH:", error);
+        console.error("❌ CRITICAL DISCOVERY ERROR:", error);
         res.status(500).json({ 
             message: 'Error checking availability', 
             error: error.message 
