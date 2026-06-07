@@ -69,9 +69,14 @@ async function populateRoomTypeDropdown() {
     if (!roomTypeSelect) return;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/public/room-types`, {
+        // 🔥 CHANGE: Send the domain as a clean query parameter instead of a custom header
+        const targetUrl = `${API_BASE_URL}/public/room-types?tenantDomain=${window.location.hostname}`;
+        
+        const response = await fetch(targetUrl, {
             method: 'GET',
-            headers: getTenantHeaders() // Send multi-tenant identity verification
+            headers: {
+                'Content-Type': 'application/json' // Simple header (Never triggers CORS preflight)
+            }
         });
         
         if (!response.ok) {
