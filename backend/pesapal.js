@@ -3246,6 +3246,11 @@ app.get('/api/public/rooms/available', async (req, res) => {
 
 
 
+const express = require('express');
+const mongoose = require('mongoose');
+const axios = require('axios');
+const router = express.Router();
+
 app.post('/api/public/bookings', async (req, res) => {
     console.log("====================================================");
     console.log("📥 [PESAPAL INTEGRATED CHECKOUT SUBMISSION] /api/public/bookings");
@@ -3284,11 +3289,8 @@ app.post('/api/public/bookings', async (req, res) => {
             });
         }
 
-        // 🔥 CRITICAL FIXED BASE PATHS FOR V3
-        // If your database gatewaySettings.environment is 'Sandbox', it targets 'cybi' cleanly
-        const pesapalBaseUrl = gatewaySettings.environment === 'Live'
-            ? 'https://pay.pesapal.com/v3'
-            : 'https://cybi.pesapal.com/v3';
+        // 🔥 THE ABSOLUTE DNS FIX: Unified endpoint for Sandbox & Live in V3 API
+        const pesapalBaseUrl = 'https://pay.pesapal.com/v3';
 
         console.log(`🛰️ Routing transactional payload to target system layout: ${pesapalBaseUrl}`);
         console.log(`🔐 Context parameter tracking verification mode: [${gatewaySettings.environment}]`);
@@ -3395,6 +3397,7 @@ app.post('/api/public/bookings', async (req, res) => {
         });
     }
 });
+
 
 
 // Public endpoint to add a new booking (from external website)
