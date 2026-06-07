@@ -3280,11 +3280,14 @@ app.post('/api/public/bookings', async (req, res) => {
         // ====================================================================
 // 🔥 THE CRITICAL FIX: Corrected official Pesapal V3 URL endpoints
 // ====================================================================
-const pesapalBaseUrl = gatewaySettings.environment === 'Live' 
-    ? 'https://pay.pesapal.com/pesapalv3'    // Live production API endpoint
-    : 'https://cybi.pesapal.com/pesapalv3'; // Sandbox testing API endpoint (Notice the "cybi")
+// ====================================================================
+// 🔥 THE DEFINITIVE PESAPAL V3 URL SPECIFICATION FIX
+// ====================================================================
+// Both Sandbox and Production run cleanly through the main API portal branch in V3
+const pesapalBaseUrl = 'https://pay.pesapal.com/pesapalv3';
 
-console.log(`🛰️ Target Environment: [${gatewaySettings.environment}] pointing to base URL: ${pesapalBaseUrl}`);
+console.log(`🛰️ Routing transactional payload to target system layout: ${pesapalBaseUrl}`);
+console.log(`🔐 Context parameter tracking environment verification mode: [${gatewaySettings.environment}]`);
         // 3. Authenticate with Pesapal to acquire a Bearer Token
         console.log("🛰️ Fetching access handshake authentication token string wrapper from Pesapal...");
         const authResponse = await axios.post(`${pesapalBaseUrl}/api/Auth/RegisterToken`, {
