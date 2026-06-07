@@ -3048,43 +3048,60 @@ app.get('/api/audit-logs', auth, async (req, res) => {
 });
 
 async function getHotelIdFromRequest(req) {
-    // 1. Check custom tenant header, then query string parameter, then standard fallbacks
+    console.log("----------------------------------------------------");
+    console.log("🔍 [TENANT IDENTITY] Starting domain lookup...");
+    
+    // 1. Gather potential domain sources
     let sourceUrl = req.headers['x-tenant-domain'] || 
                     req.query.tenantDomain || 
                     req.headers.referer || 
                     req.headers.origin;
     
+    console.log(`📋 Extracted Raw Domain Source: "${sourceUrl}"`);
+
     if (!sourceUrl) {
-        console.error("❌ Multi-Tenancy Error: No domain source found in request headers or queries.");
+        console.error("❌ Multi-Tenancy Error: No domain source could be found in request headers or query strings.");
         return null;
     }
 
     try {
         let hostname = sourceUrl;
         
-        // If the source URL contains a protocol (e.g., http:// or https://), strip it to get the raw hostname
+        // Strip protocols if they exist
         if (sourceUrl.includes('://')) {
             const urlObj = new URL(sourceUrl);
             hostname = urlObj.hostname;
         }
 
-        // Clean up formatting (remove port numbers if testing locally, e.g., localhost:3000 -> localhost)
-        hostname = hostname.split(':')[0];
+        // Clean up formatting (strip ports)
+        hostname = hostname.split(':')[0].trim().toLowerCase();
+        console.log(`🧼 Cleaned Hostname for Query: "${hostname}"`);
 
-        console.log(`🔍 Sniffing System Identity for Hostname Target: "${hostname}"`);
+        // Check database connection state before running query
+        if (mongoose.connection.readyState !== 1) {
+            console.error("❌ DATABASE CONNECTION ERROR: Mongoose is not connected to MongoDB!");
+            throw new Error("Database connection is offline.");
+        }
 
-        // 2. MATCH CORES: Query against your actual "domainName" schema property
+        console.log(`📦 Querying MongoDB: Hotel.findOne({ domainName: "${hostname}" })`);
         const hotelConfig = await Hotel.findOne({ domainName: hostname });
 
         if (!hotelConfig) {
-            console.warn(`⚠️ Multi-Tenancy Warning: No registered hotel found matching domain name: "${hostname}"`);
+            console.warn(`⚠️ Multi-Tenancy Warning: No registered hotel document matches 'domainName': "${hostname}"`);
             return null;
         }
 
+        console.log(`✅ Success: Found Hotel document! Name: "${hotelConfig.name}" | ID: ${hotelConfig._id}`);
         return hotelConfig._id;
+
     } catch (err) {
-        console.error("❌ Domain multi-tenancy parsing failure:", err);
-        return null;
+        // 🔥 CRITICAL: This catches any hidden schema or parsing crashes
+        console.error("💥 CRITICAL FAULT INSIDE getHotelIdFromRequest:");
+        console.error(`👉 Error Message: ${err.message}`);
+        console.error(`👉 Error Stack:\n`, err.stack);
+        
+        // Throwing the error here tells Express to pass it downstream to your global error boundary
+        throw err; 
     }
 }
 // Backend: api/public/room-types
