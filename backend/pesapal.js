@@ -1615,17 +1615,9 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
         // =====================================================
         // PESAPAL MAY SEND GET OR POST
         // =====================================================
-        const OrderTrackingId =
-            req.query.OrderTrackingId ||
-            req.body.OrderTrackingId;
-
-        const OrderMerchantReference =
-            req.query.OrderMerchantReference ||
-            req.body.OrderMerchantReference;
-
-        const OrderNotificationType =
-            req.query.OrderNotificationType ||
-            req.body.OrderNotificationType;
+        const OrderTrackingId = req.query.OrderTrackingId || req.body.OrderTrackingId;
+        const OrderMerchantReference = req.query.OrderMerchantReference || req.body.OrderMerchantReference;
+        const OrderNotificationType = req.query.OrderNotificationType || req.body.OrderNotificationType;
 
         console.log('====================================');
         console.log('PESAPAL IPN RECEIVED');
@@ -1635,26 +1627,16 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
         console.log('====================================');
 
         if (!OrderTrackingId) {
-            return res.status(200).json({
-                message: 'Missing tracking ID'
-            });
+            return res.status(200).json({ message: 'Missing tracking ID' });
         }
 
         // =====================================================
         // FIND BOOKING
         // =====================================================
-        const booking = await Booking.findOne({
-            transactionid: OrderTrackingId
-        });
+        const booking = await Booking.findOne({ transactionid: OrderTrackingId });
 
         if (!booking) {
-            console.log(
-                'No booking found for tracking ID:',
-                OrderTrackingId
-            );
-
-            // Even if booking isn't found locally, acknowledge to Pesapal 
-            // to stop the IPN retry loop for this orphan transaction.
+            console.log('No booking found for tracking ID:', OrderTrackingId);
             return res.status(200).json({
                 OrderNotificationType: OrderNotificationType || 'IPNCHANGE',
                 OrderTrackingId: OrderTrackingId,
@@ -1666,16 +1648,8 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
         // =====================================================
         // PREVENT DUPLICATE PROCESSING
         // =====================================================
-        if (
-            booking.paymentStatus === 'Paid' &&
-            booking.balance === 0
-        ) {
-            console.log(
-                'Payment already processed:',
-                OrderTrackingId
-            );
-
-            // Return proper acknowledgment format to silence retries
+        if (booking.paymentStatus === 'Paid' && booking.balance === 0) {
+            console.log('Payment already processed:', OrderTrackingId);
             return res.status(200).json({
                 OrderNotificationType: OrderNotificationType || 'IPNCHANGE',
                 OrderTrackingId: OrderTrackingId,
@@ -1687,18 +1661,22 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
         // =====================================================
         // AUTHENTICATE WITH HOTEL'S PESAPAL ACCOUNT
         // =====================================================
-        const {
-            token,
-            baseUrl
-        } = await getPesapalAccessToken(
-            booking.hotelId
-        );
+        const { token, bookingHotelId } = await getPesapalAccessToken(booking.hotelId);
+
+        // Fetch active gateway environment structure directly to resolve core verification URLs safely
+        const tenantGateway = await Gateway.findOne({ hotelId: booking.hotelId, gatewayId: 'pesapal' });
+        
+        // 🔥 CRITICAL IPN ENVIRONMENT RESOLVER: Ensures verification routes don't mix up live and test environments
+        const isLiveEnvironment = tenantGateway?.environment === 'Live';
+        const targetVerificationBaseUrl = isLiveEnvironment 
+            ? 'https://pay.pesapal.com/v3' 
+            : 'https://cybqa.pesapal.com/pesapalv3';
 
         // =====================================================
         // VERIFY PAYMENT DIRECTLY FROM PESAPAL
         // =====================================================
         const statusResponse = await axios.get(
-            `${baseUrl}/api/Transactions/GetTransactionStatus?orderTrackingId=${OrderTrackingId}`,
+            `${targetVerificationBaseUrl}/api/Transactions/GetTransactionStatus?orderTrackingId=${OrderTrackingId}`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -1708,20 +1686,13 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
         );
 
         const transaction = statusResponse.data;
-
-        console.log(
-            'PESAPAL STATUS RESPONSE:',
-            JSON.stringify(transaction, null, 2)
-        );
+        console.log('PESAPAL STATUS RESPONSE:', JSON.stringify(transaction, null, 2));
 
         // Strict Pesapal V3 Status Evaluation: 1 is explicitly Success/Completed
         const isSuccessful = Number(transaction.status_code) === 1;
 
         if (!isSuccessful) {
             console.log(`Payment not completed. Status code: ${transaction.status_code}`);
-            
-            // Still acknowledge to Pesapal so it knows you received the update 
-            // (even if it's currently a 'Failed' or 'Progressing' status change)
             return res.status(200).json({
                 OrderNotificationType: OrderNotificationType || 'IPNCHANGE',
                 OrderTrackingId: OrderTrackingId,
@@ -1733,37 +1704,19 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
         // =====================================================
         // UPDATE BOOKING
         // =====================================================
-        const paymentAmount =
-            Number(transaction.amount) || 0;
+        const paymentAmount = Number(transaction.amount) || 0;
+        const totalDue = Number(booking.totalDue) || 0;
+        const currentPaid = Number(booking.amountPaid) || 0;
 
-        const totalDue =
-            Number(booking.totalDue) || 0;
-
-        const currentPaid =
-            Number(booking.amountPaid) || 0;
-
-        const newAmountPaid =
-            currentPaid + paymentAmount;
-
-        const newBalance =
-            Math.max(0, totalDue - newAmountPaid);
+        const newAmountPaid = currentPaid + paymentAmount;
+        const newBalance = Math.max(0, totalDue - newAmountPaid);
 
         booking.amountPaid = newAmountPaid;
         booking.balance = newBalance;
 
-        booking.paymentMethod =
-            transaction.payment_method ||
-            transaction.payment_account ||
-            'Pesapal';
-
-        booking.paymentStatus =
-            newBalance === 0
-                ? 'Paid'
-                : 'Partially Paid';
-
-        booking.pesapalTrackingId =
-            OrderTrackingId;
-
+        booking.paymentMethod = transaction.payment_method || transaction.payment_account || 'Pesapal';
+        booking.paymentStatus = newBalance === 0 ? 'Paid' : 'Partially Paid';
+        booking.pesapalTrackingId = OrderTrackingId;
         booking.paidAt = new Date();
 
         await booking.save();
@@ -1771,7 +1724,6 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
         // =====================================================
         // AUDIT LOG
         // =====================================================
-        // Safely using booking._id instead of booking.id
         await addAuditLog(
             'Pesapal Payment Confirmed',
             'Pesapal Gateway',
@@ -1784,13 +1736,10 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
             booking.hotelId
         );
 
-        console.log(
-            'Payment successfully recorded:',
-            OrderTrackingId
-        );
+        console.log('Payment successfully recorded:', OrderTrackingId);
 
         // =====================================================
-        // ACKNOWLEDGE TO PESAPAL (FIXED: Uses PascalCase)
+        // ACKNOWLEDGE TO PESAPAL (PascalCase Match Required)
         // =====================================================
         return res.status(200).json({
             OrderNotificationType: 'IPNCHANGE',
@@ -1800,13 +1749,7 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
         });
 
     } catch (error) {
-        console.error(
-            'PESAPAL IPN ERROR:',
-            error.response?.data || error.message
-        );
-
-        // Fall back gracefully with a status 200 text response. 
-        // Do not throw a 500 error status unless you intentionally want Pesapal to retry later.
+        console.error('PESAPAL IPN ERROR:', error.response?.data || error.message);
         return res.status(200).json({
             message: 'IPN received but processing failed internal runtime'
         });
@@ -3284,16 +3227,22 @@ app.post('/api/public/bookings', async (req, res) => {
             });
         }
 
-        // 🔥 THE ABSOLUTE ENOTFOUND & 404 FIX: Setup separate path structures for Sandbox vs Live
+        // 🔥 CRITICAL ENVIRONMENT LOOKUP: Evaluated first to mirror your working Quick Sales routing logic
         const isLive = gatewaySettings.environment === 'Live';
-        const pesapalBaseUrl = isLive ? 'https://pay.pesapal.com/pesapalv3' : 'https://cybi.pesapal.com/pesapalv3';
+        const authUrl = isLive 
+            ? 'https://pay.pesapal.com/v3/api/Auth/RequestToken' 
+            : 'https://cybqa.pesapal.com/pesapalv3/api/Auth/RequestToken';
+            
+        const orderUrl = isLive 
+            ? 'https://pay.pesapal.com/v3/api/Transactions/SubmitOrderRequest' 
+            : 'https://cybqa.pesapal.com/pesapalv3/api/Transactions/SubmitOrderRequest';
 
-        console.log(`🛰️ Routing transactional payload to target system layout: ${pesapalBaseUrl}`);
+        console.log(`🛰️ Routing transactional verification payloads to target system layout.`);
         console.log(`🔐 Context parameter tracking verification mode: [${gatewaySettings.environment}]`);
 
         // 3. Auth Handshake Token Step
         console.log("🛰️ Fetching access handshake authentication token string wrapper from Pesapal...");
-        const authResponse = await axios.post(`${pesapalBaseUrl}/api/Auth/RegisterToken`, {
+        const authResponse = await axios.post(authUrl, {
             consumer_key: gatewaySettings.consumerKey,
             consumer_secret: gatewaySettings.consumerSecret
         }, {
@@ -3336,22 +3285,25 @@ app.post('/api/public/bookings', async (req, res) => {
 
         const pesapalOrderPayload = {
             id: generatedBookingId, 
-            amount: calculatedTotalDue,
+            currency: 'UGX', // Synced explicitly with working quick-sales configuration matrix
+            amount: Number(calculatedTotalDue),
             description: `Accommodation Reservation Code ${generatedBookingId}`,
+            redirect_mode: 'TOP_WINDOW',
             callback_url: `https://elegant-pasca-cea136.netlify.app/booking-status.html`, 
             notification_id: gatewaySettings.ipnUrlId, 
             billing_address: {
                 email_address: guestEmail,
                 phone_number: phoneNo || "0000000000",
                 first_name: firstName,
-                last_name: lastName
+                last_name: lastName,
+                country_code: 'UG'
             }
         };
 
         // 6. Submit checkout manifest token data string profile packet directly to Pesapal
         console.log("🛰️ Submitting checkout manifest token data string profile packet directly to Pesapal portal layout engine...");
         const transactionResponse = await axios.post(
-            `${pesapalBaseUrl}/api/Transactions/SubmitOrderRequest`, 
+            orderUrl, 
             pesapalOrderPayload,
             { 
                 headers: { 
