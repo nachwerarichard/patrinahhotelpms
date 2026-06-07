@@ -3236,87 +3236,132 @@ app.get('/api/public/rooms/available', async (req, res) => {
 
 // Public booking creation
 
+
+
 app.post('/api/public/bookings', async (req, res) => {
     console.log("====================================================");
-    console.log("📥 [INCOMING BOOKING REQUEST] /api/public/bookings");
-    console.log("📦 Payload Received:", JSON.stringify(req.body, null, 2));
+    console.log("📥 [PESAPAL INTEGRATED CHECKOUT SUBMISSION] /api/public/bookings");
     console.log("====================================================");
 
     try {
-        // Resolve hotelId context using your multi-tenant query sniffer
         const rawHotelId = await getHotelIdFromRequest(req);
         if (!rawHotelId) {
-            console.error("❌ Booking Cancelled: Hotel identity context could not be resolved.");
-            return res.status(400).json({ message: "Hotel context not found for this domain." });
+            return res.status(400).json({ message: "Hotel identity context could not be resolved." });
         }
 
         const hotelId = new mongoose.Types.ObjectId(rawHotelId);
         const { name, guestEmail, phoneNo, checkIn, checkOut, roomsRequested } = req.body;
 
         if (!roomsRequested || !Array.isArray(roomsRequested) || roomsRequested.length === 0) {
-            return res.status(400).json({ message: "Cannot submit a reservation with an empty cart." });
+            return res.status(400).json({ message: "Cannot checkout an empty shopping cart." });
         }
 
-        // Calculate aggregate headcount metrics across requested rooms to satisfy the 'people' validation check
+        // 1. Core metrics aggregation structures
         const totalPeopleCount = roomsRequested.reduce((sum, item) => sum + (Number(item.people) || 1), 0);
-        
-        // Calculate financial totals
         const calculatedTotalDue = roomsRequested.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
-
-        // Calculate nights
+        
         const start = new Date(checkIn);
         const end = new Date(checkOut);
         const totalNights = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) || 1;
-
-        // Auto-generate a randomized unique booking reference ID string to satisfy the 'id' requirement
         const generatedBookingId = `BKG-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-        // Construct the booking document mapped perfectly to your Schema validation architecture
+        // 2. Fetch unique tenant Pesapal API parameters
+        console.log(`🔑 Fetching active Pesapal gateway settings for Hotel ID: ${hotelId}...`);
+        const gatewaySettings = await Gateway.findOne({ hotelId, gatewayId: 'pesapal' });
+
+        if (!gatewaySettings || !gatewaySettings.consumerKey || !gatewaySettings.consumerSecret) {
+            console.error("❌ Gateway Configuration Missing: Tenant has not connected their Pesapal details.");
+            return res.status(422).json({ 
+                message: "This hotel hasn't completed their online billing payment terminal configuration steps yet." 
+            });
+        }
+
+        // Set matching endpoint base context environment tracks
+        const pesapalBaseUrl = gatewaySettings.environment === 'Live' 
+            ? 'https://cyb.pesapal.com/pesapalv3' 
+            : 'https://cyb.pesapal.com/pesapalv3'; // Sandbox uses the same architecture wrapper link layout matching your profile
+
+        // 3. Authenticate with Pesapal to acquire a Bearer Token
+        console.log("🛰️ Fetching access handshake authentication token string wrapper from Pesapal...");
+        const authResponse = await axios.post(`${pesapalBaseUrl}/api/Auth/RegisterToken`, {
+            consumer_key: gatewaySettings.consumerKey,
+            consumer_secret: gatewaySettings.consumerSecret
+        });
+
+        const bearerToken = authResponse.data.token;
+        if (!bearerToken) throw new Error("Failed to clear gateway security tokens parameter blocks.");
+
+        // 4. Register the reservation document placeholder as "Pending Payment" inside MongoDB
         const completeBookingPayload = {
             hotelId,
-            id: generatedBookingId, // Satisfies unique tracking ID requirement
+            id: generatedBookingId,
             name,
             guestEmail,
             phoneNo,
             checkIn,
             checkOut,
             nights: totalNights,
-            people: totalPeopleCount, // Satisfies required field constraint
+            people: totalPeopleCount,
             totalDue: calculatedTotalDue,
             balance: calculatedTotalDue,
             amountPaid: 0,
             paymentStatus: 'Pending',
-            paymentMethod: 'Cash', // Default starting option
-            guestsource: 'Hotel Website', // Overrides 'Walk in' default for trace mapping
-            gueststatus: 'confirmed', // Satisfies restricted enum requirement
-            room: "Unassigned", // Public engine registers the cart allocation details, admin assigns physical room numbers later
+            paymentMethod: 'Pesapal', 
+            guestsource: 'Hotel Website', 
+            gueststatus: 'reserved', // Status marked as reserved while awaiting remote webhook resolution confirmation 
+            room: "Unassigned",
             occupation: "Unassigned"
         };
 
-        console.log("💾 Writing to MongoDB with Payload:", JSON.stringify(completeBookingPayload, null, 2));
-
-        // Create document entry
         const newBooking = new Booking(completeBookingPayload);
         const savedBooking = await newBooking.save();
+        console.log(`💾 Local Pending Reservation Stored: ${savedBooking.id}`);
 
-        console.log(`✅ Success! Booking Document successfully saved. ID: ${savedBooking._id}`);
-        console.log("====================================================");
+        // 5. Build standard payload package data structure array to generate tracking URL frame
+        // Parse name strings into structural array blocks safely to fit Pesapal API validation
+        const splitName = name.trim().split(' ');
+        const firstName = splitName[0] || 'Guest';
+        const lastName = splitName.slice(1).join(' ') || 'User';
 
-        res.status(201).json({
+        const pesapalOrderPayload = {
+            id: generatedBookingId, // Your internal system string parameter wrapper match
+            amount: calculatedTotalDue,
+            description: `Accommodation Reservation Code ${generatedBookingId}`,
+            callback_url: `https://elegant-pasca-cea136.netlify.app/booking-status.html`, // Redirect landing interface context page path 
+            notification_id: gatewaySettings.ipnUrlId, // Uses your registered IPN hook string
+            billing_address: {
+                email_address: guestEmail,
+                phone_number: phoneNo || "0000000000",
+                first_name: firstName,
+                last_name: lastName
+            }
+        };
+
+        console.log("🛰️ Submitting checkout manifest token data string profile packet directly to Pesapal portal layout engine...");
+        const transactionResponse = await axios.post(
+            `${pesapalBaseUrl}/api/Transactions/SubmitOrderRequest`, 
+            pesapalOrderPayload,
+            { headers: { 'Authorization': `Bearer ${bearerToken}`, 'Content-Type': 'application/json' } }
+        );
+
+        const checkoutUrl = transactionResponse.data.redirect_url;
+        console.log(`✅ Success! Secure Redirect Web Gateway Route Generated cleanly: ${checkoutUrl}`);
+
+        // Update reservation to track the exact payment tracking references numbers
+        savedBooking.transactionid = transactionResponse.data.order_tracking_id;
+        await savedBooking.save();
+
+        // Pass the redirect URL back to the frontend to complete checkout
+        res.status(200).json({
             success: true,
-            message: "Reservation successfully generated.",
-            booking: savedBooking
+            redirectUrl: checkoutUrl,
+            message: "Initialization parameters constructed successfully."
         });
 
     } catch (error) {
-        console.error("💥====================================================");
-        console.error("❌ CRITICAL EXCEPTION CAUGHT IN BOOKING CREATION CONTROLLER:");
-        console.error(`👉 Error Message: ${error.message}`);
-        console.error(`👉 Stack Trace:\n`, error.stack);
-        console.error("====================================================💥");
-
+        console.error("💥 SYSTEM FAULT GENERATING CHECKOUT EXCEPTION:", error);
         res.status(500).json({
-            message: 'Internal Application Crash during booking generation',
+            message: 'Internal Checkout application pipeline breakdown.',
             error: error.message
         });
     }

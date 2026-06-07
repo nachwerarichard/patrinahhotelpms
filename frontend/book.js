@@ -273,9 +273,11 @@ function removeFromCart(index) {
 }
 
 // --- FORM SUBMISSION ---
+// --- ATTACH DIRECTLY TO YOUR EXISTENT FORM SUBMISSION TRACK ---
 publicBookingForm.addEventListener('submit', async (event) => {
     event.preventDefault();
 
+    // 1. Gather all data fields
     const bookingData = {
         name: document.getElementById('guestName').value,
         guestEmail: document.getElementById('guestEmail').value,
@@ -290,8 +292,10 @@ publicBookingForm.addEventListener('submit', async (event) => {
         return;
     }
 
+    // 2. Display an active visual loading screen context placeholder
+    showPublicMessageBox('Processing Secure Checkout', 'Connecting to the secure payment portal payment infrastructure network layer, please hold tight...', false);
+
     try {
-        // 🔥 FIXED: Removed getTenantHeaders() and passed context via query string to clear CORS boundaries
         const targetBookingUrl = `${API_BASE_URL}/public/bookings?tenantDomain=${window.location.hostname}`;
 
         const response = await fetch(targetBookingUrl, {
@@ -302,23 +306,25 @@ publicBookingForm.addEventListener('submit', async (event) => {
             body: JSON.stringify(bookingData)
         });
         
+        const data = await response.json().catch(() => ({}));
+
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || "Booking creation failed");
+            throw new Error(data.message || "Unable to initialize verification parameters.");
         }
 
-        showPublicMessageBox('Success!', `Your reservation is confirmed! We have sent a confirmation to ${bookingData.guestEmail}.`);
-
-        // Reset UI
-        publicBookingForm.reset();
-        selectedRoomsCart = [];
-        guestDetailsFormSection.style.display = 'none';
-        availabilityResultsSection.style.display = 'none';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // 3. 🔥 THE CRITICAL PAYMENT GATEWAY HOP
+        if (data.success && data.redirectUrl) {
+            showPublicMessageBox('Redirecting...', 'Forwarding your session parameters out to the official Pesapal Portal interface for payment authorization validation tasks...', false);
+            
+            // Redirect the guest's browser to complete payment via Card or Mobile Money (MTN/Airtel MoMo)
+            window.location.href = data.redirectUrl;
+        } else {
+            throw new Error("The application checkout pipeline did not return a valid payment link tracking path string structure.");
+        }
 
     } catch (error) {
-        console.error(error);
-        showPublicMessageBox('Booking Error', error.message, true);
+        console.error("Payment forward layout tracking failure:", error);
+        showPublicMessageBox('Checkout Processing Boundary Error', error.message, true);
     }
 });
 
