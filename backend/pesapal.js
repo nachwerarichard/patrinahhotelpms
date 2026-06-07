@@ -3246,11 +3246,6 @@ app.get('/api/public/rooms/available', async (req, res) => {
 
 
 
-const express = require('express');
-const mongoose = require('mongoose');
-const axios = require('axios');
-const router = express.Router();
-
 app.post('/api/public/bookings', async (req, res) => {
     console.log("====================================================");
     console.log("📥 [PESAPAL INTEGRATED CHECKOUT SUBMISSION] /api/public/bookings");
