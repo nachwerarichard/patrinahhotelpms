@@ -3235,50 +3235,90 @@ app.get('/api/public/rooms/available', async (req, res) => {
 });
 
 // Public booking creation
+
 app.post('/api/public/bookings', async (req, res) => {
-    const { roomsRequested, ...bookingDetails } = req.body;
+    console.log("====================================================");
+    console.log("📥 [INCOMING BOOKING REQUEST] /api/public/bookings");
+    console.log("📦 Payload Received:", JSON.stringify(req.body, null, 2));
+    console.log("====================================================");
 
     try {
-        // AUTOMATION: Verify hotelId from the request source
-        const hotelId = await getHotelIdFromRequest(req);
-
-        if (!hotelId) {
-            return res.status(400).json({ message: "Invalid booking source." });
+        // Resolve hotelId context using your multi-tenant query sniffer
+        const rawHotelId = await getHotelIdFromRequest(req);
+        if (!rawHotelId) {
+            console.error("❌ Booking Cancelled: Hotel identity context could not be resolved.");
+            return res.status(400).json({ message: "Hotel context not found for this domain." });
         }
 
-        // Detect Social Source (Facebook, X, etc.)
-        const referer = req.get('referer') || '';
-        let guestsource = 'Hotel Website';
-        if (referer.includes('facebook.com')) guestsource = 'Facebook';
-        if (referer.includes('t.co')) guestsource = 'X/Twitter';
+        const hotelId = new mongoose.Types.ObjectId(rawHotelId);
+        const { name, guestEmail, phoneNo, checkIn, checkOut, roomsRequested } = req.body;
 
-        // Assuming roomsRequested is an array of rooms the guest picked
-        const savedBookings = [];
-        
-        for (const item of roomsRequested) {
-            // Find an actual room number that fits the type (Simplified logic)
-            const availableRoom = await Room.findOne({ 
-                hotelId, 
-                roomTypeId: item.roomTypeId, // Ensure you send ID from frontend
-                status: 'available' 
-            });
-
-            const newBooking = new Booking({
-                ...bookingDetails,
-                hotelId, 
-                room: availableRoom ? availableRoom.number : 'Unassigned',
-                guestsource,
-                gueststatus: 'reserved'
-            });
-            
-            await newBooking.save();
-            savedBookings.push(newBooking);
+        if (!roomsRequested || !Array.isArray(roomsRequested) || roomsRequested.length === 0) {
+            return res.status(400).json({ message: "Cannot submit a reservation with an empty cart." });
         }
+
+        // Calculate aggregate headcount metrics across requested rooms to satisfy the 'people' validation check
+        const totalPeopleCount = roomsRequested.reduce((sum, item) => sum + (Number(item.people) || 1), 0);
         
-        res.status(201).json({ message: "Booking confirmed!", bookings: savedBookings });
+        // Calculate financial totals
+        const calculatedTotalDue = roomsRequested.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+
+        // Calculate nights
+        const start = new Date(checkIn);
+        const end = new Date(checkOut);
+        const totalNights = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) || 1;
+
+        // Auto-generate a randomized unique booking reference ID string to satisfy the 'id' requirement
+        const generatedBookingId = `BKG-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+        // Construct the booking document mapped perfectly to your Schema validation architecture
+        const completeBookingPayload = {
+            hotelId,
+            id: generatedBookingId, // Satisfies unique tracking ID requirement
+            name,
+            guestEmail,
+            phoneNo,
+            checkIn,
+            checkOut,
+            nights: totalNights,
+            people: totalPeopleCount, // Satisfies required field constraint
+            totalDue: calculatedTotalDue,
+            balance: calculatedTotalDue,
+            amountPaid: 0,
+            paymentStatus: 'Pending',
+            paymentMethod: 'Cash', // Default starting option
+            guestsource: 'Hotel Website', // Overrides 'Walk in' default for trace mapping
+            gueststatus: 'confirmed', // Satisfies restricted enum requirement
+            room: "Unassigned", // Public engine registers the cart allocation details, admin assigns physical room numbers later
+            occupation: "Unassigned"
+        };
+
+        console.log("💾 Writing to MongoDB with Payload:", JSON.stringify(completeBookingPayload, null, 2));
+
+        // Create document entry
+        const newBooking = new Booking(completeBookingPayload);
+        const savedBooking = await newBooking.save();
+
+        console.log(`✅ Success! Booking Document successfully saved. ID: ${savedBooking._id}`);
+        console.log("====================================================");
+
+        res.status(201).json({
+            success: true,
+            message: "Reservation successfully generated.",
+            booking: savedBooking
+        });
 
     } catch (error) {
-        res.status(500).json({ message: 'Error confirming booking', error: error.message });
+        console.error("💥====================================================");
+        console.error("❌ CRITICAL EXCEPTION CAUGHT IN BOOKING CREATION CONTROLLER:");
+        console.error(`👉 Error Message: ${error.message}`);
+        console.error(`👉 Stack Trace:\n`, error.stack);
+        console.error("====================================================💥");
+
+        res.status(500).json({
+            message: 'Internal Application Crash during booking generation',
+            error: error.message
+        });
     }
 });
 // Public endpoint to add a new booking (from external website)
