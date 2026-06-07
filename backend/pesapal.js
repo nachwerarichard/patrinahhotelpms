@@ -3118,34 +3118,81 @@ app.get('/api/public/rooms/available', async (req, res) => {
 
         // 1. Find conflicting bookings for THIS hotel
         const conflictingBookings = await Booking.find({
-            hotelId,
+            hotelId: hotelId,
+            status: { $nin: ['cancelled', 'checked-out'] }, // Safeguard: Ignore dead bookings
             checkIn: { $lt: checkOut },
             checkOut: { $gt: checkIn }
         });
 
-        const bookedRoomNumbers = conflictingBookings.map(booking => booking.room);
+        // 🔥 FIX 1: Support standard schema fields (checks room, roomId, and rooms array elements safely)
+        const bookedRoomNumbers = conflictingBookings.flatMap(booking => {
+            if (!booking) return [];
+            if (booking.room) return [booking.room];
+            if (booking.roomId) return [booking.roomId];
+            if (Array.isArray(booking.rooms)) return booking.rooms;
+            return [];
+        });
 
         // 2. Query available rooms
         let query = {
-            hotelId,
-            status: { $nin: ['under-maintenance', 'blocked'] },
-            number: { $nin: bookedRoomNumbers }
+            hotelId: hotelId,
+            status: { $nin: ['under-maintenance', 'blocked'] }
         };
+
+        // Only filter out rooms if there are active conflicting bookings
+        if (bookedRoomNumbers.length > 0) {
+            query._id = { $nin: bookedRoomNumbers }; // Match by Object ID string structure
+        }
 
         // Filter by specific type if the user selected one (other than 'Any')
         if (roomType && roomType !== 'Any') {
-            // We need to find the RoomType ID first because roomType in query is a Name string
             const rType = await RoomType.findOne({ hotelId, name: roomType });
-            if (rType) query.roomTypeId = rType._id;
+            if (rType) {
+                // Adjust this key to match whatever your Room Schema field name is (roomTypeId or roomType)
+                query.roomTypeId = rType._id; 
+            }
         }
 
-        const availableRooms = await Room.find(query).populate('roomTypeId');
+        // 3. Fetch rooms matching parameters
+        // Safe Check: Fallback path if populate fails due to key mismatch
+        let availableRooms = [];
+        try {
+            availableRooms = await Room.find(query).populate('roomTypeId');
+        } catch (popError) {
+            console.warn("Populate failed, attempting clean fallback query:", popError.message);
+            availableRooms = await Room.find(query); // Fallback so system doesn't crash 500
+        }
         
-        // ... (Your grouping logic: availableRoomsByType) ...
+        // 4. 🔥 FIX 2: Grouping Logic Setup
+        // Ensure this block runs safely even if roomTypeId field reference is empty
+        const availableRoomsByType = {};
+
+        availableRooms.forEach(room => {
+            // Read type name cleanly depending on whether it was populated or remains a string ID
+            let typeName = "Standard Room"; 
+            if (room.roomTypeId && typeof room.roomTypeId === 'object') {
+                typeName = room.roomTypeId.name;
+            } else if (room.roomType) {
+                typeName = room.roomType;
+            }
+
+            if (!availableRoomsByType[typeName]) {
+                availableRoomsByType[typeName] = {
+                    rooms: []
+                };
+            }
+            availableRoomsByType[typeName].rooms.push(room);
+        });
         
+        // Return structured result back to Netlify client application
         res.json(availableRoomsByType);
+
     } catch (error) {
-        res.status(500).json({ message: 'Error checking availability', error: error.message });
+        console.error("❌ CRITICAL AVAILABILITY ROUTE CRASH:", error);
+        res.status(500).json({ 
+            message: 'Error checking availability', 
+            error: error.message 
+        });
     }
 });
 
