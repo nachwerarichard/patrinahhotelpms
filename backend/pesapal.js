@@ -3122,7 +3122,6 @@ app.get('/api/public/room-types', async (req, res) => {
     }
 });
 // Public availability check
-const mongoose = require('mongoose');
 
 app.get('/api/public/rooms/available', async (req, res) => {
     const { checkIn, checkOut, roomType } = req.query;
