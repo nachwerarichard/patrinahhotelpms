@@ -3238,6 +3238,12 @@ app.get('/api/public/rooms/available', async (req, res) => {
 
 
 
+
+
+// Ensure your models are imported where this route is used, for example:
+// const Booking = mongoose.model('Booking');
+// const Gateway = mongoose.model('Gateway');
+
 app.post('/api/public/bookings', async (req, res) => {
     console.log("====================================================");
     console.log("📥 [PESAPAL INTEGRATED CHECKOUT SUBMISSION] /api/public/bookings");
@@ -3276,29 +3282,21 @@ app.post('/api/public/bookings', async (req, res) => {
             });
         }
 
-        // Set matching endpoint base context environment tracks
-        // ====================================================================
-// 🔥 THE CRITICAL FIX: Corrected official Pesapal V3 URL endpoints
-// ====================================================================
-// ====================================================================
-// 🔥 THE DEFINITIVE PESAPAL V3 URL SPECIFICATION FIX
-// ====================================================================
-// Both Sandbox and Production run cleanly through the main API portal branch in V3
+        // Both Sandbox and Production run cleanly through the main API portal branch in V3
+        const pesapalBaseUrl = 'https://pay.pesapal.com/v3';
 
-       const pesapalBaseUrl = 'https://pay.pesapal.com/v3';
+        console.log(`🛰️ Routing transactional payload to target system layout: ${pesapalBaseUrl}`);
+        console.log(`🔐 Context parameter tracking verification mode: [${gatewaySettings.environment}]`);
 
-console.log(`🛰️ Routing transactional payload to target system layout: ${pesapalBaseUrl}`);
-console.log(`🔐 Context parameter tracking verification mode: [${gatewaySettings.environment}]`);
+        // 3. Auth Handshake Token Step
+        console.log("🛰️ Fetching access handshake authentication token string wrapper from Pesapal...");
+        const authResponse = await axios.post(`${pesapalBaseUrl}/api/Auth/RegisterToken`, {
+            consumer_key: gatewaySettings.consumerKey,
+            consumer_secret: gatewaySettings.consumerSecret
+        });
 
-// 2. Auth Handshake Token Step (Note the direct path string layout)
-console.log("🛰️ Fetching access handshake authentication token string wrapper from Pesapal...");
-const authResponse = await axios.post(`${pesapalBaseUrl}/api/Auth/RegisterToken`, {
-    consumer_key: gatewaySettings.consumerKey,
-    consumer_secret: gatewaySettings.consumerSecret
-});
-
-const bearerToken = authResponse.data.token;
-if (!bearerToken) throw new Error("Failed to clear gateway security tokens parameter blocks.");
+        const bearerToken = authResponse.data.token;
+        if (!bearerToken) throw new Error("Failed to clear gateway security tokens parameter blocks.");
 
         // 4. Register the reservation document placeholder as "Pending Payment" inside MongoDB
         const completeBookingPayload = {
@@ -3327,17 +3325,16 @@ if (!bearerToken) throw new Error("Failed to clear gateway security tokens param
         console.log(`💾 Local Pending Reservation Stored: ${savedBooking.id}`);
 
         // 5. Build standard payload package data structure array to generate tracking URL frame
-        // Parse name strings into structural array blocks safely to fit Pesapal API validation
         const splitName = name.trim().split(' ');
         const firstName = splitName[0] || 'Guest';
         const lastName = splitName.slice(1).join(' ') || 'User';
 
         const pesapalOrderPayload = {
-            id: generatedBookingId, // Your internal system string parameter wrapper match
+            id: generatedBookingId, 
             amount: calculatedTotalDue,
             description: `Accommodation Reservation Code ${generatedBookingId}`,
-            callback_url: `https://elegant-pasca-cea136.netlify.app/booking-status.html`, // Redirect landing interface context page path 
-            notification_id: gatewaySettings.ipnUrlId, // Uses your registered IPN hook string
+            callback_url: `https://elegant-pasca-cea136.netlify.app/booking-status.html`, 
+            notification_id: gatewaySettings.ipnUrlId, 
             billing_address: {
                 email_address: guestEmail,
                 phone_number: phoneNo || "0000000000",
@@ -3346,11 +3343,17 @@ if (!bearerToken) throw new Error("Failed to clear gateway security tokens param
             }
         };
 
+        // 6. Submit checkout manifest token data string profile packet directly to Pesapal
         console.log("🛰️ Submitting checkout manifest token data string profile packet directly to Pesapal portal layout engine...");
         const transactionResponse = await axios.post(
             `${pesapalBaseUrl}/api/Transactions/SubmitOrderRequest`, 
             pesapalOrderPayload,
-            { headers: { 'Authorization': `Bearer ${bearerToken}`, 'Content-Type': 'application/json' } }
+            { 
+                headers: { 
+                    'Authorization': `Bearer ${bearerToken}`, 
+                    'Content-Type': 'application/json' 
+                } 
+            }
         );
 
         const checkoutUrl = transactionResponse.data.redirect_url;
@@ -3359,18 +3362,6 @@ if (!bearerToken) throw new Error("Failed to clear gateway security tokens param
         // Update reservation to track the exact payment tracking references numbers
         savedBooking.transactionid = transactionResponse.data.order_tracking_id;
         await savedBooking.save();
-
-        console.log("🛰️ Submitting checkout manifest token data string profile packet directly to Pesapal portal layout engine...");
-const transactionResponse = await axios.post(
-    `${pesapalBaseUrl}/api/Transactions/SubmitOrderRequest`, 
-    pesapalOrderPayload,
-    { 
-        headers: { 
-            'Authorization': `Bearer ${bearerToken}`, 
-            'Content-Type': 'application/json' 
-        } 
-    }
-);
 
         // Pass the redirect URL back to the frontend to complete checkout
         res.status(200).json({
@@ -3387,6 +3378,7 @@ const transactionResponse = await axios.post(
         });
     }
 });
+
 // Public endpoint to add a new booking (from external website)
 //End of app.post
 // Nodemailer  Setup
