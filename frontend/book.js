@@ -29,18 +29,6 @@ const addMoreRoomsBtn = document.getElementById('addMoreRoomsBtn');
 const publicMessageBox = document.getElementById('publicMessageBox');
 const publicMessageBoxContent = document.getElementById('publicMessageBoxContent');
 
-// --- MULTI-TENANCY HELPERS ---
-/**
- * Captures the current window domain to pass explicitly to the backend framework
- */
-function getTenantHeaders() {
-    return {
-        'Content-Type': 'application/json',
-        // Pass the explicit hostname directly to bypass stripped Netlify referer variables
-        'X-Tenant-Domain': window.location.hostname 
-    };
-}
-
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     // Set min dates for calendars
@@ -69,7 +57,7 @@ async function populateRoomTypeDropdown() {
     if (!roomTypeSelect) return;
 
     try {
-        // 🔥 CHANGE: Send the domain as a clean query parameter instead of a custom header
+        // Passed domain safely as a clean query parameter instead of a custom header
         const targetUrl = `${API_BASE_URL}/public/room-types?tenantDomain=${window.location.hostname}`;
         
         const response = await fetch(targetUrl, {
@@ -120,12 +108,14 @@ checkAvailabilityBtn.addEventListener('click', async () => {
     noAvailabilityMessage.style.display = 'none';
 
     try {
-        // Build clear endpoint string, attaching tenant domain as a query parameter fallback
+        // 🔥 FIXED: Custom headers removed, tenant context is passed strictly via query string parameter
         const targetUrl = `${API_BASE_URL}/public/rooms/available?checkIn=${checkIn}&checkOut=${checkOut}&roomType=${roomType}&people=${people}&tenantDomain=${window.location.hostname}`;
         
         const response = await fetch(targetUrl, {
             method: 'GET',
-            headers: getTenantHeaders()
+            headers: {
+                'Content-Type': 'application/json' // Standard layout, bypasses preflight checks
+            }
         });
 
         if (!response.ok) {
@@ -301,9 +291,14 @@ publicBookingForm.addEventListener('submit', async (event) => {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/public/bookings`, {
+        // 🔥 FIXED: Removed getTenantHeaders() and passed context via query string to clear CORS boundaries
+        const targetBookingUrl = `${API_BASE_URL}/public/bookings?tenantDomain=${window.location.hostname}`;
+
+        const response = await fetch(targetBookingUrl, {
             method: 'POST',
-            headers: getTenantHeaders(), // Attaches tenant parameters to the booking payload
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(bookingData)
         });
         
