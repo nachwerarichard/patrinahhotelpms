@@ -3244,6 +3244,8 @@ app.get('/api/public/rooms/available', async (req, res) => {
 // const Booking = mongoose.model('Booking');
 // const Gateway = mongoose.model('Gateway');
 
+
+
 app.post('/api/public/bookings', async (req, res) => {
     console.log("====================================================");
     console.log("📥 [PESAPAL INTEGRATED CHECKOUT SUBMISSION] /api/public/bookings");
@@ -3282,8 +3284,11 @@ app.post('/api/public/bookings', async (req, res) => {
             });
         }
 
-        // Both Sandbox and Production run cleanly through the main API portal branch in V3
-        const pesapalBaseUrl = 'https://pay.pesapal.com/v3';
+        // 🔥 CRITICAL FIXED BASE PATHS FOR V3
+        // If your database gatewaySettings.environment is 'Sandbox', it targets 'cybi' cleanly
+        const pesapalBaseUrl = gatewaySettings.environment === 'Live'
+            ? 'https://pay.pesapal.com/v3'
+            : 'https://cybi.pesapal.com/v3';
 
         console.log(`🛰️ Routing transactional payload to target system layout: ${pesapalBaseUrl}`);
         console.log(`🔐 Context parameter tracking verification mode: [${gatewaySettings.environment}]`);
@@ -3293,6 +3298,8 @@ app.post('/api/public/bookings', async (req, res) => {
         const authResponse = await axios.post(`${pesapalBaseUrl}/api/Auth/RegisterToken`, {
             consumer_key: gatewaySettings.consumerKey,
             consumer_secret: gatewaySettings.consumerSecret
+        }, {
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
         });
 
         const bearerToken = authResponse.data.token;
@@ -3315,7 +3322,7 @@ app.post('/api/public/bookings', async (req, res) => {
             paymentStatus: 'Pending',
             paymentMethod: 'Pesapal', 
             guestsource: 'Hotel Website', 
-            gueststatus: 'reserved', // Status marked as reserved while awaiting remote webhook resolution confirmation 
+            gueststatus: 'reserved', 
             room: "Unassigned",
             occupation: "Unassigned"
         };
@@ -3351,10 +3358,16 @@ app.post('/api/public/bookings', async (req, res) => {
             { 
                 headers: { 
                     'Authorization': `Bearer ${bearerToken}`, 
-                    'Content-Type': 'application/json' 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 } 
             }
         );
+
+        // API checks validation return references cleanly
+        if (!transactionResponse.data || !transactionResponse.data.redirect_url) {
+             throw new Error(transactionResponse.data.message || "Pesapal order initialization failed.");
+        }
 
         const checkoutUrl = transactionResponse.data.redirect_url;
         console.log(`✅ Success! Secure Redirect Web Gateway Route Generated cleanly: ${checkoutUrl}`);
@@ -3371,6 +3384,10 @@ app.post('/api/public/bookings', async (req, res) => {
         });
 
     } catch (error) {
+        // Log deep error data to Render terminal console logs
+        if (error.response && error.response.data) {
+             console.error("❌ PESAPAL CONTROLLER REJECTION DATA:", JSON.stringify(error.response.data, null, 2));
+        }
         console.error("💥 SYSTEM FAULT GENERATING CHECKOUT EXCEPTION:", error);
         res.status(500).json({
             message: 'Internal Checkout application pipeline breakdown.',
@@ -3378,6 +3395,7 @@ app.post('/api/public/bookings', async (req, res) => {
         });
     }
 });
+
 
 // Public endpoint to add a new booking (from external website)
 //End of app.post
