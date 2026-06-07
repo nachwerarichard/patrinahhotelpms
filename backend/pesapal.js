@@ -3284,8 +3284,9 @@ app.post('/api/public/bookings', async (req, res) => {
             });
         }
 
-        // 🔥 THE ABSOLUTE DNS FIX: Unified endpoint for Sandbox & Live in V3 API
-        const pesapalBaseUrl = 'https://pay.pesapal.com/v3';
+        // 🔥 THE ABSOLUTE ENOTFOUND & 404 FIX: Setup separate path structures for Sandbox vs Live
+        const isLive = gatewaySettings.environment === 'Live';
+        const pesapalBaseUrl = isLive ? 'https://pay.pesapal.com/pesapalv3' : 'https://cybi.pesapal.com/pesapalv3';
 
         console.log(`🛰️ Routing transactional payload to target system layout: ${pesapalBaseUrl}`);
         console.log(`🔐 Context parameter tracking verification mode: [${gatewaySettings.environment}]`);
