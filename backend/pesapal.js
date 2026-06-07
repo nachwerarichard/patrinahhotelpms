@@ -3105,12 +3105,14 @@ app.get('/api/public/room-types', async (req, res) => {
     }
 });
 // Public availability check
+const mongoose = require('mongoose');
+
 app.get('/api/public/rooms/available', async (req, res) => {
     const { checkIn, checkOut, roomType } = req.query;
     
     console.log("====================================================");
     console.log("🚀 [INCOMING REQUEST] /api/public/rooms/available");
-    console.log(`📋 Query Params Received: checkIn=${checkIn}, checkOut=${checkOut}, roomType=${roomType}`);
+    console.log(`📋 Params: checkIn=${checkIn}, checkOut=${checkOut}, roomType=${roomType}`);
     console.log("====================================================");
 
     if (!checkIn || !checkOut) {
@@ -3119,35 +3121,33 @@ app.get('/api/public/rooms/available', async (req, res) => {
     }
 
     try {
-        // AUTOMATION: Get hotelId by sniffing the Domain via the URL query param
-        console.log("🔍 Step 1: Resolving Hotel ID from request context...");
-        const hotelId = await getHotelIdFromRequest(req);
-        console.log(`🎯 Resolved Hotel ID: "${hotelId}"`);
+        console.log("🔍 Step 1: Resolving Hotel Context ID from request...");
+        const rawHotelId = await getHotelIdFromRequest(req);
+        console.log(`🎯 Raw Hotel ID Found: "${rawHotelId}"`);
 
-        if (!hotelId) {
+        if (!rawHotelId) {
             console.error("❌ Error: Hotel context could not be identified for this domain.");
             return res.status(400).json({ message: "Hotel context not found for this domain." });
         }
 
+        // Convert plain string ID safely to official Mongoose ObjectId to avoid Casting Failures
+        const hotelId = new mongoose.Types.ObjectId(rawHotelId);
+
         // 1. Find conflicting bookings for THIS hotel
-        console.log(`🔍 Step 2: Fetching conflicting bookings for Hotel ID ${hotelId} between ${checkIn} and ${checkOut}...`);
+        console.log(`🔍 Step 2: Fetching active overlapping bookings for Hotel...`);
         const conflictingBookings = await Booking.find({
             hotelId,
             checkIn: { $lt: checkOut },
             checkOut: { $gt: checkIn },
             gueststatus: { $nin: ['cancelled', 'void'] }
         });
-        console.log(`📉 Found ${conflictingBookings.length} potentially overlapping booking documents.`);
+        console.log(`📉 Found ${conflictingBookings.length} overlapping booking records.`);
 
-        // Safe extraction: Filter out any entries where the room string field isn't explicitly defined
         const bookedRoomNumbers = conflictingBookings
-            .map(booking => {
-                console.log(`   - Processing booking [ID: ${booking._id || booking.id}] assigned to room field: "${booking.room}"`);
-                return booking.room;
-            })
+            .map(b => b.room)
             .filter(roomNum => typeof roomNum === 'string' && roomNum.trim() !== '');
         
-        console.log(`🚫 Complete list of excluded/occupied room numbers:`, bookedRoomNumbers);
+        console.log(`🚫 Excluded occupied room list:`, bookedRoomNumbers);
 
         // 2. Base query criteria for finding open vacancies
         let roomQuery = {
@@ -3155,72 +3155,60 @@ app.get('/api/public/rooms/available', async (req, res) => {
             status: { $nin: ['under-maintenance', 'blocked'] }
         };
 
-        // If there are currently occupied rooms, exclude them from results
         if (bookedRoomNumbers.length > 0) {
             roomQuery.number = { $nin: bookedRoomNumbers };
         }
 
         // Filter by specific type if the user selected one (other than 'Any')
         if (roomType && roomType !== 'Any') {
-            console.log(`🔍 Step 3: Specific room type requested: "${roomType}". Looking up RoomType schema ID...`);
+            console.log(`🔍 Step 3: Specific category requested: "${roomType}". Resolving details...`);
             const rType = await RoomType.findOne({ hotelId, name: roomType });
             
             if (rType) {
-                console.log(`✅ RoomType matched: "${rType.name}" matches ID: ${rType._id}`);
+                console.log(`✅ RoomType profile found: "${rType.name}" -> ID: ${rType._id}`);
                 roomQuery.roomTypeId = rType._id;
             } else {
-                console.warn(`⚠️ Warning: Room type "${roomType}" does not exist in database for this hotel. Aborting early.`);
+                console.warn(`⚠️ Warning: Category "${roomType}" does not exist for this hotel ID. Stopping query early.`);
                 return res.json({});
             }
         } else {
-            console.log(`🔍 Step 3: Room Type filter is "Any". Fetching all operational categories.`);
+            console.log(`🔍 Step 3: Room Type filter is "Any". Parsing all rooms.`);
         }
 
-        console.log("🔍 Step 4: Executing Room query with parameters:", JSON.stringify(roomQuery));
+        console.log("🔍 Step 4: Finding open rooms with parameters:", JSON.stringify(roomQuery));
         const availableRooms = await Room.find(roomQuery).populate('roomTypeId');
-        console.log(`📦 Database hit returned ${availableRooms.length} total raw room documents matching conditions.`);
+        console.log(`📦 Database returned ${availableRooms.length} room rows matching criteria.`);
         
-        // 3. SAFE GROUPING LOGIC (Prevents server crashes due to orphan database records)
-        console.log("⚙️ Step 5: Commencing grouping logic map arrays...");
+        // 3. SAFE GROUPING LOGIC
+        console.log("⚙️ Step 5: Sorting rooms into category array objects...");
         const availableRoomsByType = {};
-        let processingIndex = 0;
 
         availableRooms.forEach(room => {
-            processingIndex++;
-            
-            // Log issues with structural relational integrity
             if (!room.roomTypeId) {
-                console.error(`❌ DATA INTEGRITY ERROR: Room entry [No. ${room.number}] with ID [${room._id}] does not possess a linked 'roomTypeId' relationship! It was skipped to prevent a server crash.`);
+                console.error(`❌ INTEGRITY FAULT: Room [No. ${room.number}] with ID [${room._id}] has an unlinked 'roomTypeId'! Skipped to prevent route crashes.`);
                 return; 
             }
 
             const typeName = room.roomTypeId.name;
-            if (!typeName) {
-                console.error(`❌ DATA INTEGRITY ERROR: Room Type object found for Room [No. ${room.number}] has an empty or invalid '.name' property.`);
-                return;
-            }
-
             if (!availableRoomsByType[typeName]) {
                 availableRoomsByType[typeName] = {
                     details: room.roomTypeId,
                     rooms: []
                 };
             }
-            
             availableRoomsByType[typeName].rooms.push(room);
         });
         
-        console.log(`✨ Grouping process finished completely. Sorted rooms into ${Object.keys(availableRoomsByType).length} unique room type containers.`);
+        console.log(`✨ Grouping complete. Found ${Object.keys(availableRoomsByType).length} available types.`);
         console.log("====================================================");
         
-        // Return structured map back to frontend application script layer
         res.json(availableRoomsByType);
 
     } catch (error) {
         console.error("💥====================================================");
-        console.error("❌ CRITICAL EXCEPTION CAUGHT IN AVAILABILITY CONTROLLER:");
-        console.error(`👉 Error Message: ${error.message}`);
-        console.error(`👉 Error Stack Trace:\n`, error.stack);
+        console.error("❌ CRITICAL EXCEPTION IN AVAILABILITY CONTROLLER:");
+        console.error(`👉 Message: ${error.message}`);
+        console.error(`👉 Stack Trace:\n`, error.stack);
         console.error("====================================================💥");
         
         res.status(500).json({ 
