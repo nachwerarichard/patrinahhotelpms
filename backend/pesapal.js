@@ -3107,32 +3107,47 @@ app.get('/api/public/room-types', async (req, res) => {
 // Public availability check
 app.get('/api/public/rooms/available', async (req, res) => {
     const { checkIn, checkOut, roomType } = req.query;
+    
+    console.log("====================================================");
+    console.log("🚀 [INCOMING REQUEST] /api/public/rooms/available");
+    console.log(`📋 Query Params Received: checkIn=${checkIn}, checkOut=${checkOut}, roomType=${roomType}`);
+    console.log("====================================================");
 
     if (!checkIn || !checkOut) {
+        console.warn("⚠️ Validation Failed: Missing checkIn or checkOut dates.");
         return res.status(400).json({ message: "Check-in and Check-out dates are required query fields." });
     }
 
     try {
         // AUTOMATION: Get hotelId by sniffing the Domain via the URL query param
+        console.log("🔍 Step 1: Resolving Hotel ID from request context...");
         const hotelId = await getHotelIdFromRequest(req);
+        console.log(`🎯 Resolved Hotel ID: "${hotelId}"`);
 
         if (!hotelId) {
+            console.error("❌ Error: Hotel context could not be identified for this domain.");
             return res.status(400).json({ message: "Hotel context not found for this domain." });
         }
 
         // 1. Find conflicting bookings for THIS hotel
+        console.log(`🔍 Step 2: Fetching conflicting bookings for Hotel ID ${hotelId} between ${checkIn} and ${checkOut}...`);
         const conflictingBookings = await Booking.find({
             hotelId,
             checkIn: { $lt: checkOut },
             checkOut: { $gt: checkIn },
-            // Only count active bookings (don't block rooms for cancelled or void stays)
             gueststatus: { $nin: ['cancelled', 'void'] }
         });
+        console.log(`📉 Found ${conflictingBookings.length} potentially overlapping booking documents.`);
 
         // Safe extraction: Filter out any entries where the room string field isn't explicitly defined
         const bookedRoomNumbers = conflictingBookings
-            .map(booking => booking.room)
+            .map(booking => {
+                console.log(`   - Processing booking [ID: ${booking._id || booking.id}] assigned to room field: "${booking.room}"`);
+                return booking.room;
+            })
             .filter(roomNum => typeof roomNum === 'string' && roomNum.trim() !== '');
+        
+        console.log(`🚫 Complete list of excluded/occupied room numbers:`, bookedRoomNumbers);
 
         // 2. Base query criteria for finding open vacancies
         let roomQuery = {
@@ -3147,26 +3162,43 @@ app.get('/api/public/rooms/available', async (req, res) => {
 
         // Filter by specific type if the user selected one (other than 'Any')
         if (roomType && roomType !== 'Any') {
+            console.log(`🔍 Step 3: Specific room type requested: "${roomType}". Looking up RoomType schema ID...`);
             const rType = await RoomType.findOne({ hotelId, name: roomType });
+            
             if (rType) {
+                console.log(`✅ RoomType matched: "${rType.name}" matches ID: ${rType._id}`);
                 roomQuery.roomTypeId = rType._id;
             } else {
-                // If the requested room category name wasn't found, instantly return empty structures safely
+                console.warn(`⚠️ Warning: Room type "${roomType}" does not exist in database for this hotel. Aborting early.`);
                 return res.json({});
             }
+        } else {
+            console.log(`🔍 Step 3: Room Type filter is "Any". Fetching all operational categories.`);
         }
 
-        // Fetch matching vacancies and populate their associated category layout profiles
+        console.log("🔍 Step 4: Executing Room query with parameters:", JSON.stringify(roomQuery));
         const availableRooms = await Room.find(roomQuery).populate('roomTypeId');
+        console.log(`📦 Database hit returned ${availableRooms.length} total raw room documents matching conditions.`);
         
         // 3. SAFE GROUPING LOGIC (Prevents server crashes due to orphan database records)
+        console.log("⚙️ Step 5: Commencing grouping logic map arrays...");
         const availableRoomsByType = {};
+        let processingIndex = 0;
 
         availableRooms.forEach(room => {
-            // CRITICAL SAFEGUARD: Skip any room records missing a valid roomTypeId relation block
-            if (!room.roomTypeId) return; 
+            processingIndex++;
+            
+            // Log issues with structural relational integrity
+            if (!room.roomTypeId) {
+                console.error(`❌ DATA INTEGRITY ERROR: Room entry [No. ${room.number}] with ID [${room._id}] does not possess a linked 'roomTypeId' relationship! It was skipped to prevent a server crash.`);
+                return; 
+            }
 
             const typeName = room.roomTypeId.name;
+            if (!typeName) {
+                console.error(`❌ DATA INTEGRITY ERROR: Room Type object found for Room [No. ${room.number}] has an empty or invalid '.name' property.`);
+                return;
+            }
 
             if (!availableRoomsByType[typeName]) {
                 availableRoomsByType[typeName] = {
@@ -3178,11 +3210,19 @@ app.get('/api/public/rooms/available', async (req, res) => {
             availableRoomsByType[typeName].rooms.push(room);
         });
         
+        console.log(`✨ Grouping process finished completely. Sorted rooms into ${Object.keys(availableRoomsByType).length} unique room type containers.`);
+        console.log("====================================================");
+        
         // Return structured map back to frontend application script layer
         res.json(availableRoomsByType);
 
     } catch (error) {
-        console.error("❌ CRITICAL DISCOVERY ERROR:", error);
+        console.error("💥====================================================");
+        console.error("❌ CRITICAL EXCEPTION CAUGHT IN AVAILABILITY CONTROLLER:");
+        console.error(`👉 Error Message: ${error.message}`);
+        console.error(`👉 Error Stack Trace:\n`, error.stack);
+        console.error("====================================================💥");
+        
         res.status(500).json({ 
             message: 'Error checking availability', 
             error: error.message 
