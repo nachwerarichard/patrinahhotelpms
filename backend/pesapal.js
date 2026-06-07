@@ -3284,19 +3284,21 @@ app.post('/api/public/bookings', async (req, res) => {
 // 🔥 THE DEFINITIVE PESAPAL V3 URL SPECIFICATION FIX
 // ====================================================================
 // Both Sandbox and Production run cleanly through the main API portal branch in V3
-const pesapalBaseUrl = 'https://pay.pesapal.com/pesapalv3';
+
+       const pesapalBaseUrl = 'https://pay.pesapal.com/v3';
 
 console.log(`🛰️ Routing transactional payload to target system layout: ${pesapalBaseUrl}`);
-console.log(`🔐 Context parameter tracking environment verification mode: [${gatewaySettings.environment}]`);
-        // 3. Authenticate with Pesapal to acquire a Bearer Token
-        console.log("🛰️ Fetching access handshake authentication token string wrapper from Pesapal...");
-        const authResponse = await axios.post(`${pesapalBaseUrl}/api/Auth/RegisterToken`, {
-            consumer_key: gatewaySettings.consumerKey,
-            consumer_secret: gatewaySettings.consumerSecret
-        });
+console.log(`🔐 Context parameter tracking verification mode: [${gatewaySettings.environment}]`);
 
-        const bearerToken = authResponse.data.token;
-        if (!bearerToken) throw new Error("Failed to clear gateway security tokens parameter blocks.");
+// 2. Auth Handshake Token Step (Note the direct path string layout)
+console.log("🛰️ Fetching access handshake authentication token string wrapper from Pesapal...");
+const authResponse = await axios.post(`${pesapalBaseUrl}/api/Auth/RegisterToken`, {
+    consumer_key: gatewaySettings.consumerKey,
+    consumer_secret: gatewaySettings.consumerSecret
+});
+
+const bearerToken = authResponse.data.token;
+if (!bearerToken) throw new Error("Failed to clear gateway security tokens parameter blocks.");
 
         // 4. Register the reservation document placeholder as "Pending Payment" inside MongoDB
         const completeBookingPayload = {
@@ -3357,6 +3359,18 @@ console.log(`🔐 Context parameter tracking environment verification mode: [${g
         // Update reservation to track the exact payment tracking references numbers
         savedBooking.transactionid = transactionResponse.data.order_tracking_id;
         await savedBooking.save();
+
+        console.log("🛰️ Submitting checkout manifest token data string profile packet directly to Pesapal portal layout engine...");
+const transactionResponse = await axios.post(
+    `${pesapalBaseUrl}/api/Transactions/SubmitOrderRequest`, 
+    pesapalOrderPayload,
+    { 
+        headers: { 
+            'Authorization': `Bearer ${bearerToken}`, 
+            'Content-Type': 'application/json' 
+        } 
+    }
+);
 
         // Pass the redirect URL back to the frontend to complete checkout
         res.status(200).json({
