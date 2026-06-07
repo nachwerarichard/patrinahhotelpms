@@ -47,11 +47,14 @@ app.use(cors({
   origin: [
     'https://elegant-pasca-cea136.netlify.app'
   ],
-  methods: ['GET','POST','PUT','PATCH', 'DELETE','OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  
+  // 🔥 THE FIX: Added 'x-tenant-domain' to the allowed headers list
   allowedHeaders: [
     'Content-Type',
     'Authorization',
-    'x-hotel-id'
+    'x-hotel-id',
+    'x-tenant-domain' 
   ],
   credentials: true
 }));
