@@ -43,21 +43,21 @@ const app = express();
 // Configure CORS
 
 // This is the "Open Door" policy
-app.use(cors({
-  origin: [
-    'https://elegant-pasca-cea136.netlify.app'
-  ],
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  
-  // 🔥 THE FIX: Added 'x-tenant-domain' to the allowed headers list
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'x-hotel-id',
-    'x-tenant-domain' 
-  ],
-  credentials: true
-}));
+// ==========================================
+// BULLETPROOF CORS OVERRIDE FOR X-TENANT-DOMAIN
+// ==========================================
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', 'https://elegant-pasca-cea136.netlify.app');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-hotel-id, x-tenant-domain');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    // Intercept preflight OPTIONS request immediately and return 200 OK
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
 
 app.use(express.json()); // This should also be before your routes to parse JSON bodies
  
