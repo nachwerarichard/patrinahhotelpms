@@ -8183,8 +8183,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const saleForm = document.getElementById('sale-form');
     if (saleForm) saleForm.addEventListener('submit', submitSaleForm);
 
-    const expenseForm = document.getElementById('expense-form');
-    if (expenseForm) expenseForm.addEventListener('submit', submitExpenseForm);
+    
 
     const cashJournalForm = document.getElementById('cash-journal-form');
     if (cashJournalForm) cashJournalForm.addEventListener('submit', submitCashJournalForm);
