@@ -19,7 +19,7 @@ const storage = new CloudinaryStorage({
     params: async (req, file) => {
         return {
             folder: `novouspms/hotels/${req.user.hotelId}/room-categories`,
-            allowed_formats: ['jpg', 'png', 'webp'],
+            allowed_formats: ['jpg', 'png', 'webp','avif'],
             // Dynamic transformation to keep your database "light"
             transformation: [{ width: 1000, height: 600, crop: 'fill' }] 
         };
