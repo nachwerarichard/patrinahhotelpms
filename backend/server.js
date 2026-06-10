@@ -7,26 +7,7 @@ const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 //CLOUDINARY_URL=cloudinary://986177637794957:**********@dckvyguun
-cloudinary.config({
-    cloud_name: 'dckvyguun',
-    api_key: '986177637794957',
-    api_secret: '986177637794957'
-});
-//**********
-// 1. Configure Cloudinary Storage for Multer
-const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: async (req, file) => {
-        return {
-            folder: `novouspms/hotels/${req.user.hotelId}/room-categories`,
-            allowed_formats: ['jpg', 'png', 'webp','avif'],
-            // Dynamic transformation to keep your database "light"
-            transformation: [{ width: 1000, height: 600, crop: 'fill' }] 
-        };
-    },
-});
 
-const upload = multer({ storage: storage });
 const app = express();
 
 
@@ -329,6 +310,27 @@ const roomSchema = new mongoose.Schema({
 roomSchema.index({ hotelId: 1, number: 1 }, { unique: true });
 const Room = mongoose.model('Room', roomSchema);
 // Create a Room Type (Tied to the hotel)
+
+cloudinary.config({
+    cloud_name: 'dckvyguun',
+    api_key: '986177637794957',
+    api_secret: '986177637794957'
+});
+//**********
+// 1. Configure Cloudinary Storage for Multer
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: async (req, file) => {
+        return {
+            folder: `novouspms/hotels/${req.user.hotelId}/room-categories`,
+            allowed_formats: ['jpg', 'png', 'webp','avif'],
+            // Dynamic transformation to keep your database "light"
+            transformation: [{ width: 1000, height: 600, crop: 'fill' }] 
+        };
+    },
+});
+
+const upload = multer({ storage: storage });
 
 // GET ALL HOTELS
 app.get('/api/admin/hotels', auth, authorize('super-admin'), async (req, res) => {
