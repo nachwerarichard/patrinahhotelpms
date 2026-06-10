@@ -7,7 +7,7 @@ const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 //CLOUDINARY_URL=cloudinary://986177637794957:**********@dckvyguun
-
+//CLOUDINARY_URL=cloudinary://478483388418876:**********@dreiyg73q
 const app = express();
 
 
@@ -312,10 +312,11 @@ const Room = mongoose.model('Room', roomSchema);
 // Create a Room Type (Tied to the hotel)
 
 cloudinary.config({
-    cloud_name: 'dckvyguun',
-    api_key: '986177637794957',
-    api_secret: '986177637794957'
+    cloud_name: 'dreiyg73q',
+    api_key: '478483388418876',
+    api_secret: 'SfkfPxGZWM4H95Ndgje7SEKe2Y8'
 });
+const hotelId = req.user && req.user.hotelId ? req.user.hotelId : 'generic';
 //**********
 // 1. Configure Cloudinary Storage for Multer
 const storage = new CloudinaryStorage({
@@ -355,21 +356,26 @@ app.delete('/api/admin/hotel/:id', auth, authorize('super-admin'), async (req, r
 // Add 'upload.array('images', 5)' as a second middleware after 'auth'
 app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) => {
     try {
-        // 1. Safely handle if no files were uploaded
-        const uploadedUrls = (req.files && req.files.length > 0) 
-            ? req.files.map(file => file.path) 
-            : [];
+        // Double check that auth worked perfectly
+        if (!req.user || !req.user.hotelId) {
+            return res.status(401).json({ error: "Unauthorized. Missing hotel configuration." });
+        }
 
-        // 2. Extract fields from req.body (Multer populates this)
+        // Extract fields from req.body
         const { name, basePrice } = req.body;
 
-        // 3. Basic validation to catch issues before the database does
+        // Basic validation
         if (!name || !basePrice) {
             return res.status(400).json({ error: "Name and Base Price are required." });
         }
 
+        // Safely handle if no files were uploaded
+        const uploadedUrls = (req.files && req.files.length > 0) 
+            ? req.files.map(file => file.path) 
+            : [];
+
         const newType = new RoomType({
-            hotelId: req.user.hotelId, // Ensure your 'auth' middleware provides this
+            hotelId: req.user.hotelId, 
             name: name.trim(), 
             basePrice: parseFloat(basePrice),
             imageUrls: uploadedUrls,
@@ -378,20 +384,20 @@ app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) =>
         });
 
         await newType.save();
-        res.status(201).json(newType);
+        return res.status(201).json(newType);
 
-   } catch (err) {
-    console.error("❌ RoomType creation failed:", err);
-    
-    // Check if it's a duplicate key error
-    if (err.code === 11000) {
-        return res.status(400).json({ 
-            error: "A room category with this name already exists for your hotel." 
-        });
+    } catch (err) {
+        console.error("❌ RoomType creation failed:", err);
+        
+        // Check if it's a duplicate key error from MongoDB
+        if (err.code === 11000) {
+            return res.status(400).json({ 
+                error: "A room category with this name already exists for your hotel." 
+            });
+        }
+        
+        return res.status(500).json({ error: err.message || "An internal server error occurred." });
     }
-    
-    res.status(400).json({ error: err.message });
-}
 });
 /*RoomType.collection.dropIndex('name_1')
   .then(() => console.log('Old index dropped'))
