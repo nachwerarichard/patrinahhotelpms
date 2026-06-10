@@ -4561,7 +4561,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const navRates = document.getElementById('nav-inventory');
         const navStaff = document.getElementById('nav-staff');
     const navKDS = document.getElementById('nav-kds');
-
+    const navChecklistform = document.getElementById('nav-checklistform');
+    const navMissingitems = document.getElementById('nav-missingitems');
+    const navChecklisttable = document.getElementById('nav-checklisttable');
     const navReports = document.getElementById('nav-reports');
     const navServiceReports = document.getElementById('nav-service-reports');
     const navCalendar = document.getElementById('nav-calendar');
@@ -4576,7 +4578,28 @@ document.addEventListener('DOMContentLoaded', () => {
       const navPOSreport = document.getElementById('nav-posreports');
         const navBarReport = document.getElementById('nav-salereport');
 
-  if (navCash) {
+  if (navMissingitems) {
+        navMissingitems.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('missingitems');
+        });
+    }
+
+    if (navChecklistform) {
+        navChecklistform.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('checklistform');
+        });
+    }
+
+    if (navChecklisttable) {
+        navChecklisttable.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('checklist');
+        });
+    }
+
+        if (navCash) {
         navCash.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
             showSection('cash');
