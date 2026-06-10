@@ -62,7 +62,7 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true },
     role: { 
         type: String, 
-        enum: ['super-admin', 'admin', 'bar', 'housekeeper', 'cashier', 'front office'], 
+        enum: ['super-admin', 'admin', 'bar','chef','housekeeper', 'cashier', 'front office'], 
         default: 'admin' 
     },
     isInitial: { type: Boolean, default: false } // For default credentials

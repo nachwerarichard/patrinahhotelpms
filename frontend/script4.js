@@ -735,6 +735,11 @@ async function showDashboard(username, role) {
         initialNavLinkId = 'nav-housekeeping';
         document.getElementById('dashboard').style.display = 'none';
     } 
+    else if (role === 'chef') {
+        initialSectionId = 'kds';
+        initialNavLinkId = 'nav-kds';
+        document.getElementById('dashboard').style.display = 'none';
+    } 
     else if (role === 'cashier' || role === 'bar') {
         initialSectionId = 'sales-records'; // Change this to your POS section ID
         initialNavLinkId = 'nav-sales';
@@ -931,6 +936,10 @@ function applyRoleAccess(role) {
 
         case 'bar':
             document.getElementById('nav-sales').style.display = 'list-item';
+            break;
+
+        case 'chef':
+            document.getElementById('nav-kds').style.display = 'list-item';
             break;
 
         case 'cashier':
@@ -5177,6 +5186,7 @@ async function fetchUsers() {
                         <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
                         <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
                         <option value="reception" ${user.role === 'reception' ? 'selected' : ''}>Reception</option>
+                        <option value="chef" ${user.role === 'chef' ? 'selected' : ''}>Chef</option>
                         <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
                     </select>
                 </td>
