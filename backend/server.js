@@ -316,7 +316,7 @@ cloudinary.config({
     api_key: '478483388418876',
     api_secret: 'SfkfPxGZWM4H95Ndgje7SEKe2Y8'
 });
-const hotelId = req.user && req.user.hotelId ? req.user.hotelId : 'generic';
+//const hotelId = req.user && req.user.hotelId ? req.user.hotelId : 'generic';
 //**********
 // 1. Configure Cloudinary Storage for Multer
 const storage = new CloudinaryStorage({
