@@ -4595,7 +4595,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navChecklisttable) {
         navChecklisttable.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
-            showSection('checklist');
+            showSection('checklisttable');
         });
     }
 
