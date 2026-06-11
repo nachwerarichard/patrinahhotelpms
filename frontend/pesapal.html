@@ -1085,198 +1085,198 @@ body {
     </div>
 </div>
   <section id="checklistform" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-            <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                <span class="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><i class="fa-solid fa-hotel text-xl"></i></span>
-                Hotel Room Checklist Form
-            </h2>
+    <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+        <span class="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><i class="fa-solid fa-hotel text-xl"></i></span>
+        Hotel Room Checklist Form
+    </h2>
+    
+    <form id="hotelChecklistForm" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="flex flex-col gap-2">
+                <label for="roomnumber" class="text-sm font-semibold text-slate-700">Room Number:</label>
+                <input type="number" id="roomnumber" name="rno" class="w-full md:w-64 px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-700" required>
+            </div>
             
-            <form id="hotelChecklistForm" class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="flex flex-col gap-2">
-                        <label for="room" class="text-sm font-semibold text-slate-700">Room Number:</label>
-                        <input type="number" id="roomnumber" name="rno" class="w-full md:w-64 px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-700" required>
-                    </div>
-                    
-                    <div class="flex flex-col gap-2">
-                        <label for="date" class="text-sm font-semibold text-slate-700">Date:</label>
-                        <input type="date" id="date" name="date" class="w-full md:w-64 px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-700" required>
-                    </div>
-                </div>
+            <div class="flex flex-col gap-2">
+                <label for="date" class="text-sm font-semibold text-slate-700">Date:</label>
+                <input type="date" id="date" name="date" class="w-full md:w-64 px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-700" required>
+            </div>
+        </div>
 
-                <div class="border-t border-slate-100 pt-6">
-                    <p class="text-base font-semibold text-indigo-950 mb-4 flex items-center gap-2">
-                        <i class="fa-solid fa-sparkles text-amber-500"></i> Amenities Status
-                    </p>
-                    
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3">
-                            <span class="text-sm font-medium text-slate-700">Towel</span>
-                            <div class="flex items-center gap-4">
-                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
-                                    <input type="radio" name="towels" value="yes" class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500" required> Yes
-                                </label>
-                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
-                                    <input type="radio" name="towels" value="no" class="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500" required> No
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3">
-                            <span class="text-sm font-medium text-slate-700">Soap</span>
-                            <div class="flex items-center gap-4">
-                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
-                                    <input type="radio" name="soap" value="yes" class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500" required> Yes
-                                </label>
-                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
-                                    <input type="radio" name="soap" value="no" class="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500" required> No
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3">
-                            <span class="text-sm font-medium text-slate-700">Door mat</span>
-                            <div class="flex items-center gap-4">
-                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
-                                    <input type="radio" name="door mat" value="yes" class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500" required> Yes
-                                </label>
-                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
-                                    <input type="radio" name="door mat" value="no" class="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500" required> No
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3">
-                            <span class="text-sm font-medium text-slate-700">Sandals</span>
-                            <div class="flex items-center gap-4">
-                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
-                                    <input type="radio" name="sandals" value="yes" class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500" required> Yes
-                                </label>
-                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
-                                    <input type="radio" name="sandals" value="no" class="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500" required> No
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3">
-                            <span class="text-sm font-medium text-slate-700">Toilet paper</span>
-                            <div class="flex items-center gap-4">
-                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
-                                    <input type="radio" name="toilet paper" value="yes" class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500" required> Yes
-                                </label>
-                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
-                                    <input type="radio" name="toilet paper" value="no" class="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500" required> No
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3">
-                            <span class="text-sm font-medium text-slate-700">Trash can</span>
-                            <div class="flex items-center gap-4">
-                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
-                                    <input type="radio" name="trash can" value="yes" class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500" required> Yes
-                                </label>
-                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
-                                    <input type="radio" name="trash can" value="no" class="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500" required> No
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3">
-                            <span class="text-sm font-medium text-slate-700">Remote</span>
-                            <div class="flex items-center gap-4">
-                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
-                                    <input type="radio" name="remote" value="yes" class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500" required> Yes
-                                </label>
-                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
-                                    <input type="radio" name="remote" value="no" class="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500" required> No
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3">
-                            <span class="text-sm font-medium text-slate-700">TV</span>
-                            <div class="flex items-center gap-4">
-                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
-                                    <input type="radio" name="tv" value="yes" class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500" required> Yes
-                                </label>
-                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
-                                    <input type="radio" name="tv" value="no" class="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500" required> No
-                                </label>
-                            </div>
-                        </div>
+        <div class="border-t border-slate-100 pt-6">
+            <p class="text-base font-semibold text-indigo-950 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-sparkles text-amber-500"></i> Amenities Status
+            </p>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3">
+                    <span class="text-sm font-medium text-slate-700">Towel</span>
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="radio" name="towels" value="yes" class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500" required> Yes
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="radio" name="towels" value="no" class="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500" required> No
+                        </label>
                     </div>
                 </div>
 
-                <div class="pt-4 border-t border-slate-100 flex items-center justify-end">
-                    <button type="submit" class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold rounded-xl shadow-md shadow-indigo-200 transition-all transform active:scale-[0.98]">
-                        <i class="fa-solid fa-check"></i> Submit Checklist
-                    </button>
+                <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3">
+                    <span class="text-sm font-medium text-slate-700">Soap</span>
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="radio" name="soap" value="yes" class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500" required> Yes
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="radio" name="soap" value="no" class="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500" required> No
+                        </label>
+                    </div>
                 </div>
-            </form>
-            <p id="message" class="text-center text-emerald-600 font-bold mt-4"></p>
-        </section>
 
-        <section id="checklisttable" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-            <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                <span class="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><i class="fa-solid fa-table text-xl"></i></span>
-                Room Checklists Table
-            </h2>
-            
-            <div class="flex flex-col sm:flex-row gap-4 items-center justify-between mb-6">
-                <div class="relative w-full sm:w-72">
-                    <input type="date" id="searchInputdate" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm" placeholder="Search room or date...">
+                <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3">
+                    <span class="text-sm font-medium text-slate-700">Door mat</span>
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="radio" name="door mat" value="yes" class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500" required> Yes
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="radio" name="door mat" value="no" class="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500" required> No
+                        </label>
+                    </div>
                 </div>
-                
-                <div class="flex gap-3 w-full sm:w-auto justify-end">
-                    <button onclick="exportToExcel()" class="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold text-sm rounded-xl transition-colors shadow-sm">
-                        <i class="fa-solid fa-file-export"></i> Export
-                    </button>
-                    <button onclick="printChecklists()" class="inline-flex items-center gap-2 px-4 py-2.5 bg-sky-500 hover:bg-sky-600 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm">
-                        <i class="fa-solid fa-print"></i> Print
-                    </button>
-                </div>
-            </div>
-            
-            <div class="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
-                <table id="checklistTable" class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-700 text-sm font-semibold uppercase tracking-wider">
-                            <th class="px-6 py-4">Room</th>
-                            <th class="px-6 py-4">Date</th>
-                            <th class="px-6 py-4">Items</th>
-                            <th class="px-6 py-4 text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="checklistBody" class="divide-y divide-slate-100 text-sm text-slate-600">
-                        </tbody>
-                </table>
-            </div>
 
-            <div class="flex items-center justify-center gap-4 mt-6">
-                <button id="prevBtn" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium rounded-lg transition-colors text-sm disabled:opacity-50">&laquo; Prev</button>
-                <span id="pageInfo" class="text-sm font-semibold text-slate-700">Page 1 of X</span>
-                <button id="nextBtn" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium rounded-lg transition-colors text-sm disabled:opacity-50">Next &raquo;</button>
+                <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3">
+                    <span class="text-sm font-medium text-slate-700">Sandals</span>
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="radio" name="sandals" value="yes" class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500" required> Yes
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="radio" name="sandals" value="no" class="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500" required> No
+                        </label>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3">
+                    <span class="text-sm font-medium text-slate-700">Toilet paper</span>
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="radio" name="toilet paper" value="yes" class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500" required> Yes
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="radio" name="toilet paper" value="no" class="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500" required> No
+                        </label>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3">
+                    <span class="text-sm font-medium text-slate-700">Trash can</span>
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="radio" name="trash can" value="yes" class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500" required> Yes
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="radio" name="trash can" value="no" class="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500" required> No
+                        </label>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3">
+                    <span class="text-sm font-medium text-slate-700">Remote</span>
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="radio" name="remote" value="yes" class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500" required> Yes
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="radio" name="remote" value="no" class="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500" required> No
+                        </label>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3">
+                    <span class="text-sm font-medium text-slate-700">TV</span>
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="radio" name="tv" value="yes" class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500" required> Yes
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="radio" name="tv" value="no" class="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500" required> No
+                        </label>
+                    </div>
+                </div>
             </div>
-        </section>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 flex items-center justify-end">
+            <button type="submit" class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold rounded-xl shadow-md shadow-indigo-200 transition-all transform active:scale-[0.98]">
+                <i class="fa-solid fa-check"></i> Submit Checklist
+            </button>
+        </div>
+    </form>
+    <p id="message" class="text-center text-emerald-600 font-bold mt-4"></p>
+</section>
+
+<section id="checklisttable" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+    <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+        <span class="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><i class="fa-solid fa-table text-xl"></i></span>
+        Room Checklists Table
+    </h2>
+    
+    <div class="flex flex-col sm:flex-row gap-4 items-center justify-between mb-6">
+        <div class="relative w-full sm:w-72">
+            <input type="text" id="searchInputdate" class="w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm" placeholder="Search room or date...">
+        </div>
         
-        <section id="missingitems" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-            <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                <span class="p-2 bg-red-50 text-red-600 rounded-lg"><i class="fa-solid fa-triangle-exclamation text-xl"></i></span>
-                Missing Items Summary
-            </h2>
-            
-            <div class="flex flex-wrap items-center gap-4 border-b border-slate-100 pb-6 mb-6">
-                <label for="missingItemsDateFilter" class="text-sm font-semibold text-slate-700">Filter by Date:</label>
-                <input type="date" id="missingItemsDateFilter" class="w-full sm:w-56 px-4 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
-                <button id="clearMissingItemsDateFilter" class="inline-flex items-center gap-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-sm rounded-xl transition-colors">
-                    <i class="fa-solid fa-xmark"></i> Clear Filter
-                </button>
-            </div>
-            
-            <div id="missingItemsSummary" class="p-6 bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-center text-sm">
-                <p>No missing items found for the selected date. Select a date to view a summary.</p>
-            </div>
-        </section>
+        <div class="flex gap-3 w-full sm:w-auto justify-end">
+            <button onclick="exportToExcel()" class="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold text-sm rounded-xl transition-colors shadow-sm">
+                <i class="fa-solid fa-file-export"></i> Export
+            </button>
+            <button onclick="printChecklists()" class="inline-flex items-center gap-2 px-4 py-2.5 bg-sky-500 hover:bg-sky-600 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm">
+                <i class="fa-solid fa-print"></i> Print
+            </button>
+        </div>
+    </div>
+    
+    <div class="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
+        <table id="checklistTable" class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-slate-700 text-sm font-semibold uppercase tracking-wider">
+                    <th class="px-6 py-4">Room</th>
+                    <th class="px-6 py-4">Date</th>
+                    <th class="px-6 py-4">Items</th>
+                    <th id="checklistActionsHeader" class="px-6 py-4 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="checklistBody" class="divide-y divide-slate-100 text-sm text-slate-600">
+            </tbody>
+        </table>
+    </div>
+
+    <div class="flex items-center justify-center gap-4 mt-6">
+        <button id="prevBtn" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium rounded-lg transition-colors text-sm disabled:opacity-50">&laquo; Prev</button>
+        <span id="pageInfo" class="text-sm font-semibold text-slate-700">Page 1 of X</span>
+        <button id="nextBtn" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium rounded-lg transition-colors text-sm disabled:opacity-50">Next &raquo;</button>
+    </div>
+</section>
+
+<section id="missingitems" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+    <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+        <span class="p-2 bg-red-50 text-red-600 rounded-lg"><i class="fa-solid fa-triangle-exclamation text-xl"></i></span>
+        Missing Items Summary
+    </h2>
+    
+    <div class="flex flex-wrap items-center gap-4 border-b border-slate-100 pb-6 mb-6">
+        <label for="missingItemsDateFilter" class="text-sm font-semibold text-slate-700">Filter by Date:</label>
+        <input type="date" id="missingItemsDateFilter" class="w-full sm:w-56 px-4 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+        <button id="clearMissingItemsDateFilter" class="inline-flex items-center gap-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-sm rounded-xl transition-colors">
+            <i class="fa-solid fa-xmark"></i> Clear Filter
+        </button>
+    </div>
+    
+    <div id="missingItemsSummary" class="p-6 bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-center text-sm">
+        <p>No missing items found for the selected date. Select a date to view a summary.</p>
+    </div>
+</section>
 <section id="kds" class="section bg-slate-900 p-6 rounded-2xl shadow-2xl mb-8 hidden min-h-[80vh]">
     <div class="flex justify-between items-center mb-8 border-b border-slate-700 pb-6">
         <div>
@@ -3780,17 +3780,7 @@ function googleTranslateElementInit() {
 }
 </script>
 <script>
-    /* ==========================================================
-   Authenticated Core Fetch Utility Function
-   ========================================================== */
-
-
-/* ==========================================================
-   Hotel App Front-End Logic (Unrestricted)
-   ========================================================== */
-
-const backendURL = 'https://patrinahhotelpms.onrender.com/api';
-
+    const backendURL = 'https://patrinahhotelpms.onrender.com/api';
 // --- App State ---
 let allChecklists = [];
 let currentPage = 1;
@@ -3837,9 +3827,11 @@ function printChecklists() {
   win.print();
 }
 
-document.getElementById('checklistForm')?.addEventListener('submit', async function (e) {
+// Fixed selector target here to match HTML form ID
+document.getElementById('hotelChecklistForm')?.addEventListener('submit', async function (e) {
   e.preventDefault();
-  const room = document.getElementById('room').value;
+  // Fixed target to select correctly from 'roomnumber'
+  const room = document.getElementById('roomnumber').value;
   const date = document.getElementById('date').value;
   if (!room || !date) {
     showMessage('message', 'Please select a room and date.', true);
@@ -3847,11 +3839,11 @@ document.getElementById('checklistForm')?.addEventListener('submit', async funct
   }
   const formData = new FormData(e.target);
   const items = Object.fromEntries(formData.entries());
-  delete items.room;
+  // Removed keys accurately matching form inputs name fields
+  delete items.rno; 
   delete items.date;
 
   try {
-    // Replaced native fetch with authenticatedFetch
     const res = await authenticatedFetch(`${backendURL}/submit-checklist`, {
       method: 'POST',
       body: JSON.stringify({ room, date, items }),
@@ -3872,7 +3864,6 @@ document.getElementById('checklistForm')?.addEventListener('submit', async funct
 
 async function loadChecklists() {
   try {
-    // Replaced native fetch with authenticatedFetch
     const res = await authenticatedFetch(`${backendURL}/checklists`, {
       method: 'GET'
     });
@@ -3887,7 +3878,8 @@ async function loadChecklists() {
 }
 
 function getFilteredChecklists() {
-  const search = (document.getElementById('searchInput')?.value || '').toLowerCase();
+  // Corrected to match HTML id 'searchInputdate'
+  const search = (document.getElementById('searchInputdate')?.value || '').toLowerCase();
   return allChecklists.filter((entry) => {
     const haystack =
       `${entry.room} ${entry.date} ${JSON.stringify(entry.items)}`.toLowerCase();
@@ -3914,18 +3906,20 @@ function renderChecklistTable() {
     pageSlice.forEach((entry) => {
       const tr = document.createElement('tr');
       tr.dataset.id = entry._id;
+      tr.className = "border-b border-slate-100 text-slate-600 hover:bg-slate-50 transition-colors";
+      
       const actionsHtml = `
-        <td class="border px-4 py-2">
-          <button class="bg-yellow-500 text-white px-3 py-1 rounded-md hover:bg-yellow-600 mr-2"
+        <td class="px-6 py-4 text-center">
+          <button class="bg-amber-500 text-slate-900 font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-amber-600 transition-colors mr-2"
             onclick='editChecklist("${entry._id}")'>Edit</button>
-          <button class="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600"
+          <button class="bg-red-500 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-red-600 transition-colors"
             onclick='deleteChecklist("${entry._id}")'>Delete</button>
         </td>`;
 
       tr.innerHTML = `
-        <td class="border px-4 py-2">${entry.room}</td>
-        <td class="border px-4 py-2">${entry.date}</td>
-        <td class="border px-4 py-2">
+        <td class="px-6 py-4 font-medium text-slate-900">${entry.room}</td>
+        <td class="px-6 py-4">${entry.date}</td>
+        <td class="px-6 py-4 max-w-xs truncate">
           ${Object.entries(entry.items).map(([k, v]) => `${humanize(k)}: ${humanize(v)}`).join(', ')}
         </td>
         ${actionsHtml}
@@ -3949,9 +3943,9 @@ function editChecklist(id) {
   const itemsHtml = Object.keys(entry.items)
     .map(
       (key) => `
-      <div class="flex items-center justify-between py-1">
-        <span class="font-medium">${humanize(key)}:</span>
-        <select id="item-${key}-${id}" class="px-2 py-1 border rounded-md text-sm">
+      <div class="flex items-center justify-between py-1 gap-4">
+        <span class="font-medium text-xs text-slate-700">${humanize(key)}:</span>
+        <select id="item-${key}-${id}" class="px-2 py-1 bg-white border rounded-md text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none">
           <option value="yes" ${entry.items[key] === 'yes' ? 'selected' : ''}>Yes</option>
           <option value="no" ${entry.items[key] === 'no' ? 'selected' : ''}>No</option>
         </select>
@@ -3960,19 +3954,19 @@ function editChecklist(id) {
     .join('');
 
   const editRowHtml = `
-    <tr class="bg-blue-50" data-id="${id}">
-      <td class="border px-4 py-2">
-        <input type="text" id="editRoom-${id}" value="${entry.room}" class="w-full px-2 py-1 border rounded-md"/>
+    <tr class="bg-indigo-50/50" data-id="${id}">
+      <td class="px-6 py-4">
+        <input type="number" id="editRoom-${id}" value="${entry.room}" class="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"/>
       </td>
-      <td class="border px-4 py-2">
-        <input type="date" id="editDate-${id}" value="${entry.date}" class="w-full px-2 py-1 border rounded-md"/>
+      <td class="px-6 py-4">
+        <input type="date" id="editDate-${id}" value="${entry.date}" class="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"/>
       </td>
-      <td class="border px-4 py-2">
-        <div class="space-y-1">${itemsHtml}</div>
+      <td class="px-6 py-4">
+        <div class="space-y-1 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">${itemsHtml}</div>
       </td>
-      <td class="border px-4 py-2">
-        <button class="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 mr-2" onclick='saveChecklist("${id}")'>Save</button>
-        <button class="bg-gray-500 text-white px-3 py-1 rounded-md hover:bg-gray-600" onclick='loadChecklists()'>Cancel</button>
+      <td class="px-6 py-4 text-center">
+        <button class="bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 transition-colors mr-2" onclick='saveChecklist("${id}")'>Save</button>
+        <button class="bg-slate-500 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-slate-600 transition-colors" onclick='loadChecklists()'>Cancel</button>
       </td>
     </tr>
   `;
@@ -3990,7 +3984,6 @@ async function saveChecklist(id) {
   });
 
   try {
-    // Replaced native fetch with authenticatedFetch
     const res = await authenticatedFetch(`${backendURL}/checklists/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ room, date, items }),
@@ -4009,7 +4002,6 @@ async function deleteChecklist(id) {
   if (!window.confirm('Are you sure you want to delete this checklist?')) return;
 
   try {
-    // Replaced native fetch with authenticatedFetch
     const res = await authenticatedFetch(`${backendURL}/checklists/${id}`, {
       method: 'DELETE',
     });
@@ -4024,7 +4016,7 @@ async function deleteChecklist(id) {
 }
 
 // Checklist search & pagination
-document.getElementById('searchInput')?.addEventListener('input', () => {
+document.getElementById('searchInputdate')?.addEventListener('input', () => {
   currentPage = 1;
   renderChecklistTable();
 });
@@ -4077,23 +4069,53 @@ function renderMissingItemsSummary() {
     }
   });
 
-  let html = '<h3 class="text-xl font-semibold mb-3 text-gray-800">Missing Items Summary</h3>';
+  let html = '<h3 class="text-base font-bold mb-4 text-slate-800">Missing Items Report</h3>';
   if (Object.keys(missingItemsCount).length === 0) {
-    html += '<p class="text-gray-600">No missing items found for the selected date.</p>';
+    html += '<p class="text-slate-500">No missing items found for the selected date timeframe.</p>';
   } else {
-    html += '<ul class="list-disc pl-5 space-y-2">';
+    html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">';
     for (const item in missingItemsCount) {
-      html += `<li><span class="font-semibold">${item}</span>: ${missingItemsCount[item]} missing. (Rooms: ${missingItemsRooms[item].join(', ')})</li>`;
+      html += `
+        <div class="p-4 bg-white rounded-xl border border-rose-100 shadow-sm flex flex-col gap-1">
+          <span class="text-sm font-bold text-rose-600 flex items-center gap-1.5">
+            <i class="fa-solid fa-circle-exclamation"></i> ${item}
+          </span>
+          <span class="text-xs text-slate-500 font-medium">Total Missing: <strong class="text-slate-800 font-bold">${missingItemsCount[item]}</strong></span>
+          <span class="text-xs text-slate-500 font-medium">Affected Rooms: <span class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono">${missingItemsRooms[item].join(', ')}</span></span>
+        </div>`;
     }
-    html += '</ul>';
+    html += '</div>';
   }
   summaryContainer.innerHTML = html;
 }
 
+// Bind missing item summary controls cleanly
+document.getElementById('missingItemsDateFilter')?.addEventListener('change', renderMissingItemsSummary);
+document.getElementById('clearMissingItemsDateFilter')?.addEventListener('click', () => {
+  const filterInput = document.getElementById('missingItemsDateFilter');
+  if (filterInput) filterInput.value = '';
+  renderMissingItemsSummary();
+});
 
+// Helper Function fallback placeholder to avoid runtime breaking errors
+function humanize(str) {
+  if (!str) return '';
+  return str.replace(/^[-_]+/g, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/[A-Z]/g, ' $&')
+    .replace(/^./, firstChar => firstChar.toUpperCase())
+    .trim();
+}
 
-// Expose functions globally for dynamic DOM elements and inline HTML onclick callbacks
-window.showTab = showTab;
+function showMessage(id, message, isError = false) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = message;
+  el.className = `text-center font-bold mt-4 ${isError ? 'text-rose-600' : 'text-emerald-600'}`;
+}
+
+// Expose functions globally safely
+window.showTab = window.showTab || function() {};
 window.exportToExcel = exportToExcel;
 window.printChecklists = printChecklists;
 window.editChecklist = editChecklist;
