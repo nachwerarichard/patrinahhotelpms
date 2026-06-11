@@ -10276,3 +10276,345 @@ function saveGatewayCredentials(event) {
         submitBtn.innerText = originalBtnText;
     });
 }
+
+
+// --- App State ---
+let allChecklists = [];
+let currentPage = 1;
+const rowsPerPage = 5;
+let allStatusReports = [];
+let filteredStatusReports = [];
+let allInventory = [];
+
+/* ---------- Room Checklist ---------- */
+function exportToExcel() {
+  const dataToExport = allChecklists.map((entry) => ({
+    Room: entry.room,
+    Date: entry.date,
+    Items: Object.entries(entry.items)
+      .map(([k, v]) => `${humanize(k)}: ${humanize(v)}`)
+      .join(', '),
+  }));
+  const ws = XLSX.utils.json_to_sheet(dataToExport);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Checklist Data');
+  XLSX.writeFile(wb, 'Hotel_Room_Checklist.xlsx');
+}
+
+function printChecklists() {
+  const win = window.open('', '_blank');
+  win.document.write('<html><head><title>Room Checklist</title>');
+  win.document.write('<style>body{font-family:sans-serif;margin:20px;}h1{text-align:center;margin-bottom:20px;}table{width:100%;border-collapse:collapse;margin-bottom:20px;}th,td{border:1px solid #ccc;padding:8px;text-align:left;}th{background:#f2f2f2;}</style>');
+  win.document.write('</head><body>');
+  win.document.write('<h1>Hotel Room Checklist</h1>');
+  win.document.write('<table><thead><tr><th>Room</th><th>Date</th><th>Items</th></tr></thead><tbody>');
+  allChecklists.forEach((entry) => {
+    win.document.write('<tr>');
+    win.document.write(`<td>${entry.room}</td>`);
+    win.document.write(`<td>${entry.date}</td>`);
+    win.document.write(
+      `<td>${Object.entries(entry.items)
+        .map(([k, v]) => `${humanize(k)}: ${humanize(v)}`)
+        .join(', ')}</td>`
+    );
+    win.document.write('</tr>');
+  });
+  win.document.write('</tbody></table></body></html>');
+  win.document.close();
+  win.print();
+}
+
+// Fixed selector target here to match HTML form ID
+document.getElementById('hotelChecklistForm')?.addEventListener('submit', async function (e) {
+  e.preventDefault();
+  // Fixed target to select correctly from 'roomnumber'
+  const room = document.getElementById('roomnumber').value;
+  const date = document.getElementById('date').value;
+  if (!room || !date) {
+    showMessage('message', 'Please select a room and date.', true);
+    return;
+  }
+  const formData = new FormData(e.target);
+  const items = Object.fromEntries(formData.entries());
+  // Removed keys accurately matching form inputs name fields
+  delete items.rno; 
+  delete items.date;
+
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/submit-checklist`, {
+      method: 'POST',
+      body: JSON.stringify({ room, date, items }),
+    });
+    if (!res || !res.ok) throw new Error(`HTTP error! status: ${res ? res.status : 'No Response'}`);
+
+    const result = await res.json();
+    let msg = result.message || 'Checklist submitted.';
+    if (result.emailSent) msg += ' Email sent for missing items.';
+    showMessage('message', msg);
+    e.target.reset();
+    await loadChecklists();
+  } catch (err) {
+    console.error('Error submitting checklist:', err);
+    showMessage('message', 'An error occurred while submitting the checklist.', true);
+  }
+});
+
+async function loadChecklists() {
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/checklists`, {
+      method: 'GET'
+    });
+    if (!res || !res.ok) throw new Error(`HTTP error! status: ${res ? res.status : 'No Response'}`);
+    allChecklists = await res.json();
+    renderChecklistTable();
+    renderMissingItemsSummary();
+  } catch (err) {
+    console.error('Error loading checklists:', err);
+    showMessage('message', 'Failed to load checklists.', true);
+  }
+}
+
+function getFilteredChecklists() {
+  // Corrected to match HTML id 'searchInputdate'
+  const search = (document.getElementById('searchInputdate')?.value || '').toLowerCase();
+  return allChecklists.filter((entry) => {
+    const haystack =
+      `${entry.room} ${entry.date} ${JSON.stringify(entry.items)}`.toLowerCase();
+    return haystack.includes(search);
+  });
+}
+
+function renderChecklistTable() {
+  const tbody = document.getElementById('checklistBody');
+  if (!tbody) return;
+  const actionsHeader = document.getElementById('checklistActionsHeader');
+  if (actionsHeader) actionsHeader.classList.remove('hidden');
+
+  const filtered = getFilteredChecklists();
+  const start = (currentPage - 1) * rowsPerPage;
+  const pageSlice = filtered.slice(start, start + rowsPerPage);
+
+  tbody.innerHTML = '';
+
+  if (pageSlice.length === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="4" class="text-center py-4 text-gray-500">No checklists found.</td></tr>';
+  } else {
+    pageSlice.forEach((entry) => {
+      const tr = document.createElement('tr');
+      tr.dataset.id = entry._id;
+      tr.className = "border-b border-slate-100 text-slate-600 hover:bg-slate-50 transition-colors";
+      
+      const actionsHtml = `
+        <td class="px-6 py-4 text-center">
+          <button class="bg-amber-500 text-slate-900 font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-amber-600 transition-colors mr-2"
+            onclick='editChecklist("${entry._id}")'>Edit</button>
+          <button class="bg-red-500 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-red-600 transition-colors"
+            onclick='deleteChecklist("${entry._id}")'>Delete</button>
+        </td>`;
+
+      tr.innerHTML = `
+        <td class="px-6 py-4 font-medium text-slate-900">${entry.room}</td>
+        <td class="px-6 py-4">${entry.date}</td>
+        <td class="px-6 py-4 max-w-xs truncate">
+          ${Object.entries(entry.items).map(([k, v]) => `${humanize(k)}: ${humanize(v)}`).join(', ')}
+        </td>
+        ${actionsHtml}
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  const totalPages = Math.ceil(filtered.length / rowsPerPage) || 1;
+  document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+  document.getElementById('prevBtn').disabled = currentPage === 1;
+  document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+}
+
+function editChecklist(id) {
+  const entry = allChecklists.find((c) => c._id === id);
+  if (!entry) return;
+
+  const tbody = document.getElementById('checklistBody');
+  const row = tbody.querySelector(`tr[data-id="${id}"]`);
+  const itemsHtml = Object.keys(entry.items)
+    .map(
+      (key) => `
+      <div class="flex items-center justify-between py-1 gap-4">
+        <span class="font-medium text-xs text-slate-700">${humanize(key)}:</span>
+        <select id="item-${key}-${id}" class="px-2 py-1 bg-white border rounded-md text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+          <option value="yes" ${entry.items[key] === 'yes' ? 'selected' : ''}>Yes</option>
+          <option value="no" ${entry.items[key] === 'no' ? 'selected' : ''}>No</option>
+        </select>
+      </div>`
+    )
+    .join('');
+
+  const editRowHtml = `
+    <tr class="bg-indigo-50/50" data-id="${id}">
+      <td class="px-6 py-4">
+        <input type="number" id="editRoom-${id}" value="${entry.room}" class="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"/>
+      </td>
+      <td class="px-6 py-4">
+        <input type="date" id="editDate-${id}" value="${entry.date}" class="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"/>
+      </td>
+      <td class="px-6 py-4">
+        <div class="space-y-1 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">${itemsHtml}</div>
+      </td>
+      <td class="px-6 py-4 text-center">
+        <button class="bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 transition-colors mr-2" onclick='saveChecklist("${id}")'>Save</button>
+        <button class="bg-slate-500 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-slate-600 transition-colors" onclick='loadChecklists()'>Cancel</button>
+      </td>
+    </tr>
+  `;
+  if (row) row.outerHTML = editRowHtml;
+}
+
+async function saveChecklist(id) {
+  const room = document.getElementById(`editRoom-${id}`).value;
+  const date = document.getElementById(`editDate-${id}`).value;
+  const itemElements = document.querySelectorAll(`[id^="item-"][id$="-${id}"]`);
+  const items = {};
+  itemElements.forEach((el) => {
+    const key = el.id.replace(`item-`, '').replace(`-${id}`, '');
+    items[key] = el.value;
+  });
+
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/checklists/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ room, date, items }),
+    });
+    if (!res || !res.ok) throw new Error(`HTTP error! status: ${res ? res.status : 'No Response'}`);
+    const result = await res.json();
+    showMessage('message', result.message || 'Checklist updated successfully!');
+    await loadChecklists();
+  } catch (err) {
+    console.error('Error saving checklist:', err);
+    showMessage('message', 'An error occurred while saving the checklist.', true);
+  }
+}
+
+async function deleteChecklist(id) {
+  if (!window.confirm('Are you sure you want to delete this checklist?')) return;
+
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/checklists/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res || !res.ok) throw new Error(`HTTP error! status: ${res ? res.status : 'No Response'}`);
+    const result = await res.json();
+    showMessage('message', result.message || 'Checklist deleted successfully!');
+    await loadChecklists();
+  } catch (err) {
+    console.error('Error deleting checklist:', err);
+    showMessage('message', 'An error occurred while deleting the checklist.', true);
+  }
+}
+
+// Checklist search & pagination
+document.getElementById('searchInputdate')?.addEventListener('input', () => {
+  currentPage = 1;
+  renderChecklistTable();
+});
+
+document.getElementById('prevBtn')?.addEventListener('click', () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderChecklistTable();
+  }
+});
+
+document.getElementById('nextBtn')?.addEventListener('click', () => {
+  const totalPages = Math.ceil(getFilteredChecklists().length / rowsPerPage) || 1;
+  if (currentPage < totalPages) {
+    currentPage++;
+    renderChecklistTable();
+  }
+});
+
+/* ---------- Missing Items Summary ---------- */
+function renderMissingItemsSummary() {
+  const summaryContainer = document.getElementById('missingItemsSummary');
+  if (!summaryContainer) return;
+
+  const filterDateInput = document.getElementById('missingItemsDateFilter')?.value;
+  let data = allChecklists;
+
+  if (filterDateInput) {
+    const selectedDate = new Date(filterDateInput);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    data = allChecklists.filter((entry) => {
+      const entryDate = new Date(entry.date);
+      entryDate.setHours(0, 0, 0, 0);
+      return entryDate.getTime() === selectedDate.getTime();
+    });
+  }
+
+  const missingItemsCount = {};
+  const missingItemsRooms = {};
+
+  data.forEach((entry) => {
+    for (const itemKey in entry.items) {
+      if (String(entry.items[itemKey]).toLowerCase() === 'no') {
+        const label = humanize(itemKey);
+        missingItemsCount[label] = (missingItemsCount[label] || 0) + 1;
+        if (!missingItemsRooms[label]) missingItemsRooms[label] = [];
+        missingItemsRooms[label].push(entry.room);
+      }
+    }
+  });
+
+  let html = '<h3 class="text-base font-bold mb-4 text-slate-800">Missing Items Report</h3>';
+  if (Object.keys(missingItemsCount).length === 0) {
+    html += '<p class="text-slate-500">No missing items found for the selected date timeframe.</p>';
+  } else {
+    html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">';
+    for (const item in missingItemsCount) {
+      html += `
+        <div class="p-4 bg-white rounded-xl border border-rose-100 shadow-sm flex flex-col gap-1">
+          <span class="text-sm font-bold text-rose-600 flex items-center gap-1.5">
+            <i class="fa-solid fa-circle-exclamation"></i> ${item}
+          </span>
+          <span class="text-xs text-slate-500 font-medium">Total Missing: <strong class="text-slate-800 font-bold">${missingItemsCount[item]}</strong></span>
+          <span class="text-xs text-slate-500 font-medium">Affected Rooms: <span class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono">${missingItemsRooms[item].join(', ')}</span></span>
+        </div>`;
+    }
+    html += '</div>';
+  }
+  summaryContainer.innerHTML = html;
+}
+
+// Bind missing item summary controls cleanly
+document.getElementById('missingItemsDateFilter')?.addEventListener('change', renderMissingItemsSummary);
+document.getElementById('clearMissingItemsDateFilter')?.addEventListener('click', () => {
+  const filterInput = document.getElementById('missingItemsDateFilter');
+  if (filterInput) filterInput.value = '';
+  renderMissingItemsSummary();
+});
+
+// Helper Function fallback placeholder to avoid runtime breaking errors
+function humanize(str) {
+  if (!str) return '';
+  return str.replace(/^[-_]+/g, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/[A-Z]/g, ' $&')
+    .replace(/^./, firstChar => firstChar.toUpperCase())
+    .trim();
+}
+
+function showMessage(id, message, isError = false) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = message;
+  el.className = `text-center font-bold mt-4 ${isError ? 'text-rose-600' : 'text-emerald-600'}`;
+}
+
+// Expose functions globally safely
+window.showTab = window.showTab || function() {};
+window.exportToExcel = exportToExcel;
+window.printChecklists = printChecklists;
+window.editChecklist = editChecklist;
+window.saveChecklist = saveChecklist;
+window.deleteChecklist = deleteChecklist;
