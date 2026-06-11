@@ -3805,85 +3805,6 @@ let allStatusReports = [];
 let filteredStatusReports = [];
 let allInventory = [];
 
-// --- Tab Elements ---
-const tabChecklistBtn = document.getElementById('tabChecklist');
-const tabHousekeepingBtn = document.getElementById('tabHousekeeping');
-const tabInventoryBtn = document.getElementById('tabInventory');
-
-const roomChecklistSection = document.getElementById('roomChecklistSection');
-const housekeepingReportSection = document.getElementById('housekeepingReportSection');
-const inventorySection = document.getElementById('inventorySection');
-
-/* ---------- Helpers ---------- */
-const humanize = (str) =>
-  String(str)
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (l) => l.toUpperCase());
-
-function showMessage(elementId, msg, isError = false) {
-  const el = document.getElementById(elementId);
-  if (!el) return;
-  el.textContent = msg;
-  el.classList.remove('text-green-600', 'text-red-600');
-  el.classList.add(isError ? 'text-red-600' : 'text-green-600');
-  setTimeout(() => {
-    el.textContent = '';
-  }, 5000);
-}
-
-/* ---------- Tab Logic ---------- */
-function resetTabButtons() {
-  [tabChecklistBtn, tabHousekeepingBtn, tabInventoryBtn].forEach((btn) => {
-    if (!btn) return;
-    btn.classList.remove('bg-blue-600', 'text-white');
-    btn.classList.add('bg-gray-200', 'text-gray-700');
-  });
-}
-
-function hideAllSections() {
-  roomChecklistSection?.classList.add('hidden');
-  housekeepingReportSection?.classList.add('hidden');
-  inventorySection?.classList.add('hidden');
-}
-
-async function showTab(tabName) {
-  hideAllSections();
-  resetTabButtons();
-
-  if (tabName === 'checklist') {
-    roomChecklistSection?.classList.remove('hidden');
-    tabChecklistBtn?.classList.remove('bg-gray-200', 'text-gray-700');
-    tabChecklistBtn?.classList.add('bg-blue-600', 'text-white');
-    await loadChecklists();
-  } else if (tabName === 'housekeeping') {
-    housekeepingReportSection?.classList.remove('hidden');
-    tabHousekeepingBtn?.classList.remove('bg-gray-200', 'text-gray-700');
-    tabHousekeepingBtn?.classList.add('bg-blue-600', 'text-white');
-    await loadStatusReports();
-  } else if (tabName === 'inventory') {
-    inventorySection?.classList.remove('hidden');
-    tabInventoryBtn?.classList.remove('bg-gray-200', 'text-gray-700');
-    tabInventoryBtn?.classList.add('bg-blue-600', 'text-white');
-    await loadInventory();
-  }
-}
-
-// Tab button handlers
-tabChecklistBtn?.addEventListener('click', () => showTab('checklist'));
-tabHousekeepingBtn?.addEventListener('click', () => showTab('housekeeping'));
-tabInventoryBtn?.addEventListener('click', () => showTab('inventory'));
-
-/* ---------- Startup ---------- */
-document.addEventListener('DOMContentLoaded', () => {
-  // Directly show the main app since there's no login
-  showTab('checklist');
-
-  const missingItemsDateFilter = document.getElementById('missingItemsDateFilter');
-  if (missingItemsDateFilter) {
-    missingItemsDateFilter.addEventListener('change', renderMissingItemsSummary);
-  }
-});
-
 /* ---------- Room Checklist ---------- */
 function exportToExcel() {
   const dataToExport = allChecklists.map((entry) => ({
@@ -4175,62 +4096,7 @@ function renderMissingItemsSummary() {
   summaryContainer.innerHTML = html;
 }
 
-// Side-menu and section visibility toggles
-function toggleMenu(id, element) {
-    const submenu = document.getElementById(id);
-    const icon = element.querySelector("i");
-    const isSubmenuOpen = submenu.style.display === "flex";
 
-    // Close all submenus and reset icons
-    document.querySelectorAll('.submenu').forEach(menu => menu.style.display = 'none');
-    document.querySelectorAll('.nav-item i').forEach(ic => {
-        ic.classList.remove("fa-chevron-up");
-        ic.classList.add("fa-chevron-down");
-    });
-
-    // Open clicked submenu only if it wasn't already open
-    if (!isSubmenuOpen) {
-        submenu.style.display = "flex";
-        icon.classList.remove("fa-chevron-down");
-        icon.classList.add("fa-chevron-up");
-    }
-}
-
-function showSection(id) {
-    document.querySelectorAll('.tab-content').forEach(sec => sec.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-
-    // Close all submenus when a section is targeted for a cleaner interface
-    document.querySelectorAll('.submenu').forEach(menu => menu.style.display = 'none');
-    document.querySelectorAll('.nav-item i').forEach(ic => {
-        ic.classList.remove("fa-chevron-up");
-        ic.classList.add("fa-chevron-down");
-    });
-
-    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-}
-
-// Stub implementations to handle downstream window exposures cleanly
-async function loadStatusReports() { console.log("Loading Housekeeping Status Reports..."); }
-async function loadInventory() { console.log("Loading Inventory Data..."); }
-function filterStatusReportsByDate() {}
-function clearStatusDateFilter() {}
-function exportStatusReportsToExcel() {}
-function printStatusReports() {}
-function editStatusReport() {}
-function saveStatusReport() {}
-function deleteStatusReport() {}
-function exportInventoryToExcel() {}
-function editInventoryItem() {}
-function saveInventoryItem() {}
-function deleteInventoryItem() {}
-
-// Initial load configuration routing
-document.addEventListener('DOMContentLoaded', () => {
-    showSection('checklistForm');
-    const standardNavItem = document.querySelector('.nav-item');
-    if (standardNavItem) standardNavItem.classList.add('active');
-});
 
 // Expose functions globally for dynamic DOM elements and inline HTML onclick callbacks
 window.showTab = showTab;
@@ -4239,17 +4105,6 @@ window.printChecklists = printChecklists;
 window.editChecklist = editChecklist;
 window.saveChecklist = saveChecklist;
 window.deleteChecklist = deleteChecklist;
-window.filterStatusReportsByDate = filterStatusReportsByDate;
-window.clearStatusDateFilter = clearStatusDateFilter;
-window.exportStatusReportsToExcel = exportStatusReportsToExcel;
-window.printStatusReports = printStatusReports;
-window.editStatusReport = editStatusReport;
-window.saveStatusReport = saveStatusReport;
-window.deleteStatusReport = deleteStatusReport;
-window.exportInventoryToExcel = exportInventoryToExcel;
-window.editInventoryItem = editInventoryItem;
-window.saveInventoryItem = saveInventoryItem;
-window.deleteInventoryItem = deleteInventoryItem;
 </script>
 <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 

@@ -904,8 +904,8 @@ function applyRoleAccess(role) {
     const navIds = [
         'nav-booking', 'nav-dashboard', 'nav-housekeeping', 'nav-inventory', 
         'nav-sales', 'nav-posinventory', 'nav-kds', 
-         'nav-expenses', 'nav-cash', 
-        'nav-posreports', 'nav-salereport', 'nav-housekeepingreports', 
+         'nav-expenses', 'nav-cash', 'nav-checklistform', 'nav-checklisttable',
+        'nav-posreports', 'nav-missingitems' , 'nav-salereport', 'nav-housekeepingreports', 
         'nav-staff', 'nav-reports', 'nav-calendar', 'nav-audit-logs'
     ];
 
@@ -929,6 +929,9 @@ function applyRoleAccess(role) {
         case 'housekeeper':
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             document.getElementById('nav-housekeepingreports').style.display = 'list-item';
+            document.getElementById('nav-checklistform').style.display = 'list-item';
+            document.getElementById('nav-checklisttable').style.display = 'list-item';
+            document.getElementById('nav-missingitems').style.display = 'list-item';
             break;
 
         case 'bar':
