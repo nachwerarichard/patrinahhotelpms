@@ -1094,10 +1094,7 @@ body {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="flex flex-col gap-2">
                         <label for="room" class="text-sm font-semibold text-slate-700">Room Number:</label>
-                        <select id="room" name="room" class="w-full md:w-64 px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-700" required>
-                            <option value="">-- Select a Room --</option>
-                            <option value="101">Room 101</option>
-                        </select>
+                        <input type="number" id="roomnumber" name="rno" class="w-full md:w-64 px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-700" required>
                     </div>
                     
                     <div class="flex flex-col gap-2">
@@ -1227,10 +1224,7 @@ body {
             
             <div class="flex flex-col sm:flex-row gap-4 items-center justify-between mb-6">
                 <div class="relative w-full sm:w-72">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                        <i class="fa-solid fa-magnifying-glass text-sm"></i>
-                    </span>
-                    <input type="search" id="searchInput" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm" placeholder="Search room or date...">
+                    <input type="date" id="searchInputdate" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm" placeholder="Search room or date...">
                 </div>
                 
                 <div class="flex gap-3 w-full sm:w-auto justify-end">
