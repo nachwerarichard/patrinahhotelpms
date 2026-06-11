@@ -3780,13 +3780,22 @@ function googleTranslateElementInit() {
 }
 </script>
 <script>
-    // --- App State ---
+    //const backendURL = 'https://patrinahhotelpms.onrender.com/api';
+// --- App State ---
 let allChecklists = [];
 //let currentPage = 1;
 const rowsPerPage = 5;
-//let allStatusReports = [];
-//let filteredStatusReports = [];
-//let allInventory = [];
+
+
+// Safely resolve naming conflict by using a localized internal humanizer
+function checklistHumanize(str) {
+  if (!str) return '';
+  return str.replace(/^[-_]+/g, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/[A-Z]/g, ' $&')
+    .replace(/^./, firstChar => firstChar.toUpperCase())
+    .trim();
+}
 
 /* ---------- Room Checklist ---------- */
 function exportToExcel() {
@@ -3794,7 +3803,7 @@ function exportToExcel() {
     Room: entry.room,
     Date: entry.date,
     Items: Object.entries(entry.items)
-      .map(([k, v]) => `${humanize(k)}: ${humanize(v)}`)
+      .map(([k, v]) => `${checklistHumanize(k)}: ${checklistHumanize(v)}`)
       .join(', '),
   }));
   const ws = XLSX.utils.json_to_sheet(dataToExport);
@@ -3816,7 +3825,7 @@ function printChecklists() {
     win.document.write(`<td>${entry.date}</td>`);
     win.document.write(
       `<td>${Object.entries(entry.items)
-        .map(([k, v]) => `${humanize(k)}: ${humanize(v)}`)
+        .map(([k, v]) => `${checklistHumanize(k)}: ${checklistHumanize(v)}`)
         .join(', ')}</td>`
     );
     win.document.write('</tr>');
@@ -3826,10 +3835,8 @@ function printChecklists() {
   win.print();
 }
 
-// Fixed selector target here to match HTML form ID
 document.getElementById('hotelChecklistForm')?.addEventListener('submit', async function (e) {
   e.preventDefault();
-  // Fixed target to select correctly from 'roomnumber'
   const room = document.getElementById('roomnumber').value;
   const date = document.getElementById('date').value;
   if (!room || !date) {
@@ -3838,7 +3845,6 @@ document.getElementById('hotelChecklistForm')?.addEventListener('submit', async 
   }
   const formData = new FormData(e.target);
   const items = Object.fromEntries(formData.entries());
-  // Removed keys accurately matching form inputs name fields
   delete items.rno; 
   delete items.date;
 
@@ -3877,7 +3883,6 @@ async function loadChecklists() {
 }
 
 function getFilteredChecklists() {
-  // Corrected to match HTML id 'searchInputdate'
   const search = (document.getElementById('searchInputdate')?.value || '').toLowerCase();
   return allChecklists.filter((entry) => {
     const haystack =
@@ -3919,7 +3924,7 @@ function renderChecklistTable() {
         <td class="px-6 py-4 font-medium text-slate-900">${entry.room}</td>
         <td class="px-6 py-4">${entry.date}</td>
         <td class="px-6 py-4 max-w-xs truncate">
-          ${Object.entries(entry.items).map(([k, v]) => `${humanize(k)}: ${humanize(v)}`).join(', ')}
+          ${Object.entries(entry.items).map(([k, v]) => `${checklistHumanize(k)}: ${checklistHumanize(v)}`).join(', ')}
         </td>
         ${actionsHtml}
       `;
@@ -3943,7 +3948,7 @@ function editChecklist(id) {
     .map(
       (key) => `
       <div class="flex items-center justify-between py-1 gap-4">
-        <span class="font-medium text-xs text-slate-700">${humanize(key)}:</span>
+        <span class="font-medium text-xs text-slate-700">${checklistHumanize(key)}:</span>
         <select id="item-${key}-${id}" class="px-2 py-1 bg-white border rounded-md text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none">
           <option value="yes" ${entry.items[key] === 'yes' ? 'selected' : ''}>Yes</option>
           <option value="no" ${entry.items[key] === 'no' ? 'selected' : ''}>No</option>
@@ -4060,7 +4065,7 @@ function renderMissingItemsSummary() {
   data.forEach((entry) => {
     for (const itemKey in entry.items) {
       if (String(entry.items[itemKey]).toLowerCase() === 'no') {
-        const label = humanize(itemKey);
+        const label = checklistHumanize(itemKey);
         missingItemsCount[label] = (missingItemsCount[label] || 0) + 1;
         if (!missingItemsRooms[label]) missingItemsRooms[label] = [];
         missingItemsRooms[label].push(entry.room);
@@ -4088,23 +4093,12 @@ function renderMissingItemsSummary() {
   summaryContainer.innerHTML = html;
 }
 
-// Bind missing item summary controls cleanly
 document.getElementById('missingItemsDateFilter')?.addEventListener('change', renderMissingItemsSummary);
 document.getElementById('clearMissingItemsDateFilter')?.addEventListener('click', () => {
   const filterInput = document.getElementById('missingItemsDateFilter');
   if (filterInput) filterInput.value = '';
   renderMissingItemsSummary();
 });
-
-// Helper Function fallback placeholder to avoid runtime breaking errors
-function humanize(str) {
-  if (!str) return '';
-  return str.replace(/^[-_]+/g, '')
-    .replace(/[_-]+/g, ' ')
-    .replace(/[A-Z]/g, ' $&')
-    .replace(/^./, firstChar => firstChar.toUpperCase())
-    .trim();
-}
 
 function showMessage(id, message, isError = false) {
   const el = document.getElementById(id);
@@ -4120,7 +4114,6 @@ window.printChecklists = printChecklists;
 window.editChecklist = editChecklist;
 window.saveChecklist = saveChecklist;
 window.deleteChecklist = deleteChecklist;
-
 </script>
 
 <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
