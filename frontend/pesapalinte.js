@@ -10280,7 +10280,7 @@ function saveGatewayCredentials(event) {
 
 // --- App State ---
 let allChecklists = [];
-let currentPage = 1;
+//let currentPage = 1;
 const rowsPerPage = 5;
 let allStatusReports = [];
 let filteredStatusReports = [];
