@@ -10282,9 +10282,9 @@ function saveGatewayCredentials(event) {
 let allChecklists = [];
 //let currentPage = 1;
 const rowsPerPage = 5;
-let allStatusReports = [];
-let filteredStatusReports = [];
-let allInventory = [];
+//let allStatusReports = [];
+//let filteredStatusReports = [];
+//let allInventory = [];
 
 /* ---------- Room Checklist ---------- */
 function exportToExcel() {
