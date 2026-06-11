@@ -3743,13 +3743,14 @@ app.post('/api/public/send-booking-confirm', async (req, res) => {
 
 // Checklist Schema and Model
 const checklistSchema = new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
-  room: { type: String, required: true },
-  date: { type: String, required: true },
-  items: { type: Object, required: true },
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+    room: { type: String, required: true },
+    date: { type: String, required: true },
+    items: { type: Object, required: true },
 }, { timestamps: true });
 
-const Checklist = mongoose.model('Checklist', checklistSchema);
+// Prevent model overwrite errors during hot-reloads
+const Checklist = mongoose.models.Checklist || mongoose.model('Checklist', checklistSchema);
 
 // StatusReport Schema and Model
 const statusReportSchema = new mongoose.Schema({
@@ -3944,64 +3945,71 @@ async function sendLowStockEmail(item, quantity, lowStockLevel) {
 
 // Submit checklist
 // Submit a Checklist (Secure & Tenant-Aware)
-app.post('/api/submit-checklist', async (req, res) => {
-  const { room, date, items } = req.body;
-  const hotelId = req.user.hotelId;
+app.post('/api/submit-checklist', auth, async (req, res) => {
+    const { room, date, items } = req.body;
+    const hotelId = req.user.hotelId;
 
-  if (!room || !date || !items) {
-    return res.status(400).json({ message: 'Missing fields' });
-  }
-
-  try {
-    // 1. Save checklist with hotelId
-    const checklist = new Checklist({ 
-      room, 
-      date, 
-      items, 
-      hotelId 
-    });
-    await checklist.save();
-
-    await addAuditLog('Checklist Submitted', req.user.username, { room, date, hotelId });
-
-    // 2. Handle missing items email alert
-    const missingItems = Object.entries(items).filter(([, val]) => val === 'no');
-    let emailSent = false;
-
-    if (missingItems.length > 0) {
-      const html = `<p>Room <strong>${room}</strong> at your hotel is missing:</p>
-        <ul>${missingItems.map(([key]) => `<li>${key.replace(/_/g, ' ')}</li>`).join('')}</ul>`;
-
-      try {
-        // Fetch the hotel's specific contact email (optional logic)
-        // or use req.user.email if that's the manager's email
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: req.user.email, // Sends alert to the logged-in manager/admin
-          subject: `Urgent: Missing Items - Room ${room}`,
-          html,
-        });
-        emailSent = true;
-      } catch (emailErr) {
-        console.error('❌ Email failed:', emailErr);
-      }
+    if (!room || !date || !items) {
+        return res.status(400).json({ message: 'Missing fields' });
     }
 
-    res.status(201).json({ message: 'Checklist submitted', checklist, emailSent });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error' });
-  }
+    try {
+        // 1. Save checklist with authenticated hotelId context
+        const checklist = new Checklist({ 
+            room, 
+            date, 
+            items, 
+            hotelId 
+        });
+        await checklist.save();
+
+        // 2. Add an Audit Log trail entry
+        await addAuditLog('Checklist Submitted', req.user.username, { room, date, hotelId });
+
+        // 3. Handle processing missing items email alert
+        const missingItems = Object.entries(items).filter(([, val]) => val === 'no');
+        let emailSent = false;
+
+        if (missingItems.length > 0) {
+            const html = `
+                <p>Room <strong>${room}</strong> at your hotel is missing:</p>
+                <ul>${missingItems.map(([key]) => `<li>${key.replace(/_/g, ' ')}</li>`).join('')}</ul>
+            `;
+
+            try {
+                // Sends structured email alert to the logged-in user / manager
+                await transporter.sendMail({
+                    from: process.env.EMAIL_USER,
+                    to: req.user.email, 
+                    subject: `Urgent: Missing Items - Room ${room}`,
+                    html: html,
+                });
+                emailSent = true;
+            } catch (emailErr) {
+                console.error('❌ Email failed to send:', emailErr);
+                // We intentionally don't throw an error here so the API request doesn't crash 
+                // just because an optional notification email failed.
+            }
+        }
+
+        return res.status(201).json({ message: 'Checklist submitted', checklist, emailSent });
+
+    } catch (err) {
+        console.error('❌ Error saving checklist:', err);
+        return res.status(500).json({ message: 'Server error parsing data payload.' });
+    }
 });
 
-// Get checklists (Filtered by Hotel)
-app.get('/api/checklists',  async (req, res) => {
-  try {
-    const data = await Checklist.find({ hotelId: req.user.hotelId })
-                                .sort({ date: -1, createdAt: -1 });
-    res.status(200).json(data);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to retrieve checklists' });
-  }
+// Route B: Get historical checklists (Isolated and Filtered strictly by user Hotel context)
+app.get('/api/checklists', auth, async (req, res) => {
+    try {
+        const data = await Checklist.find({ hotelId: req.user.hotelId })
+                                    .sort({ date: -1, createdAt: -1 });
+        return res.status(200).json(data);
+    } catch (err) {
+        console.error('❌ Error retrieving checklists:', err);
+        return res.status(500).json({ message: 'Failed to retrieve checklists' });
+    }
 });
 // Submit Status Report (Secure)
 app.post('/api/submit-status-report', async (req, res) => {
@@ -5524,6 +5532,8 @@ app.post('/api/gateways/configure', auth, async (req, res) => {
         });
     }
 });
+
+
         
 
 
