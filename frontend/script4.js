@@ -1509,6 +1509,7 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
         // Refresh UI
         renderBookings(currentPage, currentSearchTerm);
         renderHousekeepingRooms();
+        updateDashboard();
         if (typeof renderCalendar === 'function') renderCalendar();
 
     } catch (error) {
