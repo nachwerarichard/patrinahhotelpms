@@ -8226,8 +8226,8 @@ document.addEventListener('DOMContentLoaded', () => {
     //const inventoryForm = document.getElementById('inventory-form');
     //if (inventoryForm) inventoryForm.addEventListener('submit', submitInventoryForm);
 
-    const saleForm = document.getElementById('sale-form');
-    if (saleForm) saleForm.addEventListener('submit', submitSaleForm);
+    //const saleForm = document.getElementById('sale-form');
+    //if (saleForm) saleForm.addEventListener('submit', submitSaleForm);
 
     
 
