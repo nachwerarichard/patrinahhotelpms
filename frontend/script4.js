@@ -9192,6 +9192,7 @@ async function submitEditSaleForm(event) {
 
     // 2. Retrieve all necessary form elements
     const idInput = document.getElementById('edit-sale-id');
+    const departmentInput = document.getElementById('edit-sale-department');
     const itemInput = document.getElementById('edit-sale-item');
     const numberInput = document.getElementById('edit-sale-number');
     const bpInput = document.getElementById('edit-sale-bp');
@@ -9208,6 +9209,7 @@ async function submitEditSaleForm(event) {
 
     // 4. Extract and convert values
     const id = idInput.value;
+    const department = departmentInput.value;
     const item = itemInput.value.trim();
     const number = parseInt(numberInput.value, 10);
     const bp = parseFloat(bpInput.value);
@@ -9241,6 +9243,7 @@ async function submitEditSaleForm(event) {
     // 7. Assemble the data payload for the API
     const saleData = {
         item: item,
+        department:department,
         number: number,
         bp: bp,
         sp: sp,
