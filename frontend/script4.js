@@ -907,7 +907,7 @@ function applyRoleAccess(role) {
     const navIds = [
         'nav-booking', 'nav-dashboard', 'nav-housekeeping', 'nav-inventory', 
         'nav-sales', 'nav-posinventory', 'nav-kds', 
-         'nav-expenses', 'nav-cash', 
+         'nav-expenses', 'nav-cash', , 'nav-checklistform', 'nav-checklisttable','nav-missingitems' ,
         'nav-posreports', 'nav-salereport', 'nav-housekeepingreports', 
         'nav-staff', 'nav-reports', 'nav-calendar', 'nav-audit-logs'
     ];
@@ -932,6 +932,9 @@ function applyRoleAccess(role) {
         case 'housekeeper':
             document.getElementById('nav-housekeeping').style.display = 'list-item';
             document.getElementById('nav-housekeepingreports').style.display = 'list-item';
+             document.getElementById('nav-checklistform').style.display = 'list-item';
+            document.getElementById('nav-checklisttable').style.display = 'list-item';
+            document.getElementById('nav-missingitems').style.display = 'list-item';
             break;
 
         case 'bar':
@@ -4560,7 +4563,9 @@ function showSection(sectionId) {
 document.addEventListener('DOMContentLoaded', () => {
     const navBooking = document.getElementById('nav-booking');
         const navDashboard = document.getElementById('nav-dashboard');
-
+ const navChecklistform = document.getElementById('nav-checklistform');
+    const navMissingitems = document.getElementById('nav-missingitems');
+    const navChecklisttable = document.getElementById('nav-checklisttable');
     const navHousekeeping = document.getElementById('nav-housekeeping');
       const navHousekeepingreports = document.getElementById('nav-housekeepingreports');
 
@@ -4631,6 +4636,27 @@ document.addEventListener('DOMContentLoaded', () => {
             showSection('expense');
         });
     }
+    if (navMissingitems) {
+        navMissingitems.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('missingitems');
+        });
+    }
+
+    if (navChecklistform) {
+        navChecklistform.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('checklistform');
+        });
+    }
+
+    if (navChecklisttable) {
+        navChecklisttable.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('checklisttable');
+        });
+    }
+
 
     if (navBooking) {
         navBooking.addEventListener('click', (e) => {

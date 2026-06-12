@@ -904,7 +904,7 @@ function applyRoleAccess(role) {
     const navIds = [
         'nav-booking', 'nav-dashboard', 'nav-housekeeping', 'nav-inventory', 
         'nav-sales', 'nav-posinventory', 'nav-kds', 
-         'nav-expenses', 'nav-cash', 'nav-checklistform', 'nav-checklisttable',
+         'nav-expenses', 'nav-cash', 'nav-checklistform', 'nav-checklisttable', 'nav-missingitems',
         'nav-posreports', 'nav-missingitems' , 'nav-salereport', 'nav-housekeepingreports', 
         'nav-staff', 'nav-reports', 'nav-calendar', 'nav-audit-logs'
     ];
