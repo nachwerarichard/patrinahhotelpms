@@ -3339,22 +3339,75 @@ app.delete('/api/kitchen/order/:id/served', auth, async (req, res) => {
 // 1. Mark Order as "Ready" (Multi-tenant)
 app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
     try {
-        const hotelId = req.user.hotelId; // Extracted from token by auth middleware
+        const hotelId = req.user.hotelId;
+        const orderId = req.params.id;
 
-        const order = await KitchenOrder.findOneAndUpdate(
-            { _id: req.params.id, hotelId: hotelId }, // Ensure ID AND Hotel match
-            { 
-                status: 'Ready',
-                readyAt: new Date() 
-            },
-            { new: true }
-        );
-
+        // 1. Fetch the order details
+        const order = await KitchenOrder.findOne({ _id: orderId, hotelId: hotelId });
         if (!order) {
-            return res.status(404).json({ message: "Order not found or access denied for this hotel." });
+            return res.status(404).json({ error: "Order not found or access denied." });
         }
 
-        res.status(200).json(order);
+        // 🛑 CRITICAL: Prevent double sales / double billing if double-clicked
+        if (['Ready', 'Served'].includes(order.status)) {
+            return res.status(400).json({ error: "This order has already been processed." });
+        }
+
+        // 2. Fetch & Update Inventory (Stock Check)
+        const dept = order.department || 'Kitchen'; 
+        const todayInventory = await getTodayInventory(order.item, 0, hotelId);
+        
+        const currentAvailableStock = todayInventory.opening + todayInventory.purchases;
+        if (todayInventory.trackInventory && (todayInventory.sales + order.number) > currentAvailableStock) {
+            return res.status(400).json({ 
+                error: `Insufficient stock for ${order.item}. Available: ${currentAvailableStock - todayInventory.sales}` 
+            });
+        }
+
+        todayInventory.sales += order.number;
+        await todayInventory.save();
+
+        // 3. Folio Charging (Room Billing)
+        if (order.accountId) {
+            const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');            
+            await AccountModel.findOneAndUpdate(
+                { _id: order.accountId, hotelId }, 
+                {
+                    $push: {
+                        charges: {
+                            description: `${order.item} (x${order.number})`,
+                            amount: order.sp * order.number,
+                            type: dept,
+                            date: new Date()
+                        }
+                    },
+                    $inc: { totalCharges: order.sp * order.number }
+                }
+            );
+        }
+
+        // 4. ✅ REAL SALES RECORDING (Saves to your 'Sale' collection)
+        const sale = await Sale.create({
+            hotelId,
+            item: order.item,
+            department: dept,
+            number: order.number,
+            bp: order.bp || 0,
+            sp: order.sp || 0,
+            date: new Date(),
+            profit: ((order.sp || 0) - (order.bp || 0)) * order.number,
+            percentageprofit: order.bp && order.bp !== 0 ? (((order.sp - order.bp) / order.bp) * 100) : 0
+        });
+
+        // 5. Update Kitchen Order Status to Ready
+        order.status = 'Ready';
+        order.readyAt = new Date();
+        await order.save();
+
+        // 6. Log Actions
+        await logAction('Sale Created via Kitchen', req.user.username, { saleId: sale._id, hotelId });
+
+        res.status(200).json({ success: true, message: "Order ready and sale recorded!", sale });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -3676,37 +3729,7 @@ app.get('/api/inventory', auth, async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 });
-app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
-    try {
-        const order = await KitchenOrder.findOne({ _id: req.params.id, hotelId: req.user.hotelId });
-        if (!order) return res.status(404).json({ error: "Order not found" });
 
-        // ... [Price Calculations] ...
-
-        // Add to Folio (Ensuring the account belongs to the same hotel)
-        if (order.accountId) {
-            const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');            
-            await AccountModel.findOneAndUpdate(
-                { _id: order.accountId, hotelId: req.user.hotelId }, 
-                {
-                    $push: {
-                        charges: {
-                            description: `${order.item} (x${order.number})`,
-                            amount: sellPrice * order.number,
-                            type: 'Restaurant',
-                            date: new Date()
-                        }
-                    }
-                }
-            );
-        }
-
-        await KitchenOrder.findByIdAndUpdate(req.params.id, { status: 'Ready' });
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
 
 // PUT /api/sales/:id
 app.put('/api/sales/:id', async (req, res) => {
