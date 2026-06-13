@@ -4845,6 +4845,7 @@ document.getElementById('typeForm').addEventListener('submit', async (e) => {
             if (res.ok) {
                 showMessage("Room Type Created! 🎉");
                 e.target.reset();
+                loadRoomTypes()
                 // Optionally refresh a list here
                 if(typeof fetchRoomTypes === 'function') fetchRoomTypes();
             } else {
