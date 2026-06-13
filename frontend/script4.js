@@ -187,6 +187,38 @@ async function authenticatedFetch(url, options = {}) {
 
     return fetch(url, { ...options, headers: headers });
 }
+
+function showMessage(title, message, isError = false) {
+    // 1. Grab elements only when the function is called
+    const overlay = document.getElementById('messageBoxOverlay');
+    const modal = document.getElementById('messageBox');
+    const titleEl = document.getElementById('messageBoxTitle');
+    const contentEl = document.getElementById('messageBoxContent');
+
+    // 2. Safety check - stop if HTML is missing
+    if (!overlay || !modal || !titleEl || !contentEl) {
+        console.error("Error: Message box elements not found in the HTML.");
+        return;
+    }
+
+    // 3. Set the text
+    titleEl.textContent = title;
+    contentEl.textContent = message;
+
+    // 4. Set the color based on error status
+    if (isError) {
+        titleEl.classList.add('text-red-600');
+        titleEl.classList.remove('text-indigo-600', 'text-gray-900');
+    } else {
+        titleEl.classList.add('text-indigo-600');
+        titleEl.classList.remove('text-red-600', 'text-gray-900');
+    }
+
+    // 5. SHOW BOTH: This is the key part!
+    overlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
+}
+
 // IMPROVED FRONTEND FETCH
 async function renderAuditLogs() {
     const tableBody = document.querySelector("#auditLogTable tbody");
@@ -301,36 +333,7 @@ let currentHotel = userData ? userData.hotelName : 'Property Mnagement System';
  * @param {string} message - The content message.
  * @param {boolean} isError - True if it's an error message, false for success/info.
  */
-function showMessage(title, message, isError = false) {
-    // 1. Grab elements only when the function is called
-    const overlay = document.getElementById('messageBoxOverlay');
-    const modal = document.getElementById('messageBox');
-    const titleEl = document.getElementById('messageBoxTitle');
-    const contentEl = document.getElementById('messageBoxContent');
 
-    // 2. Safety check - stop if HTML is missing
-    if (!overlay || !modal || !titleEl || !contentEl) {
-        console.error("Error: Message box elements not found in the HTML.");
-        return;
-    }
-
-    // 3. Set the text
-    titleEl.textContent = title;
-    contentEl.textContent = message;
-
-    // 4. Set the color based on error status
-    if (isError) {
-        titleEl.classList.add('text-red-600');
-        titleEl.classList.remove('text-indigo-600', 'text-gray-900');
-    } else {
-        titleEl.classList.add('text-indigo-600');
-        titleEl.classList.remove('text-red-600', 'text-gray-900');
-    }
-
-    // 5. SHOW BOTH: This is the key part!
-    overlay.classList.remove('hidden');
-    modal.classList.remove('hidden');
-}
 
 function closeMessageBox() {
     const overlay = document.getElementById('messageBoxOverlay');
