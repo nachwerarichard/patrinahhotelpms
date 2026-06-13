@@ -5643,7 +5643,7 @@ const addCharge = async (description, number, department) => {
         accountId: activeAccountId || null,
         tableNumber: tableNum,
         isQuickSale: isQuickSale,
-        date: new Date() // Sending current date
+        date: new Date()
     };
 
     try {
@@ -5665,9 +5665,9 @@ const addCharge = async (description, number, department) => {
         if (!res) return;
         if (!res.ok) throw new Error("Failed to record primary sale.");
 
-        // 2. Process Notifications based on destination
+        // 2. Process Notifications based on destination matching your function signature
         if (department === 'Restaurant') {
-            showMessage('Success', 'Kitchen order has been sent! 🍳✅');
+            showMessage('Success', 'Kitchen order has been sent! 🍳✅', false);
         }
 
         // 3. Update guest accounts if linked to an active folio
@@ -5687,16 +5687,16 @@ const addCharge = async (description, number, department) => {
                 if (typeof updateActiveAccountUI === 'function') updateActiveAccountUI(updatedAccount);
                 
                 if (department !== 'Restaurant') {
-                    showMessage('Success', 'Charged to Guest Folio! 📄✅');
+                    showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
                 }
             }
         } else {
             if (department !== 'Restaurant') {
-                showMessage('Success', 'Direct Sale Recorded! 💰✅');
+                showMessage('Success', 'Direct Sale Recorded! 💰✅', false);
             }
         }
 
-        // --- SUCCESS CLEANUP WITH THE RIGHT ID ---
+        // --- SUCCESS CLEANUP ---
         document.getElementById('addChargeForm').reset();
         
         // Refresh UI components safely if defined
@@ -5705,11 +5705,12 @@ const addCharge = async (description, number, department) => {
 
     } catch (err) {
         console.error("Add Charge Error:", err);
+        // FIX: Pass 'Error' as Title, the err message as Body, and 'true' to trigger red text
         showMessage('Error', err.message, true);
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = "SUBMIT ITEM"; // Exact fallback value to retain styling
+            submitBtn.innerHTML = "SUBMIT ITEM"; 
         }
     }
 };
@@ -5874,7 +5875,7 @@ document.addEventListener('DOMContentLoaded', () => {
         searchAccounts(document.getElementById('searchQuery').value);
     };
 
-    document.getElementById('addChargeForm').onsubmit = async (e) => {
+   document.getElementById('addChargeForm').onsubmit = async (e) => {
     e.preventDefault();
     
     // Authorization Check
