@@ -6749,17 +6749,21 @@ async function fetchSales() {
         const dateFilterInput = document.getElementById('sales-date-filter');
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
 
-        // 1. FIX: Use API_BASE_URL (Correct spelling)
-        // 2. FIX: Ensure you don't have double /api/api
-        // If API_BASE_URL is ".../api", use `${API_BASE_URL}/sales`
-        let url = `${API_BASE_URL}/sales`; 
+        // If no date is picked, handle it or point to your general endpoint
+        if (!dateFilter) {
+            showMessage('Please select a date first.');
+            updateSalesSearchButton('Search', 'fas fa-search');
+            return;
+        }
+
+        // Pointing to your brand new single-date endpoint
+        let url = `${API_BASE_URL}/sales/by-date`; 
         
         const params = new URLSearchParams();
-        if (dateFilter) params.append('date', dateFilter);
+        params.append('date', dateFilter); // Only sending the single date string
         params.append('page', currentSalesPage);
         params.append('limit', salesPerPage);
         
-        // hotelId is required by the backend route we wrote
         const hotelId = localStorage.getItem('hotelId'); 
         if (hotelId) params.append('hotelId', hotelId);
 
@@ -6773,8 +6777,6 @@ async function fetchSales() {
 
         const result = await response.json();
         
-        // 3. FIX: Backend sends 'sales', not 'data'
-        // 4. ADD: Fallback to empty array [] to prevent .length errors
         const salesData = result.sales || [];
         const totalPages = result.totalPages || 1;
         const currentPage = result.currentPage || 1;

@@ -3147,21 +3147,20 @@ const Inventory = mongoose.model('Inventory', new mongoose.Schema({
 }));
 
 const Sale = mongoose.model('Sale', new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
-  department: { 
-    type: String, 
-    required: true,
-    enum: ['Bar', 'Restaurant', 'Kitchen'], // Strict list of allowed values
-    trim: true
-  },
-  item: { type: String, required: true },
-  number: { type: Number, required: true, min: 1 },
-  bp: { type: Number, required: true, min: 0 },
-  sp: { type: Number, required: true, min: 0 },
-  date: { type: Date, default: Date.now },
-  profit: Number,
-  percentageprofit: Number,
-  date: { type: Date, default: Date.now }
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+    department: { 
+        type: String, 
+        required: true,
+        enum: ['Bar', 'Restaurant', 'Kitchen'], 
+        trim: true
+    },
+    item: { type: String, required: true },
+    number: { type: Number, required: true, min: 1 },
+    bp: { type: Number, required: true, min: 0 },
+    sp: { type: Number, required: true, min: 0 },
+    profit: Number,
+    percentageprofit: Number,
+    date: { type: Date, default: Date.now } // Keep just this one
 }));
 
 const Expense = mongoose.model('Expense', new mongoose.Schema({
@@ -3772,6 +3771,43 @@ app.put('/api/sales/:id', async (req, res) => {
     console.error("Error updating sale:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
+});
+
+app.get('/api/sales/by-date', async (req, res) => {
+    try {
+        const { hotelId, page = 1, limit = 15, department, date } = req.query;
+        
+        if (!hotelId) return res.status(400).json({ error: 'hotelId required' });
+        if (!date) return res.status(400).json({ error: 'date parameter is required (YYYY-MM-DD)' });
+
+        const filter = { hotelId };
+        if (department) filter.department = department;
+
+        // Process the single date parameter into a 24-hour range
+        // Example: '2026-06-13' becomes 2026-06-13T00:00:00.000Z to 2026-06-13T23:59:59.999Z
+        filter.date = { 
+            $gte: new Date(`${date}T00:00:00.000Z`), 
+            $lte: new Date(`${date}T23:59:59.999Z`) 
+        };
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        const sales = await Sale.find(filter)
+            .sort({ date: -1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+            
+        const total = await Sale.countDocuments(filter);
+
+        res.status(200).json({
+            sales,
+            totalPages: Math.ceil(total / limit),
+            totalItems: total,
+            currentPage: parseInt(page)
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.post('/api/sales', auth, async (req, res) => {
