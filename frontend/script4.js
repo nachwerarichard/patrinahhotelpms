@@ -5609,34 +5609,47 @@ if (!res) return; // in case redirect happened
 };
 
 const addCharge = async (description, number, department) => {
-    const hotelId = getHotelId();
+    const hotelId = localStorage.getItem('hotelId') || (typeof getHotelId === 'function' ? getHotelId() : null);
     const submitBtn = document.getElementById('submitBtn');
     const isQuickSale = (!activeAccountId);
 
     const itemInfo = document.getElementById('itemDesc').dataset;
-    const qtyValue = parseFloat(number) || 1;
+    const qtyValue = parseInt(number) || 1;
     const tableNum = document.getElementById('tableNum')?.value || "N/A";
 
+    // Grab pricing dynamically
+    const basePrice = parseFloat(itemInfo.bp || 0);
+    const sellingPrice = parseFloat(document.getElementById('itemPrice').value || itemInfo.sp || 0);
+    const calculatedProfit = (sellingPrice - basePrice) * qtyValue;
+    const profitPercentage = basePrice !== 0 ? (calculatedProfit / (basePrice * qtyValue)) * 100 : 0;
+
+    // Form input validation check
+    if (!description || isNaN(qtyValue) || isNaN(sellingPrice)) {
+        return showMessage('Incomplete Form', 'Please fill all fields with valid data.', true);
+    }
+
     const payload = {
-        item: description,
+        hotelId: hotelId,
+        item: description.trim(),
         department: department,
         number: qtyValue,
-        bp: parseFloat(itemInfo.bp || 0),
-        sp: parseFloat(itemInfo.sp || 0),
+        bp: basePrice,
+        sp: sellingPrice,
+        profit: calculatedProfit,
+        percentageprofit: profitPercentage,
         accountId: activeAccountId || null,
-        hotelId: hotelId,
         tableNumber: tableNum,
         isQuickSale: isQuickSale,
-        date: new Date()
+        date: new Date() // Sending current date
     };
 
     try {
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.innerHTML = `Processing...`;
+            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> SAVING...`;
         }
 
-        // 1. Send Order to Department (Kitchen or Sales)
+        // 1. Send Order to correct Endpoint
         const endpoint = (department === 'Restaurant') 
             ? `${API_BASE_URL}/kitchen/order` 
             : `${API_BASE_URL}/sales`;
@@ -5649,12 +5662,12 @@ const addCharge = async (description, number, department) => {
         if (!res) return;
         if (!res.ok) throw new Error("Failed to record primary sale.");
 
-        // --- KITCHEN showMessage ---
+        // 2. Process Notifications based on destination
         if (department === 'Restaurant') {
-            showMessage(`Kitchen order  has been sent!`, "success");
+            showMessage('Success', 'Kitchen order has been sent! 🍳✅');
         }
 
-        // 2. If Guest Folio exists, update the account
+        // 3. Update guest accounts if linked to an active folio
         if (activeAccountId) {
             const folioRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}/charge`, {
                 method: 'POST',
@@ -5668,29 +5681,32 @@ const addCharge = async (description, number, department) => {
 
             if (folioRes && folioRes.ok) {
                 const updatedAccount = await folioRes.json();
-                updateActiveAccountUI(updatedAccount);
+                if (typeof updateActiveAccountUI === 'function') updateActiveAccountUI(updatedAccount);
                 
-                // Avoid double showMessageing if kitchen message already showed
                 if (department !== 'Restaurant') {
-                    showMessage("Charged to Guest Folio!", "success");
+                    showMessage('Success', 'Charged to Guest Folio! 📄✅');
                 }
             }
         } else {
-            // Standard direct sale message
             if (department !== 'Restaurant') {
-                showMessage("Direct Sale Recorded!", "success");
+                showMessage('Success', 'Direct Sale Recorded! 💰✅');
             }
         }
 
-        resetForm();
+        // --- SUCCESS CLEANUP WITH THE RIGHT ID ---
+        document.getElementById('addChargeForm').reset();
+        
+        // Refresh UI components safely if defined
+        if (typeof fetchSales === 'function') fetchSales(); 
+        if (typeof refreshTodayPOSStats === 'function') refreshTodayPOSStats();
 
     } catch (err) {
         console.error("Add Charge Error:", err);
-        showMessage(err.message, "error");
+        showMessage('Error', err.message, true);
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
-            submitBtn.innerText = "Submit";
+            submitBtn.innerHTML = "SUBMIT ITEM"; // Exact fallback value to retain styling
         }
     }
 };
@@ -5855,12 +5871,25 @@ document.addEventListener('DOMContentLoaded', () => {
         searchAccounts(document.getElementById('searchQuery').value);
     };
 
-    document.getElementById('addChargeForm').onsubmit = e => {
-        e.preventDefault();
-        const fd = new FormData(e.target);
-        const dept = document.getElementById('deptSelect').value;
-        addCharge(fd.get('description'), fd.get('number'), dept);
-    };
+    document.getElementById('addChargeForm').onsubmit = async (e) => {
+    e.preventDefault();
+    
+    // Authorization Check
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const allowedRoles = ['cashier', 'manager', 'bar', 'super-admin', 'admin'];
+    
+    if (typeof currentUserRole !== 'undefined' && !allowedRoles.includes(currentUserRole)) {
+        return showMessage('Access Denied', 'You do not have permission to record sales.', true);
+    }
+
+    const fd = new FormData(e.target);
+    const description = fd.get('description');
+    const number = fd.get('number');
+    const department = document.getElementById('deptSelect').value;
+
+    // Run the primary charge logic
+    await addCharge(description, number, department);
+};
 
     document.getElementById('itemDesc').addEventListener('input', (e) => autoFillPrices(e.target.value));
     document.getElementById('postToRoomBtn').onclick = () => settleAccount('room');
@@ -6976,68 +7005,7 @@ async function updateSale(id, saleData) {
 
     return await response.json();
 }
-async function submitSaleForm(event) {
-    event.preventDefault();
 
-    // 1. Authorization Check
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const hotelId = sessionData?.hotelId;
-    const allowedRoles = ['cashier', 'manager', 'bar', 'super-admin', 'admin'];
-
-    if (!allowedRoles.includes(currentUserRole)) {
-        return showMessage('Access Denied', 'You do not have permission to record sales.', true);
-    }
-
-    // 2. UI Elements & Validation
-    const submitButton = document.querySelector('#sale-form button[type="submit"]');
-    const originalText = submitButton.innerHTML;
-    const id = document.getElementById('sale-id').value;
-
-    const saleData = {
-        hotelId,
-        item: document.getElementById('sale-item').value.trim(),
-        department: document.getElementById('department-item').value,
-        number: parseInt(document.getElementById('sale-number').value),
-        bp: parseFloat(document.getElementById('sale-bp').value),
-        sp: parseFloat(document.getElementById('sale-sp').value),
-        date: document.getElementById('sales-date').value
-    };
-
-    if (!saleData.item || isNaN(saleData.number) || isNaN(saleData.bp) || isNaN(saleData.sp) || !saleData.date) {
-        return showMessage('Incomplete Form', 'Please fill all fields with valid data.', true);
-    }
-
-    // 3. Logic Calculations
-    saleData.profit = (saleData.sp - saleData.bp) * saleData.number;
-    saleData.percentageprofit = saleData.bp !== 0 ? (saleData.profit / (saleData.bp * saleData.number)) * 100 : 0;
-
-    // 4. Execution
-    try {
-        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-        submitButton.disabled = true;
-
-        if (id) {
-            await updateSale(id, saleData);
-            showMessage('Success', 'Sale updated! ✅');
-        } else {
-            await createSale(saleData);
-            showMessage('Success', 'Sale recorded! ✅');
-        }
-
-        // Cleanup
-        document.getElementById('sale-form').reset();
-        document.getElementById('sale-id').value = '';
-        fetchSales(); 
-        refreshTodayPOSStats();
-
-
-    } catch (error) {
-        showMessage('Error', error.message, true);
-    } finally {
-        submitButton.innerHTML = originalText;
-        submitButton.disabled = false;
-    }
-}
 async function deleteSale(id) {
     if (!['admin', 'super-admin'].includes(currentUserRole)) {
         return showMessage('Restricted', 'Only administrators can delete sales records.', true);
@@ -8229,8 +8197,7 @@ document.addEventListener('DOMContentLoaded', () => {
     //const inventoryForm = document.getElementById('inventory-form');
     //if (inventoryForm) inventoryForm.addEventListener('submit', submitInventoryForm);
 
-    const saleForm = document.getElementById('sale-form');
-    if (saleForm) saleForm.addEventListener('submit', submitSaleForm);
+    
 
     
 
