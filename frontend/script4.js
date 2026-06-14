@@ -214,11 +214,26 @@ function showMessage(title, message, isError = false) {
         titleEl.classList.remove('text-red-600', 'text-gray-900');
     }
 
-    // 5. SHOW BOTH: This is the key part!
+    // 5. SHOW BOTH: Remove hidden, and explicitly add 'flex' to center the modal content
     overlay.classList.remove('hidden');
+    
     modal.classList.remove('hidden');
+    modal.classList.add('flex'); 
 }
 
+function closeMessageBox() {
+    const overlay = document.getElementById('messageBoxOverlay');
+    const modal = document.getElementById('messageBox');
+    
+    if (overlay) {
+        overlay.classList.add('hidden');
+    }
+    
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex'); // Remove flex so 'hidden' (display: none) can take effect
+    }
+}
 // IMPROVED FRONTEND FETCH
 async function renderAuditLogs() {
     const tableBody = document.querySelector("#auditLogTable tbody");
@@ -335,13 +350,7 @@ let currentHotel = userData ? userData.hotelName : 'Property Mnagement System';
  */
 
 
-function closeMessageBox() {
-    const overlay = document.getElementById('messageBoxOverlay');
-    const modal = document.getElementById('messageBox');
-    
-    if (overlay) overlay.classList.add('hidden');
-    if (modal) modal.classList.add('hidden');
-}
+
 
 async function updateDashboard() {
   try {
