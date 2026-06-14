@@ -3820,15 +3820,22 @@ app.post('/api/sales', auth, async (req, res) => {
 
     // 2. Dynamic Inventory Logic (Stock Check)
     const currentAvailableStock = todayInventory.opening + todayInventory.purchases;
-    if (todayInventory.trackInventory && (todayInventory.sales + number) > currentAvailableStock) {
+    
+    // Skip insufficient stock check if department is 'Restaurant'
+    const shouldTrackStock = todayInventory.trackInventory && department !== 'Restaurant';
+
+    if (shouldStockCheck && (todayInventory.sales + number) > currentAvailableStock) {
       return res.status(400).json({ 
         error: `Insufficient stock. Available: ${currentAvailableStock - todayInventory.sales}` 
       });
     }
 
-    // 3. Update Inventory (Tenant Isolated)
-    todayInventory.sales += number;
-    await todayInventory.save();
+    // 3. Update Inventory (INTEGRATED HERE)
+    // Only update the inventory database if it is NOT a Restaurant sale
+    if (department !== 'Restaurant') {
+      todayInventory.sales += number;
+      await todayInventory.save();
+    }
 
     // 4. Folio Charging (Securely link to guest account in SAME hotel)
     if (accountId) {
