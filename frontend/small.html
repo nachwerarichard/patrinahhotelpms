@@ -241,6 +241,21 @@ body {
 .skiptranslate.goog-te-gadget {
     display: block !important;
 }
+
+/* Target the navigation element's scrollbar container specifically */
+#sidebar nav::-webkit-scrollbar {
+    width: 5px !important;              /* Force scrollbar to take up physical width */
+    display: block !important;          /* Override default mobile OS hiding behaviors */
+}
+
+#sidebar nav::-webkit-scrollbar-track {
+    background: transparent !important; /* Keep the scrollbar track invisible */
+}
+
+#sidebar nav::-webkit-scrollbar-thumb {
+    background-color: #334155 !important; /* Tailwind's slate-700 color */
+    border-radius: 9999px !important;    /* Make the indicator perfectly rounded */
+}
     </style>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen flex flex-col">
@@ -405,8 +420,9 @@ body {
         </button>
     </div>
     
-    <nav class="flex-grow p-4 mt-4 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent lg:pr-2">
-        <ul class="space-y-1.5">
+<nav class="flex-grow p-4 pr-2 mt-4 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+    
+</nav>        <ul class="space-y-1.5">
             
             <li id="nav-dashboard">
                 <a href="#" class="flex items-center group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
