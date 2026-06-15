@@ -3915,8 +3915,9 @@ function debounce(func, timeout = 300) {
  * Filters bookings based on UI inputs and scoped by Hotel ID.
  */
 async function fetchReport() {
-    // 1. Get DOM Elements
+    // 1. Get DOM Elements for both display pipelines
     const tableBody = document.getElementById('tableBody');
+    const mobileGrid = document.getElementById('reportsMobileGrid');
     const sumPaid = document.getElementById('sumPaid');
     const sumBalance = document.getElementById('sumBalance');
 
@@ -3929,7 +3930,7 @@ async function fetchReport() {
     const startDate = document.getElementById('filterDate').value;
     const endDate = document.getElementById('endDate').value;
 
-    // 3. Multi-Tenant Context (Crucial!)
+    // 3. Multi-Tenant Context Retrieval
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelId = user ? user.hotelId : null;
 
@@ -3938,21 +3939,21 @@ async function fetchReport() {
         return;
     }
 
-    // 4. Logic: Wipe table if no filters are active
+    // 4. Logic Validation Checks: Wipe table contexts if parameters remain baseline clear
     const hasActiveFilter = search || paymentStatus || gueststatus || 
                             paymentMethod || guestsource || startDate || endDate;
 
     if (!hasActiveFilter) {
         if (tableBody) tableBody.innerHTML = '';
+        if (mobileGrid) mobileGrid.innerHTML = '';
         if (sumPaid) sumPaid.textContent = "UGX 0.00";
         if (sumBalance) sumBalance.textContent = "UGX 0.00";
-        console.log("Filters cleared. Table wiped.");
         return;
     }
 
-    // 5. Build Query Parameters
+    // 5. Build Parameters Query Array
     const params = new URLSearchParams({
-        hotelId, // Ensure the backend only returns data for this hotel
+        hotelId,
         search,
         paymentStatus,
         gueststatus,
@@ -3963,130 +3964,148 @@ async function fetchReport() {
     });
 
     try {
-        // Show loading state in the table
-        if (tableBody) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="9" class="p-10 text-center">
-                        <div class="flex flex-col items-center gap-2">
-                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                            <span class="text-gray-500 font-medium">Processing Report...</span>
-                        </div>
-                    </td>
-                </tr>`;
-        }
+        // Render identical animated loader bars into both target elements
+        const loadingIndicator = `
+            <div class="flex flex-col items-center justify-center p-12 gap-2 w-full text-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <span class="text-gray-500 text-sm font-medium">Processing Report Matrix...</span>
+            </div>`;
 
-        // 6. Execute Request using authenticatedFetch
+        if (tableBody) tableBody.innerHTML = `<tr><td colspan="9">${loadingIndicator}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = loadingIndicator;
+
+        // 6. Execute Request Context Pipeline
         const response = await authenticatedFetch(`${API_BASE_URL}/bookings?${params}`);
-        
-        if (!response) throw new Error("No response from server");
+        if (!response) throw new Error("No payload parsed back from execution environment.");
         
         const data = await response.json();
-
-        // 7. Update Global State and UI
-        // Note: adjust 'data.bookings' to just 'data' depending on your backend response structure
         const bookings = Array.isArray(data) ? data : (data.bookings || []);
-        currentData = bookings; 
         
+        currentData = bookings; 
         renderTable(bookings);
 
     } catch (err) {
-        console.error("Fetch error:", err);
-        if (tableBody) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="9" class="p-8 text-center text-red-500 bg-red-50">
-                        <i class="fas fa-exclamation-triangle mr-2"></i> 
-                        Error loading report. Please check your connection.
-                    </td>
-                </tr>`;
-        }
+        console.error("Fetch execution fault error reported:", err);
+        const errorTemplate = `
+            <div class="p-6 text-center text-red-500 font-semibold bg-red-50 rounded-lg">
+                <i class="fas fa-exclamation-triangle mr-2"></i> Error loading report structure. Check internet connectivity log.
+            </div>`;
+        if (tableBody) tableBody.innerHTML = `<tr><td colspan="9">${errorTemplate}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = errorTemplate;
     }
 }
-/**
- * HOTEL PMS REPORTING MODULE
- * Handles rendering, filtering, and exporting of booking data.
- */
 
-
-// 1. MAIN RENDER FUNCTION
 function renderTable(bookings) {
     const tbody = document.getElementById('tableBody');
+    const mobileGrid = document.getElementById('reportsMobileGrid');
     const sumPaidDisplay = document.getElementById('sumPaid');
     const sumBalanceDisplay = document.getElementById('sumBalance');
 
-    // Reset UI if elements don't exist
-    if (!tbody) return;
+    // Wipe down containers completely before running updates
+    if (tbody) tbody.innerHTML = '';
+    if (mobileGrid) mobileGrid.innerHTML = '';
 
-    // Handle empty data gracefully
+    // Handle empty dataset scenarios gracefully across targets
     if (!bookings || bookings.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-gray-400 italic">No bookings found for the selected filters</td></tr>';
+        const fallbackMsg = '<div class="p-8 text-center text-gray-400 font-medium italic">No match logs mapped for active criteria.</div>';
+        if (tbody) tbody.innerHTML = `<tr><td colspan="9">${fallbackMsg}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
         if (sumPaidDisplay) sumPaidDisplay.textContent = "UGX 0.00";
         if (sumBalanceDisplay) sumBalanceDisplay.textContent = "UGX 0.00";
         return;
     }
 
-    // A. Calculate Totals
+    // A. Calculate Dynamic Financial Summaries
     const totalPaid = bookings.reduce((sum, b) => sum + Number(b.amountPaid || 0), 0);
     const totalBalance = bookings.reduce((sum, b) => sum + Number(b.balance || 0), 0);
 
-    // B. Update the Summary Cards (Top of page)
-    const formattedPaid = `UGX ${totalPaid.toLocaleString(undefined, {minimumFractionDigits: 0})}`;
-    const formattedBalance = `UGX ${totalBalance.toLocaleString(undefined, {minimumFractionDigits: 0})}`;
-    
-    if (sumPaidDisplay) sumPaidDisplay.textContent = formattedPaid;
-    if (sumBalanceDisplay) sumBalanceDisplay.textContent = formattedBalance;
+    // B. Reformat Financial String Representations
+    if (sumPaidDisplay) sumPaidDisplay.textContent = `UGX ${totalPaid.toLocaleString()}`;
+    if (sumBalanceDisplay) sumBalanceDisplay.textContent = `UGX ${totalBalance.toLocaleString()}`;
 
-    // C. Generate Table Rows
-    const rows = bookings.map(b => {
-        // Define dynamic badge colors
+    // C. Process Collections and Run Render Loops
+    bookings.forEach(b => {
+        // Map aesthetic colors 
         const payColor = b.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700';
         const statusColor = b.gueststatus === 'confirmed' || b.gueststatus === 'checkedin' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700';
         const methodColor = b.paymentMethod === 'Cash' ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700';
 
-        return `
-            <tr class="hover:bg-gray-50 transition-colors border-b">
-                <td class="p-3 font-medium text-gray-700">${b.name || 'N/A'}</td>
-                <td class="p-3 text-gray-600">${b.room || 'N/A'}</td>
-                <td class="p-3 text-gray-600 text-sm">${b.checkIn}</td>
+        // 1. POPULATE VIEW 1: Render out standard desktop table row element
+        if (tbody) {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-gray-50/80 transition-colors border-b border-gray-100";
+            tr.innerHTML = `
+                <td class="p-3 font-semibold text-gray-800">${b.name || 'N/A'}</td>
+                <td class="p-3 text-gray-600 font-medium">${b.room || 'N/A'}</td>
+                <td class="p-3 text-gray-400 text-xs">${b.checkIn}</td>
                 <td class="p-3 text-green-600 font-bold font-mono text-right">${Number(b.amountPaid || 0).toLocaleString()}</td>
                 <td class="p-3 text-red-600 font-bold font-mono text-right">${Number(b.balance || 0).toLocaleString()}</td>
                 <td class="p-3 text-center">
-                    <span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase ${payColor}">
-                        ${b.paymentStatus || 'Pending'}
-                    </span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${payColor}">${b.paymentStatus || 'Pending'}</span>
                 </td>
                 <td class="p-3 text-center">
-                    <span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase ${statusColor}">
-                        ${b.gueststatus || 'Reserved'}
-                    </span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${statusColor}">${b.gueststatus || 'Reserved'}</span>
                 </td>
                 <td class="p-3 text-center">
-                    <span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase ${methodColor}">
-                        ${b.paymentMethod || 'N/A'}
-                    </span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${methodColor}">${b.paymentMethod || 'N/A'}</span>
                 </td>
-                <td class="p-3 text-center text-gray-500 text-xs">
-                    ${b.guestsource || 'Walk in'}
-                </td>
-            </tr>
-        `;
-    }).join('');
+                <td class="p-3 text-center text-gray-400 text-xs">${b.guestsource || 'Walk in'}</td>
+            `;
+            tbody.appendChild(tr);
+        }
 
-    // D. Create the Summary/Total Row at bottom of table
-    const totalRow = `
-        <tr class="bg-gray-50 font-black border-t-2 border-gray-300">
-            <td colspan="3" class="p-4 text-right text-gray-500 uppercase tracking-widest text-xs">Grand Total:</td>
-            <td class="p-4 text-green-700 text-right font-mono">${totalPaid.toLocaleString()}</td>
-            <td class="p-4 text-red-700 text-right font-mono">${totalBalance.toLocaleString()}</td>
+        // 2. POPULATE VIEW 2: Render out clean card template for mobile ledger screens
+        if (mobileGrid) {
+            const card = document.createElement('div');
+            card.className = "p-4 bg-white border border-gray-200 rounded-xl shadow-sm space-y-3";
+            card.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 class="text-base font-bold text-gray-900">${b.name || 'N/A'}</h4>
+                        <p class="text-xs text-gray-400 font-medium">Room Assigned: <span class="text-indigo-600 font-bold">${b.room || 'N/A'}</span></p>
+                    </div>
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${statusColor}">${b.gueststatus || 'Reserved'}</span>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2 bg-gray-50 border border-gray-100 rounded-lg p-3 text-xs">
+                    <div>
+                        <span class="text-[10px] text-gray-400 font-bold uppercase block tracking-tight">Paid Amount</span>
+                        <span class="text-green-600 font-bold font-mono text-sm">UGX ${Number(b.amountPaid || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-gray-400 font-bold uppercase block tracking-tight">Balance Outstanding</span>
+                        <span class="text-red-600 font-bold font-mono text-sm">UGX ${Number(b.balance || 0).toLocaleString()}</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between text-xs pt-1 gap-2">
+                    <div class="text-gray-400 font-medium"><i class="far fa-calendar-alt mr-1"></i> In: ${b.checkIn}</div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase ${payColor}">${b.paymentStatus || 'Pending'}</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase ${methodColor}">${b.paymentMethod || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="text-[11px] text-gray-400 border-t border-gray-100/70 pt-2 flex justify-between">
+                    <span>Source: <strong class="text-gray-600">${b.guestsource || 'Walk in'}</strong></span>
+                </div>
+            `;
+            mobileGrid.appendChild(card);
+        }
+    });
+
+    // D. Append Grand Totals Summary Row at bottom of Table view (Desktop Only)
+    if (tbody) {
+        const totalRow = document.createElement('tr');
+        totalRow.className = "bg-slate-50 font-black border-t-2 border-gray-300 text-gray-900";
+        totalRow.innerHTML = `
+            <td colspan="3" class="p-4 text-right text-gray-500 uppercase tracking-widest text-xs font-bold">Grand Total:</td>
+            <td class="p-4 text-green-700 text-right font-mono text-base">${totalPaid.toLocaleString()}</td>
+            <td class="p-4 text-red-700 text-right font-mono text-base">${totalBalance.toLocaleString()}</td>
             <td colspan="4" class="p-4"></td>
-        </tr>
-    `;
-
-    // E. Update the DOM once to prevent flickering
-    tbody.innerHTML = rows + totalRow;
+        `;
+        tbody.appendChild(totalRow);
+    }
     
-    // Save to global for exports
     currentData = bookings;
 }
 
