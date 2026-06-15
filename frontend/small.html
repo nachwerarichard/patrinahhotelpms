@@ -316,20 +316,27 @@ body {
                 <span id="hotel-name-display" class="text-xs sm:text-sm font-bold uppercase tracking-wide text-slate-100 truncate">
                     Unknown Hotel
                 </span>
-                <i class="fas fa-chevron-down text-[10px] text-slate-400 mt-0.5"></i>
             </div>
         </div>
     </div>
 
     <!-- MIDDLE ZONE: Global Search Bar (Hidden on small screens, pops up as a tool on desktop layouts) -->
-    <div class="hidden lg:flex flex-1 max-w-xl mx-8">
+    <!-- MIDDLE ZONE: Global Search Bar -->
+    <div class="hidden lg:flex flex-1 max-w-xl mx-8 relative">
         <div class="relative w-full group">
             <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                 <i class="fas fa-search text-slate-400 text-sm group-focus-within:text-indigo-400 transition-colors"></i>
             </div>
             <input type="text" 
-                   placeholder="Search Room, Guest Name, Reservation ID... (Press '/' to focus)" 
+                   id="global-guest-search"
+                   placeholder="Type guest name to search... (Press '/' to focus)" 
+                   autocomplete="off"
                    class="w-full bg-slate-850 text-slate-200 placeholder-slate-400 text-sm rounded-xl pl-10 pr-4 py-2 border border-slate-700/80 focus:outline-none focus:border-indigo-500 focus:bg-slate-800 transition-all shadow-inner">
+        </div>
+        
+        <!-- Floating Dropdown Result Box panel matching slate theme -->
+        <div id="search-results-dropdown" class="absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden hidden z-50 max-h-80 overflow-y-auto">
+            <!-- Results will be injected here dynamically -->
         </div>
     </div>
 
@@ -3761,6 +3768,191 @@ function toggleDropdown(menuId, arrowId) {
 </script>
 <script type="text/javascript"
 src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
+</script>
+<script>
+    // 1. Core global event setup
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('global-guest-search');
+    const resultsDropdown = document.getElementById('search-results-dropdown');
+    let debounceTimer;
+
+    if (!searchInput) return;
+
+    // Hotkey feature: Press '/' to quickly focus the search bar
+    window.addEventListener('keydown', (e) => {
+        if (e.key === '/' && document.activeElement !== searchInput) {
+            e.preventDefault();
+            searchInput.focus();
+        }
+    });
+
+    // Fire data fetches as user types with a 300ms delay buffer
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        const query = e.target.value.trim();
+
+        if (query.length < 2) {
+            resultsDropdown.innerHTML = '';
+            resultsDropdown.classList.add('hidden');
+            return;
+        }
+
+        debounceTimer = setTimeout(() => {
+            executeGuestSearch(query);
+        }, 300);
+    });
+
+    // Close the dropdown cleanly if clicking outside the component panel
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !resultsDropdown.contains(e.target)) {
+            resultsDropdown.classList.add('hidden');
+        }
+    });
+});
+
+// 2. Fetch matches from your Live Render Booking API endpoints
+
+// 3. Print out neat match records mimicking dark system aesthetic
+// 1. Fetch matches using your existing backend route query parameter (?search=)
+async function executeGuestSearch(query) {
+    const resultsDropdown = document.getElementById('search-results-dropdown');
+    
+    try {
+        // CHANGED: Query using 'search=' instead of 'name=' to match your backend logic
+        // Also adding a limit of 10 for the quick dropdown so we don't pull 500 records
+        const response = await authenticatedFetch(`${API_BASE_URL}/bookings?search=${encodeURIComponent(query)}&limit=10`);
+        
+        if (!response || !response.ok) {
+            showDropdownMessage('<div class="p-4 text-xs text-rose-400">Failed to pull data matching queries.</div>');
+            return;
+        }
+
+        const data = await response.json();
+        
+        // CHANGED: Your backend returns an object { bookings: [], totalPages: X } 
+        // We must extract 'data.bookings' instead of reading 'data' as a direct array
+        renderDropdownResults(data.bookings);
+        
+    } catch (error) {
+        console.error('Search mechanism exception:', error);
+        showDropdownMessage('<div class="p-4 text-xs text-rose-400">Error connecting to PMS servers.</div>');
+    }
+}
+
+// 2. Render dropdown results safely
+function renderDropdownResults(bookings) {
+    const resultsDropdown = document.getElementById('search-results-dropdown');
+    resultsDropdown.innerHTML = '';
+
+    // Handle empty arrays safely
+    if (!bookings || bookings.length === 0) {
+        showDropdownMessage('<div class="p-4 text-xs text-slate-400">No active records match that search.</div>');
+        return;
+    }
+
+    resultsDropdown.classList.remove('hidden');
+
+    bookings.forEach(booking => {
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between p-3 border-b border-slate-800/60 hover:bg-slate-800 cursor-pointer transition-colors group";
+        
+        item.innerHTML = `
+            <div class="flex flex-col min-w-0">
+                <span class="text-sm font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">${escapeHTML(booking.name)}</span>
+                <span class="text-[11px] text-slate-400 mt-0.5">ID: ${escapeHTML(booking.id)} | Room: ${escapeHTML(booking.room || 'N/A')}</span>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-slate-800 text-indigo-400 border border-slate-700 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-transparent transition-all">
+                Open Details
+            </span>
+        `;
+
+        // Click action: populate the pre-existing bookingModal form
+        item.addEventListener('click', () => {
+            populateAndOpenModal(booking);
+            resultsDropdown.classList.add('hidden');
+            document.getElementById('global-guest-search').value = '';
+        });
+
+        resultsDropdown.appendChild(item);
+    });
+}
+
+function showDropdownMessage(htmlContent) {
+    const resultsDropdown = document.getElementById('search-results-dropdown');
+    resultsDropdown.innerHTML = htmlContent;
+    resultsDropdown.classList.remove('hidden');
+}
+
+// Helper sanitization utility protecting DOM environments from input execution anomalies
+function escapeHTML(str) {
+    if (!str) return '';
+    return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+    );
+}
+
+// 4. Inject specific schema properties context to matching modal UI layout targets
+function populateAndOpenModal(booking) {
+    const modal = document.getElementById('bookingModal');
+    if (!modal) return;
+
+    // Reset Form standard logic
+    document.getElementById('bookingForm').reset();
+
+    // Mapping key attributes to element values following your exact Schema & Form Layout keys
+    setFieldValue('bookingId', booking._id || booking.id);
+    setFieldValue('name', booking.name);
+    setFieldValue('nationality', booking.nationality);
+    setFieldValue('nationalIdNo', booking.nationalIdNo);
+    setFieldValue('guestEmail', booking.guestEmail);
+    setFieldValue('phoneNo', booking.phoneNo);
+    setFieldValue('occupation', booking.occupation);
+    setFieldValue('address', booking.address);
+    
+    // Room stay fields
+    setFieldValue('room', booking.room);
+    setFieldValue('checkIn', booking.checkIn);
+    setFieldValue('checkIntime', booking.checkIntime);
+    setFieldValue('checkOut', booking.checkOut);
+    setFieldValue('checkOuttime', booking.checkOuttime);
+    setFieldValue('nights', booking.nights);
+    setFieldValue('people', booking.people);
+    setFieldValue('extraperson', booking.extraperson);
+
+    // Accounting variables
+    setFieldValue('amtPerNight', booking.amtPerNight);
+    setFieldValue('totalDue', booking.totalDue);
+    setFieldValue('amountPaid', booking.amountPaid);
+    setFieldValue('balance', booking.balance);
+    setFieldValue('paymentMethod', booking.paymentMethod || 'Cash');
+    setFieldValue('transactionid', booking.transactionid);
+    setFieldValue('paymentStatus', booking.paymentStatus || 'Pending');
+    setFieldValue('gueststatus', booking.gueststatus || 'confirmed');
+
+    // Emergency fields
+    setFieldValue('vehno', booking.vehno);
+    setFieldValue('destination', booking.destination);
+    setFieldValue('guestsource', booking.guestsource || 'Walk in');
+    setFieldValue('kin', booking.kin);
+    setFieldValue('kintel', booking.kintel);
+    setFieldValue('purpose', booking.purpose);
+    setFieldValue('declarations', booking.declarations);
+
+    // Update styling tags inside modal header to show viewing state context
+    const modalTitle = document.getElementById('modalTitle');
+    if (modalTitle) modalTitle.innerHTML = `<i class="fas fa-user-check"></i> Reviewing Guest: ${escapeHTML(booking.name)}`;
+
+    // Toggle styling flags unlocking container viewing frame visibility layers smoothly
+    modal.classList.remove('hidden');
+}
+
+// Field assignments guard wrapper avoiding unexpected DOM value initialization errors
+function setFieldValue(id, value) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.value = value !== undefined && value !== null ? value : '';
+    }
+}
 </script>
 </body>
 </html>
