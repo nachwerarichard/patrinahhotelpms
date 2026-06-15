@@ -8402,12 +8402,3 @@ function showSection(sectionId) {
 
 
 
-
-        // 3. LOAD ORDERS
-// 1. MUST BE OUTSIDE THE FUNCTION
-let lastOrderCount = 0; 
-
-async function loadOrders() {
-    console.log("1. loadOrders started");
-    try {
-        const res = await authenticatedFetch(`${API_BASE}/api/kitchen/Pending`, { method: 'GET' })
