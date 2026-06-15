@@ -420,23 +420,34 @@ body {
         </button>
     </div>
     
-    <nav class="custom-sidebar-scroll flex-grow p-4 pr-2 mt-4 overflow-y-auto">
+    <nav class="custom-sidebar-scroll flex-grow p-4 pr-3 mt-4 overflow-y-auto">
+        
         <style>
+            /* Webkit engines (Desktop Chrome/Safari/Edge & ALL Mobile Phones) */
             .custom-sidebar-scroll::-webkit-scrollbar {
                 width: 6px !important;
+                height: 6px !important;
                 display: block !important;
             }
+
+            /* CRITICAL FIX FOR MOBILE: Changing background from 'transparent' to a 
+              microscopic color forces mobile engines to permanently render the element.
+            */
             .custom-sidebar-scroll::-webkit-scrollbar-track {
-                background: transparent !important;
+                background: rgba(255, 255, 255, 0.01) !important; 
             }
+
             .custom-sidebar-scroll::-webkit-scrollbar-thumb {
-                background-color: #334155 !important; /* Matches Tailwind slate-700 */
+                background-color: #334155 !important; /* Tailwind slate-700 */
                 border-radius: 9999px !important;
+                border: 1px solid transparent !important;
             }
-            /* Styling fallback rule for Firefox */
+
+            /* Fallback styling syntax rules targeting desktop/mobile Firefox */
             .custom-sidebar-scroll {
                 scrollbar-width: thin !important;
-                scrollbar-color: #334155 transparent !important;
+                scrollbar-color: #334155 rgba(255, 255, 255, 0.01) !important;
+                -webkit-overflow-scrolling: touch !important; /* Smooth momentum on iOS */
             }
         </style>
 
