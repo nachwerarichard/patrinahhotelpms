@@ -982,17 +982,19 @@ async function renderBookings(page = 1, searchTerm = '') {
     const currentUserRole = sessionData?.role;
 
     renderHousekeepingRooms();
-    const bookingsTableBody = document.querySelector("#bookingsTable tbody");
-    if (!bookingsTableBody) return;
-    bookingsTableBody.innerHTML = ''; 
+    
+    const tableBody = document.querySelector("#bookingsTable tbody");
+    const mobileGrid = document.getElementById("bookingsMobileGrid");
+    
+    if(tableBody) tableBody.innerHTML = '';
+    if(mobileGrid) mobileGrid.innerHTML = '';
 
-    if (!pageInfoSpan) {
-        console.warn("Skipping renderBookings: pageInfoSpan not found on this page.");
-        return; 
-    }
+    if (!pageInfoSpan) return; 
 
     if (!['admin', 'front office', 'bar', 'super-admin'].includes(currentUserRole)) {
-        bookingsTableBody.innerHTML = '<tr><td colspan="8" class="text-center p-6 text-gray-500">Access Denied. You do not have permission to view bookings.</td></tr>';
+        const errorMsg = '<div class="text-center p-6 text-gray-500 font-bold">Access Denied.</div>';
+        if(tableBody) tableBody.innerHTML = `<tr><td colspan="8">${errorMsg}</td></tr>`;
+        if(mobileGrid) mobileGrid.innerHTML = errorMsg;
         prevPageBtn.disabled = true;
         nextPageBtn.disabled = true;
         pageInfoSpan.textContent = 'Page 0 of 0';
@@ -1007,9 +1009,7 @@ async function renderBookings(page = 1, searchTerm = '') {
 
     try {
         let url = `${API_BASE_URL}/bookings?page=${currentPage}&limit=${recordsPerPage}&hotelId=${hotelId}`;
-        if (currentSearchTerm) {
-            url += `&search=${encodeURIComponent(currentSearchTerm)}`;
-        }
+        if (currentSearchTerm) url += `&search=${encodeURIComponent(currentSearchTerm)}`;
 
         const response = await fetch(url, {
             method: 'GET',
@@ -1019,35 +1019,27 @@ async function renderBookings(page = 1, searchTerm = '') {
                 'x-hotel-id': hotelId
             }
         });
-
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP fetch error Status code: ${response.status}`);
         
         const data = await response.json();
         currentBookings = data.bookings || [];
         totalPages = data.totalPages || 1;
         totalCount = data.totalCount || 0;
-
     } catch (error) {
         console.error('Error fetching bookings:', error);
-        bookingsTableBody.innerHTML = '<tr><td colspan="8" class="text-center p-6 text-red-500">Failed to load booking information. Please try again.</td></tr>';
         return;
     }
 
     if (currentBookings.length === 0) {
-        bookingsTableBody.innerHTML = '<tr><td colspan="8" class="text-center p-6 text-gray-500">No bookings found.</td></tr>';
+        const emptyMsg = '<div class="text-center p-6 text-gray-400">No records tracked.</div>';
+        if(tableBody) tableBody.innerHTML = `<tr><td colspan="8">${emptyMsg}</td></tr>`;
+        if(mobileGrid) mobileGrid.innerHTML = emptyMsg;
     } else {
         currentBookings.forEach(booking => {
-            const row = bookingsTableBody.insertRow();
-            row.dataset.id = booking.id;
-            
             const isCancelled = booking.gueststatus === 'cancelled';
-            row.className = isCancelled 
-                ? "bg-red-50/70 hover:bg-red-100/70 transition-colors opacity-90 border-b border-gray-100" 
-                : "hover:bg-gray-50/80 transition-colors border-b border-gray-100";
-
-            const baseBtn = "inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-md shadow-sm text-white transition-all duration-200 w-full justify-center mb-1";
+            const baseBtn = "inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white focus:outline-none transition-all duration-200 w-full justify-center mb-1";
+            
             let actionButtonsHtml = '';
-
             if (['admin', 'super-admin', 'front office'].includes(currentUserRole)) {
                 if (isCancelled) {
                     actionButtonsHtml = `
@@ -1076,40 +1068,61 @@ async function renderBookings(page = 1, searchTerm = '') {
 
             const cancellationReason = booking.cancellationReason || "No reason provided";
 
-            // Note the use of whitespace-nowrap below to protect alignment on small screens
-            row.innerHTML = `
-                <td class="py-3 px-4 whitespace-nowrap font-semibold text-gray-900">${booking.name}</td>
-                <td class="py-3 px-4 whitespace-nowrap">${booking.room}</td>
-                <td class="py-3 px-4 whitespace-nowrap text-gray-500">${booking.checkIn}</td>
-                <td class="py-3 px-4 whitespace-nowrap text-gray-500">${booking.checkOut}</td>
-                <td class="py-3 px-4 whitespace-nowrap">
-                    <span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${booking.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
-                        ${booking.paymentStatus}
-                    </span>
-                </td>
-                <td class="py-3 px-4 whitespace-nowrap relative group cursor-help">
-                    <span class="${isCancelled ? 'text-red-600 font-bold' : 'text-gray-700 bg-gray-100 px-2 py-0.5 rounded text-xs'}">
-                        ${booking.gueststatus}
-                    </span>
-                    ${isCancelled ? `
-                    <div class="invisible group-hover:visible absolute z-50 w-48 bg-gray-900 text-white text-xs rounded p-2 -top-12 left-0 shadow-xl pointer-events-none whitespace-normal">
-                        <strong>Reason:</strong> ${cancellationReason}
-                        <div class="bg-gray-900 w-2 h-2 rotate-45 absolute -bottom-1 left-4"></div>
-                    </div>
-                    ` : ''}
-                </td>
-                <td class="py-3 px-4 whitespace-nowrap text-xs text-gray-500">${booking.guestsource}</td>
-                <td class="py-3 px-4 whitespace-nowrap text-center">
-                    <div class="relative inline-block text-left">
-                        <button class="p-2 hover:bg-gray-200 rounded-full transition-colors focus:outline-none" onclick="toggleActionButtons(event, this)">
-                            <i class="fas fa-ellipsis-v text-gray-500"></i>
-                        </button>
-                        <div class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 shadow-2xl rounded-lg p-2 z-[100]">
-                           ${actionButtonsHtml}
+            // Populate View 1: Desktop Layout
+            if(tableBody) {
+                const row = tableBody.insertRow();
+                row.dataset.id = booking.id;
+                row.className = isCancelled ? "bg-red-50 hover:bg-red-100 transition-colors opacity-75" : "hover:bg-gray-50 transition-colors";
+                row.innerHTML = `
+                    <td class="py-3 px-6">${booking.name}</td>
+                    <td class="py-3 px-6">${booking.room}</td>
+                    <td class="py-3 px-6">${booking.checkIn}</td>
+                    <td class="py-3 px-6">${booking.checkOut}</td>
+                    <td class="py-3 px-6">${booking.paymentStatus}</td>
+                    <td class="py-3 px-6 relative group cursor-help">
+                        <span class="${isCancelled ? 'text-red-600 font-semibold' : 'text-gray-700'}">${booking.gueststatus}</span>
+                        ${isCancelled ? `<div class="invisible group-hover:visible absolute z-50 w-48 bg-gray-900 text-white text-xs rounded p-2 -top-12 left-0 shadow-xl pointer-events-none"><strong>Reason:</strong> ${cancellationReason}</div>` : ''}
+                    </td>
+                    <td class="py-3 px-6">${booking.guestsource}</td>
+                    <td class="py-3 px-6 text-center">
+                        <div class="relative inline-block text-left">
+                            <button class="p-2 hover:bg-gray-200 rounded-full transition-colors" onclick="toggleActionButtons(event, this)">
+                                <i class="fas fa-ellipsis-v text-gray-600"></i>
+                            </button>
+                            <div class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 shadow-2xl rounded-lg p-2 z-[100]">${actionButtonsHtml}</div>
+                        </div>
+                    </td>
+                `;
+            }
+
+            // Populate View 2: Mobile Stack Layout
+            if(mobileGrid) {
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-xl border ${isCancelled ? 'bg-red-50/50 border-red-200' : 'bg-gray-50 border-gray-200'} shadow-sm relative`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h4 class="text-base font-bold text-gray-900">${booking.name}</h4>
+                            <p class="text-xs text-gray-500 font-medium">Room: <span class="text-blue-600 font-bold">${booking.room}</span> | Source: ${booking.guestsource}</p>
+                        </div>
+                        <div class="relative">
+                            <button class="p-1.5 bg-white border border-gray-200 rounded-lg shadow-sm" onclick="toggleActionButtons(event, this)">
+                                <i class="fas fa-ellipsis-h text-gray-600"></i>
+                            </button>
+                            <div class="hidden absolute right-0 mt-1 w-48 bg-white border border-gray-200 shadow-2xl rounded-lg p-2 z-[100]">${actionButtonsHtml}</div>
                         </div>
                     </div>
-                </td>
-            `;
+                    <div class="grid grid-cols-2 gap-2 my-3 text-xs border-y border-gray-200/60 py-2">
+                        <div><span class="text-gray-400 block uppercase font-bold tracking-tight text-[10px]">Check In</span> <span class="font-medium text-gray-700">${booking.checkIn}</span></div>
+                        <div><span class="text-gray-400 block uppercase font-bold tracking-tight text-[10px]">Check Out</span> <span class="font-medium text-gray-700">${booking.checkOut}</span></div>
+                    </div>
+                    <div class="flex items-center justify-between text-xs pt-1">
+                        <div>Status: <span class="font-bold ${isCancelled ? 'text-red-600' : 'text-emerald-600'}">${booking.gueststatus}</span></div>
+                        <div class="px-2 py-0.5 rounded font-bold ${booking.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${booking.paymentStatus}</div>
+                    </div>
+                `;
+                mobileGrid.appendChild(card);
+            }
         });
     }
 
