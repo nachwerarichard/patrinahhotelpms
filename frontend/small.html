@@ -1195,7 +1195,7 @@ body {
     <p id="message" class="text-center text-emerald-600 font-bold mt-4"></p>
 </section>
 
-<section id="checklisttable" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+<section id="checklisttable" class="section bg-white p-4 md:p-6 rounded-lg shadow-md mb-8 hidden">
     <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
         <span class="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><i class="fa-solid fa-table text-xl"></i></span>
         Room Checklists Table
@@ -1203,7 +1203,7 @@ body {
     
     <div class="flex flex-col sm:flex-row gap-4 items-center justify-between mb-6">
         <div class="relative w-full sm:w-72">
-            <input type="text" id="searchInputdate" class="w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm" placeholder="Search room or date...">
+            <input type="text" id="searchInputdate" class="w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm" placeholder="Search room or date...">
         </div>
         
         <div class="flex gap-3 w-full sm:w-auto justify-end">
@@ -1216,7 +1216,7 @@ body {
         </div>
     </div>
     
-    <div class="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
+    <div class="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
         <table id="checklistTable" class="w-full text-left border-collapse">
             <thead>
                 <tr class="bg-slate-50 border-b border-slate-200 text-slate-700 text-sm font-semibold uppercase tracking-wider">
@@ -1227,9 +1227,12 @@ body {
                 </tr>
             </thead>
             <tbody id="checklistBody" class="divide-y divide-slate-100 text-sm text-slate-600">
-            </tbody>
+                </tbody>
         </table>
     </div>
+
+    <div id="checklistMobileGrid" class="block md:hidden space-y-4">
+        </div>
 
     <div class="flex items-center justify-center gap-4 mt-6">
         <button id="prevBtn" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium rounded-lg transition-colors text-sm disabled:opacity-50">&laquo; Prev</button>
@@ -3323,15 +3326,18 @@ async function loadChecklists() {
 function getFilteredChecklists() {
   const search = (document.getElementById('searchInputdate')?.value || '').toLowerCase();
   return allChecklists.filter((entry) => {
-    const haystack =
-      `${entry.room} ${entry.date} ${JSON.stringify(entry.items)}`.toLowerCase();
+    const haystack = `${entry.room} ${entry.date} ${JSON.stringify(entry.items)}`.toLowerCase();
     return haystack.includes(search);
   });
 }
 
 function renderChecklistTable() {
   const tbody = document.getElementById('checklistBody');
-  if (!tbody) return;
+  const mobileGrid = document.getElementById('checklistMobileGrid');
+  
+  if (tbody) tbody.innerHTML = '';
+  if (mobileGrid) mobileGrid.innerHTML = '';
+
   const actionsHeader = document.getElementById('checklistActionsHeader');
   if (actionsHeader) actionsHeader.classList.remove('hidden');
 
@@ -3339,34 +3345,60 @@ function renderChecklistTable() {
   const start = (currentPage - 1) * rowsPerPage;
   const pageSlice = filtered.slice(start, start + rowsPerPage);
 
-  tbody.innerHTML = '';
-
   if (pageSlice.length === 0) {
-    tbody.innerHTML =
-      '<tr><td colspan="4" class="text-center py-4 text-gray-500">No checklists found.</td></tr>';
+    const fallback = '<div class="text-center py-6 text-gray-400 text-sm font-medium">No checklists found.</div>';
+    if (tbody) tbody.innerHTML = `<tr><td colspan="4">${fallback}</td></tr>`;
+    if (mobileGrid) mobileGrid.innerHTML = fallback;
   } else {
     pageSlice.forEach((entry) => {
-      const tr = document.createElement('tr');
-      tr.dataset.id = entry._id;
-      tr.className = "border-b border-slate-100 text-slate-600 hover:bg-slate-50 transition-colors";
-      
-      const actionsHtml = `
-        <td class="px-6 py-4 text-center">
-          <button class="bg-amber-500 text-slate-900 font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-amber-600 transition-colors mr-2"
-            onclick='editChecklist("${entry._id}")'>Edit</button>
-          <button class="bg-red-500 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-red-600 transition-colors"
-            onclick='deleteChecklist("${entry._id}")'>Delete</button>
-        </td>`;
+      const itemsString = Object.entries(entry.items)
+        .map(([k, v]) => `${checklistHumanize(k)}: ${checklistHumanize(v)}`)
+        .join(', ');
 
-      tr.innerHTML = `
-        <td class="px-6 py-4 font-medium text-slate-900">${entry.room}</td>
-        <td class="px-6 py-4">${entry.date}</td>
-        <td class="px-6 py-4 max-w-xs truncate">
-          ${Object.entries(entry.items).map(([k, v]) => `${checklistHumanize(k)}: ${checklistHumanize(v)}`).join(', ')}
-        </td>
-        ${actionsHtml}
-      `;
-      tbody.appendChild(tr);
+      // --- 1. POPULATE VIEW 1: DESKTOP TABLE ROW ---
+      if (tbody) {
+        const tr = document.createElement('tr');
+        tr.dataset.id = entry._id;
+        tr.className = "border-b border-slate-100 text-slate-600 hover:bg-slate-50 transition-colors";
+        tr.innerHTML = `
+          <td class="px-6 py-4 font-semibold text-slate-900">${entry.room}</td>
+          <td class="px-6 py-4 text-slate-500">${entry.date}</td>
+          <td class="px-6 py-4 max-w-xs truncate" title="${itemsString}">${itemsString}</td>
+          <td class="px-6 py-4 text-center whitespace-nowrap">
+            <button class="bg-amber-500 text-slate-900 font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-amber-600 transition-colors mr-2"
+              onclick='editChecklist("${entry._id}")'>Edit</button>
+            <button class="bg-red-500 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-red-600 transition-colors"
+              onclick='deleteChecklist("${entry._id}")'>Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      // --- 2. POPULATE VIEW 2: MOBILE CARD VIEW ---
+      if (mobileGrid) {
+        const card = document.createElement('div');
+        card.dataset.id = entry._id;
+        card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3 hover:border-slate-300 transition-all";
+        card.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <h4 class="text-base font-bold text-slate-900">Room ${entry.room}</h4>
+              <p class="text-xs text-slate-400 font-medium"><i class="far fa-calendar-alt mr-1"></i> ${entry.date}</p>
+            </div>
+            <div class="flex gap-1.5">
+              <button class="bg-amber-500 text-slate-900 font-bold px-2.5 py-1.5 rounded-lg text-xs hover:bg-amber-600 transition-colors"
+                onclick='editChecklist("${entry._id}")'><i class="fa-solid fa-pen"></i></button>
+              <button class="bg-red-500 text-white font-bold px-2.5 py-1.5 rounded-lg text-xs hover:bg-red-600 transition-colors"
+                onclick='deleteChecklist("${entry._id}")'><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+          </div>
+          <div class="bg-slate-50 border border-slate-100 rounded-lg p-3 text-xs text-slate-600 leading-relaxed">
+            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Status Items</span>
+            ${itemsString}
+          </div>
+        `;
+        mobileGrid.appendChild(card);
+      }
     });
   }
 
@@ -3381,43 +3413,84 @@ function editChecklist(id) {
   if (!entry) return;
 
   const tbody = document.getElementById('checklistBody');
-  const row = tbody.querySelector(`tr[data-id="${id}"]`);
+  const mobileGrid = document.getElementById('checklistMobileGrid');
+  
+  // Find both responsive variant row targets
+  const desktopRow = tbody ? tbody.querySelector(`tr[data-id="${id}"]`) : null;
+  const mobileCard = mobileGrid ? mobileGrid.querySelector(`div[data-id="${id}"]`) : null;
+
+  // Build the unified dropdown element items template
   const itemsHtml = Object.keys(entry.items)
-    .map(
-      (key) => `
-      <div class="flex items-center justify-between py-1 gap-4">
+    .map((key) => `
+      <div class="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0 gap-4">
         <span class="font-medium text-xs text-slate-700">${checklistHumanize(key)}:</span>
-        <select id="item-${key}-${id}" class="px-2 py-1 bg-white border rounded-md text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+        <select id="item-${key}-${id}" class="px-2 py-1 bg-white border border-slate-300 rounded-md text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none">
           <option value="yes" ${entry.items[key] === 'yes' ? 'selected' : ''}>Yes</option>
           <option value="no" ${entry.items[key] === 'no' ? 'selected' : ''}>No</option>
         </select>
       </div>`
-    )
-    .join('');
+    ).join('');
 
-  const editRowHtml = `
-    <tr class="bg-indigo-50/50" data-id="${id}">
-      <td class="px-6 py-4">
-        <input type="number" id="editRoom-${id}" value="${entry.room}" class="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"/>
-      </td>
-      <td class="px-6 py-4">
-        <input type="date" id="editDate-${id}" value="${entry.date}" class="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"/>
-      </td>
-      <td class="px-6 py-4">
-        <div class="space-y-1 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">${itemsHtml}</div>
-      </td>
-      <td class="px-6 py-4 text-center">
-        <button class="bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 transition-colors mr-2" onclick='saveChecklist("${id}")'>Save</button>
-        <button class="bg-slate-500 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-slate-600 transition-colors" onclick='loadChecklists()'>Cancel</button>
-      </td>
-    </tr>
-  `;
-  if (row) row.outerHTML = editRowHtml;
+  // --- HTML TEMPLATE: INLINE DESKTOP ROW EDITING MODE ---
+  if (desktopRow) {
+    const editRowHtml = `
+      <tr class="bg-indigo-50/40 border-b border-indigo-100" data-id="${id}">
+        <td class="px-6 py-4">
+          <input type="number" id="editRoom-${id}" value="${entry.room}" class="w-24 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"/>
+        </td>
+        <td class="px-6 py-4">
+          <input type="date" id="editDate-${id}" value="${entry.date}" class="w-40 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"/>
+        </td>
+        <td class="px-6 py-4">
+          <div class="max-w-md bg-white p-3 rounded-xl border border-slate-200 shadow-sm">${itemsHtml}</div>
+        </td>
+        <td class="px-6 py-4 text-center whitespace-nowrap">
+          <button class="bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 transition-colors mr-2" onclick='saveChecklist("${id}")'>Save</button>
+          <button class="bg-slate-500 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-slate-600 transition-colors" onclick='loadChecklists()'>Cancel</button>
+        </td>
+      </tr>
+    `;
+    desktopRow.outerHTML = editRowHtml;
+  }
+
+  // --- HTML TEMPLATE: MOBILE CARD EDITING MODE ---
+  if (mobileCard) {
+    const editCardHtml = `
+      <div data-id="${id}" class="p-4 bg-indigo-50/60 border border-indigo-200 rounded-xl shadow-sm space-y-4">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Room</label>
+            <input type="number" id="editRoomMobile-${id}" value="${entry.room}" class="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"/>
+          </div>
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Date</label>
+            <input type="date" id="editDateMobile-${id}" value="${entry.date}" class="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"/>
+          </div>
+        </div>
+        
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Update Status Items</span>
+          ${itemsHtml}
+        </div>
+
+        <div class="flex gap-2">
+          <button class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs hover:bg-emerald-700 transition-colors" onclick='saveChecklist("${id}", true)'>Save</button>
+          <button class="flex-1 bg-slate-500 text-white font-bold py-2 rounded-lg text-xs hover:bg-slate-600 transition-colors" onclick='loadChecklists()'>Cancel</button>
+        </div>
+      </div>
+    `;
+    mobileCard.outerHTML = editCardHtml;
+  }
 }
 
-async function saveChecklist(id) {
-  const room = document.getElementById(`editRoom-${id}`).value;
-  const date = document.getElementById(`editDate-${id}`).value;
+async function saveChecklist(id, isMobile = false) {
+  // Pull inputs dynamically based on which layout context submitted the event form
+  const roomPrefix = isMobile ? `editRoomMobile-${id}` : `editRoom-${id}`;
+  const datePrefix = isMobile ? `editDateMobile-${id}` : `editDate-${id}`;
+  
+  const room = document.getElementById(roomPrefix).value;
+  const date = document.getElementById(datePrefix).value;
+  
   const itemElements = document.querySelectorAll(`[id^="item-"][id$="-${id}"]`);
   const items = {};
   itemElements.forEach((el) => {
@@ -3457,7 +3530,7 @@ async function deleteChecklist(id) {
   }
 }
 
-// Checklist search & pagination
+// Event Listeners Configuration
 document.getElementById('searchInputdate')?.addEventListener('input', () => {
   currentPage = 1;
   renderChecklistTable();
