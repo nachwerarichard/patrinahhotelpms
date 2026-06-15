@@ -389,13 +389,12 @@ body {
 
     </div>
     
-<aside id="sidebar" class="hidden lg:flex flex-col fixed lg:relative w-72 bg-slate-900 text-slate-300 shadow-2xl min-h-screen border-r border-slate-800 z-50">    
-    <div class="p-8 border-b border-slate-800/50">
+<aside id="sidebar" class="hidden lg:flex flex-col fixed inset-y-0 left-0 w-72 bg-slate-900 text-slate-300 shadow-2xl h-screen overflow-y-auto border-r border-slate-800 z-50">    <div class="p-8 border-b border-slate-800/50">
         <div class="text-[10px] font-bold uppercase tracking-[0.3em] text-indigo-400 mb-1">Management</div>
         <h1 class="text-xl font-light text-white tracking-tight"> Concierge<span class="font-semibold">Portal</span></h1>
     </div>
-
-    <nav class="flex-grow p-4 mt-4 overflow-y-auto custom-scrollbar">
+<nav class="flex-grow p-4 mt-4">
+    <!--<nav class="flex-grow p-4 mt-4 overflow-y-auto custom-scrollbar">-->
         <ul class="space-y-1.5">
             
             <li id="nav-dashboard">
@@ -3549,14 +3548,11 @@ window.deleteChecklist = deleteChecklist;
     const sidebar = document.getElementById("sidebar");
 
     menuToggle.addEventListener("click", (e) => {
-        // Prevent click from bubbling up if you decide to implement a "click outside to close" feature later
         e.stopPropagation(); 
-        
-        // Toggle the 'hidden' utility class
         sidebar.classList.toggle("hidden");
     });
 
-    // Optional: Close the sidebar when clicking anywhere outside of it on mobile
+    // Closes the sidebar smoothly if a user taps outside of it on mobile
     document.addEventListener("click", (e) => {
         if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
             if (!sidebar.classList.contains("hidden") && window.innerWidth < 1024) {
@@ -3565,7 +3561,7 @@ window.deleteChecklist = deleteChecklist;
         }
     });
 });
-</script>
+    </script>
 <script type="text/javascript"
 src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
 </script>
