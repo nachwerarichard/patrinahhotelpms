@@ -3821,10 +3821,11 @@ app.post('/api/sales', auth, async (req, res) => {
     // 2. Dynamic Inventory Logic (Stock Check)
     const currentAvailableStock = todayInventory.opening + todayInventory.purchases;
     
-    // Skip insufficient stock check if department is 'Restaurant'
+    // Define the variable name clearly here:
     const shouldTrackStock = todayInventory.trackInventory && department !== 'Restaurant';
 
-    if (shouldStockCheck && (todayInventory.sales + number) > currentAvailableStock) {
+    // FIX: Changed 'shouldStockCheck' to 'shouldTrackStock' to match the variable above
+    if (shouldTrackStock && (todayInventory.sales + number) > currentAvailableStock) {
       return res.status(400).json({ 
         error: `Insufficient stock. Available: ${currentAvailableStock - todayInventory.sales}` 
       });
