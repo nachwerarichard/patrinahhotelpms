@@ -3193,7 +3193,7 @@ Add Guest Details            </h2>
     <script src="housekeep.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="script4.js"></script>
+    <script src="small.js"></script>
 <script>
 function googleTranslateElementInit() {
     new google.translate.TranslateElement(
@@ -3562,6 +3562,29 @@ window.deleteChecklist = deleteChecklist;
     });
 });
     </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+    const menuToggle = document.getElementById("menu-toggle");
+    const sidebar = document.getElementById("sidebar");
+
+    menuToggle.addEventListener("click", (e) => {
+        // Prevent click from bubbling up if you decide to implement a "click outside to close" feature later
+        e.stopPropagation(); 
+        
+        // Toggle the 'hidden' utility class
+        sidebar.classList.toggle("hidden");
+    });
+
+    // Optional: Close the sidebar when clicking anywhere outside of it on mobile
+    document.addEventListener("click", (e) => {
+        if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+            if (!sidebar.classList.contains("hidden") && window.innerWidth < 1024) {
+                sidebar.classList.add("hidden");
+            }
+        }
+    });
+});
+</script>
 <script type="text/javascript"
 src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
 </script>
