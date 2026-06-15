@@ -241,6 +241,36 @@ body {
 .skiptranslate.goog-te-gadget {
     display: block !important;
 }
+
+
+            /* THE BULLETPROOF MOBILE SCROLLBAR GENERATOR
+               Instead of relying on webkit styles that mobile phones discard, 
+               this introduces a visual slider directly pinned inside the box model framework.
+            */
+            .custom-sidebar-scroll::after {
+                content: '' !important;
+                position: absolute !important;
+                top: 10px !important;
+                right: 6px !important;
+                bottom: 10px !important;
+                width: 4px !important;
+                background: #334155 !important; /* Tailwind slate-700 color */
+                border-radius: 9999px !important;
+                opacity: 0.7 !important;
+                pointer-events: none !important; /* Prevents finger touch interference */
+                z-index: 50 !important;
+            }
+
+            /* Hides native browser system tracks to prevent dual visual paths on Desktop browsers */
+            .custom-sidebar-scroll::-webkit-scrollbar {
+                width: 0px !important;
+                background: transparent !important;
+            }
+            .custom-sidebar-scroll {
+                scrollbar-width: none !important; /* Firefox */
+                -webkit-overflow-scrolling: touch !important; /* Native smooth momentum for iOS */
+            }
+        
     </style>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen flex flex-col">
