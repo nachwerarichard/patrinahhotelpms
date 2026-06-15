@@ -308,36 +308,38 @@ body {
 </header>
 
 <div class="bg-slate-50/50 border-b border-slate-200 px-6 py-4">
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div class="bg-white border-b-2 border-blue-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
+    <div class="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-2 md:grid md:grid-cols-3 lg:grid-cols-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        
+        <div class="bg-white border-b-2 border-blue-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[140px] flex-1 md:min-w-0 snap-center">
             <p class="text-[10px] uppercase font-bold text-blue-600 tracking-wider">Occupied</p>
             <p class="text-xl font-bold text-slate-800" id="stat-occupied">0</p>
         </div>
 
-        <div class="bg-white border-b-2 border-green-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
+        <div class="bg-white border-b-2 border-green-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[140px] flex-1 md:min-w-0 snap-center">
             <p class="text-[10px] uppercase font-bold text-green-600 tracking-wider">Clean</p>
             <p class="text-xl font-bold text-slate-800" id="stat-clean">0</p>
         </div>
 
-        <div class="bg-white border-b-2 border-orange-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
+        <div class="bg-white border-b-2 border-orange-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[140px] flex-1 md:min-w-0 snap-center">
             <p class="text-[10px] uppercase font-bold text-orange-600 tracking-wider">Dirty</p>
             <p class="text-xl font-bold text-slate-800" id="stat-dirty">0</p>
         </div>
 
-        <div class="bg-white border-b-2 border-indigo-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
+        <div class="bg-white border-b-2 border-indigo-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[140px] flex-1 md:min-w-0 snap-center">
             <p class="text-[10px] uppercase font-bold text-indigo-600 tracking-wider">Arrivals</p>
             <p class="text-xl font-bold text-slate-800" id="arrivals">0</p>
         </div>
 
-        <div class="bg-white border-b-2 border-purple-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
+        <div class="bg-white border-b-2 border-purple-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[140px] flex-1 md:min-w-0 snap-center">
             <p class="text-[10px] uppercase font-bold text-purple-600 tracking-wider">Departures</p>
             <p class="text-xl font-bold text-slate-800" id="departures">0</p>
         </div>
 
-        <div class="bg-white border-b-2 border-red-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
+        <div class="bg-white border-b-2 border-red-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[140px] flex-1 md:min-w-0 snap-center">
             <p class="text-[10px] uppercase font-bold text-red-600 tracking-wider">Maintenance</p>
             <p class="text-xl font-bold text-slate-800" id="stat-maintenance">0</p>
         </div>
+        
     </div>
 </div>
 <div id="main-content" class="flex flex-1 overflow-hidden">
