@@ -336,11 +336,11 @@ body {
     </div>
      
    </header>
-<div class="bg-slate-50/50 border-b border-slate-200 px-6 py-4 relative">
+<div class="bg-slate-50/50 border-b border-slate-200 px-6 pt-4 pb-7 relative block clear-both">
     
-    <div id="statContainer" class="mobile-stat-scroll overflow-x-auto md:overflow-visible">
+    <div id="statContainer" class="mobile-stat-scroll overflow-x-auto md:overflow-visible w-full block">
         
-        <div class="flex gap-4 pb-6 w-max min-w-full snap-x snap-mandatory md:w-auto md:min-w-0 md:grid md:grid-cols-3 lg:grid-cols-6 md:pb-0">
+        <div class="flex gap-4 pb-3 w-max min-w-full snap-x snap-mandatory md:w-auto md:min-w-0 md:grid md:grid-cols-3 lg:grid-cols-6 md:pb-0">
             
             <div class="bg-white border-b-2 border-blue-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[145px] shrink-0 md:min-w-0 snap-center">
                 <p class="text-[10px] uppercase font-bold text-blue-600 tracking-wider">Occupied</p>
@@ -375,29 +375,44 @@ body {
         </div>
     </div>
 
-    <div class="mobile-scrollbar-track md:hidden absolute bottom-2 left-6 right-6 h-1 bg-slate-200 rounded-full">
-        <div id="statScrollThumb" class="h-full w-1/3 bg-slate-400 rounded-full transition-transform duration-75"></div>
+    <div class="mobile-scrollbar-track md:hidden absolute bottom-2 left-6 right-6 h-1 bg-slate-200 rounded-full pointer-events-none z-10">
+        <div id="statScrollThumb" class="h-full w-1/4 bg-slate-400 rounded-full transition-transform duration-75 origin-left"></div>
     </div>
 </div>
 
 <script>
-    // Simple script to move the custom scroll thumb as the user swipes
-    const container = document.getElementById('statContainer');
-    const thumb = document.getElementById('statScrollThumb');
+    (function() {
+        const container = document.getElementById('statContainer');
+        const thumb = document.getElementById('statScrollThumb');
 
-    if (container && thumb) {
-        container.addEventListener('scroll', () => {
-            const maxScroll = container.scrollWidth - container.clientWidth;
-            if (maxScroll <= 0) return;
-            
-            const scrollPercentage = container.scrollLeft / maxScroll;
-            // Calculate available room for the thumb to slide (Track width minus thumb width)
-            const maxThumbTranslate = 200; // mapped to percentage coordinates
-            const translateX = scrollPercentage * 200; 
-            
-            thumb.style.transform = `translateX(${translateX}%)`;
-        });
-    }
+        if (container && thumb) {
+            function updateScrollIndicator() {
+                const scrollWidth = container.scrollWidth;
+                const clientWidth = container.clientWidth;
+                const maxScroll = scrollWidth - clientWidth;
+                
+                if (maxScroll <= 0) return;
+
+                // Dynamically size the thumb based on screen space ratio
+                const currentRatio = clientWidth / scrollWidth;
+                thumb.style.width = `${currentRatio * 100}%`;
+
+                // Calculate the exact sliding position offset metrics
+                const scrollPercentage = container.scrollLeft / maxScroll;
+                const availableTrackSpace = clientWidth - (clientWidth * currentRatio);
+                const moveAmount = scrollPercentage * availableTrackSpace;
+
+                thumb.style.transform = `translateX(${moveAmount}px)`;
+            }
+
+            // Sync on scroll, resize events, and system structural re-evaluations
+            container.addEventListener('scroll', updateScrollIndicator, { passive: true });
+            window.addEventListener('resize', updateScrollIndicator);
+            window.addEventListener('load', updateScrollIndicator);
+            // Run initially once script passes rendering phase
+            setTimeout(updateScrollIndicator, 100);
+        }
+    })();
 </script>
 
 <style>
@@ -405,11 +420,11 @@ body {
         .mobile-stat-scroll {
             -webkit-overflow-scrolling: touch !important;
         }
-        /* Completely hide the broken system track so it doesn't conflict with our clean layout */
+        /* Strongly override native track paths entirely */
         .mobile-stat-scroll::-webkit-scrollbar {
             display: none !important;
-            width: 0 !important;
-            height: 0 !important;
+            width: 0px !important;
+            height: 0px !important;
         }
     }
 </style>
