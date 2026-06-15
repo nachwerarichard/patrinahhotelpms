@@ -390,11 +390,18 @@ body {
 
     </div>
     
-<aside id="sidebar" class="hidden lg:flex flex-col fixed inset-y-0 left-0 w-72 bg-slate-900 text-slate-300 shadow-2xl h-screen border-r border-slate-800 z-50">
+<div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden lg:hidden"></div>
+
+<aside id="sidebar" class="hidden lg:flex flex-col fixed inset-y-0 left-0 w-72 bg-slate-900 text-slate-300 shadow-2xl h-screen border-r border-slate-800 z-50 transition-all duration-300">
     
-    <div class="p-8 border-b border-slate-800/50 shrink-0">
-        <div class="text-[10px] font-bold uppercase tracking-[0.3em] text-indigo-400 mb-1">Management</div>
-        <h1 class="text-xl font-light text-white tracking-tight">Concierge<span class="font-semibold">Portal</span></h1>
+    <div class="p-8 border-b border-slate-800/50 shrink-0 flex items-center justify-between">
+        <div>
+            <div class="text-[10px] font-bold uppercase tracking-[0.3em] text-indigo-400 mb-1">Management</div>
+            <h1 class="text-xl font-light text-white tracking-tight">Concierge<span class="font-semibold">Portal</span></h1>
+        </div>
+        <button id="sidebar-close" class="lg:hidden p-1 text-slate-400 hover:text-white focus:outline-none">
+            <i class="fas fa-times text-lg"></i>
+        </button>
     </div>
     
     <nav class="flex-grow p-4 mt-4 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -470,39 +477,6 @@ body {
                     </div>
                     <span class="ml-4 font-medium text-[15px]">Kitchen Display System</span>
                 </a>
-            </li>
-
-            <li class="space-y-1">
-                <button onclick="toggleDropdown('reports-menu', 'rep-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <i class="fas fa-chart-bar text-slate-400 group-hover:text-white"></i>
-                        </div>
-                        <span class="ml-4 font-medium text-[15px]">Analytics</span>
-                    </div>
-                    <i id="rep-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
-                </button>
-                <ul id="reports-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
-                    <li id="nav-reports"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Front Office Reports</a></li>
-                    <li id="nav-posreports"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Room Charge Reports</a></li>
-                    <li id="nav-salereport"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Sale & Expense Reports</a></li>
-                </ul>
-            </li>
-
-            <li class="space-y-1">
-                <button onclick="toggleDropdown('admin-menu', 'adm-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <i class="fas fa-user-shield text-slate-400 group-hover:text-white"></i>
-                        </div>
-                        <span class="ml-4 font-medium text-[15px]">Administration</span>
-                    </div>
-                    <i id="adm-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
-                </button>
-                <ul id="admin-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
-                    <li id="nav-staff"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Staff Management</a></li>
-                    <li id="nav-audit-logs"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Audit Logs</a></li>
-                </ul>
             </li>
 
         </ul>
@@ -3625,45 +3599,64 @@ window.saveChecklist = saveChecklist;
 window.deleteChecklist = deleteChecklist;
 </script>
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
-    const menuToggle = document.getElementById("menu-toggle");
+document.addEventListener("DOMContentLoaded", () => {
+    const menuToggle = document.getElementById("menu-toggle"); // Your main layout's mobile hamburger icon
+    const sidebarClose = document.getElementById("sidebar-close");
+    const sidebarOverlay = document.getElementById("sidebar-overlay");
     const sidebar = document.getElementById("sidebar");
 
-    // Helper function to close sidebar on mobile/tablet screens (< 1024px)
+    // Unified function to show mobile sidebar drawer
+    const openSidebar = () => {
+        sidebar.classList.remove("hidden");
+        sidebarOverlay.classList.remove("hidden");
+    };
+
+    // Unified function to hide mobile sidebar drawer
     const closeSidebarMobile = () => {
-        if (window.innerWidth < 1024) {
+        if (window.innerWidth < 1024) { // Only force-closes on mobile viewports
             sidebar.classList.add("hidden");
+            sidebarOverlay.classList.add("hidden");
         }
     };
 
-    // Toggle sidebar when clicking the hamburger menu button
-    menuToggle.addEventListener("click", (e) => {
-        e.stopPropagation(); 
-        sidebar.classList.toggle("hidden");
-    });
+    // 1. Open menu clicking hamburger
+    if (menuToggle) {
+        menuToggle.addEventListener("click", (e) => {
+            e.stopPropagation(); 
+            openSidebar();
+        });
+    }
 
-    // NEW: Close the sidebar when an actual navigation link is clicked
+    // 2. Close menu clicking 'X' button
+    if (sidebarClose) {
+        sidebarClose.addEventListener("click", closeSidebarMobile);
+    }
+
+    // 3. Close menu when clicking outside / on the dim backdrop layout
+    sidebarOverlay.addEventListener("click", closeSidebarMobile);
+
+    // 4. Close menu dynamically when a specific page view link is selected
     sidebar.addEventListener("click", (e) => {
-        // Find the closest anchor tag 'a' to handle clicks on the text, icons, or wrapper
         const clickedLink = e.target.closest("a");
-        
-        // If they clicked a link, and it's not a dummy hash link used for dropdown toggles
         if (clickedLink) {
-            // Note: If your dropdown triggers use `<a href="#">`, verify they don't conflict. 
-            // In your template, your dropdowns use `<button>`, so this works perfectly!
             closeSidebarMobile();
         }
     });
-
-    // Close the sidebar if a user clicks completely outside of it
-    document.addEventListener("click", (e) => {
-        if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
-            if (!sidebar.classList.contains("hidden")) {
-                closeSidebarMobile();
-            }
-        }
-    });
 });
+
+// Dropdown Toggle Utility Logic
+function toggleDropdown(menuId, arrowId) {
+    const menu = document.getElementById(menuId);
+    const arrow = document.getElementById(arrowId);
+    
+    if (menu.classList.contains('hidden')) {
+        menu.classList.remove('hidden');
+        arrow.classList.add('rotate-180');
+    } else {
+        menu.classList.add('hidden');
+        arrow.classList.remove('rotate-180');
+    }
+}
 </script>
 <script type="text/javascript"
 src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
