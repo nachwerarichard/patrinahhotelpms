@@ -5273,76 +5273,132 @@ async function fetchUsers() {
 
         const users = await res.json();
         
-        // Update Stats
+        // Update Global Stats Counts
         const staffCountEl = document.getElementById('totalStaffCount');
         if (staffCountEl) staffCountEl.innerText = users.length;
         
+        // Update Server Status Indicators
         const statusEl = document.getElementById('connectionStatus');
         if (statusEl) {
             statusEl.innerText = "Server Online";
             statusEl.className = "flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 px-3 py-1.5 rounded-full border border-green-200";
-            // Update the dot color if it exists
             const dot = statusEl.querySelector('span');
             if (dot) dot.className = "w-2 h-2 rounded-full bg-green-500";
         }
 
         const tbody = document.getElementById('userTableBody');
+        const mobileGrid = document.getElementById('userMobileGrid');
         
-        // Use map and join, but ensure buttons have clear dimensions
-        tbody.innerHTML = users.map(user => `
-            <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
-                <td class="px-8 py-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100">
-                            ${user.username ? user.username.charAt(0).toUpperCase() : '?'}
+        // Purge raw DOM contents before rendering loops
+        if (tbody) tbody.innerHTML = '';
+        if (mobileGrid) mobileGrid.innerHTML = '';
+
+        users.forEach(user => {
+            const firstLetter = user.username ? user.username.charAt(0).toUpperCase() : '?';
+            const roleClass = typeof getRoleClass === 'function' ? getRoleClass(user.role) : 'bg-slate-100 text-slate-700 border-slate-200';
+            const upperRole = user.role ? user.role.toUpperCase() : 'UNKNOWN';
+
+            // Shared modular dropdown element template string
+            const selectOptionsHtml = `
+                <select onchange="updateRole('${user._id}', this.value)" 
+                        class="w-full sm:w-auto text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition shadow-sm text-slate-700">
+                    <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
+                    <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
+                    <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
+                    <option value="reception" ${user.role === 'reception' ? 'selected' : ''}>Reception</option>
+                    <option value="chef" ${user.role === 'chef' ? 'selected' : ''}>Chef</option>
+                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                </select>
+            `;
+
+            // Shared modular action utility button group template string
+            const actionButtonsHtml = `
+                <div class="flex items-center gap-2">
+                    <button data-id="${user._id}" 
+                            data-username="${user.username}" 
+                            data-role="${user.role}"
+                            onclick="handleEditClick(this)" 
+                            class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-lg transition-all border border-indigo-100/70 active:scale-95">
+                        <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                        <span>Edit</span>
+                    </button>
+
+                    <button onclick="deleteUser('${user._id}')" 
+                            class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100/70 active:scale-95">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        <span>Delete</span>
+                    </button>
+                </div>
+            `;
+
+            // --- A. POPULATE VIEW 1: DESKTOP TABLE ROW LAYOUT ---
+            if (tbody) {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="px-8 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 text-sm">
+                                ${firstLetter}
+                            </div>
+                            <span class="font-semibold text-slate-700">${user.username}</span>
                         </div>
-                        <span class="font-semibold text-slate-700">${user.username}</span>
+                    </td>
+                    <td class="px-8 py-4">
+                        <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-wider border ${roleClass}">
+                            ${upperRole}
+                        </span>
+                    </td>
+                    <td class="px-8 py-4">${selectOptionsHtml}</td>
+                    <td class="px-8 py-4 text-right">
+                        <div class="flex justify-end">${actionButtonsHtml}</div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            // --- B. POPULATE VIEW 2: SMARTPHONE RESPONSIVE LEDGER CARD ---
+            if (mobileGrid) {
+                const card = document.createElement('div');
+                card.className = "p-4 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 hover:border-slate-300 transition-all";
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 text-xs">
+                                ${firstLetter}
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-800">${user.username}</h4>
+                                <span class="text-[9px] uppercase tracking-wider font-extrabold text-slate-400 block mt-0.5">Personnel ID Target</span>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-wider border ${roleClass}">
+                            ${upperRole}
+                        </span>
                     </div>
-                </td>
-                <td class="px-8 py-4">
-                    <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-wider border ${getRoleClass(user.role)}">
-                        ${user.role.toUpperCase()}
-                    </span>
-                </td>
-                <td class="px-8 py-4">
-                    <select onchange="updateRole('${user._id}', this.value)" 
-                            class="text-sm bg-white border border-slate-200 rounded-md px-2 py-1 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition">
-                        <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
-                        <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
-                        <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
-                        <option value="reception" ${user.role === 'reception' ? 'selected' : ''}>Reception</option>
-                        <option value="chef" ${user.role === 'chef' ? 'selected' : ''}>Chef</option>
-                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                    </select>
-                </td>
-                <td class="px-8 py-4 text-right">
-    <div class="flex justify-end items-center gap-3">
-        <button data-id="${user._id}" 
-    data-username="${user.username}" 
-    data-role="${user.role}"
-    onclick="handleEditClick(this)" 
-                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-md transition-all border border-indigo-100 active:scale-95">
-            <span>Edit</span>
-        </button>
 
-        <button onclick="deleteUser('${user._id}')" 
-                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-md transition-all border border-red-100 active:scale-95">
-            <span>Delete</span>
-        </button>
-    </div>
-</td>
-            </tr>
-        `).join('');
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] uppercase font-bold tracking-tight text-slate-400">Modify Access Tier Permissions</label>
+                            ${selectOptionsHtml}
+                        </div>
+                    </div>
 
-        // CRITICAL: Re-initialize icons after adding them to the DOM
+                    <div class="pt-1">${actionButtonsHtml}</div>
+                `;
+                mobileGrid.appendChild(card);
+            }
+        });
+
+        // Re-initialize vector icons to prevent visual clipping
         if (window.lucide) {
             window.lucide.createIcons();
         } else {
-            console.error("Lucide library not found. Buttons may appear empty.");
+            console.error("Lucide library asset reference error.");
         }
 
     } catch (err) {
-        console.error("Fetch Error:", err);
+        console.error("Fetch Operational System Fault Error:", err);
         const statusEl = document.getElementById('connectionStatus');
         if (statusEl) {
             statusEl.innerText = "Offline";
