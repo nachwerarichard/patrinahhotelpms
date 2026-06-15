@@ -302,21 +302,22 @@ body {
 <header class="bg-slate-900 text-white shadow-md py-2.5 px-4 sm:px-6 flex justify-between items-center sticky top-0 z-50 select-none">
     
     <!-- LEFT ZONE: System Navigation & Property Context -->
-    <div class="flex items-center space-x-3 min-w-0 flex-1 sm:flex-initial">
-        <!-- Structural Navigation Toggle Link -->
-        <button id="menu-toggle" class="p-2 -ml-2 text-slate-400 hover:text-white rounded-lg focus:outline-none transition-colors shrink-0">
+    <!-- LEFT ZONE: System Navigation & Property Context -->
+    <div class="flex items-center space-x-0 lg:space-x-0 min-w-0 flex-1 sm:flex-initial">
+        
+        <!-- Navigation Toggle: Visible on mobile/tablet, completely hidden on desktop (lg:) -->
+        <button id="menu-toggle" class="lg:hidden p-2 -ml-2 text-slate-400 hover:text-white rounded-lg focus:outline-none transition-colors shrink-0 mr-2">
             <i class="fas fa-bars text-xl"></i>
         </button>
         
-        <!-- Enterprise Property Switcher -->
+        <!-- Enterprise Property Switcher (Moves seamlessly to the far left edge on desktop) -->
         <div class="flex flex-col min-w-0 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 rounded-lg px-3 py-1 cursor-pointer transition-all">
             <div class="flex items-center space-x-1.5">
                 <span id="hotel-name-display" class="text-xs sm:text-sm font-bold uppercase tracking-wide text-slate-100 truncate">
-                    
+                    Unknown Hotel
                 </span>
                 <i class="fas fa-chevron-down text-[10px] text-slate-400 mt-0.5"></i>
             </div>
-            <span class="text-[9px] font-bold text-indigo-400 uppercase tracking-widest hidden sm:block">Novus Cloud PMS</span>
         </div>
     </div>
 
@@ -338,7 +339,7 @@ body {
         <!-- SYSTEM QUICK ACTIONS: Operational Shortcut Buttons -->
         <div class="hidden sm:flex items-center space-x-2 border-r border-slate-800 pr-4">
             <!-- Fast Walk-In Booking Button -->
-            <button class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition-all shadow-sm">
+            <button class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition-all shadow-sm" onclick="openBookingModal()">
                 <i class="fas fa-plus"></i>
                 <span class="hidden md:inline">New Booking</span>
             </button>
