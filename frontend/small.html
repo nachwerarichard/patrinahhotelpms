@@ -241,21 +241,6 @@ body {
 .skiptranslate.goog-te-gadget {
     display: block !important;
 }
-
-/* Target the navigation element's scrollbar container specifically */
-#sidebar nav::-webkit-scrollbar {
-    width: 5px !important;              /* Force scrollbar to take up physical width */
-    display: block !important;          /* Override default mobile OS hiding behaviors */
-}
-
-#sidebar nav::-webkit-scrollbar-track {
-    background: transparent !important; /* Keep the scrollbar track invisible */
-}
-
-#sidebar nav::-webkit-scrollbar-thumb {
-    background-color: #334155 !important; /* Tailwind's slate-700 color */
-    border-radius: 9999px !important;    /* Make the indicator perfectly rounded */
-}
     </style>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen flex flex-col">
@@ -423,31 +408,36 @@ body {
     <nav class="custom-sidebar-scroll flex-grow p-4 pr-3 mt-4 overflow-y-auto">
         
         <style>
-            /* Webkit engines (Desktop Chrome/Safari/Edge & ALL Mobile Phones) */
+            /* THE UNIVERSAL MOBILE OVERRIDE TRICK:
+               Instead of relying on webkit pseudo-elements that mobile OS engines discard, 
+               we append a simulated scrollbar line using standard CSS backgrounds.
+            */
+            .custom-sidebar-scroll {
+                /* Create a 4px wide vertical line on the far right edge of the nav element */
+                background-image: linear-gradient(to bottom, #334155, #334155) !important; /* slate-700 */
+                background-position: calc(100% - 4px) 0% !important;
+                background-size: 4px 100% !important;
+                background-repeat: no-repeat !important;
+                
+                /* Native engine scrollbar definitions for modern desktop browsers */
+                scrollbar-width: thin !important;
+                scrollbar-color: #334155 #0f172a !important; /* slate-700 track on slate-900 */
+                
+                /* Ensures momentum tracking is responsive on mobile touch zones */
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            /* Extra fallback rules explicitly targeting desktop engines */
             .custom-sidebar-scroll::-webkit-scrollbar {
                 width: 6px !important;
-                height: 6px !important;
                 display: block !important;
             }
-
-            /* CRITICAL FIX FOR MOBILE: Changing background from 'transparent' to a 
-              microscopic color forces mobile engines to permanently render the element.
-            */
             .custom-sidebar-scroll::-webkit-scrollbar-track {
-                background: rgba(255, 255, 255, 0.01) !important; 
+                background: #0f172a !important; /* Fixed slate-900 container background */
             }
-
             .custom-sidebar-scroll::-webkit-scrollbar-thumb {
-                background-color: #334155 !important; /* Tailwind slate-700 */
+                background-color: #334155 !important;
                 border-radius: 9999px !important;
-                border: 1px solid transparent !important;
-            }
-
-            /* Fallback styling syntax rules targeting desktop/mobile Firefox */
-            .custom-sidebar-scroll {
-                scrollbar-width: thin !important;
-                scrollbar-color: #334155 rgba(255, 255, 255, 0.01) !important;
-                -webkit-overflow-scrolling: touch !important; /* Smooth momentum on iOS */
             }
         </style>
 
