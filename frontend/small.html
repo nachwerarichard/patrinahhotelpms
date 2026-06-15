@@ -893,28 +893,32 @@ body {
 </section>
 
         <section class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
-            <div class="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-                <h2 class="text-xl font-bold text-slate-800"> Room Inventory </h2>
-                <div class="flex gap-2">
-                    <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wider">Live View</span>
-                </div>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-400 uppercase text-[10px] font-bold tracking-[0.2em]">
-                            <th class="px-8 py-5 text-left">Room Number</th>
-                            <th class="px-8 py-5 text-left">Room Type</th>
-                            <th class="px-8 py-5 text-left">Base Rate</th>
-                            <th class="px-8 py-5 text-left">Status</th>
-                            <th class="px-8 py-5 text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="roomTableBody" class="divide-y divide-slate-100">
-                        </tbody>
-                </table>
-            </div>
-        </section>
+    <div class="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <h2 class="text-xl font-bold text-slate-800">Room Inventory</h2>
+        <div class="flex gap-2">
+            <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wider">Live View</span>
+        </div>
+    </div>
+
+    <div class="hidden md:block overflow-x-auto">
+        <table class="min-w-full">
+            <thead>
+                <tr class="bg-slate-50 text-slate-400 uppercase text-[10px] font-bold tracking-[0.2em] border-b border-slate-100">
+                    <th class="px-8 py-5 text-left">Room Number</th>
+                    <th class="px-8 py-5 text-left">Room Type</th>
+                    <th class="px-8 py-5 text-left">Base Rate</th>
+                    <th class="px-8 py-5 text-left">Status</th>
+                    <th class="px-8 py-5 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="roomTableBody" class="divide-y divide-slate-100">
+                </tbody>
+        </table>
+    </div>
+
+    <div id="roomMobileGrid" class="block md:hidden p-4 space-y-4 bg-slate-50/30">
+        </div>
+</section>
 
         <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center z-50">
             <div class="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-md w-full mx-4 border border-white/20">

@@ -5028,47 +5028,101 @@ document.getElementById('roomForm').addEventListener('submit', async (e) => {
 
 async function fetchRoomsV2() {
     const tbody = document.getElementById('roomTableBody');
-    if (!tbody) return;
+    const mobileGrid = document.getElementById('roomMobileGrid');
+    
+    // Safety check: break execution out early if neither viewport target element exists
+    if (!tbody && !mobileGrid) return;
 
     try {
         const res = await authenticatedFetch(`${API_BASE_URL}/v2/rooms`);
         const rooms = await res.json();
 
-        if (!res.ok) throw new Error(rooms.error);
+        if (!res.ok) throw new Error(rooms.error || "Inventory endpoint communication error.");
 
-        if (rooms.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-slate-400">No rooms found in registry.</td></tr>`;
+        // Graceful handling for empty array results across view variants
+        if (!rooms || rooms.length === 0) {
+            const fallbackMsg = '<div class="p-10 text-center text-slate-400 font-medium text-sm">No rooms found in registry.</div>';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="5">${fallbackMsg}</td></tr>`;
+            if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
             return;
         }
 
-// Inside fetchRoomsV2 in script4.js
-tbody.innerHTML = rooms.map(room => {
-    // 🛡️ Safety Check: Handle missing categories or prices
-    const categoryName = room.roomTypeId?.name || '<span class="text-rose-400">Missing Category</span>';
-    const rate = room.roomTypeId?.basePrice ? room.roomTypeId.basePrice.toLocaleString() : '0.00';
-    
-    return `
-        <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
-            <td class="px-8 py-5 font-bold text-slate-700">${room.number}</td>
-            <td class="px-8 py-5 text-slate-500">${categoryName}</td>
-            <td class="px-8 py-5 font-mono text-sm text-indigo-600">UGX ${rate}</td>
-            <td class="px-8 py-5">
-                <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
-                    room.status === 'clean' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                }">${room.status}</span>
-            </td>
-            <td class="px-8 py-5 text-center flex justify-center gap-2">
-                <button onclick="deleteRoom('${room._id}')" class="p-2 text-slate-300 hover:text-rose-600 transition-colors">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        </tr>
-    `;
-}).join('');
+        // Clean out baseline raw HTML before applying string payload loops
+        if (tbody) tbody.innerHTML = '';
+        if (mobileGrid) mobileGrid.innerHTML = '';
+
+        rooms.forEach(room => {
+            // Safety Check: Handle missing categories or prices
+            const categoryName = room.roomTypeId?.name || '<span class="text-rose-400 font-medium">Missing Category</span>';
+            const rate = room.roomTypeId?.basePrice ? room.roomTypeId.basePrice.toLocaleString() : '0.00';
+            
+            // Dynamic badge color configuration mapping parameters
+            const badgeClass = room.status === 'clean' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
+
+            // --- A. POPULATE VIEW 1: DESKTOP TABLE ROW APPEND LOOP ---
+            if (tbody) {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="px-8 py-5 font-bold text-slate-700">${room.number}</td>
+                    <td class="px-8 py-5 text-slate-500 font-medium">${categoryName}</td>
+                    <td class="px-8 py-5 font-mono text-sm text-indigo-600 font-bold">UGX ${rate}</td>
+                    <td class="px-8 py-5">
+                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${badgeClass}">
+                            ${room.status || 'Unknown'}
+                        </span>
+                    </td>
+                    <td class="px-8 py-5 text-center">
+                        <button onclick="deleteRoom('${room._id}')" class="p-2 text-slate-400 hover:text-rose-600 transition-colors focus:outline-none" title="Remove Room">
+                            <i class="fas fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            // --- B. POPULATE VIEW 2: SMARTPHONE ADAPTIVE CARD MODULE LOOP ---
+            if (mobileGrid) {
+                const card = document.createElement('div');
+                card.className = "p-4 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-3 relative hover:border-slate-300 transition-all";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 block mb-0.5">Room Number</span>
+                            <h4 class="text-lg font-black text-slate-800">${room.number}</h4>
+                        </div>
+                        <button onclick="deleteRoom('${room._id}')" class="p-2 text-slate-300 hover:text-rose-600 transition-colors active:scale-95 focus:outline-none" title="Remove Room">
+                            <i class="fas fa-trash-can text-sm"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="pt-1 border-t border-slate-100 flex items-center justify-between gap-4">
+                        <div>
+                            <span class="text-[9px] uppercase font-bold tracking-tight text-slate-400 block">Classification</span>
+                            <span class="text-sm font-semibold text-slate-600">${categoryName}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[9px] uppercase font-bold tracking-tight text-slate-400 block">Nightly Price</span>
+                            <span class="text-sm font-black font-mono text-indigo-600">UGX ${rate}</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-xs">
+                        <span class="text-[10px] uppercase font-bold tracking-tight text-slate-400">Housekeeping State</span>
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${badgeClass}">
+                            ${room.status || 'Unknown'}
+                        </span>
+                    </div>
+                `;
+                mobileGrid.appendChild(card);
+            }
+        });
 
     } catch (err) {
-        console.error("Table Refresh Error:", err);
-        tbody.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-rose-500">Error loading inventory.</td></tr>`;
+        console.error("Table Refresh Error Catch Exception:", err);
+        const errorMsg = '<div class="p-10 text-center text-rose-500 font-semibold text-sm"><i class="fas fa-circle-exclamation mr-2"></i>Error loading inventory matrix records.</div>';
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5">${errorMsg}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = errorMsg;
     }
 }
 
