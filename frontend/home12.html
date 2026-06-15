@@ -241,6 +241,35 @@ body {
 .skiptranslate.goog-te-gadget {
     display: block !important;
 }
+    /* Custom, sleek scrollbar for your sidebar nav container */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 5px; /* Ultra-thin sleek track */
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent; /* Seamless blend with sidebar bg */
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #334155; /* Slate-700 to match dashboard borders */
+        border-radius: 9999px; /* Pill-shaped design */
+        transition: background 0.2s ease;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #4f46e5; /* Changes to Indigo-600 when hovered to match interactive states */
+    }
+
+    /* Firefox fallback styling */
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #334155 transparent;
+        -webkit-overflow-scrolling: touch; /* Butter-smooth momentum physics for iOS safari */
+    }
+
+    
+    
+
     </style>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen flex flex-col">
@@ -269,77 +298,123 @@ body {
             </div>
         </div>
     </div>
-<div id="dashboard-wrapper" style="display: none;" class="flex flex-col min-h-screen overflow-x-hidden">    
- <header class="bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-200 py-3 px-6 flex justify-between items-center sticky top-0 z-50">
-    <div class="flex items-center space-x-4 h-12">
-        <div class="bg-white p-1 rounded-lg">
-            <img src="/novuscloud.png" alt="Novus Cloud PMS" class="h-10 w-auto object-contain" />
-        </div>
-        <div class="hidden md:block border-l border-slate-200 pl-4">
-            <div id="hotel-name-display" class="text-sm font-bold uppercase text-slate-600"></div>
-            <span class="text-xs font-semibold uppercase tracking-widest text-slate-400">NOVUS CLOUD PMS</span>
-        </div>
-    </div>
-    <div class="flex items-center space-x-6">
-    <!-- User Profile Card -->
-    <div class="flex items-center space-x-3 p-1.5 pr-4 rounded-full bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all duration-200 cursor-pointer group">
-        <div class="relative">
-            <img id="user-profile-pic" src="/bar&rest/user.png" alt="User Profile" class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm group-hover:border-indigo-300">
-            <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
-        </div>
-        <div class="flex flex-col">
-            <span id="display-user-name" class="username-display text-[15px] font-bold text-slate-700 leading-tight"></span>
-            <span id="display-user-role" class="text-[12px] font-medium text-slate-500 group-hover:text-indigo-500 transition-colors"></span>
+<div id="dashboard-wrapper" style="display: none;" class="flex flex-col min-h-screen overflow-x-hidden lg:ml-72">
+<header class="bg-slate-900 text-white shadow-md py-2.5 px-4 sm:px-6 flex justify-between items-center sticky top-0 z-50 select-none">
+    
+    <!-- LEFT ZONE: System Navigation & Property Context -->
+    <!-- LEFT ZONE: System Navigation & Property Context -->
+    <div class="flex items-center space-x-0 lg:space-x-0 min-w-0 flex-1 sm:flex-initial">
+        
+        <!-- Navigation Toggle: Visible on mobile/tablet, completely hidden on desktop (lg:) -->
+        <button id="menu-toggle" class="lg:hidden p-2 -ml-2 text-slate-400 hover:text-white rounded-lg focus:outline-none transition-colors shrink-0 mr-2">
+            <i class="fas fa-bars text-xl"></i>
+        </button>
+        
+        <!-- Enterprise Property Switcher (Moves seamlessly to the far left edge on desktop) -->
+        <div class="flex flex-col min-w-0 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 rounded-lg px-3 py-1 cursor-pointer transition-all">
+            <div class="flex items-center space-x-1.5">
+                <span id="hotel-name-display" class="text-xs sm:text-sm font-bold uppercase tracking-wide text-slate-100 truncate">
+                    Unknown Hotel
+                </span>
+            </div>
         </div>
     </div>
 
-    <!-- Polished Google Translate Widget Container -->
-    <div class="translate-wrapper h-11 bg-slate-50 border border-slate-200 hover:border-indigo-200 hover:bg-indigo-50 rounded-xl px-3 transition-all duration-200 group">
-        <i class="fas fa-globe text-slate-400 mr-1.5 text-sm pointer-events-none group-hover:text-indigo-500 transition-colors"></i>
-        <div id="google_translate_element"></div>
+    <!-- MIDDLE ZONE: Global Search Bar (Hidden on small screens, pops up as a tool on desktop layouts) -->
+    <!-- MIDDLE ZONE: Global Search Bar -->
+    <div class="hidden lg:flex flex-1 max-w-xl mx-8 relative">
+        <div class="relative w-full group">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <i class="fas fa-search text-slate-400 text-sm group-focus-within:text-indigo-400 transition-colors"></i>
+            </div>
+            <input type="text" 
+                   id="global-guest-search"
+                   placeholder="Type guest name to search... (Press '/' to focus)" 
+                   autocomplete="off"
+                   class="w-full bg-slate-850 text-slate-200 placeholder-slate-400 text-sm rounded-xl pl-10 pr-4 py-2 border border-slate-700/80 focus:outline-none focus:border-indigo-500 focus:bg-slate-800 transition-all shadow-inner">
+        </div>
+        
+        <!-- Floating Dropdown Result Box panel matching slate theme -->
+        <div id="search-results-dropdown" class="absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden hidden z-50 max-h-80 overflow-y-auto">
+            <!-- Results will be injected here dynamically -->
+        </div>
     </div>
 
-    <!-- Mobile Menu Toggle Button -->
-    <button id="menu-toggle-open" class="text-slate-600 hover:text-indigo-600 text-2xl p-2.5 rounded-xl bg-slate-100 hover:bg-indigo-50 transition-all lg:hidden focus:ring-2 focus:ring-indigo-500 outline-none">
-        <i class="fas fa-bars"></i>
-    </button>
-</div>
-     
+    <!-- RIGHT ZONE: System Shortcuts, Integrations, & User Metrics -->
+    <div class="flex items-center space-x-3 sm:space-x-4 shrink-0">
+        
+        <!-- SYSTEM QUICK ACTIONS: Operational Shortcut Buttons -->
+        <div class="hidden sm:flex items-center space-x-2 border-r border-slate-800 pr-4">
+            <!-- Fast Walk-In Booking Button -->
+            <button class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition-all shadow-sm" onclick="openBookingModal()">
+                <i class="fas fa-plus"></i>
+                <span class="hidden md:inline">New Booking</span>
+            </button>
+            
+            <!-- Quick System Operations Notification Icon -->
+             <button class="p-2 text-slate-600 opacity-40 cursor-not-allowed relative rounded-lg pointer-events-none" title="Notifications coming soon">
+    <i class="fas fa-bell text-lg"></i>
+</button>
+        </div>
+
+        <!-- Google Translate Integration Panel Container -->
+        <div class="translate-wrapper h-9 w-10 sm:w-auto overflow-hidden sm:overflow-visible bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-lg px-2 sm:px-3 flex items-center transition-all duration-200 group">
+            <i class="fas fa-globe text-slate-400 text-sm pointer-events-none group-hover:text-indigo-400 transition-colors sm:mr-1.5"></i>
+            <div id="google_translate_element" class="hidden sm:block"></div>
+        </div>
+
+        <!-- Operator User Details Module -->
+        <div class="flex items-center p-1 rounded-lg hover:bg-slate-800 transition-all duration-150 cursor-pointer group">
+            <div class="relative shrink-0">
+                <img id="user-profile-pic" src="/bar&rest/user.png" alt="User Profile" class="w-8 h-8 rounded-full object-cover border border-slate-700 shadow-sm">
+                <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-slate-900 rounded-full"></span>
+            </div>
+            <!-- Structural Profile Text Fields hidden automatically on compact mobile views -->
+            <div class="hidden md:flex flex-col ml-2.5 text-left">
+                <span id="display-user-name" class="username-display text-xs font-bold text-slate-200 leading-tight">FrontDesk_Manager</span>
+                <span id="display-user-role" class="text-[10px] font-semibold text-slate-400 tracking-wider uppercase">Shift Admin</span>
+            </div>
+        </div>
+
+    </div>
 </header>
-
-<div class="bg-slate-50/50 border-b border-slate-200 px-6 py-4">
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div class="bg-white border-b-2 border-blue-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
-            <p class="text-[10px] uppercase font-bold text-blue-600 tracking-wider">Occupied</p>
-            <p class="text-xl font-bold text-slate-800" id="stat-occupied">0</p>
+<div class="bg-slate-50/50 border-b border-slate-200 px-4 py-3 md:px-6 md:py-4">
+    <div class="flex flex-wrap gap-2 justify-center md:grid md:grid-cols-3 lg:grid-cols-6 md:gap-4">
+        
+        <div class="bg-white border border-slate-200 md:border-0 md:border-b-2 border-l-4 md:border-l-0 border-l-blue-500 md:border-b-blue-500 px-3 py-1.5 md:p-3 rounded-lg shadow-sm flex flex-row md:flex-col items-center justify-between md:justify-center text-center min-w-[45%] md:min-w-0">
+            <p class="text-[10px] uppercase font-bold text-blue-600 tracking-wider md:mb-1">Occupied</p>
+            <p class="text-base md:text-xl font-bold text-slate-800" id="stat-occupied">0</p>
         </div>
 
-        <div class="bg-white border-b-2 border-green-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
-            <p class="text-[10px] uppercase font-bold text-green-600 tracking-wider">Clean</p>
-            <p class="text-xl font-bold text-slate-800" id="stat-clean">0</p>
+        <div class="bg-white border border-slate-200 md:border-0 md:border-b-2 border-l-4 md:border-l-0 border-l-green-500 md:border-b-green-500 px-3 py-1.5 md:p-3 rounded-lg shadow-sm flex flex-row md:flex-col items-center justify-between md:justify-center text-center min-w-[45%] md:min-w-0">
+            <p class="text-[10px] uppercase font-bold text-green-600 tracking-wider md:mb-1">Clean</p>
+            <p class="text-base md:text-xl font-bold text-slate-800" id="stat-clean">0</p>
         </div>
 
-        <div class="bg-white border-b-2 border-orange-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
-            <p class="text-[10px] uppercase font-bold text-orange-600 tracking-wider">Dirty</p>
-            <p class="text-xl font-bold text-slate-800" id="stat-dirty">0</p>
+        <div class="bg-white border border-slate-200 md:border-0 md:border-b-2 border-l-4 md:border-l-0 border-l-orange-500 md:border-b-orange-500 px-3 py-1.5 md:p-3 rounded-lg shadow-sm flex flex-row md:flex-col items-center justify-between md:justify-center text-center min-w-[45%] md:min-w-0">
+            <p class="text-[10px] uppercase font-bold text-orange-600 tracking-wider md:mb-1">Dirty</p>
+            <p class="text-base md:text-xl font-bold text-slate-800" id="stat-dirty">0</p>
         </div>
 
-        <div class="bg-white border-b-2 border-indigo-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
-            <p class="text-[10px] uppercase font-bold text-indigo-600 tracking-wider">Arrivals</p>
-            <p class="text-xl font-bold text-slate-800" id="arrivals">0</p>
+        <div class="bg-white border border-slate-200 md:border-0 md:border-b-2 border-l-4 md:border-l-0 border-l-indigo-500 md:border-b-indigo-500 px-3 py-1.5 md:p-3 rounded-lg shadow-sm flex flex-row md:flex-col items-center justify-between md:justify-center text-center min-w-[45%] md:min-w-0">
+            <p class="text-[10px] uppercase font-bold text-indigo-600 tracking-wider md:mb-1">Arrivals</p>
+            <p class="text-base md:text-xl font-bold text-slate-800" id="arrivals">0</p>
         </div>
 
-        <div class="bg-white border-b-2 border-purple-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
-            <p class="text-[10px] uppercase font-bold text-purple-600 tracking-wider">Departures</p>
-            <p class="text-xl font-bold text-slate-800" id="departures">0</p>
+        <div class="bg-white border border-slate-200 md:border-0 md:border-b-2 border-l-4 md:border-l-0 border-l-purple-500 md:border-b-purple-500 px-3 py-1.5 md:p-3 rounded-lg shadow-sm flex flex-row md:flex-col items-center justify-between md:justify-center text-center min-w-[45%] md:min-w-0">
+            <p class="text-[10px] uppercase font-bold text-purple-600 tracking-wider md:mb-1">Departures</p>
+            <p class="text-base md:text-xl font-bold text-slate-800" id="departures">0</p>
         </div>
 
-        <div class="bg-white border-b-2 border-red-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center">
-            <p class="text-[10px] uppercase font-bold text-red-600 tracking-wider">Maintenance</p>
-            <p class="text-xl font-bold text-slate-800" id="stat-maintenance">0</p>
+        <div class="bg-white border border-slate-200 md:border-0 md:border-b-2 border-l-4 md:border-l-0 border-l-red-500 md:border-b-red-500 px-3 py-1.5 md:p-3 rounded-lg shadow-sm flex flex-row md:flex-col items-center justify-between md:justify-center text-center min-w-[45%] md:min-w-0">
+            <p class="text-[10px] uppercase font-bold text-red-600 tracking-wider md:mb-1">Maintenance</p>
+            <p class="text-base md:text-xl font-bold text-slate-800" id="stat-maintenance">0</p>
         </div>
+        
     </div>
 </div>
+
+
 <div id="main-content" class="flex flex-1 overflow-hidden">
 
           <div class="fixed inset-0 z-[9999] pointer-events-none flex flex-col items-end justify-end p-6">
@@ -388,125 +463,133 @@ body {
         </div>
 
     </div>
-<aside class="w-72 bg-slate-900 text-slate-300 shadow-2xl flex flex-col min-h-screen border-r border-slate-800">
     
-    <div class="p-8 border-b border-slate-800/50">
-        <div class="text-[10px] font-bold uppercase tracking-[0.3em] text-indigo-400 mb-1">Management</div>
-        <h1 class="text-xl font-light text-white tracking-tight"> Concierge<span class="font-semibold">Portal</span></h1>
+<div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden lg:hidden"></div>
+
+<aside id="sidebar" class="hidden flex flex-col lg:flex fixed inset-y-0 left-0 w-72 bg-slate-900 text-slate-300 shadow-2xl h-screen border-r border-slate-800 z-50 transition-all duration-300">
+    
+    <div class="p-8 border-b border-slate-800/50 shrink-0 items-center justify-between flex">
+        <div>
+            <div class="text-[10px] font-bold uppercase tracking-[0.3em] text-indigo-400 mb-1">Novus</div>
+            <h1 class="text-xl font-light text-white tracking-tight">Cloud<span class="font-semibold">PMS</span></h1>
+        </div>
+        <button id="sidebar-close" class="lg:hidden p-1 text-slate-400 hover:text-white focus:outline-none">
+            <i class="fas fa-times text-lg"></i>
+        </button>
     </div>
-
+    
     <nav class="flex-grow p-4 mt-4 overflow-y-auto custom-scrollbar">
-        <ul class="space-y-1.5">
-            
-            <li id="nav-dashboard">
-                <a href="#" class="flex items-center group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+    <ul class="space-y-1.5 pb-12">
+        
+        <li id="nav-dashboard">
+            <a href="#" class="flex items-center group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                    <i class="fas fa-chart-line text-slate-400 group-hover:text-white"></i>
+                </div>
+                <span class="ml-4 font-medium text-[15px]">Dashboard</span>
+            </a>
+        </li>
+
+        <li id="nav-book" class="space-y-1">
+            <button onclick="toggleDropdown('booking-menu', 'booking-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                <div class="flex items-center">
                     <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                        <i class="fas fa-chart-line text-slate-400 group-hover:text-white"></i>
+                        <i class="fas fa-concierge-bell text-slate-400 group-hover:text-white"></i>
                     </div>
-                    <span class="ml-4 font-medium text-[15px]">Dashboard</span>
-                </a>
-            </li>
+                    <span class="ml-4 font-medium text-[15px]">Front Office</span>
+                </div>
+                <i id="booking-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+            </button>
+            <ul id="booking-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
+                <li id="nav-booking"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Booking Management</a></li>
+                <li id="nav-calendar"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Calendar</a></li>
+                <li id="nav-inventory"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Inventory & Pricing</a></li>
+            </ul>
+        </li>
 
-            <li id="nav-book" class="space-y-1">
-                <button  onclick="toggleDropdown('booking-menu', 'booking-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <i class="fas fa-concierge-bell text-slate-400 group-hover:text-white"></i>
-                        </div>
-                        <span class="ml-4 font-medium text-[15px]">Front Office</span>
-                    </div>
-                    <i id="booking-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
-                </button>
-                <ul id="booking-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
-                    <li id="nav-booking"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Booking Management</a></li>
-                    <li id="nav-calendar"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Calendar</a></li>
-                    <li id="nav-inventory"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Inventory & Pricing</a></li>
-                </ul>
-            </li>
-
-            <li id="nav-housekeep" class="space-y-1">
-                <button onclick="toggleDropdown('housekeeping-menu', 'housekeeping-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <i class="fas fa-tasks text-slate-400 group-hover:text-white"></i>
-                        </div>
-                        <span class="ml-4 font-medium text-[15px]">Operations</span>
-                    </div>
-                    <i id="housekeeping-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
-                </button>
-                <ul id="housekeeping-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
-                    <li id="nav-housekeeping"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Housekeeping</a></li>
-                    <li id="nav-housekeepingreports"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Housekeeping Reports</a></li>
-                    <li id="nav-checklistform"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Checklist form</a></li>
-                    <li id="nav-checklisttable"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Checklist table</a></li>
-                    <li id="nav-missingitems"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Missing items</a></li>
-                </ul>
-            </li>
-
-            <li id="nav-pos" class="space-y-1">
-                <button  onclick="toggleDropdown('pos-menu', 'pos-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <i class="fas fa-shopping-bag text-slate-400 group-hover:text-white"></i>
-                        </div>
-                        <span class="ml-4 font-medium text-[15px]">Commerce</span>
-                    </div>
-                    <i id="pos-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
-                </button>
-                <ul id="pos-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
-                    <li id="nav-posinventory"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Inventory</a></li>
-                    <li id="nav-sales"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Sales</a></li>
-                    <li id="nav-expenses"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Expenses</a></li>
-                    <li id="nav-cash"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Cash Management</a></li>
-                </ul>
-            </li>
-
-            <li id="nav-kds">
-                <a href="#" class="flex items-center group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+        <li id="nav-housekeep" class="space-y-1">
+            <button onclick="toggleDropdown('housekeeping-menu', 'housekeeping-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                <div class="flex items-center">
                     <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                        <i class="fas fa-list-check text-slate-400 group-hover:text-white"></i>
+                        <i class="fas fa-tasks text-slate-400 group-hover:text-white"></i>
                     </div>
-                    <span class="ml-4 font-medium text-[15px]">Kitchen Display System</span>
-                </a>
-            </li>
+                    <span class="ml-4 font-medium text-[15px]">Operations</span>
+                </div>
+                <i id="housekeeping-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+            </button>
+            <ul id="housekeeping-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
+                <li id="nav-housekeeping"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Housekeeping</a></li>
+                <li id="nav-housekeepingreports"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Housekeeping Reports</a></li>
+                <li id="nav-checklistform"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Checklist form</a></li>
+                <li id="nav-checklisttable"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Checklist table</a></li>
+                <li id="nav-missingitems"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Missing items</a></li>
+            </ul>
+        </li>
 
-            <li class="space-y-1">
-                <button onclick="toggleDropdown('reports-menu', 'rep-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <i class="fas fa-chart-bar text-slate-400 group-hover:text-white"></i>
-                        </div>
-                        <span class="ml-4 font-medium text-[15px]">Analytics</span>
+        <li id="nav-pos" class="space-y-1">
+            <button onclick="toggleDropdown('pos-menu', 'pos-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                        <i class="fas fa-shopping-bag text-slate-400 group-hover:text-white"></i>
                     </div>
-                    <i id="rep-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
-                </button>
-                <ul id="reports-menu" class="hidden pl-14 space-y-1">
-                    <li id="nav-reports"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Front Office Reports</a></li>
-                    <li id="nav-posreports"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Room Charge Reports</a></li>
-                    <li id="nav-salereport"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Sale & Expense Reports</a></li>
-                </ul>
-            </li>
+                    <span class="ml-4 font-medium text-[15px]">Commerce</span>
+                </div>
+                <i id="pos-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+            </button>
+            <ul id="pos-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
+                <li id="nav-posinventory"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Inventory</a></li>
+                <li id="nav-sales"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Sales</a></li>
+                <li id="nav-expenses"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Expenses</a></li>
+                <li id="nav-cash"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Cash Management</a></li>
+            </ul>
+        </li>
 
-            <li class="space-y-1">
-                <button onclick="toggleDropdown('admin-menu', 'adm-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <i class="fas fa-user-shield text-slate-400 group-hover:text-white"></i>
-                        </div>
-                        <span class="ml-4 font-medium text-[15px]">Administration</span>
+        <li id="nav-kds">
+            <a href="#" class="flex items-center group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                    <i class="fas fa-list-check text-slate-400 group-hover:text-white"></i>
+                </div>
+                <span class="ml-4 font-medium text-[15px]">Kitchen Display System</span>
+            </a>
+        </li>
+
+        <li class="space-y-1">
+            <button onclick="toggleDropdown('reports-menu', 'rep-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                        <i class="fas fa-chart-bar text-slate-400 group-hover:text-white"></i>
                     </div>
-                    <i id="adm-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
-                </button>
-                <ul id="admin-menu" class="hidden pl-14 space-y-1">
-                    <li id="nav-staff"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Staff Management</a></li>
-                    <li id="nav-audit-logs"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Audit Logs</a></li>
-                </ul>
-            </li>
+                    <span class="ml-4 font-medium text-[15px]">Analytics</span>
+                </div>
+                <i id="rep-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+            </button>
+            <ul id="reports-menu" class="hidden pl-14 space-y-1">
+                <li id="nav-reports"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Front Office Reports</a></li>
+                <li id="nav-posreports"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Room Charge Reports</a></li>
+                <li id="nav-salereport"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Sale & Expense Reports</a></li>
+            </ul>
+        </li>
 
-        </ul>
-    </nav>
+        <li class="space-y-1">
+            <button onclick="toggleDropdown('admin-menu', 'adm-arrow')" class="w-full flex items-center justify-between group p-3.5 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                        <i class="fas fa-user-shield text-slate-400 group-hover:text-white"></i>
+                    </div>
+                    <span class="ml-4 font-medium text-[15px]">Administration</span>
+                </div>
+                <i id="adm-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+            </button>
+            <ul id="admin-menu" class="hidden pl-14 space-y-1">
+                <li id="nav-staff"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Staff Management</a></li>
+                <li id="nav-audit-logs"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Audit Logs</a></li>
+            </ul>
+        </li>
 
-    <div class="p-6 border-t border-slate-800 mt-auto">
+    </ul>
+</nav>
+
+    <div class="p-6 border-t border-slate-800 mt-auto shrink-0">
         <a href="#" onclick="logout()" class="flex items-center justify-center space-x-3 p-4 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 group">
             <i class="fas fa-sign-out-alt transition-transform group-hover:-translate-x-1"></i>
             <span class="font-bold text-sm uppercase tracking-widest">Log Out</span>
@@ -530,34 +613,34 @@ body {
         </div>
     </div>
 
-    <div class="w-full overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
-        <table id="bookingsTable" class="min-w-full divide-y divide-gray-200 bg-white">
+    <div class="hidden md:block overflow-x-auto border border-gray-200 rounded-lg">
+        <table id="bookingsTable" class="min-w-full bg-white">
             <thead>
-                <tr class="bg-gray-100 text-gray-700 uppercase text-xs font-bold tracking-wider leading-normal">
-                    <th class="py-3.5 px-4 text-left">Name</th>
-                    <th class="py-3.5 px-4 text-left">Room</th>
-                    <th class="py-3.5 px-4 text-left">Check-in</th>
-                    <th class="py-3.5 px-4 text-left">Check-out</th>
-                    <th class="py-3.5 px-4 text-left">Payment Status</th>
-                    <th class="py-3.5 px-4 text-left">Guest Status</th>
-                    <th class="py-3.5 px-4 text-left">Guest Source</th>
-                    <th class="py-3.5 px-4 text-center">Actions</th>
+                <tr class="bg-gray-200 text-gray-800 uppercase text-xs leading-normal">
+                    <th class="py-3 px-6 text-left">Name</th>
+                    <th class="py-3 px-6 text-left">Room</th>
+                    <th class="py-3 px-6 text-left">Check-in</th>
+                    <th class="py-3 px-6 text-left">Check-out</th>
+                    <th class="py-3 px-6 text-left">Payment Status</th>
+                    <th class="py-3 px-6 text-left">Guest Status</th>
+                    <th class="py-3 px-6 text-left">Guest Source</th>
+                    <th class="py-3 px-6 text-center">Actions</th>
                 </tr>
             </thead>
-            <tbody class="text-gray-600 text-sm divide-y divide-gray-200 font-medium">
-                </tbody>
+            <tbody class="text-gray-600 text-sm font-medium"></tbody>
         </table>
     </div>
 
-    <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
-        <button id="prevPageBtn" class="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 transition duration-300 text-sm" disabled>
-            <i class="fas fa-arrow-left mr-1"></i> Previous
+    <div id="bookingsMobileGrid" class="block md:hidden space-y-4">
+        </div>
+
+    <div class="flex items-center justify-between mt-6">
+        <button id="prevPageBtn" class="bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-400 transition duration-300" disabled>
+            <i class="fas fa-arrow-left"></i> Previous
         </button>
-
-        <span id="pageInfoSpan" class="text-gray-700 font-medium text-sm">Page 0 of 0</span>
-
-        <button id="nextPageBtn" class="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 transition duration-300 text-sm" disabled>
-            Next <i class="fas fa-arrow-right ml-1"></i>
+        <span id="pageInfoSpan" class="text-gray-700 font-medium">Page 0 of 0</span>
+        <button id="nextPageBtn" class="bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-400 transition duration-300" disabled>
+            Next <i class="fas fa-arrow-right"></i>
         </button>
     </div>
 </section>
@@ -759,36 +842,27 @@ body {
                 </button>
             </div>
             
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-separate border-spacing-0">
-                    <thead>
-                        <tr class="bg-slate-50/50 text-slate-500 uppercase text-[11px] font-black tracking-widest">
-                            <th class="px-8 py-4 border-b border-slate-100">Personnel Name</th>
-                            <th class="px-8 py-4 border-b border-slate-100">Designated Role</th>
-                            <th class="px-8 py-4 border-b border-slate-100">Access Tier</th>
-                            <th class="px-8 py-4 border-b border-slate-100 text-right">Administrative Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="userTableBody" class="divide-y divide-slate-100">
-                        <tr class="hover:bg-slate-50/80 transition-colors">
-                            <td class="px-8 py-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600">JD</div>
-                                    <span class="font-semibold text-slate-700">John Doe</span>
-                                </div>
-                            </td>
-                            <td class="px-8 py-4 text-slate-600 text-sm italic">System Architect</td>
-                            <td class="px-8 py-4">
-                                <span class="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-[11px] font-bold uppercase border border-emerald-100">Admin</span>
-                            </td>
-                            <td class="px-8 py-4 text-right">
-                                <button class="text-slate-400 hover:text-indigo-600 transition-colors px-2"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
-                                <button class="text-slate-400 hover:text-red-600 transition-colors px-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            <div class="w-full bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+    
+    <div class="hidden md:block overflow-x-auto">
+        <table class="w-full text-left border-separate border-spacing-0">
+            <thead>
+                <tr class="bg-slate-50/50 text-slate-500 uppercase text-[11px] font-black tracking-widest border-b border-slate-100">
+                    <th class="px-8 py-4 border-b border-slate-100">Personnel Name</th>
+                    <th class="px-8 py-4 border-b border-slate-100">Designated Role</th>
+                    <th class="px-8 py-4 border-b border-slate-100">Access Tier</th>
+                    <th class="px-8 py-4 border-b border-slate-100 text-right">Administrative Actions</th>
+                </tr>
+            </thead>
+            <tbody id="userTableBody" class="divide-y divide-slate-100">
+                </tbody>
+        </table>
+    </div>
+
+    <div id="userMobileGrid" class="block md:hidden p-4 space-y-4 bg-slate-50/30">
+        </div>
+    
+</div>
         </div>
     </div>
 </section>
@@ -894,28 +968,32 @@ body {
 </section>
 
         <section class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
-            <div class="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-                <h2 class="text-xl font-bold text-slate-800"> Room Inventory </h2>
-                <div class="flex gap-2">
-                    <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wider">Live View</span>
-                </div>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-400 uppercase text-[10px] font-bold tracking-[0.2em]">
-                            <th class="px-8 py-5 text-left">Room Number</th>
-                            <th class="px-8 py-5 text-left">Room Type</th>
-                            <th class="px-8 py-5 text-left">Base Rate</th>
-                            <th class="px-8 py-5 text-left">Status</th>
-                            <th class="px-8 py-5 text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="roomTableBody" class="divide-y divide-slate-100">
-                        </tbody>
-                </table>
-            </div>
-        </section>
+    <div class="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <h2 class="text-xl font-bold text-slate-800">Room Inventory</h2>
+        <div class="flex gap-2">
+            <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wider">Live View</span>
+        </div>
+    </div>
+
+    <div class="hidden md:block overflow-x-auto">
+        <table class="min-w-full">
+            <thead>
+                <tr class="bg-slate-50 text-slate-400 uppercase text-[10px] font-bold tracking-[0.2em] border-b border-slate-100">
+                    <th class="px-8 py-5 text-left">Room Number</th>
+                    <th class="px-8 py-5 text-left">Room Type</th>
+                    <th class="px-8 py-5 text-left">Base Rate</th>
+                    <th class="px-8 py-5 text-left">Status</th>
+                    <th class="px-8 py-5 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="roomTableBody" class="divide-y divide-slate-100">
+                </tbody>
+        </table>
+    </div>
+
+    <div id="roomMobileGrid" class="block md:hidden p-4 space-y-4 bg-slate-50/30">
+        </div>
+</section>
 
         <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center z-50">
             <div class="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-md w-full mx-4 border border-white/20">
@@ -954,49 +1032,60 @@ body {
 </div>
 
      </section>
-<section id="housekeepingreports" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+<section id="housekeepingreports" class="section bg-white p-4 md:p-6 rounded-lg shadow-md mb-8 hidden">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-blue-600">Housekeeping Reports</h2>
-        <button onclick="openReportModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+        <button onclick="openReportModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium">
             <i class="fas fa-plus"></i> New Status Report
         </button>
     </div>
 
     <div id="reportsTable">
-        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <label for="filterDate" style="font-weight: 600; color: #1e3d59;">Search by Date:</label>
-                <input type="date" id="statusReportFilterDate" style="width: 180px;">
-                <button id="filterBtn" onclick="filterStatusReportsByDate()" 
-    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 active:scale-95">
-    <i class="fa-solid fa-search"></i>
-    <span id="filterBtnText">Search</span>
-</button>
-               <!-- <button onclick="filterStatusReportsByDate()" style="background-color: #9b59b6; color: white; padding: 5px 15px; rounded: 5px;"><i class="fa-solid fa-filter"></i> Apply</button>-->
-                <button onclick="clearStatusDateFilter()" style="background-color: #95a5a6; color: white; padding: 5px 15px; rounded: 5px;">Clear</button>
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 mb-6 border-b border-gray-100">
+            <div class="flex flex-wrap items-center gap-3">
+                <label for="statusReportFilterDate" class="font-semibold text-slate-700 text-sm">Search by Date:</label>
+                <input type="date" id="statusReportFilterDate" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-44">
+                
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button id="filterBtn" onclick="filterStatusReportsByDate()" class="flex-1 sm:flex-initial bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-2 active:scale-95 text-sm font-medium">
+                        <i class="fa-solid fa-search"></i>
+                        <span id="filterBtnText">Search</span>
+                    </button>
+                    <button onclick="clearStatusDateFilter()" class="bg-slate-400 hover:bg-slate-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        Clear
+                    </button>
+                </div>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="exportStatusReportsToExcel()" style="background-color: #ffc300; color: #1e3d59; padding: 5px 15px; rounded: 5px;"><i class="fa-solid fa-file-export"></i> Export</button>
-                <button onclick="printStatusReports()" style="background-color: #3498db; color: white; padding: 5px 15px; rounded: 5px;"><i class="fa-solid fa-print"></i> Print</button>
+            
+            <div class="flex gap-2 justify-end">
+                <button onclick="exportStatusReportsToExcel()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors">
+                    <i class="fa-solid fa-file-export"></i> Export
+                </button>
+                <button onclick="printStatusReports()" class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors">
+                    <i class="fa-solid fa-print"></i> Print
+                </button>
             </div>
         </div>
 
-        <div class="table-wrapper overflow-x-auto">
-            <table id="statusReportTable" class="w-full text-left border-collapse">
+        <div class="hidden md:block overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+            <table id="statusReportTable" class="w-full text-left border-collapse bg-white">
                 <thead>
-                    <tr class="bg-slate-50">
-                        <th class="p-3 border-b">Room</th>
-                        <th class="p-3 border-b">Category</th>
-                        <th class="p-3 border-b">Status</th>
-                        <th class="p-3 border-b">Remarks</th>
-                        <th class="p-3 border-b">Date & Time</th>
-                        <th class="p-3 border-b">Actions</th>
+                    <tr class="bg-slate-100 text-slate-700 uppercase text-xs font-bold tracking-wider">
+                        <th class="p-3.5 border-b border-gray-200">Room</th>
+                        <th class="p-3.5 border-b border-gray-200">Category</th>
+                        <th class="p-3.5 border-b border-gray-200">Status</th>
+                        <th class="p-3.5 border-b border-gray-200">Remarks</th>
+                        <th class="p-3.5 border-b border-gray-200">Date & Time</th>
+                        <th class="p-3.5 border-b border-gray-200 text-center">Actions</th>
                     </tr>
                 </thead>
-                <tbody id="statusReportTableBody">
+                <tbody id="statusReportTableBody" class="text-gray-600 text-sm divide-y divide-gray-100 font-medium">
                     </tbody>
             </table>
         </div>
+
+        <div id="statusReportMobileGrid" class="block md:hidden space-y-4">
+            </div>
     </div>
 </section>
 
@@ -1185,7 +1274,7 @@ body {
     <p id="message" class="text-center text-emerald-600 font-bold mt-4"></p>
 </section>
 
-<section id="checklisttable" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+<section id="checklisttable" class="section bg-white p-4 md:p-6 rounded-lg shadow-md mb-8 hidden">
     <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
         <span class="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><i class="fa-solid fa-table text-xl"></i></span>
         Room Checklists Table
@@ -1193,7 +1282,7 @@ body {
     
     <div class="flex flex-col sm:flex-row gap-4 items-center justify-between mb-6">
         <div class="relative w-full sm:w-72">
-            <input type="text" id="searchInputdate" class="w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm" placeholder="Search room or date...">
+            <input type="text" id="searchInputdate" class="w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm" placeholder="Search room or date...">
         </div>
         
         <div class="flex gap-3 w-full sm:w-auto justify-end">
@@ -1206,7 +1295,7 @@ body {
         </div>
     </div>
     
-    <div class="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
+    <div class="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
         <table id="checklistTable" class="w-full text-left border-collapse">
             <thead>
                 <tr class="bg-slate-50 border-b border-slate-200 text-slate-700 text-sm font-semibold uppercase tracking-wider">
@@ -1217,9 +1306,12 @@ body {
                 </tr>
             </thead>
             <tbody id="checklistBody" class="divide-y divide-slate-100 text-sm text-slate-600">
-            </tbody>
+                </tbody>
         </table>
     </div>
+
+    <div id="checklistMobileGrid" class="block md:hidden space-y-4">
+        </div>
 
     <div class="flex items-center justify-center gap-4 mt-6">
         <button id="prevBtn" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium rounded-lg transition-colors text-sm disabled:opacity-50">&laquo; Prev</button>
@@ -2067,94 +2159,124 @@ body {
     
 </section>
 
-           <section id="reports" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-               
-<div class="p-6 bg-gray-50 min-h-screen">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div class="bg-green-100 p-4 rounded-lg shadow border-l-4 border-green-500">
-            <h3 class="text-sm font-bold text-green-700 uppercase">Total Amount Paid</h3>
-            <p id="sumPaid" class="text-2xl font-bold">UGX 0.00</p>
-        </div>
-        <div class="bg-red-100 p-4 rounded-lg shadow border-l-4 border-red-500">
-            <h3 class="text-sm font-bold text-red-700 uppercase">Total Balance</h3>
-            <p id="sumBalance" class="text-2xl font-bold">UGX 0.00</p>
-        </div>
-    </div>
-
-    <div class="bg-white p-4 rounded-lg shadow mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="flex gap-2 mb-4">
-    <button onclick="setDateFilter('today')" class="bg-gray-200 px-3 py-1 rounded text-sm hover:bg-gray-300">Today</button>
-    <button onclick="setDateFilter('month')" class="bg-gray-200 px-3 py-1 rounded text-sm hover:bg-gray-300">This Month</button>
-</div>
-        <input type="text" id="filterSearch" placeholder="Search Guest/Room..." class="border p-2 rounded">
-        <select id="filterPaymentStatus"placeholder="Payment Status" class="border p-2 rounded">
-            <option value="">All Payment Status</option>
-            <option value="Paid">Paid</option>
-            <option value="Pending">Pending</option>
-            <option value="Partially Paid">Partially Paid</option>
-        </select>
-        <select id="filterGuestStatus" placeholder="Guest Status"class="border p-2 rounded">
-            <option value="">All Guest Status</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="checkedin">Checked In</option>
-            <option value="reserved">Reserved</option>
-            <option value="checkedout">Checkedout</option>
-            <option value="no show">No Show</option>
-            <option value="cancelled">Cancelled</option>
-        </select>
-        <select id="filterGuestSource" placeholder="Guest Source"class="border p-2 rounded">
-            <option value="">All Guest Source</option>
-            <option value="Walk in">Walk In</option>
-            <option value="Hotel Website">Hotel Website</option>
-            <option value="Booking.com">Booking.com</option>
-            <option value="Expedia">Expedia Group</option>
-            <option value="Airbnd">Airbnd</option>
-             <option value="Trip">Trip</option>
-        </select>
-        <select id="filterPaymentMethod" placeholder="Payment Method" class="border p-2 rounded">
-            <option value="">Payment  Method</option>
-            <option value="Cash">Cash</option>
-            <option value="MTN Momo">MTN Momo</option>
-            <option value="Airtel Pay">Airtel Pay</option>
-            <option value="Bank">Bank</option>
-        </select>
-        <div class="flex flex-col">
-    <label for="filterDate" class="text-xs font-bold text-gray-600 uppercase mb-1">Check-In Date</label>
-    <input type="date" id="filterDate" class="border p-2 rounded w-full">
-</div>
-
-<div class="flex flex-col">
-    <label for="endDate" class="text-xs font-bold text-gray-600 uppercase mb-1">Check-Out Date</label>
-    <input type="date" id="endDate" class="border p-2 rounded w-full">
-</div>
-
+<section id="reports" class="section bg-white p-4 md:p-6 rounded-lg shadow-md mb-8 hidden">
+    <div class="bg-gray-50 rounded-xl p-3 sm:p-6 min-h-screen">
         
-        <div class="md:col-span-4 flex gap-2">
-            <button onclick="exportToExcel()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Export Excel</button>
-            <button onclick="exportToPDF()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Print PDF</button>
-            
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div class="bg-green-100 p-4 rounded-lg shadow border-l-4 border-green-500">
+                <h3 class="text-xs font-bold text-green-700 uppercase tracking-wider">Total Amount Paid</h3>
+                <p id="sumPaid" class="text-xl sm:text-2xl font-black text-gray-800 mt-1">UGX 0.00</p>
+            </div>
+            <div class="bg-red-100 p-4 rounded-lg shadow border-l-4 border-red-500">
+                <h3 class="text-xs font-bold text-red-700 uppercase tracking-wider">Total Balance</h3>
+                <p id="sumBalance" class="text-xl sm:text-2xl font-black text-gray-800 mt-1">UGX 0.00</p>
+            </div>
         </div>
-    </div>
 
-    <div class="overflow-x-auto bg-white rounded-lg shadow">
-        <table class="w-full text-left border-collapse" id="reportsTable">
-            <thead class="bg-gray-200">
-                <tr>
-                    <th class="p-3 border">Guest</th>
-                    <th class="p-3 border">Room</th>
-                    <th class="p-3 border">Check In</th>
-                    <th class="p-3 border">Paid</th>
-                    <th class="p-3 border">Balance</th>
-                    <th class="p-3 border">Payment Status</th>
-                    <th class="p-3 border"> Guest Status</th>
-                    <th class="p-3 border"> Payment Method</th>
-                    <th class="p-3 border">Guest Source</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody"></tbody>
-        </table>
+        <div class="bg-white p-4 rounded-xl shadow-sm mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <div class="sm:col-span-2 lg:col-span-4 flex items-center gap-2 border-b border-gray-100 pb-3">
+                <span class="text-xs font-bold text-gray-500 uppercase mr-2">Presets:</span>
+                <button onclick="setDateFilter('today')" class="bg-gray-100 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-200 transition-colors">Today</button>
+                <button onclick="setDateFilter('month')" class="bg-gray-100 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-200 transition-colors">This Month</button>
+            </div>
+
+            <div class="flex flex-col">
+                <label class="text-[11px] font-bold text-gray-500 uppercase mb-1">Search Parameters</label>
+                <input type="text" id="filterSearch" placeholder="Search Guest/Room..." class="border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+
+            <div class="flex flex-col">
+                <label class="text-[11px] font-bold text-gray-500 uppercase mb-1">Payment Status</label>
+                <select id="filterPaymentStatus" class="border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="">All Payment Status</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Partially Paid">Partially Paid</option>
+                </select>
+            </div>
+
+            <div class="flex flex-col">
+                <label class="text-[11px] font-bold text-gray-500 uppercase mb-1">Guest Status</label>
+                <select id="filterGuestStatus" class="border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="">All Guest Status</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="checkedin">Checked In</option>
+                    <option value="reserved">Reserved</option>
+                    <option value="checkedout">Checkedout</option>
+                    <option value="no show">No Show</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+
+            <div class="flex flex-col">
+                <label class="text-[11px] font-bold text-gray-500 uppercase mb-1">Guest Source</label>
+                <select id="filterGuestSource" class="border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="">All Guest Source</option>
+                    <option value="Walk in">Walk In</option>
+                    <option value="Hotel Website">Hotel Website</option>
+                    <option value="Booking.com">Booking.com</option>
+                    <option value="Expedia">Expedia Group</option>
+                    <option value="Airbnd">Airbnd</option>
+                    <option value="Trip">Trip</option>
+                </select>
+            </div>
+
+            <div class="flex flex-col">
+                <label class="text-[11px] font-bold text-gray-500 uppercase mb-1">Payment Method</label>
+                <select id="filterPaymentMethod" class="border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="">Payment Method</option>
+                    <option value="Cash">Cash</option>
+                    <option value="MTN Momo">MTN Momo</option>
+                    <option value="Airtel Pay">Airtel Pay</option>
+                    <option value="Bank">Bank</option>
+                </select>
+            </div>
+
+            <div class="flex flex-col">
+                <label for="filterDate" class="text-[11px] font-bold text-gray-500 uppercase mb-1">Check-In Date</label>
+                <input type="date" id="filterDate" class="border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none w-full">
+            </div>
+
+            <div class="flex flex-col">
+                <label for="endDate" class="text-[11px] font-bold text-gray-500 uppercase mb-1">Check-Out Date</label>
+                <input type="date" id="endDate" class="border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none w-full">
+            </div>
+
+            <div class="sm:col-span-2 lg:col-span-4 flex flex-wrap gap-2 pt-2 border-t border-gray-100 mt-2">
+                <button onclick="exportToExcel()" class="flex-1 sm:flex-none bg-green-600 text-white font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-green-700 transition-colors shadow-sm">
+                    <i class="fa-solid fa-file-excel mr-1"></i> Export Excel
+                </button>
+                <button onclick="exportToPDF()" class="flex-1 sm:flex-none bg-blue-600 text-white font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+                    <i class="fa-solid fa-file-pdf mr-1"></i> Print PDF
+                </button>
+            </div>
+        </div>
+
+        <div class="hidden md:block overflow-x-auto bg-white rounded-xl shadow-sm border border-gray-200">
+            <table class="w-full text-left border-collapse" id="reportsTable">
+                <thead>
+                    <tr class="bg-slate-100 text-slate-700 uppercase text-xs font-bold tracking-wider border-b border-gray-200">
+                        <th class="p-3.5">Guest</th>
+                        <th class="p-3.5">Room</th>
+                        <th class="p-3.5">Check In</th>
+                        <th class="p-3.5 text-right">Paid</th>
+                        <th class="p-3.5 text-right">Balance</th>
+                        <th class="p-3.5 text-center">Payment Status</th>
+                        <th class="p-3.5 text-center">Guest Status</th>
+                        <th class="p-3.5 text-center">Payment Method</th>
+                        <th class="p-3.5 text-center">Guest Source</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody" class="text-gray-600 text-sm font-medium divide-y divide-gray-100">
+                    </tbody>
+            </table>
+        </div>
+
+        <div id="reportsMobileGrid" class="block md:hidden space-y-4">
+            </div>
+
     </div>
-</div>
 </section>
             <section id="service-reports" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
                 <h2 class="text-2xl font-bold mb-4 text-blue-600"><i class="fas fa-concierge-bell"></i> Service Reports (Incidental Charges)</h2>
@@ -3164,7 +3286,7 @@ Add Guest Details            </h2>
     <script src="housekeep.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="script4.js"></script>
+    <script src="small.js"></script>
 <script>
 function googleTranslateElementInit() {
     new google.translate.TranslateElement(
@@ -3283,15 +3405,18 @@ async function loadChecklists() {
 function getFilteredChecklists() {
   const search = (document.getElementById('searchInputdate')?.value || '').toLowerCase();
   return allChecklists.filter((entry) => {
-    const haystack =
-      `${entry.room} ${entry.date} ${JSON.stringify(entry.items)}`.toLowerCase();
+    const haystack = `${entry.room} ${entry.date} ${JSON.stringify(entry.items)}`.toLowerCase();
     return haystack.includes(search);
   });
 }
 
 function renderChecklistTable() {
   const tbody = document.getElementById('checklistBody');
-  if (!tbody) return;
+  const mobileGrid = document.getElementById('checklistMobileGrid');
+  
+  if (tbody) tbody.innerHTML = '';
+  if (mobileGrid) mobileGrid.innerHTML = '';
+
   const actionsHeader = document.getElementById('checklistActionsHeader');
   if (actionsHeader) actionsHeader.classList.remove('hidden');
 
@@ -3299,34 +3424,60 @@ function renderChecklistTable() {
   const start = (currentPage - 1) * rowsPerPage;
   const pageSlice = filtered.slice(start, start + rowsPerPage);
 
-  tbody.innerHTML = '';
-
   if (pageSlice.length === 0) {
-    tbody.innerHTML =
-      '<tr><td colspan="4" class="text-center py-4 text-gray-500">No checklists found.</td></tr>';
+    const fallback = '<div class="text-center py-6 text-gray-400 text-sm font-medium">No checklists found.</div>';
+    if (tbody) tbody.innerHTML = `<tr><td colspan="4">${fallback}</td></tr>`;
+    if (mobileGrid) mobileGrid.innerHTML = fallback;
   } else {
     pageSlice.forEach((entry) => {
-      const tr = document.createElement('tr');
-      tr.dataset.id = entry._id;
-      tr.className = "border-b border-slate-100 text-slate-600 hover:bg-slate-50 transition-colors";
-      
-      const actionsHtml = `
-        <td class="px-6 py-4 text-center">
-          <button class="bg-amber-500 text-slate-900 font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-amber-600 transition-colors mr-2"
-            onclick='editChecklist("${entry._id}")'>Edit</button>
-          <button class="bg-red-500 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-red-600 transition-colors"
-            onclick='deleteChecklist("${entry._id}")'>Delete</button>
-        </td>`;
+      const itemsString = Object.entries(entry.items)
+        .map(([k, v]) => `${checklistHumanize(k)}: ${checklistHumanize(v)}`)
+        .join(', ');
 
-      tr.innerHTML = `
-        <td class="px-6 py-4 font-medium text-slate-900">${entry.room}</td>
-        <td class="px-6 py-4">${entry.date}</td>
-        <td class="px-6 py-4 max-w-xs truncate">
-          ${Object.entries(entry.items).map(([k, v]) => `${checklistHumanize(k)}: ${checklistHumanize(v)}`).join(', ')}
-        </td>
-        ${actionsHtml}
-      `;
-      tbody.appendChild(tr);
+      // --- 1. POPULATE VIEW 1: DESKTOP TABLE ROW ---
+      if (tbody) {
+        const tr = document.createElement('tr');
+        tr.dataset.id = entry._id;
+        tr.className = "border-b border-slate-100 text-slate-600 hover:bg-slate-50 transition-colors";
+        tr.innerHTML = `
+          <td class="px-6 py-4 font-semibold text-slate-900">${entry.room}</td>
+          <td class="px-6 py-4 text-slate-500">${entry.date}</td>
+          <td class="px-6 py-4 max-w-xs truncate" title="${itemsString}">${itemsString}</td>
+          <td class="px-6 py-4 text-center whitespace-nowrap">
+            <button class="bg-amber-500 text-slate-900 font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-amber-600 transition-colors mr-2"
+              onclick='editChecklist("${entry._id}")'>Edit</button>
+            <button class="bg-red-500 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-red-600 transition-colors"
+              onclick='deleteChecklist("${entry._id}")'>Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      // --- 2. POPULATE VIEW 2: MOBILE CARD VIEW ---
+      if (mobileGrid) {
+        const card = document.createElement('div');
+        card.dataset.id = entry._id;
+        card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3 hover:border-slate-300 transition-all";
+        card.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <h4 class="text-base font-bold text-slate-900">Room ${entry.room}</h4>
+              <p class="text-xs text-slate-400 font-medium"><i class="far fa-calendar-alt mr-1"></i> ${entry.date}</p>
+            </div>
+            <div class="flex gap-1.5">
+              <button class="bg-amber-500 text-slate-900 font-bold px-2.5 py-1.5 rounded-lg text-xs hover:bg-amber-600 transition-colors"
+                onclick='editChecklist("${entry._id}")'><i class="fa-solid fa-pen"></i></button>
+              <button class="bg-red-500 text-white font-bold px-2.5 py-1.5 rounded-lg text-xs hover:bg-red-600 transition-colors"
+                onclick='deleteChecklist("${entry._id}")'><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+          </div>
+          <div class="bg-slate-50 border border-slate-100 rounded-lg p-3 text-xs text-slate-600 leading-relaxed">
+            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Status Items</span>
+            ${itemsString}
+          </div>
+        `;
+        mobileGrid.appendChild(card);
+      }
     });
   }
 
@@ -3341,43 +3492,84 @@ function editChecklist(id) {
   if (!entry) return;
 
   const tbody = document.getElementById('checklistBody');
-  const row = tbody.querySelector(`tr[data-id="${id}"]`);
+  const mobileGrid = document.getElementById('checklistMobileGrid');
+  
+  // Find both responsive variant row targets
+  const desktopRow = tbody ? tbody.querySelector(`tr[data-id="${id}"]`) : null;
+  const mobileCard = mobileGrid ? mobileGrid.querySelector(`div[data-id="${id}"]`) : null;
+
+  // Build the unified dropdown element items template
   const itemsHtml = Object.keys(entry.items)
-    .map(
-      (key) => `
-      <div class="flex items-center justify-between py-1 gap-4">
+    .map((key) => `
+      <div class="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0 gap-4">
         <span class="font-medium text-xs text-slate-700">${checklistHumanize(key)}:</span>
-        <select id="item-${key}-${id}" class="px-2 py-1 bg-white border rounded-md text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+        <select id="item-${key}-${id}" class="px-2 py-1 bg-white border border-slate-300 rounded-md text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none">
           <option value="yes" ${entry.items[key] === 'yes' ? 'selected' : ''}>Yes</option>
           <option value="no" ${entry.items[key] === 'no' ? 'selected' : ''}>No</option>
         </select>
       </div>`
-    )
-    .join('');
+    ).join('');
 
-  const editRowHtml = `
-    <tr class="bg-indigo-50/50" data-id="${id}">
-      <td class="px-6 py-4">
-        <input type="number" id="editRoom-${id}" value="${entry.room}" class="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"/>
-      </td>
-      <td class="px-6 py-4">
-        <input type="date" id="editDate-${id}" value="${entry.date}" class="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"/>
-      </td>
-      <td class="px-6 py-4">
-        <div class="space-y-1 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">${itemsHtml}</div>
-      </td>
-      <td class="px-6 py-4 text-center">
-        <button class="bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 transition-colors mr-2" onclick='saveChecklist("${id}")'>Save</button>
-        <button class="bg-slate-500 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-slate-600 transition-colors" onclick='loadChecklists()'>Cancel</button>
-      </td>
-    </tr>
-  `;
-  if (row) row.outerHTML = editRowHtml;
+  // --- HTML TEMPLATE: INLINE DESKTOP ROW EDITING MODE ---
+  if (desktopRow) {
+    const editRowHtml = `
+      <tr class="bg-indigo-50/40 border-b border-indigo-100" data-id="${id}">
+        <td class="px-6 py-4">
+          <input type="number" id="editRoom-${id}" value="${entry.room}" class="w-24 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"/>
+        </td>
+        <td class="px-6 py-4">
+          <input type="date" id="editDate-${id}" value="${entry.date}" class="w-40 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"/>
+        </td>
+        <td class="px-6 py-4">
+          <div class="max-w-md bg-white p-3 rounded-xl border border-slate-200 shadow-sm">${itemsHtml}</div>
+        </td>
+        <td class="px-6 py-4 text-center whitespace-nowrap">
+          <button class="bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 transition-colors mr-2" onclick='saveChecklist("${id}")'>Save</button>
+          <button class="bg-slate-500 text-white font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-slate-600 transition-colors" onclick='loadChecklists()'>Cancel</button>
+        </td>
+      </tr>
+    `;
+    desktopRow.outerHTML = editRowHtml;
+  }
+
+  // --- HTML TEMPLATE: MOBILE CARD EDITING MODE ---
+  if (mobileCard) {
+    const editCardHtml = `
+      <div data-id="${id}" class="p-4 bg-indigo-50/60 border border-indigo-200 rounded-xl shadow-sm space-y-4">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Room</label>
+            <input type="number" id="editRoomMobile-${id}" value="${entry.room}" class="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"/>
+          </div>
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Date</label>
+            <input type="date" id="editDateMobile-${id}" value="${entry.date}" class="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"/>
+          </div>
+        </div>
+        
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Update Status Items</span>
+          ${itemsHtml}
+        </div>
+
+        <div class="flex gap-2">
+          <button class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs hover:bg-emerald-700 transition-colors" onclick='saveChecklist("${id}", true)'>Save</button>
+          <button class="flex-1 bg-slate-500 text-white font-bold py-2 rounded-lg text-xs hover:bg-slate-600 transition-colors" onclick='loadChecklists()'>Cancel</button>
+        </div>
+      </div>
+    `;
+    mobileCard.outerHTML = editCardHtml;
+  }
 }
 
-async function saveChecklist(id) {
-  const room = document.getElementById(`editRoom-${id}`).value;
-  const date = document.getElementById(`editDate-${id}`).value;
+async function saveChecklist(id, isMobile = false) {
+  // Pull inputs dynamically based on which layout context submitted the event form
+  const roomPrefix = isMobile ? `editRoomMobile-${id}` : `editRoom-${id}`;
+  const datePrefix = isMobile ? `editDateMobile-${id}` : `editDate-${id}`;
+  
+  const room = document.getElementById(roomPrefix).value;
+  const date = document.getElementById(datePrefix).value;
+  
   const itemElements = document.querySelectorAll(`[id^="item-"][id$="-${id}"]`);
   const items = {};
   itemElements.forEach((el) => {
@@ -3417,7 +3609,7 @@ async function deleteChecklist(id) {
   }
 }
 
-// Checklist search & pagination
+// Event Listeners Configuration
 document.getElementById('searchInputdate')?.addEventListener('input', () => {
   currentPage = 1;
   renderChecklistTable();
@@ -3513,9 +3705,253 @@ window.editChecklist = editChecklist;
 window.saveChecklist = saveChecklist;
 window.deleteChecklist = deleteChecklist;
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const menuToggle = document.getElementById("menu-toggle"); // Your main layout's mobile hamburger icon
+    const sidebarClose = document.getElementById("sidebar-close");
+    const sidebarOverlay = document.getElementById("sidebar-overlay");
+    const sidebar = document.getElementById("sidebar");
 
+    // Unified function to show mobile sidebar drawer
+    const openSidebar = () => {
+        sidebar.classList.remove("hidden");
+        sidebarOverlay.classList.remove("hidden");
+    };
+
+    // Unified function to hide mobile sidebar drawer
+    const closeSidebarMobile = () => {
+        if (window.innerWidth < 1024) { // Only force-closes on mobile viewports
+            sidebar.classList.add("hidden");
+            sidebarOverlay.classList.add("hidden");
+        }
+    };
+
+    // 1. Open menu clicking hamburger
+    if (menuToggle) {
+        menuToggle.addEventListener("click", (e) => {
+            e.stopPropagation(); 
+            openSidebar();
+        });
+    }
+
+    // 2. Close menu clicking 'X' button
+    if (sidebarClose) {
+        sidebarClose.addEventListener("click", closeSidebarMobile);
+    }
+
+    // 3. Close menu when clicking outside / on the dim backdrop layout
+    sidebarOverlay.addEventListener("click", closeSidebarMobile);
+
+    // 4. Close menu dynamically when a specific page view link is selected
+    sidebar.addEventListener("click", (e) => {
+        const clickedLink = e.target.closest("a");
+        if (clickedLink) {
+            closeSidebarMobile();
+        }
+    });
+});
+
+// Dropdown Toggle Utility Logic
+function toggleDropdown(menuId, arrowId) {
+    const menu = document.getElementById(menuId);
+    const arrow = document.getElementById(arrowId);
+    
+    if (menu.classList.contains('hidden')) {
+        menu.classList.remove('hidden');
+        arrow.classList.add('rotate-180');
+    } else {
+        menu.classList.add('hidden');
+        arrow.classList.remove('rotate-180');
+    }
+}
+</script>
 <script type="text/javascript"
 src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
+</script>
+<script>
+    // 1. Core global event setup
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('global-guest-search');
+    const resultsDropdown = document.getElementById('search-results-dropdown');
+    let debounceTimer;
+
+    if (!searchInput) return;
+
+    // Hotkey feature: Press '/' to quickly focus the search bar
+    window.addEventListener('keydown', (e) => {
+        if (e.key === '/' && document.activeElement !== searchInput) {
+            e.preventDefault();
+            searchInput.focus();
+        }
+    });
+
+    // Fire data fetches as user types with a 300ms delay buffer
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        const query = e.target.value.trim();
+
+        if (query.length < 2) {
+            resultsDropdown.innerHTML = '';
+            resultsDropdown.classList.add('hidden');
+            return;
+        }
+
+        debounceTimer = setTimeout(() => {
+            executeGuestSearch(query);
+        }, 300);
+    });
+
+    // Close the dropdown cleanly if clicking outside the component panel
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !resultsDropdown.contains(e.target)) {
+            resultsDropdown.classList.add('hidden');
+        }
+    });
+});
+
+// 2. Fetch matches from your Live Render Booking API endpoints
+
+// 3. Print out neat match records mimicking dark system aesthetic
+// 1. Fetch matches using your existing backend route query parameter (?search=)
+async function executeGuestSearch(query) {
+    const resultsDropdown = document.getElementById('search-results-dropdown');
+    
+    try {
+        // CHANGED: Query using 'search=' instead of 'name=' to match your backend logic
+        // Also adding a limit of 10 for the quick dropdown so we don't pull 500 records
+        const response = await authenticatedFetch(`${API_BASE_URL}/bookings?search=${encodeURIComponent(query)}&limit=10`);
+        
+        if (!response || !response.ok) {
+            showDropdownMessage('<div class="p-4 text-xs text-rose-400">Failed to pull data matching queries.</div>');
+            return;
+        }
+
+        const data = await response.json();
+        
+        // CHANGED: Your backend returns an object { bookings: [], totalPages: X } 
+        // We must extract 'data.bookings' instead of reading 'data' as a direct array
+        renderDropdownResults(data.bookings);
+        
+    } catch (error) {
+        console.error('Search mechanism exception:', error);
+        showDropdownMessage('<div class="p-4 text-xs text-rose-400">Error connecting to PMS servers.</div>');
+    }
+}
+
+// 2. Render dropdown results safely
+function renderDropdownResults(bookings) {
+    const resultsDropdown = document.getElementById('search-results-dropdown');
+    resultsDropdown.innerHTML = '';
+
+    // Handle empty arrays safely
+    if (!bookings || bookings.length === 0) {
+        showDropdownMessage('<div class="p-4 text-xs text-slate-400">No active records match that search.</div>');
+        return;
+    }
+
+    resultsDropdown.classList.remove('hidden');
+
+    bookings.forEach(booking => {
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between p-3 border-b border-slate-800/60 hover:bg-slate-800 cursor-pointer transition-colors group";
+        
+        item.innerHTML = `
+            <div class="flex flex-col min-w-0">
+                <span class="text-sm font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">${escapeHTML(booking.name)}</span>
+                <span class="text-[11px] text-slate-400 mt-0.5">ID: ${escapeHTML(booking.id)} | Room: ${escapeHTML(booking.room || 'N/A')}</span>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-slate-800 text-indigo-400 border border-slate-700 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-transparent transition-all">
+                Open Details
+            </span>
+        `;
+
+        // Click action: populate the pre-existing bookingModal form
+        item.addEventListener('click', () => {
+            populateAndOpenModal(booking);
+            resultsDropdown.classList.add('hidden');
+            document.getElementById('global-guest-search').value = '';
+        });
+
+        resultsDropdown.appendChild(item);
+    });
+}
+
+function showDropdownMessage(htmlContent) {
+    const resultsDropdown = document.getElementById('search-results-dropdown');
+    resultsDropdown.innerHTML = htmlContent;
+    resultsDropdown.classList.remove('hidden');
+}
+
+// Helper sanitization utility protecting DOM environments from input execution anomalies
+function escapeHTML(str) {
+    if (!str) return '';
+    return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+    );
+}
+
+// 4. Inject specific schema properties context to matching modal UI layout targets
+function populateAndOpenModal(booking) {
+    const modal = document.getElementById('bookingModal');
+    if (!modal) return;
+
+    // Reset Form standard logic
+    document.getElementById('bookingForm').reset();
+
+    // Mapping key attributes to element values following your exact Schema & Form Layout keys
+    setFieldValue('bookingId', booking._id || booking.id);
+    setFieldValue('name', booking.name);
+    setFieldValue('nationality', booking.nationality);
+    setFieldValue('nationalIdNo', booking.nationalIdNo);
+    setFieldValue('guestEmail', booking.guestEmail);
+    setFieldValue('phoneNo', booking.phoneNo);
+    setFieldValue('occupation', booking.occupation);
+    setFieldValue('address', booking.address);
+    
+    // Room stay fields
+    setFieldValue('room', booking.room);
+    setFieldValue('checkIn', booking.checkIn);
+    setFieldValue('checkIntime', booking.checkIntime);
+    setFieldValue('checkOut', booking.checkOut);
+    setFieldValue('checkOuttime', booking.checkOuttime);
+    setFieldValue('nights', booking.nights);
+    setFieldValue('people', booking.people);
+    setFieldValue('extraperson', booking.extraperson);
+
+    // Accounting variables
+    setFieldValue('amtPerNight', booking.amtPerNight);
+    setFieldValue('totalDue', booking.totalDue);
+    setFieldValue('amountPaid', booking.amountPaid);
+    setFieldValue('balance', booking.balance);
+    setFieldValue('paymentMethod', booking.paymentMethod || 'Cash');
+    setFieldValue('transactionid', booking.transactionid);
+    setFieldValue('paymentStatus', booking.paymentStatus || 'Pending');
+    setFieldValue('gueststatus', booking.gueststatus || 'confirmed');
+
+    // Emergency fields
+    setFieldValue('vehno', booking.vehno);
+    setFieldValue('destination', booking.destination);
+    setFieldValue('guestsource', booking.guestsource || 'Walk in');
+    setFieldValue('kin', booking.kin);
+    setFieldValue('kintel', booking.kintel);
+    setFieldValue('purpose', booking.purpose);
+    setFieldValue('declarations', booking.declarations);
+
+    // Update styling tags inside modal header to show viewing state context
+    const modalTitle = document.getElementById('modalTitle');
+    if (modalTitle) modalTitle.innerHTML = `<i class="fas fa-user-check"></i> Reviewing Guest: ${escapeHTML(booking.name)}`;
+
+    // Toggle styling flags unlocking container viewing frame visibility layers smoothly
+    modal.classList.remove('hidden');
+}
+
+// Field assignments guard wrapper avoiding unexpected DOM value initialization errors
+function setFieldValue(id, value) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.value = value !== undefined && value !== null ? value : '';
+    }
+}
 </script>
 </body>
 </html>

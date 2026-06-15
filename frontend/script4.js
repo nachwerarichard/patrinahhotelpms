@@ -976,23 +976,25 @@ function applyRoleAccess(role) {
  * @param {string} [searchTerm=''] - Optional: A search term to filter bookings.
  */
 async function renderBookings(page = 1, searchTerm = '') {
-    // 1. Retrieve session data
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelId = sessionData?.hotelId;
     const token = sessionData?.token;
     const currentUserRole = sessionData?.role;
 
     renderHousekeepingRooms();
-    bookingsTableBody.innerHTML = ''; 
+    
+    const tableBody = document.querySelector("#bookingsTable tbody");
+    const mobileGrid = document.getElementById("bookingsMobileGrid");
+    
+    if(tableBody) tableBody.innerHTML = '';
+    if(mobileGrid) mobileGrid.innerHTML = '';
 
-    if (!pageInfoSpan) {
-        console.warn("Skipping renderBookings: pageInfoSpan not found on this page.");
-        return; 
-    }
+    if (!pageInfoSpan) return; 
 
-    // 2. Validate Permissions (Including super-admin)
-    if (currentUserRole !== 'admin' && currentUserRole !== 'front office' && currentUserRole !== 'bar' && currentUserRole !== 'front office' && currentUserRole !== 'super-admin') {
-        bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px;">Access Denied. You do not have permission to view bookings.</td></tr>';
+    if (!['admin', 'front office', 'bar', 'super-admin'].includes(currentUserRole)) {
+        const errorMsg = '<div class="text-center p-6 text-gray-500 font-bold">Access Denied.</div>';
+        if(tableBody) tableBody.innerHTML = `<tr><td colspan="8">${errorMsg}</td></tr>`;
+        if(mobileGrid) mobileGrid.innerHTML = errorMsg;
         prevPageBtn.disabled = true;
         nextPageBtn.disabled = true;
         pageInfoSpan.textContent = 'Page 0 of 0';
@@ -1006,64 +1008,43 @@ async function renderBookings(page = 1, searchTerm = '') {
     currentSearchTerm = searchTerm; 
 
     try {
-        // 3. Update URL with hotelId and add Authorization Header
         let url = `${API_BASE_URL}/bookings?page=${currentPage}&limit=${recordsPerPage}&hotelId=${hotelId}`;
-        if (currentSearchTerm) {
-            url += `&search=${encodeURIComponent(currentSearchTerm)}`;
-        }
+        if (currentSearchTerm) url += `&search=${encodeURIComponent(currentSearchTerm)}`;
 
         const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',    'x-hotel-id': sessionData?.hotelId
-
+                'Content-Type': 'application/json',
+                'x-hotel-id': hotelId
             }
         });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP fetch error Status code: ${response.status}`);
         
         const data = await response.json();
-        currentBookings = data.bookings;
-        bookings = data.bookings; 
-        totalPages = data.totalPages;
-        totalCount = data.totalCount;
-
+        currentBookings = data.bookings || [];
+        totalPages = data.totalPages || 1;
+        totalCount = data.totalCount || 0;
     } catch (error) {
         console.error('Error fetching bookings:', error);
-        // ... error handling UI remains same ...
         return;
     }
 
     if (currentBookings.length === 0) {
-        bookingsTableBody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px;">No bookings found.</td></tr>';
+        const emptyMsg = '<div class="text-center p-6 text-gray-400">No records tracked.</div>';
+        if(tableBody) tableBody.innerHTML = `<tr><td colspan="8">${emptyMsg}</td></tr>`;
+        if(mobileGrid) mobileGrid.innerHTML = emptyMsg;
     } else {
         currentBookings.forEach(booking => {
-            const row = bookingsTableBody.insertRow();
-            row.dataset.id = booking.id;
-            
             const isCancelled = booking.gueststatus === 'cancelled';
-            
-            // Logic for Row Highlighting
-            if (isCancelled) {
-                row.className = "bg-red-50 hover:bg-red-100 transition-colors opacity-75";
-            } else {
-                row.className = "hover:bg-gray-50 transition-colors";
-            }
-
             const baseBtn = "inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white focus:outline-none transition-all duration-200 w-full justify-center mb-1";
+            
             let actionButtonsHtml = '';
-
-            // 4. Role-based Button UI (Admin/Super-Admin)
-            if (currentUserRole === 'admin' || currentUserRole === 'super-admin'  || currentUserRole === 'front office') {
+            if (['admin', 'super-admin', 'front office'].includes(currentUserRole)) {
                 if (isCancelled) {
                     actionButtonsHtml = `
                         <span class="text-xs text-red-600 font-bold block mb-2 text-center uppercase tracking-wide">Cancelled</span>
-                        <button class="${baseBtn} bg-red-600 hover:bg-red-700" onclick="confirmDeleteBooking('${booking.id}')">
-                            Delete Permanently
-                        </button>
+                        <button class="${baseBtn} bg-red-600 hover:bg-red-700" onclick="confirmDeleteBooking('${booking.id}')">Delete Permanently</button>
                     `;
                 } else {
                     actionButtonsHtml = `
@@ -1087,35 +1068,61 @@ async function renderBookings(page = 1, searchTerm = '') {
 
             const cancellationReason = booking.cancellationReason || "No reason provided";
 
-            row.innerHTML = `
-                <td class="py-3 px-6">${booking.name}</td>
-                <td class="py-3 px-6">${booking.room}</td>
-                <td class="py-3 px-6">${booking.checkIn}</td>
-                <td class="py-3 px-6">${booking.checkOut}</td>
-                <td class="py-3 px-6">${booking.paymentStatus}</td>
-                <td class="py-3 px-6 relative group cursor-help">
-                    <span class="${isCancelled ? 'text-red-600 font-semibold' : 'text-gray-700'}">
-                        ${booking.gueststatus}
-                    </span>
-                    ${isCancelled ? `
-                    <div class="invisible group-hover:visible absolute z-50 w-48 bg-gray-900 text-white text-xs rounded p-2 -top-12 left-0 shadow-xl pointer-events-none">
-                        <strong>Reason:</strong> ${cancellationReason}
-                        <div class="bg-gray-900 w-2 h-2 rotate-45 absolute -bottom-1 left-4"></div>
-                    </div>
-                    ` : ''}
-                </td>
-                <td class="py-3 px-6">${booking.guestsource}</td>
-                <td class="py-3 px-6 text-center">
-                    <div class="relative inline-block text-left">
-                        <button class="p-2 hover:bg-gray-200 rounded-full transition-colors" onclick="toggleActionButtons(event, this)">
-                            <i class="fas fa-ellipsis-v text-gray-600"></i>
-                        </button>
-                        <div class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 shadow-2xl rounded-lg p-2 z-[100]">
-                           ${actionButtonsHtml}
+            // Populate View 1: Desktop Layout
+            if(tableBody) {
+                const row = tableBody.insertRow();
+                row.dataset.id = booking.id;
+                row.className = isCancelled ? "bg-red-50 hover:bg-red-100 transition-colors opacity-75" : "hover:bg-gray-50 transition-colors";
+                row.innerHTML = `
+                    <td class="py-3 px-6">${booking.name}</td>
+                    <td class="py-3 px-6">${booking.room}</td>
+                    <td class="py-3 px-6">${booking.checkIn}</td>
+                    <td class="py-3 px-6">${booking.checkOut}</td>
+                    <td class="py-3 px-6">${booking.paymentStatus}</td>
+                    <td class="py-3 px-6 relative group cursor-help">
+                        <span class="${isCancelled ? 'text-red-600 font-semibold' : 'text-gray-700'}">${booking.gueststatus}</span>
+                        ${isCancelled ? `<div class="invisible group-hover:visible absolute z-50 w-48 bg-gray-900 text-white text-xs rounded p-2 -top-12 left-0 shadow-xl pointer-events-none"><strong>Reason:</strong> ${cancellationReason}</div>` : ''}
+                    </td>
+                    <td class="py-3 px-6">${booking.guestsource}</td>
+                    <td class="py-3 px-6 text-center">
+                        <div class="relative inline-block text-left">
+                            <button class="p-2 hover:bg-gray-200 rounded-full transition-colors" onclick="toggleActionButtons(event, this)">
+                                <i class="fas fa-ellipsis-v text-gray-600"></i>
+                            </button>
+                            <div class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 shadow-2xl rounded-lg p-2 z-[100]">${actionButtonsHtml}</div>
+                        </div>
+                    </td>
+                `;
+            }
+
+            // Populate View 2: Mobile Stack Layout
+            if(mobileGrid) {
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-xl border ${isCancelled ? 'bg-red-50/50 border-red-200' : 'bg-gray-50 border-gray-200'} shadow-sm relative`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h4 class="text-base font-bold text-gray-900">${booking.name}</h4>
+                            <p class="text-xs text-gray-500 font-medium">Room: <span class="text-blue-600 font-bold">${booking.room}</span> | Source: ${booking.guestsource}</p>
+                        </div>
+                        <div class="relative">
+                            <button class="p-1.5 bg-white border border-gray-200 rounded-lg shadow-sm" onclick="toggleActionButtons(event, this)">
+                                <i class="fas fa-ellipsis-h text-gray-600"></i>
+                            </button>
+                            <div class="hidden absolute right-0 mt-1 w-48 bg-white border border-gray-200 shadow-2xl rounded-lg p-2 z-[100]">${actionButtonsHtml}</div>
                         </div>
                     </div>
-                </td>
-            `;
+                    <div class="grid grid-cols-2 gap-2 my-3 text-xs border-y border-gray-200/60 py-2">
+                        <div><span class="text-gray-400 block uppercase font-bold tracking-tight text-[10px]">Check In</span> <span class="font-medium text-gray-700">${booking.checkIn}</span></div>
+                        <div><span class="text-gray-400 block uppercase font-bold tracking-tight text-[10px]">Check Out</span> <span class="font-medium text-gray-700">${booking.checkOut}</span></div>
+                    </div>
+                    <div class="flex items-center justify-between text-xs pt-1">
+                        <div>Status: <span class="font-bold ${isCancelled ? 'text-red-600' : 'text-emerald-600'}">${booking.gueststatus}</span></div>
+                        <div class="px-2 py-0.5 rounded font-bold ${booking.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${booking.paymentStatus}</div>
+                    </div>
+                `;
+                mobileGrid.appendChild(card);
+            }
         });
     }
 
@@ -1531,10 +1538,29 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
 });
 
 function closeBookingModal() {
-    bookingModal.style.display = 'none';
+    // 1. Grab the modal element cleanly
+    const modal = document.getElementById('bookingModal');
+    const form = document.getElementById('bookingForm');
+    
+    if (modal) {
+        // FIX: Use classList to hide it, matching your search open logic!
+        modal.classList.add('hidden');
+    }
+    
+    // 2. Reset the text contexts back to default parameters
     document.getElementById('modalTitle').textContent = 'Add New Guest';
     document.getElementById('saveBookingBtn').textContent = 'Save';
 
+    // 3. CRITICAL: Wipe out the data from the previous guest search
+    if (form) {
+        form.reset();
+    }
+    
+    // Clear out the hidden database identifier tag so the next action doesn't get confused
+    const hiddenIdField = document.getElementById('bookingId');
+    if (hiddenIdField) {
+        hiddenIdField.value = '';
+    }
 }
 
 
@@ -3908,8 +3934,9 @@ function debounce(func, timeout = 300) {
  * Filters bookings based on UI inputs and scoped by Hotel ID.
  */
 async function fetchReport() {
-    // 1. Get DOM Elements
+    // 1. Get DOM Elements for both display pipelines
     const tableBody = document.getElementById('tableBody');
+    const mobileGrid = document.getElementById('reportsMobileGrid');
     const sumPaid = document.getElementById('sumPaid');
     const sumBalance = document.getElementById('sumBalance');
 
@@ -3922,7 +3949,7 @@ async function fetchReport() {
     const startDate = document.getElementById('filterDate').value;
     const endDate = document.getElementById('endDate').value;
 
-    // 3. Multi-Tenant Context (Crucial!)
+    // 3. Multi-Tenant Context Retrieval
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelId = user ? user.hotelId : null;
 
@@ -3931,21 +3958,21 @@ async function fetchReport() {
         return;
     }
 
-    // 4. Logic: Wipe table if no filters are active
+    // 4. Logic Validation Checks: Wipe table contexts if parameters remain baseline clear
     const hasActiveFilter = search || paymentStatus || gueststatus || 
                             paymentMethod || guestsource || startDate || endDate;
 
     if (!hasActiveFilter) {
         if (tableBody) tableBody.innerHTML = '';
+        if (mobileGrid) mobileGrid.innerHTML = '';
         if (sumPaid) sumPaid.textContent = "UGX 0.00";
         if (sumBalance) sumBalance.textContent = "UGX 0.00";
-        console.log("Filters cleared. Table wiped.");
         return;
     }
 
-    // 5. Build Query Parameters
+    // 5. Build Parameters Query Array
     const params = new URLSearchParams({
-        hotelId, // Ensure the backend only returns data for this hotel
+        hotelId,
         search,
         paymentStatus,
         gueststatus,
@@ -3956,130 +3983,148 @@ async function fetchReport() {
     });
 
     try {
-        // Show loading state in the table
-        if (tableBody) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="9" class="p-10 text-center">
-                        <div class="flex flex-col items-center gap-2">
-                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                            <span class="text-gray-500 font-medium">Processing Report...</span>
-                        </div>
-                    </td>
-                </tr>`;
-        }
+        // Render identical animated loader bars into both target elements
+        const loadingIndicator = `
+            <div class="flex flex-col items-center justify-center p-12 gap-2 w-full text-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <span class="text-gray-500 text-sm font-medium">Processing Report Matrix...</span>
+            </div>`;
 
-        // 6. Execute Request using authenticatedFetch
+        if (tableBody) tableBody.innerHTML = `<tr><td colspan="9">${loadingIndicator}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = loadingIndicator;
+
+        // 6. Execute Request Context Pipeline
         const response = await authenticatedFetch(`${API_BASE_URL}/bookings?${params}`);
-        
-        if (!response) throw new Error("No response from server");
+        if (!response) throw new Error("No payload parsed back from execution environment.");
         
         const data = await response.json();
-
-        // 7. Update Global State and UI
-        // Note: adjust 'data.bookings' to just 'data' depending on your backend response structure
         const bookings = Array.isArray(data) ? data : (data.bookings || []);
-        currentData = bookings; 
         
+        currentData = bookings; 
         renderTable(bookings);
 
     } catch (err) {
-        console.error("Fetch error:", err);
-        if (tableBody) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="9" class="p-8 text-center text-red-500 bg-red-50">
-                        <i class="fas fa-exclamation-triangle mr-2"></i> 
-                        Error loading report. Please check your connection.
-                    </td>
-                </tr>`;
-        }
+        console.error("Fetch execution fault error reported:", err);
+        const errorTemplate = `
+            <div class="p-6 text-center text-red-500 font-semibold bg-red-50 rounded-lg">
+                <i class="fas fa-exclamation-triangle mr-2"></i> Error loading report structure. Check internet connectivity log.
+            </div>`;
+        if (tableBody) tableBody.innerHTML = `<tr><td colspan="9">${errorTemplate}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = errorTemplate;
     }
 }
-/**
- * HOTEL PMS REPORTING MODULE
- * Handles rendering, filtering, and exporting of booking data.
- */
 
-
-// 1. MAIN RENDER FUNCTION
 function renderTable(bookings) {
     const tbody = document.getElementById('tableBody');
+    const mobileGrid = document.getElementById('reportsMobileGrid');
     const sumPaidDisplay = document.getElementById('sumPaid');
     const sumBalanceDisplay = document.getElementById('sumBalance');
 
-    // Reset UI if elements don't exist
-    if (!tbody) return;
+    // Wipe down containers completely before running updates
+    if (tbody) tbody.innerHTML = '';
+    if (mobileGrid) mobileGrid.innerHTML = '';
 
-    // Handle empty data gracefully
+    // Handle empty dataset scenarios gracefully across targets
     if (!bookings || bookings.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-gray-400 italic">No bookings found for the selected filters</td></tr>';
+        const fallbackMsg = '<div class="p-8 text-center text-gray-400 font-medium italic">No match logs mapped for active criteria.</div>';
+        if (tbody) tbody.innerHTML = `<tr><td colspan="9">${fallbackMsg}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
         if (sumPaidDisplay) sumPaidDisplay.textContent = "UGX 0.00";
         if (sumBalanceDisplay) sumBalanceDisplay.textContent = "UGX 0.00";
         return;
     }
 
-    // A. Calculate Totals
+    // A. Calculate Dynamic Financial Summaries
     const totalPaid = bookings.reduce((sum, b) => sum + Number(b.amountPaid || 0), 0);
     const totalBalance = bookings.reduce((sum, b) => sum + Number(b.balance || 0), 0);
 
-    // B. Update the Summary Cards (Top of page)
-    const formattedPaid = `UGX ${totalPaid.toLocaleString(undefined, {minimumFractionDigits: 0})}`;
-    const formattedBalance = `UGX ${totalBalance.toLocaleString(undefined, {minimumFractionDigits: 0})}`;
-    
-    if (sumPaidDisplay) sumPaidDisplay.textContent = formattedPaid;
-    if (sumBalanceDisplay) sumBalanceDisplay.textContent = formattedBalance;
+    // B. Reformat Financial String Representations
+    if (sumPaidDisplay) sumPaidDisplay.textContent = `UGX ${totalPaid.toLocaleString()}`;
+    if (sumBalanceDisplay) sumBalanceDisplay.textContent = `UGX ${totalBalance.toLocaleString()}`;
 
-    // C. Generate Table Rows
-    const rows = bookings.map(b => {
-        // Define dynamic badge colors
+    // C. Process Collections and Run Render Loops
+    bookings.forEach(b => {
+        // Map aesthetic colors 
         const payColor = b.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700';
         const statusColor = b.gueststatus === 'confirmed' || b.gueststatus === 'checkedin' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700';
         const methodColor = b.paymentMethod === 'Cash' ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700';
 
-        return `
-            <tr class="hover:bg-gray-50 transition-colors border-b">
-                <td class="p-3 font-medium text-gray-700">${b.name || 'N/A'}</td>
-                <td class="p-3 text-gray-600">${b.room || 'N/A'}</td>
-                <td class="p-3 text-gray-600 text-sm">${b.checkIn}</td>
+        // 1. POPULATE VIEW 1: Render out standard desktop table row element
+        if (tbody) {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-gray-50/80 transition-colors border-b border-gray-100";
+            tr.innerHTML = `
+                <td class="p-3 font-semibold text-gray-800">${b.name || 'N/A'}</td>
+                <td class="p-3 text-gray-600 font-medium">${b.room || 'N/A'}</td>
+                <td class="p-3 text-gray-400 text-xs">${b.checkIn}</td>
                 <td class="p-3 text-green-600 font-bold font-mono text-right">${Number(b.amountPaid || 0).toLocaleString()}</td>
                 <td class="p-3 text-red-600 font-bold font-mono text-right">${Number(b.balance || 0).toLocaleString()}</td>
                 <td class="p-3 text-center">
-                    <span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase ${payColor}">
-                        ${b.paymentStatus || 'Pending'}
-                    </span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${payColor}">${b.paymentStatus || 'Pending'}</span>
                 </td>
                 <td class="p-3 text-center">
-                    <span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase ${statusColor}">
-                        ${b.gueststatus || 'Reserved'}
-                    </span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${statusColor}">${b.gueststatus || 'Reserved'}</span>
                 </td>
                 <td class="p-3 text-center">
-                    <span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase ${methodColor}">
-                        ${b.paymentMethod || 'N/A'}
-                    </span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${methodColor}">${b.paymentMethod || 'N/A'}</span>
                 </td>
-                <td class="p-3 text-center text-gray-500 text-xs">
-                    ${b.guestsource || 'Walk in'}
-                </td>
-            </tr>
-        `;
-    }).join('');
+                <td class="p-3 text-center text-gray-400 text-xs">${b.guestsource || 'Walk in'}</td>
+            `;
+            tbody.appendChild(tr);
+        }
 
-    // D. Create the Summary/Total Row at bottom of table
-    const totalRow = `
-        <tr class="bg-gray-50 font-black border-t-2 border-gray-300">
-            <td colspan="3" class="p-4 text-right text-gray-500 uppercase tracking-widest text-xs">Grand Total:</td>
-            <td class="p-4 text-green-700 text-right font-mono">${totalPaid.toLocaleString()}</td>
-            <td class="p-4 text-red-700 text-right font-mono">${totalBalance.toLocaleString()}</td>
+        // 2. POPULATE VIEW 2: Render out clean card template for mobile ledger screens
+        if (mobileGrid) {
+            const card = document.createElement('div');
+            card.className = "p-4 bg-white border border-gray-200 rounded-xl shadow-sm space-y-3";
+            card.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 class="text-base font-bold text-gray-900">${b.name || 'N/A'}</h4>
+                        <p class="text-xs text-gray-400 font-medium">Room Assigned: <span class="text-indigo-600 font-bold">${b.room || 'N/A'}</span></p>
+                    </div>
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${statusColor}">${b.gueststatus || 'Reserved'}</span>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2 bg-gray-50 border border-gray-100 rounded-lg p-3 text-xs">
+                    <div>
+                        <span class="text-[10px] text-gray-400 font-bold uppercase block tracking-tight">Paid Amount</span>
+                        <span class="text-green-600 font-bold font-mono text-sm">UGX ${Number(b.amountPaid || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-gray-400 font-bold uppercase block tracking-tight">Balance Outstanding</span>
+                        <span class="text-red-600 font-bold font-mono text-sm">UGX ${Number(b.balance || 0).toLocaleString()}</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between text-xs pt-1 gap-2">
+                    <div class="text-gray-400 font-medium"><i class="far fa-calendar-alt mr-1"></i> In: ${b.checkIn}</div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase ${payColor}">${b.paymentStatus || 'Pending'}</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase ${methodColor}">${b.paymentMethod || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="text-[11px] text-gray-400 border-t border-gray-100/70 pt-2 flex justify-between">
+                    <span>Source: <strong class="text-gray-600">${b.guestsource || 'Walk in'}</strong></span>
+                </div>
+            `;
+            mobileGrid.appendChild(card);
+        }
+    });
+
+    // D. Append Grand Totals Summary Row at bottom of Table view (Desktop Only)
+    if (tbody) {
+        const totalRow = document.createElement('tr');
+        totalRow.className = "bg-slate-50 font-black border-t-2 border-gray-300 text-gray-900";
+        totalRow.innerHTML = `
+            <td colspan="3" class="p-4 text-right text-gray-500 uppercase tracking-widest text-xs font-bold">Grand Total:</td>
+            <td class="p-4 text-green-700 text-right font-mono text-base">${totalPaid.toLocaleString()}</td>
+            <td class="p-4 text-red-700 text-right font-mono text-base">${totalBalance.toLocaleString()}</td>
             <td colspan="4" class="p-4"></td>
-        </tr>
-    `;
-
-    // E. Update the DOM once to prevent flickering
-    tbody.innerHTML = rows + totalRow;
+        `;
+        tbody.appendChild(totalRow);
+    }
     
-    // Save to global for exports
     currentData = bookings;
 }
 
@@ -5002,47 +5047,101 @@ document.getElementById('roomForm').addEventListener('submit', async (e) => {
 
 async function fetchRoomsV2() {
     const tbody = document.getElementById('roomTableBody');
-    if (!tbody) return;
+    const mobileGrid = document.getElementById('roomMobileGrid');
+    
+    // Safety check: break execution out early if neither viewport target element exists
+    if (!tbody && !mobileGrid) return;
 
     try {
         const res = await authenticatedFetch(`${API_BASE_URL}/v2/rooms`);
         const rooms = await res.json();
 
-        if (!res.ok) throw new Error(rooms.error);
+        if (!res.ok) throw new Error(rooms.error || "Inventory endpoint communication error.");
 
-        if (rooms.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-slate-400">No rooms found in registry.</td></tr>`;
+        // Graceful handling for empty array results across view variants
+        if (!rooms || rooms.length === 0) {
+            const fallbackMsg = '<div class="p-10 text-center text-slate-400 font-medium text-sm">No rooms found in registry.</div>';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="5">${fallbackMsg}</td></tr>`;
+            if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
             return;
         }
 
-// Inside fetchRoomsV2 in script4.js
-tbody.innerHTML = rooms.map(room => {
-    // 🛡️ Safety Check: Handle missing categories or prices
-    const categoryName = room.roomTypeId?.name || '<span class="text-rose-400">Missing Category</span>';
-    const rate = room.roomTypeId?.basePrice ? room.roomTypeId.basePrice.toLocaleString() : '0.00';
-    
-    return `
-        <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
-            <td class="px-8 py-5 font-bold text-slate-700">${room.number}</td>
-            <td class="px-8 py-5 text-slate-500">${categoryName}</td>
-            <td class="px-8 py-5 font-mono text-sm text-indigo-600">UGX ${rate}</td>
-            <td class="px-8 py-5">
-                <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
-                    room.status === 'clean' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                }">${room.status}</span>
-            </td>
-            <td class="px-8 py-5 text-center flex justify-center gap-2">
-                <button onclick="deleteRoom('${room._id}')" class="p-2 text-slate-300 hover:text-rose-600 transition-colors">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        </tr>
-    `;
-}).join('');
+        // Clean out baseline raw HTML before applying string payload loops
+        if (tbody) tbody.innerHTML = '';
+        if (mobileGrid) mobileGrid.innerHTML = '';
+
+        rooms.forEach(room => {
+            // Safety Check: Handle missing categories or prices
+            const categoryName = room.roomTypeId?.name || '<span class="text-rose-400 font-medium">Missing Category</span>';
+            const rate = room.roomTypeId?.basePrice ? room.roomTypeId.basePrice.toLocaleString() : '0.00';
+            
+            // Dynamic badge color configuration mapping parameters
+            const badgeClass = room.status === 'clean' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
+
+            // --- A. POPULATE VIEW 1: DESKTOP TABLE ROW APPEND LOOP ---
+            if (tbody) {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="px-8 py-5 font-bold text-slate-700">${room.number}</td>
+                    <td class="px-8 py-5 text-slate-500 font-medium">${categoryName}</td>
+                    <td class="px-8 py-5 font-mono text-sm text-indigo-600 font-bold">UGX ${rate}</td>
+                    <td class="px-8 py-5">
+                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${badgeClass}">
+                            ${room.status || 'Unknown'}
+                        </span>
+                    </td>
+                    <td class="px-8 py-5 text-center">
+                        <button onclick="deleteRoom('${room._id}')" class="p-2 text-slate-400 hover:text-rose-600 transition-colors focus:outline-none" title="Remove Room">
+                            <i class="fas fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            // --- B. POPULATE VIEW 2: SMARTPHONE ADAPTIVE CARD MODULE LOOP ---
+            if (mobileGrid) {
+                const card = document.createElement('div');
+                card.className = "p-4 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-3 relative hover:border-slate-300 transition-all";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 block mb-0.5">Room Number</span>
+                            <h4 class="text-lg font-black text-slate-800">${room.number}</h4>
+                        </div>
+                        <button onclick="deleteRoom('${room._id}')" class="p-2 text-slate-300 hover:text-rose-600 transition-colors active:scale-95 focus:outline-none" title="Remove Room">
+                            <i class="fas fa-trash-can text-sm"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="pt-1 border-t border-slate-100 flex items-center justify-between gap-4">
+                        <div>
+                            <span class="text-[9px] uppercase font-bold tracking-tight text-slate-400 block">Classification</span>
+                            <span class="text-sm font-semibold text-slate-600">${categoryName}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[9px] uppercase font-bold tracking-tight text-slate-400 block">Nightly Price</span>
+                            <span class="text-sm font-black font-mono text-indigo-600">UGX ${rate}</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-xs">
+                        <span class="text-[10px] uppercase font-bold tracking-tight text-slate-400">Housekeeping State</span>
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${badgeClass}">
+                            ${room.status || 'Unknown'}
+                        </span>
+                    </div>
+                `;
+                mobileGrid.appendChild(card);
+            }
+        });
 
     } catch (err) {
-        console.error("Table Refresh Error:", err);
-        tbody.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-rose-500">Error loading inventory.</td></tr>`;
+        console.error("Table Refresh Error Catch Exception:", err);
+        const errorMsg = '<div class="p-10 text-center text-rose-500 font-semibold text-sm"><i class="fas fa-circle-exclamation mr-2"></i>Error loading inventory matrix records.</div>';
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5">${errorMsg}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = errorMsg;
     }
 }
 
@@ -5193,76 +5292,132 @@ async function fetchUsers() {
 
         const users = await res.json();
         
-        // Update Stats
+        // Update Global Stats Counts
         const staffCountEl = document.getElementById('totalStaffCount');
         if (staffCountEl) staffCountEl.innerText = users.length;
         
+        // Update Server Status Indicators
         const statusEl = document.getElementById('connectionStatus');
         if (statusEl) {
             statusEl.innerText = "Server Online";
             statusEl.className = "flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 px-3 py-1.5 rounded-full border border-green-200";
-            // Update the dot color if it exists
             const dot = statusEl.querySelector('span');
             if (dot) dot.className = "w-2 h-2 rounded-full bg-green-500";
         }
 
         const tbody = document.getElementById('userTableBody');
+        const mobileGrid = document.getElementById('userMobileGrid');
         
-        // Use map and join, but ensure buttons have clear dimensions
-        tbody.innerHTML = users.map(user => `
-            <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
-                <td class="px-8 py-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100">
-                            ${user.username ? user.username.charAt(0).toUpperCase() : '?'}
+        // Purge raw DOM contents before rendering loops
+        if (tbody) tbody.innerHTML = '';
+        if (mobileGrid) mobileGrid.innerHTML = '';
+
+        users.forEach(user => {
+            const firstLetter = user.username ? user.username.charAt(0).toUpperCase() : '?';
+            const roleClass = typeof getRoleClass === 'function' ? getRoleClass(user.role) : 'bg-slate-100 text-slate-700 border-slate-200';
+            const upperRole = user.role ? user.role.toUpperCase() : 'UNKNOWN';
+
+            // Shared modular dropdown element template string
+            const selectOptionsHtml = `
+                <select onchange="updateRole('${user._id}', this.value)" 
+                        class="w-full sm:w-auto text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition shadow-sm text-slate-700">
+                    <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
+                    <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
+                    <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
+                    <option value="reception" ${user.role === 'reception' ? 'selected' : ''}>Reception</option>
+                    <option value="chef" ${user.role === 'chef' ? 'selected' : ''}>Chef</option>
+                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                </select>
+            `;
+
+            // Shared modular action utility button group template string
+            const actionButtonsHtml = `
+                <div class="flex items-center gap-2">
+                    <button data-id="${user._id}" 
+                            data-username="${user.username}" 
+                            data-role="${user.role}"
+                            onclick="handleEditClick(this)" 
+                            class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-lg transition-all border border-indigo-100/70 active:scale-95">
+                        <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                        <span>Edit</span>
+                    </button>
+
+                    <button onclick="deleteUser('${user._id}')" 
+                            class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100/70 active:scale-95">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        <span>Delete</span>
+                    </button>
+                </div>
+            `;
+
+            // --- A. POPULATE VIEW 1: DESKTOP TABLE ROW LAYOUT ---
+            if (tbody) {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="px-8 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 text-sm">
+                                ${firstLetter}
+                            </div>
+                            <span class="font-semibold text-slate-700">${user.username}</span>
                         </div>
-                        <span class="font-semibold text-slate-700">${user.username}</span>
+                    </td>
+                    <td class="px-8 py-4">
+                        <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-wider border ${roleClass}">
+                            ${upperRole}
+                        </span>
+                    </td>
+                    <td class="px-8 py-4">${selectOptionsHtml}</td>
+                    <td class="px-8 py-4 text-right">
+                        <div class="flex justify-end">${actionButtonsHtml}</div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            // --- B. POPULATE VIEW 2: SMARTPHONE RESPONSIVE LEDGER CARD ---
+            if (mobileGrid) {
+                const card = document.createElement('div');
+                card.className = "p-4 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 hover:border-slate-300 transition-all";
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 text-xs">
+                                ${firstLetter}
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-800">${user.username}</h4>
+                                <span class="text-[9px] uppercase tracking-wider font-extrabold text-slate-400 block mt-0.5">Personnel ID Target</span>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-wider border ${roleClass}">
+                            ${upperRole}
+                        </span>
                     </div>
-                </td>
-                <td class="px-8 py-4">
-                    <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-wider border ${getRoleClass(user.role)}">
-                        ${user.role.toUpperCase()}
-                    </span>
-                </td>
-                <td class="px-8 py-4">
-                    <select onchange="updateRole('${user._id}', this.value)" 
-                            class="text-sm bg-white border border-slate-200 rounded-md px-2 py-1 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition">
-                        <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
-                        <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
-                        <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
-                        <option value="reception" ${user.role === 'reception' ? 'selected' : ''}>Reception</option>
-                        <option value="chef" ${user.role === 'chef' ? 'selected' : ''}>Chef</option>
-                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                    </select>
-                </td>
-                <td class="px-8 py-4 text-right">
-    <div class="flex justify-end items-center gap-3">
-        <button data-id="${user._id}" 
-    data-username="${user.username}" 
-    data-role="${user.role}"
-    onclick="handleEditClick(this)" 
-                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-md transition-all border border-indigo-100 active:scale-95">
-            <span>Edit</span>
-        </button>
 
-        <button onclick="deleteUser('${user._id}')" 
-                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-md transition-all border border-red-100 active:scale-95">
-            <span>Delete</span>
-        </button>
-    </div>
-</td>
-            </tr>
-        `).join('');
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] uppercase font-bold tracking-tight text-slate-400">Modify Access Tier Permissions</label>
+                            ${selectOptionsHtml}
+                        </div>
+                    </div>
 
-        // CRITICAL: Re-initialize icons after adding them to the DOM
+                    <div class="pt-1">${actionButtonsHtml}</div>
+                `;
+                mobileGrid.appendChild(card);
+            }
+        });
+
+        // Re-initialize vector icons to prevent visual clipping
         if (window.lucide) {
             window.lucide.createIcons();
         } else {
-            console.error("Lucide library not found. Buttons may appear empty.");
+            console.error("Lucide library asset reference error.");
         }
 
     } catch (err) {
-        console.error("Fetch Error:", err);
+        console.error("Fetch Operational System Fault Error:", err);
         const statusEl = document.getElementById('connectionStatus');
         if (statusEl) {
             statusEl.innerText = "Offline";
@@ -8214,8 +8369,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     
 
-    const cashJournalForm = document.getElementById('cash-journal-form');
-    if (cashJournalForm) cashJournalForm.addEventListener('submit', submitCashJournalForm);
+    
    
     // Set initial date filters for various sections
     const today = new Date();
@@ -8395,9 +8549,6 @@ function showSection(sectionId) {
 
 
 
-
-        // 3. LOAD ORDERS
-// 1. MUST BE OUTSIDE THE FUNCTION
 let lastOrderCount = 0; 
 
 async function loadOrders() {
@@ -8414,30 +8565,7 @@ async function loadOrders() {
         console.log("3. Orders received:", orders.length);
         
         const cardContainer = document.getElementById('kitchenOrders');
-       /* const tableBody = document.getElementById('waiterTrackerBody');
 
-        // --- RENDER TABLE ---
-        if (tableBody) {
-            console.log("4. Rendering Table");
-            tableBody.innerHTML = orders.map(order => {
-                const time = order.createdAt ? new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '---';
-                return `
-                    <tr class="hover:bg-slate-50 border-b border-slate-100">
-                        <td class="px-8 py-4 font-medium">${time}</td>
-                        <td class="px-8 py-4 font-bold text-slate-800">${order.item || 'N/A'}</td>
-                        <td class="px-8 py-4 text-center font-black">${order.number || 0}</td>
-                        <td class="px-8 py-4">
-                            <span class="px-2 py-1 rounded-full text-[10px] font-bold ${order.status === 'Preparing' ? 'bg-amber-100 text-amber-600' : 'bg-orange-100 text-orange-600'}">
-                                ${(order.status || 'Pending').toUpperCase()}
-                            </span>
-                        </td>
-                        <td class="px-8 py-4 text-right">
-                            <button onclick="completeOrder('${order._id}')" class="text-emerald-600 font-bold">DONE</button>
-                        </td>
-                    </tr>`;
-            }).join('');
-        }
-*/
         // --- RENDER CARDS ---
         if (!cardContainer) {
             console.error("5. Error: kitchenOrders div not found!");
@@ -8447,6 +8575,8 @@ async function loadOrders() {
         console.log("6. Rendering Cards");
         if (orders.length === 0) {
             cardContainer.innerHTML = `<div class="col-span-full text-center py-20 text-slate-500 bg-white rounded-3xl border-2 border-dashed">No active orders.</div>`;
+            // Crucial: Update count to 0 even if empty, so the next order rings the bell
+            lastOrderCount = 0; 
             return;
         }
 
@@ -8457,8 +8587,9 @@ async function loadOrders() {
             const minutes = Math.floor((now - created) / 60000) || 0;
             const isLate = minutes >= 15;
             
-            // Safety: Handle ID string
-            const displayId = order._id ? String(order._id).slice(-5).toUpperCase() : '???';
+            // Safety: Handle ID string safely
+            const orderId = order._id ? String(order._id) : '';
+            const displayId = orderId ? orderId.slice(-5).toUpperCase() : '???';
 
             return `
             <div class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col ${isLate ? 'ring-4 ring-red-500/20' : ''}">
@@ -8482,38 +8613,43 @@ async function loadOrders() {
                 </div>
 
                 <div class="p-6 pt-0 space-y-2">
-                    <button onclick="markAsPreparing('${order._id}')" 
+                    <button onclick="markAsPreparing('${orderId}')" 
                             class="w-full ${order.status === 'Preparing' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-amber-50 text-amber-600 border-2 border-amber-100'} py-3 rounded-xl font-bold text-xs transition-all">
                         ${order.status === 'Preparing' ? 'IN PROGRESS' : 'START PREPARING'}
                     </button>
-                    <button onclick="completeOrder('${order._id}')" 
+                    <button onclick="completeOrder('${orderId}')" 
                             class="w-full bg-emerald-500 text-white py-3 rounded-xl font-bold text-xs shadow-md">
                         MARK READY
                     </button>
                 </div>
             </div>`;
         }).join('');
+
+        // --- AUDIO NOTIFICATION ---
         const audio = document.getElementById('orderDing');
         
-        // If we have more orders than last time, someone just placed a new one!
         if (orders.length > lastOrderCount && lastOrderCount !== 0) {
             console.log("🔔 New order detected! Playing sound...");
-            audio.play().catch(err => {
-                console.warn("Audio play blocked: Interaction required.", err);
-            });
+            if (audio) {
+                audio.play().catch(err => {
+                    console.warn("Audio play blocked: Interaction required.", err);
+                });
+            } else {
+                console.warn("Audio element #orderDing not found in HTML.");
+            }
         }
 
         // Update the count for the next check
         lastOrderCount = orders.length;
-        // -----------------------------
         console.log("7. Render Complete");
 
     } catch (err) {
         console.error("CRITICAL JS ERROR:", err);
     }
 }
-
-        async function completeOrder(id) {
+        // 3. LOAD ORDERS
+// 1. MUST BE OUTSIDE THE FUNCTION
+async function completeOrder(id) {
             try {
                const res = await authenticatedFetch(
     `${API_BASE_URL}/kitchen/order/${id}/ready`,
@@ -9447,7 +9583,8 @@ async function submitCashJournalForm(event) {
         submitButton.disabled = false;
     }
 }
-
+  const cashJournalForm = document.getElementById('cash-journal-form');
+    if (cashJournalForm) cashJournalForm.addEventListener('submit', submitCashJournalForm);
 /**
  * 1. Fetch data from the lookup endpoint using the Base URL
  */
@@ -9956,7 +10093,6 @@ async function filterStatusReportsByDate() {
     const dateInput = document.getElementById('statusReportFilterDate');
     const selectedDate = dateInput ? dateInput.value : '';
     
-    // UI References
     const filterBtn = document.getElementById('filterBtn');
     const filterBtnText = document.getElementById('filterBtnText');
 
@@ -9983,7 +10119,6 @@ async function filterStatusReportsByDate() {
             renderStatusTable(reports);
             console.log(`Filtered results for ${selectedDate}: ${reports.length} found.`);
         } else {
-            // Render an empty table so the user sees it cleared
             renderStatusTable([]); 
             showMessage(`No reports found for ${selectedDate}.`);
         }
@@ -9999,6 +10134,98 @@ async function filterStatusReportsByDate() {
     }
 }
 
+// Complete Dual UI rendering companion function to copy/paste 
+function renderStatusTable(reports) {
+    const tableBody = document.getElementById("statusReportTableBody");
+    const mobileGrid = document.getElementById("statusReportMobileGrid");
+    
+    // Wipe baseline stale data logs out cleanly before painting UI
+    if (tableBody) tableBody.innerHTML = '';
+    if (mobileGrid) mobileGrid.innerHTML = '';
+
+    if (!reports || reports.length === 0) {
+        const fallbackMsg = '<div class="text-center p-6 text-gray-400 text-sm font-medium">No housekeeping reports mapped for this cycle.</div>';
+        if (tableBody) tableBody.innerHTML = `<tr><td colspan="6">${fallbackMsg}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
+        return;
+    }
+
+    reports.forEach(report => {
+        // Dynamic color tags based on standard housekeeping assignments
+        let statusBadgeClass = "bg-gray-100 text-gray-800";
+        if (report.status?.toLowerCase() === 'clean') statusBadgeClass = "bg-green-100 text-green-800";
+        if (report.status?.toLowerCase() === 'dirty') statusBadgeClass = "bg-amber-100 text-amber-800";
+        if (report.status?.toLowerCase() === 'inspected') statusBadgeClass = "bg-blue-100 text-blue-800";
+
+        // Setup shared row item actionable items HTML string template block
+        const actionHtml = `
+            <div class="relative inline-block text-left">
+                <button class="p-2 hover:bg-gray-200 rounded-full transition-colors focus:outline-none" onclick="toggleActionButtons(event, this)">
+                    <i class="fas fa-ellipsis-v text-gray-500"></i>
+                </button>
+                <div class="hidden absolute right-0 mt-2 w-40 bg-white border border-gray-200 shadow-2xl rounded-lg p-1.5 z-50">
+                    <button class="w-full text-left px-3 py-2 text-xs font-semibold rounded-md hover:bg-gray-100 text-gray-700" onclick="viewReportDetails('${report.id}')">
+                        <i class="fas fa-eye mr-2 text-gray-400"></i> View Details
+                    </button>
+                    <button class="w-full text-left px-3 py-2 text-xs font-semibold rounded-md hover:bg-red-50 text-red-600" onclick="deleteReportRecord('${report.id}')">
+                        <i class="fas fa-trash-can mr-2 text-red-400"></i> Delete
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // POPULATE VIEW 1: Traditional Large Desktop Layout Matrix Row
+        if (tableBody) {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50/80 transition-colors border-b border-gray-100";
+            tr.innerHTML = `
+                <td class="p-3 font-semibold text-slate-900">${report.room || 'N/A'}</td>
+                <td class="p-3 text-gray-500">${report.category || 'Standard'}</td>
+                <td class="p-3">
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${statusBadgeClass}">
+                        ${report.status || 'Unknown'}
+                    </span>
+                </td>
+                <td class="p-3 text-gray-500 max-w-xs truncate" title="${report.remarks || ''}">
+                    ${report.remarks || '<span class="text-gray-300 italic">No notes</span>'}
+                </td>
+                <td class="p-3 text-xs text-gray-400 font-normal">${report.dateTime || report.createdAt || 'N/A'}</td>
+                <td class="p-3 text-center">${actionHtml}</td>
+            `;
+            tableBody.appendChild(tr);
+        }
+
+        // POPULATE VIEW 2: Elegant Stacked Card Module (Optimized for Small Touchscreens)
+        if (mobileGrid) {
+            const card = document.createElement('div');
+            card.className = "p-4 bg-slate-50/60 border border-gray-200 rounded-xl shadow-sm relative hover:bg-slate-50 transition-colors";
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h4 class="text-base font-bold text-slate-900">Room ${report.room || 'N/A'}</h4>
+                        <p class="text-xs text-gray-400 font-medium">${report.category || 'Standard Type'}</p>
+                    </div>
+                    <div>
+                        ${actionHtml}
+                    </div>
+                </div>
+                
+                <div class="my-2 text-xs text-gray-600 bg-white border border-gray-100 rounded-lg p-2.5 min-h-[40px]">
+                    <span class="text-[10px] uppercase tracking-wider font-bold text-gray-400 block mb-0.5">Remarks / Details</span>
+                    <p class="italic">${report.remarks || 'No descriptive comments captured.'}</p>
+                </div>
+
+                <div class="flex justify-between items-center pt-2 text-xs">
+                    <div class="text-gray-400 text-[11px]"><i class="far fa-clock mr-1"></i> ${report.dateTime || report.createdAt || 'N/A'}</div>
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold ${statusBadgeClass}">
+                        ${report.status || 'Unknown'}
+                    </span>
+                </div>
+            `;
+            mobileGrid.appendChild(card);
+        }
+    });
+}
 document.addEventListener('DOMContentLoaded', () => {
     loadOrders();
 });
