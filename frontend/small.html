@@ -3625,21 +3625,41 @@ window.saveChecklist = saveChecklist;
 window.deleteChecklist = deleteChecklist;
 </script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", () => {
     const menuToggle = document.getElementById("menu-toggle");
     const sidebar = document.getElementById("sidebar");
 
-    // Toggle sidebar when clicking the menu button
+    // Helper function to close sidebar on mobile/tablet screens (< 1024px)
+    const closeSidebarMobile = () => {
+        if (window.innerWidth < 1024) {
+            sidebar.classList.add("hidden");
+        }
+    };
+
+    // Toggle sidebar when clicking the hamburger menu button
     menuToggle.addEventListener("click", (e) => {
         e.stopPropagation(); 
         sidebar.classList.toggle("hidden");
     });
 
-    // Close the sidebar smoothly if a user clicks outside of it (on mobile/tablet)
+    // NEW: Close the sidebar when an actual navigation link is clicked
+    sidebar.addEventListener("click", (e) => {
+        // Find the closest anchor tag 'a' to handle clicks on the text, icons, or wrapper
+        const clickedLink = e.target.closest("a");
+        
+        // If they clicked a link, and it's not a dummy hash link used for dropdown toggles
+        if (clickedLink) {
+            // Note: If your dropdown triggers use `<a href="#">`, verify they don't conflict. 
+            // In your template, your dropdowns use `<button>`, so this works perfectly!
+            closeSidebarMobile();
+        }
+    });
+
+    // Close the sidebar if a user clicks completely outside of it
     document.addEventListener("click", (e) => {
         if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
-            if (!sidebar.classList.contains("hidden") && window.innerWidth < 1024) {
-                sidebar.classList.add("hidden");
+            if (!sidebar.classList.contains("hidden")) {
+                closeSidebarMobile();
             }
         }
     });
