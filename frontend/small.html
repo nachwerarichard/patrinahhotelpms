@@ -241,7 +241,6 @@ body {
 .skiptranslate.goog-te-gadget {
     display: block !important;
 }
-<style>
     /* Custom, sleek scrollbar for your sidebar nav container */
     .custom-scrollbar::-webkit-scrollbar {
         width: 5px; /* Ultra-thin sleek track */
@@ -267,7 +266,34 @@ body {
         scrollbar-color: #334155 transparent;
         -webkit-overflow-scrolling: touch; /* Butter-smooth momentum physics for iOS safari */
     }
-</style>
+
+    
+    /* target mobile screens only (below Tailwind's md breakpoint of 768px) */
+    @media (max-width: 767px) {
+        /* 1. Force Webkit (Chrome/Safari/iOS) scrollbars to stay visible */
+        .overflow-x-auto::-webkit-scrollbar {
+            height: 5px !important; /* Elegant, thin indicator row */
+            display: block !important;
+        }
+        
+        .overflow-x-auto::-webkit-scrollbar-track {
+            background: #f1f5f9 !important; /* slate-100 to blend with container background */
+            border-radius: 9999px;
+        }
+        
+        .overflow-x-auto::-webkit-scrollbar-thumb {
+            background: #cbd5e1 !important; /* slate-300 to match your inline class layout */
+            border-radius: 9999px;
+        }
+
+        /* 2. Firefox Fallback layout */
+        .overflow-x-auto {
+            scrollbar-width: thin !important;
+            scrollbar-color: #cbd5e1 #f1f5f9 !important;
+            -webkit-overflow-scrolling: touch !important; /* Enforces fast native swiping on iOS */
+        }
+    }
+
     </style>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen flex flex-col">
