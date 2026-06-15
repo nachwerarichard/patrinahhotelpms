@@ -268,31 +268,7 @@ body {
     }
 
     
-    /* target mobile screens only (below Tailwind's md breakpoint of 768px) */
-    @media (max-width: 767px) {
-        /* 1. Force Webkit (Chrome/Safari/iOS) scrollbars to stay visible */
-        .overflow-x-auto::-webkit-scrollbar {
-            height: 5px !important; /* Elegant, thin indicator row */
-            display: block !important;
-        }
-        
-        .overflow-x-auto::-webkit-scrollbar-track {
-            background: #f1f5f9 !important; /* slate-100 to blend with container background */
-            border-radius: 9999px;
-        }
-        
-        .overflow-x-auto::-webkit-scrollbar-thumb {
-            background: #cbd5e1 !important; /* slate-300 to match your inline class layout */
-            border-radius: 9999px;
-        }
-
-        /* 2. Firefox Fallback layout */
-        .overflow-x-auto {
-            scrollbar-width: thin !important;
-            scrollbar-color: #cbd5e1 #f1f5f9 !important;
-            -webkit-overflow-scrolling: touch !important; /* Enforces fast native swiping on iOS */
-        }
-    }
+    
 
     </style>
 </head>
@@ -361,7 +337,7 @@ body {
      
    </header>
 <div class="bg-slate-50/50 border-b border-slate-200 px-6 py-4">
-    <div class="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-3 md:grid md:grid-cols-3 lg:grid-cols-6 scrollbar-thin scrollbar-thumb-slate-300">
+    <div class="mobile-stat-scroll flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 md:pb-0 md:grid md:grid-cols-3 lg:grid-cols-6">
         
         <div class="bg-white border-b-2 border-blue-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[140px] shrink-0 md:min-w-0 snap-center">
             <p class="text-[10px] uppercase font-bold text-blue-600 tracking-wider">Occupied</p>
@@ -395,6 +371,37 @@ body {
         
     </div>
 </div>
+
+<style>
+    /* Mobile-only layout styling */
+    @media (max-width: 767px) {
+        .mobile-stat-scroll {
+            /* Smooth swiping mechanics for touchscreens */
+            -webkit-overflow-scrolling: touch !important;
+            
+            /* Forces a fake visible track at the bottom of the container */
+            border-bottom: 3px solid #e2e8f0 !important; /* Tailwind slate-200 line */
+            border-radius: 2px;
+        }
+
+        /* Forces modern mobile webkit engines to show the scroll bar thumb */
+        .mobile-stat-scroll::-webkit-scrollbar {
+            height: 5px !important;
+            display: block !important;
+        }
+        .mobile-stat-scroll::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1 !important; /* Tailwind slate-300 thumb */
+            border-radius: 9999px !important;
+        }
+    }
+
+    /* Cleans up the desktop view so no weird lines appear */
+    @media (min-width: 768px) {
+        .mobile-stat-scroll {
+            border-bottom: none !important;
+        }
+    }
+</style>
 <div id="main-content" class="flex flex-1 overflow-hidden">
 
           <div class="fixed inset-0 z-[9999] pointer-events-none flex flex-col items-end justify-end p-6">
