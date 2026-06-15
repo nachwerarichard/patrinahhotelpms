@@ -393,7 +393,7 @@ body {
     
 <div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden lg:hidden"></div>
 
-<aside id="sidebar" class="hidden lg:flex flex-col fixed inset-y-0 left-0 w-72 bg-slate-900 text-slate-300 shadow-2xl h-screen border-r border-slate-800 z-50 transition-all duration-300">
+<aside id="sidebar" class="hidden flex flex-col lg:flex fixed inset-y-0 left-0 w-72 bg-slate-900 text-slate-300 shadow-2xl h-screen border-r border-slate-800 z-50 transition-all duration-300">
     
     <div class="p-8 border-b border-slate-800/50 shrink-0 items-center justify-between flex">
         <div>
@@ -405,39 +405,35 @@ body {
         </button>
     </div>
     
-    <nav class="custom-sidebar-scroll flex-grow p-4 pr-3 mt-4 overflow-y-auto">
+    <nav class="custom-sidebar-scroll relative flex-grow p-4 pr-4 mt-4 overflow-y-auto max-h-[calc(100vh-180px)]">
         
         <style>
-            /* THE UNIVERSAL MOBILE OVERRIDE TRICK:
-               Instead of relying on webkit pseudo-elements that mobile OS engines discard, 
-               we append a simulated scrollbar line using standard CSS backgrounds.
+            /* THE BULLETPROOF MOBILE SCROLLBAR GENERATOR
+               Instead of relying on webkit styles that mobile phones discard, 
+               this introduces a visual slider directly pinned inside the box model framework.
             */
-            .custom-sidebar-scroll {
-                /* Create a 4px wide vertical line on the far right edge of the nav element */
-                background-image: linear-gradient(to bottom, #334155, #334155) !important; /* slate-700 */
-                background-position: calc(100% - 4px) 0% !important;
-                background-size: 4px 100% !important;
-                background-repeat: no-repeat !important;
-                
-                /* Native engine scrollbar definitions for modern desktop browsers */
-                scrollbar-width: thin !important;
-                scrollbar-color: #334155 #0f172a !important; /* slate-700 track on slate-900 */
-                
-                /* Ensures momentum tracking is responsive on mobile touch zones */
-                -webkit-overflow-scrolling: touch !important;
+            .custom-sidebar-scroll::after {
+                content: '' !important;
+                position: absolute !important;
+                top: 10px !important;
+                right: 6px !important;
+                bottom: 10px !important;
+                width: 4px !important;
+                background: #334155 !important; /* Tailwind slate-700 color */
+                border-radius: 9999px !important;
+                opacity: 0.7 !important;
+                pointer-events: none !important; /* Prevents finger touch interference */
+                z-index: 50 !important;
             }
 
-            /* Extra fallback rules explicitly targeting desktop engines */
+            /* Hides native browser system tracks to prevent dual visual paths on Desktop browsers */
             .custom-sidebar-scroll::-webkit-scrollbar {
-                width: 6px !important;
-                display: block !important;
+                width: 0px !important;
+                background: transparent !important;
             }
-            .custom-sidebar-scroll::-webkit-scrollbar-track {
-                background: #0f172a !important; /* Fixed slate-900 container background */
-            }
-            .custom-sidebar-scroll::-webkit-scrollbar-thumb {
-                background-color: #334155 !important;
-                border-radius: 9999px !important;
+            .custom-sidebar-scroll {
+                scrollbar-width: none !important; /* Firefox */
+                -webkit-overflow-scrolling: touch !important; /* Native smooth momentum for iOS */
             }
         </style>
 
