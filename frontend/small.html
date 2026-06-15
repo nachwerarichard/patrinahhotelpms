@@ -336,98 +336,43 @@ body {
     </div>
      
    </header>
-<div class="bg-slate-50/50 border-b border-slate-200 px-6 pt-4 pb-7 relative block clear-both">
-    
-    <div id="statContainer" class="mobile-stat-scroll overflow-x-auto md:overflow-visible w-full block">
+<div class="bg-slate-50/50 border-b border-slate-200 px-4 py-3 md:px-6 md:py-4">
+    <div class="flex flex-wrap gap-2 justify-center md:grid md:grid-cols-3 lg:grid-cols-6 md:gap-4">
         
-        <div class="flex gap-4 pb-3 w-max min-w-full snap-x snap-mandatory md:w-auto md:min-w-0 md:grid md:grid-cols-3 lg:grid-cols-6 md:pb-0">
-            
-            <div class="bg-white border-b-2 border-blue-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[145px] shrink-0 md:min-w-0 snap-center">
-                <p class="text-[10px] uppercase font-bold text-blue-600 tracking-wider">Occupied</p>
-                <p class="text-xl font-bold text-slate-800" id="stat-occupied">0</p>
-            </div>
-
-            <div class="bg-white border-b-2 border-green-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[145px] shrink-0 md:min-w-0 snap-center">
-                <p class="text-[10px] uppercase font-bold text-green-600 tracking-wider">Clean</p>
-                <p class="text-xl font-bold text-slate-800" id="stat-clean">0</p>
-            </div>
-
-            <div class="bg-white border-b-2 border-orange-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[145px] shrink-0 md:min-w-0 snap-center">
-                <p class="text-[10px] uppercase font-bold text-orange-600 tracking-wider">Dirty</p>
-                <p class="text-xl font-bold text-slate-800" id="stat-dirty">0</p>
-            </div>
-
-            <div class="bg-white border-b-2 border-indigo-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[145px] shrink-0 md:min-w-0 snap-center">
-                <p class="text-[10px] uppercase font-bold text-indigo-600 tracking-wider">Arrivals</p>
-                <p class="text-xl font-bold text-slate-800" id="arrivals">0</p>
-            </div>
-
-            <div class="bg-white border-b-2 border-purple-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[145px] shrink-0 md:min-w-0 snap-center">
-                <p class="text-[10px] uppercase font-bold text-purple-600 tracking-wider">Departures</p>
-                <p class="text-xl font-bold text-slate-800" id="departures">0</p>
-            </div>
-
-            <div class="bg-white border-b-2 border-red-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[145px] shrink-0 md:min-w-0 snap-center">
-                <p class="text-[10px] uppercase font-bold text-red-600 tracking-wider">Maintenance</p>
-                <p class="text-xl font-bold text-slate-800" id="stat-maintenance">0</p>
-            </div>
-            
+        <div class="bg-white border border-slate-200 md:border-0 md:border-b-2 border-l-4 md:border-l-0 border-l-blue-500 md:border-b-blue-500 px-3 py-1.5 md:p-3 rounded-lg shadow-sm flex flex-row md:flex-col items-center justify-between md:justify-center text-center min-w-[45%] md:min-w-0">
+            <p class="text-[10px] uppercase font-bold text-blue-600 tracking-wider md:mb-1">Occupied</p>
+            <p class="text-base md:text-xl font-bold text-slate-800" id="stat-occupied">0</p>
         </div>
-    </div>
 
-    <div class="mobile-scrollbar-track md:hidden absolute bottom-2 left-6 right-6 h-1 bg-slate-200 rounded-full pointer-events-none z-10">
-        <div id="statScrollThumb" class="h-full w-1/4 bg-slate-400 rounded-full transition-transform duration-75 origin-left"></div>
+        <div class="bg-white border border-slate-200 md:border-0 md:border-b-2 border-l-4 md:border-l-0 border-l-green-500 md:border-b-green-500 px-3 py-1.5 md:p-3 rounded-lg shadow-sm flex flex-row md:flex-col items-center justify-between md:justify-center text-center min-w-[45%] md:min-w-0">
+            <p class="text-[10px] uppercase font-bold text-green-600 tracking-wider md:mb-1">Clean</p>
+            <p class="text-base md:text-xl font-bold text-slate-800" id="stat-clean">0</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 md:border-0 md:border-b-2 border-l-4 md:border-l-0 border-l-orange-500 md:border-b-orange-500 px-3 py-1.5 md:p-3 rounded-lg shadow-sm flex flex-row md:flex-col items-center justify-between md:justify-center text-center min-w-[45%] md:min-w-0">
+            <p class="text-[10px] uppercase font-bold text-orange-600 tracking-wider md:mb-1">Dirty</p>
+            <p class="text-base md:text-xl font-bold text-slate-800" id="stat-dirty">0</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 md:border-0 md:border-b-2 border-l-4 md:border-l-0 border-l-indigo-500 md:border-b-indigo-500 px-3 py-1.5 md:p-3 rounded-lg shadow-sm flex flex-row md:flex-col items-center justify-between md:justify-center text-center min-w-[45%] md:min-w-0">
+            <p class="text-[10px] uppercase font-bold text-indigo-600 tracking-wider md:mb-1">Arrivals</p>
+            <p class="text-base md:text-xl font-bold text-slate-800" id="arrivals">0</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 md:border-0 md:border-b-2 border-l-4 md:border-l-0 border-l-purple-500 md:border-b-purple-500 px-3 py-1.5 md:p-3 rounded-lg shadow-sm flex flex-row md:flex-col items-center justify-between md:justify-center text-center min-w-[45%] md:min-w-0">
+            <p class="text-[10px] uppercase font-bold text-purple-600 tracking-wider md:mb-1">Departures</p>
+            <p class="text-base md:text-xl font-bold text-slate-800" id="departures">0</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 md:border-0 md:border-b-2 border-l-4 md:border-l-0 border-l-red-500 md:border-b-red-500 px-3 py-1.5 md:p-3 rounded-lg shadow-sm flex flex-row md:flex-col items-center justify-between md:justify-center text-center min-w-[45%] md:min-w-0">
+            <p class="text-[10px] uppercase font-bold text-red-600 tracking-wider md:mb-1">Maintenance</p>
+            <p class="text-base md:text-xl font-bold text-slate-800" id="stat-maintenance">0</p>
+        </div>
+        
     </div>
 </div>
 
-<script>
-    (function() {
-        const container = document.getElementById('statContainer');
-        const thumb = document.getElementById('statScrollThumb');
 
-        if (container && thumb) {
-            function updateScrollIndicator() {
-                const scrollWidth = container.scrollWidth;
-                const clientWidth = container.clientWidth;
-                const maxScroll = scrollWidth - clientWidth;
-                
-                if (maxScroll <= 0) return;
-
-                // Dynamically size the thumb based on screen space ratio
-                const currentRatio = clientWidth / scrollWidth;
-                thumb.style.width = `${currentRatio * 100}%`;
-
-                // Calculate the exact sliding position offset metrics
-                const scrollPercentage = container.scrollLeft / maxScroll;
-                const availableTrackSpace = clientWidth - (clientWidth * currentRatio);
-                const moveAmount = scrollPercentage * availableTrackSpace;
-
-                thumb.style.transform = `translateX(${moveAmount}px)`;
-            }
-
-            // Sync on scroll, resize events, and system structural re-evaluations
-            container.addEventListener('scroll', updateScrollIndicator, { passive: true });
-            window.addEventListener('resize', updateScrollIndicator);
-            window.addEventListener('load', updateScrollIndicator);
-            // Run initially once script passes rendering phase
-            setTimeout(updateScrollIndicator, 100);
-        }
-    })();
-</script>
-
-<style>
-    @media (max-width: 767px) {
-        .mobile-stat-scroll {
-            -webkit-overflow-scrolling: touch !important;
-        }
-        /* Strongly override native track paths entirely */
-        .mobile-stat-scroll::-webkit-scrollbar {
-            display: none !important;
-            width: 0px !important;
-            height: 0px !important;
-        }
-    }
-</style>
 <div id="main-content" class="flex flex-1 overflow-hidden">
 
           <div class="fixed inset-0 z-[9999] pointer-events-none flex flex-col items-end justify-end p-6">
