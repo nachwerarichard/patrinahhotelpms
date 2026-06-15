@@ -1538,10 +1538,29 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
 });
 
 function closeBookingModal() {
-    bookingModal.style.display = 'none';
+    // 1. Grab the modal element cleanly
+    const modal = document.getElementById('bookingModal');
+    const form = document.getElementById('bookingForm');
+    
+    if (modal) {
+        // FIX: Use classList to hide it, matching your search open logic!
+        modal.classList.add('hidden');
+    }
+    
+    // 2. Reset the text contexts back to default parameters
     document.getElementById('modalTitle').textContent = 'Add New Guest';
     document.getElementById('saveBookingBtn').textContent = 'Save';
 
+    // 3. CRITICAL: Wipe out the data from the previous guest search
+    if (form) {
+        form.reset();
+    }
+    
+    // Clear out the hidden database identifier tag so the next action doesn't get confused
+    const hiddenIdField = document.getElementById('bookingId');
+    if (hiddenIdField) {
+        hiddenIdField.value = '';
+    }
 }
 
 
