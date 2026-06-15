@@ -337,68 +337,66 @@ body {
      
    </header>
 <div class="bg-slate-50/50 border-b border-slate-200 px-6 py-4">
-    <div class="mobile-stat-scroll flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 md:pb-0 md:grid md:grid-cols-3 lg:grid-cols-6">
+    <div class="mobile-stat-scroll overflow-x-auto md:overflow-visible">
         
-        <div class="bg-white border-b-2 border-blue-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[140px] shrink-0 md:min-w-0 snap-center">
-            <p class="text-[10px] uppercase font-bold text-blue-600 tracking-wider">Occupied</p>
-            <p class="text-xl font-bold text-slate-800" id="stat-occupied">0</p>
-        </div>
+        <div class="flex gap-4 pb-4 w-max min-w-full snap-x snap-mandatory md:w-auto md:min-w-0 md:grid md:grid-cols-3 lg:grid-cols-6 md:pb-0">
+            
+            <div class="bg-white border-b-2 border-blue-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[145px] shrink-0 md:min-w-0 snap-center">
+                <p class="text-[10px] uppercase font-bold text-blue-600 tracking-wider">Occupied</p>
+                <p class="text-xl font-bold text-slate-800" id="stat-occupied">0</p>
+            </div>
 
-        <div class="bg-white border-b-2 border-green-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[140px] shrink-0 md:min-w-0 snap-center">
-            <p class="text-[10px] uppercase font-bold text-green-600 tracking-wider">Clean</p>
-            <p class="text-xl font-bold text-slate-800" id="stat-clean">0</p>
-        </div>
+            <div class="bg-white border-b-2 border-green-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[145px] shrink-0 md:min-w-0 snap-center">
+                <p class="text-[10px] uppercase font-bold text-green-600 tracking-wider">Clean</p>
+                <p class="text-xl font-bold text-slate-800" id="stat-clean">0</p>
+            </div>
 
-        <div class="bg-white border-b-2 border-orange-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[140px] shrink-0 md:min-w-0 snap-center">
-            <p class="text-[10px] uppercase font-bold text-orange-600 tracking-wider">Dirty</p>
-            <p class="text-xl font-bold text-slate-800" id="stat-dirty">0</p>
-        </div>
+            <div class="bg-white border-b-2 border-orange-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[145px] shrink-0 md:min-w-0 snap-center">
+                <p class="text-[10px] uppercase font-bold text-orange-600 tracking-wider">Dirty</p>
+                <p class="text-xl font-bold text-slate-800" id="stat-dirty">0</p>
+            </div>
 
-        <div class="bg-white border-b-2 border-indigo-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[140px] shrink-0 md:min-w-0 snap-center">
-            <p class="text-[10px] uppercase font-bold text-indigo-600 tracking-wider">Arrivals</p>
-            <p class="text-xl font-bold text-slate-800" id="arrivals">0</p>
-        </div>
+            <div class="bg-white border-b-2 border-indigo-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[145px] shrink-0 md:min-w-0 snap-center">
+                <p class="text-[10px] uppercase font-bold text-indigo-600 tracking-wider">Arrivals</p>
+                <p class="text-xl font-bold text-slate-800" id="arrivals">0</p>
+            </div>
 
-        <div class="bg-white border-b-2 border-purple-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[140px] shrink-0 md:min-w-0 snap-center">
-            <p class="text-[10px] uppercase font-bold text-purple-600 tracking-wider">Departures</p>
-            <p class="text-xl font-bold text-slate-800" id="departures">0</p>
-        </div>
+            <div class="bg-white border-b-2 border-purple-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[145px] shrink-0 md:min-w-0 snap-center">
+                <p class="text-[10px] uppercase font-bold text-purple-600 tracking-wider">Departures</p>
+                <p class="text-xl font-bold text-slate-800" id="departures">0</p>
+            </div>
 
-        <div class="bg-white border-b-2 border-red-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[140px] shrink-0 md:min-w-0 snap-center">
-            <p class="text-[10px] uppercase font-bold text-red-600 tracking-wider">Maintenance</p>
-            <p class="text-xl font-bold text-slate-800" id="stat-maintenance">0</p>
+            <div class="bg-white border-b-2 border-red-500 p-3 rounded-lg shadow-sm flex flex-col items-center justify-center text-center min-w-[145px] shrink-0 md:min-w-0 snap-center">
+                <p class="text-[10px] uppercase font-bold text-red-600 tracking-wider">Maintenance</p>
+                <p class="text-xl font-bold text-slate-800" id="stat-maintenance">0</p>
+            </div>
+            
         </div>
-        
     </div>
 </div>
 
 <style>
-    /* Mobile-only layout styling */
+    /* Absolute target for mobile screens (below 768px) */
     @media (max-width: 767px) {
         .mobile-stat-scroll {
-            /* Smooth swiping mechanics for touchscreens */
-            -webkit-overflow-scrolling: touch !important;
-            
-            /* Forces a fake visible track at the bottom of the container */
-            border-bottom: 3px solid #e2e8f0 !important; /* Tailwind slate-200 line */
-            border-radius: 2px;
+            -webkit-overflow-scrolling: touch !important; /* Smooth touch momentum styling */
+            padding-bottom: 4px;
         }
 
-        /* Forces modern mobile webkit engines to show the scroll bar thumb */
+        /* Enforce a visible, stylized desktop-style system layout scroll track on mobile views */
         .mobile-stat-scroll::-webkit-scrollbar {
-            height: 5px !important;
+            height: 6px !important;
             display: block !important;
         }
-        .mobile-stat-scroll::-webkit-scrollbar-thumb {
-            background-color: #cbd5e1 !important; /* Tailwind slate-300 thumb */
+        
+        .mobile-stat-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9 !important; /* slate-100 container fill */
             border-radius: 9999px !important;
         }
-    }
-
-    /* Cleans up the desktop view so no weird lines appear */
-    @media (min-width: 768px) {
-        .mobile-stat-scroll {
-            border-bottom: none !important;
+        
+        .mobile-stat-scroll::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1 !important; /* slate-300 structural line track */
+            border-radius: 9999px !important;
         }
     }
 </style>
