@@ -1542,10 +1542,6 @@ function closeBookingModal() {
     const modal = document.getElementById('bookingModal');
     const form = document.getElementById('bookingForm');
     
-    if (modal) {
-        // FIX: Use classList to hide it, matching your search open logic!
-        modal.classList.add('hidden');
-    }
     
     // 2. Reset the text contexts back to default parameters
     document.getElementById('modalTitle').textContent = 'Add New Guest';
@@ -1560,6 +1556,10 @@ function closeBookingModal() {
     const hiddenIdField = document.getElementById('bookingId');
     if (hiddenIdField) {
         hiddenIdField.value = '';
+    }
+    if (modal) {
+        // FIX: Use classList to hide it, matching your search open logic!
+        modal.classList.add('hidden');
     }
 }
 
