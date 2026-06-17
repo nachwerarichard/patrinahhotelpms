@@ -1548,25 +1548,27 @@ body {
     </div>
 
     <div class="w-full py-2">
-    <div class="inventory-scroll-container overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
-        <table id="inventory-table" class="w-full text-left border-collapse min-w-[800px]">
-            <thead>
-                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    <th class="px-4 py-3 sticky-col left-0 bg-slate-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Item</th>
-                    <th class="px-4 py-3">Opening</th>
-                    <th class="px-4 py-3">Purchases</th>
-                    <th class="px-4 py-3">Sales</th>
-                    <th class="px-4 py-3">Spoilage</th>
-                    <th class="px-4 py-3 stock-header-cell">Closing</th>
-                    <th class="px-4 py-3">BP</th>
-                    <th class="px-4 py-3">SP</th>
-                    <th class="px-4 py-3 text-right">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
-                </tbody>
-        </table>
-    </div>
+  <div class="w-full overflow-x-auto border border-slate-200/80 rounded-xl bg-white shadow-sm">
+    
+    <table id="inventory-table" class="w-full min-w-max text-left border-collapse table-auto">
+      <thead>
+        <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+          <th class="px-5 py-4 min-w-[150px]">Item</th>
+          <th class="px-4 py-4 text-center">Opening</th>
+          <th class="px-4 py-4 text-center">Purchases</th>
+          <th class="px-4 py-4 text-center">Sales</th>
+          <th class="px-4 py-4 text-center">Spoilage</th>
+          <th class="px-4 py-4 text-center stock-header-cell">Closing</th>
+          <th class="px-4 py-4 text-center">BP</th>
+          <th class="px-4 py-4 text-center">SP</th>
+          <th class="px-5 py-4 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
+        </tbody>
+    </table>
+
+  </div>
 </div>
   </div>
 </section>

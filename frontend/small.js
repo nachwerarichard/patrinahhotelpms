@@ -6293,25 +6293,27 @@ function renderInventoryTable(inventory) {
         
         const generatedRowId = `actions-row-${item._id || Math.random().toString(36).substring(2, 11)}`;
 
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
-        
-        tr.innerHTML = `
-            <td class="px-4 py-3 font-semibold text-slate-800 sticky-col left-0 bg-white">
-                <div class="flex flex-col items-start gap-0.5">
-                    <span class="whitespace-nowrap">${item.item}</span>
-                    ${statusBadge}
-                </div>
-            </td>
-            <td class="px-4 py-3 font-mono text-slate-500">${item.opening || 0}</td>
-            <td class="px-4 py-3 font-mono text-emerald-600 font-semibold">+${item.purchases || 0}</td>
-            <td class="px-4 py-3 font-mono text-blue-600 font-semibold">-${item.sales || 0}</td>
-            <td class="px-4 py-3 font-mono text-rose-500 font-semibold">-${item.spoilage || 0}</td>
-            <td class="px-4 py-3 font-mono font-bold ${isToday ? 'text-indigo-600 bg-indigo-50/40' : 'text-slate-900'}">${stockValue}</td>
-            <td class="px-4 py-3 font-mono text-xs text-slate-500">${bpStr}</td>
-            <td class="px-4 py-3 font-mono text-xs text-slate-700 font-medium">${spStr}</td>
-            <td class="px-4 py-3 text-right" id="${generatedRowId}"></td>
-        `;
+        // Inside your inventory.forEach(item => { ... }) loop, replace the row rendering block with this:
+
+const tr = document.createElement('tr');
+tr.className = "hover:bg-slate-50/60 transition-colors border-b border-slate-100 whitespace-nowrap";
+
+tr.innerHTML = `
+    <td class="px-5 py-3.5 font-semibold text-slate-800">
+        <div class="flex flex-col items-start gap-1">
+            <span class="text-sm leading-tight">${item.item}</span>
+            ${statusBadge}
+        </div>
+    </td>
+    <td class="px-4 py-3.5 font-mono text-center text-slate-500">${item.opening || 0}</td>
+    <td class="px-4 py-3.5 font-mono text-center text-emerald-600 font-bold">+${item.purchases || 0}</td>
+    <td class="px-4 py-3.5 font-mono text-center text-blue-600 font-bold">-${item.sales || 0}</td>
+    <td class="px-4 py-3.5 font-mono text-center text-rose-500 font-bold">-${item.spoilage || 0}</td>
+    <td class="px-4 py-3.5 font-mono text-center font-black ${isToday ? 'text-indigo-600 bg-indigo-50/30 rounded px-1' : 'text-slate-900'}">${stockValue}</td>
+    <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-500">${bpStr}</td>
+    <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-700 font-semibold">${spStr}</td>
+    <td class="px-5 py-3.5 text-right overflow-visible" id="${generatedRowId}"></td>
+`;
 
         tbody.appendChild(tr);
 
