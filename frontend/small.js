@@ -189,49 +189,45 @@ async function authenticatedFetch(url, options = {}) {
 }
 
 function showMessage(title, message, isError = false) {
-    // 1. Grab elements only when the function is called
-    const overlay = document.getElementById('messageBoxOverlay');
-    const modal = document.getElementById('messageBox');
-    const titleEl = document.getElementById('messageBoxTitle');
-    const contentEl = document.getElementById('messageBoxContent');
+    // Target unique global IDs to avoid collision with login boxes
+    const overlay = document.getElementById('globalNotificationOverlay');
+    const modal = document.getElementById('globalNotificationBox');
+    const titleEl = document.getElementById('globalNotificationTitle');
+    const contentEl = document.getElementById('globalNotificationContent');
 
-    // 2. Safety check - stop if HTML is missing
+    // Safety check - stop if HTML elements are missing
     if (!overlay || !modal || !titleEl || !contentEl) {
-        console.error("Error: Message box elements not found in the HTML.");
+        console.error("Error: Global message box elements not found in the HTML.");
         return;
     }
 
-    // 3. Set the text
+    // Set textual context
     titleEl.textContent = title;
     contentEl.textContent = message;
 
-    // 4. Set the color based on error status
+    // Reset layout color themes
+    titleEl.classList.remove('text-red-600', 'text-indigo-600', 'text-gray-900');
+
     if (isError) {
         titleEl.classList.add('text-red-600');
-        titleEl.classList.remove('text-indigo-600', 'text-gray-900');
     } else {
         titleEl.classList.add('text-indigo-600');
-        titleEl.classList.remove('text-red-600', 'text-gray-900');
     }
 
-    // 5. SHOW BOTH: Remove hidden, and explicitly add 'flex' to center the modal content
+    // Reveal interfaces dynamically
     overlay.classList.remove('hidden');
-    
     modal.classList.remove('hidden');
     modal.classList.add('flex'); 
 }
 
 function closeMessageBox() {
-    const overlay = document.getElementById('messageBoxOverlay');
-    const modal = document.getElementById('messageBox');
+    const overlay = document.getElementById('globalNotificationOverlay');
+    const modal = document.getElementById('globalNotificationBox');
     
-    if (overlay) {
-        overlay.classList.add('hidden');
-    }
-    
+    if (overlay) overlay.classList.add('hidden');
     if (modal) {
         modal.classList.add('hidden');
-        modal.classList.remove('flex'); // Remove flex so 'hidden' (display: none) can take effect
+        modal.classList.remove('flex');
     }
 }
 // IMPROVED FRONTEND FETCH
