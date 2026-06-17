@@ -8148,7 +8148,10 @@ async function generateReports() {
     }
 
     const tbody = document.getElementById('department-report-tbody');
+    const cardContainer = document.getElementById('department-report-cards');
+    
     if (tbody) tbody.innerHTML = ''; 
+    if (cardContainer) cardContainer.innerHTML = ''; 
 
     try {
         const queryParams = `hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`;
@@ -8160,7 +8163,6 @@ async function generateReports() {
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/sales?${queryParams}&page=${page}&limit=100`);
             const res = await resp.json();
-            // BACKEND FIX: Your backend sends 'sales' and 'totalPages'
             if (res && res.sales) { 
                 allSales = allSales.concat(res.sales); 
                 totalPages = res.totalPages || 1;
@@ -8173,7 +8175,6 @@ async function generateReports() {
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/expenses?${queryParams}&page=${page}&limit=100`);
             const res = await resp.json();
-            // BACKEND FIX: Your backend sends 'expenses' and 'totalPages'
             if (res && res.expenses) { 
                 allExpenses = allExpenses.concat(res.expenses); 
                 totalPages = res.totalPages || 1;
@@ -8187,7 +8188,6 @@ async function generateReports() {
         allSales.forEach(sale => {
             const dept = sale.department || 'Other';
             if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
-            // Ensure numbers are handled correctly
             report[dept].sales += (Number(sale.number) * Number(sale.sp));
         });
 
@@ -8202,24 +8202,62 @@ async function generateReports() {
         const sortedDepts = Object.keys(report).sort();
 
         if (sortedDepts.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500 italic">No activity found for this period.</td></tr>';
+            const emptyStateHtml = 'No activity found for this period.';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
+            if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
         } else {
+            let tableRowsHTML = [];
+            let mobileCardsHTML = [];
+
             sortedDepts.forEach(dept => {
                 const { sales, expenses } = report[dept];
                 totalS += sales; totalE += expenses;
                 const balance = sales - expenses;
 
-                const row = tbody.insertRow();
-                row.className = "border-b border-gray-100 hover:bg-gray-50";
-                row.innerHTML = `
-                    <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
-                    <td class="px-6 py-4">${sales.toLocaleString()}</td>
-                    <td class="px-6 py-4">${expenses.toLocaleString()}</td>
-                    <td class="px-6 py-4 text-right font-bold ${balance >= 0 ? 'text-emerald-600' : 'text-red-600'}">
-                        ${balance.toLocaleString()}
-                    </td>
-                `;
+                const balanceColorClass = balance >= 0 ? 'text-emerald-600' : 'text-red-600';
+                const balanceBgClass = balance >= 0 ? 'bg-emerald-50/50 border border-emerald-100' : 'bg-rose-50/50 border border-rose-100';
+
+                // Desktop row generation
+                tableRowsHTML.push(`
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
+                        <td class="px-6 py-4 font-mono text-slate-600">${sales.toLocaleString()}</td>
+                        <td class="px-6 py-4 font-mono text-slate-600">${expenses.toLocaleString()}</td>
+                        <td class="px-6 py-4 text-right font-mono font-bold ${balanceColorClass}">
+                            ${balance.toLocaleString()}
+                        </td>
+                    </tr>
+                `);
+
+                // Mobile card template generation
+                mobileCardsHTML.push(`
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                        <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+                            <h4 class="font-bold text-slate-800 text-base tracking-tight">${dept}</h4>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3 text-center">
+                            <div class="bg-slate-50/80 p-2 rounded-lg">
+                                <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wide mb-0.5">Revenue (Sales)</span>
+                                <span class="font-mono font-semibold text-slate-700 text-sm">${sales.toLocaleString()}</span>
+                            </div>
+                            <div class="bg-slate-50/80 p-2 rounded-lg">
+                                <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wide mb-0.5">Costs (Expenses)</span>
+                                <span class="font-mono font-semibold text-slate-700 text-sm">${expenses.toLocaleString()}</span>
+                            </div>
+                        </div>
+
+                        <div class="${balanceBgClass} p-2.5 rounded-lg flex justify-between items-center px-4">
+                            <span class="text-xs font-bold uppercase text-slate-500 tracking-wide">Net Position</span>
+                            <span class="font-mono font-black text-base ${balanceColorClass}">${balance.toLocaleString()}</span>
+                        </div>
+                    </div>
+                `);
             });
+
+            // Injection
+            if (tbody) tbody.innerHTML = tableRowsHTML.join('');
+            if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
         }
 
         // 5. UPDATE UI CARDS (Matching your specific HTML IDs)

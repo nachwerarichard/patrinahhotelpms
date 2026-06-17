@@ -2073,25 +2073,29 @@ body {
         </div>
     </div>
 
-    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-        <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
-            <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Departmental Breakdown</h3>
-        </div>
-        <div class="table-responsive">
-            <table id="department-table" class="min-w-full text-left">
-                <thead>
-                    <tr class="bg-white text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
-                        <th class="px-6 py-4">Department</th>
-                        <th class="px-6 py-4">Revenue (Sales)</th>
-                        <th class="px-6 py-4">Costs (Expenses)</th>
-                        <th class="px-6 py-4 text-right">Net Position</th>
-                    </tr>
-                </thead>
-                <tbody id="department-report-tbody" class="divide-y divide-slate-50">
-                    </tbody>
-            </table>
-        </div>
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm mb-8">
+    <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
+        <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Departmental Breakdown</h3>
     </div>
+    
+    <div class="hidden md:block table-responsive">
+        <table id="department-table" class="min-w-full text-left">
+            <thead>
+                <tr class="bg-white text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
+                    <th class="px-6 py-4">Department</th>
+                    <th class="px-6 py-4">Revenue (Sales)</th>
+                    <th class="px-6 py-4">Costs (Expenses)</th>
+                    <th class="px-6 py-4 text-right">Net Position</th>
+                </tr>
+            </thead>
+            <tbody id="department-report-tbody" class="divide-y divide-slate-50">
+            </tbody>
+        </table>
+    </div>
+
+    <div id="department-report-cards" class="block md:hidden p-4 space-y-4 bg-slate-50/40">
+        </div>
+</div>
 
     <table id="overall-reports-table" class="hidden">
         <thead>
