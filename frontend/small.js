@@ -1543,41 +1543,33 @@ async function openBookingModal() {
     
     if (!modal) return;
 
-    // 1. Force Modal Display
+    // 1. Properly display the modal by removing 'hidden' and ensuring 'flex' is active
     modal.classList.remove('hidden');
-    modal.style.setProperty('display', 'flex', 'important');
+    modal.classList.add('flex');
 
     if (form) {
         form.reset();
-        // 2. Force the Grid to show
-        const grid = form.querySelector('.grid');
-        if (grid) {
-            grid.style.setProperty('display', 'grid', 'important');
-        }
-
-        // 3. Force every single "flex flex-col" wrapper to show
-        const containers = form.querySelectorAll('.flex.flex-col');
-        containers.forEach(div => {
-            div.classList.remove('hidden');
-            div.style.setProperty('display', 'flex', 'important');
-            div.style.setProperty('visibility', 'visible', 'important');
-            div.style.setProperty('opacity', '1', 'important');
-        });
+        
+        // Note: You can completely remove the manual inline style overrides for the grid 
+        // and child containers here because they will naturally inherit visibility 
+        // once the parent modal loses its 'hidden' class!
     }
 
-    // 4. Reset values
+    // 2. Reset values
     const fieldIds = ['bookingId', 'nights', 'totalDue', 'balance', 'amountPaid'];
     fieldIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = (id === 'bookingId') ? '' : 0;
     });
 
-    // 5. Run dropdown logic last
+    // 3. Run dropdown logic last
     try {
         if (typeof populateRoomDropdown === "function") {
             await populateRoomDropdown();
         }
-    } catch (e) { console.log("Dropdown error ignored for UI display."); }
+    } catch (e) { 
+        console.log("Dropdown error ignored for UI display.", e); 
+    }
 }
 /**
  * Sends a booking confirmation email for a given booking ID.
@@ -1606,9 +1598,10 @@ function closeBookingModal() {
         hiddenIdField.value = '';
     }
     if (modal) {
-        // FIX: Use classList to hide it, matching your search open logic!
-        modal.classList.add('hidden');
-    }
+    // Remove 'flex' so that 'hidden' actually works!
+    modal.classList.remove('flex');
+    modal.classList.add('hidden');
+}
 }
 async function SendConfirmEmail(bookingId) {
     // 1. Role and Input Validation
