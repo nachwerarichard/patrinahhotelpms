@@ -1510,36 +1510,48 @@ body {
   </div>
 
   <div id="inventory-records" class="mt-6">
-    <div class="filter-controls flex flex-wrap gap-4 mb-4 items-end">
-      <input type="text" id="search-inventory-item" placeholder="Search item name..." class="p-2 border border-gray-300 rounded-md">
-      <input type="date" id="search-inventory-date" class="p-2 border border-gray-300 rounded-md">
-      <button onclick="fetchInventory()" id="inventory-search-button" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">
-        <i class="fas fa-search"></i> <span>Search</span>
-      </button>
+    <div class="filter-controls flex flex-col sm:flex-row flex-wrap gap-4 mb-6 items-stretch sm:items-end bg-slate-50 p-4 rounded-xl border border-slate-200/60">
+        <div class="flex-1 min-w-[200px]">
+            <label for="search-inventory-item" class="block text-xs font-bold text-slate-500 uppercase mb-1 tracking-wider">Item Name:</label>
+            <input type="text" id="search-inventory-item" placeholder="Search item name..." class="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm transition">
+        </div>
+        <div class="flex-1 min-w-[160px]">
+            <label for="search-inventory-date" class="block text-xs font-bold text-slate-500 uppercase mb-1 tracking-wider">Inventory Date:</label>
+            <input type="date" id="search-inventory-date" class="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm transition">
+        </div>
+        <div class="flex gap-3">
+            <button onclick="fetchInventory()" id="inventory-search-button" class="flex-1 sm:flex-initial bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg transition flex items-center justify-center gap-2 text-sm shadow-sm">
+                <i class="fas fa-search"></i> <span>Search</span>
+            </button>
+            <button class="flex-1 sm:flex-initial bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 shadow-sm" onclick="exportTableToExcel('inventory-table', 'Inventory_Report')">
+                <i class="fas fa-file-excel"></i> Export
+            </button>
+        </div>
     </div>
 
-    <div class="table-responsive py-4" id="table-responsive">
-      <button class="export-button bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg mb-3" onclick="exportTableToExcel('inventory-table', 'Inventory_Report')">
-        Export to Excel
-      </button>
-      <table id="inventory-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opening</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purchases</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sales</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Spoilage</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Closing</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BP</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SP</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200"></tbody>
-      </table>
+    <div class="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm" id="table-responsive">
+        <table id="inventory-table" class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th class="px-6 py-4">Item</th>
+                    <th class="px-6 py-4">Opening</th>
+                    <th class="px-6 py-4">Purchases</th>
+                    <th class="px-6 py-4">Sales</th>
+                    <th class="px-6 py-4">Spoilage</th>
+                    <th class="px-6 py-4 stock-header-cell">Closing</th>
+                    <th class="px-6 py-4">BP</th>
+                    <th class="px-6 py-4">SP</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
+                </tbody>
+        </table>
     </div>
-  </div>
+
+    <div id="inventory-mobile-grid" class="block md:hidden space-y-4">
+        </div>
+</div>
 </section>
 
 <div id="inventory-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50 p-4">

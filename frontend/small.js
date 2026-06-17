@@ -6244,105 +6244,209 @@ function exportTableToExcel(tableId, filename) { console.log(`Exporting table ${
 
 function renderInventoryTable(inventory) {
     const tbody = document.querySelector('#inventory-table tbody');
-    if (!tbody) return;
-    tbody.innerHTML = '';
+    const mobileGrid = document.getElementById('inventory-mobile-grid');
+    
+    // Clear out active layout containers safely
+    if (tbody) tbody.innerHTML = '';
+    if (mobileGrid) mobileGrid.innerHTML = '';
 
     const dateInput = document.getElementById('search-inventory-date');
-    const tableHeaders = document.querySelectorAll('#inventory-table thead th');
+    const desktopStockHeader = document.querySelector('#inventory-table thead .stock-header-cell');
     
-    const selectedDate = dateInput.value || new Date().toISOString().split('T')[0];
+    const selectedDate = dateInput?.value || new Date().toISOString().split('T')[0];
     const todayStr = new Date().toISOString().split('T')[0];
     const isToday = selectedDate === todayStr;
 
-    if (tableHeaders[5]) { 
-        tableHeaders[5].textContent = isToday ? 'Current Stock' : 'Closing Stock';
+    // Mutate the reactive stock label to keep state accuracy clear
+    const dynamicStockLabel = isToday ? 'Current Stock' : 'Closing Stock';
+    if (desktopStockHeader) { 
+        desktopStockHeader.textContent = dynamicStockLabel;
     }
 
     if (inventory.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-gray-500 italic">No stock records found.</td></tr>`;
+        const fallBackHtml = 'No stock records found for your chosen query parameters.';
+        if (tbody) tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic">${fallBackHtml}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = `<div class="p-8 text-center text-slate-400 font-medium text-sm border border-slate-200 bg-white rounded-xl italic">${fallBackHtml}</div>`;
         return;
     }
 
+    const authorizedRoles = ['admin', 'super-admin', 'manager'];
+    const hasWriteAccess = authorizedRoles.includes(currentUserRole);
+
+    // Global document-wide click hook to clean up lingering active contextual dropdown items
+    document.addEventListener('click', () => {
+        document.querySelectorAll('#inventory-table .menu').forEach(m => m.classList.add('hidden'));
+    });
+
     inventory.forEach(item => {
-        // IMPORTANT: Attach the selected date to the item object 
-        // so the modal knows which day this record belongs to.
         item.viewingDate = selectedDate;
 
-        const row = tbody.insertRow();
-        row.className = "hover:bg-gray-50 transition-colors border-b border-gray-100";
-        
         const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
-        const statusBadge = hasMovement 
-            ? `<span class="ml-2 px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-700 rounded-full uppercase">Updated</span>`
-            : `<span class="ml-2 px-2 py-0.5 text-[10px] font-bold bg-gray-100 text-gray-500 rounded-full uppercase">Static</span>`;
+        const badgeClasses = hasMovement ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100';
+        const badgeText = hasMovement ? 'Updated' : 'Static';
+        const statusBadge = `<span class="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider border rounded ${badgeClasses}">${badgeText}</span>`;
 
         const calculatedCurrent = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
-        const stockDisplay = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
+        const stockValue = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
 
-        row.innerHTML = `
-            <td class="px-4 py-3 font-medium text-gray-800">
-                <div class="flex flex-col">
-                    <span>${item.item}</span>
-                    <div class="flex items-center mt-1">${statusBadge}</div>
-                </div>
-            </td>
-            <td class="px-4 py-3">${item.opening || 0}</td>
-            <td class="px-4 py-3 text-green-600 font-medium">+${item.purchases || 0}</td>
-            <td class="px-4 py-3 text-blue-600 font-medium">-${item.sales || 0}</td>
-            <td class="px-4 py-3 text-red-500 font-medium">-${item.spoilage || 0}</td>
-            <td class="px-4 py-3 font-bold ${isToday ? 'text-indigo-600 bg-indigo-50/50' : 'text-gray-900'}">
-                ${stockDisplay}
-            </td>
-            <td class="px-4 py-3 text-sm">${Number(item.buyingprice || 0).toLocaleString()}</td>
-            <td class="px-4 py-3 text-sm">${Number(item.sellingprice || 0).toLocaleString()}</td>
-            <td class="px-4 py-3 text-right" id="actions-${item._id || Math.random().toString(36).substr(2, 9)}"></td>
-        `;
+        const bpStr = Number(item.buyingprice || 0).toLocaleString();
+        const spStr = Number(item.sellingprice || 0).toLocaleString();
 
-        const actionsCell = row.querySelector('[id^="actions-"]');
-        const authorizedRoles = ['admin', 'super-admin', 'manager'];
-
-        if (authorizedRoles.includes(currentUserRole)) {
-            const dropdown = document.createElement('div');
-            dropdown.className = 'relative inline-block text-left';
-            dropdown.innerHTML = `
-                <button class="dots-btn p-2 hover:bg-gray-200 rounded-full">
-                    <i class="fas fa-ellipsis-h"></i>
-                </button>
-                <div class="menu hidden absolute right-0 bottom-full mb-2 w-40 bg-white border border-gray-200 rounded-lg shadow-xl z-50 py-1">
-                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-indigo-50 text-indigo-700 flex items-center gap-2 edit-opt">
-                        <i class="fas fa-edit"></i> ${item._id ? 'Edit Record' : 'Create Record'}
-                    </button>
-                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-amber-50 text-amber-700 flex items-center gap-2 adjust-opt">
-                        <i class="fas fa-plus-circle"></i> Add Stock
-                    </button>
-                    <div class="border-t border-gray-100 my-1"></div>
-                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600 flex items-center gap-2 delete-opt">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
-                </div>
+        // --- A. POPULATE VIEW 1: DESKTOP TABLE SYSTEM LAYOUT ---
+        if (tbody) {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
+            
+            const generatedRowId = `actions-${item._id || Math.random().toString(36).substring(2, 11)}`;
+            
+            tr.innerHTML = `
+                <td class="px-6 py-4 font-semibold text-slate-800">
+                    <div class="flex items-center gap-2">
+                        <span>${item.item}</span>
+                        ${statusBadge}
+                    </div>
+                </td>
+                <td class="px-6 py-4 font-mono text-slate-500">${item.opening || 0}</td>
+                <td class="px-6 py-4 font-mono text-emerald-600 font-semibold">+${item.purchases || 0}</td>
+                <td class="px-6 py-4 font-mono text-blue-600 font-semibold">-${item.sales || 0}</td>
+                <td class="px-6 py-4 font-mono text-rose-500 font-semibold">-${item.spoilage || 0}</td>
+                <td class="px-6 py-4 font-mono font-bold ${isToday ? 'text-indigo-600 bg-indigo-50/40' : 'text-slate-900'}">${stockValue}</td>
+                <td class="px-6 py-4 font-mono text-xs text-slate-500">${bpStr}</td>
+                <td class="px-6 py-4 font-mono text-xs text-slate-700 font-medium">${spStr}</td>
+                <td class="px-6 py-4 text-right overflow-visible" id="${generatedRowId}"></td>
             `;
 
-            const btn = dropdown.querySelector('.dots-btn');
-            const menu = dropdown.querySelector('.menu');
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                document.querySelectorAll('.menu').forEach(m => m !== menu && m.classList.add('hidden'));
-                menu.classList.toggle('hidden');
-            };
+            const actionsCell = tr.querySelector(`#${generatedRowId}`);
+            if (hasWriteAccess) {
+                const dropdown = document.createElement('div');
+                dropdown.className = 'relative inline-block text-left';
+                dropdown.innerHTML = `
+                    <button class="dots-btn p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full transition focus:outline-none">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
+                    <div class="menu hidden absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 divide-y divide-slate-100">
+                        <div class="py-1">
+                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-indigo-50 text-indigo-700 flex items-center gap-2 edit-opt transition-colors">
+                                <i class="fas fa-edit w-3.5"></i> ${item._id ? 'Edit Record' : 'Create Record'}
+                            </button>
+                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 adjust-opt transition-colors">
+                                <i class="fas fa-plus-circle w-3.5"></i> Add Stock
+                            </button>
+                        </div>
+                        <div class="py-1">
+                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-rose-50 text-rose-600 flex items-center gap-2 delete-opt transition-colors">
+                                <i class="fas fa-trash w-3.5"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
 
-            dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
-            dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
-dropdown.querySelector('.delete-opt').onclick = () => {
-    // We only delete if there is a real database ID (_id)
+                const btn = dropdown.querySelector('.dots-btn');
+                const menu = dropdown.querySelector('.menu');
+                
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('#inventory-table .menu').forEach(m => m !== menu && m.classList.add('hidden'));
+                    menu.classList.toggle('hidden');
+                };
+
+                dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
+                dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
+                dropdown.querySelector('.delete-opt').onclick = () => handleItemDeletionWorkflow(item);
+
+                actionsCell.appendChild(dropdown);
+            } else {
+                actionsCell.innerHTML = `<span class="text-xs text-slate-400 italic font-medium pr-2">View Only</span>`;
+            }
+            tbody.appendChild(tr);
+        }
+
+        // --- B. POPULATE VIEW 2: SMARTPHONE GRID LAYOUT CARD ---
+        if (mobileGrid) {
+            const card = document.createElement('div');
+            card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3.5 hover:border-slate-300 transition-all";
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start gap-4">
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-900 leading-tight">${item.item}</h4>
+                        <div class="mt-1 flex items-center gap-2">${statusBadge}</div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[9px] uppercase font-black tracking-wider text-slate-400 block">${dynamicStockLabel}</span>
+                        <span class="font-mono text-base font-black px-2 py-0.5 rounded ${isToday ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'bg-slate-100 text-slate-800 border border-slate-200'}">${stockValue}</span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-4 gap-1.5 bg-slate-50 p-2 border border-slate-100 rounded-lg text-center font-mono text-xs">
+                    <div>
+                        <span class="text-[8px] text-slate-400 block font-sans font-bold uppercase mb-0.5">Open</span>
+                        <span class="text-slate-700 font-medium">${item.opening || 0}</span>
+                    </div>
+                    <div class="border-l border-slate-200/60">
+                        <span class="text-[8px] text-slate-400 block font-sans font-bold uppercase mb-0.5">Purch</span>
+                        <span class="text-emerald-600 font-bold">+${item.purchases || 0}</span>
+                    </div>
+                    <div class="border-l border-slate-200/60">
+                        <span class="text-[8px] text-slate-400 block font-sans font-bold uppercase mb-0.5">Sales</span>
+                        <span class="text-blue-600 font-bold">-${item.sales || 0}</span>
+                    </div>
+                    <div class="border-l border-slate-200/60">
+                        <span class="text-[8px] text-slate-400 block font-sans font-bold uppercase mb-0.5">Spoil</span>
+                        <span class="text-rose-500 font-bold">-${item.spoilage || 0}</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-xs font-medium text-slate-500 bg-slate-50/40 p-2 rounded-lg border border-slate-100/60">
+                    <div><span class="text-[9px] font-bold text-slate-400 uppercase tracking-tight mr-1">BP:</span><span class="font-mono font-semibold text-slate-700">${bpStr}</span></div>
+                    <div><span class="text-[9px] font-bold text-slate-400 uppercase tracking-tight mr-1">SP:</span><span class="font-mono font-semibold text-slate-900">${spStr}</span></div>
+                </div>
+
+                <div class="pt-2 border-t border-slate-100 mobile-controls-slot flex items-center justify-end"></div>
+            `;
+
+            const controlsSlot = card.querySelector('.mobile-controls-slot');
+            if (hasWriteAccess) {
+                const actionGroup = document.createElement('div');
+                actionGroup.className = "grid grid-cols-3 gap-2 w-full";
+                
+                actionGroup.innerHTML = `
+                    <button class="flex items-center justify-center gap-1 py-2 text-[11px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg active:bg-indigo-100 focus:outline-none edit-btn">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="flex items-center justify-center gap-1 py-2 text-[11px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-lg active:bg-emerald-100 focus:outline-none adjust-btn">
+                        <i class="fas fa-plus-circle"></i> +Stock
+                    </button>
+                    <button class="flex items-center justify-center gap-1 py-2 text-[11px] font-bold uppercase tracking-wider text-rose-600 bg-rose-50 border border-rose-100 rounded-lg active:bg-rose-100 focus:outline-none delete-btn">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                `;
+
+                actionGroup.querySelector('.edit-btn').onclick = () => openEditModal(item);
+                actionGroup.querySelector('.adjust-btn').onclick = () => openAdjustModal(item);
+                actionGroup.querySelector('.delete-btn').onclick = () => handleItemDeletionWorkflow(item);
+                
+                controlsSlot.appendChild(actionGroup);
+            } else {
+                controlsSlot.innerHTML = `<span class="text-[11px] bg-slate-100 px-2 py-1 text-slate-400 rounded font-bold uppercase tracking-wider">View Only Access</span>`;
+            }
+
+            mobileGrid.appendChild(card);
+        }
+    });
+}
+
+// Decentralized standalone utility processing deletion workflows cleanly
+function handleItemDeletionWorkflow(item) {
     if (item._id) { 
         deleteInventoryItem(item._id);
     } else {
-        showMessage("Cannot delete a placeholder. This item hasn't been saved for this date yet.");
-    }
-};
-            actionsCell.appendChild(dropdown);
+        if (typeof showMessage === 'function') {
+            showMessage("Cannot delete a placeholder. This item hasn't been saved for this date yet.");
+        } else {
+            alert("Cannot delete a placeholder. This item hasn't been saved for this date yet.");
         }
-    });
+    }
 }
 
 async function deleteInventoryItem(id) {
