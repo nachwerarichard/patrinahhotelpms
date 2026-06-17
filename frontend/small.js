@@ -9975,9 +9975,9 @@ window.addEventListener('DOMContentLoaded', () => {
 async function loadWaiterTracker() {
     try {
         const tbody = document.getElementById('waiterTrackerBody');
+        const cardContainer = document.getElementById('waiterTrackerCards');
         
-        // 1. Use the wrapper - it handles Authorization and x-hotel-id automatically
-        // This hits: https://novouscloudpms-tz4s.onrender.com/api/waiter/orders
+        // 1. Fetch data from backend
         const res = await authenticatedFetch(`${API_BASE_URL}/waiter/orders`);
         
         if (!res || !res.ok) {
@@ -9987,16 +9987,26 @@ async function loadWaiterTracker() {
         
         const orders = await res.json();
 
+        // 2. Clear layouts and check for an empty array
+        if (tbody) tbody.innerHTML = '';
+        if (cardContainer) cardContainer.innerHTML = '';
+
         if (!orders || orders.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400">No active kitchen orders found.</td></tr>`;
+            const emptyMessage = 'No active kitchen orders found.';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400">${emptyMessage}</td></tr>`;
+            if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-8 text-slate-400 bg-white border rounded-xl shadow-sm italic text-sm">${emptyMessage}</div>`;
             return;
         }
 
-        tbody.innerHTML = orders.map(order => {
+        // Arrays to compile separate HTML structures
+        let tableRowsHTML = [];
+        let mobileCardsHTML = [];
+
+        orders.forEach(order => {
             let statusBadge = "";
             const timeStr = new Date(order.date || order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            // Logic for status colors
+            // Logic for status badges
             switch(order.status) {
                 case 'Preparing':
                     statusBadge = `<span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-black animate-pulse border border-amber-200">PREPARING</span>`;
@@ -10008,33 +10018,59 @@ async function loadWaiterTracker() {
                     statusBadge = `<span class="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-xs font-bold border border-slate-200">PENDING</span>`;
             }
 
-            return `
+            // Action Button Builder
+            const actionButtonHTML = order.status === 'Ready' ? `
+                <button onclick="markAsServed('${order._id}')" 
+                    class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-4 py-2 rounded-lg shadow-sm transition transform active:scale-95 font-semibold">
+                    Mark Served
+                </button>
+            ` : '<span class="text-gray-400 text-xs italic">Awaiting Kitchen</span>';
+
+            // Desktop Row Markup Generation
+            tableRowsHTML.push(`
                 <tr class="hover:bg-slate-50 transition">
-                    <td class="px-6 py-4 text-slate-500 text-sm">${timeStr}</td>
-                    <td class="px-6 py-4 font-bold text-slate-800">${order.item}</td>
-                    <td class="px-6 py-4 text-center text-slate-700 font-mono">${order.number || order.quantity}</td>
-                    <td class="px-6 py-4">${statusBadge}</td>
-                    <td class="px-6 py-4 text-right">
-                        ${order.status === 'Ready' ? `
-                            <button onclick="markAsServed('${order._id}')" 
-                                class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-4 py-2 rounded-lg shadow-sm transition transform active:scale-95">
-                                Mark Served
-                            </button>
-                        ` : '<span class="text-gray-300 text-xs italic">Awaiting Kitchen</span>'}
-                    </td>
+                    <td class="px-8 py-4 text-slate-500 text-sm">${timeStr}</td>
+                    <td class="px-8 py-4 font-bold text-slate-800">${order.item}</td>
+                    <td class="px-8 py-4 text-center text-slate-700 font-mono">${order.number || order.quantity}</td>
+                    <td class="px-8 py-4">${statusBadge}</td>
+                    <td class="px-8 py-4 text-right">${actionButtonHTML}</td>
                 </tr>
-            `;
-        }).join('');
+            `);
+
+            // Mobile Card Markup Generation
+            mobileCardsHTML.push(`
+                <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-3 transition active:bg-slate-50">
+                    <div class="flex justify-between items-start gap-2">
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-base leading-tight">${order.item}</h4>
+                            <span class="text-xs text-slate-400 inline-block mt-1 font-medium">Ordered: ${timeStr}</span>
+                        </div>
+                        <div class="flex flex-col items-end gap-1">
+                            <span class="text-xs font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md font-mono">Qty: ${order.number || order.quantity}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-100 gap-4">
+                        <div>${statusBadge}</div>
+                        <div class="text-right">${actionButtonHTML}</div>
+                    </div>
+                </div>
+            `);
+        });
+
+        // 3. Mount both layout structures safely to the DOM
+        if (tbody) tbody.innerHTML = tableRowsHTML.join('');
+        if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
         
     } catch (err) {
         console.error("Waiter Tracker Error:", err);
         const tbody = document.getElementById('waiterTrackerBody');
-        if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Error loading tracker data.</td></tr>`;
-        }
+        const cardContainer = document.getElementById('waiterTrackerCards');
+        const errorMsg = 'Error loading tracker data.';
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">${errorMsg}</td></tr>`;
+        if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-4 text-red-500 text-sm font-semibold">${errorMsg}</div>`;
     }
 }
-
 // Auto-refresh every 15 seconds to keep the waiter updated
 setInterval(loadWaiterTracker, 15000);
 loadWaiterTracker();
