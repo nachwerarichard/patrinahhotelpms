@@ -1500,16 +1500,17 @@ body {
     </div>
 </div>
 
-            <section id="posinventory" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-  <div class="flex justify-between items-center mb-4">
-    <h2 class="text-2xl font-bold text-blue-600">Inventory Management</h2>
-    <button onclick="toggleInventoryModal(true)" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 flex items-center space-x-2">
+<section id="posinventory" class="section bg-white p-4 sm:p-6 rounded-xl shadow-md mb-8 hidden">
+  
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <h2 class="text-xl sm:text-2xl font-bold text-slate-800">Inventory Management</h2>
+    <button onclick="toggleInventoryModal(true)" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-lg transition duration-300 flex items-center justify-center space-x-2 shadow-sm text-sm">
       <i class="fas fa-plus"></i>
       <span>Add New Item</span>
     </button>
   </div>
 
-  <div id="inventory-records" class="mt-6">
+  <div id="inventory-records" class="mt-4">
     <div class="filter-controls flex flex-col sm:flex-row flex-wrap gap-4 mb-6 items-stretch sm:items-end bg-slate-50 p-4 rounded-xl border border-slate-200/60">
         <div class="flex-1 min-w-[200px]">
             <label for="search-inventory-item" class="block text-xs font-bold text-slate-500 uppercase mb-1 tracking-wider">Item Name:</label>
@@ -1519,17 +1520,17 @@ body {
             <label for="search-inventory-date" class="block text-xs font-bold text-slate-500 uppercase mb-1 tracking-wider">Inventory Date:</label>
             <input type="date" id="search-inventory-date" class="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm transition">
         </div>
-        <div class="flex gap-3">
-            <button onclick="fetchInventory()" id="inventory-search-button" class="flex-1 sm:flex-initial bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg transition flex items-center justify-center gap-2 text-sm shadow-sm">
+        <div class="flex flex-col sm:flex-row gap-3">
+            <button onclick="fetchInventory()" id="inventory-search-button" class="w-full sm:w-initial bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg transition flex items-center justify-center gap-2 text-sm shadow-sm">
                 <i class="fas fa-search"></i> <span>Search</span>
             </button>
-            <button class="flex-1 sm:flex-initial bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 shadow-sm" onclick="exportTableToExcel('inventory-table', 'Inventory_Report')">
+            <button class="w-full sm:w-initial bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 shadow-sm" onclick="exportTableToExcel('inventory-table', 'Inventory_Report')">
                 <i class="fas fa-file-excel"></i> Export
             </button>
         </div>
     </div>
 
-    <div id="table-responsive" class="w-full py-2">
+    <div class="w-full py-2">
         
         <div class="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
             <table id="inventory-table" class="w-full text-left border-collapse">
@@ -1555,7 +1556,7 @@ body {
             </div>
         
     </div>
-</div>
+  </div>
 </section>
 
 <div id="inventory-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50 p-4">
