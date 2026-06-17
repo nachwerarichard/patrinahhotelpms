@@ -7038,109 +7038,223 @@ function showModal(modalId) {
 
 function renderSalesTable(sales) {
     const tbody = document.querySelector('#sales-table tbody');
-    if (!tbody) return;
+    const mobileGrid = document.getElementById('sales-mobile-grid');
+    
+    if (tbody) tbody.innerHTML = '';
+    if (mobileGrid) mobileGrid.innerHTML = '';
 
-    tbody.innerHTML = '';
     if (sales.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-gray-500 italic">No sales records found for this date.</td></tr>`;
+        const emptyStateHtml = `<div class="py-10 text-center text-slate-400 font-medium text-sm italic">No sales records found for this date.</div>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="9">${emptyStateHtml}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = emptyStateHtml;
         return;
     }
 
-    // Role-based privacy: Cashiers/Bar staff should not see profit or buying prices
+    // Role-based privacy calculation flags
     const hideSensitiveInfo = ['cashier', 'bar'].includes(currentUserRole);
+    const isAdmin = ['admin', 'super-admin'].includes(currentUserRole);
     
     let totalSellingPriceSum = 0;
     const departmentTotals = {}; 
 
     sales.forEach(sale => {
-        const totalSellingPrice = (sale.sp || 0) * (sale.number || 0);
+        const qty = sale.number || 0;
+        const sp = sale.sp || 0;
+        const bp = sale.bp || 0;
+        const totalSellingPrice = sp * qty;
+        
         totalSellingPriceSum += totalSellingPrice;
         
         const dept = sale.department || 'General';
         departmentTotals[dept] = (departmentTotals[dept] || 0) + totalSellingPrice;
 
-        const row = tbody.insertRow();
-        row.className = "hover:bg-gray-50 border-b border-gray-100 transition-colors";
+        // Structured formats for parsed financial outputs
+        const bpDisplay = hideSensitiveInfo ? '***' : bp.toLocaleString();
+        const spDisplay = sp.toLocaleString();
+        
+        let profitDisplay = '---';
+        let percentageDisplay = '---';
+        let profitClass = 'text-slate-600';
 
-        row.insertCell().textContent = sale.department;
-        row.insertCell().textContent = sale.item;
-        row.insertCell().className = "font-semibold text-center";
-        row.cells[2].textContent = sale.number;
-
-        // Buying Price (Sensitive)
-        const bpCell = row.insertCell();
-        bpCell.textContent = hideSensitiveInfo ? '***' : (sale.bp || 0).toLocaleString();
-
-        // Selling Price
-        row.insertCell().textContent = (sale.sp || 0).toLocaleString();
-
-        // Profit & Percentage (Sensitive)
-        if (hideSensitiveInfo) {
-            row.insertCell().textContent = '---';
-            row.insertCell().textContent = '---';
-        } else {
-            const profitCell = row.insertCell();
-            profitCell.textContent = Math.round(sale.profit || 0).toLocaleString();
-            profitCell.className = (sale.profit >= 0) ? 'text-green-600' : 'text-red-600';
-            
-            row.insertCell().textContent = Math.round(sale.percentageprofit || 0) + '%';
+        if (!hideSensitiveInfo) {
+            const profit = sale.profit || 0;
+            profitDisplay = Math.round(profit).toLocaleString();
+            percentageDisplay = Math.round(sale.percentageprofit || 0) + '%';
+            profitClass = (profit >= 0) ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold';
         }
 
-        row.insertCell().textContent = new Date(sale.date).toLocaleDateString();
-        
-        const actionsCell = row.insertCell();
-        actionsCell.className = "px-4 py-2 text-right";
+        const formattedDate = new Date(sale.date).toLocaleDateString();
 
-        if (['admin','super-admin'].includes(currentUserRole)) {
-            const btnGroup = document.createElement('div');
-            btnGroup.className = "flex gap-2 justify-end";
+        // --- A. POPULATE VIEW 1: DESKTOP TABLE INTERFACE TR ---
+        if (tbody) {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50/80 border-b border-slate-100 text-slate-600 text-sm transition-colors";
+            
+            // Build cell payloads
+            tr.innerHTML = `
+                <td class="px-6 py-4 font-medium text-slate-900">${dept}</td>
+                <td class="px-6 py-4 font-semibold text-slate-700">${sale.item}</td>
+                <td class="px-6 py-4 text-center font-bold text-slate-800">${qty}</td>
+                <td class="px-6 py-4 font-mono text-xs text-slate-500">${bpDisplay}</td>
+                <td class="px-6 py-4 font-mono text-indigo-600 font-semibold">${spDisplay}</td>
+                <td class="px-6 py-4 font-mono ${profitClass}">${profitDisplay}</td>
+                <td class="px-6 py-4 font-mono text-xs text-slate-500">${percentageDisplay}</td>
+                <td class="px-6 py-4 text-xs whitespace-nowrap text-slate-400">${formattedDate}</td>
+                <td class="px-6 py-4 text-right whitespace-nowrap actions-cell"></td>
+            `;
 
-            const editBtn = document.createElement('button');
-            editBtn.innerHTML = '<i class="fas fa-edit"></i>';
-            editBtn.className = 'p-2 text-blue-600 hover:bg-blue-50 rounded';
-            editBtn.onclick = () => populateSaleForm(sale);
+            const actionsCell = tr.querySelector('.actions-cell');
+            injectActionElements(actionsCell, isAdmin, sale);
+            tbody.appendChild(tr);
+        }
 
-            const delBtn = document.createElement('button');
-            delBtn.innerHTML = '<i class="fas fa-trash"></i>';
-            delBtn.className = 'p-2 text-red-600 hover:bg-red-50 rounded';
-            delBtn.onclick = () => deleteSale(sale._id);
+        // --- B. POPULATE VIEW 2: SMARTPHONE GRID CARD ELEMENT ---
+        if (mobileGrid) {
+            const card = document.createElement('div');
+            card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3 hover:border-slate-300 transition-all";
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase tracking-wider mb-1 inline-block">${dept}</span>
+                        <h4 class="text-base font-bold text-slate-900">${sale.item}</h4>
+                        <p class="text-[11px] text-slate-400 font-medium mt-0.5"><i class="far fa-calendar mr-1"></i> ${formattedDate}</p>
+                    </div>
+                    <div class="mobile-actions-container"></div>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-lg text-xs font-medium text-slate-600 border border-slate-100">
+                    <div class="text-center border-r border-slate-200/60">
+                        <span class="text-[9px] text-slate-400 block uppercase font-bold mb-0.5">Quantity</span>
+                        <span class="text-sm font-black text-slate-800">${qty}</span>
+                    </div>
+                    <div class="text-center border-r border-slate-200/60">
+                        <span class="text-[9px] text-slate-400 block uppercase font-bold mb-0.5">Unit BP</span>
+                        <span class="font-mono text-slate-600">${bpDisplay}</span>
+                    </div>
+                    <div class="text-center">
+                        <span class="text-[9px] text-slate-400 block uppercase font-bold mb-0.5">Unit SP</span>
+                        <span class="font-mono text-indigo-600 font-bold">${spDisplay}</span>
+                    </div>
+                </div>
 
-            btnGroup.appendChild(editBtn);
-            btnGroup.appendChild(delBtn);
-            actionsCell.appendChild(btnGroup);
-        } else {
-            actionsCell.innerHTML = '<span class="text-xs text-gray-400 italic">View Only</span>';
+                <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                    <div class="flex items-center gap-1">
+                        <span class="text-[10px] uppercase font-bold tracking-tight text-slate-400">Net Return Margin:</span>
+                        <span class="font-mono ${profitClass}">${profitDisplay}</span>
+                    </div>
+                    <span class="font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">${percentageDisplay}</span>
+                </div>
+            `;
+
+            const mobileActionSlot = card.querySelector('.mobile-actions-container');
+            injectActionElements(mobileActionSlot, isAdmin, sale, true);
+            mobileGrid.appendChild(card);
         }
     });
 
-    // --- SUMMARY SECTION ---
-    renderSalesSummary(tbody, departmentTotals, totalSellingPriceSum);
+    // Invoke baseline summary generation parameters downstream
+    if (typeof renderSalesSummary === 'function') {
+        renderSalesSummary(tbody, departmentTotals, totalSellingPriceSum);
+    }
+}
+
+// Helper utility targeting modular actions rendering matrix
+function injectActionElements(container, isAdmin, sale, isMobileVariant = false) {
+    if (!container) return;
+
+    if (isAdmin) {
+        const btnGroup = document.createElement('div');
+        btnGroup.className = "flex gap-1.5 justify-end";
+
+        const editBtn = document.createElement('button');
+        editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+        editBtn.title = "Edit Sale Record";
+        editBtn.className = isMobileVariant 
+            ? 'p-2 text-indigo-600 bg-indigo-50 active:bg-indigo-100 rounded-lg text-xs transition-colors'
+            : 'p-1.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors';
+        editBtn.onclick = () => populateSaleForm(sale);
+
+        const delBtn = document.createElement('button');
+        delBtn.innerHTML = '<i class="fas fa-trash-can"></i>';
+        delBtn.title = "Delete Sale Record";
+        delBtn.className = isMobileVariant 
+            ? 'p-2 text-rose-600 bg-rose-50 active:bg-rose-100 rounded-lg text-xs transition-colors'
+            : 'p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors';
+        delBtn.onclick = () => deleteSale(sale._id);
+
+        btnGroup.appendChild(editBtn);
+        btnGroup.appendChild(delBtn);
+        container.appendChild(btnGroup);
+    } else {
+        container.innerHTML = `<span class="text-xs text-slate-400 tracking-wide font-medium ${isMobileVariant ? 'bg-slate-100 px-2 py-1 rounded text-[10px]' : 'italic'}">View Only</span>`;
+    }
 }
 
 function renderSalesSummary(tbody, departmentTotals, grandTotal) {
-    // Spacer
-    const spacer = tbody.insertRow();
-    spacer.innerHTML = `<td colspan="9" class="h-4"></td>`;
+    // --- 1. DESKTOP VIEWPORT PROCESSING (TABLE ROWS) ---
+    if (tbody) {
+        // Safe check: prevent duplicate summaries if called multiple times
+        const existingSummaries = tbody.querySelectorAll('.summary-row');
+        existingSummaries.forEach(el => el.remove());
 
-    // Departmental Sub-totals
-    for (const [dept, total] of Object.entries(departmentTotals)) {
-        const row = tbody.insertRow();
-        row.className = "bg-gray-50/50 italic text-gray-600";
-        row.innerHTML = `
-            <td colspan="4" class="text-right py-2 pr-4 font-medium">${dept} Total:</td>
-            <td class="font-bold">${total.toLocaleString()}</td>
+        // Spacer Row
+        const spacer = tbody.insertRow();
+        spacer.className = "summary-row border-none";
+        spacer.innerHTML = `<td colspan="9" class="h-6 bg-white"></td>`;
+
+        // Departmental Sub-totals Loop
+        for (const [dept, total] of Object.entries(departmentTotals)) {
+            const row = tbody.insertRow();
+            row.className = "summary-row bg-slate-50 text-slate-600 font-medium border-b border-slate-200/60";
+            row.innerHTML = `
+                <td colspan="4" class="text-right py-3 pr-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">${dept} Subtotal:</td>
+                <td class="px-6 py-3 font-mono font-bold text-slate-900">UGX ${total.toLocaleString()}</td>
+                <td colspan="4"></td>
+            `;
+        }
+
+        // Grand Total Header Row Block
+        const grandRow = tbody.insertRow();
+        grandRow.className = "summary-row bg-indigo-600 text-white font-bold border-none shadow-sm";
+        grandRow.innerHTML = `
+            <td colspan="4" class="text-right py-3.5 pr-4 text-sm uppercase tracking-widest font-black">Grand Total:</td>
+            <td class="px-6 py-3.5 text-base font-mono font-black">UGX ${grandTotal.toLocaleString()}</td>
             <td colspan="4"></td>
         `;
     }
 
-    // Grand Total Row
-    const grandRow = tbody.insertRow();
-    grandRow.className = 'bg-indigo-600 text-white font-bold';
-    grandRow.innerHTML = `
-        <td colspan="4" class="text-right py-3 pr-4 text-lg">GRAND TOTAL:</td>
-        <td class="py-3 text-lg">${grandTotal.toLocaleString()}</td>
-        <td colspan="4"></td>
-    `;
+    // --- 2. MOBILE VIEWPORT PROCESSING (CARD CONTAINER MODULE) ---
+    const summaryContainer = document.getElementById('sales-summary');
+    if (summaryContainer) {
+        // Generate departmental subtotal template pieces dynamically
+        const mobileDeptRowsHtml = Object.entries(departmentTotals)
+            .map(([dept, total]) => `
+                <div class="flex justify-between items-center py-2 border-b border-amber-200/40 last:border-0 text-xs">
+                    <span class="text-slate-500 font-medium">${dept} Subtotal</span>
+                    <span class="font-mono font-bold text-slate-800">UGX ${total.toLocaleString()}</span>
+                </div>
+            `).join('');
+
+        // Inject compiled responsive structural layout block
+        summaryContainer.innerHTML = `
+            <div class="space-y-3">
+                <div class="flex items-center gap-2 pb-2 border-b border-amber-200 text-amber-800">
+                    <i class="fa-solid fa-calculator text-base"></i>
+                    <h4 class="font-bold uppercase tracking-wider text-xs">Financial Overview Summary</h4>
+                </div>
+                
+                <div class="divide-y divide-amber-200/30">
+                    ${mobileDeptRowsHtml || '<div class="text-xs text-slate-400 italic py-1">No departmental records calculated.</div>'}
+                </div>
+
+                <div class="mt-3 p-3 bg-indigo-600 text-white rounded-xl flex justify-between items-center shadow-inner">
+                    <span class="text-[10px] uppercase tracking-widest font-black">Grand Total</span>
+                    <span class="text-base font-mono font-black">UGX ${grandTotal.toLocaleString()}</span>
+                </div>
+            </div>
+        `;
+    }
 }
 
 async function createSale(saleData) {
@@ -7382,38 +7496,114 @@ function renderExpensesPagination(current, totalPages) {
 
 function renderExpensesTable(expenses) {
     const tbody = document.querySelector('#expenses-table tbody');
-    if (!tbody) return;
+    const mobileGrid = document.getElementById('expenses-mobile-grid');
+    
+    // Safety purge of baseline DOM states
+    if (tbody) tbody.innerHTML = '';
+    if (mobileGrid) mobileGrid.innerHTML = '';
 
-    tbody.innerHTML = '';
     if (expenses.length === 0) {
-        const row = tbody.insertRow();
-        const cell = row.insertCell();
-        cell.colSpan = 6;
-        cell.textContent = 'No expense records found for this date. Try adjusting the filter.';
-        cell.style.textAlign = 'center';
+        const noDataMsg = 'No expense records found for this date. Try adjusting the filter.';
+        
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="7" class="py-10 text-center text-slate-400 font-medium italic">${noDataMsg}</td></tr>`;
+        }
+        if (mobileGrid) {
+            mobileGrid.innerHTML = `<div class="p-8 text-center text-slate-400 font-medium text-sm border border-slate-200 bg-white rounded-xl italic">${noDataMsg}</div>`;
+        }
         return;
     }
 
-    expenses.forEach(expense => {
-        const row = tbody.insertRow();
-        row.insertCell().textContent = expense.department;
-        row.insertCell().textContent = expense.description;
-        row.insertCell().textContent = expense.amount.toFixed(2);
-        row.insertCell().textContent = new Date(expense.date).toLocaleDateString();
-        row.insertCell().textContent = expense.receiptId;
-        row.insertCell().textContent = expense.source || 'N/A'; // Assuming source might be optional
-        const actionsCell = row.insertCell();
-        actionsCell.className = 'actions';
+    const adminRoles = ['admin', 'super-admin'];
+    const hasAdminAccess = adminRoles.includes(currentUserRole);
 
-        const adminRoles = [ 'admin','super-admin'];
-        // Only administrators can edit expenses
-        if (adminRoles.includes(currentUserRole)) {
-            const editButton = document.createElement('button');
-            editButton.textContent = 'Edit';
-            editButton.className = 'edit';
-editButton.onclick = () => populateEditExpenseModal(expense);            actionsCell.appendChild(editButton);
-        } else {
-            actionsCell.textContent = 'View Only';
+    expenses.forEach(expense => {
+        const dept = expense.department || 'General';
+        const desc = expense.description || 'No description provided';
+        const amountDisplay = `UGX ${Number(expense.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const dateDisplay = new Date(expense.date).toLocaleDateString();
+        const receipt = expense.receiptId || '—';
+        const source = expense.source || 'N/A';
+
+        // --- HELPER: ACTIONS WORKFLOW GENERATOR ---
+        const createActionsElement = (isMobileLayout) => {
+            const container = document.createElement('div');
+            if (hasAdminAccess) {
+                const editBtn = document.createElement('button');
+                editBtn.textContent = 'Edit';
+                editBtn.onclick = () => populateEditExpenseModal(expense);
+                
+                if (isMobileLayout) {
+                    editBtn.className = 'w-full text-center px-4 py-2 text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 active:bg-indigo-100 rounded-lg transition-all border border-indigo-100';
+                } else {
+                    editBtn.className = 'text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded transition';
+                }
+                container.appendChild(editBtn);
+            } else {
+                const label = document.createElement('span');
+                label.textContent = 'View Only';
+                label.className = isMobileLayout 
+                    ? 'text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-1 rounded' 
+                    : 'text-xs text-slate-400 italic';
+                container.appendChild(label);
+            }
+            return container;
+        };
+
+        // --- A. POPULATE VIEW 1: DESKTOP SYSTEM ROW ---
+        if (tbody) {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
+            tr.innerHTML = `
+                <td class="px-6 py-4 font-semibold text-slate-800">${dept}</td>
+                <td class="px-6 py-4 text-slate-600 max-w-xs truncate" title="${desc}">${desc}</td>
+                <td class="px-6 py-4 font-mono font-bold text-slate-900">${amountDisplay}</td>
+                <td class="px-6 py-4 text-slate-500 whitespace-nowrap">${dateDisplay}</td>
+                <td class="px-6 py-4 font-mono text-xs text-slate-400">${receipt}</td>
+                <td class="px-6 py-4 text-slate-500">${source}</td>
+                <td class="px-6 py-4 text-right actions-cell whitespace-nowrap"></td>
+            `;
+            tr.querySelector('.actions-cell').appendChild(createActionsElement(false));
+            tbody.appendChild(tr);
+        }
+
+        // --- B. POPULATE VIEW 2: SMARTPHONE LAYOUT CARD ---
+        if (mobileGrid) {
+            const card = document.createElement('div');
+            card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3.5 hover:border-slate-300 transition-all";
+            card.innerHTML = `
+                <div class="flex justify-between items-start gap-4">
+                    <div>
+                        <span class="px-2 py-0.5 bg-slate-100 text-slate-600 border border-slate-200/60 rounded text-[10px] font-bold uppercase tracking-wider block w-fit mb-1.5">${dept}</span>
+                        <h4 class="text-sm font-semibold text-slate-800 leading-snug">${desc}</h4>
+                    </div>
+                    <div class="text-right whitespace-nowrap">
+                        <span class="text-[9px] uppercase font-bold tracking-tight text-slate-400 block">Amount</span>
+                        <span class="font-mono text-sm font-bold text-rose-600">${amountDisplay}</span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-lg text-[11px] font-medium text-slate-500 border border-slate-100">
+                    <div>
+                        <span class="text-[9px] text-slate-400 block uppercase font-bold mb-0.5">Date</span>
+                        <span class="text-slate-700 font-semibold">${dateDisplay}</span>
+                    </div>
+                    <div class="border-l border-slate-200/60 pl-2">
+                        <span class="text-[9px] text-slate-400 block uppercase font-bold mb-0.5">Receipt ID</span>
+                        <span class="font-mono text-slate-700 truncate block">${receipt}</span>
+                    </div>
+                    <div class="border-l border-slate-200/60 pl-2">
+                        <span class="text-[9px] text-slate-400 block uppercase font-bold mb-0.5">Source</span>
+                        <span class="text-slate-700 truncate block">${source}</span>
+                    </div>
+                </div>
+
+                <div class="pt-1 flex items-center justify-between mobile-actions-slot">
+                    <span class="text-[10px] uppercase font-bold tracking-tight text-slate-400">Security Clearance</span>
+                </div>
+            `;
+            card.querySelector('.mobile-actions-slot').appendChild(createActionsElement(true));
+            mobileGrid.appendChild(card);
         }
     });
 }
@@ -7834,46 +8024,118 @@ function updateCashSearchButton(text, iconClass) {
 
  function renderCashJournalTable(records) {
     const tbody = document.querySelector('#cash-journal-table tbody');
-    if (!tbody) return;
-    tbody.innerHTML = '';
+    const mobileGrid = document.getElementById('cash-journal-mobile-grid');
     
+    // Standard safety purge of current DOM contents
+    if (tbody) tbody.innerHTML = '';
+    if (mobileGrid) mobileGrid.innerHTML = '';
+
     if (records.length === 0) {
-        const row = tbody.insertRow();
-        const cell = row.insertCell();
-        cell.colSpan = 6; // Adjusted to match your column count
-        cell.textContent = 'No cash records found for the selected filters.';
-        cell.style.textAlign = 'center';
+        const fallBackMsg = 'No cash records found for the selected filters.';
+        
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="6" class="py-10 text-center text-slate-400 font-medium italic">${fallBackMsg}</td></tr>`;
+        }
+        if (mobileGrid) {
+            mobileGrid.innerHTML = `<div class="p-8 text-center text-slate-400 font-medium text-sm border border-slate-200 bg-white rounded-xl italic">${fallBackMsg}</div>`;
+        }
         return;
     }
 
+    const adminRoles = ['admin', 'super-admin'];
+    const hasAdminAccess = adminRoles.includes(currentUserRole);
+
     records.forEach(record => {
-        const row = tbody.insertRow();
-        
-        // 1. Safely extract values from the 'record' object
-        // We use || 0 to prevent the .toFixed() error if data is missing
+        // Safe extraction defaults to handle zero values gracefully
         const hand = record.cashAtHand || 0;
         const banked = record.cashBanked || 0;
         const phone = record.cashOnPhone || 0;
+        
+        // Formatting outputs for localization
+        const dateDisplay = new Date(record.date).toLocaleDateString();
+        const receiptDisplay = record.bankReceiptId || 'N/A';
+        const handStr = `UGX ${hand.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const bankedStr = `UGX ${banked.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const phoneStr = `UGX ${phone.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-        // 2. Insert Cells
-        row.insertCell().textContent = new Date(record.date).toLocaleDateString();
-        row.insertCell().textContent = hand.toFixed(2);
-        row.insertCell().textContent = banked.toFixed(2);
-        row.insertCell().textContent = phone.toFixed(2);
-        row.insertCell().textContent = record.bankReceiptId || 'N/A';
+        // --- HELPER: CENTRALIZED ACCOUNTABILITY ACTION BUTTONS ---
+        const createActionsButton = (isMobileLayout) => {
+            const container = document.createElement('div');
+            if (hasAdminAccess) {
+                const editButton = document.createElement('button');
+                editButton.textContent = 'Edit Record';
+                editButton.onclick = () => populateEditCashModal(record);
+                
+                if (isMobileLayout) {
+                    editButton.className = 'w-full text-center px-4 py-2 text-xs font-bold uppercase tracking-wider text-amber-700 bg-amber-50 active:bg-amber-100 border border-amber-200 rounded-lg transition-colors focus:outline-none';
+                } else {
+                    editButton.className = 'text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-lg border border-amber-200 transition-colors focus:outline-none';
+                }
+                container.appendChild(editButton);
+            } else {
+                const badge = document.createElement('span');
+                badge.textContent = 'View Only';
+                badge.className = isMobileLayout 
+                    ? 'text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-2.5 py-1 rounded-md' 
+                    : 'text-xs text-slate-400 italic font-medium';
+                container.appendChild(badge);
+            }
+            return container;
+        };
 
-        const actionsCell = row.insertCell();
-        actionsCell.className = 'actions';
+        // --- A. POPULATE VIEW 1: DESKTOP SYSTEM TABLE TR ---
+        if (tbody) {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
+            tr.innerHTML = `
+                <td class="px-6 py-4 font-semibold text-slate-800 whitespace-nowrap">${dateDisplay}</td>
+                <td class="px-6 py-4 font-mono text-slate-700">${handStr}</td>
+                <td class="px-6 py-4 font-mono text-emerald-600 font-semibold">${bankedStr}</td>
+                <td class="px-6 py-4 font-mono text-indigo-600">${phoneStr}</td>
+                <td class="px-6 py-4 font-mono text-xs text-slate-500">${receiptDisplay}</td>
+                <td class="px-6 py-4 text-right actions-cell whitespace-nowrap"></td>
+            `;
+            tr.querySelector('.actions-cell').appendChild(createActionsButton(false));
+            tbody.appendChild(tr);
+        }
 
-        const adminRoles = ['admin','super-admin'];
-        if (adminRoles.includes(currentUserRole)) { 
-            const editButton = document.createElement('button');
-            editButton.textContent = 'Edit';
-            editButton.className = 'edit bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded-lg text-sm';
-            editButton.onclick = () => populateEditCashModal(record); 
-            actionsCell.appendChild(editButton);
-        } else {
-            actionsCell.textContent = 'View Only';
+        // --- B. POPULATE VIEW 2: SMARTPHONE ADAPTIVE BALANCE CARD ---
+        if (mobileGrid) {
+            const card = document.createElement('div');
+            card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3.5 hover:border-slate-300 transition-all";
+            card.innerHTML = `
+                <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                    <div>
+                        <span class="text-[9px] uppercase font-black tracking-wider text-slate-400 block">Statement Date</span>
+                        <h4 class="text-sm font-bold text-slate-800">${dateDisplay}</h4>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[9px] uppercase font-black tracking-wider text-slate-400 block">Receipt reference</span>
+                        <span class="font-mono text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-semibold">${receiptDisplay}</span>
+                    </div>
+                </div>
+                
+                <div class="space-y-2 pt-0.5">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-400 font-medium">Cash At Hand</span>
+                        <span class="font-mono text-slate-800 font-medium">${handStr}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-400 font-medium">Cash Banked</span>
+                        <span class="font-mono text-emerald-600 font-bold">${bankedStr}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-400 font-medium">Cash On Mobile Phone</span>
+                        <span class="font-mono text-indigo-600 font-semibold">${phoneStr}</span>
+                    </div>
+                </div>
+
+                <div class="pt-2.5 border-t border-slate-100 flex items-center justify-between mobile-actions-slot">
+                    <span class="text-[10px] uppercase font-bold tracking-tight text-slate-400">Ledger Security</span>
+                </div>
+            `;
+            card.querySelector('.mobile-actions-slot').appendChild(createActionsButton(true));
+            mobileGrid.appendChild(card);
         }
     });
 }
@@ -9867,53 +10129,89 @@ document.addEventListener('click', (e) => {
 
 async function fetchActiveAccounts() {
     const tableBody = document.getElementById('activeAccountsTableBody');
+    const mobileGrid = document.getElementById('activeAccountsMobileGrid');
     const emptyMessage = document.getElementById('noAccountsMessage');
 
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/pos/accounts/active`);
         const accounts = await response.json();
 
-        // Check if tableBody exists before clearing it
-        if (tableBody) {
-            if (accounts.length === 0) {
-                tableBody.innerHTML = '';
-                // Only access classList if emptyMessage actually exists
-                if (emptyMessage) emptyMessage.classList.remove('hidden');
-                return;
-            }
+        // Clear out baseline raw markup containers before assessing conditions
+        if (tableBody) tableBody.innerHTML = '';
+        if (mobileGrid) mobileGrid.innerHTML = '';
+
+        // Check if there are active accounts to display
+        if (!accounts || accounts.length === 0) {
+            if (emptyMessage) emptyMessage.classList.remove('hidden');
+            return;
         }
 
-        // Hide empty message if it exists
+        // Hide empty message fallback if array features content payloads
         if (emptyMessage) emptyMessage.classList.add('hidden');
 
-        // Render table
-        if (tableBody) {
-            tableBody.innerHTML = accounts.map(acc => `
-                <tr class="hover:bg-slate-50 transition-colors">
+        // Loop through accounts and populate both viewport versions
+        accounts.forEach(acc => {
+            const guestName = acc.guestName || 'Unknown Guest';
+            const roomDisplay = acc.roomNumber ? `Room ${acc.roomNumber}` : 'N/A';
+            const chargesDisplay = `UGX ${Number(acc.totalCharges || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const dateDisplay = acc.lastUpdated ? new Date(acc.lastUpdated).toLocaleDateString() : 'No Date';
+
+            // --- A. POPULATE VIEW 1: DESKTOP TABLE ROW INTERFACE ---
+            if (tableBody) {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors text-slate-600";
+                tr.innerHTML = `
                     <td class="py-4">
-                        <div class="font-semibold text-slate-700">${acc.guestName}</div>
-                        <div class="text-xs text-indigo-500 font-medium">Room ${acc.roomNumber || 'N/A'}</div>
+                        <div class="font-semibold text-slate-800">${guestName}</div>
+                        <div class="text-xs text-indigo-500 font-medium">${roomDisplay}</div>
                     </td>
-                    <td class="py-4 font-mono text-sm text-slate-600">
-                        UGX ${Number(acc.totalCharges).toFixed(2)}
-                    </td>
+                    <td class="py-4 font-mono text-sm text-slate-700 font-medium">${chargesDisplay}</td>
                     <td class="py-4 text-xs text-slate-400">
-                        <div class="font-medium text-slate-500">
-                            ${acc.lastUpdated ? new Date(acc.lastUpdated).toLocaleDateString() : 'No Date'}
-                        </div>
+                        <div class="font-medium text-slate-500">${dateDisplay}</div>
                     </td>
                     <td class="py-4 text-right">
                         <button onclick="viewAccountDetails('${acc._id}')" 
-                            class="text-xs bg-slate-100 hover:bg-indigo-600 hover:text-white px-3 py-1.5 rounded-lg font-bold transition-all">
+                            class="text-xs bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-700 font-bold px-3 py-1.5 rounded-lg transition-all tracking-wider uppercase active:scale-95 focus:outline-none">
                             MANAGE
                         </button>
                     </td>
-                </tr>
-            `).join('');
-        }
+                `;
+                tableBody.appendChild(tr);
+            }
+
+            // --- B. POPULATE VIEW 2: SMARTPHONE GRID LEDGER CARD ---
+            if (mobileGrid) {
+                const card = document.createElement('div');
+                card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3.5 hover:border-slate-300 transition-all";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start gap-2">
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-900">${guestName}</h4>
+                            <span class="inline-block mt-1 px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px] font-bold uppercase tracking-wider">${roomDisplay}</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 font-medium whitespace-nowrap text-right">
+                            <span class="text-slate-300 block text-[9px] uppercase font-bold tracking-tight mb-0.5">Updated</span>
+                            <i class="far fa-clock mr-0.5"></i> ${dateDisplay}
+                        </p>
+                    </div>
+                    
+                    <div class="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-4">
+                        <div>
+                            <span class="text-[9px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">Total Balance Due</span>
+                            <span class="font-mono text-sm font-bold text-slate-800">${chargesDisplay}</span>
+                        </div>
+                        <button onclick="viewAccountDetails('${acc._id}')" 
+                            class="text-xs bg-slate-100 active:bg-indigo-600 active:text-white text-slate-700 font-bold px-4 py-2 rounded-lg transition-all tracking-wider uppercase focus:outline-none shadow-sm">
+                            MANAGE
+                        </button>
+                    </div>
+                `;
+                mobileGrid.appendChild(card);
+            }
+        });
 
     } catch (err) {
-        console.error('Failed to fetch active accounts:', err);
+        console.error('Failed to fetch active accounts from service layer:', err);
     }
 }
 

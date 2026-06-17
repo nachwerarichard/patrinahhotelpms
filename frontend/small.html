@@ -1416,22 +1416,27 @@ body {
             </button>
         </div>
 
-        <div class="table-responsive overflow-x-auto">
-            <table id="cash-journal-table" class="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Cash At Hand</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Cash Banked</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Cash On Phone</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Bank Receipt ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    </tbody>
-            </table>
+        <div class="w-full bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="hidden md:block overflow-x-auto">
+        <table id="cash-journal-table" class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th class="px-6 py-4">Date</th>
+                    <th class="px-6 py-4">Cash At Hand</th>
+                    <th class="px-6 py-4">Cash Banked</th>
+                    <th class="px-6 py-4">Cash On Phone</th>
+                    <th class="px-6 py-4">Bank Receipt ID</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
+                </tbody>
+        </table>
+    </div>
+
+    <div id="cash-journal-mobile-grid" class="block md:hidden p-4 space-y-4 bg-slate-50/30">
         </div>
+</div>
     </div>
 </section>
 
@@ -1729,58 +1734,81 @@ body {
 </div>
     </div>
 
-    <div id="activeAccountsSection" class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-lg font-bold text-slate-800">In-House Accounts</h2>
-            <button onclick="fetchActiveAccounts()" class="p-2 hover:bg-slate-100 rounded-full"><i class="fas fa-sync-alt text-slate-400"></i></button>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead>
-                    <tr class="border-b border-slate-100">
-                        <th class="pb-3 text-xs font-bold text-slate-400 uppercase">Guest / Room</th>
-                        <th class="pb-3 text-xs font-bold text-slate-400 uppercase">Total Charges</th>
-                        <th class="pb-3 text-xs font-bold text-slate-400 uppercase">Last Updated</th>
-                        <th class="pb-3 text-xs font-bold text-slate-400 uppercase text-right">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="activeAccountsTableBody" class="divide-y divide-slate-50"></tbody>
-            </table>
-        </div>
+    <div id="activeAccountsSection" class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-lg font-bold text-slate-800">In-House Accounts</h2>
+        <button onclick="fetchActiveAccounts()" class="p-2 hover:bg-slate-100 rounded-full transition-colors" title="Refresh Accounts">
+            <i class="fas fa-sync-alt text-slate-400"></i>
+        </button>
+    </div>
+    
+    <div class="hidden md:block overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    <th class="pb-3">Guest / Room</th>
+                    <th class="pb-3">Total Charges</th>
+                    <th class="pb-3">Last Updated</th>
+                    <th class="pb-3 text-right">Action</th>
+                </tr>
+            </thead>
+            <tbody id="activeAccountsTableBody" class="divide-y divide-slate-100 text-sm">
+                </tbody>
+        </table>
     </div>
 
+    <div id="activeAccountsMobileGrid" class="block md:hidden space-y-4">
+        </div>
+
+    <div id="noAccountsMessage" class="hidden py-10 text-center text-slate-400 text-sm font-medium italic">
+        No active in-house accounts found.
+    </div>
+</div>
+
     <div id="sales-records" class="mt-12 pt-8 border-t border-slate-200">
-        <h3 class="text-xl font-medium mb-4 text-gray-800">Historical Sales Records</h3>
-        <div class="filter-controls flex flex-wrap gap-4 mb-4 items-end">
-            <div>
-                <label for="sales-date-filter" class="block text-xs font-bold text-gray-500 uppercase mb-1">Search by Date:</label>
-                <input type="date" id="sales-date-filter" class="p-2 border border-gray-300 rounded-md">
-            </div>
-            <button id="sales-search-button" onclick="fetchSales()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">
+    <h3 class="text-xl font-bold mb-6 text-slate-800">Historical Sales Records</h3>
+    
+    <div class="filter-controls flex flex-col sm:flex-row flex-wrap gap-4 mb-6 items-stretch sm:items-end bg-slate-50 p-4 rounded-2xl border border-slate-100">
+        <div class="flex-1 min-w-[200px]">
+            <label for="sales-date-filter" class="block text-xs font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Search by Date:</label>
+            <input type="date" id="sales-date-filter" class="w-full p-2.5 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm shadow-sm">
+        </div>
+        <div class="flex gap-3">
+            <button id="sales-search-button" onclick="fetchSales()" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm focus:outline-none">
                 <i class="fas fa-search"></i> Search
             </button>
-            <button class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg" onclick="exportTableToExcel('sales-table', 'Sales_Report')">Export Excel</button>
-        </div>
-        <div class="table-responsive">
-            <table id="sales-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
-                <thead class="bg-gray-50">
-                    <tr class="text-[10px] text-gray-500 uppercase">
-                        <th class="px-6 py-3 text-left">Dept</th>
-                        <th class="px-6 py-3 text-left">Item</th>
-                        <th class="px-6 py-3 text-left">Qty</th>
-                        <th class="px-6 py-3 text-left">BP</th>
-                        <th class="px-6 py-3 text-left">SP</th>
-                        <th class="px-6 py-3 text-left">Profit</th>
-                        <th class="px-6 py-3 text-left">%</th>
-                        <th class="px-6 py-3 text-left">Date</th>
-                        <th class="px-6 py-3 text-left">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200"></tbody>
-            </table>
-            <div id="sales-summary" class="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200 font-semibold text-gray-700"></div>
+            <button class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm focus:outline-none" onclick="exportTableToExcel('sales-table', 'Sales_Report')">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </button>
         </div>
     </div>
+    
+    <div class="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
+        <table id="sales-table" class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
+                    <th class="px-6 py-4">Dept</th>
+                    <th class="px-6 py-4">Item</th>
+                    <th class="px-6 py-4 text-center">Qty</th>
+                    <th class="px-6 py-4">BP</th>
+                    <th class="px-6 py-4">SP</th>
+                    <th class="px-6 py-4">Profit</th>
+                    <th class="px-6 py-4">%</th>
+                    <th class="px-6 py-4">Date</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
+                </tbody>
+        </table>
+    </div>
+
+    <div id="sales-mobile-grid" class="block md:hidden space-y-4">
+        </div>
+
+    <div id="sales-summary" class="mt-6 p-5 bg-amber-50/60 rounded-xl border border-amber-200 text-sm text-slate-700 shadow-sm leading-relaxed">
+        </div>
+</div>
 </section>
 
 <div id="sale-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center z-[60] p-4">
@@ -1841,41 +1869,46 @@ body {
         </button>
     </div>
 
-    <div id="expenses-records">
-        <div class="filter-controls flex flex-wrap gap-4 mb-6 items-end bg-gray-50 p-4 rounded-xl border border-gray-100">
-            <div class="flex flex-col">
-                <label for="expenses-date-filter" class="text-xs font-bold text-gray-500 uppercase mb-1">Search by Date</label>
-                <input type="date" id="expenses-date-filter" class="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
-            </div>
-            
-            <button id="expenses-search-button" onclick="fetchExpenses()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition flex items-center gap-2">
+    <div id="expenses-records" class="mt-8">
+    <div class="filter-controls flex flex-col sm:flex-row flex-wrap gap-4 mb-6 items-stretch sm:items-end bg-slate-50 p-4 rounded-xl border border-slate-200/60">
+        <div class="flex-1 min-w-[200px]">
+            <label for="expenses-date-filter" class="text-xs font-bold text-slate-500 uppercase mb-1.5 tracking-wider block">Search by Date</label>
+            <input type="date" id="expenses-date-filter" class="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm transition">
+        </div>
+        
+        <div class="flex gap-3">
+            <button id="expenses-search-button" onclick="fetchExpenses()" class="flex-1 sm:flex-initial bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg transition flex items-center justify-center gap-2 text-sm shadow-sm">
                 <i class="fas fa-search"></i>
                 <span id="expenses-search-button-text">Search Records</span>
             </button>
 
-            <button class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition" onclick="exportTableToExcel('expenses-table', 'Expense_Report')">
-                <i class="fas fa-file-excel mr-1"></i> Export
+            <button class="flex-1 sm:flex-initial bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold py-2 px-5 rounded-lg transition flex items-center justify-center gap-2 shadow-sm" onclick="exportTableToExcel('expenses-table', 'Expense_Report')">
+                <i class="fas fa-file-excel"></i> Export
             </button>
         </div>
-
-        <div class="table-responsive overflow-x-auto">
-            <table id="expenses-table" class="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Department</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Description</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Amount</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Receipt ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Source</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    </tbody>
-            </table>
-        </div>
     </div>
+
+    <div class="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
+        <table id="expenses-table" class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th class="px-6 py-4">Department</th>
+                    <th class="px-6 py-4">Description</th>
+                    <th class="px-6 py-4">Amount</th>
+                    <th class="px-6 py-4">Date</th>
+                    <th class="px-6 py-4">Receipt ID</th>
+                    <th class="px-6 py-4">Source</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
+                </tbody>
+        </table>
+    </div>
+
+    <div id="expenses-mobile-grid" class="block md:hidden space-y-4">
+        </div>
+</div>
 </section>
 
 <div id="expense-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center z-[70] p-4 backdrop-blur-sm">
