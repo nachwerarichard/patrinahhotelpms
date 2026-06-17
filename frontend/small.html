@@ -1547,29 +1547,30 @@ body {
         </div>
     </div>
 
-    <div class="w-full py-2">
-  <div class="w-full overflow-x-auto border border-slate-200/80 rounded-xl bg-white shadow-sm">
-    
-    <table id="inventory-table" class="w-full min-w-max text-left border-collapse table-auto">
-      <thead>
-        <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-          <th class="px-5 py-4 min-w-[150px]">Item</th>
-          <th class="px-4 py-4 text-center">Opening</th>
-          <th class="px-4 py-4 text-center">Purchases</th>
-          <th class="px-4 py-4 text-center">Sales</th>
-          <th class="px-4 py-4 text-center">Spoilage</th>
-          <th class="px-4 py-4 text-center stock-header-cell">Closing</th>
-          <th class="px-4 py-4 text-center">BP</th>
-          <th class="px-4 py-4 text-center">SP</th>
-          <th class="px-5 py-4 text-right">Actions</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
-        </tbody>
-    </table>
+    <div class="w-full py-2 hidden md:block">
+      <div class="w-full overflow-x-auto border border-slate-200/80 rounded-xl bg-white shadow-sm">
+        <table id="inventory-table" class="w-full min-w-max text-left border-collapse table-auto">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+              <th class="px-5 py-4 min-w-[150px]">Item</th>
+              <th class="px-4 py-4 text-center">Opening</th>
+              <th class="px-4 py-4 text-center">Purchases</th>
+              <th class="px-4 py-4 text-center">Sales</th>
+              <th class="px-4 py-4 text-center">Spoilage</th>
+              <th class="px-4 py-4 text-center stock-header-cell">Closing</th>
+              <th class="px-4 py-4 text-center">BP</th>
+              <th class="px-4 py-4 text-center">SP</th>
+              <th class="px-5 py-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-sm text-slate-600"></tbody>
+        </table>
+      </div>
+    </div>
 
-  </div>
-</div>
+    <div id="inventory-cards-container" class="block md:hidden space-y-4 py-2">
+      </div>
+
   </div>
 </section>
 
