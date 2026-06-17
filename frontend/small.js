@@ -6234,180 +6234,7 @@ function exportTableToExcel(tableId, filename) { console.log(`Exporting table ${
     }
 
 
-function renderInventoryTable(inventory) {
-    const tbody = document.querySelector('#inventory-table tbody');
-    const cardContainer = document.querySelector('#inventory-cards');
-    if (!tbody || !cardContainer) return;
-    
-    tbody.innerHTML = '';
-    cardContainer.innerHTML = '';
 
-    const dateInput = document.getElementById('search-inventory-date');
-    const desktopStockHeader = document.querySelector('#inventory-table thead .stock-header-cell');
-    
-    const selectedDate = dateInput?.value || new Date().toISOString().split('T')[0];
-    const todayStr = new Date().toISOString().split('T')[0];
-    const isToday = selectedDate === todayStr;
-
-    // 1. Dynamic Stock Label update
-    if (desktopStockHeader) { 
-        desktopStockHeader.textContent = isToday ? 'Current Stock' : 'Closing Stock';
-    }
-
-    // 2. Empty State Handling
-    if (!inventory || inventory.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic">No stock records found for your chosen parameters.</td></tr>`;
-        cardContainer.innerHTML = `<div class="p-6 text-center text-slate-400 font-medium italic bg-white rounded-xl border border-slate-200 shadow-sm">No stock records found for your chosen parameters.</div>`;
-        return;
-    }
-
-    // 3. Robust Role Safety Check
-    let activeRole = 'staff';
-    if (typeof currentUserRole !== 'undefined') {
-        activeRole = currentUserRole;
-    } else {
-        const fallback = JSON.parse(localStorage.getItem('loggedInUser'));
-        activeRole = fallback?.role || 'staff';
-    }
-    const hasWriteAccess = ['admin', 'super-admin', 'manager'].includes(activeRole);
-
-    // 4. Populate views
-    inventory.forEach(item => {
-        item.viewingDate = selectedDate;
-
-        const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
-        const badgeClasses = hasMovement ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100';
-        const badgeText = hasMovement ? 'Updated' : 'Static';
-        const statusBadge = `<span class="ml-1 px-1 py-0.5 text-[8px] font-black uppercase tracking-wider border rounded ${badgeClasses}">${badgeText}</span>`;
-
-        const calculatedCurrent = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
-        const stockValue = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
-
-        const bpStr = Number(item.buyingprice || 0).toLocaleString();
-        const spStr = Number(item.sellingprice || 0).toLocaleString();
-        
-        const generatedIdSuffix = item._id || Math.random().toString(36).substring(2, 11);
-        const desktopRowId = `actions-row-${generatedIdSuffix}`;
-        const mobileCardId = `actions-card-${generatedIdSuffix}`;
-
-        // --- A. DESKTOP ROW VIEW ---
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50/60 transition-colors border-b border-slate-100 whitespace-nowrap";
-        tr.innerHTML = `
-            <td class="px-5 py-3.5 font-semibold text-slate-800">
-                <div class="flex flex-col items-start gap-1">
-                    <span class="text-sm leading-tight">${item.item}</span>
-                    ${statusBadge}
-                </div>
-            </td>
-            <td class="px-4 py-3.5 font-mono text-center text-slate-500">${item.opening || 0}</td>
-            <td class="px-4 py-3.5 font-mono text-center text-emerald-600 font-bold">+${item.purchases || 0}</td>
-            <td class="px-4 py-3.5 font-mono text-center text-blue-600 font-bold">-${item.sales || 0}</td>
-            <td class="px-4 py-3.5 font-mono text-center text-rose-500 font-bold">-${item.spoilage || 0}</td>
-            <td class="px-4 py-3.5 font-mono text-center font-black ${isToday ? 'text-indigo-600 bg-indigo-50/30 rounded px-1' : 'text-slate-900'}">${stockValue}</td>
-            <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-500">${bpStr}</td>
-            <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-700 font-semibold">${spStr}</td>
-            <td class="px-5 py-3.5 text-right overflow-visible" id="${desktopRowId}"></td>
-        `;
-        tbody.appendChild(tr);
-
-        // --- B. MOBILE CARD VIEW ---
-        const card = document.createElement('div');
-        card.className = "bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-3";
-        card.innerHTML = `
-            <div class="flex justify-between items-start">
-                <div>
-                    <h3 class="text-base font-bold text-slate-800 leading-tight">${item.item}</h3>
-                    <div class="mt-1">${statusBadge}</div>
-                </div>
-                <div id="${mobileCardId}" class="overflow-visible relative"></div>
-            </div>
-            
-            <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
-                <div class="bg-slate-50 p-2 rounded-lg">
-                    <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wide">Opening</span>
-                    <span class="font-mono font-semibold text-slate-600 text-sm">${item.opening || 0}</span>
-                </div>
-                <div class="bg-emerald-50/50 p-2 rounded-lg">
-                    <span class="block text-[10px] font-bold uppercase text-emerald-600 tracking-wide">Purchases</span>
-                    <span class="font-mono font-bold text-emerald-600 text-sm">+${item.purchases || 0}</span>
-                </div>
-                <div class="bg-blue-50/50 p-2 rounded-lg">
-                    <span class="block text-[10px] font-bold uppercase text-blue-600 tracking-wide">Sales</span>
-                    <span class="font-mono font-bold text-blue-600 text-sm">-${item.sales || 0}</span>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-2 text-center">
-                <div class="bg-rose-50/50 p-2 rounded-lg">
-                    <span class="block text-[10px] font-bold uppercase text-rose-500 tracking-wide">Spoilage</span>
-                    <span class="font-mono font-bold text-rose-500 text-sm">-${item.spoilage || 0}</span>
-                </div>
-                <div class="${isToday ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-100'} p-2 rounded-lg col-span-2 flex flex-col justify-center">
-                    <span class="block text-[10px] font-bold uppercase text-slate-500 tracking-wide">${isToday ? 'Current Stock' : 'Closing Stock'}</span>
-                    <span class="font-mono font-black text-base ${isToday ? 'text-indigo-600' : 'text-slate-800'}">${stockValue}</span>
-                </div>
-            </div>
-
-            <div class="flex justify-between items-center pt-2 px-1 text-xs text-slate-500 border-t border-slate-100">
-                <div>Buying Price: <span class="font-mono font-semibold text-slate-700">${bpStr}</span></div>
-                <div>Selling Price: <span class="font-mono font-bold text-slate-800">${spStr}</span></div>
-            </div>
-        `;
-        cardContainer.appendChild(card);
-
-        // --- C. ATTACH DROPDOWNS TO BOTH TARGETS ---
-        const appendDropdown = (targetCellElement) => {
-            if (!targetCellElement) return;
-            
-            if (hasWriteAccess) {
-                const dropdown = document.createElement('div');
-                dropdown.className = 'relative inline-block text-left';
-                dropdown.innerHTML = `
-                    <button class="dots-btn p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full transition focus:outline-none">
-                        <i class="fas fa-ellipsis-h"></i>
-                    </button>
-                    <div class="menu hidden absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 divide-y divide-slate-100">
-                        <div class="py-1">
-                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-indigo-50 text-indigo-700 flex items-center gap-2 edit-opt">
-                                <i class="fas fa-edit w-3.5"></i> Edit
-                            </button>
-                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 adjust-opt">
-                                <i class="fas fa-plus-circle w-3.5"></i> Add Stock
-                            </button>
-                        </div>
-                        <div class="py-1">
-                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-rose-50 text-rose-600 flex items-center gap-2 delete-opt">
-                                <i class="fas fa-trash w-3.5"></i> Delete
-                            </button>
-                        </div>
-                    </div>
-                `;
-
-                const btn = dropdown.querySelector('.dots-btn');
-                const menu = dropdown.querySelector('.menu');
-                
-                btn.onclick = (e) => {
-                    e.stopPropagation();
-                    // Close all active dropdown instances everywhere
-                    document.querySelectorAll('.menu').forEach(m => m !== menu && m.classList.add('hidden'));
-                    menu.classList.toggle('hidden');
-                };
-
-                dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
-                dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
-                dropdown.querySelector('.delete-opt').onclick = () => handleItemDeletionWorkflow(item);
-                
-                targetCellElement.appendChild(dropdown);
-            } else {
-                targetCellElement.innerHTML = `<span class="text-xs text-slate-400 italic font-medium pr-2">View Only</span>`;
-            }
-        };
-
-        appendDropdown(tr.querySelector(`#${desktopRowId}`));
-        appendDropdown(card.querySelector(`#${mobileCardId}`));
-    });
-}
 
 // Reusable dropdown action setup helper to dry up actions cell initialization
 function setupActionsDropdown(actionsCell, item, hasWriteAccess) {
@@ -6738,122 +6565,7 @@ const response = await authenticatedFetch(url, {
         }
     }
 }
-function renderInventoryTable(inventory) {
-    const tbody = document.querySelector('#inventory-table tbody');
-    if (!tbody) return;
-    tbody.innerHTML = '';
 
-    const dateInput = document.getElementById('search-inventory-date');
-    const tableHeaders = document.querySelectorAll('#inventory-table thead th');
-    
-    // Determine if we are looking at today
-    const selectedDate = dateInput.value;
-    const todayStr = new Date().toISOString().split('T')[0];
-    const isToday = !selectedDate || selectedDate === todayStr;
-
-    // 1. Update Header based on date context
-    if (tableHeaders[5]) { 
-        tableHeaders[5].textContent = isToday ? 'Current Stock' : 'Closing Stock';
-    }
-
-    if (inventory.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-gray-500 italic">No stock records found for this period.</td></tr>`;
-        return;
-    }
-
-    inventory.forEach(item => {
-        const row = tbody.insertRow();
-        row.className = "hover:bg-gray-50 transition-colors border-b border-gray-100";
-        
-        // 2. Status Logic (Movement Check)
-        const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
-        const statusBadge = hasMovement 
-            ? `<span class="ml-2 px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-700 rounded-full uppercase">Updated</span>`
-            : `<span class="ml-2 px-2 py-0.5 text-[10px] font-bold bg-gray-100 text-gray-500 rounded-full uppercase">Static</span>`;
-
-        // 3. Stock Calculation
-        // If today, we show the live math. If historical, we show the saved closing value.
-        const calculatedCurrent = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
-        const stockDisplay = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
-
-        row.innerHTML = `
-            <td class="px-4 py-3 font-medium text-gray-800">
-                <div class="flex flex-col">
-                    <span>${item.item}</span>
-                    <div class="flex items-center mt-1">${statusBadge}</div>
-                </div>
-            </td>
-            <td class="px-4 py-3">${item.opening || 0}</td>
-            <td class="px-4 py-3 text-green-600 font-medium">+${item.purchases || 0}</td>
-            <td class="px-4 py-3 text-blue-600 font-medium">-${item.sales || 0}</td>
-            <td class="px-4 py-3 text-red-500 font-medium">-${item.spoilage || 0}</td>
-            <td class="px-4 py-3 font-bold ${isToday ? 'text-indigo-600 bg-indigo-50/50' : 'text-gray-900'}">
-                ${stockDisplay}
-            </td>
-            <td class="px-4 py-3 text-sm">${Number(item.buyingprice || 0).toLocaleString()}</td>
-            <td class="px-4 py-3 text-sm">${Number(item.sellingprice || 0).toLocaleString()}</td>
-            <td class="px-4 py-3 text-right" id="actions-${item._id || 'new'}"></td>
-        `;
-
-        const actionsCell = row.querySelector(`#actions-${item._id || 'new'}`);
-        
-        // 4. Permission Logic: Include 'manager' and allow edits regardless of date
-        const authorizedRoles = ['admin', 'super-admin', 'manager'];
-
-        if (authorizedRoles.includes(currentUserRole)) {
-            const dropdown = document.createElement('div');
-            dropdown.className = 'relative inline-block text-left';
-
-            dropdown.innerHTML = `
-                <button class="dots-btn p-2 hover:bg-gray-200 rounded-full transition-all">
-                    <i class="fas fa-ellipsis-h"></i>
-                </button>
-                <div class="menu hidden absolute right-0 bottom-full mb-2 w-40 bg-white border border-gray-200 rounded-lg shadow-xl z-50 py-1">
-                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-indigo-50 text-indigo-700 flex items-center gap-2 edit-opt">
-                        <i class="fas fa-edit"></i> Edit Record
-                    </button>
-                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-amber-50 text-amber-700 flex items-center gap-2 adjust-opt">
-                        <i class="fas fa-plus-circle"></i> Add Stock
-                    </button>
-                    <div class="border-t border-gray-100 my-1"></div>
-                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600 flex items-center gap-2 delete-opt">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
-                </div>
-            `;
-
-            const btn = dropdown.querySelector('.dots-btn');
-            const menu = dropdown.querySelector('.menu');
-
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                document.querySelectorAll('.menu').forEach(m => m !== menu && m.classList.add('hidden'));
-                menu.classList.toggle('hidden');
-            };
-
-            // Setup click handlers for the options
-            dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
-            dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
-            dropdown.querySelector('.delete-opt').onclick = () => {
-    // We only delete if there is a real database ID (_id)
-    if (item._id) { 
-        deleteInventoryItem(item._id);
-    } else {
-        showMessage("Cannot delete a placeholder. This item hasn't been saved for this date yet.");
-    }
-};
-
-            actionsCell.appendChild(dropdown);
-        } else {
-            actionsCell.innerHTML = `<span class="text-gray-400 text-xs italic"><i class="fas fa-lock mr-1"></i>View Only</span>`;
-        }
-    });
-}
-
-// Global click listener to close dropdowns
-document.addEventListener('click', () => {
-    document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
-});
 
 // Close dropdowns when clicking outside
 window.addEventListener('click', () => {
@@ -9506,6 +9218,187 @@ async function fetchInventory() {
     }
 }
 
+// Force this version globally to override any duplicate or hidden definitions
+window.renderInventoryTable = function(inventory) {
+    console.log("🚀 renderInventoryTable execution started with data:", inventory);
+
+    const tbody = document.querySelector('#inventory-table tbody');
+    const cardContainer = document.querySelector('#inventory-cards');
+    
+    if (!tbody || !cardContainer) {
+        console.error("❌ Target layout containers could not be found in the DOM:", { tbody, cardContainer });
+        return;
+    }
+    
+    // Clear old elements cleanly
+    tbody.innerHTML = '';
+    cardContainer.innerHTML = '';
+
+    const dateInput = document.getElementById('search-inventory-date');
+    const desktopStockHeader = document.querySelector('#inventory-table thead .stock-header-cell');
+    
+    const selectedDate = dateInput?.value || new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isToday = selectedDate === todayStr;
+
+    if (desktopStockHeader) { 
+        desktopStockHeader.textContent = isToday ? 'Current Stock' : 'Closing Stock';
+    }
+
+    // Empty State Check
+    if (!inventory || inventory.length === 0) {
+        console.warn("⚠️ Array is empty inside rendering execution context.");
+        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic">No stock records found for your chosen parameters.</td></tr>`;
+        cardContainer.innerHTML = `<div class="p-6 text-center text-slate-400 font-medium italic bg-white rounded-xl border border-slate-200 shadow-sm">No stock records found for your chosen parameters.</div>`;
+        return;
+    }
+
+    let activeRole = 'staff';
+    if (typeof currentUserRole !== 'undefined') {
+        activeRole = currentUserRole;
+    } else {
+        const fallback = JSON.parse(localStorage.getItem('loggedInUser'));
+        activeRole = fallback?.role || 'staff';
+    }
+    const hasWriteAccess = ['admin', 'super-admin', 'manager'].includes(activeRole);
+
+    // Populate loop
+    inventory.forEach((item, index) => {
+        item.viewingDate = selectedDate;
+
+        const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
+        const badgeClasses = hasMovement ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100';
+        const badgeText = hasMovement ? 'Updated' : 'Static';
+        const statusBadge = `<span class="ml-1 px-1 py-0.5 text-[8px] font-black uppercase tracking-wider border rounded ${badgeClasses}">${badgeText}</span>`;
+
+        const calculatedCurrent = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
+        const stockValue = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
+
+        const bpStr = Number(item.buyingprice || 0).toLocaleString();
+        const spStr = Number(item.sellingprice || 0).toLocaleString();
+        
+        const generatedIdSuffix = item._id || `rand-${index}-${Math.random().toString(36).substring(2, 7)}`;
+        const desktopRowId = `actions-row-${generatedIdSuffix}`;
+        const mobileCardId = `actions-card-${generatedIdSuffix}`;
+
+        // --- DESKTOP ROW VIEW ---
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50/60 transition-colors border-b border-slate-100 whitespace-nowrap";
+        tr.innerHTML = `
+            <td class="px-5 py-3.5 font-semibold text-slate-800">
+                <div class="flex flex-col items-start gap-1">
+                    <span class="text-sm leading-tight">${item.item || 'Unnamed Item'}</span>
+                    ${statusBadge}
+                </div>
+            </td>
+            <td class="px-4 py-3.5 font-mono text-center text-slate-500">${item.opening || 0}</td>
+            <td class="px-4 py-3.5 font-mono text-center text-emerald-600 font-bold">+${item.purchases || 0}</td>
+            <td class="px-4 py-3.5 font-mono text-center text-blue-600 font-bold">-${item.sales || 0}</td>
+            <td class="px-4 py-3.5 font-mono text-center text-rose-500 font-bold">-${item.spoilage || 0}</td>
+            <td class="px-4 py-3.5 font-mono text-center font-black ${isToday ? 'text-indigo-600 bg-indigo-50/30 rounded px-1' : 'text-slate-900'}">${stockValue}</td>
+            <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-500">${bpStr}</td>
+            <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-700 font-semibold">${spStr}</td>
+            <td class="px-5 py-3.5 text-right overflow-visible" id="${desktopRowId}"></td>
+        `;
+        tbody.appendChild(tr);
+
+        // --- MOBILE CARD VIEW ---
+        const card = document.createElement('div');
+        card.className = "bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-3 block";
+        card.innerHTML = `
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="text-base font-bold text-slate-800 leading-tight">${item.item || 'Unnamed Item'}</h3>
+                    <div class="mt-1">${statusBadge}</div>
+                </div>
+                <div id="${mobileCardId}" class="overflow-visible relative"></div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
+                <div class="bg-slate-50 p-2 rounded-lg">
+                    <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wide">Opening</span>
+                    <span class="font-mono font-semibold text-slate-600 text-sm">${item.opening || 0}</span>
+                </div>
+                <div class="bg-emerald-50/50 p-2 rounded-lg">
+                    <span class="block text-[10px] font-bold uppercase text-emerald-600 tracking-wide">Purchases</span>
+                    <span class="font-mono font-bold text-emerald-600 text-sm">+${item.purchases || 0}</span>
+                </div>
+                <div class="bg-blue-50/50 p-2 rounded-lg">
+                    <span class="block text-[10px] font-bold uppercase text-blue-600 tracking-wide">Sales</span>
+                    <span class="font-mono font-bold text-blue-600 text-sm">-${item.sales || 0}</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-center">
+                <div class="bg-rose-50/50 p-2 rounded-lg">
+                    <span class="block text-[10px] font-bold uppercase text-rose-500 tracking-wide">Spoilage</span>
+                    <span class="font-mono font-bold text-rose-500 text-sm">-${item.spoilage || 0}</span>
+                </div>
+                <div class="${isToday ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-100'} p-2 rounded-lg col-span-2 flex flex-col justify-center">
+                    <span class="block text-[10px] font-bold uppercase text-slate-500 tracking-wide">${isToday ? 'Current Stock' : 'Closing Stock'}</span>
+                    <span class="font-mono font-black text-base ${isToday ? 'text-indigo-600' : 'text-slate-800'}">${stockValue}</span>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-2 px-1 text-xs text-slate-500 border-t border-slate-100">
+                <div>Buying Price: <span class="font-mono font-semibold text-slate-700">${bpStr}</span></div>
+                <div>Selling Price: <span class="font-mono font-bold text-slate-800">${spStr}</span></div>
+            </div>
+        `;
+        cardContainer.appendChild(card);
+
+        // --- ATTACH DROPDOWNS ---
+        const appendDropdown = (targetCellElement) => {
+            if (!targetCellElement) return;
+            if (hasWriteAccess) {
+                const dropdown = document.createElement('div');
+                dropdown.className = 'relative inline-block text-left';
+                dropdown.innerHTML = `
+                    <button class="dots-btn p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full transition focus:outline-none">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
+                    <div class="menu hidden absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 divide-y divide-slate-100">
+                        <div class="py-1">
+                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-indigo-50 text-indigo-700 flex items-center gap-2 edit-opt">
+                                <i class="fas fa-edit w-3.5"></i> Edit
+                            </button>
+                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 adjust-opt">
+                                <i class="fas fa-plus-circle w-3.5"></i> Add Stock
+                            </button>
+                        </div>
+                        <div class="py-1">
+                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-rose-50 text-rose-600 flex items-center gap-2 delete-opt">
+                                <i class="fas fa-trash w-3.5"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                const btn = dropdown.querySelector('.dots-btn');
+                const menu = dropdown.querySelector('.menu');
+                
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.menu').forEach(m => m !== menu && m.classList.add('hidden'));
+                    menu.classList.toggle('hidden');
+                };
+
+                dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
+                dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
+                dropdown.querySelector('.delete-opt').onclick = () => handleItemDeletionWorkflow(item);
+                
+                targetCellElement.appendChild(dropdown);
+            } else {
+                targetCellElement.innerHTML = `<span class="text-xs text-slate-400 italic font-medium pr-2">View Only</span>`;
+            }
+        };
+
+        appendDropdown(tr.querySelector(`#${desktopRowId}`));
+        appendDropdown(card.querySelector(`#${mobileCardId}`));
+    });
+
+    console.log(`✅ Cards rendering completed. Built ${cardContainer.children.length} mobile items.`);
+};
     // ... rest of the function (success handling, modal closing, etc.) remains the same ...
 // ----- Debuggable loader toggle -----
 function setEditInventoryLoading(isLoading) {
