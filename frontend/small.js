@@ -189,40 +189,38 @@ async function authenticatedFetch(url, options = {}) {
 }
 
 function showMessage(title, message, isError = false) {
-    // Target unique global IDs to avoid collision with login boxes
-    const overlay = document.getElementById('globalNotificationOverlay');
-    const modal = document.getElementById('globalNotificationBox');
-    const titleEl = document.getElementById('globalNotificationTitle');
-    const contentEl = document.getElementById('globalNotificationContent');
+    const overlay = document.getElementById('messageBoxOverlay');
+    const modal = document.getElementById('messageBox');
+    const titleEl = document.getElementById('messageBoxTitle');
+    const contentEl = document.getElementById('messageBoxContent');
 
-    // Safety check - stop if HTML elements are missing
     if (!overlay || !modal || !titleEl || !contentEl) {
-        console.error("Error: Global message box elements not found in the HTML.");
+        console.error("Error: Message box elements not found in the HTML.");
         return;
     }
 
-    // Set textual context
+    // Set text safely
     titleEl.textContent = title;
     contentEl.textContent = message;
 
-    // Reset layout color themes
-    titleEl.classList.remove('text-red-600', 'text-indigo-600', 'text-gray-900');
-
+    // Handle title coloring cleanly
     if (isError) {
         titleEl.classList.add('text-red-600');
+        titleEl.classList.remove('text-indigo-600');
     } else {
         titleEl.classList.add('text-indigo-600');
+        titleEl.classList.remove('text-red-600');
     }
 
-    // Reveal interfaces dynamically
+    // Show modal elements
     overlay.classList.remove('hidden');
     modal.classList.remove('hidden');
     modal.classList.add('flex'); 
 }
 
 function closeMessageBox() {
-    const overlay = document.getElementById('globalNotificationOverlay');
-    const modal = document.getElementById('globalNotificationBox');
+    const overlay = document.getElementById('messageBoxOverlay');
+    const modal = document.getElementById('messageBox');
     
     if (overlay) overlay.classList.add('hidden');
     if (modal) {
