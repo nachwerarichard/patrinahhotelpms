@@ -6246,7 +6246,7 @@ function renderInventoryTable(inventory) {
     const tbody = document.querySelector('#inventory-table tbody');
     const mobileGrid = document.getElementById('inventory-mobile-grid');
     
-    // Clear out active layout containers safely
+    // Safety purge of layout containers
     if (tbody) tbody.innerHTML = '';
     if (mobileGrid) mobileGrid.innerHTML = '';
 
@@ -6257,12 +6257,12 @@ function renderInventoryTable(inventory) {
     const todayStr = new Date().toISOString().split('T')[0];
     const isToday = selectedDate === todayStr;
 
-    // Mutate the reactive stock label to keep state accuracy clear
     const dynamicStockLabel = isToday ? 'Current Stock' : 'Closing Stock';
     if (desktopStockHeader) { 
         desktopStockHeader.textContent = dynamicStockLabel;
     }
 
+    // Handles empty data states for both viewports
     if (inventory.length === 0) {
         const fallBackHtml = 'No stock records found for your chosen query parameters.';
         if (tbody) tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic">${fallBackHtml}</td></tr>`;
@@ -6272,11 +6272,6 @@ function renderInventoryTable(inventory) {
 
     const authorizedRoles = ['admin', 'super-admin', 'manager'];
     const hasWriteAccess = authorizedRoles.includes(currentUserRole);
-
-    // Global document-wide click hook to clean up lingering active contextual dropdown items
-    document.addEventListener('click', () => {
-        document.querySelectorAll('#inventory-table .menu').forEach(m => m.classList.add('hidden'));
-    });
 
     inventory.forEach(item => {
         item.viewingDate = selectedDate;
@@ -6292,11 +6287,10 @@ function renderInventoryTable(inventory) {
         const bpStr = Number(item.buyingprice || 0).toLocaleString();
         const spStr = Number(item.sellingprice || 0).toLocaleString();
 
-        // --- A. POPULATE VIEW 1: DESKTOP TABLE SYSTEM LAYOUT ---
+        // --- A. DESKTOP RENDER ---
         if (tbody) {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
-            
             const generatedRowId = `actions-${item._id || Math.random().toString(36).substring(2, 11)}`;
             
             tr.innerHTML = `
@@ -6343,7 +6337,6 @@ function renderInventoryTable(inventory) {
 
                 const btn = dropdown.querySelector('.dots-btn');
                 const menu = dropdown.querySelector('.menu');
-                
                 btn.onclick = (e) => {
                     e.stopPropagation();
                     document.querySelectorAll('#inventory-table .menu').forEach(m => m !== menu && m.classList.add('hidden'));
@@ -6353,7 +6346,6 @@ function renderInventoryTable(inventory) {
                 dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
                 dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
                 dropdown.querySelector('.delete-opt').onclick = () => handleItemDeletionWorkflow(item);
-
                 actionsCell.appendChild(dropdown);
             } else {
                 actionsCell.innerHTML = `<span class="text-xs text-slate-400 italic font-medium pr-2">View Only</span>`;
@@ -6361,11 +6353,10 @@ function renderInventoryTable(inventory) {
             tbody.appendChild(tr);
         }
 
-        // --- B. POPULATE VIEW 2: SMARTPHONE GRID LAYOUT CARD ---
+        // --- B. MOBILE CARD RENDER ---
         if (mobileGrid) {
             const card = document.createElement('div');
-            card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3.5 hover:border-slate-300 transition-all";
-            
+            card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3.5";
             card.innerHTML = `
                 <div class="flex justify-between items-start gap-4">
                     <div>
@@ -6374,7 +6365,7 @@ function renderInventoryTable(inventory) {
                     </div>
                     <div class="text-right">
                         <span class="text-[9px] uppercase font-black tracking-wider text-slate-400 block">${dynamicStockLabel}</span>
-                        <span class="font-mono text-base font-black px-2 py-0.5 rounded ${isToday ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'bg-slate-100 text-slate-800 border border-slate-200'}">${stockValue}</span>
+                        <span class="font-mono text-base font-black px-2 py-0.5 rounded ${isToday ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-800'}">${stockValue}</span>
                     </div>
                 </div>
                 
@@ -6409,23 +6400,21 @@ function renderInventoryTable(inventory) {
             if (hasWriteAccess) {
                 const actionGroup = document.createElement('div');
                 actionGroup.className = "grid grid-cols-3 gap-2 w-full";
-                
                 actionGroup.innerHTML = `
                     <button class="flex items-center justify-center gap-1 py-2 text-[11px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg active:bg-indigo-100 focus:outline-none edit-btn">
-                        <i class="fas fa-edit"></i> Edit
+                        Edit
                     </button>
                     <button class="flex items-center justify-center gap-1 py-2 text-[11px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-lg active:bg-emerald-100 focus:outline-none adjust-btn">
-                        <i class="fas fa-plus-circle"></i> +Stock
+                        +Stock
                     </button>
                     <button class="flex items-center justify-center gap-1 py-2 text-[11px] font-bold uppercase tracking-wider text-rose-600 bg-rose-50 border border-rose-100 rounded-lg active:bg-rose-100 focus:outline-none delete-btn">
-                        <i class="fas fa-trash"></i> Delete
+                        Delete
                     </button>
                 `;
 
                 actionGroup.querySelector('.edit-btn').onclick = () => openEditModal(item);
                 actionGroup.querySelector('.adjust-btn').onclick = () => openAdjustModal(item);
                 actionGroup.querySelector('.delete-btn').onclick = () => handleItemDeletionWorkflow(item);
-                
                 controlsSlot.appendChild(actionGroup);
             } else {
                 controlsSlot.innerHTML = `<span class="text-[11px] bg-slate-100 px-2 py-1 text-slate-400 rounded font-bold uppercase tracking-wider">View Only Access</span>`;
@@ -6436,18 +6425,15 @@ function renderInventoryTable(inventory) {
     });
 }
 
-// Decentralized standalone utility processing deletion workflows cleanly
 function handleItemDeletionWorkflow(item) {
     if (item._id) { 
         deleteInventoryItem(item._id);
     } else {
-        if (typeof showMessage === 'function') {
-            showMessage("Cannot delete a placeholder. This item hasn't been saved for this date yet.");
-        } else {
-            alert("Cannot delete a placeholder. This item hasn't been saved for this date yet.");
-        }
+        alert("Cannot delete a placeholder. This item hasn't been saved for this date yet.");
     }
 }
+
+
 
 async function deleteInventoryItem(id) {
     // 1. Confirm with the user

@@ -1529,28 +1529,32 @@ body {
         </div>
     </div>
 
-    <div class="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm" id="table-responsive">
-        <table id="inventory-table" class="w-full text-left border-collapse">
-            <thead>
-                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    <th class="px-6 py-4">Item</th>
-                    <th class="px-6 py-4">Opening</th>
-                    <th class="px-6 py-4">Purchases</th>
-                    <th class="px-6 py-4">Sales</th>
-                    <th class="px-6 py-4">Spoilage</th>
-                    <th class="px-6 py-4 stock-header-cell">Closing</th>
-                    <th class="px-6 py-4">BP</th>
-                    <th class="px-6 py-4">SP</th>
-                    <th class="px-6 py-4 text-right">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
-                </tbody>
-        </table>
-    </div>
-
-    <div id="inventory-mobile-grid" class="block md:hidden space-y-4">
+    <div id="table-responsive" class="w-full py-2">
+        
+        <div class="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
+            <table id="inventory-table" class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                        <th class="px-6 py-4">Item</th>
+                        <th class="px-6 py-4">Opening</th>
+                        <th class="px-6 py-4">Purchases</th>
+                        <th class="px-6 py-4">Sales</th>
+                        <th class="px-6 py-4">Spoilage</th>
+                        <th class="px-6 py-4 stock-header-cell">Closing</th>
+                        <th class="px-6 py-4">BP</th>
+                        <th class="px-6 py-4">SP</th>
+                        <th class="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
+                    </tbody>
+            </table>
         </div>
+
+        <div id="inventory-mobile-grid" class="block md:hidden space-y-4">
+            </div>
+        
+    </div>
 </div>
 </section>
 
