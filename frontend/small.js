@@ -6244,11 +6244,9 @@ function exportTableToExcel(tableId, filename) { console.log(`Exporting table ${
 
 function renderInventoryTable(inventory) {
     const tbody = document.querySelector('#inventory-table tbody');
-    const mobileGrid = document.getElementById('inventory-mobile-grid');
+    if (!tbody) return;
     
-    // Safety purge of layout containers
-    if (tbody) tbody.innerHTML = '';
-    if (mobileGrid) mobileGrid.innerHTML = '';
+    tbody.innerHTML = '';
 
     const dateInput = document.getElementById('search-inventory-date');
     const desktopStockHeader = document.querySelector('#inventory-table thead .stock-header-cell');
@@ -6257,179 +6255,109 @@ function renderInventoryTable(inventory) {
     const todayStr = new Date().toISOString().split('T')[0];
     const isToday = selectedDate === todayStr;
 
-    const dynamicStockLabel = isToday ? 'Current Stock' : 'Closing Stock';
+    // 1. Dynamic Stock Label update
     if (desktopStockHeader) { 
-        desktopStockHeader.textContent = dynamicStockLabel;
+        desktopStockHeader.textContent = isToday ? 'Current Stock' : 'Closing Stock';
     }
 
-    // Handles empty data states for both viewports
+    // 2. Empty State Handling
     if (!inventory || inventory.length === 0) {
-        const fallBackHtml = 'No stock records found for your chosen query parameters.';
-        if (tbody) tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic">${fallBackHtml}</td></tr>`;
-        if (mobileGrid) mobileGrid.innerHTML = `<div class="p-8 text-center text-slate-400 font-medium text-sm border border-slate-200 bg-white rounded-xl italic">${fallBackHtml}</div>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic">No stock records found for your chosen parameters.</td></tr>`;
         return;
     }
 
-    // SAFE VARIABLE CHECK: Prevent script crashes if global session data is slow to mount
-    let activeRole = 'staff'; 
+    // 3. Robust Role Safety Check
+    let activeRole = 'staff';
     if (typeof currentUserRole !== 'undefined') {
         activeRole = currentUserRole;
     } else {
-        const fallbackSession = JSON.parse(localStorage.getItem('loggedInUser'));
-        activeRole = fallbackSession?.role || 'staff';
+        const fallback = JSON.parse(localStorage.getItem('loggedInUser'));
+        activeRole = fallback?.role || 'staff';
     }
+    const hasWriteAccess = ['admin', 'super-admin', 'manager'].includes(activeRole);
 
-    const authorizedRoles = ['admin', 'super-admin', 'manager'];
-    const hasWriteAccess = authorizedRoles.includes(activeRole);
-
+    // 4. Populate rows
     inventory.forEach(item => {
         item.viewingDate = selectedDate;
 
         const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
         const badgeClasses = hasMovement ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100';
         const badgeText = hasMovement ? 'Updated' : 'Static';
-        const statusBadge = `<span class="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider border rounded ${badgeClasses}">${badgeText}</span>`;
+        const statusBadge = `<span class="ml-1 px-1 py-0.5 text-[8px] font-black uppercase tracking-wider border rounded ${badgeClasses}">${badgeText}</span>`;
 
         const calculatedCurrent = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
         const stockValue = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
 
         const bpStr = Number(item.buyingprice || 0).toLocaleString();
         const spStr = Number(item.sellingprice || 0).toLocaleString();
+        
+        const generatedRowId = `actions-row-${item._id || Math.random().toString(36).substring(2, 11)}`;
 
-        // --- A. DESKTOP ROW RENDER ---
-        if (tbody) {
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
-            const generatedRowId = `actions-dk-${item._id || Math.random().toString(36).substring(2, 11)}`;
-            
-            tr.innerHTML = `
-                <td class="px-6 py-4 font-semibold text-slate-800">
-                    <div class="flex items-center gap-2">
-                        <span>${item.item}</span>
-                        ${statusBadge}
-                    </div>
-                </td>
-                <td class="px-6 py-4 font-mono text-slate-500">${item.opening || 0}</td>
-                <td class="px-6 py-4 font-mono text-emerald-600 font-semibold">+${item.purchases || 0}</td>
-                <td class="px-6 py-4 font-mono text-blue-600 font-semibold">-${item.sales || 0}</td>
-                <td class="px-6 py-4 font-mono text-rose-500 font-semibold">-${item.spoilage || 0}</td>
-                <td class="px-6 py-4 font-mono font-bold ${isToday ? 'text-indigo-600 bg-indigo-50/40' : 'text-slate-900'}">${stockValue}</td>
-                <td class="px-6 py-4 font-mono text-xs text-slate-500">${bpStr}</td>
-                <td class="px-6 py-4 font-mono text-xs text-slate-700 font-medium">${spStr}</td>
-                <td class="px-6 py-4 text-right overflow-visible" id="${generatedRowId}"></td>
-            `;
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
+        
+        tr.innerHTML = `
+            <td class="px-4 py-3 font-semibold text-slate-800 sticky-col left-0 bg-white">
+                <div class="flex flex-col items-start gap-0.5">
+                    <span class="whitespace-nowrap">${item.item}</span>
+                    ${statusBadge}
+                </div>
+            </td>
+            <td class="px-4 py-3 font-mono text-slate-500">${item.opening || 0}</td>
+            <td class="px-4 py-3 font-mono text-emerald-600 font-semibold">+${item.purchases || 0}</td>
+            <td class="px-4 py-3 font-mono text-blue-600 font-semibold">-${item.sales || 0}</td>
+            <td class="px-4 py-3 font-mono text-rose-500 font-semibold">-${item.spoilage || 0}</td>
+            <td class="px-4 py-3 font-mono font-bold ${isToday ? 'text-indigo-600 bg-indigo-50/40' : 'text-slate-900'}">${stockValue}</td>
+            <td class="px-4 py-3 font-mono text-xs text-slate-500">${bpStr}</td>
+            <td class="px-4 py-3 font-mono text-xs text-slate-700 font-medium">${spStr}</td>
+            <td class="px-4 py-3 text-right" id="${generatedRowId}"></td>
+        `;
 
-            tbody.appendChild(tr);
+        tbody.appendChild(tr);
 
-            const actionsCell = tr.querySelector(`#${generatedRowId}`);
-            if (actionsCell) {
-                if (hasWriteAccess) {
-                    const dropdown = document.createElement('div');
-                    dropdown.className = 'relative inline-block text-left';
-                    dropdown.innerHTML = `
-                        <button class="dots-btn p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full transition focus:outline-none">
-                            <i class="fas fa-ellipsis-h"></i>
-                        </button>
-                        <div class="menu hidden absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 divide-y divide-slate-100">
-                            <div class="py-1">
-                                <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-indigo-50 text-indigo-700 flex items-center gap-2 edit-opt transition-colors">
-                                    <i class="fas fa-edit w-3.5"></i> ${item._id ? 'Edit Record' : 'Create Record'}
-                                </button>
-                                <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 adjust-opt transition-colors">
-                                    <i class="fas fa-plus-circle w-3.5"></i> Add Stock
-                                </button>
-                            </div>
-                            <div class="py-1">
-                                <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-rose-50 text-rose-600 flex items-center gap-2 delete-opt transition-colors">
-                                    <i class="fas fa-trash w-3.5"></i> Delete
-                                </button>
-                            </div>
+        // 5. Build Dropdown/Write Action Items
+        const actionsCell = tr.querySelector(`#${generatedRowId}`);
+        if (actionsCell) {
+            if (hasWriteAccess) {
+                const dropdown = document.createElement('div');
+                dropdown.className = 'relative inline-block text-left';
+                dropdown.innerHTML = `
+                    <button class="dots-btn p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full transition focus:outline-none">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
+                    <div class="menu hidden absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 divide-y divide-slate-100">
+                        <div class="py-1">
+                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-indigo-50 text-indigo-700 flex items-center gap-2 edit-opt">
+                                <i class="fas fa-edit w-3.5"></i> Edit
+                            </button>
+                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 adjust-opt">
+                                <i class="fas fa-plus-circle w-3.5"></i> Add Stock
+                            </button>
                         </div>
-                    `;
-
-                    const btn = dropdown.querySelector('.dots-btn');
-                    const menu = dropdown.querySelector('.menu');
-                    if (btn && menu) {
-                        btn.onclick = (e) => {
-                            e.stopPropagation();
-                            document.querySelectorAll('#inventory-table .menu').forEach(m => m !== menu && m.classList.add('hidden'));
-                            menu.classList.toggle('hidden');
-                        };
-                    }
-
-                    dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
-                    dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
-                    dropdown.querySelector('.delete-opt').onclick = () => handleItemDeletionWorkflow(item);
-                    actionsCell.appendChild(dropdown);
-                } else {
-                    actionsCell.innerHTML = `<span class="text-xs text-slate-400 italic font-medium pr-2">View Only</span>`;
-                }
-            }
-        }
-
-        // --- B. MOBILE CARD RENDER ---
-        if (mobileGrid) {
-            const card = document.createElement('div');
-            card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3.5 block";
-            card.innerHTML = `
-                <div class="flex justify-between items-start gap-4">
-                    <div>
-                        <h4 class="text-sm font-bold text-slate-900 leading-tight">${item.item}</h4>
-                        <div class="mt-1 flex items-center gap-2">${statusBadge}</div>
+                        <div class="py-1">
+                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-rose-50 text-rose-600 flex items-center gap-2 delete-opt">
+                                <i class="fas fa-trash w-3.5"></i> Delete
+                            </button>
+                        </div>
                     </div>
-                    <div class="text-right">
-                        <span class="text-[9px] uppercase font-black tracking-wider text-slate-400 block">${dynamicStockLabel}</span>
-                        <span class="font-mono text-base font-black px-2 py-0.5 rounded ${isToday ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-800'}">${stockValue}</span>
-                    </div>
-                </div>
+                `;
+
+                const btn = dropdown.querySelector('.dots-btn');
+                const menu = dropdown.querySelector('.menu');
                 
-                <div class="grid grid-cols-4 gap-1.5 bg-slate-50 p-2 border border-slate-100 rounded-lg text-center font-mono text-xs">
-                    <div>
-                        <span class="text-[8px] text-slate-400 block font-sans font-bold uppercase mb-0.5">Open</span>
-                        <span class="text-slate-700 font-medium">${item.opening || 0}</span>
-                    </div>
-                    <div class="border-l border-slate-200/60">
-                        <span class="text-[8px] text-slate-400 block font-sans font-bold uppercase mb-0.5">Purch</span>
-                        <span class="text-emerald-600 font-bold">+${item.purchases || 0}</span>
-                    </div>
-                    <div class="border-l border-slate-200/60">
-                        <span class="text-[8px] text-slate-400 block font-sans font-bold uppercase mb-0.5">Sales</span>
-                        <span class="text-blue-600 font-bold">-${item.sales || 0}</span>
-                    </div>
-                    <div class="border-l border-slate-200/60">
-                        <span class="text-[8px] text-slate-400 block font-sans font-bold uppercase mb-0.5">Spoil</span>
-                        <span class="text-rose-500 font-bold">-${item.spoilage || 0}</span>
-                    </div>
-                </div>
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('#inventory-table .menu').forEach(m => m !== menu && m.classList.add('hidden'));
+                    menu.classList.toggle('hidden');
+                };
 
-                <div class="flex items-center justify-between text-xs font-medium text-slate-500 bg-slate-50/40 p-2 rounded-lg border border-slate-100/60">
-                    <div><span class="text-[9px] font-bold text-slate-400 uppercase tracking-tight mr-1">BP:</span><span class="font-mono font-semibold text-slate-700">${bpStr}</span></div>
-                    <div><span class="text-[9px] font-bold text-slate-400 uppercase tracking-tight mr-1">SP:</span><span class="font-mono font-semibold text-slate-900">${spStr}</span></div>
-                </div>
-
-                <div class="pt-2 border-t border-slate-100 mobile-controls-slot flex items-center justify-end"></div>
-            `;
-
-            mobileGrid.appendChild(card);
-
-            const controlsSlot = card.querySelector('.mobile-controls-slot');
-            if (controlsSlot) {
-                if (hasWriteAccess) {
-                    const actionGroup = document.createElement('div');
-                    actionGroup.className = "grid grid-cols-3 gap-2 w-full";
-                    actionGroup.innerHTML = `
-                        <button class="flex items-center justify-center gap-1 py-2 text-[11px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg active:bg-indigo-100 focus:outline-none edit-btn">Edit</button>
-                        <button class="flex items-center justify-center gap-1 py-2 text-[11px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-lg active:bg-emerald-100 focus:outline-none adjust-btn">+Stock</button>
-                        <button class="flex items-center justify-center gap-1 py-2 text-[11px] font-bold uppercase tracking-wider text-rose-600 bg-rose-50 border border-rose-100 rounded-lg active:bg-rose-100 focus:outline-none delete-btn">Delete</button>
-                    `;
-
-                    actionGroup.querySelector('.edit-btn').onclick = () => openEditModal(item);
-                    actionGroup.querySelector('.adjust-btn').onclick = () => openAdjustModal(item);
-                    actionGroup.querySelector('.delete-btn').onclick = () => handleItemDeletionWorkflow(item);
-                    controlsSlot.appendChild(actionGroup);
-                } else {
-                    controlsSlot.innerHTML = `<span class="text-[11px] bg-slate-100 px-2 py-1 text-slate-400 rounded font-bold uppercase tracking-wider">View Only Access</span>`;
-                }
+                dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
+                dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
+                dropdown.querySelector('.delete-opt').onclick = () => handleItemDeletionWorkflow(item);
+                
+                actionsCell.appendChild(dropdown);
+            } else {
+                actionsCell.innerHTML = `<span class="text-xs text-slate-400 italic font-medium pr-2">View Only</span>`;
             }
         }
     });

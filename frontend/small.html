@@ -267,7 +267,26 @@ body {
         -webkit-overflow-scrolling: touch; /* Butter-smooth momentum physics for iOS safari */
     }
 
+    /* Enable smooth scrolling inside our table wrapper on mobile */
+.inventory-scroll-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* On screens smaller than 768px, stick the first column so the item name stays fixed */
+@media (max-width: 767px) {
+    .sticky-col {
+        position: sticky !important;
+        left: 0;
+        z-index: 20;
+        background-color: #ffffff; /* Matches row backgrounds */
+    }
     
+    /* Give the fixed column row a clean divider line */
+    th.sticky-col, td.sticky-col {
+        border-right: 2px solid #e2e8f0 !important;
+    }
+}
     
 
     </style>
@@ -1528,28 +1547,27 @@ body {
         </div>
     </div>
 
-    <div id="table-responsive" class="w-full py-2">
-        <div class="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
-            <table id="inventory-table" class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                        <th class="px-6 py-4">Item</th>
-                        <th class="px-6 py-4">Opening</th>
-                        <th class="px-6 py-4">Purchases</th>
-                        <th class="px-6 py-4">Sales</th>
-                        <th class="px-6 py-4">Spoilage</th>
-                        <th class="px-6 py-4 stock-header-cell">Closing</th>
-                        <th class="px-6 py-4">BP</th>
-                        <th class="px-6 py-4">SP</th>
-                        <th class="px-6 py-4 text-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 text-sm text-slate-600"></tbody>
-            </table>
-        </div>
-
-        <div id="inventory-mobile-grid" class="block md:hidden space-y-4"></div>
+    <div class="w-full py-2">
+    <div class="inventory-scroll-container overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
+        <table id="inventory-table" class="w-full text-left border-collapse min-w-[800px]">
+            <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th class="px-4 py-3 sticky-col left-0 bg-slate-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Item</th>
+                    <th class="px-4 py-3">Opening</th>
+                    <th class="px-4 py-3">Purchases</th>
+                    <th class="px-4 py-3">Sales</th>
+                    <th class="px-4 py-3">Spoilage</th>
+                    <th class="px-4 py-3 stock-header-cell">Closing</th>
+                    <th class="px-4 py-3">BP</th>
+                    <th class="px-4 py-3">SP</th>
+                    <th class="px-4 py-3 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
+                </tbody>
+        </table>
     </div>
+</div>
   </div>
 </section>
 
