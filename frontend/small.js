@@ -6236,10 +6236,11 @@ function exportTableToExcel(tableId, filename) { console.log(`Exporting table ${
 
 function renderInventoryTable(inventory) {
     const tbody = document.querySelector('#inventory-table tbody');
-    const cardsContainer = document.getElementById('inventory-cards-container');
+    const cardContainer = document.querySelector('#inventory-cards');
+    if (!tbody || !cardContainer) return;
     
-    if (tbody) tbody.innerHTML = '';
-    if (cardsContainer) cardsContainer.innerHTML = '';
+    tbody.innerHTML = '';
+    cardContainer.innerHTML = '';
 
     const dateInput = document.getElementById('search-inventory-date');
     const desktopStockHeader = document.querySelector('#inventory-table thead .stock-header-cell');
@@ -6255,9 +6256,8 @@ function renderInventoryTable(inventory) {
 
     // 2. Empty State Handling
     if (!inventory || inventory.length === 0) {
-        const fallbackMsg = `<div class="py-10 text-center text-slate-400 font-medium italic">No stock records found for your chosen parameters.</div>`;
-        if (tbody) tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic">No stock records found for your chosen parameters.</td></tr>`;
-        if (cardsContainer) cardsContainer.innerHTML = fallbackMsg;
+        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic">No stock records found for your chosen parameters.</td></tr>`;
+        cardContainer.innerHTML = `<div class="p-6 text-center text-slate-400 font-medium italic bg-white rounded-xl border border-slate-200 shadow-sm">No stock records found for your chosen parameters.</div>`;
         return;
     }
 
@@ -6271,7 +6271,7 @@ function renderInventoryTable(inventory) {
     }
     const hasWriteAccess = ['admin', 'super-admin', 'manager'].includes(activeRole);
 
-    // 4. Populate Data Structures
+    // 4. Populate views
     inventory.forEach(item => {
         item.viewingDate = selectedDate;
 
@@ -6286,89 +6286,126 @@ function renderInventoryTable(inventory) {
         const bpStr = Number(item.buyingprice || 0).toLocaleString();
         const spStr = Number(item.sellingprice || 0).toLocaleString();
         
-        const uniqueId = item._id || Math.random().toString(36).substring(2, 11);
-        const generatedRowId = `actions-row-${uniqueId}`;
-        const generatedCardId = `actions-card-${uniqueId}`;
+        const generatedIdSuffix = item._id || Math.random().toString(36).substring(2, 11);
+        const desktopRowId = `actions-row-${generatedIdSuffix}`;
+        const mobileCardId = `actions-card-${generatedIdSuffix}`;
 
-        // ==========================================
-        // A. DESKTOP ROW RENDERING
-        // ==========================================
-        if (tbody) {
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-50/60 transition-colors border-b border-slate-100 whitespace-nowrap";
-            tr.innerHTML = `
-                <td class="px-5 py-3.5 font-semibold text-slate-800">
-                    <div class="flex flex-col items-start gap-1">
-                        <span class="text-sm leading-tight">${item.item}</span>
-                        ${statusBadge}
-                    </div>
-                </td>
-                <td class="px-4 py-3.5 font-mono text-center text-slate-500">${item.opening || 0}</td>
-                <td class="px-4 py-3.5 font-mono text-center text-emerald-600 font-bold">+${item.purchases || 0}</td>
-                <td class="px-4 py-3.5 font-mono text-center text-blue-600 font-bold">-${item.sales || 0}</td>
-                <td class="px-4 py-3.5 font-mono text-center text-rose-500 font-bold">-${item.spoilage || 0}</td>
-                <td class="px-4 py-3.5 font-mono text-center font-black ${isToday ? 'text-indigo-600 bg-indigo-50/30 rounded px-1' : 'text-slate-900'}">${stockValue}</td>
-                <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-500">${bpStr}</td>
-                <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-700 font-semibold">${spStr}</td>
-                <td class="px-5 py-3.5 text-right overflow-visible" id="${generatedRowId}"></td>
-            `;
-            tbody.appendChild(tr);
-            setupActionsDropdown(tr.querySelector(`#${generatedRowId}`), item, hasWriteAccess);
-        }
-
-        // ==========================================
-        // B. MOBILE CARD RENDERING
-        // ==========================================
-        if (cardsContainer) {
-            const card = document.createElement('div');
-            card.className = "bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3 relative";
-            card.innerHTML = `
-                <div class="flex justify-between items-start pr-8">
-                    <div>
-                        <h4 class="font-bold text-slate-800 text-base">${item.item}</h4>
-                        <div class="mt-1">${statusBadge}</div>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-xs text-slate-400 block">${isToday ? 'Current Stock' : 'Closing Stock'}</span>
-                        <span class="font-black text-lg ${isToday ? 'text-indigo-600' : 'text-slate-900'}">${stockValue}</span>
-                    </div>
+        // --- A. DESKTOP ROW VIEW ---
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50/60 transition-colors border-b border-slate-100 whitespace-nowrap";
+        tr.innerHTML = `
+            <td class="px-5 py-3.5 font-semibold text-slate-800">
+                <div class="flex flex-col items-start gap-1">
+                    <span class="text-sm leading-tight">${item.item}</span>
+                    ${statusBadge}
                 </div>
+            </td>
+            <td class="px-4 py-3.5 font-mono text-center text-slate-500">${item.opening || 0}</td>
+            <td class="px-4 py-3.5 font-mono text-center text-emerald-600 font-bold">+${item.purchases || 0}</td>
+            <td class="px-4 py-3.5 font-mono text-center text-blue-600 font-bold">-${item.sales || 0}</td>
+            <td class="px-4 py-3.5 font-mono text-center text-rose-500 font-bold">-${item.spoilage || 0}</td>
+            <td class="px-4 py-3.5 font-mono text-center font-black ${isToday ? 'text-indigo-600 bg-indigo-50/30 rounded px-1' : 'text-slate-900'}">${stockValue}</td>
+            <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-500">${bpStr}</td>
+            <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-700 font-semibold">${spStr}</td>
+            <td class="px-5 py-3.5 text-right overflow-visible" id="${desktopRowId}"></td>
+        `;
+        tbody.appendChild(tr);
+
+        // --- B. MOBILE CARD VIEW ---
+        const card = document.createElement('div');
+        card.className = "bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-3";
+        card.innerHTML = `
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="text-base font-bold text-slate-800 leading-tight">${item.item}</h3>
+                    <div class="mt-1">${statusBadge}</div>
+                </div>
+                <div id="${mobileCardId}" class="overflow-visible relative"></div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
+                <div class="bg-slate-50 p-2 rounded-lg">
+                    <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wide">Opening</span>
+                    <span class="font-mono font-semibold text-slate-600 text-sm">${item.opening || 0}</span>
+                </div>
+                <div class="bg-emerald-50/50 p-2 rounded-lg">
+                    <span class="block text-[10px] font-bold uppercase text-emerald-600 tracking-wide">Purchases</span>
+                    <span class="font-mono font-bold text-emerald-600 text-sm">+${item.purchases || 0}</span>
+                </div>
+                <div class="bg-blue-50/50 p-2 rounded-lg">
+                    <span class="block text-[10px] font-bold uppercase text-blue-600 tracking-wide">Sales</span>
+                    <span class="font-mono font-bold text-blue-600 text-sm">-${item.sales || 0}</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-center">
+                <div class="bg-rose-50/50 p-2 rounded-lg">
+                    <span class="block text-[10px] font-bold uppercase text-rose-500 tracking-wide">Spoilage</span>
+                    <span class="font-mono font-bold text-rose-500 text-sm">-${item.spoilage || 0}</span>
+                </div>
+                <div class="${isToday ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-100'} p-2 rounded-lg col-span-2 flex flex-col justify-center">
+                    <span class="block text-[10px] font-bold uppercase text-slate-500 tracking-wide">${isToday ? 'Current Stock' : 'Closing Stock'}</span>
+                    <span class="font-mono font-black text-base ${isToday ? 'text-indigo-600' : 'text-slate-800'}">${stockValue}</span>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-2 px-1 text-xs text-slate-500 border-t border-slate-100">
+                <div>Buying Price: <span class="font-mono font-semibold text-slate-700">${bpStr}</span></div>
+                <div>Selling Price: <span class="font-mono font-bold text-slate-800">${spStr}</span></div>
+            </div>
+        `;
+        cardContainer.appendChild(card);
+
+        // --- C. ATTACH DROPDOWNS TO BOTH TARGETS ---
+        const appendDropdown = (targetCellElement) => {
+            if (!targetCellElement) return;
+            
+            if (hasWriteAccess) {
+                const dropdown = document.createElement('div');
+                dropdown.className = 'relative inline-block text-left';
+                dropdown.innerHTML = `
+                    <button class="dots-btn p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full transition focus:outline-none">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
+                    <div class="menu hidden absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 divide-y divide-slate-100">
+                        <div class="py-1">
+                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-indigo-50 text-indigo-700 flex items-center gap-2 edit-opt">
+                                <i class="fas fa-edit w-3.5"></i> Edit
+                            </button>
+                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 adjust-opt">
+                                <i class="fas fa-plus-circle w-3.5"></i> Add Stock
+                            </button>
+                        </div>
+                        <div class="py-1">
+                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-rose-50 text-rose-600 flex items-center gap-2 delete-opt">
+                                <i class="fas fa-trash w-3.5"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                const btn = dropdown.querySelector('.dots-btn');
+                const menu = dropdown.querySelector('.menu');
                 
-                <div class="grid grid-cols-4 gap-2 text-center bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-xs">
-                    <div>
-                        <span class="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Open</span>
-                        <span class="font-mono text-slate-600 font-medium">${item.opening || 0}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Purch</span>
-                        <span class="font-mono text-emerald-600 font-bold">+${item.purchases || 0}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Sales</span>
-                        <span class="font-mono text-blue-600 font-bold">-${item.sales || 0}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Spoil</span>
-                        <span class="font-mono text-rose-500 font-bold">-${item.spoilage || 0}</span>
-                    </div>
-                </div>
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    // Close all active dropdown instances everywhere
+                    document.querySelectorAll('.menu').forEach(m => m !== menu && m.classList.add('hidden'));
+                    menu.classList.toggle('hidden');
+                };
 
-                <div class="flex justify-between items-center text-xs border-t border-slate-100 pt-2.5">
-                    <div>
-                        <span class="text-slate-400 mr-1">BP:</span>
-                        <span class="font-mono text-slate-600">${bpStr}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-400 mr-1">SP:</span>
-                        <span class="font-mono text-slate-800 font-semibold">${spStr}</span>
-                    </div>
-                </div>
+                dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
+                dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
+                dropdown.querySelector('.delete-opt').onclick = () => handleItemDeletionWorkflow(item);
+                
+                targetCellElement.appendChild(dropdown);
+            } else {
+                targetCellElement.innerHTML = `<span class="text-xs text-slate-400 italic font-medium pr-2">View Only</span>`;
+            }
+        };
 
-                <div class="absolute top-2 right-2" id="${generatedCardId}"></div>
-            `;
-            cardsContainer.appendChild(card);
-            setupActionsDropdown(card.querySelector(`#${generatedCardId}`), item, hasWriteAccess);
-        }
+        appendDropdown(tr.querySelector(`#${desktopRowId}`));
+        appendDropdown(card.querySelector(`#${mobileCardId}`));
     });
 }
 
