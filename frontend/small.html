@@ -1501,12 +1501,10 @@ body {
 </div>
 
 <section id="posinventory" class="section bg-white p-4 sm:p-6 rounded-xl shadow-md mb-8 hidden">
-  
   <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
     <h2 class="text-xl sm:text-2xl font-bold text-slate-800">Inventory Management</h2>
     <button onclick="toggleInventoryModal(true)" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-lg transition duration-300 flex items-center justify-center space-x-2 shadow-sm text-sm">
-      <i class="fas fa-plus"></i>
-      <span>Add New Item</span>
+      <i class="fas fa-plus"></i> <span>Add New Item</span>
     </button>
   </div>
 
@@ -1530,8 +1528,7 @@ body {
         </div>
     </div>
 
-    <div class="w-full py-2">
-        
+    <div id="table-responsive" class="w-full py-2">
         <div class="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
             <table id="inventory-table" class="w-full text-left border-collapse">
                 <thead>
@@ -1547,14 +1544,11 @@ body {
                         <th class="px-6 py-4 text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
-                    </tbody>
+                <tbody class="divide-y divide-slate-100 text-sm text-slate-600"></tbody>
             </table>
         </div>
 
-        <div id="inventory-mobile-grid" class="block md:hidden space-y-4">
-            </div>
-        
+        <div id="inventory-mobile-grid" class="block md:hidden space-y-4"></div>
     </div>
   </div>
 </section>
