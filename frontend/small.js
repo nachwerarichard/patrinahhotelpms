@@ -1537,33 +1537,6 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
     }
 });
 
-function closeBookingModal() {
-    // 1. Grab the modal element cleanly
-    const modal = document.getElementById('bookingModal');
-    const form = document.getElementById('bookingForm');
-    
-    
-    // 2. Reset the text contexts back to default parameters
-    document.getElementById('modalTitle').textContent = 'Add New Guest';
-    document.getElementById('saveBookingBtn').textContent = 'Save';
-
-    // 3. CRITICAL: Wipe out the data from the previous guest search
-    if (form) {
-        form.reset();
-    }
-    
-    // Clear out the hidden database identifier tag so the next action doesn't get confused
-    const hiddenIdField = document.getElementById('bookingId');
-    if (hiddenIdField) {
-        hiddenIdField.value = '';
-    }
-    if (modal) {
-        // FIX: Use classList to hide it, matching your search open logic!
-        modal.classList.add('hidden');
-    }
-}
-
-
 async function openBookingModal() {
     const modal = document.getElementById('bookingModal');
     const form = document.getElementById('bookingForm');
@@ -1611,7 +1584,33 @@ async function openBookingModal() {
  * This function is now more robust, fetching booking details if not provided.
  * @param {string} bookingId - The ID of the booking to send the email for.
  */
-async function sendConfirmationEmail(bookingId) {
+
+function closeBookingModal() {
+    // 1. Grab the modal element cleanly
+    const modal = document.getElementById('bookingModal');
+    const form = document.getElementById('bookingForm');
+    
+    
+    // 2. Reset the text contexts back to default parameters
+    document.getElementById('modalTitle').textContent = 'Add New Guest';
+    document.getElementById('saveBookingBtn').textContent = 'Save';
+
+    // 3. CRITICAL: Wipe out the data from the previous guest search
+    if (form) {
+        form.reset();
+    }
+    
+    // Clear out the hidden database identifier tag so the next action doesn't get confused
+    const hiddenIdField = document.getElementById('bookingId');
+    if (hiddenIdField) {
+        hiddenIdField.value = '';
+    }
+    if (modal) {
+        // FIX: Use classList to hide it, matching your search open logic!
+        modal.classList.add('hidden');
+    }
+}
+async function SendConfirmEmail(bookingId) {
     // 1. Role and Input Validation
 
     let bookingToSend;
