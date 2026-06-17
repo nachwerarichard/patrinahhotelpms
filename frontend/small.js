@@ -9406,7 +9406,7 @@ async function fetchInventory() {
     }
 
     // 1. UI Loading State
-    updateSearchButton('Searching', 'fas fa-spinner fa-spin'); 
+    updateSearchButton('Searching...', 'fas fa-spinner fa-spin'); 
 
     try {
         const itemFilterInput = document.getElementById('search-inventory-item');
@@ -9417,55 +9417,57 @@ async function fetchInventory() {
 
         // 2. Build Query Params
         const params = new URLSearchParams();
-        // Note: authenticatedFetch already adds x-hotel-id header, 
-        // but adding it to params ensures backend compatibility.
         params.append('hotelId', hotelId); 
         
         if (itemFilter) params.append('item', itemFilter);
         if (dateFilter) params.append('date', dateFilter); 
         
-        // Pagination logic
-        params.append('page', currentPage || 1);
-        params.append('limit', itemsPerPage || 10);
+        // Dynamic Fallback Pagination logic safeguards
+        const activePage = (typeof currentPage !== 'undefined') ? currentPage : 1;
+        const activeLimit = (typeof itemsPerPage !== 'undefined') ? itemsPerPage : 10;
+        
+        params.append('page', activePage);
+        params.append('limit', activeLimit);
 
         const url = `${API_BASE_URL}/inventory?${params.toString()}`;
 
-        // 3. Use authenticatedFetch wrapper
+        // 3. Request Data Payload via Wrapper
         const response = await authenticatedFetch(url);
 
         if (!response || !response.ok) {
-            const err = await response.json();
+            const err = await response.json().catch(() => ({}));
             throw new Error(err.error || 'Server responded with an error');
         }
 
         const result = await response.json(); 
 
-        // 4. Data Assignment
-        // Standardize: Look for items in result.items (matching your backend GET route)
-        // fall back to .data or .report for backward compatibility
+        // 4. Extract Inventory Normalized Array Data
         let inventoryData = result.items || result.data || result.report || [];
         
-        // 5. Handle Pagination UI
-        renderPagination(result.currentPage || 1, result.totalPages || 1);
-
-        // 6. Render Table
+        // 5. Render Responsive Matrix Interfaces
         renderInventoryTable(inventoryData);
 
-        // 7. Final UI State
+        // 6. Handle Pagination Control Rendering
+        if (typeof renderPagination === 'function') {
+            renderPagination(result.currentPage || 1, result.totalPages || 1);
+        }
+
+        // 7. Success Status Notification State
         if (inventoryData.length === 0) {
             updateSearchButton('No Results', 'fas fa-exclamation-circle');
         } else {
             updateSearchButton('Done', 'fas fa-check');
         }
 
-        setTimeout(() => {
-            updateSearchButton('Search', 'fas fa-search');
-        }, 2000); 
-
     } catch (error) {
         console.error('Inventory Fetch Error:', error);
         showMessage('Error loading inventory: ' + error.message, true);
-        updateSearchButton('Search', 'fas fa-search');
+        updateSearchButton('Failed', 'fas fa-times');
+    } finally {
+        // 8. Enforce Soft Button Interface UI Reset
+        setTimeout(() => {
+            updateSearchButton('Search', 'fas fa-search');
+        }, 1500);
     }
 }
 
