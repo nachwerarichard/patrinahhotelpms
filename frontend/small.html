@@ -2403,8 +2403,7 @@ body {
                 </div>
             </section>
 
- <section id="audit-logs" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden  min-w-[2600px] overflow-hidden">
-    
+ <section id="audit-logs" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden min-w-[2600px] overflow-hidden">
     <h2 class="text-2xl font-bold mb-4 text-blue-600">Audit Logs</h2>
     
     <div class="sticky top-0 z-30 bg-white pb-4">
@@ -2435,7 +2434,7 @@ body {
         </div>
     </div>
 
-    <div class="relative border border-gray-200 rounded-lg overflow-x-auto overflow-y-auto  shadow-inner">
+    <div class="relative border border-gray-200 rounded-lg overflow-x-auto overflow-y-auto shadow-inner">
         <table id="auditLogTable" class="table-fixed min-w-[2600px] bg-white">
             <thead class="sticky top-0 z-20 shadow-sm">
                 <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
@@ -2446,8 +2445,7 @@ body {
                     <th class="py-4 px-6 text-left w-auto bg-gray-100">Details</th>
                 </tr>
             </thead>
-            <tbody class="text-gray-600 text-sm divide-y divide-gray-100">
-                </tbody>
+            <tbody class="text-gray-600 text-sm divide-y divide-gray-100"></tbody>
         </table>
     </div>
 
@@ -2457,6 +2455,7 @@ body {
         <button id="nextAuditPage" class="bg-gray-100 px-4 py-2 rounded-lg disabled:opacity-50">Next</button>
     </div>
 </section>
+
 <div id="auditLogModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex items-center justify-center hidden">
     <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 overflow-hidden flex flex-col max-h-[85vh]">
         <div class="flex justify-between items-center px-6 py-4 bg-gray-50 border-b border-gray-100">
@@ -4040,36 +4039,6 @@ function setFieldValue(id, value) {
     }
 }
 </script>
-<script>
-    // Modal DOM elements
-const auditModal = document.getElementById('auditLogModal');
-const modalContent = document.getElementById('auditLogModalContent');
-const closeBtn1 = document.getElementById('closeAuditModalBtn');
-const closeBtn2 = document.getElementById('closeAuditModalFooterBtn');
 
-// Open Modal & Format JSON
-function openAuditModal(details) {
-    // Pretty-prints the JSON object with a 2-space indentation
-    modalContent.textContent = JSON.stringify(details, null, 2);
-    auditModal.classList.remove('hidden');
-}
-
-// Close Modal Function
-function closeAuditModal() {
-    auditModal.classList.add('hidden');
-    modalContent.textContent = ''; // Clear content
-}
-
-// Event Listeners for closing
-closeBtn1.addEventListener('click', closeAuditModal);
-closeBtn2.addEventListener('click', closeAuditModal);
-
-// Close modal if user clicks outside the modal box
-window.addEventListener('click', (event) => {
-    if (event.target === auditModal) {
-        closeAuditModal();
-    }
-});
-</script>
 </body>
 </html>
