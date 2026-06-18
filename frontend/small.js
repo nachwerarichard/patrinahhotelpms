@@ -10975,7 +10975,12 @@ async function fetchAndRenderGateway() {
 }
 
 // Call this on your main application layout mount event loop / panel initiation step
-document.addEventListener("DOMContentLoaded", fetchAndRenderGateway);
-
+// Instead of calling fetchAndRenderGateway() immediately, wait for the page load:
+window.addEventListener('DOMContentLoaded', () => {
+    // Only fetch if we are logged in and looking at the setup page
+    if (document.getElementById('gatewayRowContainer')) {
+        fetchAndRenderGateway();
+    }
+});
 
 

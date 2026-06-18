@@ -3473,6 +3473,30 @@ const PaymentTransaction = mongoose.model(
     })
 );
 
+app.get('/api/gateways', auth, async (req, res) => {
+    try {
+        // Query the single unique config for this hotel & gateway
+        let gatewayConfig = await Gateway.findOne({ 
+            hotelId: req.user.hotelId, 
+            gatewayId: 'pesapal' 
+        });
+
+        // If no document exists in the collection yet, send a mock mock fallback status
+        if (!gatewayConfig) {
+            gatewayConfig = {
+                gatewayId: 'pesapal',
+                isConnected: false,
+                isDefault: false,
+                environment: '—'
+            };
+        }
+
+        res.json(gatewayConfig);
+    } catch (error) {
+        res.status(500).json({ message: 'Error retrieving gateway credentials', error: error.message });
+    }
+});
+
 //Housekeeping
 
 
