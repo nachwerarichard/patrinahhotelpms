@@ -1,6 +1,7 @@
 
 const express = require('express');
 const mongoose = require('mongoose');
+const axios = require('axios');
 const cors = require('cors'); // Required for Cross-Origin Resource Sharing
 const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
 const cloudinary = require('cloudinary').v2;
