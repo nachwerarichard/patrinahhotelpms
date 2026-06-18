@@ -3503,7 +3503,7 @@ Add Guest Details            </h2>
         </p>
     </div>
 
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto hidden md:block">
         <table class="w-full border border-gray-200 rounded-lg overflow-hidden" id="gatewayTable">
             <thead class="bg-gray-100 text-gray-700 font-medium text-sm">
                 <tr>
@@ -3518,6 +3518,10 @@ Add Guest Details            </h2>
                 </tbody>
         </table>
     </div>
+
+    <div id="gatewayMobileContainer" class="block md:hidden space-y-4">
+        </div>
+
 </section>
 
 <div id="configureGatewayModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

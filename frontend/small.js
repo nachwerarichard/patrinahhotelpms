@@ -10903,10 +10903,13 @@ function saveGatewayCredentials(event) {
 }
 
 async function fetchAndRenderGateway() {
-    const container = document.getElementById('gatewayRowContainer');
-    if (!container) return;
+    const desktopContainer = document.getElementById('gatewayRowContainer');
+    const mobileContainer = document.getElementById('gatewayMobileContainer');
+    if (!desktopContainer || !mobileContainer) return;
 
-    container.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-400">Loading configurations...</td></tr>`;
+    // Loading indicators
+    desktopContainer.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-400">Loading configurations...</td></tr>`;
+    mobileContainer.innerHTML = `<div class="text-center py-6 text-gray-400 text-sm">Loading configurations...</div>`;
 
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/gateways`, {
@@ -10916,6 +10919,7 @@ async function fetchAndRenderGateway() {
         if (!response || !response.ok) throw new Error('Failed to fetch data');
         const config = await response.json();
 
+        // Status & Default UI Assets
         const statusBadge = config.isConnected 
             ? `<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium inline-block">Connected</span>`
             : `<span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-medium inline-block">Not Connected</span>`;
@@ -10937,7 +10941,8 @@ async function fetchAndRenderGateway() {
                 <button onclick="openConfigureModal('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700 font-medium">Connect & Setup</button>
             </div>`;
 
-        container.innerHTML = `
+        // 1. Render Desktop Layout Row
+        desktopContainer.innerHTML = `
             <tr id="row-pesapal" class="border-t hover:bg-gray-50">
                 <td class="px-4 py-4">
                     <div class="font-semibold text-gray-900">Pesapal</div>
@@ -10955,9 +10960,46 @@ async function fetchAndRenderGateway() {
                     </div>
                 </td>
             </tr>`;
+
+        // 2. Render Responsive Mobile Card Component Layout
+        mobileContainer.innerHTML = `
+            <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 relative shadow-sm">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <div class="font-bold text-base text-gray-900">Pesapal</div>
+                        <div class="text-xs text-gray-500 mt-0.5">Mobile Money, Cards & Bank Payments</div>
+                    </div>
+                    
+                    <div class="relative">
+                        <button onclick="toggleGatewayMenu('pesapalMobileMenu', event)" class="p-2 -mr-2 rounded-full hover:bg-gray-200 focus:outline-none transition-colors font-bold text-gray-600 text-base">
+                            ⋮
+                        </button>
+                        <div id="pesapalMobileMenu" class="hidden absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50 text-left divide-y divide-gray-100">
+                            ${actionMenuButtons}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-y-3 pt-2 border-t border-gray-200 text-xs">
+                    <div>
+                        <span class="block text-gray-400 font-medium mb-0.5">Status</span>
+                        ${statusBadge}
+                    </div>
+                    <div>
+                        <span class="block text-gray-400 font-medium mb-0.5">Environment</span>
+                        <span class="font-mono bg-gray-200 text-gray-800 px-2 py-0.5 rounded text-xs inline-block">${config.environment || '—'}</span>
+                    </div>
+                    <div class="col-span-2">
+                        <span class="block text-gray-400 font-medium mb-0.5">Default Status</span>
+                        ${defaultBadge}
+                    </div>
+                </div>
+            </div>`;
+            
     } catch (error) {
         console.error(error);
-        container.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Error loading payment information.</td></tr>`;
+        desktopContainer.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Error loading data.</td></tr>`;
+        mobileContainer.innerHTML = `<div class="text-center py-4 text-red-500 text-xs">Error loading data.</div>`;
     }
 }
 
