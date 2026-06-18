@@ -10906,21 +10906,16 @@ async function fetchAndRenderGateway() {
     const container = document.getElementById('gatewayRowContainer');
     if (!container) return;
 
-    // Show loading state placeholder row
-    container.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-400">Loading gateway options...</td></tr>`;
+    container.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-400">Loading configurations...</td></tr>`;
 
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/gateways`, {
             method: 'GET'
         });
 
-        if (!response || !response.ok) {
-            throw new Error('Failed to retrieve gateway configurations');
-        }
-
+        if (!response || !response.ok) throw new Error('Failed to fetch data');
         const config = await response.json();
 
-        // 1. Build conditional badge styles matching database booleans
         const statusBadge = config.isConnected 
             ? `<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium inline-block">Connected</span>`
             : `<span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-medium inline-block">Not Connected</span>`;
@@ -10929,26 +10924,19 @@ async function fetchAndRenderGateway() {
             ? `<span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-medium inline-block">Default</span>`
             : `—`;
 
-        // 2. Build contextual actions list depending on if it is connected
-        let actionMenuButtons = '';
-        if (config.isConnected) {
-            actionMenuButtons = `
-                <div class="py-1">
-                    <button onclick="openConfigureModal('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Configure</button>
-                    <button onclick="openTestModal('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Test Connection</button>
-                    ${!config.isDefault ? `<button onclick="setAsDefaultGateway('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-600 font-medium">Set as Default</button>` : ''}
-                </div>
-                <div class="py-1">
-                    <button onclick="openDisconnectModal('pesapal')" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Disconnect</button>
-                </div>`;
-        } else {
-            actionMenuButtons = `
-                <div class="py-1">
-                    <button onclick="openConfigureModal('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700 font-semibold">Connect & Setup</button>
-                </div>`;
-        }
+        let actionMenuButtons = config.isConnected ? `
+            <div class="py-1">
+                <button onclick="openConfigureModal('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Configure</button>
+                <button onclick="openTestModal('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Test Connection</button>
+            </div>
+            <div class="py-1">
+                <button onclick="openDisconnectModal('pesapal')" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Disconnect</button>
+            </div>
+        ` : `
+            <div class="py-1">
+                <button onclick="openConfigureModal('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700 font-medium">Connect & Setup</button>
+            </div>`;
 
-        // 3. Inject computed row directly inside table body element
         container.innerHTML = `
             <tr id="row-pesapal" class="border-t hover:bg-gray-50">
                 <td class="px-4 py-4">
@@ -10956,7 +10944,7 @@ async function fetchAndRenderGateway() {
                     <div class="text-xs text-gray-500">Mobile Money, Cards & Bank Payments</div>
                 </td>
                 <td class="px-4 py-4 status-cell">${statusBadge}</td>
-                <td class="px-4 py-4 env-cell font-mono text-xs">${config.environment}</td>
+                <td class="px-4 py-4 env-cell font-mono text-xs">${config.environment || '—'}</td>
                 <td class="px-4 py-4 default-cell">${defaultBadge}</td>
                 <td class="px-4 py-4 relative text-right pr-6">
                     <button onclick="toggleGatewayMenu('pesapalMenu', event)" class="p-2 rounded-full hover:bg-gray-200 focus:outline-none transition-colors font-bold text-gray-600 text-lg">
@@ -10967,10 +10955,9 @@ async function fetchAndRenderGateway() {
                     </div>
                 </td>
             </tr>`;
-
     } catch (error) {
-        console.error('Gateway Error Render:', error);
-        container.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500 font-medium">Error loading gateway database information.</td></tr>`;
+        console.error(error);
+        container.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Error loading payment information.</td></tr>`;
     }
 }
 
