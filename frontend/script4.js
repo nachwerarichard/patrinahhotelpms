@@ -759,6 +759,7 @@ async function showDashboard(username, role) {
         initialSectionId = 'booking-management';
         initialNavLinkId = 'nav-booking';
         document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('nav-paymentgateway').style.display = 'none';
         renderBookings()
     }
 
@@ -4700,6 +4701,12 @@ document.addEventListener('DOMContentLoaded', () => {
             showSection('sale');
         });
     }
+     if (navPaymentGateway) {
+        navPaymentGateway.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection('paymentgateway');
+        });
+    }
 
     if (navInventory) {
         navInventory.addEventListener('click', (e) => {
@@ -4806,12 +4813,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-     if (navPaymentGateway) {
-        navPaymentGateway.addEventListener('click', (e) => {
-            e.preventDefault();
-            showSection('paymentgateway');
-        });
-    }
+    
 
     if (navChannelManager) {
         navChannelManager.addEventListener('click', (e) => {
@@ -10888,6 +10890,7 @@ function saveGatewayCredentials(event) {
             `;
         }
         closeModal('configureGatewayModal');
+        fetchAndRenderGateway();
     })
     .catch(error => {
         console.error("Tenant Gateway Error:", error);
@@ -10899,5 +10902,114 @@ function saveGatewayCredentials(event) {
     });
 }
 
+async function fetchAndRenderGateway() {
+    const desktopContainer = document.getElementById('gatewayRowContainer');
+    const mobileContainer = document.getElementById('gatewayMobileContainer');
+    if (!desktopContainer || !mobileContainer) return;
+
+    // Loading indicators
+    desktopContainer.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-400">Loading configurations...</td></tr>`;
+    mobileContainer.innerHTML = `<div class="text-center py-6 text-gray-400 text-sm">Loading configurations...</div>`;
+
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/gateways`, {
+            method: 'GET'
+        });
+
+        if (!response || !response.ok) throw new Error('Failed to fetch data');
+        const config = await response.json();
+
+        // Status & Default UI Assets
+        const statusBadge = config.isConnected 
+            ? `<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium inline-block">Connected</span>`
+            : `<span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-medium inline-block">Not Connected</span>`;
+
+        const defaultBadge = config.isDefault 
+            ? `<span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-medium inline-block">Default</span>`
+            : `—`;
+
+        let actionMenuButtons = config.isConnected ? `
+            <div class="py-1">
+                <button onclick="openConfigureModal('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Configure</button>
+                <button onclick="openTestModal('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Test Connection</button>
+            </div>
+            <div class="py-1">
+                <button onclick="openDisconnectModal('pesapal')" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Disconnect</button>
+            </div>
+        ` : `
+            <div class="py-1">
+                <button onclick="openConfigureModal('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700 font-medium">Connect & Setup</button>
+            </div>`;
+
+        // 1. Render Desktop Layout Row
+        desktopContainer.innerHTML = `
+            <tr id="row-pesapal" class="border-t hover:bg-gray-50">
+                <td class="px-4 py-4">
+                    <div class="font-semibold text-gray-900">Pesapal</div>
+                    <div class="text-xs text-gray-500">Mobile Money, Cards & Bank Payments</div>
+                </td>
+                <td class="px-4 py-4 status-cell">${statusBadge}</td>
+                <td class="px-4 py-4 env-cell font-mono text-xs">${config.environment || '—'}</td>
+                <td class="px-4 py-4 default-cell">${defaultBadge}</td>
+                <td class="px-4 py-4 relative text-right pr-6">
+                    <button onclick="toggleGatewayMenu('pesapalMenu', event)" class="p-2 rounded-full hover:bg-gray-200 focus:outline-none transition-colors font-bold text-gray-600 text-lg">
+                        ⋮
+                    </button>
+                    <div id="pesapalMenu" class="hidden absolute right-4 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50 text-left divide-y divide-gray-100">
+                        ${actionMenuButtons}
+                    </div>
+                </td>
+            </tr>`;
+
+        // 2. Render Responsive Mobile Card Component Layout
+        mobileContainer.innerHTML = `
+            <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 relative shadow-sm">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <div class="font-bold text-base text-gray-900">Pesapal</div>
+                        <div class="text-xs text-gray-500 mt-0.5">Mobile Money, Cards & Bank Payments</div>
+                    </div>
+                    
+                    <div class="relative">
+                        <button onclick="toggleGatewayMenu('pesapalMobileMenu', event)" class="p-2 -mr-2 rounded-full hover:bg-gray-200 focus:outline-none transition-colors font-bold text-gray-600 text-base">
+                            ⋮
+                        </button>
+                        <div id="pesapalMobileMenu" class="hidden absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50 text-left divide-y divide-gray-100">
+                            ${actionMenuButtons}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-y-3 pt-2 border-t border-gray-200 text-xs">
+                    <div>
+                        <span class="block text-gray-400 font-medium mb-0.5">Status</span>
+                        ${statusBadge}
+                    </div>
+                    <div>
+                        <span class="block text-gray-400 font-medium mb-0.5">Environment</span>
+                        <span class="font-mono bg-gray-200 text-gray-800 px-2 py-0.5 rounded text-xs inline-block">${config.environment || '—'}</span>
+                    </div>
+                    <div class="col-span-2">
+                        <span class="block text-gray-400 font-medium mb-0.5">Default Status</span>
+                        ${defaultBadge}
+                    </div>
+                </div>
+            </div>`;
+            
+    } catch (error) {
+        console.error(error);
+        desktopContainer.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Error loading data.</td></tr>`;
+        mobileContainer.innerHTML = `<div class="text-center py-4 text-red-500 text-xs">Error loading data.</div>`;
+    }
+}
+
+// Call this on your main application layout mount event loop / panel initiation step
+// Instead of calling fetchAndRenderGateway() immediately, wait for the page load:
+window.addEventListener('DOMContentLoaded', () => {
+    // Only fetch if we are logged in and looking at the setup page
+    if (document.getElementById('gatewayRowContainer')) {
+        fetchAndRenderGateway();
+    }
+});
 
 
