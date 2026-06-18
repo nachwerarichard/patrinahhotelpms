@@ -189,34 +189,31 @@ async function authenticatedFetch(url, options = {}) {
 }
 
 function showMessage(title, message, isError = false) {
-    // 1. Grab elements only when the function is called
     const overlay = document.getElementById('messageBoxOverlay');
     const modal = document.getElementById('messageBox');
     const titleEl = document.getElementById('messageBoxTitle');
     const contentEl = document.getElementById('messageBoxContent');
 
-    // 2. Safety check - stop if HTML is missing
     if (!overlay || !modal || !titleEl || !contentEl) {
         console.error("Error: Message box elements not found in the HTML.");
         return;
     }
 
-    // 3. Set the text
+    // Set text safely
     titleEl.textContent = title;
     contentEl.textContent = message;
 
-    // 4. Set the color based on error status
+    // Handle title coloring cleanly
     if (isError) {
         titleEl.classList.add('text-red-600');
-        titleEl.classList.remove('text-indigo-600', 'text-gray-900');
+        titleEl.classList.remove('text-indigo-600');
     } else {
         titleEl.classList.add('text-indigo-600');
-        titleEl.classList.remove('text-red-600', 'text-gray-900');
+        titleEl.classList.remove('text-red-600');
     }
 
-    // 5. SHOW BOTH: Remove hidden, and explicitly add 'flex' to center the modal content
+    // Show modal elements
     overlay.classList.remove('hidden');
-    
     modal.classList.remove('hidden');
     modal.classList.add('flex'); 
 }
@@ -225,13 +222,10 @@ function closeMessageBox() {
     const overlay = document.getElementById('messageBoxOverlay');
     const modal = document.getElementById('messageBox');
     
-    if (overlay) {
-        overlay.classList.add('hidden');
-    }
-    
+    if (overlay) overlay.classList.add('hidden');
     if (modal) {
         modal.classList.add('hidden');
-        modal.classList.remove('flex'); // Remove flex so 'hidden' (display: none) can take effect
+        modal.classList.remove('flex');
     }
 }
 // IMPROVED FRONTEND FETCH
@@ -291,25 +285,29 @@ async function renderAuditLogs() {
             tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No audit logs found.</td></tr>';
         } else {
             logs.forEach(log => {
-                const reason = (log.details?.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
-                const row = tableBody.insertRow();
-                row.className = "border-b border-gray-200 hover:bg-gray-50 transition-colors";
+    const reason = (log.details?.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
+    const row = tableBody.insertRow();
+    row.className = "border-b border-gray-200 hover:bg-gray-50 transition-colors";
 
-                row.innerHTML = `
-                    <td class="py-3 px-6 text-left text-sm">${new Date(log.timestamp).toLocaleString()}</td>
-                    <td class="py-3 px-6 text-left font-medium">${log.user}</td>
-                    <td class="py-3 px-6 text-left">
-                        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs uppercase font-bold">${log.action}</span>
-                    </td>
-                    <td class="py-3 px-6 text-left text-sm italic text-gray-600">${reason}</td>
-                    <td class="py-3 px-6 text-left">
-                        <button class="text-indigo-600 hover:underline text-xs font-mono" 
-                                onclick='console.log(${JSON.stringify(log.details)})'>
-                            View Raw Details
-                        </button>
-                    </td>
-                `;
-            });
+    row.innerHTML = `
+        <td class="py-3 px-6 text-left text-sm">${new Date(log.timestamp).toLocaleString()}</td>
+        <td class="py-3 px-6 text-left font-medium">${log.user}</td>
+        <td class="py-3 px-6 text-left">
+            <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs uppercase font-bold">${log.action}</span>
+        </td>
+        <td class="py-3 px-6 text-left text-sm italic text-gray-600">${reason}</td>
+        <td class="py-3 px-6 text-left">
+            <button class="view-details-btn text-indigo-600 hover:underline text-xs font-mono">
+                View Details
+            </button>
+        </td>
+    `;
+
+    // Safely attach the click event handler directly to this row's button
+    row.querySelector('.view-details-btn').addEventListener('click', () => {
+        openAuditModal(log.details);
+    });
+});
         }
 
     } catch (error) {
@@ -3317,94 +3315,118 @@ document.getElementById('applyAuditLogFiltersBtn').addEventListener('click', () 
 //let currentAuditPage = 1;
 //const logsPerPage = 20;
 
-async function renderAuditLogs() {
-    const hotelId = getHotelId(); // safely get hotelId, returns null if none selected
-    if (!hotelId) {
-        const tableBody = document.querySelector("#auditLogTable tbody");
-        tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hotel selected.</td></tr>';
-        return;
+const auditModal = document.getElementById('auditLogModal');
+    const modalContent = document.getElementById('auditLogModalContent');
+    const closeBtn1 = document.getElementById('closeAuditModalBtn');
+    const closeBtn2 = document.getElementById('closeAuditModalFooterBtn');
+
+    function openAuditModal(details) {
+        modalContent.textContent = JSON.stringify(details, null, 2);
+        auditModal.classList.remove('hidden');
     }
 
-    // 2️⃣ Pagination and table elements
-    const tableBody = document.querySelector("#auditLogTable tbody");
-    const prevBtn = document.getElementById('prevAuditPage');
-    const nextBtn = document.getElementById('nextAuditPage');
-    const pageIndicator = document.getElementById('auditPageIndicator');
-
-
-    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Loading audit logs...</td></tr>';
-
-    // 3️⃣ Build query params dynamically (only include non-empty filters)
-    const params = {
-        page: currentAuditPage,
-        limit: logsPerPage,
-        hotelId
-    };
-
-    const userFilter = document.getElementById('auditLogUserFilter').value;
-    if (userFilter) params.user = userFilter;
-
-    const actionFilter = document.getElementById('auditLogActionFilter').value;
-    if (actionFilter) params.action = actionFilter;
-
-    const startDateFilter = document.getElementById('auditLogStartDateFilter').value;
-    if (startDateFilter) params.startDate = startDateFilter;
-
-    const endDateFilter = document.getElementById('auditLogEndDateFilter').value;
-    if (endDateFilter) params.endDate = endDateFilter;
-
-    const queryParams = new URLSearchParams(params).toString();
-
-    try {
-    const response = await authenticatedFetch(
-        `${API_BASE_URL}/audit-logs?${queryParams}`,
-        { method: "GET" }
-    );
-
-    if (!response) return; // authenticatedFetch redirected
-
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    function closeAuditModal() {
+        auditModal.classList.add('hidden');
+        modalContent.textContent = '';
     }
 
-    const logs = await response.json();
-    console.log("Logs received:", logs);
+    closeBtn1.addEventListener('click', closeAuditModal);
+    closeBtn2.addEventListener('click', closeAuditModal);
 
-        tableBody.innerHTML = '';
-
-        // 5️⃣ Update pagination buttons
-        pageIndicator.innerText = `Page ${currentAuditPage}`;
-        prevBtn.disabled = (currentAuditPage === 1);
-        nextBtn.disabled = (logs.length < logsPerPage);
-
-        // 6️⃣ Display logs or empty state
-        if (!logs || logs.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No audit logs found.</td></tr>';
-        } else {
-            logs.forEach(log => {
-                const reason = (log.details?.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
-                const row = tableBody.insertRow();
-                row.className = "border-b border-gray-200 hover:bg-gray-50 transition-colors";
-
-                row.innerHTML = `
-                    <td class="py-3 px-6 text-left text-sm">${new Date(log.timestamp).toLocaleString()}</td>
-                    <td class="py-3 px-6 text-left font-medium">${log.user}</td>
-                    <td class="py-3 px-6 text-left">
-                        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs uppercase font-bold">${log.action}</span>
-                    </td>
-                    <td class="py-3 px-6 text-left text-sm italic text-gray-600">${reason}</td>
-                    <td class="py-3 px-6 text-left">
-                        <button onclick='console.log(${JSON.stringify(log.details)})' class="text-indigo-600 hover:underline text-xs font-mono">View Raw Details</button>
-                    </td>
-                `;
-            });
+    window.addEventListener('click', (event) => {
+        if (event.target === auditModal) {
+            closeAuditModal();
         }
-    } catch (error) {
-        console.error('Error fetching audit logs:', error);
-        tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Error loading audit logs.</td></tr>';
-    }
-}
+    });
 
+    // Updated render Function
+    async function renderAuditLogs() {
+        const hotelId = getHotelId(); 
+        const tableBody = document.querySelector("#auditLogTable tbody");
+        
+        if (!hotelId) {
+            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hotel selected.</td></tr>';
+            return;
+        }
+
+        const prevBtn = document.getElementById('prevAuditPage');
+        const nextBtn = document.getElementById('nextAuditPage');
+        const pageIndicator = document.getElementById('auditPageIndicator');
+
+        tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Loading audit logs...</td></tr>';
+
+        const params = {
+            page: currentAuditPage,
+            limit: logsPerPage,
+            hotelId
+        };
+
+        const userFilter = document.getElementById('auditLogUserFilter').value;
+        if (userFilter) params.user = userFilter;
+
+        const actionFilter = document.getElementById('auditLogActionFilter').value;
+        if (actionFilter) params.action = actionFilter;
+
+        const startDateFilter = document.getElementById('auditLogStartDateFilter').value;
+        if (startDateFilter) params.startDate = startDateFilter;
+
+        const endDateFilter = document.getElementById('auditLogEndDateFilter').value;
+        if (endDateFilter) params.endDate = endDateFilter;
+
+        const queryParams = new URLSearchParams(params).toString();
+
+        try {
+            const response = await authenticatedFetch(
+                `${API_BASE_URL}/audit-logs?${queryParams}`,
+                { method: "GET" }
+            );
+
+            if (!response) return; 
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const logs = await response.json();
+            console.log("Logs received:", logs);
+
+            tableBody.innerHTML = '';
+
+            pageIndicator.innerText = `Page ${currentAuditPage}`;
+            prevBtn.disabled = (currentAuditPage === 1);
+            nextBtn.disabled = (logs.length < logsPerPage);
+
+            if (!logs || logs.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No audit logs found.</td></tr>';
+            } else {
+                logs.forEach(log => {
+                    const reason = (log.details?.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
+                    const row = tableBody.insertRow();
+                    row.className = "border-b border-gray-200 hover:bg-gray-50 transition-colors";
+
+                    row.innerHTML = `
+                        <td class="py-3 px-6 text-left text-sm">${new Date(log.timestamp).toLocaleString()}</td>
+                        <td class="py-3 px-6 text-left font-medium">${log.user}</td>
+                        <td class="py-3 px-6 text-left">
+                            <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs uppercase font-bold">${log.action}</span>
+                        </td>
+                        <td class="py-3 px-6 text-left text-sm italic text-gray-600">${reason}</td>
+                        <td class="py-3 px-6 text-left">
+                            <button class="view-details-btn text-indigo-600 hover:underline text-xs font-mono">View Details</button>
+                        </td>
+                    `;
+
+                    // Bind the element cleanly directly to the generated button
+                    row.querySelector('.view-details-btn').addEventListener('click', () => {
+                        openAuditModal(log.details);
+                    });
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching audit logs:', error);
+            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Error loading audit logs.</td></tr>';
+        }
+    }
 
 
 async function simulateChannelManagerSync() {
@@ -6234,128 +6256,59 @@ function exportTableToExcel(tableId, filename) { console.log(`Exporting table ${
     }
 
 
-function renderInventoryTable(inventory) {
-    const tbody = document.querySelector('#inventory-table tbody');
-    if (!tbody) return;
+
+
+// Reusable dropdown action setup helper to dry up actions cell initialization
+function setupActionsDropdown(actionsCell, item, hasWriteAccess) {
+    if (!actionsCell) return;
     
-    tbody.innerHTML = '';
-
-    const dateInput = document.getElementById('search-inventory-date');
-    const desktopStockHeader = document.querySelector('#inventory-table thead .stock-header-cell');
-    
-    const selectedDate = dateInput?.value || new Date().toISOString().split('T')[0];
-    const todayStr = new Date().toISOString().split('T')[0];
-    const isToday = selectedDate === todayStr;
-
-    // 1. Dynamic Stock Label update
-    if (desktopStockHeader) { 
-        desktopStockHeader.textContent = isToday ? 'Current Stock' : 'Closing Stock';
-    }
-
-    // 2. Empty State Handling
-    if (!inventory || inventory.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic">No stock records found for your chosen parameters.</td></tr>`;
-        return;
-    }
-
-    // 3. Robust Role Safety Check
-    let activeRole = 'staff';
-    if (typeof currentUserRole !== 'undefined') {
-        activeRole = currentUserRole;
-    } else {
-        const fallback = JSON.parse(localStorage.getItem('loggedInUser'));
-        activeRole = fallback?.role || 'staff';
-    }
-    const hasWriteAccess = ['admin', 'super-admin', 'manager'].includes(activeRole);
-
-    // 4. Populate rows
-    inventory.forEach(item => {
-        item.viewingDate = selectedDate;
-
-        const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
-        const badgeClasses = hasMovement ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100';
-        const badgeText = hasMovement ? 'Updated' : 'Static';
-        const statusBadge = `<span class="ml-1 px-1 py-0.5 text-[8px] font-black uppercase tracking-wider border rounded ${badgeClasses}">${badgeText}</span>`;
-
-        const calculatedCurrent = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
-        const stockValue = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
-
-        const bpStr = Number(item.buyingprice || 0).toLocaleString();
-        const spStr = Number(item.sellingprice || 0).toLocaleString();
-        
-        const generatedRowId = `actions-row-${item._id || Math.random().toString(36).substring(2, 11)}`;
-
-        // Inside your inventory.forEach(item => { ... }) loop, replace the row rendering block with this:
-
-const tr = document.createElement('tr');
-tr.className = "hover:bg-slate-50/60 transition-colors border-b border-slate-100 whitespace-nowrap";
-
-tr.innerHTML = `
-    <td class="px-5 py-3.5 font-semibold text-slate-800">
-        <div class="flex flex-col items-start gap-1">
-            <span class="text-sm leading-tight">${item.item}</span>
-            ${statusBadge}
-        </div>
-    </td>
-    <td class="px-4 py-3.5 font-mono text-center text-slate-500">${item.opening || 0}</td>
-    <td class="px-4 py-3.5 font-mono text-center text-emerald-600 font-bold">+${item.purchases || 0}</td>
-    <td class="px-4 py-3.5 font-mono text-center text-blue-600 font-bold">-${item.sales || 0}</td>
-    <td class="px-4 py-3.5 font-mono text-center text-rose-500 font-bold">-${item.spoilage || 0}</td>
-    <td class="px-4 py-3.5 font-mono text-center font-black ${isToday ? 'text-indigo-600 bg-indigo-50/30 rounded px-1' : 'text-slate-900'}">${stockValue}</td>
-    <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-500">${bpStr}</td>
-    <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-700 font-semibold">${spStr}</td>
-    <td class="px-5 py-3.5 text-right overflow-visible" id="${generatedRowId}"></td>
-`;
-
-        tbody.appendChild(tr);
-
-        // 5. Build Dropdown/Write Action Items
-        const actionsCell = tr.querySelector(`#${generatedRowId}`);
-        if (actionsCell) {
-            if (hasWriteAccess) {
-                const dropdown = document.createElement('div');
-                dropdown.className = 'relative inline-block text-left';
-                dropdown.innerHTML = `
-                    <button class="dots-btn p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full transition focus:outline-none">
-                        <i class="fas fa-ellipsis-h"></i>
+    if (hasWriteAccess) {
+        const dropdown = document.createElement('div');
+        dropdown.className = 'relative inline-block text-left';
+        dropdown.innerHTML = `
+            <button class="dots-btn p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full transition focus:outline-none">
+                <i class="fas fa-ellipsis-h"></i>
+            </button>
+            <div class="menu hidden absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 divide-y divide-slate-100">
+                <div class="py-1">
+                    <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-indigo-50 text-indigo-700 flex items-center gap-2 edit-opt">
+                        <i class="fas fa-edit w-3.5"></i> Edit
                     </button>
-                    <div class="menu hidden absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 divide-y divide-slate-100">
-                        <div class="py-1">
-                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-indigo-50 text-indigo-700 flex items-center gap-2 edit-opt">
-                                <i class="fas fa-edit w-3.5"></i> Edit
-                            </button>
-                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 adjust-opt">
-                                <i class="fas fa-plus-circle w-3.5"></i> Add Stock
-                            </button>
-                        </div>
-                        <div class="py-1">
-                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-rose-50 text-rose-600 flex items-center gap-2 delete-opt">
-                                <i class="fas fa-trash w-3.5"></i> Delete
-                            </button>
-                        </div>
-                    </div>
-                `;
+                    <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 adjust-opt">
+                        <i class="fas fa-plus-circle w-3.5"></i> Add Stock
+                    </button>
+                </div>
+                <div class="py-1">
+                    <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-rose-50 text-rose-600 flex items-center gap-2 delete-opt">
+                        <i class="fas fa-trash w-3.5"></i> Delete
+                    </button>
+                </div>
+            </div>
+        `;
 
-                const btn = dropdown.querySelector('.dots-btn');
-                const menu = dropdown.querySelector('.menu');
-                
-                btn.onclick = (e) => {
-                    e.stopPropagation();
-                    document.querySelectorAll('#inventory-table .menu').forEach(m => m !== menu && m.classList.add('hidden'));
-                    menu.classList.toggle('hidden');
-                };
+        const btn = dropdown.querySelector('.dots-btn');
+        const menu = dropdown.querySelector('.menu');
+        
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('#posinventory .menu').forEach(m => m !== menu && m.classList.add('hidden'));
+            menu.classList.toggle('hidden');
+        };
 
-                dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
-                dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
-                dropdown.querySelector('.delete-opt').onclick = () => handleItemDeletionWorkflow(item);
-                
-                actionsCell.appendChild(dropdown);
-            } else {
-                actionsCell.innerHTML = `<span class="text-xs text-slate-400 italic font-medium pr-2">View Only</span>`;
-            }
-        }
-    });
+        dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
+        dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
+        dropdown.querySelector('.delete-opt').onclick = () => handleItemDeletionWorkflow(item);
+        
+        actionsCell.appendChild(dropdown);
+    } else {
+        actionsCell.innerHTML = `<span class="text-xs text-slate-400 italic font-medium pr-2">View Only</span>`;
+    }
 }
+
+// Global click event to close dropdowns when clicking anywhere else
+document.addEventListener('click', () => {
+    document.querySelectorAll('#posinventory .menu').forEach(m => m.classList.add('hidden'));
+});
 function handleItemDeletionWorkflow(item) {
     if (item._id) { 
         deleteInventoryItem(item._id);
@@ -6634,122 +6587,7 @@ const response = await authenticatedFetch(url, {
         }
     }
 }
-function renderInventoryTable(inventory) {
-    const tbody = document.querySelector('#inventory-table tbody');
-    if (!tbody) return;
-    tbody.innerHTML = '';
 
-    const dateInput = document.getElementById('search-inventory-date');
-    const tableHeaders = document.querySelectorAll('#inventory-table thead th');
-    
-    // Determine if we are looking at today
-    const selectedDate = dateInput.value;
-    const todayStr = new Date().toISOString().split('T')[0];
-    const isToday = !selectedDate || selectedDate === todayStr;
-
-    // 1. Update Header based on date context
-    if (tableHeaders[5]) { 
-        tableHeaders[5].textContent = isToday ? 'Current Stock' : 'Closing Stock';
-    }
-
-    if (inventory.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-gray-500 italic">No stock records found for this period.</td></tr>`;
-        return;
-    }
-
-    inventory.forEach(item => {
-        const row = tbody.insertRow();
-        row.className = "hover:bg-gray-50 transition-colors border-b border-gray-100";
-        
-        // 2. Status Logic (Movement Check)
-        const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
-        const statusBadge = hasMovement 
-            ? `<span class="ml-2 px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-700 rounded-full uppercase">Updated</span>`
-            : `<span class="ml-2 px-2 py-0.5 text-[10px] font-bold bg-gray-100 text-gray-500 rounded-full uppercase">Static</span>`;
-
-        // 3. Stock Calculation
-        // If today, we show the live math. If historical, we show the saved closing value.
-        const calculatedCurrent = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
-        const stockDisplay = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
-
-        row.innerHTML = `
-            <td class="px-4 py-3 font-medium text-gray-800">
-                <div class="flex flex-col">
-                    <span>${item.item}</span>
-                    <div class="flex items-center mt-1">${statusBadge}</div>
-                </div>
-            </td>
-            <td class="px-4 py-3">${item.opening || 0}</td>
-            <td class="px-4 py-3 text-green-600 font-medium">+${item.purchases || 0}</td>
-            <td class="px-4 py-3 text-blue-600 font-medium">-${item.sales || 0}</td>
-            <td class="px-4 py-3 text-red-500 font-medium">-${item.spoilage || 0}</td>
-            <td class="px-4 py-3 font-bold ${isToday ? 'text-indigo-600 bg-indigo-50/50' : 'text-gray-900'}">
-                ${stockDisplay}
-            </td>
-            <td class="px-4 py-3 text-sm">${Number(item.buyingprice || 0).toLocaleString()}</td>
-            <td class="px-4 py-3 text-sm">${Number(item.sellingprice || 0).toLocaleString()}</td>
-            <td class="px-4 py-3 text-right" id="actions-${item._id || 'new'}"></td>
-        `;
-
-        const actionsCell = row.querySelector(`#actions-${item._id || 'new'}`);
-        
-        // 4. Permission Logic: Include 'manager' and allow edits regardless of date
-        const authorizedRoles = ['admin', 'super-admin', 'manager'];
-
-        if (authorizedRoles.includes(currentUserRole)) {
-            const dropdown = document.createElement('div');
-            dropdown.className = 'relative inline-block text-left';
-
-            dropdown.innerHTML = `
-                <button class="dots-btn p-2 hover:bg-gray-200 rounded-full transition-all">
-                    <i class="fas fa-ellipsis-h"></i>
-                </button>
-                <div class="menu hidden absolute right-0 bottom-full mb-2 w-40 bg-white border border-gray-200 rounded-lg shadow-xl z-50 py-1">
-                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-indigo-50 text-indigo-700 flex items-center gap-2 edit-opt">
-                        <i class="fas fa-edit"></i> Edit Record
-                    </button>
-                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-amber-50 text-amber-700 flex items-center gap-2 adjust-opt">
-                        <i class="fas fa-plus-circle"></i> Add Stock
-                    </button>
-                    <div class="border-t border-gray-100 my-1"></div>
-                    <button class="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600 flex items-center gap-2 delete-opt">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
-                </div>
-            `;
-
-            const btn = dropdown.querySelector('.dots-btn');
-            const menu = dropdown.querySelector('.menu');
-
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                document.querySelectorAll('.menu').forEach(m => m !== menu && m.classList.add('hidden'));
-                menu.classList.toggle('hidden');
-            };
-
-            // Setup click handlers for the options
-            dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
-            dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
-            dropdown.querySelector('.delete-opt').onclick = () => {
-    // We only delete if there is a real database ID (_id)
-    if (item._id) { 
-        deleteInventoryItem(item._id);
-    } else {
-        showMessage("Cannot delete a placeholder. This item hasn't been saved for this date yet.");
-    }
-};
-
-            actionsCell.appendChild(dropdown);
-        } else {
-            actionsCell.innerHTML = `<span class="text-gray-400 text-xs italic"><i class="fas fa-lock mr-1"></i>View Only</span>`;
-        }
-    });
-}
-
-// Global click listener to close dropdowns
-document.addEventListener('click', () => {
-    document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
-});
 
 // Close dropdowns when clicking outside
 window.addEventListener('click', () => {
@@ -8332,7 +8170,10 @@ async function generateReports() {
     }
 
     const tbody = document.getElementById('department-report-tbody');
+    const cardContainer = document.getElementById('department-report-cards');
+    
     if (tbody) tbody.innerHTML = ''; 
+    if (cardContainer) cardContainer.innerHTML = ''; 
 
     try {
         const queryParams = `hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`;
@@ -8344,7 +8185,6 @@ async function generateReports() {
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/sales?${queryParams}&page=${page}&limit=100`);
             const res = await resp.json();
-            // BACKEND FIX: Your backend sends 'sales' and 'totalPages'
             if (res && res.sales) { 
                 allSales = allSales.concat(res.sales); 
                 totalPages = res.totalPages || 1;
@@ -8357,7 +8197,6 @@ async function generateReports() {
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/expenses?${queryParams}&page=${page}&limit=100`);
             const res = await resp.json();
-            // BACKEND FIX: Your backend sends 'expenses' and 'totalPages'
             if (res && res.expenses) { 
                 allExpenses = allExpenses.concat(res.expenses); 
                 totalPages = res.totalPages || 1;
@@ -8371,7 +8210,6 @@ async function generateReports() {
         allSales.forEach(sale => {
             const dept = sale.department || 'Other';
             if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
-            // Ensure numbers are handled correctly
             report[dept].sales += (Number(sale.number) * Number(sale.sp));
         });
 
@@ -8386,24 +8224,62 @@ async function generateReports() {
         const sortedDepts = Object.keys(report).sort();
 
         if (sortedDepts.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500 italic">No activity found for this period.</td></tr>';
+            const emptyStateHtml = 'No activity found for this period.';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
+            if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
         } else {
+            let tableRowsHTML = [];
+            let mobileCardsHTML = [];
+
             sortedDepts.forEach(dept => {
                 const { sales, expenses } = report[dept];
                 totalS += sales; totalE += expenses;
                 const balance = sales - expenses;
 
-                const row = tbody.insertRow();
-                row.className = "border-b border-gray-100 hover:bg-gray-50";
-                row.innerHTML = `
-                    <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
-                    <td class="px-6 py-4">${sales.toLocaleString()}</td>
-                    <td class="px-6 py-4">${expenses.toLocaleString()}</td>
-                    <td class="px-6 py-4 text-right font-bold ${balance >= 0 ? 'text-emerald-600' : 'text-red-600'}">
-                        ${balance.toLocaleString()}
-                    </td>
-                `;
+                const balanceColorClass = balance >= 0 ? 'text-emerald-600' : 'text-red-600';
+                const balanceBgClass = balance >= 0 ? 'bg-emerald-50/50 border border-emerald-100' : 'bg-rose-50/50 border border-rose-100';
+
+                // Desktop row generation
+                tableRowsHTML.push(`
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
+                        <td class="px-6 py-4 font-mono text-slate-600">${sales.toLocaleString()}</td>
+                        <td class="px-6 py-4 font-mono text-slate-600">${expenses.toLocaleString()}</td>
+                        <td class="px-6 py-4 text-right font-mono font-bold ${balanceColorClass}">
+                            ${balance.toLocaleString()}
+                        </td>
+                    </tr>
+                `);
+
+                // Mobile card template generation
+                mobileCardsHTML.push(`
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                        <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+                            <h4 class="font-bold text-slate-800 text-base tracking-tight">${dept}</h4>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3 text-center">
+                            <div class="bg-slate-50/80 p-2 rounded-lg">
+                                <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wide mb-0.5">Revenue (Sales)</span>
+                                <span class="font-mono font-semibold text-slate-700 text-sm">${sales.toLocaleString()}</span>
+                            </div>
+                            <div class="bg-slate-50/80 p-2 rounded-lg">
+                                <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wide mb-0.5">Costs (Expenses)</span>
+                                <span class="font-mono font-semibold text-slate-700 text-sm">${expenses.toLocaleString()}</span>
+                            </div>
+                        </div>
+
+                        <div class="${balanceBgClass} p-2.5 rounded-lg flex justify-between items-center px-4">
+                            <span class="text-xs font-bold uppercase text-slate-500 tracking-wide">Net Position</span>
+                            <span class="font-mono font-black text-base ${balanceColorClass}">${balance.toLocaleString()}</span>
+                        </div>
+                    </div>
+                `);
             });
+
+            // Injection
+            if (tbody) tbody.innerHTML = tableRowsHTML.join('');
+            if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
         }
 
         // 5. UPDATE UI CARDS (Matching your specific HTML IDs)
@@ -9402,6 +9278,187 @@ async function fetchInventory() {
     }
 }
 
+// Force this version globally to override any duplicate or hidden definitions
+window.renderInventoryTable = function(inventory) {
+    console.log("🚀 renderInventoryTable execution started with data:", inventory);
+
+    const tbody = document.querySelector('#inventory-table tbody');
+    const cardContainer = document.querySelector('#inventory-cards');
+    
+    if (!tbody || !cardContainer) {
+        console.error("❌ Target layout containers could not be found in the DOM:", { tbody, cardContainer });
+        return;
+    }
+    
+    // Clear old elements cleanly
+    tbody.innerHTML = '';
+    cardContainer.innerHTML = '';
+
+    const dateInput = document.getElementById('search-inventory-date');
+    const desktopStockHeader = document.querySelector('#inventory-table thead .stock-header-cell');
+    
+    const selectedDate = dateInput?.value || new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isToday = selectedDate === todayStr;
+
+    if (desktopStockHeader) { 
+        desktopStockHeader.textContent = isToday ? 'Current Stock' : 'Closing Stock';
+    }
+
+    // Empty State Check
+    if (!inventory || inventory.length === 0) {
+        console.warn("⚠️ Array is empty inside rendering execution context.");
+        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic">No stock records found for your chosen parameters.</td></tr>`;
+        cardContainer.innerHTML = `<div class="p-6 text-center text-slate-400 font-medium italic bg-white rounded-xl border border-slate-200 shadow-sm">No stock records found for your chosen parameters.</div>`;
+        return;
+    }
+
+    let activeRole = 'staff';
+    if (typeof currentUserRole !== 'undefined') {
+        activeRole = currentUserRole;
+    } else {
+        const fallback = JSON.parse(localStorage.getItem('loggedInUser'));
+        activeRole = fallback?.role || 'staff';
+    }
+    const hasWriteAccess = ['admin', 'super-admin', 'manager'].includes(activeRole);
+
+    // Populate loop
+    inventory.forEach((item, index) => {
+        item.viewingDate = selectedDate;
+
+        const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
+        const badgeClasses = hasMovement ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100';
+        const badgeText = hasMovement ? 'Updated' : 'Static';
+        const statusBadge = `<span class="ml-1 px-1 py-0.5 text-[8px] font-black uppercase tracking-wider border rounded ${badgeClasses}">${badgeText}</span>`;
+
+        const calculatedCurrent = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
+        const stockValue = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
+
+        const bpStr = Number(item.buyingprice || 0).toLocaleString();
+        const spStr = Number(item.sellingprice || 0).toLocaleString();
+        
+        const generatedIdSuffix = item._id || `rand-${index}-${Math.random().toString(36).substring(2, 7)}`;
+        const desktopRowId = `actions-row-${generatedIdSuffix}`;
+        const mobileCardId = `actions-card-${generatedIdSuffix}`;
+
+        // --- DESKTOP ROW VIEW ---
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50/60 transition-colors border-b border-slate-100 whitespace-nowrap";
+        tr.innerHTML = `
+            <td class="px-5 py-3.5 font-semibold text-slate-800">
+                <div class="flex flex-col items-start gap-1">
+                    <span class="text-sm leading-tight">${item.item || 'Unnamed Item'}</span>
+                    ${statusBadge}
+                </div>
+            </td>
+            <td class="px-4 py-3.5 font-mono text-center text-slate-500">${item.opening || 0}</td>
+            <td class="px-4 py-3.5 font-mono text-center text-emerald-600 font-bold">+${item.purchases || 0}</td>
+            <td class="px-4 py-3.5 font-mono text-center text-blue-600 font-bold">-${item.sales || 0}</td>
+            <td class="px-4 py-3.5 font-mono text-center text-rose-500 font-bold">-${item.spoilage || 0}</td>
+            <td class="px-4 py-3.5 font-mono text-center font-black ${isToday ? 'text-indigo-600 bg-indigo-50/30 rounded px-1' : 'text-slate-900'}">${stockValue}</td>
+            <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-500">${bpStr}</td>
+            <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-700 font-semibold">${spStr}</td>
+            <td class="px-5 py-3.5 text-right overflow-visible" id="${desktopRowId}"></td>
+        `;
+        tbody.appendChild(tr);
+
+        // --- MOBILE CARD VIEW ---
+        const card = document.createElement('div');
+        card.className = "bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-3 block";
+        card.innerHTML = `
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="text-base font-bold text-slate-800 leading-tight">${item.item || 'Unnamed Item'}</h3>
+                    <div class="mt-1">${statusBadge}</div>
+                </div>
+                <div id="${mobileCardId}" class="overflow-visible relative"></div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
+                <div class="bg-slate-50 p-2 rounded-lg">
+                    <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wide">Opening</span>
+                    <span class="font-mono font-semibold text-slate-600 text-sm">${item.opening || 0}</span>
+                </div>
+                <div class="bg-emerald-50/50 p-2 rounded-lg">
+                    <span class="block text-[10px] font-bold uppercase text-emerald-600 tracking-wide">Purchases</span>
+                    <span class="font-mono font-bold text-emerald-600 text-sm">+${item.purchases || 0}</span>
+                </div>
+                <div class="bg-blue-50/50 p-2 rounded-lg">
+                    <span class="block text-[10px] font-bold uppercase text-blue-600 tracking-wide">Sales</span>
+                    <span class="font-mono font-bold text-blue-600 text-sm">-${item.sales || 0}</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-center">
+                <div class="bg-rose-50/50 p-2 rounded-lg">
+                    <span class="block text-[10px] font-bold uppercase text-rose-500 tracking-wide">Spoilage</span>
+                    <span class="font-mono font-bold text-rose-500 text-sm">-${item.spoilage || 0}</span>
+                </div>
+                <div class="${isToday ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-100'} p-2 rounded-lg col-span-2 flex flex-col justify-center">
+                    <span class="block text-[10px] font-bold uppercase text-slate-500 tracking-wide">${isToday ? 'Current Stock' : 'Closing Stock'}</span>
+                    <span class="font-mono font-black text-base ${isToday ? 'text-indigo-600' : 'text-slate-800'}">${stockValue}</span>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-2 px-1 text-xs text-slate-500 border-t border-slate-100">
+                <div>Buying Price: <span class="font-mono font-semibold text-slate-700">${bpStr}</span></div>
+                <div>Selling Price: <span class="font-mono font-bold text-slate-800">${spStr}</span></div>
+            </div>
+        `;
+        cardContainer.appendChild(card);
+
+        // --- ATTACH DROPDOWNS ---
+        const appendDropdown = (targetCellElement) => {
+            if (!targetCellElement) return;
+            if (hasWriteAccess) {
+                const dropdown = document.createElement('div');
+                dropdown.className = 'relative inline-block text-left';
+                dropdown.innerHTML = `
+                    <button class="dots-btn p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full transition focus:outline-none">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
+                    <div class="menu hidden absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 divide-y divide-slate-100">
+                        <div class="py-1">
+                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-indigo-50 text-indigo-700 flex items-center gap-2 edit-opt">
+                                <i class="fas fa-edit w-3.5"></i> Edit
+                            </button>
+                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 adjust-opt">
+                                <i class="fas fa-plus-circle w-3.5"></i> Add Stock
+                            </button>
+                        </div>
+                        <div class="py-1">
+                            <button class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-rose-50 text-rose-600 flex items-center gap-2 delete-opt">
+                                <i class="fas fa-trash w-3.5"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                const btn = dropdown.querySelector('.dots-btn');
+                const menu = dropdown.querySelector('.menu');
+                
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.menu').forEach(m => m !== menu && m.classList.add('hidden'));
+                    menu.classList.toggle('hidden');
+                };
+
+                dropdown.querySelector('.edit-opt').onclick = () => openEditModal(item);
+                dropdown.querySelector('.adjust-opt').onclick = () => openAdjustModal(item);
+                dropdown.querySelector('.delete-opt').onclick = () => handleItemDeletionWorkflow(item);
+                
+                targetCellElement.appendChild(dropdown);
+            } else {
+                targetCellElement.innerHTML = `<span class="text-xs text-slate-400 italic font-medium pr-2">View Only</span>`;
+            }
+        };
+
+        appendDropdown(tr.querySelector(`#${desktopRowId}`));
+        appendDropdown(card.querySelector(`#${mobileCardId}`));
+    });
+
+    console.log(`✅ Cards rendering completed. Built ${cardContainer.children.length} mobile items.`);
+};
     // ... rest of the function (success handling, modal closing, etc.) remains the same ...
 // ----- Debuggable loader toggle -----
 function setEditInventoryLoading(isLoading) {
@@ -9978,9 +10035,9 @@ window.addEventListener('DOMContentLoaded', () => {
 async function loadWaiterTracker() {
     try {
         const tbody = document.getElementById('waiterTrackerBody');
+        const cardContainer = document.getElementById('waiterTrackerCards');
         
-        // 1. Use the wrapper - it handles Authorization and x-hotel-id automatically
-        // This hits: https://novouscloudpms-tz4s.onrender.com/api/waiter/orders
+        // 1. Fetch data from backend
         const res = await authenticatedFetch(`${API_BASE_URL}/waiter/orders`);
         
         if (!res || !res.ok) {
@@ -9990,16 +10047,26 @@ async function loadWaiterTracker() {
         
         const orders = await res.json();
 
+        // 2. Clear layouts and check for an empty array
+        if (tbody) tbody.innerHTML = '';
+        if (cardContainer) cardContainer.innerHTML = '';
+
         if (!orders || orders.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400">No active kitchen orders found.</td></tr>`;
+            const emptyMessage = 'No active kitchen orders found.';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400">${emptyMessage}</td></tr>`;
+            if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-8 text-slate-400 bg-white border rounded-xl shadow-sm italic text-sm">${emptyMessage}</div>`;
             return;
         }
 
-        tbody.innerHTML = orders.map(order => {
+        // Arrays to compile separate HTML structures
+        let tableRowsHTML = [];
+        let mobileCardsHTML = [];
+
+        orders.forEach(order => {
             let statusBadge = "";
             const timeStr = new Date(order.date || order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            // Logic for status colors
+            // Logic for status badges
             switch(order.status) {
                 case 'Preparing':
                     statusBadge = `<span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-black animate-pulse border border-amber-200">PREPARING</span>`;
@@ -10011,33 +10078,59 @@ async function loadWaiterTracker() {
                     statusBadge = `<span class="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-xs font-bold border border-slate-200">PENDING</span>`;
             }
 
-            return `
+            // Action Button Builder
+            const actionButtonHTML = order.status === 'Ready' ? `
+                <button onclick="markAsServed('${order._id}')" 
+                    class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-4 py-2 rounded-lg shadow-sm transition transform active:scale-95 font-semibold">
+                    Mark Served
+                </button>
+            ` : '<span class="text-gray-400 text-xs italic">Awaiting Kitchen</span>';
+
+            // Desktop Row Markup Generation
+            tableRowsHTML.push(`
                 <tr class="hover:bg-slate-50 transition">
-                    <td class="px-6 py-4 text-slate-500 text-sm">${timeStr}</td>
-                    <td class="px-6 py-4 font-bold text-slate-800">${order.item}</td>
-                    <td class="px-6 py-4 text-center text-slate-700 font-mono">${order.number || order.quantity}</td>
-                    <td class="px-6 py-4">${statusBadge}</td>
-                    <td class="px-6 py-4 text-right">
-                        ${order.status === 'Ready' ? `
-                            <button onclick="markAsServed('${order._id}')" 
-                                class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-4 py-2 rounded-lg shadow-sm transition transform active:scale-95">
-                                Mark Served
-                            </button>
-                        ` : '<span class="text-gray-300 text-xs italic">Awaiting Kitchen</span>'}
-                    </td>
+                    <td class="px-8 py-4 text-slate-500 text-sm">${timeStr}</td>
+                    <td class="px-8 py-4 font-bold text-slate-800">${order.item}</td>
+                    <td class="px-8 py-4 text-center text-slate-700 font-mono">${order.number || order.quantity}</td>
+                    <td class="px-8 py-4">${statusBadge}</td>
+                    <td class="px-8 py-4 text-right">${actionButtonHTML}</td>
                 </tr>
-            `;
-        }).join('');
+            `);
+
+            // Mobile Card Markup Generation
+            mobileCardsHTML.push(`
+                <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-3 transition active:bg-slate-50">
+                    <div class="flex justify-between items-start gap-2">
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-base leading-tight">${order.item}</h4>
+                            <span class="text-xs text-slate-400 inline-block mt-1 font-medium">Ordered: ${timeStr}</span>
+                        </div>
+                        <div class="flex flex-col items-end gap-1">
+                            <span class="text-xs font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md font-mono">Qty: ${order.number || order.quantity}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-100 gap-4">
+                        <div>${statusBadge}</div>
+                        <div class="text-right">${actionButtonHTML}</div>
+                    </div>
+                </div>
+            `);
+        });
+
+        // 3. Mount both layout structures safely to the DOM
+        if (tbody) tbody.innerHTML = tableRowsHTML.join('');
+        if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
         
     } catch (err) {
         console.error("Waiter Tracker Error:", err);
         const tbody = document.getElementById('waiterTrackerBody');
-        if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Error loading tracker data.</td></tr>`;
-        }
+        const cardContainer = document.getElementById('waiterTrackerCards');
+        const errorMsg = 'Error loading tracker data.';
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">${errorMsg}</td></tr>`;
+        if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-4 text-red-500 text-sm font-semibold">${errorMsg}</div>`;
     }
 }
-
 // Auto-refresh every 15 seconds to keep the waiter updated
 setInterval(loadWaiterTracker, 15000);
 loadWaiterTracker();

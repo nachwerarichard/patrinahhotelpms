@@ -1380,31 +1380,35 @@ body {
 
 
     <div class="bg-white rounded-[1.5rem] shadow-lg border border-slate-200 overflow-hidden mb-8">
-        <div class="bg-slate-800 px-8 py-5 flex justify-between items-center">
-            <h3 class="text-white font-bold flex items-center gap-3 uppercase tracking-tighter text-sm">
-                <span class="flex h-2 w-2 relative">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
-                </span>
-                Active Prep List
-            </h3>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead class="bg-slate-50 text-[10px] uppercase text-slate-500 font-black border-b border-slate-100">
-                    <tr>
-                        <th class="px-8 py-4">Time</th>
-                        <th class="px-8 py-4">Description</th>
-                        <th class="px-8 py-4 text-center">Qty</th>
-                        <th class="px-8 py-4">KDS Status</th>
-                        <th class="px-8 py-4 text-right">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="waiterTrackerBody" class="divide-y divide-slate-100 text-sm">
-                </tbody>
-            </table>
-        </div>
+    <div class="bg-slate-800 px-8 py-5 flex justify-between items-center">
+        <h3 class="text-white font-bold flex items-center gap-3 uppercase tracking-tighter text-sm">
+            <span class="flex h-2 w-2 relative">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+            </span>
+            Active Prep List
+        </h3>
     </div>
+
+    <div class="hidden md:block overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="bg-slate-50 text-[10px] uppercase text-slate-500 font-black border-b border-slate-100">
+                <tr>
+                    <th class="px-8 py-4">Time</th>
+                    <th class="px-8 py-4">Description</th>
+                    <th class="px-8 py-4 text-center">Qty</th>
+                    <th class="px-8 py-4">KDS Status</th>
+                    <th class="px-8 py-4 text-right">Action</th>
+                </tr>
+            </thead>
+            <tbody id="waiterTrackerBody" class="divide-y divide-slate-100 text-sm">
+                </tbody>
+        </table>
+    </div>
+
+    <div id="waiterTrackerCards" class="block md:hidden p-4 space-y-4 bg-slate-50/50">
+        </div>
+</div>
 <div id="kitchenOrders" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-8">
         </div>
 
@@ -1519,8 +1523,8 @@ body {
     </div>
 </div>
 
-<section id="posinventory" class="section bg-white p-4 sm:p-6 rounded-xl shadow-md mb-8 hidden">
-  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+<section id="posinventory" class="section bg-white p-4 sm:p-6 rounded-xl shadow-md mb-8 hidden max-sm:block! sm:block!">
+     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
     <h2 class="text-xl sm:text-2xl font-bold text-slate-800">Inventory Management</h2>
     <button onclick="toggleInventoryModal(true)" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-lg transition duration-300 flex items-center justify-center space-x-2 shadow-sm text-sm">
       <i class="fas fa-plus"></i> <span>Add New Item</span>
@@ -1548,8 +1552,7 @@ body {
     </div>
 
     <div class="w-full py-2">
-  <div class="w-full overflow-x-auto border border-slate-200/80 rounded-xl bg-white shadow-sm">
-    
+  <div class="hidden sm:block w-full overflow-x-auto border border-slate-200/80 rounded-xl bg-white shadow-sm">
     <table id="inventory-table" class="w-full min-w-max text-left border-collapse table-auto">
       <thead>
         <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
@@ -1565,11 +1568,14 @@ body {
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
-        </tbody>
+      </tbody>
     </table>
-
   </div>
+
+  <div id="inventory-cards" class="block sm:hidden space-y-4">
+    </div>
 </div>
+
   </div>
 </section>
 
@@ -2067,25 +2073,29 @@ body {
         </div>
     </div>
 
-    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-        <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
-            <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Departmental Breakdown</h3>
-        </div>
-        <div class="table-responsive">
-            <table id="department-table" class="min-w-full text-left">
-                <thead>
-                    <tr class="bg-white text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
-                        <th class="px-6 py-4">Department</th>
-                        <th class="px-6 py-4">Revenue (Sales)</th>
-                        <th class="px-6 py-4">Costs (Expenses)</th>
-                        <th class="px-6 py-4 text-right">Net Position</th>
-                    </tr>
-                </thead>
-                <tbody id="department-report-tbody" class="divide-y divide-slate-50">
-                    </tbody>
-            </table>
-        </div>
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm mb-8">
+    <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
+        <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Departmental Breakdown</h3>
     </div>
+    
+    <div class="hidden md:block table-responsive">
+        <table id="department-table" class="min-w-full text-left">
+            <thead>
+                <tr class="bg-white text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
+                    <th class="px-6 py-4">Department</th>
+                    <th class="px-6 py-4">Revenue (Sales)</th>
+                    <th class="px-6 py-4">Costs (Expenses)</th>
+                    <th class="px-6 py-4 text-right">Net Position</th>
+                </tr>
+            </thead>
+            <tbody id="department-report-tbody" class="divide-y divide-slate-50">
+            </tbody>
+        </table>
+    </div>
+
+    <div id="department-report-cards" class="block md:hidden p-4 space-y-4 bg-slate-50/40">
+        </div>
+</div>
 
     <table id="overall-reports-table" class="hidden">
         <thead>
@@ -2393,8 +2403,7 @@ body {
                 </div>
             </section>
 
-            <section id="audit-logs" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden  min-w-[2600px] overflow-hidden">
-    
+ <section id="audit-logs" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden min-w-[2600px] overflow-hidden">
     <h2 class="text-2xl font-bold mb-4 text-blue-600">Audit Logs</h2>
     
     <div class="sticky top-0 z-30 bg-white pb-4">
@@ -2425,7 +2434,7 @@ body {
         </div>
     </div>
 
-    <div class="relative border border-gray-200 rounded-lg overflow-x-auto overflow-y-auto  shadow-inner">
+    <div class="relative border border-gray-200 rounded-lg overflow-x-auto overflow-y-auto shadow-inner">
         <table id="auditLogTable" class="table-fixed min-w-[2600px] bg-white">
             <thead class="sticky top-0 z-20 shadow-sm">
                 <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
@@ -2436,8 +2445,7 @@ body {
                     <th class="py-4 px-6 text-left w-auto bg-gray-100">Details</th>
                 </tr>
             </thead>
-            <tbody class="text-gray-600 text-sm divide-y divide-gray-100">
-                </tbody>
+            <tbody class="text-gray-600 text-sm divide-y divide-gray-100"></tbody>
         </table>
     </div>
 
@@ -2447,6 +2455,25 @@ body {
         <button id="nextAuditPage" class="bg-gray-100 px-4 py-2 rounded-lg disabled:opacity-50">Next</button>
     </div>
 </section>
+
+<div id="auditLogModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 overflow-hidden flex flex-col max-h-[85vh]">
+        <div class="flex justify-between items-center px-6 py-4 bg-gray-50 border-b border-gray-100">
+            <h3 class="text-lg font-bold text-gray-800">Audit Log Details</h3>
+            <button id="closeAuditModalBtn" class="text-gray-400 hover:text-gray-600 transition text-2xl font-semibold">&times;</button>
+        </div>
+        
+        <div class="p-6 overflow-y-auto flex-1">
+            <pre id="auditLogModalContent" class="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-xs overflow-x-auto whitespace-pre-wrap"></pre>
+        </div>
+        
+        <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+            <button id="closeAuditModalFooterBtn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition text-sm font-medium">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
 
             <section id="channel-manager" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
                 <h2 class="text-2xl font-bold mb-4 text-blue-600"><i class="fas fa-exchange-alt"></i> Channel Manager</h2>
@@ -3754,12 +3781,7 @@ document.getElementById('clearMissingItemsDateFilter')?.addEventListener('click'
   renderMissingItemsSummary();
 });
 
-function showMessage(id, message, isError = false) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = message;
-  el.className = `text-center font-bold mt-4 ${isError ? 'text-rose-600' : 'text-emerald-600'}`;
-}
+
 
 // Expose functions globally safely
 window.showTab = window.showTab || function() {};
@@ -4017,5 +4039,6 @@ function setFieldValue(id, value) {
     }
 }
 </script>
+
 </body>
 </html>
