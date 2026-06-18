@@ -285,25 +285,29 @@ async function renderAuditLogs() {
             tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No audit logs found.</td></tr>';
         } else {
             logs.forEach(log => {
-                const reason = (log.details?.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
-                const row = tableBody.insertRow();
-                row.className = "border-b border-gray-200 hover:bg-gray-50 transition-colors";
+    const reason = (log.details?.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
+    const row = tableBody.insertRow();
+    row.className = "border-b border-gray-200 hover:bg-gray-50 transition-colors";
 
-                row.innerHTML = `
-                    <td class="py-3 px-6 text-left text-sm">${new Date(log.timestamp).toLocaleString()}</td>
-                    <td class="py-3 px-6 text-left font-medium">${log.user}</td>
-                    <td class="py-3 px-6 text-left">
-                        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs uppercase font-bold">${log.action}</span>
-                    </td>
-                    <td class="py-3 px-6 text-left text-sm italic text-gray-600">${reason}</td>
-                    <td class="py-3 px-6 text-left">
-                        <button class="text-indigo-600 hover:underline text-xs font-mono" 
-                                onclick='console.log(${JSON.stringify(log.details)})'>
-                            View Raw Details
-                        </button>
-                    </td>
-                `;
-            });
+    row.innerHTML = `
+        <td class="py-3 px-6 text-left text-sm">${new Date(log.timestamp).toLocaleString()}</td>
+        <td class="py-3 px-6 text-left font-medium">${log.user}</td>
+        <td class="py-3 px-6 text-left">
+            <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs uppercase font-bold">${log.action}</span>
+        </td>
+        <td class="py-3 px-6 text-left text-sm italic text-gray-600">${reason}</td>
+        <td class="py-3 px-6 text-left">
+            <button class="view-details-btn text-indigo-600 hover:underline text-xs font-mono">
+                View Details
+            </button>
+        </td>
+    `;
+
+    // Safely attach the click event handler directly to this row's button
+    row.querySelector('.view-details-btn').addEventListener('click', () => {
+        openAuditModal(log.details);
+    });
+});
         }
 
     } catch (error) {

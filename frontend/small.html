@@ -2403,7 +2403,7 @@ body {
                 </div>
             </section>
 
-            <section id="audit-logs" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden  min-w-[2600px] overflow-hidden">
+ <section id="audit-logs" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden  min-w-[2600px] overflow-hidden">
     
     <h2 class="text-2xl font-bold mb-4 text-blue-600">Audit Logs</h2>
     
@@ -2457,6 +2457,24 @@ body {
         <button id="nextAuditPage" class="bg-gray-100 px-4 py-2 rounded-lg disabled:opacity-50">Next</button>
     </div>
 </section>
+<div id="auditLogModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 overflow-hidden flex flex-col max-h-[85vh]">
+        <div class="flex justify-between items-center px-6 py-4 bg-gray-50 border-b border-gray-100">
+            <h3 class="text-lg font-bold text-gray-800">Audit Log Details</h3>
+            <button id="closeAuditModalBtn" class="text-gray-400 hover:text-gray-600 transition text-2xl font-semibold">&times;</button>
+        </div>
+        
+        <div class="p-6 overflow-y-auto flex-1">
+            <pre id="auditLogModalContent" class="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-xs overflow-x-auto whitespace-pre-wrap"></pre>
+        </div>
+        
+        <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+            <button id="closeAuditModalFooterBtn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition text-sm font-medium">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
 
             <section id="channel-manager" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
                 <h2 class="text-2xl font-bold mb-4 text-blue-600"><i class="fas fa-exchange-alt"></i> Channel Manager</h2>
@@ -4021,6 +4039,37 @@ function setFieldValue(id, value) {
         el.value = value !== undefined && value !== null ? value : '';
     }
 }
+</script>
+<script>
+    // Modal DOM elements
+const auditModal = document.getElementById('auditLogModal');
+const modalContent = document.getElementById('auditLogModalContent');
+const closeBtn1 = document.getElementById('closeAuditModalBtn');
+const closeBtn2 = document.getElementById('closeAuditModalFooterBtn');
+
+// Open Modal & Format JSON
+function openAuditModal(details) {
+    // Pretty-prints the JSON object with a 2-space indentation
+    modalContent.textContent = JSON.stringify(details, null, 2);
+    auditModal.classList.remove('hidden');
+}
+
+// Close Modal Function
+function closeAuditModal() {
+    auditModal.classList.add('hidden');
+    modalContent.textContent = ''; // Clear content
+}
+
+// Event Listeners for closing
+closeBtn1.addEventListener('click', closeAuditModal);
+closeBtn2.addEventListener('click', closeAuditModal);
+
+// Close modal if user clicks outside the modal box
+window.addEventListener('click', (event) => {
+    if (event.target === auditModal) {
+        closeAuditModal();
+    }
+});
 </script>
 </body>
 </html>
