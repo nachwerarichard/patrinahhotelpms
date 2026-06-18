@@ -4560,40 +4560,58 @@ app.post('/api/sales', auth, async (req, res) => {
   try {
     const { item, department, number, bp, sp, date, accountId } = req.body;
     const hotelId = req.user.hotelId; // Extract tenant ID
+    const username = req.user.username; // Extract username context
 
     // 1. Fetch the Inventory record (now hotel-specific)
     const todayInventory = await getTodayInventory(item, 0, hotelId);
 
     // 2. Dynamic Inventory Logic (Stock Check)
     const currentAvailableStock = todayInventory.opening + todayInventory.purchases;
-    
-    // Define the variable name clearly here:
     const shouldTrackStock = todayInventory.trackInventory && department !== 'Restaurant';
 
-    // FIX: Changed 'shouldStockCheck' to 'shouldTrackStock' to match the variable above
     if (shouldTrackStock && (todayInventory.sales + number) > currentAvailableStock) {
+      // 📝 AUDIT LOG: Track failed sale due to low inventory levels
+      await addAuditLog('Sale Failed: Insufficient Stock', username, hotelId, {
+        item,
+        department,
+        requestedQuantity: number,
+        availableStock: currentAvailableStock - todayInventory.sales
+      });
+
       return res.status(400).json({ 
         error: `Insufficient stock. Available: ${currentAvailableStock - todayInventory.sales}` 
       });
     }
 
-    // 3. Update Inventory (INTEGRATED HERE)
-    // Only update the inventory database if it is NOT a Restaurant sale
+    // 3. Update Inventory
     if (department !== 'Restaurant') {
       todayInventory.sales += number;
       await todayInventory.save();
     }
 
     // 4. Folio Charging (Securely link to guest account in SAME hotel)
+    let appliedToAccount = false;
     if (accountId) {
       const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');
-      await AccountModel.findOneAndUpdate(
+      const updatedAccount = await AccountModel.findOneAndUpdate(
         { _id: accountId, hotelId }, // Ensure account belongs to this hotel
         {
           $push: { charges: { description: `${item} (x${number})`, amount: sp * number, type: department, date: new Date() }},
           $inc: { totalCharges: sp * number }
-        }
+        },
+        { new: true }
       );
+
+      if (updatedAccount) {
+        appliedToAccount = true;
+        // 📝 AUDIT LOG: Track room charge connection
+        await addAuditLog('Folio Charged via Sale', username, hotelId, {
+          accountId,
+          item,
+          totalCharge: sp * number,
+          department
+        });
+      }
     }
 
     // 5. Create Sale Record (Tagged with hotelId)
@@ -4604,7 +4622,16 @@ app.post('/api/sales', auth, async (req, res) => {
       percentageprofit: bp !== 0 ? ((sp - bp) / bp) * 100 : 0
     });
 
-    await logAction('Sale Created', req.user.username, { saleId: sale._id, hotelId });
+    // 📝 AUDIT LOG: Log final successful sale state configuration
+    await addAuditLog('Sale Created', username, hotelId, { 
+      saleId: sale._id,
+      item: sale.item,
+      quantity: number,
+      department,
+      totalRevenue: sp * number,
+      folioCharged: appliedToAccount
+    });
+
     res.status(201).json(sale);  
 
   } catch (err) {

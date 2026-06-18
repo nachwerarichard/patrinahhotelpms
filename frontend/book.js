@@ -3,7 +3,7 @@
  * Integrated with: Cloudinary Images & Domain-based Multi-tenancy
  */
 
-const API_BASE_URL = 'https://patrinahhotelpms-ew8d.onrender.com/api';
+const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
 let availableRoomsBySelectedType = {};
 let selectedRoomsCart = [];
 let roomTypeDetails = []; 
