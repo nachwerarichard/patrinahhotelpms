@@ -1676,6 +1676,96 @@ body {
                         <h3 class="text-xs font-bold text-slate-400 uppercase mb-6 flex items-center gap-2">
                             <i class="fas fa-cart-plus text-indigo-500"></i> POS Terminal
                         </h3>
+                        <button
+    id="openQuickPayModal"
+    class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-5 py-2.5 rounded-lg font-medium w-full md:w-auto shadow-sm transition-colors"
+>
+    Quick Pay
+</button>
+
+<div
+    id="quickPayModal"
+    class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4 backdrop-blur-sm"
+>
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md transform transition-all">
+
+        <div class="flex justify-between items-center border-b border-gray-100 px-6 py-4">
+            <h2 class="text-lg font-bold text-gray-900">
+                Quick Sale Payment
+            </h2>
+            <button
+                id="closeQuickPayModal"
+                class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1.5 rounded-lg text-xl transition-colors lines-none"
+            >
+                &times;
+            </button>
+        </div>
+
+        <form id="quickPayForm" class="p-6 space-y-4">
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">
+                    Amount
+                </label>
+                <div class="relative rounded-lg">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <span class="text-gray-400 text-sm font-medium">UGX</span>
+                    </div>
+                    <input
+                        type="number"
+                        id="amount"
+                        required
+                        min="1"
+                        placeholder="Enter amount"
+                        class="w-full border border-gray-300 rounded-lg pl-14 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    />
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">
+                    Outlet
+                </label>
+                <select
+                    id="outlet"
+                    required
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                >
+                    <option value="">Select Outlet</option>
+                    <option value="Bar">Bar</option>
+                    <option value="Restaurant">Restaurant</option>
+                    <option value="Kitchen">Kitchen</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">
+                    Customer Phone <span class="text-xs font-normal text-gray-400">(Optional)</span>
+                </label>
+                <input
+                    type="tel"
+                    id="phone"
+                    placeholder="2567XXXXXXXX"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                />
+            </div>
+
+            <div
+                id="quickPayMessage"
+                class="hidden text-sm font-medium rounded-lg p-3.5 border"
+            ></div>
+
+            <button
+                type="submit"
+                id="submitQuickPay"
+                class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                Proceed To Payment
+            </button>
+
+        </form>
+    </div>
+</div>
                         <form id="addChargeForm" class="space-y-5">
                             <div>
                                 <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Department</label>
@@ -4039,6 +4129,98 @@ function setFieldValue(id, value) {
     }
 }
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('quickPayModal');
+    const openBtn = document.getElementById('openQuickPayModal');
+    const closeBtn = document.getElementById('closeQuickPayModal');
+    const form = document.getElementById('quickPayForm');
+    const messageBox = document.getElementById('quickPayMessage');
+    const submitBtn = document.getElementById('submitQuickPay');
 
+    // Open Modal
+    openBtn.addEventListener('click', () => {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    });
+
+    // Reset view variables when closing the modal window
+    const closeModal = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Proceed To Payment';
+        messageBox.className = 'hidden';
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+
+    // Close when clicking outside modal backdrop
+    window.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Form submission processing
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Processing...';
+        messageBox.className = 'hidden';
+
+        try {
+            const payload = {
+                amount: Number(document.getElementById('amount').value),
+                outlet: document.getElementById('outlet').value,
+                phone: document.getElementById('phone').value
+            };
+
+            const response = await authenticatedFetch('https://patrinahhotelpms.onrender.com/api/quick-sales/initiate-payment', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            if (!response) return; 
+
+            const data = await response.json();
+            console.log("Backend Response Data:", data); 
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to initiate payment');
+            }
+            
+            // Check for valid camelCase string sent from backend schema rules
+            if (!data.redirectUrl) {
+                throw new Error("Payment gateway failed to provide a redirection link.");
+            }
+
+            messageBox.className = 'bg-green-50 text-green-700 border-green-200 text-sm font-medium rounded-lg p-3.5';
+            messageBox.textContent = 'Redirecting to secure Pesapal checkout page...';
+            messageBox.classList.remove('hidden');
+
+            // Securely transfer whole window frame to checkout link location
+            setTimeout(() => {
+                window.location.href = data.redirectUrl;
+            }, 1200);
+
+        } catch (error) {
+            messageBox.className = 'bg-red-50 text-red-700 border-red-200 text-sm font-medium rounded-lg p-3.5';
+            messageBox.textContent = error.message;
+            messageBox.classList.remove('hidden');
+            
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Proceed To Payment';
+        } finally {
+            // Re-enable input button only if it catches early network failure
+            if (!messageBox.classList.contains('text-green-700')) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Proceed To Payment';
+            }
+        }
+    });
+});
+</script>
 </body>
 </html>
