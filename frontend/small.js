@@ -4656,7 +4656,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const navCalendar = document.getElementById('nav-calendar');
     const navAuditLogs = document.getElementById('nav-audit-logs');
     const navPaymentGateway = document.getElementById('nav-paymentgateway');
-    const navPaymentGateway = document.getElementById('nav-paymentgateway');
     const navChannelManager = document.getElementById('nav-channel-manager');
     const navPOSInventory = document.getElementById('nav-posinventory');
       const navCash = document.getElementById('nav-cash');
