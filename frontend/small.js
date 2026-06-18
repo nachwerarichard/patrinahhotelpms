@@ -759,6 +759,7 @@ async function showDashboard(username, role) {
         initialSectionId = 'booking-management';
         initialNavLinkId = 'nav-booking';
         document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('nav-paymentgateway').style.display = 'none';
         renderBookings()
     }
 
@@ -4655,6 +4656,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const navCalendar = document.getElementById('nav-calendar');
     const navAuditLogs = document.getElementById('nav-audit-logs');
     const navPaymentGateway = document.getElementById('nav-paymentgateway');
+    const navPaymentGateway = document.getElementById('nav-paymentgateway');
     const navChannelManager = document.getElementById('nav-channel-manager');
     const navPOSInventory = document.getElementById('nav-posinventory');
       const navCash = document.getElementById('nav-cash');
@@ -4698,6 +4700,12 @@ document.addEventListener('DOMContentLoaded', () => {
         navSale.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
             showSection('sale');
+        });
+    }
+     if (navPaymentGateway) {
+        navPaymentGateway.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection('paymentgateway');
         });
     }
 
