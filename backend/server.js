@@ -3373,7 +3373,7 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
 
         booking.paymentMethod = transaction.payment_method || transaction.payment_account || 'Pesapal';
         booking.paymentStatus = newBalance === 0 ? 'Paid' : 'Partially Paid';
-        booking.pesapalTrackingId = OrderTrackingId;
+        booking.transactionid = OrderTrackingId;
         booking.paidAt = new Date();
 
         await booking.save();
