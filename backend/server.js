@@ -331,27 +331,7 @@ roomSchema.index({ hotelId: 1, number: 1 }, { unique: true });
 const Room = mongoose.model('Room', roomSchema);
 // Create a Room Type (Tied to the hotel)
 
-cloudinary.config({
-    cloud_name: 'dreiyg73q',
-    api_key: '478483388418876',
-    api_secret: 'SfkfPxGZWM4H95Ndgje7SEKe2Y8'
-});
-//const hotelId = req.user && req.user.hotelId ? req.user.hotelId : 'generic';
-//**********
-// 1. Configure Cloudinary Storage for Multer
-const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: async (req, file) => {
-        return {
-            folder: `novouspms/hotels/${req.user.hotelId}/room-categories`,
-            allowed_formats: ['jpg', 'png', 'webp','avif'],
-            // Dynamic transformation to keep your database "light"
-            transformation: [{ width: 1000, height: 600, crop: 'fill' }] 
-        };
-    },
-});
 
-const upload = multer({ storage: storage });
 
 // GET ALL HOTELS
 app.get('/api/admin/hotels', auth, authorize('super-admin'), async (req, res) => {
