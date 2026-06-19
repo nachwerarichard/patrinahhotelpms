@@ -3277,7 +3277,7 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
         const OrderNotificationType = req.query.OrderNotificationType || req.body.OrderNotificationType;
 
         console.log('====================================');
-        console.log('📥 PESAPAL IPN RECEIVED');
+        console.log('📥 PESAPAL UNIFIED IPN RECEIVED');
         console.log('Tracking ID:', OrderTrackingId);
         console.log('Merchant Ref:', OrderMerchantReference);
         console.log('Notification Type:', OrderNotificationType);
@@ -3288,22 +3288,21 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
         }
 
         // =====================================================
-        // CASE A: QUICK SALES ROUTING (Prefix: QS-)
+        // CASE A: QUICK SALES / POS PAYMENTS ROUTING (Prefix: QS-)
         // =====================================================
         if (OrderMerchantReference && OrderMerchantReference.startsWith('QS-')) {
-            console.log(`🔀 [ROUTING] Quick Sale prefix detected. Processing POS transaction...`);
+            console.log(`🔀 [ROUTING] Quick Sale prefix detected. Processing PaymentTransaction...`);
 
-            // 1. Fetch your matching Quick Sale / Invoice record
-            // (Swap out "QuickSale" with your exact schema model name)
-            const quickSale = await QuickSale.findOne({ 
+            // Find the transaction using your actual active schema model matching fields
+            const quickSalePayment = await PaymentTransaction.findOne({
                 $or: [
-                    { transactionid: OrderTrackingId },
-                    { id: OrderMerchantReference }
+                    { orderTrackingId: OrderTrackingId },
+                    { merchantReference: OrderMerchantReference }
                 ]
             });
 
-            if (!quickSale) {
-                console.log('❌ No Quick Sale record found for reference:', OrderMerchantReference);
+            if (!quickSalePayment) {
+                console.log('❌ No PaymentTransaction record found for reference:', OrderMerchantReference);
                 return res.status(200).json({
                     OrderNotificationType: OrderNotificationType || 'IPNCHANGE',
                     OrderTrackingId: OrderTrackingId,
@@ -3312,8 +3311,8 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
                 });
             }
 
-            // 2. Prevent Duplicate Webhook Execution
-            if (quickSale.paymentStatus === 'Paid') {
+            // Prevent duplicate executions
+            if (quickSalePayment.status === 'Completed') {
                 console.log('⚠️ Quick Sale payment already processed previously:', OrderMerchantReference);
                 return res.status(200).json({
                     OrderNotificationType: OrderNotificationType || 'IPNCHANGE',
@@ -3323,14 +3322,30 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
                 });
             }
 
-            // 3. Authenticate with Pesapal via Hotel Tenant Context
-            const { token } = await getPesapalAccessToken(quickSale.hotelId);
-            const tenantGateway = await Gateway.findOne({ hotelId: quickSale.hotelId, gatewayId: 'pesapal' });
-            
-            const isLiveEnvironment = tenantGateway?.environment === 'Live';
-            const targetVerificationBaseUrl = isLiveEnvironment ? 'https://pay.pesapal.com/v3' : 'https://cybqa.pesapal.com/pesapalv3';
+            // Fetch tenant gateway credential parameters safely using the stored hotelId
+            const tenantGateway = await Gateway.findOne({ hotelId: quickSalePayment.hotelId, gatewayId: 'pesapal' });
+            if (!tenantGateway) {
+                console.log('❌ Gateway config missing for Tenant ID:', quickSalePayment.hotelId);
+                return res.status(200).json({ message: 'Gateway layout not found' });
+            }
 
-            // 4. Query Real-Time Transaction Status from Gateway
+            const isLiveEnvironment = tenantGateway.environment === 'Live';
+            const authUrl = isLiveEnvironment
+                ? 'https://pay.pesapal.com/v3/api/Auth/RequestToken'
+                : 'https://cybqa.pesapal.com/pesapalv3/api/Auth/RequestToken';
+
+            const targetVerificationBaseUrl = isLiveEnvironment 
+                ? 'https://pay.pesapal.com/v3' 
+                : 'https://cybqa.pesapal.com/pesapalv3';
+
+            // Generate active handshake session token
+            const authResponse = await axios.post(authUrl, {
+                consumer_key: tenantGateway.consumerKey,
+                consumer_secret: tenantGateway.consumerSecret
+            });
+            const token = authResponse.data.token;
+
+            // Query transaction status directly from Pesapal
             const statusResponse = await axios.get(
                 `${targetVerificationBaseUrl}/api/Transactions/GetTransactionStatus?orderTrackingId=${OrderTrackingId}`,
                 { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } }
@@ -3338,7 +3353,7 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
 
             const transaction = statusResponse.data;
             if (Number(transaction.status_code) !== 1) {
-                console.log(`❌ Quick Sale payment incomplete. Status: ${transaction.status_code}`);
+                console.log(`❌ Quick Sale payment incomplete on gateway. Status: ${transaction.status_code}`);
                 return res.status(200).json({
                     OrderNotificationType: OrderNotificationType || 'IPNCHANGE',
                     OrderTrackingId: OrderTrackingId,
@@ -3347,26 +3362,30 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
                 });
             }
 
-            // 5. Update Quick Sale Financial Metrics
-            const paymentAmount = Number(transaction.amount) || 0;
-            quickSale.amountPaid = (Number(quickSale.amountPaid) || 0) + paymentAmount;
-            quickSale.balance = Math.max(0, (Number(quickSale.totalDue) || 0) - quickSale.amountPaid);
-            quickSale.paymentStatus = quickSale.balance === 0 ? 'Paid' : 'Partially Paid';
-            quickSale.paymentMethod = transaction.payment_method || 'Online';
-            quickSale.transactionid = OrderTrackingId;
-            quickSale.paidAt = new Date();
+            // Sync database tracking logs cleanly to state properties
+            quickSalePayment.status = 'Completed';
+            quickSalePayment.completedAt = new Date();
+            // Optional: Save gateway payment details if your schema tracks them
+            if (transaction.payment_method) {
+                quickSalePayment.paymentMethod = transaction.payment_method;
+            }
 
-            await quickSale.save();
+            await quickSalePayment.save();
 
-            // 6. Add Audit Tracking Trail
+            // Fire and forget audit verification entry
             await addAuditLog(
                 'Pesapal Quick Sale Confirmed',
                 'Pesapal Gateway POS',
-                { saleId: quickSale._id, trackingId: OrderTrackingId, amount: paymentAmount },
-                quickSale.hotelId
+                { 
+                    transactionId: quickSalePayment._id, 
+                    trackingId: OrderTrackingId, 
+                    amount: quickSalePayment.amount,
+                    outlet: quickSalePayment.outlet
+                },
+                quickSalePayment.hotelId
             );
 
-            console.log('✅ Quick Sale transaction recorded successfully:', OrderMerchantReference);
+            console.log('✅ PaymentTransaction updated securely:', OrderMerchantReference);
 
             return res.status(200).json({
                 OrderNotificationType: 'IPNCHANGE',
@@ -3377,7 +3396,7 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
         }
 
         // =====================================================
-        // CASE B: STANDARD ROOM BOOKING ROUTING (Prefix: BKG-)
+        // CASE B: STANDARD ROOM BOOKING ROUTING (Default / BKG-)
         // =====================================================
         const booking = await Booking.findOne({
             $or: [
@@ -3396,7 +3415,6 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
             });
         }
 
-        // Prevent Duplicate Webhook Execution
         if (booking.paymentStatus === 'Paid' && booking.balance === 0) {
             console.log('⚠️ Room booking payment already processed:', OrderTrackingId);
             return res.status(200).json({
@@ -3407,14 +3425,13 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
             });
         }
 
-        // Authenticate with Pesapal via Hotel Tenant Context
+        // Get token using hotel custom utility for normal bookings
         const { token } = await getPesapalAccessToken(booking.hotelId);
         const tenantGateway = await Gateway.findOne({ hotelId: booking.hotelId, gatewayId: 'pesapal' });
         
         const isLiveEnvironment = tenantGateway?.environment === 'Live';
         const targetVerificationBaseUrl = isLiveEnvironment ? 'https://pay.pesapal.com/v3' : 'https://cybqa.pesapal.com/pesapalv3';
 
-        // Query Real-Time Transaction Status from Gateway
         const statusResponse = await axios.get(
             `${targetVerificationBaseUrl}/api/Transactions/GetTransactionStatus?orderTrackingId=${OrderTrackingId}`,
             { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } }
@@ -3445,13 +3462,12 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
         booking.balance = newBalance;
         booking.paymentMethod = transaction.payment_method || transaction.payment_account || 'Pesapal';
         booking.paymentStatus = newBalance === 0 ? 'Paid' : 'Partially Paid';
-        booking.gueststatus = 'confirmed'; // Automatically update status code to confirmed
+        booking.gueststatus = 'confirmed';
         booking.transactionid = OrderTrackingId;
         booking.paidAt = new Date();
 
         await booking.save();
 
-        // Add Audit Tracking Trail
         await addAuditLog(
             'Pesapal Payment Confirmed',
             'Pesapal Gateway Room Booking',
@@ -3474,7 +3490,7 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('💥 PESAPAL IPN MULTI-ROUTING RUNTIME ERROR:', error.response?.data || error.message);
+        console.error('💥 PESAPAL IPN UNIFIED RUNTIME ERROR:', error.response?.data || error.message);
         return res.status(200).json({
             message: 'IPN received but processing failed internal multi-tenant runtime.'
         });
@@ -3628,63 +3644,6 @@ app.get('/api/quick-sales/payment-callback', async (req, res) => {
 
 });
 
-app.post('/api/quick-sales/pesapal-ipn', async (req, res) => {
-
-    try {
-
-        const {
-            OrderTrackingId
-        } = req.body;
-
-        console.log(
-            'Quick Sale IPN Received:',
-            OrderTrackingId
-        );
-
-        const payment = await PaymentTransaction.findOne({
-            orderTrackingId: OrderTrackingId
-        });
-
-        if (!payment) {
-
-            return res.status(404).json({
-                success: false,
-                message: 'Transaction not found'
-            });
-
-        }
-
-        if (payment.status === 'Completed') {
-
-            return res.status(200).json({
-                success: true,
-                message: 'Already processed'
-            });
-
-        }
-
-        payment.status = 'Completed';
-
-        payment.completedAt = new Date();
-
-        await payment.save();
-
-        return res.status(200).json({
-            success: true
-        });
-
-    } catch (error) {
-
-        console.error(error);
-
-        return res.status(500).json({
-            success: false,
-            message: error.message
-        });
-
-    }
-
-});
 
 app.get('/api/quick-sales', auth, async (req, res) => {
 
