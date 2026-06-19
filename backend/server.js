@@ -657,7 +657,7 @@ const bookingSchema = new mongoose.Schema({
     amountPaid: { type: Number}, // This is ROOM amount paid
     balance: { type: Number, default: 0 }, // This is ROOM balance
     paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Partially Paid'], default: 'Pending' },
-    paymentMethod: { type: String, enum: ['Pesapal', 'Visa', 'Mastercard', 'Mobile Money', 'Cash', 'M-Pesa', 'MTN Momo', 'Airtel Pay','Bank'], default: 'Cash' },
+    paymentMethod: { type: String, enum: ['Pesapal', 'Online','Visa', 'Mastercard', 'Mobile Money', 'Cash', 'M-Pesa', 'MTN Momo', 'Airtel Pay','Bank'], default: 'Cash' },
     guestsource: { type: String, required: true, enum: ['Walk in','Hotel Website', 'Expedia', 'Booking.com','Trip'], default: 'Walk in' },
     gueststatus: { type: String, required: true, enum: ['confirmed', 'cancelled', 'no show', 'checkedin', 'reserved','checkedout','void'], default: 'confirmed' },
     cancellationReason: { type: String, default: '' },
@@ -3698,10 +3698,7 @@ const PaymentTransaction = mongoose.model(
             default: null
         },
 
-        paymentMethod: {
-            type: String,
-            default: 'Pesapal'
-        },
+         paymentMethod: { type: String, enum: ['Pesapal', 'Online','Visa', 'Mastercard', 'Mobile Money', 'Cash', 'M-Pesa', 'MTN Momo', 'Airtel Pay','Bank'], default: 'Cash' },
 
         status: {
             type: String,
