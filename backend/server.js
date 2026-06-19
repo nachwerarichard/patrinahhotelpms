@@ -2253,6 +2253,64 @@ app.get('/api/audit-logs', auth, async (req, res) => {
     }
 });
 
+async function getHotelIdFromRequest(req) {
+    console.log("----------------------------------------------------");
+    console.log("🔍 [TENANT IDENTITY] Starting domain lookup...");
+    
+    // 1. Gather potential domain sources
+    let sourceUrl = req.headers['x-tenant-domain'] || 
+                    req.query.tenantDomain || 
+                    req.headers.referer || 
+                    req.headers.origin;
+    
+    console.log(`📋 Extracted Raw Domain Source: "${sourceUrl}"`);
+
+    if (!sourceUrl) {
+        console.error("❌ Multi-Tenancy Error: No domain source could be found in request headers or query strings.");
+        return null;
+    }
+
+    try {
+        let hostname = sourceUrl;
+        
+        // Strip protocols if they exist
+        if (sourceUrl.includes('://')) {
+            const urlObj = new URL(sourceUrl);
+            hostname = urlObj.hostname;
+        }
+
+        // Clean up formatting (strip ports)
+        hostname = hostname.split(':')[0].trim().toLowerCase();
+        console.log(`🧼 Cleaned Hostname for Query: "${hostname}"`);
+
+        // Check database connection state before running query
+        if (mongoose.connection.readyState !== 1) {
+            console.error("❌ DATABASE CONNECTION ERROR: Mongoose is not connected to MongoDB!");
+            throw new Error("Database connection is offline.");
+        }
+
+        console.log(`📦 Querying MongoDB: Hotel.findOne({ domainName: "${hostname}" })`);
+        const hotelConfig = await Hotel.findOne({ domainName: hostname });
+
+        if (!hotelConfig) {
+            console.warn(`⚠️ Multi-Tenancy Warning: No registered hotel document matches 'domainName': "${hostname}"`);
+            return null;
+        }
+
+        console.log(`✅ Success: Found Hotel document! Name: "${hotelConfig.name}" | ID: ${hotelConfig._id}`);
+        return hotelConfig._id;
+
+    } catch (err) {
+        // 🔥 CRITICAL: This catches any hidden schema or parsing crashes
+        console.error("💥 CRITICAL FAULT INSIDE getHotelIdFromRequest:");
+        console.error(`👉 Error Message: ${err.message}`);
+        console.error(`👉 Error Stack:\n`, err.stack);
+        
+        // Throwing the error here tells Express to pass it downstream to your global error boundary
+        throw err; 
+    }
+}
+
 // Backend: api/public/room-types
 app.get('/api/public/room-types', async (req, res) => {
     try {
