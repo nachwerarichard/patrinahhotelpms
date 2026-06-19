@@ -7,6 +7,25 @@ const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+cloudinary.config({
+    cloud_name: 'dckvyguun',
+    api_key: '986177637794957',
+    api_secret: '986177637794957'
+});
+
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: async (req, file) => {
+        return {
+            folder: `novouspms/hotels/${req.user.hotelId}/room-categories`,
+            allowed_formats: ['jpg', 'png', 'webp'],
+            // Dynamic transformation to keep your database "light"
+            transformation: [{ width: 1000, height: 600, crop: 'fill' }] 
+        };
+    },
+});
+
+const upload = multer({ storage: storage });
 //CLOUDINARY_URL=cloudinary://986177637794957:**********@dckvyguun
 //CLOUDINARY_URL=cloudinary://478483388418876:**********@dreiyg73q
 const app = express();
@@ -2272,95 +2291,284 @@ app.get('/api/public/room-types', async (req, res) => {
     }
 });
 // Public availability check
+
 app.get('/api/public/rooms/available', async (req, res) => {
     const { checkIn, checkOut, roomType } = req.query;
+    
+    console.log("====================================================");
+    console.log("🚀 [INCOMING REQUEST] /api/public/rooms/available");
+    console.log(`📋 Params: checkIn=${checkIn}, checkOut=${checkOut}, roomType=${roomType}`);
+    console.log("====================================================");
+
+    if (!checkIn || !checkOut) {
+        console.warn("⚠️ Validation Failed: Missing checkIn or checkOut dates.");
+        return res.status(400).json({ message: "Check-in and Check-out dates are required query fields." });
+    }
 
     try {
-        // AUTOMATION: Get hotelId by sniffing the Domain/Referer
-        const hotelId = await getHotelIdFromRequest(req);
+        console.log("🔍 Step 1: Resolving Hotel Context ID from request...");
+        const rawHotelId = await getHotelIdFromRequest(req);
+        console.log(`🎯 Raw Hotel ID Found: "${rawHotelId}"`);
 
-        if (!hotelId) {
+        if (!rawHotelId) {
+            console.error("❌ Error: Hotel context could not be identified for this domain.");
             return res.status(400).json({ message: "Hotel context not found for this domain." });
         }
 
+        // Convert plain string ID safely to official Mongoose ObjectId to avoid Casting Failures
+        const hotelId = new mongoose.Types.ObjectId(rawHotelId);
+
         // 1. Find conflicting bookings for THIS hotel
+        console.log(`🔍 Step 2: Fetching active overlapping bookings for Hotel...`);
         const conflictingBookings = await Booking.find({
             hotelId,
             checkIn: { $lt: checkOut },
-            checkOut: { $gt: checkIn }
+            checkOut: { $gt: checkIn },
+            gueststatus: { $nin: ['cancelled', 'void'] }
         });
+        console.log(`📉 Found ${conflictingBookings.length} overlapping booking records.`);
 
-        const bookedRoomNumbers = conflictingBookings.map(booking => booking.room);
+        const bookedRoomNumbers = conflictingBookings
+            .map(b => b.room)
+            .filter(roomNum => typeof roomNum === 'string' && roomNum.trim() !== '');
+        
+        console.log(`🚫 Excluded occupied room list:`, bookedRoomNumbers);
 
-        // 2. Query available rooms
-        let query = {
+        // 2. Base query criteria for finding open vacancies
+        let roomQuery = {
             hotelId,
-            status: { $nin: ['under-maintenance', 'blocked'] },
-            number: { $nin: bookedRoomNumbers }
+            status: { $nin: ['under-maintenance', 'blocked'] }
         };
+
+        if (bookedRoomNumbers.length > 0) {
+            roomQuery.number = { $nin: bookedRoomNumbers };
+        }
 
         // Filter by specific type if the user selected one (other than 'Any')
         if (roomType && roomType !== 'Any') {
-            // We need to find the RoomType ID first because roomType in query is a Name string
+            console.log(`🔍 Step 3: Specific category requested: "${roomType}". Resolving details...`);
             const rType = await RoomType.findOne({ hotelId, name: roomType });
-            if (rType) query.roomTypeId = rType._id;
+            
+            if (rType) {
+                console.log(`✅ RoomType profile found: "${rType.name}" -> ID: ${rType._id}`);
+                roomQuery.roomTypeId = rType._id;
+            } else {
+                console.warn(`⚠️ Warning: Category "${roomType}" does not exist for this hotel ID. Stopping query early.`);
+                return res.json({});
+            }
+        } else {
+            console.log(`🔍 Step 3: Room Type filter is "Any". Parsing all rooms.`);
         }
 
-        const availableRooms = await Room.find(query).populate('roomTypeId');
+        console.log("🔍 Step 4: Finding open rooms with parameters:", JSON.stringify(roomQuery));
+        const availableRooms = await Room.find(roomQuery).populate('roomTypeId');
+        console.log(`📦 Database returned ${availableRooms.length} room rows matching criteria.`);
         
-        // ... (Your grouping logic: availableRoomsByType) ...
+        // 3. SAFE GROUPING LOGIC
+        console.log("⚙️ Step 5: Sorting rooms into category array objects...");
+        const availableRoomsByType = {};
+
+        availableRooms.forEach(room => {
+            if (!room.roomTypeId) {
+                console.error(`❌ INTEGRITY FAULT: Room [No. ${room.number}] with ID [${room._id}] has an unlinked 'roomTypeId'! Skipped to prevent route crashes.`);
+                return; 
+            }
+
+            const typeName = room.roomTypeId.name;
+            if (!availableRoomsByType[typeName]) {
+                availableRoomsByType[typeName] = {
+                    details: room.roomTypeId,
+                    rooms: []
+                };
+            }
+            availableRoomsByType[typeName].rooms.push(room);
+        });
+        
+        console.log(`✨ Grouping complete. Found ${Object.keys(availableRoomsByType).length} available types.`);
+        console.log("====================================================");
         
         res.json(availableRoomsByType);
+
     } catch (error) {
-        res.status(500).json({ message: 'Error checking availability', error: error.message });
+        console.error("💥====================================================");
+        console.error("❌ CRITICAL EXCEPTION IN AVAILABILITY CONTROLLER:");
+        console.error(`👉 Message: ${error.message}`);
+        console.error(`👉 Stack Trace:\n`, error.stack);
+        console.error("====================================================💥");
+        
+        res.status(500).json({ 
+            message: 'Error checking availability', 
+            error: error.message 
+        });
     }
 });
 
 // Public booking creation
+
+
+
+
+
+// Ensure your models are imported where this route is used, for example:
+// const Booking = mongoose.model('Booking');
+// const Gateway = mongoose.model('Gateway');
+
+
+
 app.post('/api/public/bookings', async (req, res) => {
-    const { roomsRequested, ...bookingDetails } = req.body;
+    console.log("====================================================");
+    console.log("📥 [PESAPAL INTEGRATED CHECKOUT SUBMISSION] /api/public/bookings");
+    console.log("====================================================");
 
     try {
-        // AUTOMATION: Verify hotelId from the request source
-        const hotelId = await getHotelIdFromRequest(req);
-
-        if (!hotelId) {
-            return res.status(400).json({ message: "Invalid booking source." });
+        const rawHotelId = await getHotelIdFromRequest(req);
+        if (!rawHotelId) {
+            return res.status(400).json({ message: "Hotel identity context could not be resolved." });
         }
 
-        // Detect Social Source (Facebook, X, etc.)
-        const referer = req.get('referer') || '';
-        let guestsource = 'Hotel Website';
-        if (referer.includes('facebook.com')) guestsource = 'Facebook';
-        if (referer.includes('t.co')) guestsource = 'X/Twitter';
+        const hotelId = new mongoose.Types.ObjectId(rawHotelId);
+        const { name, guestEmail, phoneNo, checkIn, checkOut, roomsRequested } = req.body;
 
-        // Assuming roomsRequested is an array of rooms the guest picked
-        const savedBookings = [];
+        if (!roomsRequested || !Array.isArray(roomsRequested) || roomsRequested.length === 0) {
+            return res.status(400).json({ message: "Cannot checkout an empty shopping cart." });
+        }
+
+        // 1. Core metrics aggregation structures
+        const totalPeopleCount = roomsRequested.reduce((sum, item) => sum + (Number(item.people) || 1), 0);
+        const calculatedTotalDue = roomsRequested.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
         
-        for (const item of roomsRequested) {
-            // Find an actual room number that fits the type (Simplified logic)
-            const availableRoom = await Room.findOne({ 
-                hotelId, 
-                roomTypeId: item.roomTypeId, // Ensure you send ID from frontend
-                status: 'available' 
-            });
+        const start = new Date(checkIn);
+        const end = new Date(checkOut);
+        const totalNights = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) || 1;
+        const generatedBookingId = `BKG-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-            const newBooking = new Booking({
-                ...bookingDetails,
-                hotelId, 
-                room: availableRoom ? availableRoom.number : 'Unassigned',
-                guestsource,
-                gueststatus: 'reserved'
+        // 2. Fetch unique tenant Pesapal API parameters
+        console.log(`🔑 Fetching active Pesapal gateway settings for Hotel ID: ${hotelId}...`);
+        const gatewaySettings = await Gateway.findOne({ hotelId, gatewayId: 'pesapal' });
+
+        if (!gatewaySettings || !gatewaySettings.consumerKey || !gatewaySettings.consumerSecret) {
+            console.error("❌ Gateway Configuration Missing: Tenant has not connected their Pesapal details.");
+            return res.status(422).json({ 
+                message: "This hotel hasn't completed their online billing payment terminal configuration steps yet." 
             });
+        }
+
+        // 🔥 CRITICAL ENVIRONMENT LOOKUP: Evaluated first to mirror your working Quick Sales routing logic
+        const isLive = gatewaySettings.environment === 'Live';
+        const authUrl = isLive 
+            ? 'https://pay.pesapal.com/v3/api/Auth/RequestToken' 
+            : 'https://cybqa.pesapal.com/pesapalv3/api/Auth/RequestToken';
             
-            await newBooking.save();
-            savedBookings.push(newBooking);
+        const orderUrl = isLive 
+            ? 'https://pay.pesapal.com/v3/api/Transactions/SubmitOrderRequest' 
+            : 'https://cybqa.pesapal.com/pesapalv3/api/Transactions/SubmitOrderRequest';
+
+        console.log(`🛰️ Routing transactional verification payloads to target system layout.`);
+        console.log(`🔐 Context parameter tracking verification mode: [${gatewaySettings.environment}]`);
+
+        // 3. Auth Handshake Token Step
+        console.log("🛰️ Fetching access handshake authentication token string wrapper from Pesapal...");
+        const authResponse = await axios.post(authUrl, {
+            consumer_key: gatewaySettings.consumerKey,
+            consumer_secret: gatewaySettings.consumerSecret
+        }, {
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+        });
+
+        const bearerToken = authResponse.data.token;
+        if (!bearerToken) throw new Error("Failed to clear gateway security tokens parameter blocks.");
+
+        // 4. Register the reservation document placeholder as "Pending Payment" inside MongoDB
+        const completeBookingPayload = {
+            hotelId,
+            id: generatedBookingId,
+            name,
+            guestEmail,
+            phoneNo,
+            checkIn,
+            checkOut,
+            nights: totalNights,
+            people: totalPeopleCount,
+            totalDue: calculatedTotalDue,
+            balance: calculatedTotalDue,
+            amountPaid: 0,
+            paymentStatus: 'Pending',
+            paymentMethod: 'Pesapal', 
+            guestsource: 'Hotel Website', 
+            gueststatus: 'reserved', 
+            room: "Unassigned",
+            occupation: "Unassigned"
+        };
+
+        const newBooking = new Booking(completeBookingPayload);
+        const savedBooking = await newBooking.save();
+        console.log(`💾 Local Pending Reservation Stored: ${savedBooking.id}`);
+
+        // 5. Build standard payload package data structure array to generate tracking URL frame
+        const splitName = name.trim().split(' ');
+        const firstName = splitName[0] || 'Guest';
+        const lastName = splitName.slice(1).join(' ') || 'User';
+
+        const pesapalOrderPayload = {
+            id: generatedBookingId, 
+            currency: 'UGX', // Synced explicitly with working quick-sales configuration matrix
+            amount: Number(calculatedTotalDue),
+            description: `Accommodation Reservation Code ${generatedBookingId}`,
+            redirect_mode: 'TOP_WINDOW',
+            callback_url: `https://elegant-pasca-cea136.netlify.app/booking-status.html`, 
+            notification_id: gatewaySettings.ipnUrlId, 
+            billing_address: {
+                email_address: guestEmail,
+                phone_number: phoneNo || "0000000000",
+                first_name: firstName,
+                last_name: lastName,
+                country_code: 'UG'
+            }
+        };
+
+        // 6. Submit checkout manifest token data string profile packet directly to Pesapal
+        console.log("🛰️ Submitting checkout manifest token data string profile packet directly to Pesapal portal layout engine...");
+        const transactionResponse = await axios.post(
+            orderUrl, 
+            pesapalOrderPayload,
+            { 
+                headers: { 
+                    'Authorization': `Bearer ${bearerToken}`, 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                } 
+            }
+        );
+
+        // API checks validation return references cleanly
+        if (!transactionResponse.data || !transactionResponse.data.redirect_url) {
+             throw new Error(transactionResponse.data.message || "Pesapal order initialization failed.");
         }
-        
-        res.status(201).json({ message: "Booking confirmed!", bookings: savedBookings });
+
+        const checkoutUrl = transactionResponse.data.redirect_url;
+        console.log(`✅ Success! Secure Redirect Web Gateway Route Generated cleanly: ${checkoutUrl}`);
+
+        // Update reservation to track the exact payment tracking references numbers
+        savedBooking.transactionid = transactionResponse.data.order_tracking_id;
+        await savedBooking.save();
+
+        // Pass the redirect URL back to the frontend to complete checkout
+        res.status(200).json({
+            success: true,
+            redirectUrl: checkoutUrl,
+            message: "Initialization parameters constructed successfully."
+        });
 
     } catch (error) {
-        res.status(500).json({ message: 'Error confirming booking', error: error.message });
+        // Log deep error data to Render terminal console logs
+        if (error.response && error.response.data) {
+             console.error("❌ PESAPAL CONTROLLER REJECTION DATA:", JSON.stringify(error.response.data, null, 2));
+        }
+        console.error("💥 SYSTEM FAULT GENERATING CHECKOUT EXCEPTION:", error);
+        res.status(500).json({
+            message: 'Internal Checkout application pipeline breakdown.',
+            error: error.message
+        });
     }
 });
 // Public endpoint to add a new booking (from external website)
