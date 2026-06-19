@@ -2553,7 +2553,7 @@ app.post('/api/public/bookings', async (req, res) => {
             amount: Number(calculatedTotalDue),
             description: `Accommodation Reservation Code ${generatedBookingId}`,
             redirect_mode: 'TOP_WINDOW',
-            callback_url: `https://elegant-pasca-cea136.netlify.app/booking-status.html`, 
+            callback_url: `https://elegant-pasca-cea136.netlify.app/frontend/success.html`, 
             notification_id: gatewaySettings.ipnUrlId, 
             billing_address: {
                 email_address: guestEmail,
