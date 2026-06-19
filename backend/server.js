@@ -3091,7 +3091,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
         // =====================================================
         // VERIFY OR REGISTER IPN
         // =====================================================
-        const TARGET_IPN_URL = 'https://patrinahhotelpms-ew8d.onrender.com/api/payments/pesapal-ipn-callback';
+        const TARGET_IPN_URL = 'https://patrinahhotelpms.onrender.com/api/payments/pesapal-ipn-callback';
         let ipnId = gateway.ipnUrlId || null;
 
         // Fetch IPNs from Pesapal to check if it already exists there
