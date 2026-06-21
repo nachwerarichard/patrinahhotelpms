@@ -3373,17 +3373,18 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
             await quickSalePayment.save();
 
             // Fire and forget audit verification entry
-            await addAuditLog(
-                'Pesapal Quick Sale Confirmed',
-                'Pesapal Gateway POS',
-                { 
-                    transactionId: quickSalePayment._id, 
-                    trackingId: OrderTrackingId, 
-                    amount: quickSalePayment.amount,
-                    outlet: quickSalePayment.outlet
-                },
-                quickSalePayment.hotelId
-            );
+            // Fire and forget audit verification entry
+await addAuditLog(
+    'Pesapal Quick Sale Confirmed',
+    'Pesapal Gateway POS',
+    quickSalePayment.hotelId, // ✅ 3rd Parameter: hotelId
+    { 
+        transactionId: quickSalePayment._id, 
+        trackingId: OrderTrackingId, 
+        amount: quickSalePayment.amount,
+        outlet: quickSalePayment.outlet
+    } // ✅ 4th Parameter: details
+);
 
             console.log('✅ PaymentTransaction updated securely:', OrderMerchantReference);
 
@@ -3468,17 +3469,17 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
 
         await booking.save();
 
-        await addAuditLog(
-            'Pesapal Payment Confirmed',
-            'Pesapal Gateway Room Booking',
-            {
-                bookingId: booking._id,
-                trackingId: OrderTrackingId,
-                amount: paymentAmount,
-                paymentStatus: booking.paymentStatus
-            },
-            booking.hotelId
-        );
+       await addAuditLog(
+    'Pesapal Payment Confirmed',
+    'Pesapal Gateway Room Booking',
+    booking.hotelId, // ✅ 3rd Parameter: hotelId
+    {
+        bookingId: booking._id,
+        trackingId: OrderTrackingId,
+        amount: paymentAmount,
+        paymentStatus: booking.paymentStatus
+    } // ✅ 4th Parameter: details
+);
 
         console.log('✅ Room booking payment successfully recorded:', OrderTrackingId);
 
