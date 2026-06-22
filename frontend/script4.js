@@ -1203,8 +1203,9 @@ document.getElementById('declarations').value = booking.declarations || '';
         const saveBtn = document.getElementById('saveBookingBtn'); 
         if (saveBtn) saveBtn.style.display = 'none';
 
-        bookingModal.style.display = 'flex';
-
+// Change this line at the bottom of viewBooking and editBooking:
+bookingModal.classList.remove('hidden');
+bookingModal.classList.add('flex');
     } catch (error) {
         console.error('Error fetching booking:', error);
         showMessage('Error', `Failed to load details: ${error.message}`, true);
@@ -1578,25 +1579,41 @@ async function openBookingModal() {
 
 function closeBookingModal() {
     const modal = document.getElementById('bookingModal');
-    
-    // 1. Close it immediately first!
     if (modal) {
+        // 1. Clear the inline style so Tailwind can work!
+        modal.style.display = ''; 
+        
+        // 2. Hide it using Tailwind classes
         modal.classList.remove('flex');
         modal.classList.add('hidden');
     }
 
-    // 2. Safely do the cleanup down here
+    // 1. Re-enable all fields for the next time the modal opens
+    // Added a safety check here: if 'modal' exists, query it
+    if (modal) {
+        const formElements = modal.querySelectorAll('input, select, textarea');
+        formElements.forEach(el => {
+            el.disabled = false;
+            el.style.backgroundColor = ''; 
+        });
+    }
+
+    // 2. Bring the Save button back into view
+    const saveBtn = document.getElementById('saveBookingBtn');
+    if (saveBtn) {
+        saveBtn.style.display = ''; // Clear inline display here too so Tailwind controls it
+        saveBtn.textContent = 'Save';
+    }
+
+    // 3. Clear data
     const form = document.getElementById('bookingForm');
     const modalTitle = document.getElementById('modalTitle');
-    const saveBtn = document.getElementById('saveBookingBtn');
     const hiddenIdField = document.getElementById('bookingId');
     
     if (modalTitle) modalTitle.textContent = 'Add New Guest';
-    if (saveBtn) saveBtn.textContent = 'Save';
     if (form) form.reset();
     if (hiddenIdField) hiddenIdField.value = '';
 }
-
 async function SendConfirmEmail(bookingId) {
     // 1. Role and Input Validation
 
@@ -2013,7 +2030,9 @@ async function editBooking(id) {
             saveBtn.style.display = 'flex';
             saveBtn.textContent = 'Update';
         }
-        bookingModal.style.display = 'flex';
+// Change this line at the bottom of viewBooking and editBooking:
+          bookingModal.classList.remove('hidden');
+          bookingModal.classList.add('flex');
     } catch (error) {
         console.error('Error fetching booking for edit:', error);
         showMessage('Error', `Failed to load booking for editing: ${error.message}`, true);
