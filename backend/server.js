@@ -1632,19 +1632,25 @@ app.post('/api/bookings/:id/move', auth, async (req, res) => {
         newRoom.status = 'blocked';
         await newRoom.save();
 
-        // 5️⃣ Update booking
+        // 5️⃣ Update booking (Capture old room first!)
+        const oldRoomNumber = booking.room; 
+        
         booking.room = newRoomNumber;
         if (overridePrice) booking.amtPerNight = overridePrice;
         await booking.save();
 
-        // 6️⃣ Audit
-        await addAuditLog('Room Moved', username || 'System', {
-            hotelId: req.user.hotelId,
-            bookingId: booking.id,
-            oldRoom: booking.room,
-            newRoom: newRoomNumber,
-            reason
-        });
+        // 6️⃣ Audit (Pass req.user.hotelId as the 3rd argument)
+        await addAuditLog(
+            'Room Moved', 
+            username || 'System', 
+            req.user.hotelId, // ✅ 3rd argument: hotelId
+            {                 // ✅ 4th argument: details object
+                bookingId: booking.id,
+                oldRoom: oldRoomNumber, // ✅ Correctly tracks the original room
+                newRoom: newRoomNumber,
+                reason
+            }
+        );
 
         res.json({ message: 'Room moved successfully.' });
 
@@ -1811,12 +1817,16 @@ app.post('/api/bookings/:id/checkout', auth, async (req, res) => {
         );
 
         // 3️⃣ Audit Log
-        await addAuditLog('Booking Checked Out', username || 'System', {
-            hotelId: req.user.hotelId,
-            bookingId: booking.id,
-            guestName: booking.name,
-            roomNumber: booking.room
-        });
+        await addAuditLog(
+            'Booking Checked Out', 
+            username || 'System', 
+            req.user.hotelId, // ✅ 3rd argument: hotelId
+            {                 // ✅ 4th argument: details object
+                bookingId: booking.id,
+                guestName: booking.name,
+                roomNumber: booking.room
+            }
+        );
 
         res.json({
             message: `Room ${booking.room} marked as dirty upon checkout.`
@@ -1891,6 +1901,7 @@ app.post('/api/bookings/:id/void', auth, async (req, res) => {
 app.post('/api/bookings/:id/checkin', auth, async (req, res) => {
     try {
         const { id } = req.params;
+        const { username } = req.body; // 1️⃣ Extract username from the request body
 
         console.log("Check-in request for booking:", id);
         console.log("User hotelId:", req.user.hotelId);
@@ -1918,6 +1929,18 @@ app.post('/api/bookings/:id/checkin', auth, async (req, res) => {
             room.status = 'blocked';
             await room.save();
         }
+
+        // 2️⃣ Add the missing Audit Log with the correct parameter order
+        await addAuditLog(
+            'Booking Checked In', 
+            username || 'System', 
+            req.user.hotelId, // ✅ 3rd argument: hotelId
+            {                 // ✅ 4th argument: details object
+                bookingId: booking.id,
+                guestName: booking.name,
+                roomNumber: booking.room
+            }
+        );
 
         res.json({ message: 'Guest checked in successfully.' });
 
@@ -2070,6 +2093,29 @@ app.put('/api/bookings/:id', auth, async (req, res) => {
             { new: true }
         );
 
+        // 📝 Add the missing Audit Log with the correct parameter order
+        await addAuditLog(
+            'Booking Updated', 
+            username || 'System', 
+            req.user.hotelId, // ✅ 3rd argument: hotelId
+            {                 // ✅ 4th argument: details object
+                bookingId: id,
+                guestName: updatedBooking.name,
+                changes: {
+                    before: {
+                        room: oldBooking.room,
+                        checkIn: oldBooking.checkIn,
+                        checkOut: oldBooking.checkOut
+                    },
+                    after: {
+                        room: updatedBooking.room,
+                        checkIn: updatedBooking.checkIn,
+                        checkOut: updatedBooking.checkOut
+                    }
+                }
+            }
+        );
+
         res.json({
             message: 'Booking updated successfully!',
             booking: updatedBooking
@@ -2107,11 +2153,25 @@ app.post('/api/bookings', auth, async (req, res) => {
             return res.status(400).json({ message: `Room ${newBookingData.room} is already occupied.` });
         }
 
-        room.status = 'blocked';
+       room.status = 'blocked';
         await room.save();
 
         const newBooking = new Booking(newBookingData);
         await newBooking.save();
+
+        // 📝 Add the missing Audit Log with the correct parameter order
+        await addAuditLog(
+            'Booking Created', 
+            username || 'System', 
+            req.user.hotelId, // ✅ 3rd argument: hotelId
+            {                 // ✅ 4th argument: details object
+                bookingId: newBooking.id,
+                guestName: newBooking.name,
+                roomNumber: newBooking.room,
+                checkIn: newBooking.checkIn,
+                checkOut: newBooking.checkOut
+            }
+        );
 
         res.status(201).json({ message: 'Booking added!', booking: newBooking });
     } catch (error) {
@@ -2142,6 +2202,19 @@ app.delete('/api/bookings/:id', auth, async (req, res) => {
 
         await Booking.deleteOne({ _id: bookingToDelete._id });
 
+        // 📝 Add the missing Audit Log with the correct parameter order
+        await addAuditLog(
+            'Booking Deleted', 
+            username || 'System', 
+            req.user.hotelId, // ✅ 3rd argument: hotelId
+            {                 // ✅ 4th argument: details object
+                bookingId: id,
+                guestName: bookingToDelete.name,
+                roomNumber: bookingToDelete.room,
+                reason: reason || 'No reason provided'
+            }
+        );
+
         res.status(200).json({ message: 'Booking deleted successfully.' });
     } catch (error) {
         res.status(500).json({ message: 'Internal server error', error: error.message });
@@ -2167,10 +2240,17 @@ app.put('/api/bookings/:id/Confirm', auth, async (req, res) => {
             await room.save();
         }
 
-        await addAuditLog('Booking Confirmed', username || 'System', {
-            bookingId: booking.id,
-            hotelId: req.user.hotelId
-        });
+        // 📝 Fixed: Explicitly passed req.user.hotelId as the 3rd argument
+        await addAuditLog(
+            'Booking Confirmed', 
+            username || 'System', 
+            req.user.hotelId, // ✅ 3rd argument: hotelId
+            {                 // ✅ 4th argument: details object
+                bookingId: booking.id,
+                guestName: booking.name,
+                roomNumber: booking.room
+            }
+        );
 
         res.json({ message: 'Booking confirmed successfully' });
     } catch (error) {
@@ -4543,7 +4623,8 @@ app.put('/api/inventory/:id', auth, async (req, res) => {
 
     const { 
       opening, purchases, sales, spoilage, 
-      buyingprice, sellingprice, trackInventory 
+      buyingprice, sellingprice, trackInventory,
+      username // <--- 1️⃣ Extract username from the request body
     } = req.body;
 
     // Calculate closing stock
@@ -4567,6 +4648,19 @@ app.put('/api/inventory/:id', auth, async (req, res) => {
     if (!updatedItem) {
       return res.status(404).json({ error: "Inventory record not found or unauthorized." });
     }
+
+    // 2️⃣ Add the missing Audit Log with the correct parameter order
+    await addAuditLog(
+        'Inventory Item Edited', 
+        username || 'System', 
+        req.user.hotelId, // ✅ 3rd argument: hotelId
+        {                 // ✅ 4th argument: details object
+            inventoryId: id,
+            item: updatedItem.item,
+            newClosingStock: closing,
+            updatedFields: { opening, purchases, sales, spoilage }
+        }
+    );
 
     res.status(200).json(updatedItem);
   } catch (error) {
@@ -4652,7 +4746,7 @@ app.post('/api/inventory', auth, async (req, res) => {
     const { 
       item, opening, purchases, sales, spoilage, 
       sellingprice, buyingprice, trackInventory, 
-      date // <--- Add date from request body
+      date, username // <--- 1️⃣ Add username from request body
     } = req.body;
 
     const hotelId = req.user.hotelId;
@@ -4662,7 +4756,6 @@ app.post('/api/inventory', auth, async (req, res) => {
     }
 
     // 1. Determine the target date
-    // Use the date sent from frontend, or default to now
     const targetDate = date ? new Date(date) : new Date();
     const startOfDay = new Date(targetDate).setUTCHours(0, 0, 0, 0);
     const endOfDay = new Date(targetDate).setUTCHours(23, 59, 59, 999);
@@ -4679,7 +4772,7 @@ app.post('/api/inventory', auth, async (req, res) => {
         record = new Inventory({
             hotelId,
             item,
-            date: targetDate // Maintain the date user was looking at
+            date: targetDate 
         });
     }
 
@@ -4693,11 +4786,24 @@ app.post('/api/inventory', auth, async (req, res) => {
     record.trackInventory = trackInventory !== undefined ? trackInventory : true;
 
     // 5. CRITICAL: Calculate Closing Stock
-    // Closing = Opening + Purchases - Sales - Spoilage
     record.closing = record.opening + record.purchases - record.sales - record.spoilage;
 
     // 6. Final Save
     await record.save();
+
+    // 2️⃣ Add the missing Audit Log with the correct parameter order
+    await addAuditLog(
+        'Inventory Updated', 
+        username || 'System', 
+        hotelId, // ✅ 3rd argument: hotelId
+        {        // ✅ 4th argument: details object
+            item: record.item,
+            date: record.date.toISOString().split('T')[0], // YYYY-MM-DD format
+            closingStock: record.closing,
+            sales: record.sales,
+            purchases: record.purchases
+        }
+    );
 
     res.status(200).json(record);
   } catch (err) {
@@ -4707,47 +4813,7 @@ app.post('/api/inventory', auth, async (req, res) => {
 });
                // GET Inventory endpoint
 // Add 'auth' middleware here to make it secure
-app.get('/api/inventory', auth, async (req, res) => {
-    try {
-        const hotelId = req.user.hotelId;
-        const { page = 1, limit = 10 } = req.query;
 
-        if (!hotelId || hotelId === 'global') {
-            return res.status(400).json({ error: 'Please select a hotel.' });
-        }
-
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-
-        // FIX: Create a "Today" start point in UTC
-        const today = new Date();
-        today.setUTCHours(0, 0, 0, 0); 
-
-        // Change the query: 
-        // If you want ALL records ever: remove the date part.
-        // If you want TODAY'S records: keep the date part.
-        let query = { 
-            hotelId: hotelId,
-            date: { $gte: today } // Fetch records created today or later
-        };
-
-        const items = await Inventory.find(query)
-            .sort({ item: 1 })
-            .skip(skip)
-            .limit(parseInt(limit));
-
-        const total = await Inventory.countDocuments(query);
-
-        res.status(200).json({
-            items,
-            totalPages: Math.ceil(total / limit),
-            currentPage: parseInt(page),
-            totalItems: total
-        });
-    } catch (error) {
-        console.error('Error fetching inventory:', error);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
 
 
 // PUT /api/sales/:id
@@ -5128,7 +5194,18 @@ app.delete('/api/inventory/:id', auth, async (req, res) => {
     
     if (!deletedDoc) return res.status(404).json({ error: 'Item not found in your hotel' });
     
-    await logAction('Inventory Deleted', req.user.username, { itemId: deletedDoc._id });
+    // 📝 Fixed: Replaced logAction with addAuditLog and corrected the arguments
+    await addAuditLog(
+        'Inventory Deleted', 
+        req.user.username || 'System', // ✅ Pulling directly from auth middleware
+        req.user.hotelId,              // ✅ 3rd argument: hotelId
+        {                              // ✅ 4th argument: details object
+            itemId: deletedDoc._id,
+            itemName: deletedDoc.item, // Nice bonus: captures what item was lost
+            finalClosingStock: deletedDoc.closing
+        }
+    );
+
     res.sendStatus(204);
   } catch (err) {
     res.status(500).json({ error: err.message });
