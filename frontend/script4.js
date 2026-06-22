@@ -6655,33 +6655,7 @@ async function submitInventory() {
     }
 }
 
-async function updateExistingItem(id) {
-    const adminRoles = ['admin', 'super-admin'];
-    if (!adminRoles.includes(currentUserRole)) {
-        return showMessage('Access Restricted', 'Only administrators can modify existing inventory records.', true);
-    }
 
-    const data = getInventoryFormData();
-    try {
-        setLoadingState(true);
-        const response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(data)
-        });
-
-        if (response.ok) {
-            showMessage('Success', 'Inventory record updated! ✅');
-            fetchInventory();
-        } else {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Update failed');
-        }
-    } catch (error) {
-        showMessage('Error', error.message, true);
-    } finally {
-        setLoadingState(false);
-    }
-}
 
 
 // --- Sales Functions ---
@@ -9041,7 +9015,12 @@ function openEditModal(item) {
 // ----- Debuggable submit handler -----
 async function submitEditForm(event) {
   event.preventDefault();
-  console.log('[debug] submitEditForm called');
+
+  // 1️⃣ Integrated Security: Stop non-admins immediately on the frontend
+  const adminRoles = ['admin', 'super-admin'];
+  if (!adminRoles.includes(currentUserRole)) {
+      return showMessage('Access Restricted', 'Only administrators can modify existing inventory records.', true);
+  }
 
   const idInput = document.getElementById('edit-inventory-id');
   const itemInput = document.getElementById('edit-item');
@@ -9051,28 +9030,14 @@ async function submitEditForm(event) {
   const spoilageInput = document.getElementById('edit-spoilage');
   const sellingpriceInput = document.getElementById('edit-sellingprice');
   const buyingpriceInput = document.getElementById('edit-buyingprice');
-  // 1. ADD: The checkbox input
   const trackInventoryInput = document.getElementById('edit-trackInventory');
 
-  // Log whether elements were found
-  console.log('[debug] elements:', {
-    idInput: !!idInput,
-    itemInput: !!itemInput,
-    trackInventoryInput: !!trackInventoryInput // Log this too
-    // ... other logs
-  });
-
-  // 2. UPDATE: Add the checkbox to the safety check
   if (!idInput || !itemInput || !buyingpriceInput || !trackInventoryInput) {
-    console.error('[debug] Edit form elements are missing. Aborting update.');
-    showMessage('Edit form elements are missing. Cannot proceed with update.', true);
+    showMessage('Edit form elements are missing. Cannot proceed.', true);
     return;
   }
 
-  // --- Loader logic remains the same ---
   setEditInventoryLoading(true);
-
-  // ... (Repaint/Promise logic remains same) ...
 
   const id = idInput.value;
   const item = itemInput.value.trim();
@@ -9082,44 +9047,36 @@ async function submitEditForm(event) {
   const spoilage = parseInt(spoilageInput.value, 10) || 0;
   const sellingprice = parseInt(sellingpriceInput.value, 10) || 0;
   const buyingprice = parseInt(buyingpriceInput.value, 10) || 0;
-  // 3. ADD: Get the boolean value
   const trackInventory = trackInventoryInput.checked;
-
-  console.log('[debug] parsed values', { id, item, trackInventory, sellingprice });
 
   const currentStock = opening + purchases - sales - spoilage;
   
-  // 4. UPDATE: Include trackInventory in the object sent to the server
   const inventoryData = { 
-    item, 
-    opening, 
-    purchases, 
-    sales, 
-    spoilage, 
-    currentStock, 
-    sellingprice, 
-    buyingprice,
-    trackInventory // <--- Important!
+    item, opening, purchases, sales, spoilage, 
+    currentStock, sellingprice, buyingprice, trackInventory 
   };
 
   try {
-    console.log('[debug] starting fetch to', `${API_BASE_URL}/inventory/${id}`, 'with', inventoryData);
     const response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(inventoryData)
     });
-       if (!response.ok) {
+
+    if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || `Server responded with ${response.status}`);
     }
 
     showMessage('Inventory item updated successfully! 🎉');
+    
+    // Close modal and refresh the list cleanly
     setTimeout(() => {
       setEditInventoryLoading(false);
       document.getElementById('edit-inventory-modal').classList.add('hidden');
-      fetchInventory();
+      fetchInventory(); // ✅ Calls your refresh once
     }, 1000);
+
   } catch (err) {
     console.error('Error updating inventory:', err);
     showMessage(`Failed to update: ${err.message}`, true);
