@@ -4523,7 +4523,7 @@ app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
             );
         }
 
-        // 4. ✅ REAL SALES RECORDING (Saves to your 'Sale' collection)
+        // 4. REAL SALES RECORDING (Saves to your 'Sale' collection)
         const sale = await Sale.create({
             hotelId,
             item: order.item,
@@ -4541,8 +4541,20 @@ app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
         order.readyAt = new Date();
         await order.save();
 
-        // 6. Log Actions
-        await logAction('Sale Created via Kitchen', req.user.username, { saleId: sale._id, hotelId });
+        // 📝 6. Fixed: Swapped to addAuditLog, forced req.user.username, and aligned arguments
+        await addAuditLog(
+            'Kitchen Order Ready', 
+            req.user.username, // ✅ Pulls directly from auth middleware (No "System" defaults)
+            hotelId,           // ✅ 3rd argument: hotelId
+            {                  // ✅ 4th argument: details object
+                orderId: order._id,
+                saleId: sale._id,
+                item: order.item,
+                quantity: order.number,
+                totalPrice: order.sp * order.number,
+                billedToAccount: order.accountId || 'Walk-in Cash'
+            }
+        );
 
         res.status(200).json({ success: true, message: "Order ready and sale recorded!", sale });
     } catch (err) {
@@ -4607,6 +4619,19 @@ app.post('/api/kitchen/order', auth, async (req, res) => {
             hotelId: req.user.hotelId, // Critical: Scope order to hotel
             waiter: req.user.username
         });
+
+        // 📝 Add the missing Audit Log using the verified auth username
+        await addAuditLog(
+            'Kitchen Order Created', 
+            req.user.username, // ✅ Guaranteed string from your auth middleware, NO MORE "System"!
+            req.user.hotelId,  // ✅ 3rd argument: hotelId
+            {                  // ✅ 4th argument: details object
+                orderId: newOrder._id,
+                item: newOrder.item,
+                quantity: newOrder.number,
+                tableNumber: newOrder.tableNumber
+            }
+        );
 
         res.status(201).json(newOrder);
     } catch (err) {
