@@ -1272,14 +1272,31 @@ const hotelSchema = new mongoose.Schema({
         type: String, 
         unique: true, 
         sparse: true, 
-        default: null 
+        default: null,
+        // 🔥 This automatically sanitizes the data before it writes to MongoDB
+        set: function(domain) {
+            if (!domain) return null;
+            return domain
+                .trim()
+                .toLowerCase()
+                .replace(/^https?:\/\//, '')
+                .replace(/\/$/, '')
+                .split('/')[0];
+        },
+        // 🛡️ Double validation safety guard rail
+        validate: {
+            validator: function(v) {
+                if (v === null) return true;
+                return !/^https?:\/\//.test(v); // Rejects if it still contains http:// or https://
+            },
+            message: "Domain name must not include protocol schemas (http:// or https://)."
+        }
     },
     location: String,
     phoneNumber: String,
     email: String,
     createdAt: { type: Date, default: Date.now }
 });
-
 
 const Hotel = mongoose.model('Hotel', hotelSchema);
 
