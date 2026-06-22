@@ -6421,18 +6421,24 @@ function closeEditModal() {
 }
 
 async function handleUpdateSubmit(event) {
-    event.preventDefault();
+    event.preventDefault(); // Block default reloading
+
+    // 1️⃣ Integrated Security: Stop non-admins immediately on the frontend
+    const adminRoles = ['admin', 'super-admin'];
+    if (typeof currentUserRole !== 'undefined' && !adminRoles.includes(currentUserRole)) {
+        return showMessage('Access Restricted', 'Only administrators can modify inventory records.', true);
+    }
 
     const hotelId = getHotelId();
     if (!hotelId || hotelId === 'global') {
-        showMessage('Please select a hotel context before saving.');
+        showMessage('Please select a hotel context before saving.', true);
         return;
     }
 
-    // --- 1. CAPTURE DATA ONCE ---
+    // --- CAPTURE DATA ONCE ---
     const idInput = document.getElementById('edit-inventory-id');
-    const idValue = idInput ? idInput.value.trim() : "";
-    const selectedDate = document.getElementById('search-inventory-date').value || new Date().toISOString().split('T')[0];
+    const idValue = idInput ? idInput.value.trim() : ""; 
+    const selectedDate = document.getElementById('search-inventory-date')?.value || new Date().toISOString().split('T')[0];
 
     const submitBtn = document.getElementById('edit-inventory-submit-btn');
     const defaultText = document.getElementById('edit-inventory-btn-default');
@@ -6441,16 +6447,17 @@ async function handleUpdateSubmit(event) {
     const inventoryData = {
         hotelId: hotelId,
         item: document.getElementById('edit-item').value,
-        opening: parseInt(document.getElementById('edit-opening').value) || 0,
-        purchases: parseInt(document.getElementById('edit-purchases').value) || 0,
-        sales: parseInt(document.getElementById('edit-inventory-sales').value) || 0,
-        spoilage: parseInt(document.getElementById('edit-spoilage').value) || 0,
+        opening: parseInt(document.getElementById('edit-opening').value, 10) || 0,
+        purchases: parseInt(document.getElementById('edit-purchases').value, 10) || 0,
+        sales: parseInt(document.getElementById('edit-inventory-sales').value, 10) || 0,
+        spoilage: parseInt(document.getElementById('edit-spoilage').value, 10) || 0,
         buyingprice: parseFloat(document.getElementById('edit-buyingprice').value) || 0,
         sellingprice: parseFloat(document.getElementById('edit-sellingprice').value) || 0,
         trackInventory: document.getElementById('edit-trackInventory').checked,
         date: selectedDate 
     };
 
+    // Calculate Closing Stock
     inventoryData.closing = inventoryData.opening + inventoryData.purchases - inventoryData.sales - inventoryData.spoilage;
 
     try {
@@ -6461,30 +6468,23 @@ async function handleUpdateSubmit(event) {
             loadingText.classList.add('flex');
         }
 
-        // --- 2. CONSTRUCT URL & METHOD ---
-        // If idValue is an empty string, it uses POST to /inventory
-        // If idValue has text, it uses PUT to /inventory/ID
-const idValue = document.getElementById('edit-inventory-id').value.trim();
+        // --- CONSTRUCT URL & METHOD ---
+        const method = idValue ? 'PUT' : 'POST';
+        const url = idValue 
+            ? `${API_BASE_URL}/inventory/${idValue}` 
+            : `${API_BASE_URL}/inventory`; 
 
-// 1. Force POST if ID is empty, PUT if ID exists
-const method = idValue ? 'PUT' : 'POST';
+        console.log(`[debug] Requesting: ${method} ${url}`);
 
-// 2. Build URL: Do NOT add a trailing slash if idValue is empty
-const url = idValue 
-    ? `${API_BASE_URL}/inventory/${idValue}` 
-    : `${API_BASE_URL}/inventory`; 
+        const response = await authenticatedFetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(inventoryData)
+        });
 
-console.log(`[debug] Requesting: ${method} ${url}`);
-
-const response = await authenticatedFetch(url, {
-    method: method,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(inventoryData)
-});
-
-        // --- 3. HANDLE RESPONSE ---
         if (!response) throw new Error("No response from server");
 
+        // --- HANDLE RESPONSE ---
         if (response.ok) {
             showMessage(idValue ? 'Stock updated! ✅' : 'New record created! ✅');
             if (typeof closeEditModal === "function") closeEditModal();
@@ -6495,14 +6495,12 @@ const response = await authenticatedFetch(url, {
                 const errorData = await response.json();
                 throw new Error(errorData.error || errorData.message || 'Server Error');
             } else {
-                const textError = await response.text();
-                console.error("Server returned HTML instead of JSON:", textError);
-                throw new Error(`Server returned 404/Error (Check your backend routes)`);
+                throw new Error(`Server returned status code ${response.status}`);
             }
         }
     } catch (err) {
         console.error("Submit Error:", err);
-        showMessage("Inventory Error: " + err.message);
+        showMessage("Inventory Error: " + err.message, true);
     } finally {
         if (submitBtn) submitBtn.disabled = false;
         if (defaultText) defaultText.classList.remove('hidden');
@@ -6655,33 +6653,7 @@ async function submitInventory() {
     }
 }
 
-async function updateExistingItem(id) {
-    const adminRoles = ['admin', 'super-admin'];
-    if (!adminRoles.includes(currentUserRole)) {
-        return showMessage('Access Restricted', 'Only administrators can modify existing inventory records.', true);
-    }
 
-    const data = getInventoryFormData();
-    try {
-        setLoadingState(true);
-        const response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(data)
-        });
-
-        if (response.ok) {
-            showMessage('Success', 'Inventory record updated! ✅');
-            fetchInventory();
-        } else {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Update failed');
-        }
-    } catch (error) {
-        showMessage('Error', error.message, true);
-    } finally {
-        setLoadingState(false);
-    }
-}
 
 
 // --- Sales Functions ---
@@ -9039,93 +9011,7 @@ function openEditModal(item) {
 // New function to handle the form submission for the modal
 
 // ----- Debuggable submit handler -----
-async function submitEditForm(event) {
-  event.preventDefault();
-  console.log('[debug] submitEditForm called');
 
-  const idInput = document.getElementById('edit-inventory-id');
-  const itemInput = document.getElementById('edit-item');
-  const openingInput = document.getElementById('edit-opening');
-  const purchasesInput = document.getElementById('edit-purchases');
-  const salesInput = document.getElementById('edit-inventory-sales');
-  const spoilageInput = document.getElementById('edit-spoilage');
-  const sellingpriceInput = document.getElementById('edit-sellingprice');
-  const buyingpriceInput = document.getElementById('edit-buyingprice');
-  // 1. ADD: The checkbox input
-  const trackInventoryInput = document.getElementById('edit-trackInventory');
-
-  // Log whether elements were found
-  console.log('[debug] elements:', {
-    idInput: !!idInput,
-    itemInput: !!itemInput,
-    trackInventoryInput: !!trackInventoryInput // Log this too
-    // ... other logs
-  });
-
-  // 2. UPDATE: Add the checkbox to the safety check
-  if (!idInput || !itemInput || !buyingpriceInput || !trackInventoryInput) {
-    console.error('[debug] Edit form elements are missing. Aborting update.');
-    showMessage('Edit form elements are missing. Cannot proceed with update.', true);
-    return;
-  }
-
-  // --- Loader logic remains the same ---
-  setEditInventoryLoading(true);
-
-  // ... (Repaint/Promise logic remains same) ...
-
-  const id = idInput.value;
-  const item = itemInput.value.trim();
-  const opening = parseInt(openingInput.value, 10) || 0;
-  const purchases = parseInt(purchasesInput.value, 10) || 0;
-  const sales = parseInt(salesInput.value, 10) || 0;
-  const spoilage = parseInt(spoilageInput.value, 10) || 0;
-  const sellingprice = parseInt(sellingpriceInput.value, 10) || 0;
-  const buyingprice = parseInt(buyingpriceInput.value, 10) || 0;
-  // 3. ADD: Get the boolean value
-  const trackInventory = trackInventoryInput.checked;
-
-  console.log('[debug] parsed values', { id, item, trackInventory, sellingprice });
-
-  const currentStock = opening + purchases - sales - spoilage;
-  
-  // 4. UPDATE: Include trackInventory in the object sent to the server
-  const inventoryData = { 
-    item, 
-    opening, 
-    purchases, 
-    sales, 
-    spoilage, 
-    currentStock, 
-    sellingprice, 
-    buyingprice,
-    trackInventory // <--- Important!
-  };
-
-  try {
-    console.log('[debug] starting fetch to', `${API_BASE_URL}/inventory/${id}`, 'with', inventoryData);
-    const response = await authenticatedFetch(`${API_BASE_URL}/inventory/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(inventoryData)
-    });
-       if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || `Server responded with ${response.status}`);
-    }
-
-    showMessage('Inventory item updated successfully! 🎉');
-    setTimeout(() => {
-      setEditInventoryLoading(false);
-      document.getElementById('edit-inventory-modal').classList.add('hidden');
-      fetchInventory();
-    }, 1000);
-  } catch (err) {
-    console.error('Error updating inventory:', err);
-    showMessage(`Failed to update: ${err.message}`, true);
-    setEditInventoryLoading(false);
-  }
-}
 
 async function fetchInventory() {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
@@ -9443,13 +9329,7 @@ function setEditInventoryLoading(isLoading) {
 
 
 
-// Add an event listener to the new edit form
-document.addEventListener('DOMContentLoaded', () => {
-  const editForm = document.getElementById('edit-inventory-form');
-  if (editForm) {
-    editForm.addEventListener('submit', submitEditForm);
-  }
-});        
+
         
     
 
