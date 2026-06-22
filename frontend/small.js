@@ -230,20 +230,27 @@ function closeMessageBox() {
 }
 // IMPROVED FRONTEND FETCH
 async function renderAuditLogs() {
+    const hotelId = getHotelId(); // ✅ Kept: Essential multi-tenant isolation
     const tableBody = document.querySelector("#auditLogTable tbody");
+    
+    if (!hotelId) {
+        tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hotel selected.</td></tr>';
+        return;
+    }
+
     const prevBtn = document.getElementById('prevAuditPage');
     const nextBtn = document.getElementById('nextAuditPage');
     const pageIndicator = document.getElementById('auditPageIndicator');
 
-    // Show loading state
     tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Loading audit logs...</td></tr>';
 
-    // Build query params dynamically from filters and pagination
     const params = {
         page: currentAuditPage,
-        limit: logsPerPage
+        limit: logsPerPage,
+        hotelId // ✅ Kept: Sent to backend
     };
 
+    // ✅ Enhanced: Safely read values using ?. syntax to avoid unexpected crashes
     const userFilter = document.getElementById('auditLogUserFilter')?.value;
     if (userFilter) params.user = userFilter;
 
@@ -263,53 +270,44 @@ async function renderAuditLogs() {
             method: "GET"
         });
 
-        if (!response) return; // User not authenticated, redirected
+        if (!response) return; 
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const logs = await response.json();
-        console.log("Logs received:", logs);
-
-        // Clear table before inserting rows
         tableBody.innerHTML = '';
 
-        // Update pagination buttons
         pageIndicator.innerText = `Page ${currentAuditPage}`;
-        prevBtn.disabled = currentAuditPage === 1;
-        nextBtn.disabled = logs.length < logsPerPage;
+        prevBtn.disabled = (currentAuditPage === 1);
+        nextBtn.disabled = (logs.length < logsPerPage);
 
-        // Display logs or empty state
         if (!logs || logs.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No audit logs found.</td></tr>';
         } else {
             logs.forEach(log => {
-    const reason = (log.details?.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
-    const row = tableBody.insertRow();
-    row.className = "border-b border-gray-200 hover:bg-gray-50 transition-colors";
+                const reason = (log.details?.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
+                const row = tableBody.insertRow();
+                row.className = "border-b border-gray-200 hover:bg-gray-50 transition-colors";
 
-    row.innerHTML = `
-        <td class="py-3 px-6 text-left text-sm">${new Date(log.timestamp).toLocaleString()}</td>
-        <td class="py-3 px-6 text-left font-medium">${log.user}</td>
-        <td class="py-3 px-6 text-left">
-            <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs uppercase font-bold">${log.action}</span>
-        </td>
-        <td class="py-3 px-6 text-left text-sm italic text-gray-600">${reason}</td>
-        <td class="py-3 px-6 text-left">
-            <button class="view-details-btn text-indigo-600 hover:underline text-xs font-mono">
-                View Details
-            </button>
-        </td>
-    `;
+                row.innerHTML = `
+                    <td class="py-3 px-6 text-left text-sm">${new Date(log.timestamp).toLocaleString()}</td>
+                    <td class="py-3 px-6 text-left font-medium">${log.user}</td>
+                    <td class="py-3 px-6 text-left">
+                        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs uppercase font-bold">${log.action}</span>
+                    </td>
+                    <td class="py-3 px-6 text-left text-sm italic text-gray-600">${reason}</td>
+                    <td class="py-3 px-6 text-left">
+                        <button class="view-details-btn text-indigo-600 hover:underline text-xs font-mono">View Details</button>
+                    </td>
+                `;
 
-    // Safely attach the click event handler directly to this row's button
-    row.querySelector('.view-details-btn').addEventListener('click', () => {
-        openAuditModal(log.details);
-    });
-});
+                row.querySelector('.view-details-btn').addEventListener('click', () => {
+                    openAuditModal(log.details);
+                });
+            });
         }
-
     } catch (error) {
         console.error('Error fetching audit logs:', error);
         tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Error loading audit logs.</td></tr>';
@@ -3354,94 +3352,6 @@ const auditModal = document.getElementById('auditLogModal');
         }
     });
 
-    // Updated render Function
-    async function renderAuditLogs() {
-        const hotelId = getHotelId(); 
-        const tableBody = document.querySelector("#auditLogTable tbody");
-        
-        if (!hotelId) {
-            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hotel selected.</td></tr>';
-            return;
-        }
-
-        const prevBtn = document.getElementById('prevAuditPage');
-        const nextBtn = document.getElementById('nextAuditPage');
-        const pageIndicator = document.getElementById('auditPageIndicator');
-
-        tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Loading audit logs...</td></tr>';
-
-        const params = {
-            page: currentAuditPage,
-            limit: logsPerPage,
-            hotelId
-        };
-
-        const userFilter = document.getElementById('auditLogUserFilter').value;
-        if (userFilter) params.user = userFilter;
-
-        const actionFilter = document.getElementById('auditLogActionFilter').value;
-        if (actionFilter) params.action = actionFilter;
-
-        const startDateFilter = document.getElementById('auditLogStartDateFilter').value;
-        if (startDateFilter) params.startDate = startDateFilter;
-
-        const endDateFilter = document.getElementById('auditLogEndDateFilter').value;
-        if (endDateFilter) params.endDate = endDateFilter;
-
-        const queryParams = new URLSearchParams(params).toString();
-
-        try {
-            const response = await authenticatedFetch(
-                `${API_BASE_URL}/audit-logs?${queryParams}`,
-                { method: "GET" }
-            );
-
-            if (!response) return; 
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const logs = await response.json();
-            console.log("Logs received:", logs);
-
-            tableBody.innerHTML = '';
-
-            pageIndicator.innerText = `Page ${currentAuditPage}`;
-            prevBtn.disabled = (currentAuditPage === 1);
-            nextBtn.disabled = (logs.length < logsPerPage);
-
-            if (!logs || logs.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No audit logs found.</td></tr>';
-            } else {
-                logs.forEach(log => {
-                    const reason = (log.details?.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
-                    const row = tableBody.insertRow();
-                    row.className = "border-b border-gray-200 hover:bg-gray-50 transition-colors";
-
-                    row.innerHTML = `
-                        <td class="py-3 px-6 text-left text-sm">${new Date(log.timestamp).toLocaleString()}</td>
-                        <td class="py-3 px-6 text-left font-medium">${log.user}</td>
-                        <td class="py-3 px-6 text-left">
-                            <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs uppercase font-bold">${log.action}</span>
-                        </td>
-                        <td class="py-3 px-6 text-left text-sm italic text-gray-600">${reason}</td>
-                        <td class="py-3 px-6 text-left">
-                            <button class="view-details-btn text-indigo-600 hover:underline text-xs font-mono">View Details</button>
-                        </td>
-                    `;
-
-                    // Bind the element cleanly directly to the generated button
-                    row.querySelector('.view-details-btn').addEventListener('click', () => {
-                        openAuditModal(log.details);
-                    });
-                });
-            }
-        } catch (error) {
-            console.error('Error fetching audit logs:', error);
-            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Error loading audit logs.</td></tr>';
-        }
-    }
 
 
 async function simulateChannelManagerSync() {
