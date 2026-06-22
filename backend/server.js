@@ -361,8 +361,8 @@ app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) =>
             return res.status(401).json({ error: "Unauthorized. Missing hotel configuration." });
         }
 
-        // Extract fields from req.body
-        const { name, basePrice } = req.body;
+        // 1️⃣ Extract username along with fields from req.body
+        const { name, basePrice, username } = req.body;
 
         // Basic validation
         if (!name || !basePrice) {
@@ -384,6 +384,20 @@ app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) =>
         });
 
         await newType.save();
+
+        // 2️⃣ Add the missing Audit Log with the correct parameter order
+        await addAuditLog(
+            'Room Type Created', 
+            username || req.user.username || 'System', 
+            req.user.hotelId, // ✅ 3rd argument: hotelId
+            {                 // ✅ 4th argument: details object
+                roomTypeId: newType._id,
+                roomTypeName: newType.name,
+                basePrice: newType.basePrice,
+                imageCount: uploadedUrls.length
+            }
+        );
+
         return res.status(201).json(newType);
 
     } catch (err) {
@@ -493,13 +507,29 @@ app.get('/api/room-types', auth, async (req, res) => {
 // Update Room Type Price (Secure by hotelId)
 app.put('/api/room-types/:id', auth, async (req, res) => {
     try {
-        const { name, basePrice } = req.body;
+        // 1️⃣ Extract username along with the other update values
+        const { name, basePrice, username } = req.body;
+        
         const updatedType = await RoomType.findOneAndUpdate(
             { _id: req.params.id, hotelId: req.user.hotelId }, // Secure check
             { name, basePrice }, 
             { new: true, runValidators: true }
         );
+        
         if (!updatedType) return res.status(404).json({ error: "Room type not found" });
+
+        // 2️⃣ Add the missing Audit Log with the correct parameter order
+        await addAuditLog(
+            'Room Type Updated', 
+            username || req.user.username || 'System', 
+            req.user.hotelId, // ✅ 3rd argument: hotelId
+            {                 // ✅ 4th argument: details object
+                roomTypeId: req.params.id,
+                newName: updatedType.name,
+                newPrice: updatedType.basePrice
+            }
+        );
+
         res.json(updatedType);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -1664,7 +1694,8 @@ app.post('/api/bookings/:id/move', auth, async (req, res) => {
 app.post('/api/room-types/:typeId/seasons', auth, async (req, res) => {
     try {
         const { typeId } = req.params;
-        const { seasonName, startDate, endDate, rate } = req.body;
+        // 1️⃣ Extract username alongside the other inputs
+        const { seasonName, startDate, endDate, rate, username } = req.body;
 
         // 🔐 Multi-tenant protection
         const hotelId = req.user.hotelId;
@@ -1713,6 +1744,21 @@ app.post('/api/room-types/:typeId/seasons', auth, async (req, res) => {
         });
 
         await roomType.save();
+
+        // 2️⃣ Add the missing Audit Log with the correct parameter order
+        await addAuditLog(
+            'Room Season Created', 
+            username || req.user.username || 'System', 
+            hotelId, // ✅ 3rd argument: hotelId
+            {        // ✅ 4th argument: details object
+                roomTypeId: typeId,
+                roomTypeName: roomType.name,
+                seasonName,
+                rate: Number(rate),
+                validFrom: startDate,
+                validTo: endDate
+            }
+        );
 
         res.json({
             message: "Seasonal rate added successfully.",
