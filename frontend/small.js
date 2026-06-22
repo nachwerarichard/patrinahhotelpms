@@ -1577,30 +1577,24 @@ async function openBookingModal() {
  */
 
 function closeBookingModal() {
-    // 1. Grab the modal element cleanly
     const modal = document.getElementById('bookingModal');
-    const form = document.getElementById('bookingForm');
     
-    
-    // 2. Reset the text contexts back to default parameters
-    document.getElementById('modalTitle').textContent = 'Add New Guest';
-    document.getElementById('saveBookingBtn').textContent = 'Save';
-
-    // 3. CRITICAL: Wipe out the data from the previous guest search
-    if (form) {
-        form.reset();
-    }
-    
-    // Clear out the hidden database identifier tag so the next action doesn't get confused
-    const hiddenIdField = document.getElementById('bookingId');
-    if (hiddenIdField) {
-        hiddenIdField.value = '';
-    }
+    // 1. Close it immediately first!
     if (modal) {
-    // Remove 'flex' so that 'hidden' actually works!
-    modal.classList.remove('flex');
-    modal.classList.add('hidden');
-}
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+    }
+
+    // 2. Safely do the cleanup down here
+    const form = document.getElementById('bookingForm');
+    const modalTitle = document.getElementById('modalTitle');
+    const saveBtn = document.getElementById('saveBookingBtn');
+    const hiddenIdField = document.getElementById('bookingId');
+    
+    if (modalTitle) modalTitle.textContent = 'Add New Guest';
+    if (saveBtn) saveBtn.textContent = 'Save';
+    if (form) form.reset();
+    if (hiddenIdField) hiddenIdField.value = '';
 }
 async function SendConfirmEmail(bookingId) {
     // 1. Role and Input Validation
