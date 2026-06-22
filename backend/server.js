@@ -4280,14 +4280,6 @@ const Expense = mongoose.model('Expense', new mongoose.Schema({
 }));
 
 
-// --- Helper Functions ---
-async function logAction(action, user, details = {}) {
-  try {
-    await AuditLog.create({ action, user, details });
-  } catch (error) {
-    console.error('Error logging audit action:', error);
-  }
-}
 
 // Nodemailer setup
 
@@ -5018,7 +5010,19 @@ app.post('/api/expenses', auth, async (req, res) => {
       recordedBy: req.user.username
     });
 
-    await logAction('Expense Created', req.user.username, { expenseId: exp._id, hotelId: req.user.hotelId });
+    // 📝 Fixed: Swapped to addAuditLog and corrected the parameter order
+    await addAuditLog(
+        'Expense Created', 
+        req.user.username || 'System', 
+        req.user.hotelId, // ✅ 3rd argument: hotelId
+        {                 // ✅ 4th argument: details object
+            expenseId: exp._id,
+            category: exp.category,
+            amount: exp.amount,
+            description: exp.description
+        }
+    );
+
     res.status(201).json(exp);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -5084,8 +5088,73 @@ app.get('/api/expenses', async (req, res) => {
 });
 
 // PUT /api/expenses/:id
+app.put('/api/expenses/:id', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      department, 
+      description, 
+      amount, 
+      receiptId, 
+      date, 
+      source,
+      username // 📝 Extract username for our audit log
+    } = req.body;
+
+    // 1️⃣ Validate department enum if it is provided in the request
+    if (department && !['Bar', 'Restaurant', 'Kitchen'].includes(department)) {
+      return res.status(400).json({ 
+        message: "Invalid department. Must be either 'Bar', 'Restaurant', or 'Kitchen'." 
+      });
+    }
+
+    // 🔒 2. SECURE: Find and Update ONLY if the expense belongs to this user's hotel context
+    const updatedExpense = await Expense.findOneAndUpdate(
+      { _id: id, hotelId: req.user.hotelId }, 
+      {
+        department,
+        description,
+        amount: amount !== undefined ? Number(amount) : undefined,
+        receiptId,
+        source,
+        date: date || Date.now()
+      },
+      { new: true, runValidators: true } // runValidators ensures our enum list is respected
+    );
+
+    // 3️⃣ Handle missing or unauthorized record
+    if (!updatedExpense) {
+      return res.status(404).json({ 
+        message: "Expense record not found or you are not authorized to edit it." 
+      });
+    }
+
+    // 📝 4. Add the Audit Log matching the mandatory parameter order
+    await addAuditLog(
+        'Expense Updated', 
+        username || req.user.username || 'System', // Fallbacks to ensure attribution
+        req.user.hotelId, // ✅ 3rd argument: hotelId
+        {                 // ✅ 4th argument: details object
+            expenseId: id,
+            department: updatedExpense.department,
+            amount: updatedExpense.amount,
+            receiptId: updatedExpense.receiptId
+        }
+    );
+
+    res.status(200).json(updatedExpense);
+    
+  } catch (error) {
+    console.error("Error updating Expense:", error);
+    res.status(500).json({ 
+      message: "Internal Server Error", 
+      error: error.message 
+    });
+  }
+});
 // Note: If your frontend calls /api/expenses, we use that path here
-app.put('/api/expenses/:id', async (req, res) => {
+// 🔒 Added 'auth' middleware and updated the path to match the database collection
+app.put('/api/cash-journal/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
     const { 
@@ -5094,12 +5163,13 @@ app.put('/api/expenses/:id', async (req, res) => {
       cashOnPhone, 
       bankReceiptId, 
       responsiblePerson, 
-      date 
+      date,
+      username // <--- 1️⃣ Extract username from the request body
     } = req.body;
 
-    // 1. Find and Update the CashJournal entry
-    const updatedJournal = await CashJournal.findByIdAndUpdate(
-      id,
+    // 🔒 2️⃣ Secure query: Ensure users can ONLY update records belonging to their hotel
+    const updatedJournal = await CashJournal.findOneAndUpdate(
+      { _id: id, hotelId: req.user.hotelId }, 
       {
         cashAtHand: Number(cashAtHand) || 0,
         cashBanked: Number(cashBanked) || 0,
@@ -5111,14 +5181,25 @@ app.put('/api/expenses/:id', async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    // 2. Handle missing record
+    // Handle missing record or unauthorized attempt
     if (!updatedJournal) {
       return res.status(404).json({ 
-        message: "Journal entry not found. Check if the ID is correct." 
+        message: "Journal entry not found or unauthorized." 
       });
     }
 
-    // 3. Success response
+    // 📝 3️⃣ Add the missing Audit Log with the correct parameter order
+    await addAuditLog(
+        'Cash Journal Updated', 
+        username || 'System', 
+        req.user.hotelId, // ✅ 3rd argument: hotelId
+        {                 // ✅ 4th argument: details object
+            journalId: id,
+            responsiblePerson,
+            totalCashLogged: Number(cashAtHand) + Number(cashBanked) + Number(cashOnPhone)
+        }
+    );
+
     res.status(200).json(updatedJournal);
     
   } catch (error) {
