@@ -4679,22 +4679,20 @@ app.put('/api/inventory/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Check if ID is provided or valid
     if (!id || id === 'undefined' || id === 'null') {
       return res.status(400).json({ error: "Invalid ID provided for update. Use POST to create new records." });
     }
 
     const { 
       opening, purchases, sales, spoilage, 
-      buyingprice, sellingprice, trackInventory,
-      username // <--- 1️⃣ Extract username from the request body
+      buyingprice, sellingprice, trackInventory
+      // ❌ Removed username from req.body destructuring
     } = req.body;
 
-    // Calculate closing stock
     const closing = (Number(opening) + Number(purchases)) - (Number(sales) + Number(spoilage));
 
     const updatedItem = await Inventory.findOneAndUpdate(
-      { _id: id, hotelId: req.user.hotelId }, // Ensure user only updates THEIR hotel's data
+      { _id: id, hotelId: req.user.hotelId }, 
       {
         opening: Number(opening),
         purchases: Number(purchases),
@@ -4712,12 +4710,12 @@ app.put('/api/inventory/:id', auth, async (req, res) => {
       return res.status(404).json({ error: "Inventory record not found or unauthorized." });
     }
 
-    // 2️⃣ Add the missing Audit Log with the correct parameter order
+    // ✅ FIXED: Using req.user.username directly to avoid "System" fallbacks
     await addAuditLog(
         'Inventory Item Edited', 
-        username || 'System', 
-        req.user.hotelId, // ✅ 3rd argument: hotelId
-        {                 // ✅ 4th argument: details object
+        req.user.username || 'Unknown User', 
+        req.user.hotelId, 
+        {                 
             inventoryId: id,
             item: updatedItem.item,
             newClosingStock: closing,
@@ -4809,7 +4807,8 @@ app.post('/api/inventory', auth, async (req, res) => {
     const { 
       item, opening, purchases, sales, spoilage, 
       sellingprice, buyingprice, trackInventory, 
-      date, username // <--- 1️⃣ Add username from request body
+      date 
+      // ❌ Removed username from req.body destructuring
     } = req.body;
 
     const hotelId = req.user.hotelId;
@@ -4818,19 +4817,16 @@ app.post('/api/inventory', auth, async (req, res) => {
         return res.status(400).json({ error: "Please select a specific hotel context." });
     }
 
-    // 1. Determine the target date
     const targetDate = date ? new Date(date) : new Date();
     const startOfDay = new Date(targetDate).setUTCHours(0, 0, 0, 0);
     const endOfDay = new Date(targetDate).setUTCHours(23, 59, 59, 999);
 
-    // 2. Find if a record already exists for this item ON THIS SPECIFIC DATE
     let record = await Inventory.findOne({
         hotelId,
         item,
         date: { $gte: startOfDay, $lte: endOfDay }
     });
 
-    // 3. If no record exists for that day, create a new one
     if (!record) {
         record = new Inventory({
             hotelId,
@@ -4839,7 +4835,6 @@ app.post('/api/inventory', auth, async (req, res) => {
         });
     }
 
-    // 4. Update the fields
     record.opening = opening || 0;
     record.purchases = purchases || 0;
     record.sales = sales || 0;
@@ -4848,20 +4843,18 @@ app.post('/api/inventory', auth, async (req, res) => {
     record.sellingprice = sellingprice || 0;
     record.trackInventory = trackInventory !== undefined ? trackInventory : true;
 
-    // 5. CRITICAL: Calculate Closing Stock
     record.closing = record.opening + record.purchases - record.sales - record.spoilage;
 
-    // 6. Final Save
     await record.save();
 
-    // 2️⃣ Add the missing Audit Log with the correct parameter order
+    // ✅ FIXED: Using req.user.username directly here as well
     await addAuditLog(
         'Inventory Updated', 
-        username || 'System', 
-        hotelId, // ✅ 3rd argument: hotelId
-        {        // ✅ 4th argument: details object
+        req.user.username || 'Unknown User', 
+        hotelId, 
+        {        
             item: record.item,
-            date: record.date.toISOString().split('T')[0], // YYYY-MM-DD format
+            date: record.date.toISOString().split('T')[0], 
             closingStock: record.closing,
             sales: record.sales,
             purchases: record.purchases
@@ -5346,14 +5339,14 @@ app.delete('/api/inventory/:id', auth, async (req, res) => {
     
     if (!deletedDoc) return res.status(404).json({ error: 'Item not found in your hotel' });
     
-    // 📝 Fixed: Replaced logAction with addAuditLog and corrected the arguments
+    // 📝 Fixed: Explicitly trust req.user.username since auth middleware guarantees it
     await addAuditLog(
         'Inventory Deleted', 
-        req.user.username || 'System', // ✅ Pulling directly from auth middleware
-        req.user.hotelId,              // ✅ 3rd argument: hotelId
-        {                              // ✅ 4th argument: details object
+        req.user.username, // ✅ Clean and direct (no more 'System' bugs here!)
+        req.user.hotelId,   // ✅ 3rd argument: hotelId
+        {                   // ✅ 4th argument: details object
             itemId: deletedDoc._id,
-            itemName: deletedDoc.item, // Nice bonus: captures what item was lost
+            itemName: deletedDoc.item,
             finalClosingStock: deletedDoc.closing
         }
     );
