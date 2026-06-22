@@ -58,8 +58,7 @@ async function populateRoomTypeDropdown() {
 
     try {
         // Passed domain safely as a clean query parameter instead of a custom header
-        const targetUrl = `${API_BASE_URL}/public/room-types?tenantDomain=${window.location.hostname}`;
-        
+        const targetUrl = `${API_BASE_URL}/public/room-types?tenantDomain=${window.location.origin}`;        
         const response = await fetch(targetUrl, {
             method: 'GET',
             headers: {
@@ -109,8 +108,7 @@ checkAvailabilityBtn.addEventListener('click', async () => {
 
     try {
         // 🔥 FIXED: Custom headers removed, tenant context is passed strictly via query string parameter
-        const targetUrl = `${API_BASE_URL}/public/rooms/available?checkIn=${checkIn}&checkOut=${checkOut}&roomType=${roomType}&people=${people}&tenantDomain=${window.location.hostname}`;
-        
+       const targetUrl = `${API_BASE_URL}/public/rooms/available?checkIn=${checkIn}&checkOut=${checkOut}&roomType=${roomType}&people=${people}&tenantDomain=${window.location.origin}`;        
         const response = await fetch(targetUrl, {
             method: 'GET',
             headers: {
@@ -296,8 +294,7 @@ publicBookingForm.addEventListener('submit', async (event) => {
     showPublicMessageBox('Processing Secure Checkout', 'Connecting to the secure payment portal payment infrastructure network layer, please hold tight...', false);
 
     try {
-        const targetBookingUrl = `${API_BASE_URL}/public/bookings?tenantDomain=${window.location.hostname}`;
-
+        const targetBookingUrl = `${API_BASE_URL}/public/bookings?tenantDomain=${window.location.origin}`;
         const response = await fetch(targetBookingUrl, {
             method: 'POST',
             headers: {
