@@ -6464,7 +6464,6 @@ async function handleUpdateSubmit(event) {
         // --- 2. CONSTRUCT URL & METHOD ---
         // If idValue is an empty string, it uses POST to /inventory
         // If idValue has text, it uses PUT to /inventory/ID
-       // FIND THIS SECTION IN submitEditForm (around line 8740)
 const idValue = document.getElementById('edit-inventory-id').value.trim();
 
 // 1. Force POST if ID is empty, PUT if ID exists
@@ -8989,7 +8988,6 @@ function closeEditModal() {
 
 
 // Add an event listener to the new edit form
-//document.getElementById('edit-inventory-form').addEventListener('submit', submitEditForm);
         // New function to handle the modal display and population
 // New function to handle the modal display and population
 function openEditModal(item) {
