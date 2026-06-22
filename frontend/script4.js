@@ -8989,7 +8989,7 @@ function closeEditModal() {
 
 
 // Add an event listener to the new edit form
-document.getElementById('edit-inventory-form').addEventListener('submit', submitEditForm);
+//document.getElementById('edit-inventory-form').addEventListener('submit', submitEditForm);
         // New function to handle the modal display and population
 // New function to handle the modal display and population
 function openEditModal(item) {
