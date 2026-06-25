@@ -5731,12 +5731,16 @@ app.post('/api/public/hotel', async (req, res) => {
 // Initialize Gemini SDK (Ensure process.env.GEMINI_API_KEY is configured)
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-app.post('/api/ai/manager-chat', async (req, res) => {
+/**
+ * Protected Multi-Tenant AI Assistant Endpoint for Bookings and Rooms
+ */
+app.post('/api/ai/manager-chat', auth, async (req, res) => {
     try {
-        // 1. Strictly resolve hotelId to keep data sandboxed to this specific hotel
-        const hotelId = await getHotelIdFromRequest(req);
-        if (!hotelId) {
-            return res.status(400).json({ message: "Hotel context not found for this domain." });
+        // 1. Securely extract the hotelId resolved by your auth middleware
+        const hotelId = req.user.hotelId;
+        
+        if (!hotelId || hotelId === 'global') {
+            return res.status(400).json({ message: "Hotel context missing or unauthorized." });
         }
 
         const { message } = req.body;
@@ -5744,7 +5748,7 @@ app.post('/api/ai/manager-chat', async (req, res) => {
             return res.status(400).json({ message: "Message query is required." });
         }
 
-        // 2. Fetch live metrics from MongoDB for this specific hotel context
+        // 2. Fetch live metrics from MongoDB for this authenticated hotel scope
         const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
         const [
@@ -5773,6 +5777,10 @@ app.post('/api/ai/manager-chat', async (req, res) => {
             You are "Novus Copilot", an elite AI operations assistant integrated directly into this property's Management System.
             You have safe, read-only access to live real-time counts for the hotel data metrics listed below. Use them to answer operational queries directly, accurately, and concisely.
 
+            Authenticated User Context:
+            - Operator Username: ${req.user.username}
+            - Permission Tier: ${req.user.role}
+
             CRITICAL DATA SECURITY: 
             - Never reference operational data or parameters belonging to any other hotel context.
             - Do not invent metrics beyond what is given below.
@@ -5790,17 +5798,33 @@ app.post('/api/ai/manager-chat', async (req, res) => {
             - Keep responses professional, clear, action-focused, and highly relevant to hospitality management.
         `;
 
-        // 4. Send context to Gemini
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: message,
-            config: {
-                systemInstruction: systemInstruction,
-                temperature: 0.2 // Kept low for high analytical accuracy
-            }
-        });
+        // 4. Send context to Gemini with an automatic retry step to catch transient 503 errors
+        let response;
+        let attempts = 0;
+        const maxAttempts = 2;
 
-        // 5. Respond with the generated text
+        while (attempts < maxAttempts) {
+            try {
+                response = await ai.models.generateContent({
+                    model: "gemini-2.5-flash",
+                    contents: message,
+                    config: {
+                        systemInstruction: systemInstruction,
+                        temperature: 0.2 // Kept low for high analytical accuracy
+                    }
+                });
+                break; // Break loop if request succeeds
+            } catch (aiErr) {
+                attempts++;
+                console.warn(`⚠️ Gemini API attempt ${attempts} failed: ${aiErr.message}`);
+                if (attempts >= maxAttempts) throw aiErr; // Pass exception up if both attempts fail
+                
+                // 1-second delay before running the second attempt
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        }
+
+        // 5. Respond with the generated text response
         res.json({ reply: response.text });
 
     } catch (error) {
