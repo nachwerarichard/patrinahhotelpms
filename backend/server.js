@@ -6,6 +6,7 @@ const cors = require('cors'); // Required for Cross-Origin Resource Sharing
 const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
+import { GoogleGenAI } from "@google/genai";
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 cloudinary.config({
     cloud_name: 'dckvyguun',
@@ -5727,6 +5728,89 @@ app.post('/api/public/hotel', async (req, res) => {
 // ----------------------
 
 
+// Initialize Gemini SDK (Ensure process.env.GEMINI_API_KEY is configured)
+const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+
+/**
+ * Multi-Tenant AI Assistant Endpoint for Bookings and Rooms
+ */
+app.post('/api/ai/manager-chat', async (req, res) => {
+    try {
+        // 1. Strictly resolve hotelId to keep data sandboxed to this specific hotel
+        const hotelId = await getHotelIdFromRequest(req);
+        if (!hotelId) {
+            return res.status(400).json({ message: "Hotel context not found for this domain." });
+        }
+
+        const { message } = req.body;
+        if (!message) {
+            return res.status(400).json({ message: "Message query is required." });
+        }
+
+        // 2. Fetch live metrics from MongoDB for this specific hotel context
+        const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+        const [
+            totalRooms,
+            dirtyRooms,
+            cleanRooms,
+            maintenanceRooms,
+            arrivalsToday,
+            departuresToday,
+            checkedInCount
+        ] = await Promise.all([
+            Room.countDocuments({ hotelId }),
+            Room.countDocuments({ hotelId, status: 'dirty' }),
+            Room.countDocuments({ hotelId, status: 'clean' }),
+            Room.countDocuments({ hotelId, status: 'under-maintenance' }),
+            Booking.countDocuments({ hotelId, checkIn: todayStr, gueststatus: { $nin: ['cancelled', 'void'] } }),
+            Booking.countDocuments({ hotelId, checkOut: todayStr, gueststatus: { $nin: ['cancelled', 'void'] } }),
+            Booking.countDocuments({ hotelId, gueststatus: 'checkedin' })
+        ]);
+
+        // Calculate a basic live occupancy percentage
+        const occupancyRate = totalRooms > 0 ? Math.round((checkedInCount / totalRooms) * 100) : 0;
+
+        // 3. Formulate the system instruction containing the sandbox contextual data
+        const systemInstruction = `
+            You are "Novus Copilot", an elite AI operations assistant integrated directly into this property's Management System.
+            You have safe, read-only access to live real-time counts for the hotel data metrics listed below. Use them to answer operational queries directly, accurately, and concisely.
+
+            CRITICAL DATA SECURITY: 
+            - Never reference operational data or parameters belonging to any other hotel context.
+            - Do not invent metrics beyond what is given below.
+
+            LIVE PROPERTY OPERATIONS SUMMARY FOR TODAY (${todayStr}):
+            - Total Physical Rooms: ${totalRooms}
+            - Housekeeping States -> Clean: ${cleanRooms} | Dirty: ${dirtyRooms} | Maintenance/Blocked: ${maintenanceRooms}
+            - Current Operational Occupancy: ${occupancyRate}% (Based on ${checkedInCount} active checked-in rooms out of ${totalRooms})
+            - Expected Guest Arrivals Today: ${arrivalsToday}
+            - Expected Guest Departures Today: ${departuresToday}
+
+            INSTRUCTIONS FOR ENUMS & FIELD LOGIC:
+            - Guest Status values in database: 'confirmed', 'cancelled', 'no show', 'checkedin', 'reserved', 'checkedout', 'void'.
+            - Room Status values in database: 'clean', 'dirty', 'under-maintenance', 'blocked'.
+            - Keep responses professional, clear, action-focused, and highly relevant to hospitality management.
+        `;
+
+        // 4. Send context to Gemini
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: message,
+            config: {
+                systemInstruction: systemInstruction,
+                temperature: 0.2 // Kept low for high analytical accuracy
+            }
+        });
+
+        // 5. Respond with the generated text
+        res.json({ reply: response.text });
+
+    } catch (error) {
+        console.error("💥 AI Copilot Route Error:", error);
+        res.status(500).json({ message: "Server error executing AI prompt", error: error.message });
+    }
+});
         
 
 

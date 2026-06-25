@@ -18,6 +18,7 @@
   "homepage": "https://github.com/nachwerarichard/patrinahhotelpms#readme",
   "description": "",
   "dependencies": {
+    "@google/genai": "^2.10.0",
     "axios": "^1.16.1",
     "cloudinary": "^1.41.3",
     "cors": "^2.8.5",
