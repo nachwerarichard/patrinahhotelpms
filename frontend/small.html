@@ -4596,7 +4596,7 @@ document.addEventListener("click", (e) => {
         try {
             // 3. Post prompt to multi-tenant route using authenticatedFetch
             // This automatically injects Bearer tokens and your 'x-hotel-id' header
-            const response = await authenticatedFetch('/api/ai/manager-chat', {
+            const response = await authenticatedFetch('${API_BASE_URL}/ai/manager-chat', {
                 method: 'POST',
                 body: JSON.stringify({ message: messageText })
             });
