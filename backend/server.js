@@ -5729,8 +5729,7 @@ app.post('/api/public/hotel', async (req, res) => {
 
 
 // Initialize Gemini SDK (Ensure process.env.GEMINI_API_KEY is configured)
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
+const ai = new GoogleGenAI();
 /**
  * Multi-Tenant AI Assistant Endpoint for Bookings and Rooms
  */
