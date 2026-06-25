@@ -5729,10 +5729,8 @@ app.post('/api/public/hotel', async (req, res) => {
 
 
 // Initialize Gemini SDK (Ensure process.env.GEMINI_API_KEY is configured)
-const ai = new GoogleGenAI();
-/**
- * Multi-Tenant AI Assistant Endpoint for Bookings and Rooms
- */
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
 app.post('/api/ai/manager-chat', async (req, res) => {
     try {
         // 1. Strictly resolve hotelId to keep data sandboxed to this specific hotel
