@@ -3784,7 +3784,7 @@ app.get('/api/quick-sales/payment-callback', async (req, res) => {
     } = req.query;
 
     return res.redirect(
-        `https://elegant-pasca-cea136.netlify.app/frontend/success.html?trackingId=${OrderTrackingId}`
+        `https://elegant-pasca-cea136.netlify.app/frontend/success2.html?trackingId=${OrderTrackingId}`
     );
 
 });
