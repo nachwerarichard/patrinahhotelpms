@@ -3630,7 +3630,7 @@ Add Guest Details            </h2>
     <script src="housekeep.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="script4.js"></script>
+    <script src="script.js"></script>
 <script>
 function googleTranslateElementInit() {
     new google.translate.TranslateElement(
@@ -4568,6 +4568,9 @@ document.addEventListener("click", (e) => {
     const userInput = document.getElementById("ai-user-input");
     const chatMessages = document.getElementById("ai-chat-messages");
 
+    // Holds the session message history array for context continuity
+    let chatHistory = [];
+
     // Toggle panel drawer visibility
     openBtn.addEventListener("click", () => {
         drawer.classList.remove("hidden");
@@ -4585,7 +4588,7 @@ document.addEventListener("click", (e) => {
         const messageText = userInput.value.trim();
         if (!messageText) return;
 
-        // 1. Append User Bubble to window
+        // 1. Append User Bubble to UI window
         appendMessageBubble(messageText, "user");
         userInput.value = "";
 
@@ -4594,15 +4597,15 @@ document.addEventListener("click", (e) => {
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
         try {
-            // 3. Post prompt to multi-tenant route using authenticatedFetch
-            // This automatically injects Bearer tokens and your 'x-hotel-id' header
-            // Ensure you use BACKTICKS (``) and not single quotes
-const response = await authenticatedFetch(`${API_BASE_URL}/ai/manager-chat`, {
-    method: 'POST',
-    body: JSON.stringify({ message: messageText })
-});
+            // 3. Post prompt and current history stack to the backend
+            const response = await authenticatedFetch(`${API_BASE_URL}/ai/manager-chat`, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    message: messageText,
+                    history: chatHistory // Injected conversational thread history
+                })
+            });
 
-            // Handle standard redirect guard from authenticatedFetch returning null
             if (!response) return;
 
             const data = await response.json();
@@ -4610,6 +4613,15 @@ const response = await authenticatedFetch(`${API_BASE_URL}/ai/manager-chat`, {
 
             if (response.ok) {
                 appendMessageBubble(data.reply, "ai");
+                
+                // 4. Update memory context array for subsequent questions
+                chatHistory.push({ role: "user", parts: [{ text: messageText }] });
+                chatHistory.push({ role: "model", parts: [{ text: data.reply }] });
+                
+                // Optional: Keep history light to save token bandwidth (e.g., last 10 turns)
+                if (chatHistory.length > 20) {
+                    chatHistory = chatHistory.slice(-20);
+                }
             } else {
                 appendMessageBubble(`Error: ${data.message || "Failed to process request."}`, "error");
             }
@@ -4622,26 +4634,38 @@ const response = await authenticatedFetch(`${API_BASE_URL}/ai/manager-chat`, {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     });
 
+    // Helper functions (appendMessageBubble, appendLoadingBubble, removeBubble remain the same)
+
+
     // Helper functions to construct UI bubble states
     function appendMessageBubble(text, sender) {
-        const bubbleContainer = document.createElement("div");
-        bubbleContainer.className = "flex items-start " + (sender === "user" ? "justify-end" : "justify-start");
+    const bubbleContainer = document.createElement("div");
+    bubbleContainer.className = "flex items-start " + (sender === "user" ? "justify-end" : "justify-start");
 
-        const bubble = document.createElement("div");
-        bubble.className = "text-sm p-3 rounded-lg max-w-[85%] shadow-sm " + 
-            (sender === "user" 
-                ? "bg-indigo-600 text-white rounded-tr-none" 
-                : sender === "error" 
-                    ? "bg-red-100 text-red-800 rounded-tl-none border border-red-200" 
-                    : "bg-indigo-100 text-indigo-900 rounded-tl-none");
-        
-        // Preserve newlines returned from model output
-        bubble.style.whiteSpace = "pre-line";
+    const bubble = document.createElement("div");
+    bubble.className = "text-sm p-3 rounded-lg max-w-[85%] shadow-sm " + 
+        (sender === "user" 
+            ? "bg-indigo-600 text-white rounded-tr-none" 
+            : sender === "error" 
+                ? "bg-red-100 text-red-800 rounded-tl-none border border-red-200" 
+                : "bg-indigo-100 text-indigo-900 rounded-tl-none");
+    
+    bubble.style.whiteSpace = "pre-line";
+
+    if (sender === "user") {
         bubble.textContent = text;
-
-        bubbleContainer.appendChild(bubble);
-        chatMessages.appendChild(bubbleContainer);
+    } else {
+        // Safe regex conversion: replaces **text** with <strong>text</strong>
+        let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Clean out any raw single bullet asterisks if you want cleaner bullet lists too
+        formattedText = formattedText.replace(/^\*\s+/gm, '• ');
+        
+        bubble.innerHTML = formattedText;
     }
+
+    bubbleContainer.appendChild(bubble);
+    chatMessages.appendChild(bubbleContainer);
+}
 
     function appendLoadingBubble() {
         const id = "loading-" + Date.now();
