@@ -6081,7 +6081,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         while (attempts < maxAttempts) {
             try {
                 response = await ai.models.generateContent({
-                    model: "gemini-3.5-flash",
+                    model: "gemini-3.1-flash-lite",
                     contents: formattedContents,
                     config: {
                         systemInstruction: systemInstruction,
@@ -6110,7 +6110,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                         });
 
                         response = await ai.models.generateContent({
-                            model: "gemini-3.5-flash",
+                            model: "gemini-3.1-flash-lite",
                             contents: formattedContents,
                             config: { systemInstruction, tools: toolsConfig }
                         });
