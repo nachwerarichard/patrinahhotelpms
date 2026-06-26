@@ -666,13 +666,14 @@ body {
 </section>
 
            <section id="dashboard" class="section active bg-gray-50 p-4 md:p-8 rounded-2xl shadow-sm mb-8">
+    <!-- Dashboard Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
             <h2 class="text-3xl font-extrabold text-gray-800 tracking-tight flex items-center gap-3">
-                
-             Dashboard
+                <i class="fas fa-th-large text-blue-600"></i>
+                Dashboard
             </h2>
-            <p class="text-gray-500 mt-1 ml-12">Real-time property performance and guest activity.</p>
+            <p class="text-gray-500 mt-1 ml-9">Real-time property performance, finances, and staff activity.</p>
         </div>
         <div class="flex items-center gap-2 self-start md:self-center bg-white shadow-sm border border-gray-100 px-4 py-2 rounded-full">
             <span class="relative flex h-3 w-3">
@@ -684,16 +685,17 @@ body {
     </div>
 
     <div class="space-y-10">
+        <!-- Operations Overview -->
         <div>
             <div class="flex items-center gap-2 mb-5">
                 <div class="h-1 w-8 bg-blue-500 rounded-full"></div>
-                <h3 class="text-lg font-bold text-gray-700 uppercase tracking-wide text-sm">Operations Overview</h3>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Operations Overview</h3>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all group">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 uppercase">Arrivals</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Arrivals</p>
                             <p id="total-arrivals" class="text-4xl font-black text-gray-900 mt-2">0</p>
                         </div>
                         <div class="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
@@ -705,7 +707,7 @@ body {
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all group">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 uppercase">Departures</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Departures</p>
                             <p id="total-departures" class="text-4xl font-black text-gray-900 mt-2">0</p>
                         </div>
                         <div class="p-3 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-600 group-hover:text-white transition-colors">
@@ -717,7 +719,7 @@ body {
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all group">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 uppercase">No Shows</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">No Shows</p>
                             <p id="no-show-count" class="text-4xl font-black text-gray-900 mt-2">0</p>
                         </div>
                         <div class="p-3 bg-red-50 text-red-600 rounded-xl group-hover:bg-red-600 group-hover:text-white transition-colors">
@@ -728,87 +730,188 @@ body {
             </div>
         </div>
 
+        <!-- Front Office Revenue & Payments -->
         <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
             <div class="flex items-center gap-2 mb-6">
                 <div class="h-1 w-8 bg-green-500 rounded-full"></div>
-                <h3 class="text-lg font-bold text-gray-700 uppercase tracking-wide text-sm">Front office room Revenue & Payments</h3>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Front Office Room Revenue & Payments</h3>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div class="relative">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Expected</p>
                     <p id="today-revenue" class="text-xl font-bold text-gray-900 mt-1">UGX 0</p>
-                    <div class="absolute -left-4 top-0 h-full w-1 bg-green-500 rounded-full"></div>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-green-500 rounded-full"></div>
                 </div>
-                <div class="relative">
+                <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Collected</p>
                     <p id="today-amountpaid" class="text-xl font-bold text-gray-900 mt-1 text-green-600">UGX 0</p>
-                    <div class="absolute -left-4 top-0 h-full w-1 bg-blue-500 rounded-full"></div>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-full"></div>
                 </div>
-                <div class="relative">
+                <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Balance</p>
                     <p id="today-balance" class="text-xl font-bold text-gray-900 mt-1 text-red-500">UGX 0</p>
-                    <div class="absolute -left-4 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
                 </div>
-                <div class="relative">
+                <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pending Invoices</p>
                     <p id="pending-count" class="text-xl font-bold text-gray-900 mt-1">0</p>
-                    <div class="absolute -left-4 top-0 h-full w-1 bg-yellow-500 rounded-full"></div>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-yellow-500 rounded-full"></div>
                 </div>
             </div>
         </div>
 
-             <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+        <!-- Point of Sale -->
+        <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
             <div class="flex items-center gap-2 mb-6">
-                <div class="h-1 w-8 bg-green-500 rounded-full"></div>
-                <h3 class="text-lg font-bold text-gray-700 uppercase tracking-wide text-sm"> Point of Sale </h3>
+                <div class="h-1 w-8 bg-indigo-500 rounded-full"></div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Point of Sale</h3>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div class="relative">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Revenue</p>
                     <p id="postoday-revenue" class="text-xl font-bold text-gray-900 mt-1">UGX 0</p>
-                    <div class="absolute -left-4 top-0 h-full w-1 bg-green-500 rounded-full"></div>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-green-500 rounded-full"></div>
                 </div>
-                <div class="relative">
+                <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Gross Profit</p>
                     <p id="postoday-profit" class="text-xl font-bold text-gray-900 mt-1 text-green-600">UGX 0</p>
-                    <div class="absolute -left-4 top-0 h-full w-1 bg-blue-500 rounded-full"></div>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-full"></div>
                 </div>
-                <div class="relative">
+                <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Expense</p>
                     <p id="postoday-expense" class="text-xl font-bold text-gray-900 mt-1 text-red-500">UGX 0</p>
-                    <div class="absolute -left-4 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
                 </div>
-                <div class="relative">
+                <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Net Balance</p>
                     <p id="postoday-balance" class="text-xl font-bold text-gray-900 mt-1">0</p>
-                    <div class="absolute -left-4 top-0 h-full w-1 bg-yellow-500 rounded-full"></div>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-yellow-500 rounded-full"></div>
                 </div>
             </div>
         </div>
         
+        <!-- Dynamic Stats Injection Container -->
         <div id="stats-container" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
 
+        <!-- NEW: Staff Operational Performance Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- System Audit Log Trail (2/3 width on wide screens) -->
+            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm lg:col-span-2">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fas fa-history text-slate-500"></i> Live System Audit Log
+                    </h3>
+                    <span class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full">Real-time Trail</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-100 text-gray-400 font-semibold uppercase text-xs">
+                                <th class="pb-3 font-bold">Staff Member</th>
+                                <th class="pb-3 font-bold">Action / Operation</th>
+                                <th class="pb-3 font-bold">Department</th>
+                                <th class="pb-3 font-bold text-right">Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-log-rows" class="divide-y divide-gray-50 text-gray-600">
+                            <!-- Sample populated row for visual setup; bind dynamically in backend -->
+                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                <td class="py-3 font-medium text-gray-900">Alex Tumusiime</td>
+                                <td class="py-3">
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700">
+                                        <i class="fas fa-exclamation-triangle text-xs"></i> Item Voided (Table 4)
+                                    </span>
+                                </td>
+                                <td class="py-3 text-gray-500">Restaurant</td>
+                                <td class="py-3 text-right text-xs text-gray-400">14:32</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                <td class="py-3 font-medium text-gray-900">Joan Namubiru</td>
+                                <td class="py-3 text-gray-700">Guest Checked In (Rm 104)</td>
+                                <td class="py-3 text-gray-500">Front Desk</td>
+                                <td class="py-3 text-right text-xs text-gray-400">14:15</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                <td class="py-3 font-medium text-gray-900">Brian Okello</td>
+                                <td class="py-3 text-gray-700">Waybill Generated (#WB-902)</td>
+                                <td class="py-3 text-gray-500">Logistics</td>
+                                <td class="py-3 text-right text-xs text-gray-400">13:58</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Team Performance Metrics (1/3 width on wide screens) -->
+            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fas fa-medal text-amber-500"></i> Daily Target Progress
+                    </h3>
+                </div>
+                <div class="space-y-5" id="staff-performance-progress">
+                    <!-- Front Desk Check-Ins Tracking -->
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-gray-600 mb-1.5">
+                            <span>Front Desk Check-ins</span>
+                            <span class="text-gray-400">14 / 20 Targets</span>
+                        </div>
+                        <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                            <div class="bg-blue-500 h-full rounded-full transition-all duration-500" style="width: 70%"></div>
+                        </div>
+                    </div>
+                    <!-- Housekeeping Turnaround Tracking -->
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-gray-600 mb-1.5">
+                            <span>Housekeeping Speed (Avg 24m)</span>
+                            <span class="text-green-600 font-bold">Optimal (&lt;25m)</span>
+                        </div>
+                        <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                            <div class="bg-green-500 h-full rounded-full transition-all duration-500" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    <!-- POS Upselling Focus -->
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-gray-600 mb-1.5">
+                            <span>POS Upsell Conversions</span>
+                            <span class="text-gray-400">42%</span>
+                        </div>
+                        <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                            <div class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: 42%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Guest Status Chart Card -->
             <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="font-bold text-gray-800 flex items-center gap-2">
                         <i class="fas fa-chart-pie text-blue-500"></i> Guest Status
                     </h3>
-                    <button class="text-gray-400 hover:text-gray-600"><i class="fas fa-ellipsis-h"></i></button>
+                    <button class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
                 </div>
-                <div class="h-64">
+                <div class="h-64 relative">
                     <canvas id="statusChart"></canvas>
                 </div>
             </div>
 
+            <!-- Booking Sources Chart Card -->
             <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="font-bold text-gray-800 flex items-center gap-2">
                         <i class="fas fa-globe text-indigo-500"></i> Booking Sources
                     </h3>
-                    <button class="text-gray-400 hover:text-gray-600"><i class="fas fa-ellipsis-h"></i></button>
+                    <button class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
                 </div>
-                <div class="h-64">
+                <div class="h-64 relative">
                     <canvas id="sourceChart"></canvas>
                 </div>
             </div>
