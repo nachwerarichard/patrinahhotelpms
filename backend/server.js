@@ -5734,102 +5734,180 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 /**
  * Protected Multi-Tenant AI Assistant Endpoint for Bookings and Rooms
  */
+/**
+ * Protected Multi-Tenant AI Assistant Endpoint with Full Database Access
+ */
 app.post('/api/ai/manager-chat', auth, async (req, res) => {
     try {
-        // 1. Securely extract the hotelId resolved by your auth middleware
         const hotelId = req.user.hotelId;
-        
         if (!hotelId || hotelId === 'global') {
             return res.status(400).json({ message: "Hotel context missing or unauthorized." });
         }
 
-        const { message } = req.body;
+        const { message, history } = req.body;
         if (!message) {
             return res.status(400).json({ message: "Message query is required." });
         }
 
-        // 2. Fetch live metrics from MongoDB for this authenticated hotel scope
-        const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        // =========================================================================
+        // 1. DEFINE READ-ONLY TENANT-ISOLATED DATA TOOLS
+        // =========================================================================
+        
+        // Tool A: Query Bookings
+        const searchBookingsTool = async (queryFilter) => {
+            // Force compliance to this hotel context
+            const filter = { ...queryFilter, hotelId };
+            console.log("🤖 Gemini triggered searchBookingsTool with filter:", JSON.stringify(filter));
+            return await Booking.find(filter).limit(50).lean();
+        };
 
-        const [
-            totalRooms,
-            dirtyRooms,
-            cleanRooms,
-            maintenanceRooms,
-            arrivalsToday,
-            departuresToday,
-            checkedInCount
-        ] = await Promise.all([
-            Room.countDocuments({ hotelId }),
-            Room.countDocuments({ hotelId, status: 'dirty' }),
-            Room.countDocuments({ hotelId, status: 'clean' }),
-            Room.countDocuments({ hotelId, status: 'under-maintenance' }),
-            Booking.countDocuments({ hotelId, checkIn: todayStr, gueststatus: { $nin: ['cancelled', 'void'] } }),
-            Booking.countDocuments({ hotelId, checkOut: todayStr, gueststatus: { $nin: ['cancelled', 'void'] } }),
-            Booking.countDocuments({ hotelId, gueststatus: 'checkedin' })
-        ]);
+        // Tool B: Query Rooms
+        const searchRoomsTool = async (queryFilter) => {
+            const filter = { ...queryFilter, hotelId };
+            console.log("🤖 Gemini triggered searchRoomsTool with filter:", JSON.stringify(filter));
+            return await Room.find(filter).populate('roomTypeId').lean();
+        };
 
-        // Calculate a basic live occupancy percentage
-        const occupancyRate = totalRooms > 0 ? Math.round((checkedInCount / totalRooms) * 100) : 0;
+        // Tool C: System aggregates for fast situational summaries
+        const getOperationalSummaryTool = async () => {
+            console.log("🤖 Gemini triggered getOperationalSummaryTool");
+            const todayStr = new Date().toISOString().split('T')[0];
+            const [totalRooms, dirtyRooms, cleanRooms, maintenanceRooms, arrivals, departures, checkedIn] = await Promise.all([
+                Room.countDocuments({ hotelId }),
+                Room.countDocuments({ hotelId, status: 'dirty' }),
+                Room.countDocuments({ hotelId, status: 'clean' }),
+                Room.countDocuments({ hotelId, status: 'under-maintenance' }),
+                Booking.countDocuments({ hotelId, checkIn: todayStr, gueststatus: { $nin: ['cancelled', 'void'] } }),
+                Booking.countDocuments({ hotelId, checkOut: todayStr, gueststatus: { $nin: ['cancelled', 'void'] } }),
+                Booking.countDocuments({ hotelId, gueststatus: 'checkedin' })
+            ]);
+            return { totalRooms, dirtyRooms, cleanRooms, maintenanceRooms, arrivals, departures, checkedIn, date: todayStr };
+        };
 
-        // 3. Formulate the system instruction containing the sandbox contextual data
+        // Map internal tool execution names
+        const internalFunctions = {
+            searchBookings: searchBookingsTool,
+            searchRooms: searchRoomsTool,
+            getOperationalSummary: getOperationalSummaryTool
+        };
+
+        // =========================================================================
+        // 2. CONSTRUCT GEMINI TOOL DECLARATIONS FOR THE SDK
+        // =========================================================================
         const systemInstruction = `
-            You are "Novus Copilot", an elite AI operations assistant integrated directly into this property's Management System.
-            You have safe, read-only access to live real-time counts for the hotel data metrics listed below. Use them to answer operational queries directly, accurately, and concisely.
-
-            Authenticated User Context:
-            - Operator Username: ${req.user.username}
-            - Permission Tier: ${req.user.role}
-
-            CRITICAL DATA SECURITY: 
-            - Never reference operational data or parameters belonging to any other hotel context.
-            - Do not invent metrics beyond what is given below.
-
-            LIVE PROPERTY OPERATIONS SUMMARY FOR TODAY (${todayStr}):
-            - Total Physical Rooms: ${totalRooms}
-            - Housekeeping States -> Clean: ${cleanRooms} | Dirty: ${dirtyRooms} | Maintenance/Blocked: ${maintenanceRooms}
-            - Current Operational Occupancy: ${occupancyRate}% (Based on ${checkedInCount} active checked-in rooms out of ${totalRooms})
-            - Expected Guest Arrivals Today: ${arrivalsToday}
-            - Expected Guest Departures Today: ${departuresToday}
-
-            INSTRUCTIONS FOR ENUMS & FIELD LOGIC:
-            - Guest Status values in database: 'confirmed', 'cancelled', 'no show', 'checkedin', 'reserved', 'checkedout', 'void'.
-            - Room Status values in database: 'clean', 'dirty', 'under-maintenance', 'blocked'.
-            - Keep responses professional, clear, action-focused, and highly relevant to hospitality management.
+            You are "Novus Copilot", the elite administrative AI assistant for this hotel.
+            You have access to powerful search tools to pull real-time database lists regarding bookings and rooms.
+            
+            SECURITY SAFEGUARDS:
+            - You only see records matching the current hotel properties.
+            - If details for a specific guest, room type, or status are requested, use the appropriate tool to find them.
+            - Do not guess data or invent reservations. If tools return empty arrays, tell the user gracefully.
         `;
 
-        // 4. Send context to Gemini with an automatic retry step to catch transient 503 errors
+        // Define function metadata declarations for Gemini 2.5
+        const toolsConfig = [
+            {
+                functionDeclarations: [
+                    {
+                        name: "getOperationalSummary",
+                        description: "Gets today's core quick metrics including total room status counts, expected arrivals, and departures."
+                    },
+                    {
+                        name: "searchBookings",
+                        description: "Queries the hotel bookings database. Use fields like gueststatus, paymentStatus, checkIn, checkOut, name, or phoneNo to filter down values.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                gueststatus: { type: "STRING", description: "Values: confirmed, cancelled, no show, checkedin, reserved, checkedout, void" },
+                                paymentStatus: { type: "STRING", description: "Values: Pending, Paid, Partially Paid" },
+                                checkIn: { type: "STRING", description: "Date string formatted as YYYY-MM-DD" },
+                                name: { type: "STRING", description: "Guest name substring search parameter" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchRooms",
+                        description: "Queries the hotel physical rooms profile repository to discover current states.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                status: { type: "STRING", description: "Values: clean, dirty, under-maintenance, blocked" },
+                                number: { type: "STRING", description: "The explicit room number identifier" }
+                            }
+                        }
+                    }
+                ]
+            }
+        ];
+
+        // Format history input array matching standard structures
+        const formattedContents = Array.isArray(history) ? [...history] : [];
+        formattedContents.push({ role: "user", parts: [{ text: message }] });
+
+        // =========================================================================
+        // 3. EXECUTE INTERACTIVE CHAT LOOP WITH RETRIES
+        // =========================================================================
         let response;
         let attempts = 0;
         const maxAttempts = 2;
 
         while (attempts < maxAttempts) {
             try {
+                // Initial generation pass to let Gemini review instructions and decide if tools are required
                 response = await ai.models.generateContent({
                     model: "gemini-2.5-flash",
-                    contents: message,
+                    contents: formattedContents,
                     config: {
                         systemInstruction: systemInstruction,
-                        temperature: 0.2 // Kept low for high analytical accuracy
+                        tools: toolsConfig,
+                        temperature: 0.1 // Kept low for deterministic tool parsing selection
                     }
                 });
-                break; // Break loop if request succeeds
+
+                // Check if the model requested a tool execution function call
+                if (response.functionCalls && response.functionCalls.length > 0) {
+                    const call = response.functionCalls[0];
+                    const toolName = call.name;
+                    const toolArgs = call.args;
+
+                    if (internalFunctions[toolName]) {
+                        // 1. Run the local tenant-secure database lookup script
+                        const toolResultData = await internalFunctions[toolName](toolArgs);
+
+                        // 2. Feed the raw database results right back to Gemini to assemble the human answer
+                        formattedContents.push(response.candidates[0].content); // Add assistant's tool-request choice to history stack
+                        formattedContents.push({
+                            role: "user",
+                            parts: [{
+                                functionResponse: {
+                                    name: toolName,
+                                    response: { result: toolResultData }
+                                }
+                            }]
+                        });
+
+                        // Final generation step with live tool data bound into execution context
+                        response = await ai.models.generateContent({
+                            model: "gemini-2.5-flash",
+                            contents: formattedContents,
+                            config: { systemInstruction, tools: toolsConfig }
+                        });
+                    }
+                }
+                break; // Escape loop safely on successful generation cycle completion
             } catch (aiErr) {
                 attempts++;
-                console.warn(`⚠️ Gemini API attempt ${attempts} failed: ${aiErr.message}`);
-                if (attempts >= maxAttempts) throw aiErr; // Pass exception up if both attempts fail
-                
-                // 1-second delay before running the second attempt
+                console.warn(`⚠️ Gemini API executing tool loop failed (Attempt ${attempts}): ${aiErr.message}`);
+                if (attempts >= maxAttempts) throw aiErr;
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
         }
 
-        // 5. Respond with the generated text response
         res.json({ reply: response.text });
 
     } catch (error) {
-        console.error("💥 AI Copilot Route Error:", error);
-        res.status(500).json({ message: "Server error executing AI prompt", error: error.message });
+        console.error("💥 AI Copilot Tool Resolution Fault:", error);
+        res.status(500).json({ message: "Server error during operations dataset inquiry", error: error.message });
     }
 });
         
