@@ -4484,6 +4484,19 @@ app.delete('/api/kitchen/order/:id/served', auth, async (req, res) => {
             return res.status(404).json({ error: "Order not found or access denied" });
         }
 
+        // ✅ FIXED: Added structured audit logging for Served / Deleted items
+        await addAuditLog(
+            'Kitchen Order Served', 
+            req.user.username, 
+            hotelId, 
+            { 
+                orderId: order._id,
+                item: order.item,
+                quantity: order.number,
+                finalStatus: 'Served'
+            }
+        );
+
         res.status(200).json({ message: "Order processed successfully" });
     } catch (err) {
         console.error("Delete Error:", err);
@@ -4598,6 +4611,18 @@ app.patch('/api/kitchen/order/:id/preparing', auth, async (req, res) => {
             return res.status(404).json({ message: "Order not found or access denied for this hotel." });
         }
 
+        // ✅ FIXED: Added structured audit logging for the transition to preparing state
+        await addAuditLog(
+            'Kitchen Order Preparing',
+            req.user.username,
+            hotelId,
+            {
+                orderId: order._id,
+                item: order.item,
+                quantity: order.number
+            }
+        );
+
         res.status(200).json(order);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -4630,15 +4655,23 @@ app.get('/api/waiter/orders', auth, async (req, res) => {
 // POST /api/kitchen/order
 app.post('/api/kitchen/order', auth, async (req, res) => {
     try {
-        const { item, number, accountId, tableNumber, bp, sp } = req.body;
+        // ✅ Explicit destructuring for security and clarity
+        const { item, number, accountId, tableNumber, bp, sp, department } = req.body;
         
         const newOrder = await KitchenOrder.create({
-            ...req.body,
+            item,
+            number,
+            accountId,
+            tableNumber,
+            bp: bp || 0,
+            sp: sp || 0,
+            department: department || 'Kitchen',
+            status: 'Pending', // Initialize explicitly if needed
             hotelId: req.user.hotelId, // Critical: Scope order to hotel
-            waiter: req.user.username
+            waiter: req.user.username   // Set waiter from auth session data
         });
 
-        // 📝 Add the missing Audit Log using the verified auth username
+        // 📝 Structured Audit Log using the verified auth username
         await addAuditLog(
             'Kitchen Order Created', 
             req.user.username, // ✅ Guaranteed string from your auth middleware, NO MORE "System"!
@@ -4647,7 +4680,8 @@ app.post('/api/kitchen/order', auth, async (req, res) => {
                 orderId: newOrder._id,
                 item: newOrder.item,
                 quantity: newOrder.number,
-                tableNumber: newOrder.tableNumber
+                tableNumber: newOrder.tableNumber,
+                billedToAccount: newOrder.accountId || 'Walk-in Cash'
             }
         );
 
