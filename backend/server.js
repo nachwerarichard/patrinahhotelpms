@@ -6182,14 +6182,13 @@ app.get('/api/analytics/staff-performance', auth, async (req, res) => {
             timestamp: { $gte: startOfDay }
         };
 
-        // FIX 1: Synchronized with your middleware role format ('super-admin')
+        // Synchronized with your middleware role format ('super-admin')
         if (userRole !== 'super-admin' && userHotelId) {
-            // FIX 2: Check if your database schema uses strings or ObjectIds for tenant flags.
-            // If it uses ObjectIds, use the line below:
-            matchStage.hotelId = new mongoose.Types.ObjectId(userHotelId);
-            
-            // ALTERNATIVE: If your audit logs save hotelId as a plain text string, comment out the line above and use:
-            // matchStage.hotelId = String(userHotelId);
+            if (mongoose.Types.ObjectId.isValid(userHotelId)) {
+                matchStage.hotelId = new mongoose.Types.ObjectId(userHotelId);
+            } else {
+                matchStage.hotelId = null; 
+            }
         }
 
         const analytics = await AuditLog.aggregate([
@@ -6215,7 +6214,7 @@ app.get('/api/analytics/staff-performance', auth, async (req, res) => {
                                 voidsCount: {
                                     $sum: {
                                         $cond: [
-                                            { $regexMatch: { input: "$action", pattern: /void/i } },
+                                            { $regexMatch: { input: "$action", regex: /void/i } }, // FIX: changed 'pattern' to 'regex'
                                             1,
                                             0
                                         ]
@@ -6224,7 +6223,7 @@ app.get('/api/analytics/staff-performance', auth, async (req, res) => {
                                 overridesCount: {
                                     $sum: {
                                         $cond: [
-                                            { $regexMatch: { input: "$action", pattern: /override|delete/i } },
+                                            { $regexMatch: { input: "$action", regex: /override|delete/i } }, // FIX: changed 'pattern' to 'regex'
                                             1,
                                             0
                                         ]
