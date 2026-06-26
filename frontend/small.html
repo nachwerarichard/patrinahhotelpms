@@ -790,80 +790,73 @@ body {
             </div>
         </div>
         
-        <!-- Dynamic Stats Injection Container -->
         <div id="stats-container" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
 
-        <!-- STAFF PERFORMANCE CHARTS SECTION -->
-        <div>
-            <div class="flex items-center gap-2 mb-5">
-                <div class="h-1 w-8 bg-purple-600 rounded-full"></div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Staff Performance Analytics</h3>
+<div>
+    <div class="flex items-center gap-2 mb-5">
+        <div class="h-1 w-8 bg-purple-600 rounded-full"></div>
+        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Staff Performance Analytics (Past 30 Days)</h3>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-tasks text-purple-600"></i> Actions Handled per Staff (Last 30 Days)
+                </h3>
+                <button class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-ellipsis-h"></i>
+                </button>
             </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Chart 1: Staff Operational Actions / Volume -->
-                <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                            <i class="fas fa-tasks text-purple-600"></i> Actions Handled per Staff (Today)
-                        </h3>
-                        <button class="text-gray-400 hover:text-gray-600 transition-colors">
-                            <i class="fas fa-ellipsis-h"></i>
-                        </button>
-                    </div>
-                    <div class="h-64 relative">
-                        <canvas id="staffActivityChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Chart 2: System Exceptions / Overrides / Voids -->
-                <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                            <i class="fas fa-exclamation-triangle text-amber-500"></i> Item Voids & System Overrides
-                        </h3>
-                        <button class="text-gray-400 hover:text-gray-600 transition-colors">
-                            <i class="fas fa-ellipsis-h"></i>
-                        </button>
-                    </div>
-                    <div class="h-64 relative">
-                        <canvas id="discrepancyChart"></canvas>
-                    </div>
-                </div>
+            <div class="h-64 relative">
+                <canvas id="staffActivityChart"></canvas>
             </div>
         </div>
 
-        <!-- BUSINESS METRICS CHARTS GRID -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Guest Status Chart Card -->
-            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                        <i class="fas fa-chart-pie text-blue-500"></i> Guest Status
-                    </h3>
-                    <button class="text-gray-400 hover:text-gray-600 transition-colors">
-                        <i class="fas fa-ellipsis-h"></i>
-                    </button>
-                </div>
-                <div class="h-64 relative">
-                    <canvas id="statusChart"></canvas>
-                </div>
+        <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-exclamation-triangle text-amber-500"></i> Item Voids & System Overrides (Last 30 Days)
+                </h3>
+                <button class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-ellipsis-h"></i>
+                </button>
             </div>
-
-            <!-- Booking Sources Chart Card -->
-            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                        <i class="fas fa-globe text-indigo-500"></i> Booking Sources
-                    </h3>
-                    <button class="text-gray-400 hover:text-gray-600 transition-colors">
-                        <i class="fas fa-ellipsis-h"></i>
-                    </button>
-                </div>
-                <div class="h-64 relative">
-                    <canvas id="sourceChart"></canvas>
-                </div>
+            <div class="h-64 relative">
+                <canvas id="discrepancyChart"></canvas>
             </div>
         </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+    <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                <i class="fas fa-chart-pie text-blue-500"></i> Guest Status
+            </h3>
+            <button class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fas fa-ellipsis-h"></i>
+            </button>
+        </div>
+        <div class="h-64 relative">
+            <canvas id="statusChart"></canvas>
+        </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                <i class="fas fa-globe text-indigo-500"></i> Booking Sources
+            </h3>
+            <button class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fas fa-ellipsis-h"></i>
+            </button>
+        </div>
+        <div class="h-64 relative">
+            <canvas id="sourceChart"></canvas>
+        </div>
+    </div>
+</div>
         
     </div>
 </section>
@@ -4792,21 +4785,22 @@ async function loadStaffPerformanceCharts() {
 function renderActivityChart(labels, data) {
     const ctx = document.getElementById('staffActivityChart').getContext('2d');
     
-    if (staffActivityChart) staffActivityChart.destroy(); // Prevent memory leaks on reload
+    if (staffActivityChart) staffActivityChart.destroy(); 
 
     staffActivityChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels.length ? labels : ['No Activity Logged'],
             datasets: [{
-                label: 'Total Actions Flagged',
+                // UPDATED text for accurate hover descriptions
+                label: 'Total Actions (Past 30 Days)', 
                 data: data.length ? data : [0],
-                backgroundColor: 'rgba(124, 58, 237, 0.85)', // Tailwind purple-600
+                backgroundColor: 'rgba(124, 58, 237, 0.85)', 
                 borderRadius: 6
             }]
         },
         options: {
-            indexAxis: 'y', // Renders dynamically as a horizontal comparison matrix
+            indexAxis: 'y', 
             responsive: true,
             maintainAspectRatio: false,
             plugins: { legend: { display: false } }
@@ -4822,18 +4816,19 @@ function renderDiscrepancyChart(labels, voids, overrides) {
     discrepancyChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels.length ? labels : ['No Staff Active'],
+            // UPDATED placeholder text
+            labels: labels.length ? labels : ['No Activity in Past 30 Days'],
             datasets: [
                 {
                     label: 'Item Voids',
                     data: voids,
-                    backgroundColor: 'rgba(239, 68, 68, 0.85)', // Tailwind red-500
+                    backgroundColor: 'rgba(239, 68, 68, 0.85)', 
                     borderRadius: 4
                 },
                 {
                     label: 'System Overrides / Deletions',
                     data: overrides,
-                    backgroundColor: 'rgba(245, 158, 11, 0.85)', // Tailwind amber-500
+                    backgroundColor: 'rgba(245, 158, 11, 0.85)', 
                     borderRadius: 4
                 }
             ]
@@ -4847,7 +4842,6 @@ function renderDiscrepancyChart(labels, voids, overrides) {
         }
     });
 }
-
 // Trigger initialization when script mounts or main dashboard loads
 document.addEventListener('DOMContentLoaded', loadStaffPerformanceCharts);
 </script>

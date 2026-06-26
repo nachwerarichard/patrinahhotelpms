@@ -6174,12 +6174,13 @@ app.get('/api/analytics/staff-performance', auth, async (req, res) => {
         const userHotelId = req.user.hotelId; 
         const userRole = req.user.role;
 
-        // Set baseline date parameters for "Today" (UTC/local boundary safe)
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
+        // NEW: Calculate the threshold date for the past 30 days
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        thirtyDaysAgo.setHours(0, 0, 0, 0); // Optional: sets baseline to midnight 30 days ago
 
         const matchStage = {
-            timestamp: { $gte: startOfDay }
+            timestamp: { $gte: thirtyDaysAgo } // Queries everything from 30 days ago up until now
         };
 
         // Synchronized with your middleware role format ('super-admin')
@@ -6214,7 +6215,7 @@ app.get('/api/analytics/staff-performance', auth, async (req, res) => {
                                 voidsCount: {
                                     $sum: {
                                         $cond: [
-                                            { $regexMatch: { input: "$action", regex: /void/i } }, // FIX: changed 'pattern' to 'regex'
+                                            { $regexMatch: { input: "$action", regex: /void/i } },
                                             1,
                                             0
                                         ]
@@ -6223,7 +6224,7 @@ app.get('/api/analytics/staff-performance', auth, async (req, res) => {
                                 overridesCount: {
                                     $sum: {
                                         $cond: [
-                                            { $regexMatch: { input: "$action", regex: /override|delete/i } }, // FIX: changed 'pattern' to 'regex'
+                                            { $regexMatch: { input: "$action", regex: /override|delete/i } },
                                             1,
                                             0
                                         ]
@@ -6236,7 +6237,7 @@ app.get('/api/analytics/staff-performance', auth, async (req, res) => {
             }
         ]);
 
-        // Guard safety against clean but unpopulated day logs
+        // Guard safety against clean but unpopulated logs
         const responsePayload = analytics[0] || { totalActivity: [], discrepancies: [] };
 
         res.status(200).json({
