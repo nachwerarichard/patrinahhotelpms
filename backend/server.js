@@ -5749,27 +5749,26 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             return res.status(400).json({ message: "Message query is required." });
         }
 
+        // 🏨 FETCH HOTEL PROFILE ONCE FOR BASE CONTEXT
+        const hotelProfile = await Hotel.findById(hotelId).lean();
+        const hotelName = hotelProfile?.name || "this property";
+        const hotelLocation = hotelProfile?.location || "Unknown Location";
+        const hotelContact = hotelProfile?.phoneNumber || "N/A";
+
         // =========================================================================
         // 1. DEFINE READ-ONLY TENANT-ISOLATED DATA TOOLS
         // =========================================================================
-        
-        // Tool A: Query Bookings
         const searchBookingsTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
-            console.log("🤖 Gemini triggered searchBookingsTool with filter:", JSON.stringify(filter));
             return await Booking.find(filter).limit(50).lean();
         };
 
-        // Tool B: Query Rooms
         const searchRoomsTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
-            console.log("🤖 Gemini triggered searchRoomsTool with filter:", JSON.stringify(filter));
             return await Room.find(filter).populate('roomTypeId').lean();
         };
 
-        // Tool C: System aggregates for fast situational summaries
         const getOperationalSummaryTool = async () => {
-            console.log("🤖 Gemini triggered getOperationalSummaryTool");
             const todayStr = new Date().toISOString().split('T')[0];
             const [totalRooms, dirtyRooms, cleanRooms, maintenanceRooms, arrivals, departures, checkedIn] = await Promise.all([
                 Room.countDocuments({ hotelId }),
@@ -5783,106 +5782,78 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             return { totalRooms, dirtyRooms, cleanRooms, maintenanceRooms, arrivals, departures, checkedIn, date: todayStr };
         };
 
-        // Tool D: Query Cash Journal Records
         const searchCashJournalTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
-            console.log("🤖 Gemini triggered searchCashJournalTool with filter:", JSON.stringify(filter));
             return await CashJournal.find(filter).sort({ date: -1 }).limit(30).lean();
         };
 
-        // Tool E: Query Inventory Items
         const searchInventoryTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
             if (filter.item) filter.item = { $regex: filter.item, $options: 'i' };
-            console.log("🤖 Gemini triggered searchInventoryTool with filter:", JSON.stringify(filter));
             return await Inventory.find(filter).limit(50).lean();
         };
 
-        // Tool F: Query Department Sales and Analytics
         const searchSalesTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
             if (filter.item) filter.item = { $regex: filter.item, $options: 'i' };
-            console.log("🤖 Gemini triggered searchSalesTool with filter:", JSON.stringify(filter));
             return await Sale.find(filter).sort({ date: -1 }).limit(50).lean();
         };
 
-        // Tool G: Query Expenses Logged
         const searchExpensesTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
-            console.log("🤖 Gemini triggered searchExpensesTool with filter:", JSON.stringify(filter));
             return await Expense.find(filter).sort({ date: -1 }).limit(50).lean();
         };
 
-        // Tool H: Query Housekeeping & Structural Performance Checklists
         const searchChecklistsTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
-            console.log("🤖 Gemini triggered searchChecklistsTool with filter:", JSON.stringify(filter));
             return await Checklist.find(filter).sort({ createdAt: -1 }).limit(30).lean();
         };
 
-        // Tool I: Query Tiered Rate Settings & Seasonal Pricing Layouts
         const searchRoomTypesTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
             if (filter.name) filter.name = { $regex: filter.name, $options: 'i' };
-            console.log("🤖 Gemini triggered searchRoomTypesTool with filter:", JSON.stringify(filter));
             return await RoomType.find(filter).lean();
         };
 
-        // Tool J: Query Non-Sensitive Authorized Staff Roster List
         const searchUsersTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
-            console.log("🤖 Gemini triggered searchUsersTool with filter:", JSON.stringify(filter));
             return await User.find(filter).select('-password').lean();
         };
 
-        // Tool K: Query Historical Systems Actions & Audit Trace Rails
         const searchAuditLogsTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
             if (filter.action) filter.action = { $regex: filter.action, $options: 'i' };
-            console.log("🤖 Gemini triggered searchAuditLogsTool with filter:", JSON.stringify(filter));
             return await AuditLog.find(filter).sort({ timestamp: -1 }).limit(50).lean();
         };
 
-        // Tool L: Query Real-time Kitchen Orders and Preparation States (NEW)
         const searchKitchenOrdersTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
             if (filter.item) filter.item = { $regex: filter.item, $options: 'i' };
-            console.log("🤖 Gemini triggered searchKitchenOrdersTool with filter:", JSON.stringify(filter));
             return await KitchenOrder.find(filter).sort({ createdAt: -1 }).limit(50).lean();
         };
 
-        // Tool M: Query Payment Gateway Integrations Settings Safely (NEW)
         const searchGatewaysTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
-            console.log("🤖 Gemini triggered searchGatewaysTool with filter:", JSON.stringify(filter));
-            // Crucial: Strip sensitive API secrets entirely before sharing with AI
             return await Gateway.find(filter).select('-consumerKey -consumerSecret').lean();
         };
 
-        // Tool N: Query Online/Mobile Payment Transaction Ledgers (NEW)
         const searchPaymentTransactionsTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
-            console.log("🤖 Gemini triggered searchPaymentTransactionsTool with filter:", JSON.stringify(filter));
             return await PaymentTransaction.find(filter).sort({ createdAt: -1 }).limit(50).lean();
         };
 
-        // Tool O: Query Extra Non-room Charges Posted to Bookings (NEW)
         const searchIncidentalChargesTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
             if (filter.guestName) filter.guestName = { $regex: filter.guestName, $options: 'i' };
-            console.log("🤖 Gemini triggered searchIncidentalChargesTool with filter:", JSON.stringify(filter));
             return await IncidentalCharge.find(filter).sort({ createdAt: -1 }).lean();
         };
 
-        // Tool P: Query Running Client Accounts and Folio Statuses (NEW)
         const searchClientAccountsTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
             if (filter.guestName) filter.guestName = { $regex: filter.guestName, $options: 'i' };
-            console.log("🤖 Gemini triggered searchClientAccountsTool with filter:", JSON.stringify(filter));
             return await ClientAccount.find(filter).sort({ updatedAt: -1 }).lean();
         };
 
-        // Map internal tool execution names
         const internalFunctions = {
             searchBookings: searchBookingsTool,
             searchRooms: searchRoomsTool,
@@ -5903,29 +5874,31 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         };
 
         // =========================================================================
-        // 2. CONSTRUCT GEMINI TOOL DECLARATIONS FOR THE SDK
+        // 2. CONSTRUCT DYNAMIC, LOCATION-AWARE SYSTEM INSTRUCTIONS
         // =========================================================================
         const systemInstruction = `
-            You are "Novus Copilot", the elite administrative AI assistant for this hotel property management platform.
-            You possess contextual data access tools regarding reservations, kitchen line ticket pipelines, payment rails, incidentals, billing portfolios, logs, inventory, and staff rosters.
+            You are "Novus Copilot", the elite administrative AI assistant for ${hotelName}.
+            
+            CURRENT HOTEL PROFILE CONTEXT:
+            - Property Name: ${hotelName}
+            - Location/Address: ${hotelLocation}
+            - Support/Contact Phone: ${hotelContact}
+            
+            Use this profile context to ground your conversational personality. For example, if a user requests localized messages, check-in rules, or ambient updates, remember you are physically managing operations inside "${hotelLocation}".
             
             SECURITY AND PRIVACY PROTOCOLS:
             - You only pull records matching the current isolated hotel properties context.
-            - Never expose sensitive keys or credentials. Core API credential fields are systematically omitted at the system data level.
+            - Never expose sensitive keys or credentials. 
             - Do not guess metrics or invent operational records. If tools return empty structures, answer the supervisor accurately.
         `;
 
-        // Define function metadata declarations for Gemini 3.1
         const toolsConfig = [
             {
                 functionDeclarations: [
-                    {
-                        name: "getOperationalSummary",
-                        description: "Gets today's core quick metrics including total room status counts, expected arrivals, and departures."
-                    },
+                    { name: "getOperationalSummary", description: "Gets today's core quick metrics including total room status counts, expected arrivals, and departures." },
                     {
                         name: "searchBookings",
-                        description: "Queries the hotel bookings database. Filter using fields like gueststatus, paymentStatus, checkIn, checkOut, or name.",
+                        description: "Queries the hotel bookings database.",
                         parameters: {
                             type: "OBJECT",
                             properties: {
@@ -5960,11 +5933,11 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                     },
                     {
                         name: "searchInventory",
-                        description: "Queries the inventory system to check stock levels, items with trackInventory parameters, or sales velocity indicators.",
+                        description: "Queries the inventory system to check stock levels or sales velocity indicators.",
                         parameters: {
                             type: "OBJECT",
                             properties: {
-                                item: { type: "STRING", description: "Name of the inventory stock item (e.g., 'Nile Special')" },
+                                item: { type: "STRING", description: "Name of the inventory stock item" },
                                 trackInventory: { type: "BOOLEAN", description: "Filter based on whether kitchen/restaurant stock checks are bypassed" }
                             }
                         }
@@ -6030,7 +6003,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                             type: "OBJECT",
                             properties: {
                                 user: { type: "STRING", description: "The explicit associate tracking username" },
-                                action: { type: "STRING", description: "Action type (e.g., login, inventory bypass)" }
+                                action: { type: "STRING", description: "Action type" }
                             }
                         }
                     },
@@ -6041,14 +6014,14 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                             type: "OBJECT",
                             properties: {
                                 status: { type: "STRING", description: "Values: Pending, Preparing, Ready, Served" },
-                                department: { type: "STRING", description: "Originating dining point outlet (e.g., 'Restaurant', 'Bar')" },
+                                department: { type: "STRING", description: "Originating dining point outlet" },
                                 tableNumber: { type: "STRING", description: "The seating area or table identifier tag" }
                             }
                         }
                     },
                     {
                         name: "searchGateways",
-                        description: "Inspects status configurations for cloud payment providers (Pesapal, Flutterwave) without exposing access keys.",
+                        description: "Inspects status configurations for cloud payment providers without exposing access keys.",
                         parameters: {
                             type: "OBJECT",
                             properties: {
@@ -6071,7 +6044,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                     },
                     {
                         name: "searchIncidentalCharges",
-                        description: "Finds extra non-room add-on charges (Bar, Restaurant dining tabs) pinned onto specific room bookings.",
+                        description: "Finds extra non-room add-on charges pinned onto specific room bookings.",
                         parameters: {
                             type: "OBJECT",
                             properties: {
@@ -6095,42 +6068,34 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             }
         ];
 
-        // Format history input array matching standard structures
         const formattedContents = Array.isArray(history) ? [...history] : [];
         formattedContents.push({ role: "user", parts: [{ text: message }] });
 
-        // =========================================================================
-        // 3. EXECUTE INTERACTIVE CHAT LOOP WITH RETRIES
-        // =========================================================================
         let response;
         let attempts = 0;
         const maxAttempts = 2;
 
         while (attempts < maxAttempts) {
             try {
-                // Initial generation pass to let Gemini review instructions and decide if tools are required
                 response = await ai.models.generateContent({
                     model: "gemini-3.1-flash-lite",
                     contents: formattedContents,
                     config: {
                         systemInstruction: systemInstruction,
                         tools: toolsConfig,
-                        temperature: 0.1 // Kept low for deterministic tool parsing selection
+                        temperature: 0.1
                     }
                 });
 
-                // Check if the model requested a tool execution function call
                 if (response.functionCalls && response.functionCalls.length > 0) {
                     const call = response.functionCalls[0];
                     const toolName = call.name;
                     const toolArgs = call.args;
 
                     if (internalFunctions[toolName]) {
-                        // 1. Run the local tenant-secure database lookup script
                         const toolResultData = await internalFunctions[toolName](toolArgs);
 
-                        // 2. Feed the raw database results right back to Gemini to assemble the human answer
-                        formattedContents.push(response.candidates[0].content); // Add assistant's tool-request choice to history stack
+                        formattedContents.push(response.candidates[0].content);
                         formattedContents.push({
                             role: "user",
                             parts: [{
@@ -6141,7 +6106,6 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                             }]
                         });
 
-                        // Final generation step with live tool data bound into execution context
                         response = await ai.models.generateContent({
                             model: "gemini-3.1-flash-lite",
                             contents: formattedContents,
@@ -6149,10 +6113,10 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                         });
                     }
                 }
-                break; // Escape loop safely on successful generation cycle completion
+                break;
             } catch (aiErr) {
                 attempts++;
-                console.warn(`⚠️ Gemini API executing tool loop failed (Attempt ${attempts}): ${aiErr.message}`);
+                console.warn(`⚠️ Gemini API loop failed (Attempt ${attempts}): ${aiErr.message}`);
                 if (attempts >= maxAttempts) throw aiErr;
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
