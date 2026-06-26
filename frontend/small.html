@@ -4598,7 +4598,7 @@ document.addEventListener("click", (e) => {
 
         try {
             // 3. Post prompt and current history stack to the backend
-            const response = await authenticatedFetch(`${API_BASE_URL}/api/ai/manager-chat`, {
+            const response = await authenticatedFetch(`${API_BASE_URL}/ai/manager-chat`, {
                 method: 'POST',
                 body: JSON.stringify({ 
                     message: messageText,
