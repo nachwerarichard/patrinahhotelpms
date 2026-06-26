@@ -6169,7 +6169,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
   
 
 // GET /api/analytics/staff-performance
-app.get('/analytics/staff-performance', auth, async (req, res) => {
+app.get('/api/analytics/staff-performance', auth, async (req, res) => {
     try {
         // Multi-tenant check: pull hotelId from the authenticated user token
         const userHotelId = req.user.hotelId; 
