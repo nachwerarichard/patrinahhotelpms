@@ -4750,14 +4750,20 @@ let discrepancyChart = null;
 
 async function loadStaffPerformanceCharts() {
     try {
-        const response = await authenticatedFetch('${API_BASE_URL}/analytics/staff-performance');
+        // FIX 1: Changed single quotes to backticks (`) for template literal parsing
+        const response = await authenticatedFetch(`${API_BASE_URL}/analytics/staff-performance`);
         
-        if (!response.success || !response.data) {
+        if (!response) return; // Guard against redirected/unauthenticated null returns
+
+        // FIX 2: Parse the raw fetch response to JSON since your authenticatedFetch doesn't do it internally
+        const result = await response.json();
+        
+        if (!result.success || !result.data) {
             console.error("Failed to parse system analytics payload.");
             return;
         }
 
-        const { totalActivity, discrepancies } = response.data;
+        const { totalActivity, discrepancies } = result.data;
 
         // --- Chart 1 Process: Operational Load Distribution ---
         const activityLabels = totalActivity.map(item => item._id);
@@ -4766,7 +4772,6 @@ async function loadStaffPerformanceCharts() {
         renderActivityChart(activityLabels, activityData);
 
         // --- Chart 2 Process: Item Voids & System Overrides ---
-        // Map data systematically so indices line up perfectly with activity labels
         const voidsData = activityLabels.map(staff => {
             const match = discrepancies.find(d => d._id === staff);
             return match ? match.voidsCount : 0;
