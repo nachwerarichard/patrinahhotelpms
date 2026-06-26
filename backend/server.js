@@ -6166,7 +6166,84 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         res.status(500).json({ message: "Server error during operations dataset inquiry", error: error.message });
     }
 });
-        
+  
+
+// GET /api/analytics/staff-performance
+app.get('/analytics/staff-performance', auth, async (req, res) => {
+    try {
+        // Multi-tenant check: pull hotelId from the authenticated user token
+        const userHotelId = req.user.hotelId; 
+
+        // Match filters: Scope down to current tenant's logs for today
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const matchStage = {
+            timestamp: { $gte: startOfDay }
+        };
+
+        // If the user isn't a global Super Admin, enforce strict tenant isolation
+        if (req.user.role !== 'Super Admin' && userHotelId) {
+            matchStage.hotelId = new mongoose.Types.ObjectId(userHotelId);
+        }
+
+        const analytics = await AuditLog.aggregate([
+            { $match: matchStage },
+            {
+                $facet: {
+                    // Pipeline 1: Total actions handled per user
+                    "totalActivity": [
+                        {
+                            $group: {
+                                _id: "$user",
+                                totalActions: { $sum: 1 }
+                            }
+                        },
+                        { $sort: { totalActions: -1 } },
+                        { $limit: 10 } // Top 10 active staff
+                    ],
+                    // Pipeline 2: Filter specifically for high-risk system actions
+                    "discrepancies": [
+                        {
+                            $group: {
+                                _id: "$user",
+                                voidsCount: {
+                                    $sum: {
+                                        $cond: [
+                                            { $regexMatch: { input: "$action", pattern: /void/i } },
+                                            1,
+                                            0
+                                        ]
+                                    }
+                                },
+                                overridesCount: {
+                                    $sum: {
+                                        $cond: [
+                                            { $regexMatch: { input: "$action", pattern: /override|delete/i } },
+                                            1,
+                                            0
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ]);
+
+        // Format and send structure back to your frontend
+        res.status(200).json({
+            success: true,
+            data: analytics[0]
+        });
+
+    } catch (error) {
+        console.error("Staff analytics extraction failed:", error);
+        res.status(500).json({ success: false, message: "Server error tracking performance metrics." });
+    }
+});
+
 
 
 const port = process.env.PORT || 3000;
