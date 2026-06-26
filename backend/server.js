@@ -5893,6 +5893,10 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         `;
 
         const toolsConfig = [
+        {
+        // 🌐 1. Built-in Google Search Grounding Tool
+        tools: [{ type: "google_search" }]
+          },
             {
                 functionDeclarations: [
                     { name: "getOperationalSummary", description: "Gets today's core quick metrics including total room status counts, expected arrivals, and departures." },
