@@ -5855,7 +5855,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             try {
                 // Initial generation pass to let Gemini review instructions and decide if tools are required
                 response = await ai.models.generateContent({
-                    model: "gemini-1.5-flash",
+                    model: "gemini-2.5-flash-lite",
                     contents: formattedContents,
                     config: {
                         systemInstruction: systemInstruction,
@@ -5888,7 +5888,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
 
                         // Final generation step with live tool data bound into execution context
                         response = await ai.models.generateContent({
-                            model: "gemini-1.5-flash",
+                            model: "gemini-2.5-flash-lite",
                             contents: formattedContents,
                             config: { systemInstruction, tools: toolsConfig }
                         });
