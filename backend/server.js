@@ -5813,14 +5813,14 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             return await Expense.find(filter).sort({ date: -1 }).limit(50).lean();
         };
 
-        // Tool H: Query Housekeeping & Structural Performance Checklists (NEW)
+        // Tool H: Query Housekeeping & Structural Performance Checklists
         const searchChecklistsTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
             console.log("🤖 Gemini triggered searchChecklistsTool with filter:", JSON.stringify(filter));
             return await Checklist.find(filter).sort({ createdAt: -1 }).limit(30).lean();
         };
 
-        // Tool I: Query Tiered Rate Settings & Seasonal Pricing Layouts (NEW)
+        // Tool I: Query Tiered Rate Settings & Seasonal Pricing Layouts
         const searchRoomTypesTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
             if (filter.name) filter.name = { $regex: filter.name, $options: 'i' };
@@ -5828,20 +5828,58 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             return await RoomType.find(filter).lean();
         };
 
-        // Tool J: Query Non-Sensitive Authorized Staff Roster List (NEW)
+        // Tool J: Query Non-Sensitive Authorized Staff Roster List
         const searchUsersTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
             console.log("🤖 Gemini triggered searchUsersTool with filter:", JSON.stringify(filter));
-            // Crucial: Explictly drop password fields to maintain strict security
             return await User.find(filter).select('-password').lean();
         };
 
-        // Tool K: Query Historical Systems Actions & Audit Trace Rails (NEW)
+        // Tool K: Query Historical Systems Actions & Audit Trace Rails
         const searchAuditLogsTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
             if (filter.action) filter.action = { $regex: filter.action, $options: 'i' };
             console.log("🤖 Gemini triggered searchAuditLogsTool with filter:", JSON.stringify(filter));
             return await AuditLog.find(filter).sort({ timestamp: -1 }).limit(50).lean();
+        };
+
+        // Tool L: Query Real-time Kitchen Orders and Preparation States (NEW)
+        const searchKitchenOrdersTool = async (queryFilter) => {
+            const filter = { ...queryFilter, hotelId };
+            if (filter.item) filter.item = { $regex: filter.item, $options: 'i' };
+            console.log("🤖 Gemini triggered searchKitchenOrdersTool with filter:", JSON.stringify(filter));
+            return await KitchenOrder.find(filter).sort({ createdAt: -1 }).limit(50).lean();
+        };
+
+        // Tool M: Query Payment Gateway Integrations Settings Safely (NEW)
+        const searchGatewaysTool = async (queryFilter) => {
+            const filter = { ...queryFilter, hotelId };
+            console.log("🤖 Gemini triggered searchGatewaysTool with filter:", JSON.stringify(filter));
+            // Crucial: Strip sensitive API secrets entirely before sharing with AI
+            return await Gateway.find(filter).select('-consumerKey -consumerSecret').lean();
+        };
+
+        // Tool N: Query Online/Mobile Payment Transaction Ledgers (NEW)
+        const searchPaymentTransactionsTool = async (queryFilter) => {
+            const filter = { ...queryFilter, hotelId };
+            console.log("🤖 Gemini triggered searchPaymentTransactionsTool with filter:", JSON.stringify(filter));
+            return await PaymentTransaction.find(filter).sort({ createdAt: -1 }).limit(50).lean();
+        };
+
+        // Tool O: Query Extra Non-room Charges Posted to Bookings (NEW)
+        const searchIncidentalChargesTool = async (queryFilter) => {
+            const filter = { ...queryFilter, hotelId };
+            if (filter.guestName) filter.guestName = { $regex: filter.guestName, $options: 'i' };
+            console.log("🤖 Gemini triggered searchIncidentalChargesTool with filter:", JSON.stringify(filter));
+            return await IncidentalCharge.find(filter).sort({ createdAt: -1 }).lean();
+        };
+
+        // Tool P: Query Running Client Accounts and Folio Statuses (NEW)
+        const searchClientAccountsTool = async (queryFilter) => {
+            const filter = { ...queryFilter, hotelId };
+            if (filter.guestName) filter.guestName = { $regex: filter.guestName, $options: 'i' };
+            console.log("🤖 Gemini triggered searchClientAccountsTool with filter:", JSON.stringify(filter));
+            return await ClientAccount.find(filter).sort({ updatedAt: -1 }).lean();
         };
 
         // Map internal tool execution names
@@ -5856,7 +5894,12 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             searchChecklists: searchChecklistsTool,
             searchRoomTypes: searchRoomTypesTool,
             searchUsers: searchUsersTool,
-            searchAuditLogs: searchAuditLogsTool
+            searchAuditLogs: searchAuditLogsTool,
+            searchKitchenOrders: searchKitchenOrdersTool,
+            searchGateways: searchGatewaysTool,
+            searchPaymentTransactions: searchPaymentTransactionsTool,
+            searchIncidentalCharges: searchIncidentalChargesTool,
+            searchClientAccounts: searchClientAccountsTool
         };
 
         // =========================================================================
@@ -5864,11 +5907,11 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         // =========================================================================
         const systemInstruction = `
             You are "Novus Copilot", the elite administrative AI assistant for this hotel property management platform.
-            You possess contextual data access tools regarding reservations, logs, rooms, financial ledgers, room types, checklists, and active staff profiles.
+            You possess contextual data access tools regarding reservations, kitchen line ticket pipelines, payment rails, incidentals, billing portfolios, logs, inventory, and staff rosters.
             
             SECURITY AND PRIVACY PROTOCOLS:
             - You only pull records matching the current isolated hotel properties context.
-            - Never attempt to reveal or guess passwords. Staff queries automatically drop sensitive credential metrics.
+            - Never expose sensitive keys or credentials. Core API credential fields are systematically omitted at the system data level.
             - Do not guess metrics or invent operational records. If tools return empty structures, answer the supervisor accurately.
         `;
 
@@ -5882,7 +5925,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                     },
                     {
                         name: "searchBookings",
-                        description: "Queries the hotel bookings database. Use fields like gueststatus, paymentStatus, checkIn, checkOut, name, or phoneNo to filter down values.",
+                        description: "Queries the hotel bookings database. Filter using fields like gueststatus, paymentStatus, checkIn, checkOut, or name.",
                         parameters: {
                             type: "OBJECT",
                             properties: {
@@ -5895,7 +5938,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                     },
                     {
                         name: "searchRooms",
-                        description: "Queries the hotel physical rooms profile repository to discover current states.",
+                        description: "Queries the hotel physical rooms profile repository to discover current cleaning or structural states.",
                         parameters: {
                             type: "OBJECT",
                             properties: {
@@ -5906,46 +5949,45 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                     },
                     {
                         name: "searchCashJournal",
-                        description: "Queries the cash accounting journals to see cash at hand, banked funds, mobile money balance on phone, or check specific responsible persons.",
+                        description: "Queries the cash accounting journals to see cash at hand, banked funds, or mobile money balances.",
                         parameters: {
                             type: "OBJECT",
                             properties: {
-                                responsiblePerson: { type: "STRING", description: "The username of the individual handling the cash log" },
+                                responsiblePerson: { type: "STRING", description: "The username handling the cash log" },
                                 bankReceiptId: { type: "STRING", description: "The explicit bank receipt confirmation identifier number" }
                             }
                         }
                     },
                     {
                         name: "searchInventory",
-                        description: "Queries the inventory system to check stock levels, sales velocity indicators, items with trackInventory parameters, spoilage, or cost bounds.",
+                        description: "Queries the inventory system to check stock levels, items with trackInventory parameters, or sales velocity indicators.",
                         parameters: {
                             type: "OBJECT",
                             properties: {
-                                item: { type: "STRING", description: "Name of the inventory stock item (e.g., 'Nile Special', 'Soda')" },
-                                trackInventory: { type: "BOOLEAN", description: "Filter items based on whether stock checks are enabled or bypassed" }
+                                item: { type: "STRING", description: "Name of the inventory stock item (e.g., 'Nile Special')" },
+                                trackInventory: { type: "BOOLEAN", description: "Filter based on whether kitchen/restaurant stock checks are bypassed" }
                             }
                         }
                     },
                     {
                         name: "searchSales",
-                        description: "Fetches historical itemized sales metrics broken down by operational profit margins and revenue departments.",
+                        description: "Fetches historical itemized sales metrics broken down by revenue departments.",
                         parameters: {
                             type: "OBJECT",
                             properties: {
                                 department: { type: "STRING", description: "Strict values: Bar, Restaurant, Kitchen" },
-                                item: { type: "STRING", description: "The name tracking parameter of the sold retail asset" }
+                                item: { type: "STRING", description: "The sold retail asset name" }
                             }
                         }
                     },
                     {
                         name: "searchExpenses",
-                        description: "Queries operational cash outflows and spending profiles logged by the hotel management.",
+                        description: "Queries operational cash outflows and spending profiles logged by management.",
                         parameters: {
                             type: "OBJECT",
                             properties: {
                                 department: { type: "STRING", description: "Strict values: Bar, Restaurant, Kitchen" },
-                                source: { type: "STRING", description: "Funding source account descriptor" },
-                                recordedBy: { type: "STRING", description: "Username profile of the logging associate" }
+                                recordedBy: { type: "STRING", description: "Username profile of logging associate" }
                             }
                         }
                     },
@@ -5955,40 +5997,97 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                         parameters: {
                             type: "OBJECT",
                             properties: {
-                                room: { type: "STRING", description: "The specific target room number string (e.g., '102')" },
-                                date: { type: "STRING", description: "The date context parameter format string YYYY-MM-DD" }
+                                room: { type: "STRING", description: "Target room number string" },
+                                date: { type: "STRING", description: "Date context string YYYY-MM-DD" }
                             }
                         }
                     },
                     {
                         name: "searchRoomTypes",
-                        description: "Queries room types configuration details to check base prices, default images, or seasonal rates structures.",
+                        description: "Queries room categories configuration to check base prices or seasonal rates arrays.",
                         parameters: {
                             type: "OBJECT",
                             properties: {
-                                name: { type: "STRING", description: "The distinct room category type (e.g., 'Deluxe Room', 'Suite')" }
+                                name: { type: "STRING", description: "Room category type (e.g., 'Deluxe Room')" }
                             }
                         }
                     },
                     {
                         name: "searchUsers",
-                        description: "Queries the list of registered hotel employees and staff role categories to check permissions or shift assignments.",
+                        description: "Queries registered hotel employee records and structural role assignments.",
                         parameters: {
                             type: "OBJECT",
                             properties: {
                                 role: { type: "STRING", description: "Values: chef, admin, bar, housekeeper, cashier, front office" },
-                                username: { type: "STRING", description: "The specific staff member handle search descriptor" }
+                                username: { type: "STRING", description: "Staff member identity handle" }
                             }
                         }
                     },
                     {
                         name: "searchAuditLogs",
-                        description: "Queries the system's operational historical audit trail tracking actions executed by various users.",
+                        description: "Queries the system's tracking trail for analytical action verification.",
                         parameters: {
                             type: "OBJECT",
                             properties: {
                                 user: { type: "STRING", description: "The explicit associate tracking username" },
-                                action: { type: "STRING", description: "The keyword classification descriptor for actions like login, logout, deletion" }
+                                action: { type: "STRING", description: "Action type (e.g., login, inventory bypass)" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchKitchenOrders",
+                        description: "Queries active kitchen display systems for processing states, statuses, or prep speed profiles.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                status: { type: "STRING", description: "Values: Pending, Preparing, Ready, Served" },
+                                department: { type: "STRING", description: "Originating dining point outlet (e.g., 'Restaurant', 'Bar')" },
+                                tableNumber: { type: "STRING", description: "The seating area or table identifier tag" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchGateways",
+                        description: "Inspects status configurations for cloud payment providers (Pesapal, Flutterwave) without exposing access keys.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                gatewayId: { type: "STRING", description: "Values: pesapal, flutterwave" },
+                                environment: { type: "STRING", description: "Values: Sandbox, Live" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchPaymentTransactions",
+                        description: "Searches integrated electronic checkouts, merchant references, and gateway logs.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                status: { type: "STRING", description: "Values: Pending, Completed, Failed, Cancelled" },
+                                merchantReference: { type: "STRING", description: "Unique tracking ID string" },
+                                paymentMethod: { type: "STRING", description: "e.g., Pesapal, Mobile Money, Visa" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchIncidentalCharges",
+                        description: "Finds extra non-room add-on charges (Bar, Restaurant dining tabs) pinned onto specific room bookings.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                guestName: { type: "STRING", description: "Guest name text match filter" },
+                                isPaid: { type: "BOOLEAN", description: "Filters charges by open or paid status" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchClientAccounts",
+                        description: "Queries running billing summaries and customer account portfolios open at the property.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                guestName: { type: "STRING", description: "Customer ledger owner profile name" },
+                                isClosed: { type: "BOOLEAN", description: "Filters by active vs archived balances" }
                             }
                         }
                     }
