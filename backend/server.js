@@ -6171,10 +6171,10 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
 // GET /api/analytics/staff-performance
 app.get('/api/analytics/staff-performance', auth, async (req, res) => {
     try {
-        // Multi-tenant check: pull hotelId from the authenticated user token
         const userHotelId = req.user.hotelId; 
+        const userRole = req.user.role;
 
-        // Match filters: Scope down to current tenant's logs for today
+        // Set baseline date parameters for "Today" (UTC/local boundary safe)
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
 
@@ -6182,16 +6182,21 @@ app.get('/api/analytics/staff-performance', auth, async (req, res) => {
             timestamp: { $gte: startOfDay }
         };
 
-        // If the user isn't a global Super Admin, enforce strict tenant isolation
-        if (req.user.role !== 'Super Admin' && userHotelId) {
+        // FIX 1: Synchronized with your middleware role format ('super-admin')
+        if (userRole !== 'super-admin' && userHotelId) {
+            // FIX 2: Check if your database schema uses strings or ObjectIds for tenant flags.
+            // If it uses ObjectIds, use the line below:
             matchStage.hotelId = new mongoose.Types.ObjectId(userHotelId);
+            
+            // ALTERNATIVE: If your audit logs save hotelId as a plain text string, comment out the line above and use:
+            // matchStage.hotelId = String(userHotelId);
         }
 
         const analytics = await AuditLog.aggregate([
             { $match: matchStage },
             {
                 $facet: {
-                    // Pipeline 1: Total actions handled per user
+                    // Pipeline 1: Total volume distribution per operator string
                     "totalActivity": [
                         {
                             $group: {
@@ -6200,9 +6205,9 @@ app.get('/api/analytics/staff-performance', auth, async (req, res) => {
                             }
                         },
                         { $sort: { totalActions: -1 } },
-                        { $limit: 10 } // Top 10 active staff
+                        { $limit: 10 }
                     ],
-                    // Pipeline 2: Filter specifically for high-risk system actions
+                    // Pipeline 2: Exception conditional counts mapped to identical string IDs
                     "discrepancies": [
                         {
                             $group: {
@@ -6232,10 +6237,12 @@ app.get('/api/analytics/staff-performance', auth, async (req, res) => {
             }
         ]);
 
-        // Format and send structure back to your frontend
+        // Guard safety against clean but unpopulated day logs
+        const responsePayload = analytics[0] || { totalActivity: [], discrepancies: [] };
+
         res.status(200).json({
             success: true,
-            data: analytics[0]
+            data: responsePayload
         });
 
     } catch (error) {
