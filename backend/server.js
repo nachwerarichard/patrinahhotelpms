@@ -5893,37 +5893,36 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         `;
 
         const toolsConfig = [
-        {
-        // 🌐 1. Built-in Google Search Grounding Tool
-        tools: [{ type: "google_search" }]
-          },
+        // 🌐 Array Item 1: Enable the Native Google Search Grounding Engine
+    {
+        googleSearch: {} 
+    },
             {
                 functionDeclarations: [
-                    { name: "getOperationalSummary", description: "Gets today's core quick metrics including total room status counts, expected arrivals, and departures." },
+            { name: "getOperationalSummary", description: "Gets today's core quick metrics including total room status counts, expected arrivals, and departures." },
+            {
+                name: "searchBookings",
+                description: "Queries the hotel bookings database. Filter using fields like gueststatus, paymentStatus, checkIn, checkOut, or name.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        gueststatus: { type: "STRING" },
+                        paymentStatus: { type: "STRING" },
+                        checkIn: { type: "STRING" },
+                        name: { type: "STRING" }
+                    }
+                }
+            },
                     {
-                        name: "searchBookings",
-                        description: "Queries the hotel bookings database.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                gueststatus: { type: "STRING", description: "Values: confirmed, cancelled, no show, checkedin, reserved, checkedout, void" },
-                                paymentStatus: { type: "STRING", description: "Values: Pending, Paid, Partially Paid" },
-                                checkIn: { type: "STRING", description: "Date string formatted as YYYY-MM-DD" },
-                                name: { type: "STRING", description: "Guest name substring search parameter" }
-                            }
-                        }
-                    },
-                    {
-                        name: "searchRooms",
-                        description: "Queries the hotel physical rooms profile repository to discover current cleaning or structural states.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                status: { type: "STRING", description: "Values: clean, dirty, under-maintenance, blocked" },
-                                number: { type: "STRING", description: "The explicit room number identifier" }
-                            }
-                        }
-                    },
+                name: "searchRoomTypes",
+                description: "Queries room categories configuration to check internal base prices or rates.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        name: { type: "STRING", description: "Room category type (e.g., 'Deluxe Room')" }
+                    }
+                }
+            },
                     {
                         name: "searchCashJournal",
                         description: "Queries the cash accounting journals to see cash at hand, banked funds, or mobile money balances.",
