@@ -6174,24 +6174,40 @@ app.get('/api/analytics/staff-performance', auth, async (req, res) => {
         const userHotelId = req.user.hotelId; 
         const userRole = req.user.role;
 
-        // NEW: Calculate the threshold date for the past 30 days
+        // 1. Calculate the threshold date for the past 30 days
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        thirtyDaysAgo.setHours(0, 0, 0, 0); // Optional: sets baseline to midnight 30 days ago
+        thirtyDaysAgo.setHours(0, 0, 0, 0);
 
         const matchStage = {
-            timestamp: { $gte: thirtyDaysAgo } // Queries everything from 30 days ago up until now
+            timestamp: { $gte: thirtyDaysAgo }
         };
 
-        // Synchronized with your middleware role format ('super-admin')
+        // 2. Fetch valid usernames belonging to this hotel from the User schema
+        let validUsernames = [];
+        
         if (userRole !== 'super-admin' && userHotelId) {
             if (mongoose.Types.ObjectId.isValid(userHotelId)) {
-                matchStage.hotelId = new mongoose.Types.ObjectId(userHotelId);
+                const targetHotelId = new mongoose.Types.ObjectId(userHotelId);
+                matchStage.hotelId = targetHotelId;
+
+                // Query the User collection for usernames bound to this specific hotelId
+                const users = await User.find({ hotelId: targetHotelId }).select('username');
+                validUsernames = users.map(u => u.username);
             } else {
                 matchStage.hotelId = null; 
             }
+        } else {
+            // For Super Admins, fetch all users globally across the entire PMS
+            const users = await User.find({}).select('username');
+            validUsernames = users.map(u => u.username);
         }
 
+        // 3. Statically restrict logs to ONLY matching, active user accounts
+        // If no users exist yet for a new property, match an impossible string to safely yield an empty array
+        matchStage.user = { $in: validUsernames.length ? validUsernames : ["__NO_VALID_USERS__"] };
+
+        // 4. Run the optimized multi-faceted aggregation pipeline
         const analytics = await AuditLog.aggregate([
             { $match: matchStage },
             {
@@ -6237,7 +6253,6 @@ app.get('/api/analytics/staff-performance', auth, async (req, res) => {
             }
         ]);
 
-        // Guard safety against clean but unpopulated logs
         const responsePayload = analytics[0] || { totalActivity: [], discrepancies: [] };
 
         res.status(200).json({
