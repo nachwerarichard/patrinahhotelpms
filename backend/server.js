@@ -5755,7 +5755,6 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         
         // Tool A: Query Bookings
         const searchBookingsTool = async (queryFilter) => {
-            // Force compliance to this hotel context
             const filter = { ...queryFilter, hotelId };
             console.log("🤖 Gemini triggered searchBookingsTool with filter:", JSON.stringify(filter));
             return await Booking.find(filter).limit(50).lean();
@@ -5784,27 +5783,96 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             return { totalRooms, dirtyRooms, cleanRooms, maintenanceRooms, arrivals, departures, checkedIn, date: todayStr };
         };
 
+        // Tool D: Query Cash Journal Records
+        const searchCashJournalTool = async (queryFilter) => {
+            const filter = { ...queryFilter, hotelId };
+            console.log("🤖 Gemini triggered searchCashJournalTool with filter:", JSON.stringify(filter));
+            return await CashJournal.find(filter).sort({ date: -1 }).limit(30).lean();
+        };
+
+        // Tool E: Query Inventory Items
+        const searchInventoryTool = async (queryFilter) => {
+            const filter = { ...queryFilter, hotelId };
+            if (filter.item) filter.item = { $regex: filter.item, $options: 'i' };
+            console.log("🤖 Gemini triggered searchInventoryTool with filter:", JSON.stringify(filter));
+            return await Inventory.find(filter).limit(50).lean();
+        };
+
+        // Tool F: Query Department Sales and Analytics
+        const searchSalesTool = async (queryFilter) => {
+            const filter = { ...queryFilter, hotelId };
+            if (filter.item) filter.item = { $regex: filter.item, $options: 'i' };
+            console.log("🤖 Gemini triggered searchSalesTool with filter:", JSON.stringify(filter));
+            return await Sale.find(filter).sort({ date: -1 }).limit(50).lean();
+        };
+
+        // Tool G: Query Expenses Logged
+        const searchExpensesTool = async (queryFilter) => {
+            const filter = { ...queryFilter, hotelId };
+            console.log("🤖 Gemini triggered searchExpensesTool with filter:", JSON.stringify(filter));
+            return await Expense.find(filter).sort({ date: -1 }).limit(50).lean();
+        };
+
+        // Tool H: Query Housekeeping & Structural Performance Checklists (NEW)
+        const searchChecklistsTool = async (queryFilter) => {
+            const filter = { ...queryFilter, hotelId };
+            console.log("🤖 Gemini triggered searchChecklistsTool with filter:", JSON.stringify(filter));
+            return await Checklist.find(filter).sort({ createdAt: -1 }).limit(30).lean();
+        };
+
+        // Tool I: Query Tiered Rate Settings & Seasonal Pricing Layouts (NEW)
+        const searchRoomTypesTool = async (queryFilter) => {
+            const filter = { ...queryFilter, hotelId };
+            if (filter.name) filter.name = { $regex: filter.name, $options: 'i' };
+            console.log("🤖 Gemini triggered searchRoomTypesTool with filter:", JSON.stringify(filter));
+            return await RoomType.find(filter).lean();
+        };
+
+        // Tool J: Query Non-Sensitive Authorized Staff Roster List (NEW)
+        const searchUsersTool = async (queryFilter) => {
+            const filter = { ...queryFilter, hotelId };
+            console.log("🤖 Gemini triggered searchUsersTool with filter:", JSON.stringify(filter));
+            // Crucial: Explictly drop password fields to maintain strict security
+            return await User.find(filter).select('-password').lean();
+        };
+
+        // Tool K: Query Historical Systems Actions & Audit Trace Rails (NEW)
+        const searchAuditLogsTool = async (queryFilter) => {
+            const filter = { ...queryFilter, hotelId };
+            if (filter.action) filter.action = { $regex: filter.action, $options: 'i' };
+            console.log("🤖 Gemini triggered searchAuditLogsTool with filter:", JSON.stringify(filter));
+            return await AuditLog.find(filter).sort({ timestamp: -1 }).limit(50).lean();
+        };
+
         // Map internal tool execution names
         const internalFunctions = {
             searchBookings: searchBookingsTool,
             searchRooms: searchRoomsTool,
-            getOperationalSummary: getOperationalSummaryTool
+            getOperationalSummary: getOperationalSummaryTool,
+            searchCashJournal: searchCashJournalTool,
+            searchInventory: searchInventoryTool,
+            searchSales: searchSalesTool,
+            searchExpenses: searchExpensesTool,
+            searchChecklists: searchChecklistsTool,
+            searchRoomTypes: searchRoomTypesTool,
+            searchUsers: searchUsersTool,
+            searchAuditLogs: searchAuditLogsTool
         };
 
         // =========================================================================
         // 2. CONSTRUCT GEMINI TOOL DECLARATIONS FOR THE SDK
         // =========================================================================
         const systemInstruction = `
-            You are "Novus Copilot", the elite administrative AI assistant for this hotel.
-            You have access to powerful search tools to pull real-time database lists regarding bookings and rooms.
+            You are "Novus Copilot", the elite administrative AI assistant for this hotel property management platform.
+            You possess contextual data access tools regarding reservations, logs, rooms, financial ledgers, room types, checklists, and active staff profiles.
             
-            SECURITY SAFEGUARDS:
-            - You only see records matching the current hotel properties.
-            - If details for a specific guest, room type, or status are requested, use the appropriate tool to find them.
-            - Do not guess data or invent reservations. If tools return empty arrays, tell the user gracefully.
+            SECURITY AND PRIVACY PROTOCOLS:
+            - You only pull records matching the current isolated hotel properties context.
+            - Never attempt to reveal or guess passwords. Staff queries automatically drop sensitive credential metrics.
+            - Do not guess metrics or invent operational records. If tools return empty structures, answer the supervisor accurately.
         `;
 
-        // Define function metadata declarations for Gemini 2.5
+        // Define function metadata declarations for Gemini 3.1
         const toolsConfig = [
             {
                 functionDeclarations: [
@@ -5833,6 +5901,94 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                             properties: {
                                 status: { type: "STRING", description: "Values: clean, dirty, under-maintenance, blocked" },
                                 number: { type: "STRING", description: "The explicit room number identifier" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchCashJournal",
+                        description: "Queries the cash accounting journals to see cash at hand, banked funds, mobile money balance on phone, or check specific responsible persons.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                responsiblePerson: { type: "STRING", description: "The username of the individual handling the cash log" },
+                                bankReceiptId: { type: "STRING", description: "The explicit bank receipt confirmation identifier number" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchInventory",
+                        description: "Queries the inventory system to check stock levels, sales velocity indicators, items with trackInventory parameters, spoilage, or cost bounds.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                item: { type: "STRING", description: "Name of the inventory stock item (e.g., 'Nile Special', 'Soda')" },
+                                trackInventory: { type: "BOOLEAN", description: "Filter items based on whether stock checks are enabled or bypassed" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchSales",
+                        description: "Fetches historical itemized sales metrics broken down by operational profit margins and revenue departments.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                department: { type: "STRING", description: "Strict values: Bar, Restaurant, Kitchen" },
+                                item: { type: "STRING", description: "The name tracking parameter of the sold retail asset" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchExpenses",
+                        description: "Queries operational cash outflows and spending profiles logged by the hotel management.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                department: { type: "STRING", description: "Strict values: Bar, Restaurant, Kitchen" },
+                                source: { type: "STRING", description: "Funding source account descriptor" },
+                                recordedBy: { type: "STRING", description: "Username profile of the logging associate" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchChecklists",
+                        description: "Fetches room inspection checklists and housekeeping task records for review.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                room: { type: "STRING", description: "The specific target room number string (e.g., '102')" },
+                                date: { type: "STRING", description: "The date context parameter format string YYYY-MM-DD" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchRoomTypes",
+                        description: "Queries room types configuration details to check base prices, default images, or seasonal rates structures.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                name: { type: "STRING", description: "The distinct room category type (e.g., 'Deluxe Room', 'Suite')" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchUsers",
+                        description: "Queries the list of registered hotel employees and staff role categories to check permissions or shift assignments.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                role: { type: "STRING", description: "Values: chef, admin, bar, housekeeper, cashier, front office" },
+                                username: { type: "STRING", description: "The specific staff member handle search descriptor" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchAuditLogs",
+                        description: "Queries the system's operational historical audit trail tracking actions executed by various users.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                user: { type: "STRING", description: "The explicit associate tracking username" },
+                                action: { type: "STRING", description: "The keyword classification descriptor for actions like login, logout, deletion" }
                             }
                         }
                     }
