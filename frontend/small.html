@@ -815,7 +815,7 @@ body {
         <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                    <i class="fas fa-exclamation-triangle text-amber-500"></i> Item Voids & System Overrides (Last 30 Days)
+                    <i class="fas fa-exclamation-triangle text-amber-500"></i> Booking Voids & System Overrides (Last 30 Days)
                 </h3>
                 <button class="text-gray-400 hover:text-gray-600 transition-colors">
                     <i class="fas fa-ellipsis-h"></i>
@@ -4820,7 +4820,7 @@ function renderDiscrepancyChart(labels, voids, overrides) {
             labels: labels.length ? labels : ['No Activity in Past 30 Days'],
             datasets: [
                 {
-                    label: 'Item Voids',
+                    label: 'Booking Voids',
                     data: voids,
                     backgroundColor: 'rgba(239, 68, 68, 0.85)', 
                     borderRadius: 4

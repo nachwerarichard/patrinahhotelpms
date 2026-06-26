@@ -665,14 +665,15 @@ body {
     </div>
 </section>
 
-           <section id="dashboard" class="section active bg-gray-50 p-4 md:p-8 rounded-2xl shadow-sm mb-8">
+<section id="dashboard" class="section active bg-gray-50 p-4 md:p-8 rounded-2xl shadow-sm mb-8">
+    <!-- Dashboard Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
             <h2 class="text-3xl font-extrabold text-gray-800 tracking-tight flex items-center gap-3">
-                
-             Dashboard
+                <i class="fas fa-th-large text-blue-600"></i>
+                Dashboard
             </h2>
-            <p class="text-gray-500 mt-1 ml-12">Real-time property performance and guest activity.</p>
+            <p class="text-gray-500 mt-1 ml-9">Real-time property performance, finances, and staff analytics.</p>
         </div>
         <div class="flex items-center gap-2 self-start md:self-center bg-white shadow-sm border border-gray-100 px-4 py-2 rounded-full">
             <span class="relative flex h-3 w-3">
@@ -684,16 +685,17 @@ body {
     </div>
 
     <div class="space-y-10">
+        <!-- Operations Overview -->
         <div>
             <div class="flex items-center gap-2 mb-5">
                 <div class="h-1 w-8 bg-blue-500 rounded-full"></div>
-                <h3 class="text-lg font-bold text-gray-700 uppercase tracking-wide text-sm">Operations Overview</h3>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Operations Overview</h3>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all group">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 uppercase">Arrivals</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Arrivals</p>
                             <p id="total-arrivals" class="text-4xl font-black text-gray-900 mt-2">0</p>
                         </div>
                         <div class="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
@@ -705,7 +707,7 @@ body {
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all group">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 uppercase">Departures</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Departures</p>
                             <p id="total-departures" class="text-4xl font-black text-gray-900 mt-2">0</p>
                         </div>
                         <div class="p-3 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-600 group-hover:text-white transition-colors">
@@ -717,7 +719,7 @@ body {
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all group">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 uppercase">No Shows</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">No Shows</p>
                             <p id="no-show-count" class="text-4xl font-black text-gray-900 mt-2">0</p>
                         </div>
                         <div class="p-3 bg-red-50 text-red-600 rounded-xl group-hover:bg-red-600 group-hover:text-white transition-colors">
@@ -728,91 +730,133 @@ body {
             </div>
         </div>
 
+        <!-- Front Office Revenue & Payments -->
         <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
             <div class="flex items-center gap-2 mb-6">
                 <div class="h-1 w-8 bg-green-500 rounded-full"></div>
-                <h3 class="text-lg font-bold text-gray-700 uppercase tracking-wide text-sm">Front office room Revenue & Payments</h3>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Front Office Room Revenue & Payments</h3>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div class="relative">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Expected</p>
                     <p id="today-revenue" class="text-xl font-bold text-gray-900 mt-1">UGX 0</p>
-                    <div class="absolute -left-4 top-0 h-full w-1 bg-green-500 rounded-full"></div>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-green-500 rounded-full"></div>
                 </div>
-                <div class="relative">
+                <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Collected</p>
                     <p id="today-amountpaid" class="text-xl font-bold text-gray-900 mt-1 text-green-600">UGX 0</p>
-                    <div class="absolute -left-4 top-0 h-full w-1 bg-blue-500 rounded-full"></div>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-full"></div>
                 </div>
-                <div class="relative">
+                <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Balance</p>
                     <p id="today-balance" class="text-xl font-bold text-gray-900 mt-1 text-red-500">UGX 0</p>
-                    <div class="absolute -left-4 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
                 </div>
-                <div class="relative">
+                <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pending Invoices</p>
                     <p id="pending-count" class="text-xl font-bold text-gray-900 mt-1">0</p>
-                    <div class="absolute -left-4 top-0 h-full w-1 bg-yellow-500 rounded-full"></div>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-yellow-500 rounded-full"></div>
                 </div>
             </div>
         </div>
 
-             <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+        <!-- Point of Sale -->
+        <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
             <div class="flex items-center gap-2 mb-6">
-                <div class="h-1 w-8 bg-green-500 rounded-full"></div>
-                <h3 class="text-lg font-bold text-gray-700 uppercase tracking-wide text-sm"> Point of Sale </h3>
+                <div class="h-1 w-8 bg-indigo-500 rounded-full"></div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Point of Sale</h3>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div class="relative">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Revenue</p>
                     <p id="postoday-revenue" class="text-xl font-bold text-gray-900 mt-1">UGX 0</p>
-                    <div class="absolute -left-4 top-0 h-full w-1 bg-green-500 rounded-full"></div>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-green-500 rounded-full"></div>
                 </div>
-                <div class="relative">
+                <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Gross Profit</p>
                     <p id="postoday-profit" class="text-xl font-bold text-gray-900 mt-1 text-green-600">UGX 0</p>
-                    <div class="absolute -left-4 top-0 h-full w-1 bg-blue-500 rounded-full"></div>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-full"></div>
                 </div>
-                <div class="relative">
+                <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Expense</p>
                     <p id="postoday-expense" class="text-xl font-bold text-gray-900 mt-1 text-red-500">UGX 0</p>
-                    <div class="absolute -left-4 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
                 </div>
-                <div class="relative">
+                <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Net Balance</p>
                     <p id="postoday-balance" class="text-xl font-bold text-gray-900 mt-1">0</p>
-                    <div class="absolute -left-4 top-0 h-full w-1 bg-yellow-500 rounded-full"></div>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-yellow-500 rounded-full"></div>
                 </div>
             </div>
         </div>
         
         <div id="stats-container" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                        <i class="fas fa-chart-pie text-blue-500"></i> Guest Status
-                    </h3>
-                    <button class="text-gray-400 hover:text-gray-600"><i class="fas fa-ellipsis-h"></i></button>
-                </div>
-                <div class="h-64">
-                    <canvas id="statusChart"></canvas>
-                </div>
+<div>
+    <div class="flex items-center gap-2 mb-5">
+        <div class="h-1 w-8 bg-purple-600 rounded-full"></div>
+        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Staff Performance Analytics (Past 30 Days)</h3>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-tasks text-purple-600"></i> Actions Handled per Staff (Last 30 Days)
+                </h3>
+                <button class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-ellipsis-h"></i>
+                </button>
             </div>
-
-            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                        <i class="fas fa-globe text-indigo-500"></i> Booking Sources
-                    </h3>
-                    <button class="text-gray-400 hover:text-gray-600"><i class="fas fa-ellipsis-h"></i></button>
-                </div>
-                <div class="h-64">
-                    <canvas id="sourceChart"></canvas>
-                </div>
+            <div class="h-64 relative">
+                <canvas id="staffActivityChart"></canvas>
             </div>
         </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-exclamation-triangle text-amber-500"></i> Booking Voids & System Overrides (Last 30 Days)
+                </h3>
+                <button class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-ellipsis-h"></i>
+                </button>
+            </div>
+            <div class="h-64 relative">
+                <canvas id="discrepancyChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+    <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                <i class="fas fa-chart-pie text-blue-500"></i> Guest Status
+            </h3>
+            <button class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fas fa-ellipsis-h"></i>
+            </button>
+        </div>
+        <div class="h-64 relative">
+            <canvas id="statusChart"></canvas>
+        </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                <i class="fas fa-globe text-indigo-500"></i> Booking Sources
+            </h3>
+            <button class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fas fa-ellipsis-h"></i>
+            </button>
+        </div>
+        <div class="h-64 relative">
+            <canvas id="sourceChart"></canvas>
+        </div>
+    </div>
+</div>
         
     </div>
 </section>
@@ -3630,7 +3674,7 @@ Add Guest Details            </h2>
     <script src="housekeep.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="script.js"></script>
+    <script src="small.js"></script>
 <script>
 function googleTranslateElementInit() {
     new google.translate.TranslateElement(
@@ -4687,6 +4731,119 @@ document.addEventListener("click", (e) => {
         if (element) element.remove();
     }
 });
+</script>
+<script>
+    // Global chart instances to handle updates/resets smoothly
+let staffActivityChart = null;
+let discrepancyChart = null;
+
+/**
+ * Secure API wrapper for authenticated requests
+ */
+
+async function loadStaffPerformanceCharts() {
+    try {
+        // FIX 1: Changed single quotes to backticks (`) for template literal parsing
+        const response = await authenticatedFetch(`${API_BASE_URL}/analytics/staff-performance`);
+        
+        if (!response) return; // Guard against redirected/unauthenticated null returns
+
+        // FIX 2: Parse the raw fetch response to JSON since your authenticatedFetch doesn't do it internally
+        const result = await response.json();
+        
+        if (!result.success || !result.data) {
+            console.error("Failed to parse system analytics payload.");
+            return;
+        }
+
+        const { totalActivity, discrepancies } = result.data;
+
+        // --- Chart 1 Process: Operational Load Distribution ---
+        const activityLabels = totalActivity.map(item => item._id);
+        const activityData = totalActivity.map(item => item.totalActions);
+
+        renderActivityChart(activityLabels, activityData);
+
+        // --- Chart 2 Process: Item Voids & System Overrides ---
+        const voidsData = activityLabels.map(staff => {
+            const match = discrepancies.find(d => d._id === staff);
+            return match ? match.voidsCount : 0;
+        });
+
+        const overridesData = activityLabels.map(staff => {
+            const match = discrepancies.find(d => d._id === staff);
+            return match ? match.overridesCount : 0;
+        });
+
+        renderDiscrepancyChart(activityLabels, voidsData, overridesData);
+
+    } catch (err) {
+        console.error("Could not render performance dashboards:", err);
+    }
+}
+
+function renderActivityChart(labels, data) {
+    const ctx = document.getElementById('staffActivityChart').getContext('2d');
+    
+    if (staffActivityChart) staffActivityChart.destroy(); 
+
+    staffActivityChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels.length ? labels : ['No Activity Logged'],
+            datasets: [{
+                // UPDATED text for accurate hover descriptions
+                label: 'Total Actions (Past 30 Days)', 
+                data: data.length ? data : [0],
+                backgroundColor: 'rgba(124, 58, 237, 0.85)', 
+                borderRadius: 6
+            }]
+        },
+        options: {
+            indexAxis: 'y', 
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+
+function renderDiscrepancyChart(labels, voids, overrides) {
+    const ctx = document.getElementById('discrepancyChart').getContext('2d');
+    
+    if (discrepancyChart) discrepancyChart.destroy();
+
+    discrepancyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            // UPDATED placeholder text
+            labels: labels.length ? labels : ['No Activity in Past 30 Days'],
+            datasets: [
+                {
+                    label: 'Booking Voids',
+                    data: voids,
+                    backgroundColor: 'rgba(239, 68, 68, 0.85)', 
+                    borderRadius: 4
+                },
+                {
+                    label: 'System Overrides / Deletions',
+                    data: overrides,
+                    backgroundColor: 'rgba(245, 158, 11, 0.85)', 
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
+// Trigger initialization when script mounts or main dashboard loads
+document.addEventListener('DOMContentLoaded', loadStaffPerformanceCharts);
 </script>
 </body>
 </html>
