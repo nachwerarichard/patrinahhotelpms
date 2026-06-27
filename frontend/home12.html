@@ -4626,6 +4626,7 @@ document.addEventListener("click", (e) => {
     });
 
     // Handle Form Submission
+    // Handle Form Submission
     chatForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         const messageText = userInput.value.trim();
@@ -4643,13 +4644,17 @@ document.addEventListener("click", (e) => {
             // 3. Post prompt and current history stack to the backend
             const response = await authenticatedFetch(`${API_BASE_URL}/ai/manager-chat`, {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     message: messageText,
-                    history: chatHistory // Injected conversational thread history
+                    history: chatHistory 
                 })
             });
 
-            if (!response) return;
+            if (!response) {
+                removeBubble(loadingId);
+                return;
+            }
 
             const data = await response.json();
             removeBubble(loadingId);
@@ -4661,12 +4666,26 @@ document.addEventListener("click", (e) => {
                 chatHistory.push({ role: "user", parts: [{ text: messageText }] });
                 chatHistory.push({ role: "model", parts: [{ text: data.reply }] });
                 
-                // Optional: Keep history light to save token bandwidth (e.g., last 10 turns)
                 if (chatHistory.length > 20) {
                     chatHistory = chatHistory.slice(-20);
                 }
             } else {
-                appendMessageBubble(`Error: ${data.message || "Failed to process request."}`, "error");
+                // 🛑 CHECK FOR EXPLICIT 429 RATE LIMIT STATUS CODES FIRST
+                if (response.status === 429) {
+                    appendMessageBubble("⚠️ AI service is temporarily rate limited. See warning popup.", "error");
+                    
+                    // Display the message directly inside your clean global message box component
+                    if (typeof showMessage === "function") {
+                        showMessage(
+                            "Quota Limit Reached", 
+                            data.message || "You have exceeded your current Gemini API search grounding quota. Please try again in 60 seconds.", 
+                            true
+                        );
+                    }
+                } else {
+                    // Standard 500 or validation errors appear standardly inline
+                    appendMessageBubble(`Error: ${data.message || "Failed to process request."}`, "error");
+                }
             }
         } catch (err) {
             removeBubble(loadingId);
@@ -4676,9 +4695,6 @@ document.addEventListener("click", (e) => {
 
         chatMessages.scrollTop = chatMessages.scrollHeight;
     });
-
-    // Helper functions (appendMessageBubble, appendLoadingBubble, removeBubble remain the same)
-
 
     // Helper functions to construct UI bubble states
     function appendMessageBubble(text, sender) {
