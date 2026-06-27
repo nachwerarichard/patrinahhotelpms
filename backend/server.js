@@ -6162,9 +6162,30 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         res.json({ reply: response.text });
 
     } catch (error) {
-        console.error("💥 AI Copilot Tool Resolution Fault:", error);
-        res.status(500).json({ message: "Server error during operations dataset inquiry", error: error.message });
+    console.error("💥 AI Copilot Tool Resolution Fault:", error);
+
+    // Check if the error is a rate limit/quota failure (429)
+    const isRateLimit = 
+        error.status === 429 || 
+        error.code === 429 || 
+        (error.message && error.message.includes("429")) ||
+        (error.message && error.message.includes("RESOURCE_EXHAUSTED"));
+
+    if (isRateLimit) {
+        return res.status(429).json({
+            status: 429,
+            message: "AI Search Quota Exhausted. The system is currently receiving too many global requests. Please wait a minute before sending another prompt.",
+            error: "RESOURCE_EXHAUSTED"
+        });
     }
+
+    // Default Fallback Server Error
+    res.status(500).json({ 
+        status: 500,
+        message: "Server error during operations dataset inquiry", 
+        error: error.message 
+    });
+ }
 });
   
 

@@ -202,6 +202,9 @@ function showMessage(title, message, isError = false) {
     // Set text safely
     titleEl.textContent = title;
     contentEl.textContent = message;
+    
+    // 🔥 Ensure code breaks or formatting newlines preserve structure layout cleanly
+    contentEl.style.whiteSpace = "pre-line";
 
     // Handle title coloring cleanly
     if (isError) {
