@@ -6174,7 +6174,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
     if (isRateLimit) {
         return res.status(429).json({
             status: 429,
-            message: "AI Search Quota Exhausted. The system is currently receiving too many global requests. Please wait a minute before sending another prompt.",
+            message: "We have temporarily reached our limit.",
             error: "RESOURCE_EXHAUSTED"
         });
     }
