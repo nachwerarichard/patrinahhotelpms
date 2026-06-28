@@ -12,6 +12,8 @@
    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Place this inside your HTML <head> or right above your main script tag -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -3635,19 +3637,20 @@ Add Guest Details            </h2>
     </div>
 </div>
 
-<button id="open-ai-btn" class="fixed bottom-6 right-6 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-2xl transition duration-300 flex items-center justify-center z-50">
+<button id="open-ai-btn" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-2xl transition duration-300 flex items-center justify-center z-50">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
     </svg>
 </button>
 
-<div id="ai-drawer" class="fixed inset-y-0 right-0 w-96 bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col hidden">
+<div id="ai-drawer" class="fixed inset-y-0 right-0 w-full sm:w-96 bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col hidden">
+    
     <div class="p-4 bg-indigo-600 text-white flex justify-between items-center shadow-md">
         <div class="flex items-center space-x-2">
             <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
             <h3 class="font-semibold text-lg">Novus Operations Copilot</h3>
         </div>
-        <button id="close-ai-btn" class="text-white hover:text-gray-200 focus:outline-none">
+        <button id="close-ai-btn" class="text-white hover:text-gray-200 focus:outline-none p-1 rounded-md hover:bg-indigo-700 transition">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -3662,9 +3665,9 @@ Add Guest Details            </h2>
         </div>
     </div>
 
-    <form id="ai-chat-form" class="p-4 bg-white border-t border-gray-200 flex items-center space-x-2">
+    <form id="ai-chat-form" class="p-4 bg-white border-t border-gray-200 flex items-center space-x-2 pb-5 sm:pb-4">
         <input type="text" id="ai-user-input" placeholder="e.g., How many rooms need cleaning?" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" required autocomplete="off">
-        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shrink-0">
             Send
         </button>
     </form>
@@ -4603,7 +4606,7 @@ document.addEventListener("click", (e) => {
 });
 </script>
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
+   document.addEventListener("DOMContentLoaded", () => {
     const openBtn = document.getElementById("open-ai-btn");
     const closeBtn = document.getElementById("close-ai-btn");
     const drawer = document.getElementById("ai-drawer");
@@ -4613,6 +4616,14 @@ document.addEventListener("click", (e) => {
 
     // Holds the session message history array for context continuity
     let chatHistory = [];
+
+    // Configure marked options for security and line breaks
+    if (typeof marked !== 'undefined') {
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+    }
 
     // Toggle panel drawer visibility
     openBtn.addEventListener("click", () => {
@@ -4625,7 +4636,6 @@ document.addEventListener("click", (e) => {
         setTimeout(() => drawer.classList.add("hidden"), 300);
     });
 
-    // Handle Form Submission
     // Handle Form Submission
     chatForm.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -4653,6 +4663,7 @@ document.addEventListener("click", (e) => {
 
             if (!response) {
                 removeBubble(loadingId);
+                appendMessageBubble("System failed to yield a valid server response.", "error");
                 return;
             }
 
@@ -4660,31 +4671,34 @@ document.addEventListener("click", (e) => {
             removeBubble(loadingId);
 
             if (response.ok) {
-                appendMessageBubble(data.reply, "ai");
+                // 🛡️ Safe verification fallback string if data.reply is undefined or missing
+                const aiReply = data.reply || data.message || "No response content returned from the platform system.";
+                
+                appendMessageBubble(aiReply, "ai");
                 
                 // 4. Update memory context array for subsequent questions
                 chatHistory.push({ role: "user", parts: [{ text: messageText }] });
-                chatHistory.push({ role: "model", parts: [{ text: data.reply }] });
+                chatHistory.push({ role: "model", parts: [{ text: aiReply }] });
                 
-                if (chatHistory.length > 20) {
-                    chatHistory = chatHistory.slice(-20);
+                // Keep history trimmed to avoid sending excessive payload data over HTTP request blocks
+                if (chatHistory.length > 16) {
+                    chatHistory = chatHistory.slice(-16);
                 }
             } else {
-                // 🛑 CHECK FOR EXPLICIT 429 RATE LIMIT STATUS CODES FIRST
+                // 🛑 Handle explicit 429 Rate Limit Status Codes
                 if (response.status === 429) {
-                    appendMessageBubble("⚠️ AI service is temporarily rate limited. See warning popup.", "error");
+                    appendMessageBubble("⚠️ AI service limits reached. Please wait a moment before trying again.", "error");
                     
-                    // Display the message directly inside your clean global message box component
                     if (typeof showMessage === "function") {
                         showMessage(
-                            "Quota Limit Reached", 
-                            data.message || "You have exceeded your current Gemini API search grounding quota. Please try again in 60 seconds.", 
+                            data.title || "Limit Reached", 
+                            data.message || "We have temporarily reached our limit.", 
                             true
                         );
                     }
                 } else {
-                    // Standard 500 or validation errors appear standardly inline
-                    appendMessageBubble(`Error: ${data.message || "Failed to process request."}`, "error");
+                    const fallbackError = data.message || "Failed to process operational request state.";
+                    appendMessageBubble(`Error: ${fallbackError}`, "error");
                 }
             }
         } catch (err) {
@@ -4692,48 +4706,96 @@ document.addEventListener("click", (e) => {
             appendMessageBubble("Network error. Unable to contact AI assistant service.", "error");
             console.error("AI Communication Failure:", err);
         }
-
-        chatMessages.scrollTop = chatMessages.scrollHeight;
     });
 
-    // Helper functions to construct UI bubble states
+    // Helper functions to construct UI bubble states with dynamic table rendering support
     function appendMessageBubble(text, sender) {
-    const bubbleContainer = document.createElement("div");
-    bubbleContainer.className = "flex items-start " + (sender === "user" ? "justify-end" : "justify-start");
+        const cleanText = text ? String(text) : "";
 
-    const bubble = document.createElement("div");
-    bubble.className = "text-sm p-3 rounded-lg max-w-[85%] shadow-sm " + 
-        (sender === "user" 
-            ? "bg-indigo-600 text-white rounded-tr-none" 
-            : sender === "error" 
-                ? "bg-red-100 text-red-800 rounded-tl-none border border-red-200" 
-                : "bg-indigo-100 text-indigo-900 rounded-tl-none");
-    
-    bubble.style.whiteSpace = "pre-line";
+        const bubbleContainer = document.createElement("div");
+        bubbleContainer.className = "flex items-start my-2.5 " + (sender === "user" ? "justify-end" : "justify-start");
 
-    if (sender === "user") {
-        bubble.textContent = text;
-    } else {
-        // Safe regex conversion: replaces **text** with <strong>text</strong>
-        let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        // Clean out any raw single bullet asterisks if you want cleaner bullet lists too
-        formattedText = formattedText.replace(/^\*\s+/gm, '• ');
-        
-        bubble.innerHTML = formattedText;
+        const bubble = document.createElement("div");
+        bubble.className = "text-sm p-3 rounded-lg max-w-[92%] shadow-sm overflow-x-auto " + 
+            (sender === "user" 
+                ? "bg-indigo-600 text-white rounded-tr-none" 
+                : sender === "error" 
+                    ? "bg-red-100 text-red-800 rounded-tl-none border border-red-200" 
+                    : "bg-indigo-50 text-indigo-950 rounded-tl-none border border-indigo-100");
+
+        if (sender === "user") {
+            bubble.textContent = cleanText;
+            bubble.style.whiteSpace = "pre-line";
+        } else if (sender === "error") {
+            bubble.textContent = cleanText;
+        } else {
+            // Use marked parsing engine if safely available on global window execution scope
+            if (typeof marked !== 'undefined') {
+                // Wrap in explicit string conversion to avoid structural failure faults
+                bubble.innerHTML = marked.parse(cleanText);
+                injectTableStyles(bubble); 
+            } else {
+                // Fallback basic text parser matching native rules if script asset fails to load
+                let formattedText = cleanText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                formattedText = formattedText.replace(/^\*\s+/gm, '• ');
+                bubble.innerHTML = formattedText;
+                bubble.style.whiteSpace = "pre-line";
+            }
+        }
+
+        bubbleContainer.appendChild(bubble);
+        chatMessages.appendChild(bubbleContainer);
+
+        // 🔄 FIX: Enforce clear programmatic view indexing immediately following layout updates
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    bubbleContainer.appendChild(bubble);
-    chatMessages.appendChild(bubbleContainer);
-}
+    // Dynamic Tailwind class injection utility for generated markdown structural layouts
+    function injectTableStyles(container) {
+        const tables = container.querySelectorAll("table");
+        tables.forEach(table => {
+            table.className = "w-full my-3 border-collapse text-xs text-left bg-white rounded border border-gray-200 shadow-xs block sm:table overflow-x-auto";
+            
+            // Stylize header nodes blocks cleanly
+            table.querySelectorAll("th").forEach(th => {
+                th.className = "p-2 bg-indigo-100 text-indigo-900 font-semibold border-b border-gray-200 uppercase tracking-wider white-space-nowrap";
+            });
+            
+            // Stylize cell partitions sections
+            table.querySelectorAll("td").forEach(td => {
+                td.className = "p-2 border-b border-gray-100 text-gray-700 font-normal";
+            });
+
+            // Alternate row background highlight colors
+            table.querySelectorAll("tr").forEach((tr, index) => {
+                if (index > 0 && index % 2 === 0) {
+                    tr.classList.add("bg-gray-50/50");
+                }
+            });
+        });
+
+        // Stylize markdown blockquotes if system insights throw recommendations
+        container.querySelectorAll("blockquote").forEach(bq => {
+            bq.className = "my-2 pl-3 border-l-4 border-indigo-500 italic text-gray-600 bg-indigo-50/40 py-1 rounded-r";
+        });
+
+        // Stylize clean structured bullet entries spacing loops
+        container.querySelectorAll("ul").forEach(ul => {
+            ul.className = "list-disc pl-5 my-2 space-y-1";
+        });
+        container.querySelectorAll("ol").forEach(ol => {
+            ol.className = "list-decimal pl-5 my-2 space-y-1";
+        });
+    }
 
     function appendLoadingBubble() {
         const id = "loading-" + Date.now();
         const bubbleContainer = document.createElement("div");
         bubbleContainer.id = id;
-        bubbleContainer.className = "flex items-start justify-start";
+        bubbleContainer.className = "flex items-start justify-start my-2";
 
         const bubble = document.createElement("div");
-        bubble.className = "bg-gray-200 text-gray-500 text-sm p-3 rounded-lg rounded-tl-none animate-pulse";
+        bubble.className = "bg-gray-100 text-gray-500 text-sm p-3 rounded-lg rounded-tl-none border border-gray-200/60 animate-pulse";
         bubble.textContent = "Copilot is analyzing system states...";
 
         bubbleContainer.appendChild(bubble);
@@ -4745,7 +4807,7 @@ document.addEventListener("click", (e) => {
         const element = document.getElementById(id);
         if (element) element.remove();
     }
-});
+   });
 </script>
 <script>
     // Global chart instances to handle updates/resets smoothly
