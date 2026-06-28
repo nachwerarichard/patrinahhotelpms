@@ -5888,6 +5888,42 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             return await ClientAccount.find(filter).sort({ updatedAt: -1 }).lean();
         };
 
+        // 📊 NEW: AGGREGATE OPERATIONS & FINANCIAL REPORTING TOOL
+        const generateOperationalReportTool = async (queryFilter) => {
+            const { startDate, endDate, department } = queryFilter;
+            const filter = { hotelId };
+            
+            if (startDate || endDate) {
+                filter.date = {};
+                if (startDate) filter.date.$gte = startDate;
+                if (endDate) filter.date.$lte = endDate;
+            }
+
+            const salesFilter = { ...filter };
+            const expenseFilter = { ...filter };
+            if (department) {
+                salesFilter.department = department;
+                expenseFilter.department = department;
+            }
+
+            const [sales, expenses, logs] = await Promise.all([
+                Sale.find(salesFilter).lean(),
+                Expense.find(expenseFilter).lean(),
+                AuditLog.find({ hotelId, timestamp: { $gte: new Date(startDate || new Date().setDate(new Date().getDate()-7)) } }).limit(20).lean()
+            ]);
+
+            const totalRevenue = sales.reduce((sum, item) => sum + (item.amount || item.total || 0), 0);
+            const totalExpenses = expenses.reduce((sum, item) => sum + (item.amount || 0), 0);
+
+            return {
+                reportingPeriod: { startDate: startDate || "7 days ago", endDate: endDate || "Today" },
+                financialSummary: { totalRevenue, totalExpenses, netIncome: totalRevenue - totalExpenses },
+                salesCount: sales.length,
+                expensesCount: expenses.length,
+                recentAuditTrailSummary: logs.map(l => `${l.user}: ${l.action} (${l.timestamp})`)
+            };
+        };
+
         const internalFunctions = {
             searchBookings: searchBookingsTool,
             searchRooms: searchRoomsTool,
@@ -5904,21 +5940,33 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             searchGateways: searchGatewaysTool,
             searchPaymentTransactions: searchPaymentTransactionsTool,
             searchIncidentalCharges: searchIncidentalChargesTool,
-            searchClientAccounts: searchClientAccountsTool
+            searchClientAccounts: searchClientAccountsTool,
+            generateOperationalReport: generateOperationalReportTool
         };
 
         // =========================================================================
         // 2. CONSTRUCT DYNAMIC, LOCATION-AWARE SYSTEM INSTRUCTIONS
         // =========================================================================
+        const localTimeISO = new Date().toISOString();
+        const localDateStr = localTimeISO.split('T')[0];
+
         const systemInstruction = `
             You are "Novus Copilot", the elite administrative AI assistant for ${hotelName}.
             
-            CURRENT HOTEL PROFILE CONTEXT:
+            CURRENT PROPERTY PROFILE CONTEXT:
             - Property Name: ${hotelName}
             - Location/Address: ${hotelLocation}
             - Support/Contact Phone: ${hotelContact}
             
-            Use this profile context to ground your conversational personality. For example, if a user requests localized messages, check-in rules, or ambient updates, remember you are physically managing operations inside "${hotelLocation}".
+            CRITICAL TEMPORAL AWARENESS:
+            - Today's date is strictly: ${localDateStr} (ISO Timestamp: ${localTimeISO})
+            - If a user asks for metrics, summaries, bookings, sales, or data for "today", you must strictly target dates matching ${localDateStr}. Do not fall back to old records or history unless specifically asked for trends or historical periods.
+            
+            MULTI-SOURCE DATA AGGREGATION & REPORTING PROTOCOLS:
+            - You have access to distinct analytical tools across multiple databases. You are highly expected to think cross-functionally.
+            - If a prompt asks for a complex picture (e.g., "Show me everything happening today"), you can call multiple functions sequentially or parallelly in your execution loop.
+            - Combine data cleanly into unified, exhaustive responses. For instance, combine metrics from sales, cash balance updates, and active kitchen orders to provide a holistic operational landscape overview.
+            - Provide descriptive, deeply itemized, and granular analytical answers rather than short generalized summaries when supervisors request deep insights.
             
             SECURITY AND PRIVACY PROTOCOLS:
             - You only pull records matching the current isolated hotel properties context.
@@ -5938,7 +5986,8 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                             properties: {
                                 gueststatus: { type: "STRING" },
                                 paymentStatus: { type: "STRING" },
-                                checkIn: { type: "STRING" },
+                                checkIn: { type: "STRING", description: "Format: YYYY-MM-DD" },
+                                checkOut: { type: "STRING", description: "Format: YYYY-MM-DD" },
                                 name: { type: "STRING" }
                             }
                         }
@@ -6086,6 +6135,18 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                                 isClosed: { type: "BOOLEAN", description: "Filters by active vs archived balances" }
                             }
                         }
+                    },
+                    {
+                        name: "generateOperationalReport",
+                        description: "Compiles deep financial and operational updates for sales, revenues, and spending metrics across specified ranges.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                startDate: { type: "STRING", description: "Format: YYYY-MM-DD" },
+                                endDate: { type: "STRING", description: "Format: YYYY-MM-DD" },
+                                department: { type: "STRING", description: "Optional filter: Bar, Restaurant, Kitchen" }
+                            }
+                        }
                     }
                 ]
             }
@@ -6094,31 +6155,35 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         const formattedContents = Array.isArray(history) ? [...history] : [];
         formattedContents.push({ role: "user", parts: [{ text: message }] });
 
-        let response;
-        let attempts = 0;
-        const maxAttempts = 2;
+        let responseText = "";
+        let loops = 0;
+        const maxLoops = 5; // Allow sequential multi-tool calls to gather diverse data streams
 
-        while (attempts < maxAttempts) {
-            try {
-                response = await ai.models.generateContent({
-                    model: "gemini-3.1-flash-lite",
-                    contents: formattedContents,
-                    config: {
-                        systemInstruction: systemInstruction,
-                        tools: toolsConfig,
-                        temperature: 0.1
-                    }
-                });
+        // Multi-turn tool execution loop to allow the AI to chain data queries dynamically
+        while (loops < maxLoops) {
+            const aiResponse = await ai.models.generateContent({
+                model: "gemini-3.1-flash-lite",
+                contents: formattedContents,
+                config: {
+                    systemInstruction: systemInstruction,
+                    tools: toolsConfig,
+                    temperature: 0.15
+                }
+            });
 
-                if (response.functionCalls && response.functionCalls.length > 0) {
-                    const call = response.functionCalls[0];
+            // Check if model wants to call functions
+            if (aiResponse.functionCalls && aiResponse.functionCalls.length > 0) {
+                // Add the model's call request to history
+                formattedContents.push(aiResponse.candidates[0].content);
+
+                // Execute all structural tool requests made in this turn
+                for (const call of aiResponse.functionCalls) {
                     const toolName = call.name;
                     const toolArgs = call.args;
 
                     if (internalFunctions[toolName]) {
                         const toolResultData = await internalFunctions[toolName](toolArgs);
-
-                        formattedContents.push(response.candidates[0].content);
+                        
                         formattedContents.push({
                             role: "user",
                             parts: [{
@@ -6128,26 +6193,17 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                                 }
                             }]
                         });
-
-                        response = await ai.models.generateContent({
-                            model: "gemini-3.1-flash-lite",
-                            contents: formattedContents,
-                            config: { systemInstruction, tools: toolsConfig }
-                        });
                     }
                 }
+                loops++;
+            } else {
+                // Final descriptive response delivered by the model
+                responseText = aiResponse.text;
                 break;
-            } catch (aiErr) {
-                attempts++;
-                console.warn(`⚠️ Gemini API loop failed (Attempt ${attempts}): ${aiErr.message}`);
-                
-                // If it's an explicit payload syntax error (like status 400), don't retry execution
-                if (aiErr.status === 400 || attempts >= maxAttempts) throw aiErr;
-                await new Promise(resolve => setTimeout(resolve, 1000));
             }
         }
 
-        res.json({ reply: response.text });
+        res.json({ reply: responseText });
 
     } catch (error) {
         console.error("💥 AI Copilot Tool Resolution Fault:", error);
