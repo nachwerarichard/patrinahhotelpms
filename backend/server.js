@@ -5927,36 +5927,32 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         `;
 
         const toolsConfig = [
-        // 🌐 Array Item 1: Enable the Native Google Search Grounding Engine
-   // {
-       // googleSearch: {} 
-    //},
             {
                 functionDeclarations: [
-            { name: "getOperationalSummary", description: "Gets today's core quick metrics including total room status counts, expected arrivals, and departures." },
-            {
-                name: "searchBookings",
-                description: "Queries the hotel bookings database. Filter using fields like gueststatus, paymentStatus, checkIn, checkOut, or name.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        gueststatus: { type: "STRING" },
-                        paymentStatus: { type: "STRING" },
-                        checkIn: { type: "STRING" },
-                        name: { type: "STRING" }
-                    }
-                }
-            },
+                    { name: "getOperationalSummary", description: "Gets today's core quick metrics including total room status counts, expected arrivals, and departures." },
                     {
-                name: "searchRoomTypes",
-                description: "Queries room categories configuration to check internal base prices or rates.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        name: { type: "STRING", description: "Room category type (e.g., 'Deluxe Room')" }
-                    }
-                }
-            },
+                        name: "searchBookings",
+                        description: "Queries the hotel bookings database. Filter using fields like gueststatus, paymentStatus, checkIn, checkOut, or name.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                gueststatus: { type: "STRING" },
+                                paymentStatus: { type: "STRING" },
+                                checkIn: { type: "STRING" },
+                                name: { type: "STRING" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchRoomTypes",
+                        description: "Queries room categories configuration to check internal base prices or rates.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                name: { type: "STRING", description: "Room category type (e.g., 'Deluxe Room')" }
+                            }
+                        }
+                    },
                     {
                         name: "searchCashJournal",
                         description: "Queries the cash accounting journals to see cash at hand, banked funds, or mobile money balances.",
@@ -6009,16 +6005,6 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                             properties: {
                                 room: { type: "STRING", description: "Target room number string" },
                                 date: { type: "STRING", description: "Date context string YYYY-MM-DD" }
-                            }
-                        }
-                    },
-                    {
-                        name: "searchRoomTypes",
-                        description: "Queries room categories configuration to check base prices or seasonal rates arrays.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                name: { type: "STRING", description: "Room category type (e.g., 'Deluxe Room')" }
                             }
                         }
                     },
@@ -6154,7 +6140,9 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             } catch (aiErr) {
                 attempts++;
                 console.warn(`⚠️ Gemini API loop failed (Attempt ${attempts}): ${aiErr.message}`);
-                if (attempts >= maxAttempts) throw aiErr;
+                
+                // If it's an explicit payload syntax error (like status 400), don't retry execution
+                if (aiErr.status === 400 || attempts >= maxAttempts) throw aiErr;
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
         }
@@ -6162,30 +6150,28 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         res.json({ reply: response.text });
 
     } catch (error) {
-    console.error("💥 AI Copilot Tool Resolution Fault:", error);
+        console.error("💥 AI Copilot Tool Resolution Fault:", error);
 
-    // Check if the error is a rate limit/quota failure (429)
-    const isRateLimit = 
-        error.status === 429 || 
-        error.code === 429 || 
-        (error.message && error.message.includes("429")) ||
-        (error.message && error.message.includes("RESOURCE_EXHAUSTED"));
+        const isRateLimit = 
+            error.status === 429 || 
+            error.code === 429 || 
+            (error.message && error.message.includes("429")) ||
+            (error.message && error.message.includes("RESOURCE_EXHAUSTED"));
 
-    if (isRateLimit) {
-        return res.status(429).json({
-            status: 429,
-            message: "We have temporarily reached our limit.",
-            error: "RESOURCE_EXHAUSTED"
+        if (isRateLimit) {
+            return res.status(429).json({
+                status: 429,
+                message: "We have temporarily reached our AI platform limits.",
+                error: "RESOURCE_EXHAUSTED"
+            });
+        }
+
+        res.status(500).json({ 
+            status: 500,
+            message: "Server error during operations dataset inquiry", 
+            error: error.message 
         });
     }
-
-    // Default Fallback Server Error
-    res.status(500).json({ 
-        status: 500,
-        message: "Server error during operations dataset inquiry", 
-        error: error.message 
-    });
- }
 });
   
 
