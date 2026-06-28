@@ -5928,9 +5928,9 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
 
         const toolsConfig = [
         // 🌐 Array Item 1: Enable the Native Google Search Grounding Engine
-    {
-        googleSearch: {} 
-    },
+   // {
+       // googleSearch: {} 
+    //},
             {
                 functionDeclarations: [
             { name: "getOperationalSummary", description: "Gets today's core quick metrics including total room status counts, expected arrivals, and departures." },
