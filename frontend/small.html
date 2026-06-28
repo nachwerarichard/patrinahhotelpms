@@ -4605,7 +4605,7 @@ document.addEventListener("click", (e) => {
 });
 </script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
+   document.addEventListener("DOMContentLoaded", () => {
     const openBtn = document.getElementById("open-ai-btn");
     const closeBtn = document.getElementById("close-ai-btn");
     const drawer = document.getElementById("ai-drawer");
@@ -4670,8 +4670,8 @@ document.addEventListener("DOMContentLoaded", () => {
             removeBubble(loadingId);
 
             if (response.ok) {
-                // 🛡️ FIX: Safe verification fallback string if data.reply is undefined or missing
-                const aiReply = data.reply || (data.message) || "No response content returned from the platform system.";
+                // 🛡️ Safe verification fallback string if data.reply is undefined or missing
+                const aiReply = data.reply || data.message || "No response content returned from the platform system.";
                 
                 appendMessageBubble(aiReply, "ai");
                 
@@ -4679,13 +4679,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 chatHistory.push({ role: "user", parts: [{ text: messageText }] });
                 chatHistory.push({ role: "model", parts: [{ text: aiReply }] });
                 
-                if (chatHistory.length > 20) {
-                    chatHistory = chatHistory.slice(-20);
+                // Keep history trimmed to avoid sending excessive payload data over HTTP request blocks
+                if (chatHistory.length > 16) {
+                    chatHistory = chatHistory.slice(-16);
                 }
             } else {
                 // 🛑 Handle explicit 429 Rate Limit Status Codes
                 if (response.status === 429) {
-                    appendMessageBubble("⚠️ AI service limits reached.", "error");
+                    appendMessageBubble("⚠️ AI service limits reached. Please wait a moment before trying again.", "error");
                     
                     if (typeof showMessage === "function") {
                         showMessage(
@@ -4704,20 +4705,17 @@ document.addEventListener("DOMContentLoaded", () => {
             appendMessageBubble("Network error. Unable to contact AI assistant service.", "error");
             console.error("AI Communication Failure:", err);
         }
-
-        chatMessages.scrollTop = chatMessages.scrollHeight;
     });
 
     // Helper functions to construct UI bubble states with dynamic table rendering support
     function appendMessageBubble(text, sender) {
-        // Fallback protection check to prevent .replace or parsing loops on empty payloads
         const cleanText = text ? String(text) : "";
 
         const bubbleContainer = document.createElement("div");
         bubbleContainer.className = "flex items-start my-2.5 " + (sender === "user" ? "justify-end" : "justify-start");
 
         const bubble = document.createElement("div");
-        bubble.className = "text-sm p-3 rounded-lg max-w-[90%] shadow-sm overflow-x-auto " + 
+        bubble.className = "text-sm p-3 rounded-lg max-w-[92%] shadow-sm overflow-x-auto " + 
             (sender === "user" 
                 ? "bg-indigo-600 text-white rounded-tr-none" 
                 : sender === "error" 
@@ -4732,8 +4730,9 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             // Use marked parsing engine if safely available on global window execution scope
             if (typeof marked !== 'undefined') {
+                // Wrap in explicit string conversion to avoid structural failure faults
                 bubble.innerHTML = marked.parse(cleanText);
-                injectTableStyles(bubble); // Apply clean micro-borders and spacing layout styles onto data structures
+                injectTableStyles(bubble); 
             } else {
                 // Fallback basic text parser matching native rules if script asset fails to load
                 let formattedText = cleanText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
@@ -4745,18 +4744,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
         bubbleContainer.appendChild(bubble);
         chatMessages.appendChild(bubbleContainer);
+
+        // 🔄 FIX: Enforce clear programmatic view indexing immediately following layout updates
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
     // Dynamic Tailwind class injection utility for generated markdown structural layouts
     function injectTableStyles(container) {
-        // Find and stylize data tables inside response bubble container elements
         const tables = container.querySelectorAll("table");
         tables.forEach(table => {
-            table.className = "w-full my-3 border-collapse text-xs text-left bg-white rounded border border-gray-200 shadow-xs";
+            table.className = "w-full my-3 border-collapse text-xs text-left bg-white rounded border border-gray-200 shadow-xs block sm:table overflow-x-auto";
             
             // Stylize header nodes blocks cleanly
             table.querySelectorAll("th").forEach(th => {
-                th.className = "p-2 bg-indigo-100 text-indigo-900 font-semibold border-b border-gray-200 uppercase tracking-wider";
+                th.className = "p-2 bg-indigo-100 text-indigo-900 font-semibold border-b border-gray-200 uppercase tracking-wider white-space-nowrap";
             });
             
             // Stylize cell partitions sections
@@ -4805,7 +4806,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const element = document.getElementById(id);
         if (element) element.remove();
     }
-});
+   });
 </script>
 <script>
     // Global chart instances to handle updates/resets smoothly
