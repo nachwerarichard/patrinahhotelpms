@@ -12,6 +12,8 @@
    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Place this inside your HTML <head> or right above your main script tag -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -4603,7 +4605,7 @@ document.addEventListener("click", (e) => {
 });
 </script>
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", () => {
     const openBtn = document.getElementById("open-ai-btn");
     const closeBtn = document.getElementById("close-ai-btn");
     const drawer = document.getElementById("ai-drawer");
@@ -4613,6 +4615,14 @@ document.addEventListener("click", (e) => {
 
     // Holds the session message history array for context continuity
     let chatHistory = [];
+
+    // Configure marked options for security and line breaks
+    if (typeof marked !== 'undefined') {
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+    }
 
     // Toggle panel drawer visibility
     openBtn.addEventListener("click", () => {
@@ -4652,6 +4662,7 @@ document.addEventListener("click", (e) => {
 
             if (!response) {
                 removeBubble(loadingId);
+                appendMessageBubble("System failed to yield a valid server response.", "error");
                 return;
             }
 
@@ -4659,31 +4670,33 @@ document.addEventListener("click", (e) => {
             removeBubble(loadingId);
 
             if (response.ok) {
-                appendMessageBubble(data.reply, "ai");
+                // 🛡️ FIX: Safe verification fallback string if data.reply is undefined or missing
+                const aiReply = data.reply || (data.message) || "No response content returned from the platform system.";
+                
+                appendMessageBubble(aiReply, "ai");
                 
                 // 4. Update memory context array for subsequent questions
                 chatHistory.push({ role: "user", parts: [{ text: messageText }] });
-                chatHistory.push({ role: "model", parts: [{ text: data.reply }] });
+                chatHistory.push({ role: "model", parts: [{ text: aiReply }] });
                 
                 if (chatHistory.length > 20) {
                     chatHistory = chatHistory.slice(-20);
                 }
             } else {
-                // 🛑 CHECK FOR EXPLICIT 429 RATE LIMIT STATUS CODES FIRST
+                // 🛑 Handle explicit 429 Rate Limit Status Codes
                 if (response.status === 429) {
-                    appendMessageBubble("⚠️ AI service is temporarily rate limited. See warning popup.", "error");
+                    appendMessageBubble("⚠️ AI service limits reached.", "error");
                     
-                    // Display the message directly inside your clean global message box component
                     if (typeof showMessage === "function") {
                         showMessage(
-                            "Quota Limit Reached", 
-                            data.message || "You have exceeded your current Gemini API search grounding quota. Please try again in 60 seconds.", 
+                            data.title || "Limit Reached", 
+                            data.message || "We have temporarily reached our limit.", 
                             true
                         );
                     }
                 } else {
-                    // Standard 500 or validation errors appear standardly inline
-                    appendMessageBubble(`Error: ${data.message || "Failed to process request."}`, "error");
+                    const fallbackError = data.message || "Failed to process operational request state.";
+                    appendMessageBubble(`Error: ${fallbackError}`, "error");
                 }
             }
         } catch (err) {
@@ -4695,44 +4708,92 @@ document.addEventListener("click", (e) => {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     });
 
-    // Helper functions to construct UI bubble states
+    // Helper functions to construct UI bubble states with dynamic table rendering support
     function appendMessageBubble(text, sender) {
-    const bubbleContainer = document.createElement("div");
-    bubbleContainer.className = "flex items-start " + (sender === "user" ? "justify-end" : "justify-start");
+        // Fallback protection check to prevent .replace or parsing loops on empty payloads
+        const cleanText = text ? String(text) : "";
 
-    const bubble = document.createElement("div");
-    bubble.className = "text-sm p-3 rounded-lg max-w-[85%] shadow-sm " + 
-        (sender === "user" 
-            ? "bg-indigo-600 text-white rounded-tr-none" 
-            : sender === "error" 
-                ? "bg-red-100 text-red-800 rounded-tl-none border border-red-200" 
-                : "bg-indigo-100 text-indigo-900 rounded-tl-none");
-    
-    bubble.style.whiteSpace = "pre-line";
+        const bubbleContainer = document.createElement("div");
+        bubbleContainer.className = "flex items-start my-2.5 " + (sender === "user" ? "justify-end" : "justify-start");
 
-    if (sender === "user") {
-        bubble.textContent = text;
-    } else {
-        // Safe regex conversion: replaces **text** with <strong>text</strong>
-        let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        // Clean out any raw single bullet asterisks if you want cleaner bullet lists too
-        formattedText = formattedText.replace(/^\*\s+/gm, '• ');
-        
-        bubble.innerHTML = formattedText;
+        const bubble = document.createElement("div");
+        bubble.className = "text-sm p-3 rounded-lg max-w-[90%] shadow-sm overflow-x-auto " + 
+            (sender === "user" 
+                ? "bg-indigo-600 text-white rounded-tr-none" 
+                : sender === "error" 
+                    ? "bg-red-100 text-red-800 rounded-tl-none border border-red-200" 
+                    : "bg-indigo-50 text-indigo-950 rounded-tl-none border border-indigo-100");
+
+        if (sender === "user") {
+            bubble.textContent = cleanText;
+            bubble.style.whiteSpace = "pre-line";
+        } else if (sender === "error") {
+            bubble.textContent = cleanText;
+        } else {
+            // Use marked parsing engine if safely available on global window execution scope
+            if (typeof marked !== 'undefined') {
+                bubble.innerHTML = marked.parse(cleanText);
+                injectTableStyles(bubble); // Apply clean micro-borders and spacing layout styles onto data structures
+            } else {
+                // Fallback basic text parser matching native rules if script asset fails to load
+                let formattedText = cleanText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                formattedText = formattedText.replace(/^\*\s+/gm, '• ');
+                bubble.innerHTML = formattedText;
+                bubble.style.whiteSpace = "pre-line";
+            }
+        }
+
+        bubbleContainer.appendChild(bubble);
+        chatMessages.appendChild(bubbleContainer);
     }
 
-    bubbleContainer.appendChild(bubble);
-    chatMessages.appendChild(bubbleContainer);
-}
+    // Dynamic Tailwind class injection utility for generated markdown structural layouts
+    function injectTableStyles(container) {
+        // Find and stylize data tables inside response bubble container elements
+        const tables = container.querySelectorAll("table");
+        tables.forEach(table => {
+            table.className = "w-full my-3 border-collapse text-xs text-left bg-white rounded border border-gray-200 shadow-xs";
+            
+            // Stylize header nodes blocks cleanly
+            table.querySelectorAll("th").forEach(th => {
+                th.className = "p-2 bg-indigo-100 text-indigo-900 font-semibold border-b border-gray-200 uppercase tracking-wider";
+            });
+            
+            // Stylize cell partitions sections
+            table.querySelectorAll("td").forEach(td => {
+                td.className = "p-2 border-b border-gray-100 text-gray-700 font-normal";
+            });
+
+            // Alternate row background highlight colors
+            table.querySelectorAll("tr").forEach((tr, index) => {
+                if (index > 0 && index % 2 === 0) {
+                    tr.classList.add("bg-gray-50/50");
+                }
+            });
+        });
+
+        // Stylize markdown blockquotes if system insights throw recommendations
+        container.querySelectorAll("blockquote").forEach(bq => {
+            bq.className = "my-2 pl-3 border-l-4 border-indigo-500 italic text-gray-600 bg-indigo-50/40 py-1 rounded-r";
+        });
+
+        // Stylize clean structured bullet entries spacing loops
+        container.querySelectorAll("ul").forEach(ul => {
+            ul.className = "list-disc pl-5 my-2 space-y-1";
+        });
+        container.querySelectorAll("ol").forEach(ol => {
+            ol.className = "list-decimal pl-5 my-2 space-y-1";
+        });
+    }
 
     function appendLoadingBubble() {
         const id = "loading-" + Date.now();
         const bubbleContainer = document.createElement("div");
         bubbleContainer.id = id;
-        bubbleContainer.className = "flex items-start justify-start";
+        bubbleContainer.className = "flex items-start justify-start my-2";
 
         const bubble = document.createElement("div");
-        bubble.className = "bg-gray-200 text-gray-500 text-sm p-3 rounded-lg rounded-tl-none animate-pulse";
+        bubble.className = "bg-gray-100 text-gray-500 text-sm p-3 rounded-lg rounded-tl-none border border-gray-200/60 animate-pulse";
         bubble.textContent = "Copilot is analyzing system states...";
 
         bubbleContainer.appendChild(bubble);
