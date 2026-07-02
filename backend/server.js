@@ -1200,8 +1200,7 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
             const accountName = (account.guestName || "").trim().toLowerCase();
             const bookingName = (booking?.name || "").trim().toLowerCase();
 
-            // Relaxed check: Logic fails if booking doesn't exist 
-            // OR if names are wildly different (optional: remove name check if room match is enough)
+            // Relaxed check: Logic fails if booking doesn't exist OR if names are wildly different
             if (!booking || !accountName.includes(bookingName.split(' ')[0])) { 
                 return res.status(400).json({ 
                     message: `No active booking found for ${account.guestName} in Room ${account.roomNumber}` 
@@ -1215,47 +1214,66 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
                 hotelId,
                 bookingId: booking._id,
                 bookingCustomId: booking.id, // Your 'BKG001' style ID
-                guestName: account.guestName, // Ensure this is passed
+                guestName: account.guestName,
                 date: new Date()
             }));
 
             await IncidentalCharge.insertMany(newCharges);
 
         } else if (paymentMethod) {
-          const walkInCharges = account.charges.map(charge => ({
-        hotelId: hotelId,
-        guestName: account.guestName,
-        type: charge.type || 'Other', // FALLBACK: If charge.type is missing, it crashes without this
-        description: charge.description,
-        amount: charge.amount,
-        receiptId: `POS-${hotelId.toString().slice(-3)}-${Date.now()}-${Math.floor(Math.random() * 1000)}`, // Added random to ensure uniqueness
-        paymentMethod: paymentMethod,
-        isPaid: true,
-        date: new Date()
-    }));
-            if (walkInCharges.length > 0) {
-        await WalkInCharge.insertMany(walkInCharges);
-    }
+            // 1. Group items by description and type to eliminate itemized duplicates
+            const consolidatedChargesMap = {};
 
-            await WalkInCharge.insertMany(walkInCharges);
+            account.charges.forEach(charge => {
+                const key = `${charge.description}-${charge.type || 'Other'}`;
+                if (consolidatedChargesMap[key]) {
+                    consolidatedChargesMap[key].amount += charge.amount;
+                } else {
+                    consolidatedChargesMap[key] = {
+                        description: charge.description,
+                        type: charge.type || 'Other',
+                        amount: charge.amount
+                    };
+                }
+            });
+
+            // 2. Map consolidated values to WalkInCharge structures
+            const walkInCharges = Object.values(consolidatedChargesMap).map((charge, index) => ({
+                hotelId: hotelId,
+                guestName: account.guestName,
+                type: charge.type,
+                description: charge.description,
+                amount: charge.amount,
+                receiptId: `POS-${hotelId.toString().slice(-3)}-${Date.now()}-${Math.floor(Math.random() * 1000)}-${index}`,
+                paymentMethod: paymentMethod,
+                isPaid: true,
+                date: new Date()
+            }));
+
+            // 3. Single guarded write operation (Stray repeated insert cleanly removed)
+            if (walkInCharges.length > 0) {
+                await WalkInCharge.insertMany(walkInCharges);
+            }
         }
 
+        // Close the folio account to complete the process
         account.isClosed = true;
         await account.save();
+
         const receiptData = {
-    guestName: account.guestName,
-    hotelId: hotelId,
-    charges: account.charges, // This fixes the 'undefined' error
-    total: account.totalCharges || account.charges.reduce((sum, c) => sum + c.amount, 0)
-};
+            guestName: account.guestName,
+            hotelId: hotelId,
+            charges: account.charges,
+            total: account.totalCharges || account.charges.reduce((sum, c) => sum + c.amount, 0)
+        };
 
         res.status(200).json({ 
-    message: 'Successfully settled', 
-    receipt: receiptData // Now the frontend has something to read!
-});
+            message: 'Successfully settled', 
+            receipt: receiptData
+        });
 
     } catch (error) {
-        console.error("Settlement Error:", error); // This logs the ACTUAL error to your console
+        console.error("Settlement Error:", error);
         res.status(500).json({ message: 'Settlement failed', details: error.message });
     }
 });
