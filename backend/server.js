@@ -1201,7 +1201,7 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
             const bookingName = (booking?.name || "").trim().toLowerCase();
 
             // Relaxed check: Logic fails if booking doesn't exist 
-            // OR if names are wildly different
+            // OR if names are wildly different (optional: remove name check if room match is enough)
             if (!booking || !accountName.includes(bookingName.split(' ')[0])) { 
                 return res.status(400).json({ 
                     message: `No active booking found for ${account.guestName} in Room ${account.roomNumber}` 
@@ -1222,39 +1222,37 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
             await IncidentalCharge.insertMany(newCharges);
 
         } else if (paymentMethod) {
-            const walkInCharges = account.charges.map((charge, index) => ({
-                hotelId: hotelId,
-                guestName: account.guestName,
-                type: charge.type || 'Other', // FALLBACK: If charge.type is missing, it crashes without this
-                description: charge.description,
-                amount: charge.amount,
-                // Appended index to completely eliminate timestamp collisions for multiple charges in one payload
-                receiptId: `POS-${hotelId.toString().slice(-3)}-${Date.now()}-${Math.floor(Math.random() * 1000)}-${index}`, 
-                paymentMethod: paymentMethod,
-                isPaid: true,
-                date: new Date()
-            }));
-
-            // Only insert once
+          const walkInCharges = account.charges.map(charge => ({
+        hotelId: hotelId,
+        guestName: account.guestName,
+        type: charge.type || 'Other', // FALLBACK: If charge.type is missing, it crashes without this
+        description: charge.description,
+        amount: charge.amount,
+        receiptId: `POS-${hotelId.toString().slice(-3)}-${Date.now()}-${Math.floor(Math.random() * 1000)}`, // Added random to ensure uniqueness
+        paymentMethod: paymentMethod,
+        isPaid: true,
+        date: new Date()
+    }));
             if (walkInCharges.length > 0) {
-                await WalkInCharge.insertMany(walkInCharges);
-            }
+        await WalkInCharge.insertMany(walkInCharges);
+    }
+
+            await WalkInCharge.insertMany(walkInCharges);
         }
 
         account.isClosed = true;
         await account.save();
-
         const receiptData = {
-            guestName: account.guestName,
-            hotelId: hotelId,
-            charges: account.charges, // This fixes the 'undefined' error
-            total: account.totalCharges || account.charges.reduce((sum, c) => sum + c.amount, 0)
-        };
+    guestName: account.guestName,
+    hotelId: hotelId,
+    charges: account.charges, // This fixes the 'undefined' error
+    total: account.totalCharges || account.charges.reduce((sum, c) => sum + c.amount, 0)
+};
 
         res.status(200).json({ 
-            message: 'Successfully settled', 
-            receipt: receiptData // Now the frontend has something to read!
-        });
+    message: 'Successfully settled', 
+    receipt: receiptData // Now the frontend has something to read!
+});
 
     } catch (error) {
         console.error("Settlement Error:", error); // This logs the ACTUAL error to your console
@@ -5041,9 +5039,11 @@ app.post('/api/sales', auth, async (req, res) => {
 
     // 4. Folio Charging (Securely link to guest account in SAME hotel)
     let appliedToAccount = false;
+    let updatedAccount = null; // 💡 DECLARE HERE so it's accessible globally in this function
+
     if (accountId) {
       const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');
-      const updatedAccount = await AccountModel.findOneAndUpdate(
+      updatedAccount = await AccountModel.findOneAndUpdate(
         { _id: accountId, hotelId }, // Ensure account belongs to this hotel
         {
           $push: { charges: { description: `${item} (x${number})`, amount: sp * number, type: department, date: new Date() }},
@@ -5082,11 +5082,12 @@ app.post('/api/sales', auth, async (req, res) => {
       folioCharged: appliedToAccount
     });
 
-// At the bottom of your app.post('/api/sales') route:
-res.status(201).json({
-  sale,
-  updatedAccount: accountId ? updatedAccount : null
-});
+    // At the bottom of your app.post('/api/sales') route:
+    // 💡 Now updatedAccount will safely return either the updated document or null!
+    res.status(201).json({
+      sale,
+      updatedAccount: accountId ? updatedAccount : null
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -5820,7 +5821,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                 Booking.countDocuments({ hotelId, checkOut: todayStr, gueststatus: { $nin: ['cancelled', 'void'] } }),
                 Booking.countDocuments({ hotelId, gueststatus: 'checkedin' })
             ]);
-            return { totalRooms, dirtyRooms, cleanRooms, inprogress, maintenanceRooms, arrivals, departures, checkedIn, date: todayStr };
+            return { totalRooms, dirtyRooms, inprogress,cleanRooms, maintenanceRooms, arrivals, departures, checkedIn, date: todayStr };
         };
 
         const searchCashJournalTool = async (queryFilter) => {
