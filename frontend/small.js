@@ -5911,20 +5911,56 @@ function autoFillPrices(selectedItemName) {
 // --- PRINTING ---
 const printReceiptFromAccount = (receipt) => {
     const details = document.getElementById('receipt-details');
-    const itemsHtml = receipt.charges.map(c => `
-        <div class="flex justify-between text-sm">
-            <span>${c.description}</span>
-            <span>${Number(c.amount).toLocaleString()}</span>
-        </div>`).join('');
+    const dateSpan = document.getElementById('receipt-date');
+    
+    // Set the receipt timestamp cleanly
+    dateSpan.innerText = new Date().toLocaleString('en-GB', { 
+        dateStyle: 'short', 
+        timeStyle: 'short' 
+    });
 
+    // Generate individual lines for items cleanly formatted
+    const itemsHtml = receipt.charges.map(c => `
+        <div class="flex justify-between items-start text-xs font-mono my-1">
+            <span class="max-w-[70%] text-left break-words">${c.description}</span>
+            <span class="font-bold">${Number(c.amount).toLocaleString()}</span>
+        </div>
+    `).join('');
+
+    // Inject beautifully structured semantic POS layout
     details.innerHTML = `
-        <p class="font-bold">${receipt.guestName}</p>
-        <p class="text-xs mb-2">Hotel ID: ${receipt.hotelId}</p>
-        ${itemsHtml}
-        <div class="border-t mt-2 pt-2 flex justify-between font-bold">
-            <span>TOTAL</span>
-            <span>UGX ${Number(receipt.total).toLocaleString()}</span>
-        </div>`;
+        <div class="text-center border-b border-dashed pb-3 mb-3">
+            <h2 class="text-lg font-bold tracking-wider">NOVUS CLOUD PMS</h2>
+            <p class="text-[10px] text-gray-500 uppercase font-mono mt-0.5">Official Guest Receipt</p>
+        </div>
+
+        <div class="text-xs font-mono space-y-1 mb-3 pb-2 border-b border-dashed">
+            <div class="flex justify-between"><span class="text-gray-500">GUEST:</span> <span class="font-bold uppercase">${receipt.guestName}</span></div>
+            <div class="flex justify-between"><span class="text-gray-500">HOTEL REF:</span> <span class="font-bold">#${receipt.hotelId.toString().slice(-6).toUpperCase()}</span></div>
+        </div>
+
+        <div class="mb-4">
+            <div class="flex justify-between text-[11px] font-bold text-gray-500 uppercase border-b pb-1 font-mono mb-2">
+                <span>Description</span>
+                <span>Amount (UGX)</span>
+            </div>
+            ${itemsHtml}
+        </div>
+
+        <div class="border-t-2 border-double pt-3 mt-2 font-mono">
+            <div class="flex justify-between items-center text-sm font-bold">
+                <span>NET TOTAL</span>
+                <span class="text-base">UGX ${Number(receipt.total).toLocaleString()}</span>
+            </div>
+        </div>
+
+        <div class="text-center mt-6 pt-3 border-t border-dashed text-[10px] font-mono text-gray-500">
+            <p>Thank you for your visit!</p>
+            <p class="mt-1 font-bold">Powered by Novus Cloud</p>
+        </div>
+    `;
+
+    // Trigger physical paper printer print dialog cleanly
     window.print();
 };
 
