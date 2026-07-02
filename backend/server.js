@@ -324,7 +324,7 @@ const roomSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
     number: { type: String, required: true }, 
     roomTypeId: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType', required: true },
-    status: { type: String, enum: ['clean', 'dirty', 'under-maintenance', 'blocked'], default: 'clean' }
+    status: { type: String, enum: ['clean', 'dirty','In progress', 'under-maintenance', 'blocked'], default: 'clean' }
 });
 
 // This ensures Room 101 is unique ONLY within the same hotel
@@ -712,7 +712,7 @@ const Booking = mongoose.model('Booking', bookingSchema);
 const roomHistorySchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
     roomNumber: { type: String, required: true },
-    status: { type: String, required: true, enum: ['clean', 'dirty', 'under-maintenance', 'blocked'] },
+    status: { type: String, required: true, enum: ['clean','In progress', 'dirty', 'under-maintenance', 'blocked'] },
     timestamp: { type: Date, default: Date.now }
 });
 const RoomHistory = mongoose.model('RoomHistory', roomHistorySchema);
@@ -728,7 +728,7 @@ app.put('/api/rooms/status/:roomNumber', async (req, res) => {
     const { status, username } = req.body;
 
     // Optional: Add a check for valid status
-    const validStatuses = ['clean', 'dirty', 'under-maintenance', 'blocked'];
+    const validStatuses = ['clean', 'In progress', 'dirty', 'under-maintenance', 'blocked'];
     if (!validStatuses.includes(status)) {
         return res.status(400).json({ message: 'Invalid room status provided.' });
     }
@@ -5080,8 +5080,11 @@ app.post('/api/sales', auth, async (req, res) => {
       folioCharged: appliedToAccount
     });
 
-    res.status(201).json(sale);  
-
+// At the bottom of your app.post('/api/sales') route:
+res.status(201).json({
+  sale,
+  updatedAccount: accountId ? updatedAccount : null
+});
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -5805,16 +5808,17 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
 
         const getOperationalSummaryTool = async () => {
             const todayStr = new Date().toISOString().split('T')[0];
-            const [totalRooms, dirtyRooms, cleanRooms, maintenanceRooms, arrivals, departures, checkedIn] = await Promise.all([
+            const [totalRooms, dirtyRooms, cleanRooms,inprogress, maintenanceRooms, arrivals, departures, checkedIn] = await Promise.all([
                 Room.countDocuments({ hotelId }),
                 Room.countDocuments({ hotelId, status: 'dirty' }),
                 Room.countDocuments({ hotelId, status: 'clean' }),
+                Room.countDocuments({ hotelId, status: 'In progress' }),
                 Room.countDocuments({ hotelId, status: 'under-maintenance' }),
                 Booking.countDocuments({ hotelId, checkIn: todayStr, gueststatus: { $nin: ['cancelled', 'void'] } }),
                 Booking.countDocuments({ hotelId, checkOut: todayStr, gueststatus: { $nin: ['cancelled', 'void'] } }),
                 Booking.countDocuments({ hotelId, gueststatus: 'checkedin' })
             ]);
-            return { totalRooms, dirtyRooms, cleanRooms, maintenanceRooms, arrivals, departures, checkedIn, date: todayStr };
+            return { totalRooms, dirtyRooms, cleanRooms, inprogress, maintenanceRooms, arrivals, departures, checkedIn, date: todayStr };
         };
 
         const searchCashJournalTool = async (queryFilter) => {
@@ -5928,7 +5932,6 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         const internalFunctions = {
             searchBookings: searchBookingsTool,
             searchRooms: searchRoomsTool,
-            getOperationalSummary: getOperationalSummaryTool,
             searchCashJournal: searchCashJournalTool,
             searchInventory: searchInventoryTool,
             searchSales: searchSalesTool,
@@ -5942,6 +5945,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             searchPaymentTransactions: searchPaymentTransactionsTool,
             searchIncidentalCharges: searchIncidentalChargesTool,
             searchClientAccounts: searchClientAccountsTool,
+            getOperationalSummary: getOperationalSummaryTool,
             generateOperationalReport: generateOperationalReportTool
         };
 

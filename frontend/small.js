@@ -3014,6 +3014,7 @@ async function renderHousekeepingRooms() {
                                     class="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer transition-all">
                                     <option value="clean" ${room.status === 'clean' ? 'selected' : ''}>SET AS CLEAN</option>
                                     <option value="dirty" ${room.status === 'dirty' ? 'selected' : ''}>SET AS DIRTY</option>
+                                    <option value="In progress" ${room.status === 'In progress' ? 'selected' : ''}>IN PROGRESS</option>
                                     <option value="under-maintenance" ${room.status === 'under-maintenance' ? 'selected' : ''}>MAINTENANCE</option>
                                     <option value="blocked" ${room.status === 'blocked' ? 'selected' : ''}>${isOccupied ? 'OCCUPIED' : 'BLOCKED'}</option>
                                 </select>
@@ -5630,32 +5631,7 @@ const getAuthToken = () => localStorage.getItem('token');
     messageBox.classList.remove('translate-x-full');
 };*/
 
-// --- QUICK SALE LOGIC ---
-function startQuickSale() {
-    activeAccountId = null; 
-    const activeSection = document.getElementById('activeAccountSection');
-    activeSection.classList.remove('hidden');
-    
-    // Flag this as a direct cash sale
-    const orderTypeInput = document.getElementById('currentOrderType');
-    if(orderTypeInput) orderTypeInput.value = 'Direct';
-    
-    document.getElementById('currentGuestName').textContent = "Quick Sale Guest";
-    document.getElementById('currentRoomNumber').textContent = "Direct Payment";
-    document.getElementById('totalCharges').textContent = "0";
-    
-    const chargesList = document.getElementById('chargesList');
-    if (chargesList) {
-        chargesList.innerHTML = `
-            <tr>
-                <td colspan="3" class="text-center py-10 text-slate-400 italic">
-                    <i class="fas fa-plus-circle block text-2xl mb-2 opacity-20"></i>
-                    Select items to start Quick Sale
-                </td>
-            </tr>`;
-    }
-    activeSection.scrollIntoView({ behavior: 'smooth' });
-}
+
 
 // --- CORE API FUNCTIONS (UPDATED FOR MULTI-TENANCY) ---
 
@@ -5727,13 +5703,11 @@ const addCharge = async (description, number, department) => {
     const qtyValue = parseInt(number) || 1;
     const tableNum = document.getElementById('tableNum')?.value || "N/A";
 
-    // Grab pricing dynamically
     const basePrice = parseFloat(itemInfo.bp || 0);
     const sellingPrice = parseFloat(document.getElementById('itemPrice').value || itemInfo.sp || 0);
     const calculatedProfit = (sellingPrice - basePrice) * qtyValue;
     const profitPercentage = basePrice !== 0 ? (calculatedProfit / (basePrice * qtyValue)) * 100 : 0;
 
-    // Form input validation check
     if (!description || isNaN(qtyValue) || isNaN(sellingPrice)) {
         return showMessage('Incomplete Form', 'Please fill all fields with valid data.', true);
     }
@@ -5772,47 +5746,34 @@ const addCharge = async (description, number, department) => {
         if (!res) return;
         if (!res.ok) throw new Error("Failed to record primary sale.");
 
-        // 2. Process Notifications based on destination matching your function signature
+        // Grab the response from the server!
+        const savedSale = await res.json();
+
+        // 2. Process Notifications
         if (department === 'Restaurant') {
             showMessage('Success', 'Kitchen order has been sent! 🍳✅', false);
+        } else if (activeAccountId) {
+            showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
+        } else {
+            showMessage('Success', 'Direct Sale Recorded! 💰✅', false);
         }
 
-        // 3. Update guest accounts if linked to an active folio
-        if (activeAccountId) {
-            const folioRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}/charge`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    description: `${description} (x${qtyValue})`,
-                    amount: payload.sp * payload.number,
-                    type: payload.department,
-                    hotelId: hotelId
-                })
-            });
-
-            if (folioRes && folioRes.ok) {
-                const updatedAccount = await folioRes.json();
-                if (typeof updateActiveAccountUI === 'function') updateActiveAccountUI(updatedAccount);
-                
-                if (department !== 'Restaurant') {
-                    showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
-                }
-            }
-        } else {
-            if (department !== 'Restaurant') {
-                showMessage('Success', 'Direct Sale Recorded! 💰✅', false);
-            }
+        // 3. Update the UI safely using the server response instead of making a 2nd API call
+        // Note: You may need your backend to return the updated account info, or fetch it fresh here.
+        if (activeAccountId && typeof updateActiveAccountUI === 'function') {
+            // If your backend returns the sale, you might want to fetch the updated folio fresh 
+            // OR adjust your backend sales route to return { sale, updatedAccount }
+            if (typeof fetchActiveAccount === 'function') fetchActiveAccount(activeAccountId);
         }
 
         // --- SUCCESS CLEANUP ---
         document.getElementById('addChargeForm').reset();
         
-        // Refresh UI components safely if defined
         if (typeof fetchSales === 'function') fetchSales(); 
         if (typeof refreshTodayPOSStats === 'function') refreshTodayPOSStats();
 
     } catch (err) {
         console.error("Add Charge Error:", err);
-        // FIX: Pass 'Error' as Title, the err message as Body, and 'true' to trigger red text
         showMessage('Error', err.message, true);
     } finally {
         if (submitBtn) {
@@ -6005,7 +5966,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('itemDesc').addEventListener('input', (e) => autoFillPrices(e.target.value));
     document.getElementById('postToRoomBtn').onclick = () => settleAccount('room');
   });
-    /*document.getElementById('issueReceiptBtn').onclick = () => settleAccount('receipt');*/
+document.getElementById('issueReceiptBtn').onclick = () => settleAccount('receipt');
 
 //bar.js code 
 
@@ -9967,34 +9928,7 @@ async function markAsServed(orderId) {
         showMessage("Failed to update status: " + err.message);
     }
 }
-    function startNewTransaction() {
-    // 1. Reset all forms
-    document.getElementById('searchAccountForm').reset();
-    document.getElementById('createAccountForm').reset();
-    
-    // 2. Clear visual labels for the active guest
-    document.getElementById('currentGuestName').textContent = '-';
-    document.getElementById('currentRoomNumber').textContent = '';
-    document.getElementById('totalCharges').textContent = '0.00';
-    
-    // 3. Clear the Live Folio table
-    const chargesList = document.getElementById('chargesList');
-    if (chargesList) {
-        chargesList.innerHTML = `
-            <tr>
-                <td colspan="2" class="px-6 py-10 text-center text-slate-400 italic text-sm">No items posted yet</td>
-            </tr>
-        `;
-    }
-
-    // 4. Clear search results list
-    const searchResults = document.getElementById('searchResults');
-    if (searchResults) {
-        searchResults.innerHTML = '';
-    }
-    
-    console.log("UI Cleared for new transaction.");
-}
+   
 
 const suggestInput = document.getElementById('guestname');
 const suggestionBox = document.getElementById('bookingSuggestions');
