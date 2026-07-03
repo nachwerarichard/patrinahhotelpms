@@ -5055,7 +5055,7 @@ app.post('/api/sales', auth, async (req, res) => {
     const hotelId = req.user.hotelId; // Extract tenant ID
     const username = req.user.username; // Extract username context
 
-    // 1. Fetch the Inventory record (now hotel-specific)
+    // 1. Fetch the Inventory record (hotel-specific)
     const todayInventory = await getTodayInventory(item, 0, hotelId);
 
     // 2. Dynamic Inventory Logic (Stock Check)
@@ -5082,36 +5082,76 @@ app.post('/api/sales', auth, async (req, res) => {
       await todayInventory.save();
     }
 
-    // 4. Folio Charging (Securely link to guest account in SAME hotel)
+    // 4. Folio / Walk-in Charging Logic
     let appliedToAccount = false;
-    let updatedAccount = null; // 💡 DECLARE HERE so it's accessible globally in this function
+    let updatedAccount = null;
+    let finalAccountId = accountId; // Track which ID we are linking the Sale record to
 
-    if (accountId) {
-      const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');
+    const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');
+
+    // Safe type fallback to match your schema's enum validation rules
+    const validChargeType = ['Bar', 'Restaurant'].includes(department) ? department : 'Other';
+    const totalChargeAmount = sp * number;
+
+    if (finalAccountId) {
+      // SCENARIO A: An existing account was provided by the frontend
       updatedAccount = await AccountModel.findOneAndUpdate(
-        { _id: accountId, hotelId }, // Ensure account belongs to this hotel
+        { _id: finalAccountId, hotelId }, // Ensure account belongs to this hotel
         {
-          $push: { charges: { description: `${item} (x${number})`, amount: sp * number, type: department, date: new Date() }},
-          $inc: { totalCharges: sp * number }
+          $push: { 
+            charges: { 
+              description: `${item} (x${number})`, 
+              amount: totalChargeAmount, 
+              type: validChargeType, 
+              date: new Date() 
+            }
+          },
+          $inc: { totalCharges: totalChargeAmount }
         },
         { new: true }
       );
+    } else {
+      // SCENARIO B: No account was provided -> Find or Create a permanent "Walk-in Guest" account container
+      // Using findOneAndUpdate with upsert ensures we don't accidentally duplicate the "Walk-in Guest" document 
+      updatedAccount = await AccountModel.findOneAndUpdate(
+        { 
+          hotelId: hotelId, 
+          guestName: "Walk-in Guest",
+          roomNumber: { $exists: false } // Ensures we don't accidentally match a real guest with that name
+        },
+        {
+          $push: { 
+            charges: { 
+              description: `${item} (x${number})`, 
+              amount: totalChargeAmount, 
+              type: validChargeType, 
+              date: new Date() 
+            }
+          },
+          $inc: { totalCharges: totalChargeAmount },
+          $setOnInsert: { isClosed: false } // Only applied if the document is being newly created
+        },
+        { new: true, upsert: true }
+      );
 
-      if (updatedAccount) {
-        appliedToAccount = true;
-        // 📝 AUDIT LOG: Track room charge connection
-        await addAuditLog('Folio Charged via Sale', username, hotelId, {
-          accountId,
-          item,
-          totalCharge: sp * number,
-          department
-        });
-      }
+      finalAccountId = updatedAccount._id; // Map the new system-generated ID to link to the Sale document below
     }
 
-    // 5. Create Sale Record (Tagged with hotelId)
+    if (updatedAccount) {
+      appliedToAccount = true;
+      // 📝 AUDIT LOG: Track payment/charge logging connection
+      await addAuditLog('Folio Charged via Sale', username, hotelId, {
+        accountId: finalAccountId,
+        item,
+        totalCharge: totalChargeAmount,
+        department
+      });
+    }
+
+    // 5. Create Sale Record (Tagged with hotelId and final linked account target)
     const sale = await Sale.create({
       ...req.body,
+      accountId: finalAccountId, // Will link to either the guest profile or the auto-targeted Walk-in account
       hotelId,
       profit: (sp - bp) * number,
       percentageprofit: bp !== 0 ? ((sp - bp) / bp) * 100 : 0
@@ -5123,16 +5163,16 @@ app.post('/api/sales', auth, async (req, res) => {
       item: sale.item,
       quantity: number,
       department,
-      totalRevenue: sp * number,
+      totalRevenue: totalChargeAmount,
       folioCharged: appliedToAccount
     });
 
-    // At the bottom of your app.post('/api/sales') route:
-    // 💡 Now updatedAccount will safely return either the updated document or null!
+    // 6. Return response payload to frontend
     res.status(201).json({
       sale,
-      updatedAccount: accountId ? updatedAccount : null
+      updatedAccount
     });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
