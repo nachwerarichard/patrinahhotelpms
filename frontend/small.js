@@ -5841,15 +5841,13 @@ const addCharge = async (description, number, department) => {
         } else {
             showMessage('Success', 'Direct Sale Recorded! 💰✅', false);
         }
-        if (typeof updateActiveAccountUI === 'function') updateActiveAccountUI(updatedAccount);
 
-        // 3. Update the UI safely using the server response instead of making a 2nd API call
-        // Note: You may need your backend to return the updated account info, or fetch it fresh here.
-        if (activeAccountId && typeof updateActiveAccountUI === 'function') {
-            // If your backend returns the sale, you might want to fetch the updated folio fresh 
-            // OR adjust your backend sales route to return { sale, updatedAccount }
-            //if (typeof updateActiveAccountUI === 'function') updateActiveAccountUI(updatedAccount);
-            if (typeof fetchActiveAccount === 'function') fetchActiveAccount(activeAccountId);
+        // 3. Update the UI safely by fetching the fresh data from the server
+        if (activeAccountId) {
+            // This will pull the newly updated folio data (with the backend charge added) and update your UI
+            if (typeof fetchActiveAccount === 'function') {
+                await fetchActiveAccount(activeAccountId);
+            }
         }
 
         // --- SUCCESS CLEANUP ---
@@ -5858,7 +5856,8 @@ const addCharge = async (description, number, department) => {
         if (typeof fetchSales === 'function') fetchSales(); 
         if (typeof refreshTodayPOSStats === 'function') refreshTodayPOSStats();
 
-    } catch (err) {
+    } 
+     catch (err) {
         console.error("Add Charge Error:", err);
         showMessage('Error', err.message, true);
     } finally {
