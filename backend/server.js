@@ -5111,30 +5111,22 @@ app.post('/api/sales', auth, async (req, res) => {
         { new: true }
       );
     } else {
-      // SCENARIO B: No account was provided -> Find or Create a permanent "Walk-in Guest" account container
-      // Using findOneAndUpdate with upsert ensures we don't accidentally duplicate the "Walk-in Guest" document 
-      updatedAccount = await AccountModel.findOneAndUpdate(
-        { 
-          hotelId: hotelId, 
-          guestName: "Walk-in Guest",
-          roomNumber: { $exists: false } // Ensures we don't accidentally match a real guest with that name
-        },
-        {
-          $push: { 
-            charges: { 
-              description: `${item} (x${number})`, 
-              amount: totalChargeAmount, 
-              type: validChargeType, 
-              date: new Date() 
-            }
-          },
-          $inc: { totalCharges: totalChargeAmount },
-          $setOnInsert: { isClosed: false } // Only applied if the document is being newly created
-        },
-        { new: true, upsert: true }
-      );
+      // SCENARIO B: No account was provided -> Freshly CREATE a new "Walk-in Guest" account document
+      updatedAccount = await AccountModel.create({
+        hotelId: hotelId,
+        guestName: "Walk-in Guest",
+        roomNumber: "", // Explicitly blank/empty string to keep schema clean
+        isClosed: false,
+        totalCharges: totalChargeAmount,
+        charges: [{
+          description: `${item} (x${number})`,
+          amount: totalChargeAmount,
+          type: validChargeType,
+          date: new Date()
+        }]
+      });
 
-      finalAccountId = updatedAccount._id; // Map the new system-generated ID to link to the Sale document below
+      finalAccountId = updatedAccount._id; // Map the newly created document's ID to link below
     }
 
     if (updatedAccount) {
@@ -5151,7 +5143,7 @@ app.post('/api/sales', auth, async (req, res) => {
     // 5. Create Sale Record (Tagged with hotelId and final linked account target)
     const sale = await Sale.create({
       ...req.body,
-      accountId: finalAccountId, // Will link to either the guest profile or the auto-targeted Walk-in account
+      accountId: finalAccountId, // Links cleanly to either the guest profile or the fresh Walk-in account
       hotelId,
       profit: (sp - bp) * number,
       percentageprofit: bp !== 0 ? ((sp - bp) / bp) * 100 : 0
