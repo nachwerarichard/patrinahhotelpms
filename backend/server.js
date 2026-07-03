@@ -4803,7 +4803,7 @@ app.put('/api/inventory/:id', auth, async (req, res) => {
 
     // ✅ FIXED: Using req.user.username directly to avoid "System" fallbacks
     await addAuditLog(
-        'Inventory Item Edited', 
+        'Inventory Item Updated', 
         req.user.username || 'Unknown User', 
         req.user.hotelId, 
         {                 
