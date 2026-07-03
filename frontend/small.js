@@ -5778,7 +5778,7 @@ if (!res) return; // in case redirect happened
     } catch (err) { showMessage(err.message, 'error'); }
 };
 
-const addCharge = async (description, number, department,paymentMethod) => {
+const addCharge = async (description, number, department) => {
     const hotelId = localStorage.getItem('hotelId') || (typeof getHotelId === 'function' ? getHotelId() : null);
     const submitBtn = document.getElementById('submitBtn');
     const isQuickSale = (!activeAccountId);
@@ -5808,7 +5808,6 @@ const addCharge = async (description, number, department,paymentMethod) => {
         accountId: activeAccountId || null,
         tableNumber: tableNum,
         isQuickSale: isQuickSale,
-        paymentMethod: isQuickSale ? paymentMethod : 'Folio', // If it's a room charge, the method is 'Folio'
         date: new Date()
     };
 
@@ -5831,8 +5830,8 @@ const addCharge = async (description, number, department,paymentMethod) => {
         if (!res) return;
         if (!res.ok) throw new Error("Failed to record primary sale.");
 
-        // Grab the response from the server once
-        const savedSale = await res.json();
+        // Grab the data returned directly from your updated backend route
+        const serverResponse = await res.json(); // contains { sale, updatedAccount }
 
         // 2. Process Notifications
         if (department === 'Restaurant') {
@@ -5840,19 +5839,23 @@ const addCharge = async (description, number, department,paymentMethod) => {
         } else if (activeAccountId) {
             showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
         } else {
-            showMessage('Success', 'Direct Sale Recorded! 💰✅', false);
+            showMessage('Success', 'Walk-in Sale Recorded to Ledger! 💰✅', false);
         }
 
-        // 3. Update the UI using your function by fetching the targeted account data
-       // Inside your frontend addCharge function (Step 3)
-if (activeAccountId && typeof updateActiveAccountUI === 'function') {
-    // URL prefix matches the new GET route configuration
-    const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
-    if (accountRes && accountRes.ok) {
-        const freshAccountData = await accountRes.json();
-        updateActiveAccountUI(freshAccountData);
-    }
-}
+        // 3. Update the UI efficiently using the server response data
+        if (typeof updateActiveAccountUI === 'function') {
+            if (activeAccountId) {
+                // For existing registered guests, proceed with your standard refresh
+                const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
+                if (accountRes && accountRes.ok) {
+                    const freshAccountData = await accountRes.json();
+                    updateActiveAccountUI(freshAccountData);
+                }
+            } else if (serverResponse.updatedAccount) {
+                // 💡 CHIP IN HERE: For walk-ins, use the auto-created account straight from the response!
+                updateActiveAccountUI(serverResponse.updatedAccount);
+            }
+        }
 
         // --- SUCCESS CLEANUP ---
         document.getElementById('addChargeForm').reset();
@@ -5870,7 +5873,6 @@ if (activeAccountId && typeof updateActiveAccountUI === 'function') {
         }
     }
 };
-
 const settleAccount = async (method) => {
     if (!activeAccountId) return;
 
@@ -6082,9 +6084,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const description = fd.get('description');
     const number = fd.get('number');
     const department = document.getElementById('deptSelect').value;
-    const paymentMethod = fd.get('paymentMethod'); // Grab the dropdown value
     // Run the primary charge logic
-    await addCharge(description, number, department, paymentMethod );
+    await addCharge(description, number, department );
 };
 
     document.getElementById('itemDesc').addEventListener('input', (e) => autoFillPrices(e.target.value));
