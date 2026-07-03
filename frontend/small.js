@@ -2912,29 +2912,36 @@ function exportReport() {
 /**
  * Renders the room cards for housekeeping, fetching data from the backend.
  */
+// Global memory caches to hold fetched data for instant filtering
+let globalRoomsData = [];
+let globalTypeLookup = {};
+
 async function renderHousekeepingRooms() {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const token = sessionData?.token;
     const hotelId = sessionData?.hotelId;
 
     if (typeof updateBookingStats === 'function') updateBookingStats();
-    housekeepingRoomGrid.innerHTML = ''; 
-
-    let currentRooms = [];
-    let roomTypesData = [];
-
+    
     try {
         // Fetch only this hotel's rooms and types
         const [roomsRes, typesRes] = await Promise.all([
-    authenticatedFetch(` ${API_BASE_URL}/rooms`, { method: 'GET' }),
-    authenticatedFetch(`${API_BASE_URL}/room-types`, { method: 'GET' })
-]);
+            authenticatedFetch(`${API_BASE_URL}/rooms`, { method: 'GET' }),
+            authenticatedFetch(`${API_BASE_URL}/room-types`, { method: 'GET' })
+        ]);
 
         if (!roomsRes.ok || !typesRes.ok) throw new Error("Failed to fetch data");
 
-        currentRooms = await roomsRes.json();
-        roomTypesData = await typesRes.json();
-        rooms = currentRooms; 
+        globalRoomsData = await roomsRes.json();
+        const roomTypesData = await typesRes.json();
+        
+        // Also sync back to your older 'rooms' global reference if other parts of the app use it
+        rooms = globalRoomsData; 
+
+        // Build the type lookup object
+        globalTypeLookup = {};
+        roomTypesData.forEach(t => { globalTypeLookup[t._id] = t.name; });
+
     } catch (error) {
         console.error('Housekeeping Load Error:', error);
         housekeepingRoomGrid.innerHTML = `
@@ -2944,37 +2951,47 @@ async function renderHousekeepingRooms() {
         return;
     }
 
-    const typeLookup = {};
-    roomTypesData.forEach(t => { typeLookup[t._id] = t.name; });
+    // Always update status counters using the UNFILTERED source pool
+    updateStatusCounters(globalRoomsData);
 
-    // Status Counting
-    const counts = { clean: 0, dirty: 0, maintenance: 0, blocked: 0 };
-    currentRooms.forEach(room => {
-        if (room.status === 'clean') counts.clean++;
-        else if (room.status === 'dirty') counts.dirty++;
-        else if (room.status === 'under-maintenance') counts.maintenance++;
-        else if (room.status === 'blocked') counts.blocked++;
+    // Initial render invocation
+    applyFiltersAndRender();
+}
+
+// Separate function dedicated entirely to managing logic filters and HTML composition
+function applyFiltersAndRender() {
+    housekeepingRoomGrid.innerHTML = ''; 
+
+    const searchQuery = document.getElementById('roomSearchInput')?.value.trim().toLowerCase() || '';
+    const selectedStatus = document.getElementById('roomStatusFilter')?.value || 'all';
+
+    // 1. Process Filters
+    const filteredRooms = globalRoomsData.filter(room => {
+        const matchesSearch = room.number.toLowerCase().includes(searchQuery);
+        const matchesStatus = (selectedStatus === 'all') || (room.status === selectedStatus);
+        return matchesSearch && matchesStatus;
     });
 
-    if(document.getElementById('stat-clean')) {
-        document.getElementById('stat-clean').textContent = counts.clean;
-        document.getElementById('stat-dirty').textContent = counts.dirty;
-        document.getElementById('stat-maintenance').textContent = counts.maintenance;
-        document.getElementById('stat-occupied').textContent = counts.blocked;
+    if (filteredRooms.length === 0) {
+        housekeepingRoomGrid.innerHTML = `
+            <div class="col-span-full text-center py-10 bg-slate-50 rounded-2xl border border-slate-100">
+                <p class="text-slate-500 font-medium">No rooms match your active search filters.</p>
+            </div>`;
+        return;
     }
 
-    // Grouping logic
+    // 2. Grouping Logic
     const groupedRooms = {};
-    currentRooms.forEach(room => {
+    filteredRooms.forEach(room => {
         let typeName = (room.roomTypeId && typeof room.roomTypeId === 'object') 
             ? room.roomTypeId.name 
-            : (typeLookup[room.roomTypeId] || "Unassigned Category");
+            : (globalTypeLookup[room.roomTypeId] || "Unassigned Category");
 
         if (!groupedRooms[typeName]) groupedRooms[typeName] = [];
         groupedRooms[typeName].push(room);
     });
     
-    // Render Sections
+    // 3. Render Sections & Cards
     for (const typeName in groupedRooms) {
         const sectionHeader = document.createElement('div');
         sectionHeader.className = "col-span-full mt-10 mb-6 flex items-center gap-4";
@@ -3026,6 +3043,31 @@ async function renderHousekeepingRooms() {
             });
     }
 }
+
+// Helper to keep counters clean and readable
+function updateStatusCounters(roomsArray) {
+    const counts = { clean: 0, dirty: 0, maintenance: 0, blocked: 0 };
+    roomsArray.forEach(room => {
+        if (room.status === 'clean') counts.clean++;
+        else if (room.status === 'dirty') counts.dirty++;
+        else if (room.status === 'under-maintenance') counts.maintenance++;
+        else if (room.status === 'blocked') counts.blocked++;
+    });
+
+    if (document.getElementById('stat-clean')) {
+        document.getElementById('stat-clean').textContent = counts.clean;
+        document.getElementById('stat-dirty').textContent = counts.dirty;
+        document.getElementById('stat-maintenance').textContent = counts.maintenance;
+        document.getElementById('stat-occupied').textContent = counts.blocked;
+    }
+}
+
+// Bind active filter listeners to DOM elements once loaded
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('roomSearchInput')?.addEventListener('input', applyFiltersAndRender);
+    document.getElementById('roomStatusFilter')?.addEventListener('change', applyFiltersAndRender);
+});
+
 async function updateRoomStatus(roomMongoId, newStatus) {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const token = sessionData?.token;
@@ -3587,7 +3629,7 @@ function renderRadialOptions() {
         modulesToShow = [SYSTEM_LINKS.systemA, SYSTEM_LINKS.systemB, SYSTEM_LINKS.KDS, SYSTEM_LINKS.staff];
     } else if (['bar', 'cashier'].includes(role)) {
         modulesToShow = [SYSTEM_LINKS.systemA];
-    } else if (['housekeeping', 'reception'].includes(role)) {
+    } else if (['housekeeping', 'front office'].includes(role)) {
         modulesToShow = [SYSTEM_LINKS.systemB];
     }
 
@@ -5268,7 +5310,7 @@ async function fetchUsers() {
                     <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
                     <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
                     <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
-                    <option value="reception" ${user.role === 'reception' ? 'selected' : ''}>Reception</option>
+                    <option value="front office" ${user.role === 'front office' ? 'selected' : ''}>Front Office</option>
                     <option value="chef" ${user.role === 'chef' ? 'selected' : ''}>Chef</option>
                     <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
                 </select>
@@ -5537,7 +5579,7 @@ function getRoleClass(role) {
     const classes = {
         admin: 'bg-purple-50 text-purple-600 border-purple-100',
         bar: 'bg-amber-50 text-amber-600 border-amber-100',
-        reception: 'bg-blue-50 text-blue-600 border-blue-100',
+        'front office': 'bg-blue-50 text-blue-600 border-blue-100',
         cashier: 'bg-cyan-50 text-cyan-600 border-cyan-100',
         housekeeper: 'bg-emerald-50 text-emerald-600 border-emerald-100'
     };

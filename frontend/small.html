@@ -2359,6 +2359,28 @@ body {
     </svg>
   </a> -->
 </div>
+<div class="flex flex-col sm:flex-row gap-4 mb-6">
+    <!-- Search Input -->
+    <div class="relative flex-1">
+        <input type="text" id="roomSearchInput" placeholder="Search room number..." 
+            class="w-full bg-white border border-slate-200 p-3 pl-10 rounded-xl text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+    </div>
+    
+    <!-- Status Filter Dropdown -->
+    <div class="relative w-full sm:w-64">
+        <select id="roomStatusFilter" 
+            class="w-full bg-white border border-slate-200 p-3 pr-10 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer transition-all">
+            <option value="all">ALL STATUSES</option>
+            <option value="clean">CLEAN</option>
+            <option value="dirty">DIRTY</option>
+            <option value="In progress">IN PROGRESS</option>
+            <option value="under-maintenance">MAINTENANCE</option>
+            <option value="blocked">OCCUPIED / BLOCKED</option>
+        </select>
+        <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
+    </div>
+</div>
                 
                 <div id="housekeepingRoomGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
             </section>
