@@ -5811,7 +5811,7 @@ const addCharge = async (description, number, department) => {
         date: new Date()
     };
 
-    try {
+   try {
         if (submitBtn) {
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> SAVING...`;
@@ -5830,7 +5830,7 @@ const addCharge = async (description, number, department) => {
         if (!res) return;
         if (!res.ok) throw new Error("Failed to record primary sale.");
 
-        // Grab the response from the server!
+        // Grab the response from the server once
         const savedSale = await res.json();
 
         // 2. Process Notifications
@@ -5842,12 +5842,14 @@ const addCharge = async (description, number, department) => {
             showMessage('Success', 'Direct Sale Recorded! 💰✅', false);
         }
 
-        // 3. Update the UI safely by fetching the fresh data from the server
-        if (activeAccountId) {
-                const updatedAccount = await res.json();
-            // This will pull the newly updated folio data (with the backend charge added) and update your UI
-            if (typeof updateActiveAccountUI === 'function') {
-                await updateActiveAccountUI(updatedAccount);
+        // 3. Update the UI using your function by fetching the targeted account data
+        if (activeAccountId && typeof updateActiveAccountUI === 'function') {
+            // Fetch the updated account object specifically for this guest
+            const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
+            if (accountRes && accountRes.ok) {
+                const freshAccountData = await accountRes.json();
+                // Pass the fresh account data right into your UI updater
+                updateActiveAccountUI(freshAccountData);
             }
         }
 
@@ -5857,8 +5859,7 @@ const addCharge = async (description, number, department) => {
         if (typeof fetchSales === 'function') fetchSales(); 
         if (typeof refreshTodayPOSStats === 'function') refreshTodayPOSStats();
 
-    } 
-     catch (err) {
+    } catch (err) {
         console.error("Add Charge Error:", err);
         showMessage('Error', err.message, true);
     } finally {

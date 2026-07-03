@@ -1178,6 +1178,27 @@ app.post('/api/pos/client/account/:accountId/charge', auth, async (req, res) => 
         res.status(500).json({ message: 'Error adding charge' });
     }
 });
+
+app.get('/api/pos/client/account/:accountId', auth, async (req, res) => {
+    const { accountId } = req.params;
+    const hotelId = req.user.hotelId; // Securely extract tenant ID
+
+    try {
+        // Find the account only if it belongs to this hotel
+        const account = await ClientAccount.findOne({ _id: accountId, hotelId });
+        
+        if (!account) {
+            return res.status(404).json({ message: 'Account not found' });
+        }
+
+        // Return the fresh account details to the frontend
+        res.status(200).json(account);
+    } catch (error) {
+        console.error("Fetch Account Error:", error);
+        res.status(500).json({ message: 'Error retrieving account details' });
+    }
+});
+
 app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => {
     const { accountId } = req.params;
     const { paymentMethod, roomPost } = req.body;
