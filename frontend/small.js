@@ -5719,87 +5719,210 @@ const getAuthToken = () => localStorage.getItem('token');
 
 // --- CORE API FUNCTIONS (UPDATED FOR MULTI-TENANCY) ---
 
+let activeAccount = null;     // folio / guest / table session
+let activeOrder = null;       // current bill/check
 const createAccount = async (guestName, roomNumber) => {
     const hotelId = getHotelId();
-    showMessage('Initializing account...', 'info');
-    
+
     try {
-      const res = await authenticatedFetch(`${API_BASE_URL}/pos/client/account`, {
-    method: 'POST',
-    body: JSON.stringify({ guestName, roomNumber, hotelId })
-});
-        
+        showMessage("Creating guest account...", "info");
+
+        const res = await authenticatedFetch(
+            `${API_BASE_URL}/pos/accounts`,
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    hotelId,
+                    guestName,
+                    roomNumber
+                })
+            }
+        );
+
         const data = await res.json();
         if (!res.ok) throw new Error(data.message);
-        
-        activeAccountId = data._id;
-        activeAccountData = data;
+
+        activeAccount = data;
+
         updateActiveAccountUI(data);
-        showMessage(`Account active for ${data.guestName}`, 'success');
-    } catch (err) { showMessage(err.message, 'error'); }
+        showMessage(`Account opened for ${data.guestName}`, "success");
+
+    } catch (err) {
+        console.error(err);
+        showMessage(err.message, "error");
+    }
 };
-const refreshActiveAccount = async () => {
-    if (!activeAccountId) return;
+const refreshAccount = async () => {
+    if (!activeAccount?._id) return;
 
     try {
         const res = await authenticatedFetch(
-            `${API_BASE_URL}/pos/client/account/${activeAccountId}`
+            `${API_BASE_URL}/pos/accounts/${activeAccount._id}`
         );
 
         if (!res || !res.ok) return;
 
-        const data = await res.json();
-
-        activeAccountData = data;
-        updateActiveAccountUI(data);
+        activeAccount = await res.json();
+        updateActiveAccountUI(activeAccount);
 
     } catch (err) {
-        console.error("Account refresh failed:", err);
+        console.error("Account refresh failed", err);
+    }
+};
+const ensureOrder = async (context = {}) => {
+    if (activeOrder) return activeOrder;
+
+    const res = await authenticatedFetch(
+        `${API_BASE_URL}/pos/orders`,
+        {
+            method: "POST",
+            body: JSON.stringify({
+                accountId: activeAccount?._id || null,
+                tableNumber: context.tableNumber || null,
+                status: "OPEN",
+                type: activeAccount ? "ACCOUNT" : "WALK_IN"
+            })
+        }
+    );
+
+    const order = await res.json();
+    if (!res.ok) throw new Error(order.message);
+
+    activeOrder = order;
+    return order;
+};
+const addCharge = async (description, quantity, department) => {
+    const submitBtn = document.getElementById("submitBtn");
+
+    try {
+        const qty = parseInt(quantity) || 1;
+
+        const itemInfo = document.getElementById("itemDesc")?.dataset || {};
+        const tableNumber = document.getElementById("tableNum")?.value || null;
+
+        const basePrice = parseFloat(itemInfo.bp || 0);
+        const sellingPrice =
+            parseFloat(document.getElementById("itemPrice")?.value || itemInfo.sp || 0);
+
+        if (!description || isNaN(qty) || isNaN(sellingPrice)) {
+            return showMessage("Invalid item data", "error");
+        }
+
+        const order = await ensureOrder({ tableNumber });
+
+        const payload = {
+            orderId: order._id,
+            accountId: activeAccount?._id || null,
+
+            item: description.trim(),
+            department,
+            quantity: qty,
+
+            bp: basePrice,
+            sp: sellingPrice,
+
+            profit: (sellingPrice - basePrice) * qty,
+            percentageprofit:
+                basePrice !== 0
+                    ? ((sellingPrice - basePrice) / basePrice) * 100
+                    : 0
+        };
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = "Saving...";
+        }
+
+        const endpoint =
+            department === "Restaurant"
+                ? `${API_BASE_URL}/orders/items/kitchen`
+                : `${API_BASE_URL}/orders/items`;
+
+        const res = await authenticatedFetch(endpoint, {
+            method: "POST",
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+
+        // UI feedback
+        showMessage(
+            activeAccount
+                ? "Charged to account"
+                : "Walk-in sale recorded",
+            "success"
+        );
+
+        // Refresh both order + account
+        await refreshOrder();
+        await refreshAccount();
+
+        document.getElementById("addChargeForm")?.reset();
+
+    } catch (err) {
+        console.error(err);
+        showMessage(err.message, "error");
+
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = "SUBMIT ITEM";
+        }
+    }
+};
+const refreshOrder = async () => {
+    if (!activeOrder?._id) return;
+
+    try {
+        const res = await authenticatedFetch(
+            `${API_BASE_URL}/pos/orders/${activeOrder._id}`
+        );
+
+        if (!res || !res.ok) return;
+
+        activeOrder = await res.json();
+
+    } catch (err) {
+        console.error("Order refresh failed", err);
     }
 };
 const searchAccounts = async (query) => {
-    const searchResults = document.getElementById('searchResults');
+    const searchResults = document.getElementById("searchResults");
 
     if (!query) {
-        searchResults.innerHTML = '';
+        searchResults.innerHTML = "";
         return;
     }
 
     try {
         const res = await authenticatedFetch(
-            `${API_BASE_URL}/pos/search/in-house?query=${encodeURIComponent(query)}`
+            `${API_BASE_URL}/pos/accounts/search?query=${encodeURIComponent(query)}`
         );
-
-        if (!res) return;
 
         const data = await res.json();
 
         searchResults.innerHTML = data.length
-            ? ''
-            : '<p class="text-xs text-center text-slate-400 py-4">No records found</p>';
+            ? ""
+            : `<p class="text-xs text-center text-slate-400 py-4">No records found</p>`;
 
         data.forEach(acc => {
-            const el = document.createElement('div');
+            const el = document.createElement("div");
+
             el.className =
-                'p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-300 transition-all group';
+                "p-3 bg-slate-50 border rounded-xl cursor-pointer";
 
             el.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <div>
-                        <p class="text-sm font-bold text-slate-700">${acc.guestName}</p>
-                        <p class="text-[10px] uppercase font-bold text-slate-400">
-                            Room: ${acc.roomNumber || 'Walk-In'}
-                        </p>
-                    </div>
-                    <span class="text-xs font-black text-indigo-600 opacity-0 group-hover:opacity-100">
-                        SELECT →
-                    </span>
+                <div>
+                    <p class="font-bold">${acc.guestName}</p>
+                    <p class="text-xs text-slate-500">
+                        Room: ${acc.roomNumber || "Walk-In"}
+                    </p>
                 </div>
             `;
 
             el.onclick = () => {
-                activeAccountId = acc._id;
-                activeAccountData = acc;
+                activeAccount = acc;
                 updateActiveAccountUI(acc);
             };
 
@@ -5808,103 +5931,7 @@ const searchAccounts = async (query) => {
 
     } catch (err) {
         console.error(err);
-        showMessage(err.message, 'error');
-    }
-};
-
-const addCharge = async (description, number, department) => {
-    const hotelId = getHotelId();
-    const submitBtn = document.getElementById('submitBtn');
-
-    const qtyValue = parseInt(number) || 1;
-
-    const itemInfo = document.getElementById('itemDesc')?.dataset || {};
-    const tableNum = document.getElementById('tableNum')?.value || "N/A";
-
-    const basePrice = parseFloat(itemInfo.bp || 0);
-    const sellingPrice = parseFloat(
-        document.getElementById('itemPrice')?.value || itemInfo.sp || 0
-    );
-
-    if (!description || isNaN(qtyValue) || isNaN(sellingPrice)) {
-        return showMessage('Incomplete Form', 'Invalid item data', true);
-    }
-
-    const calculatedProfit = (sellingPrice - basePrice) * qtyValue;
-    const profitPercentage =
-        basePrice !== 0
-            ? (calculatedProfit / (basePrice * qtyValue)) * 100
-            : 0;
-
-    // ✅ KEY LOGIC: determine sale type properly
-    const hasAccount = Boolean(activeAccountId);
-
-    const payload = {
-        hotelId,
-        item: description.trim(),
-        department,
-        number: qtyValue,
-        bp: basePrice,
-        sp: sellingPrice,
-        profit: calculatedProfit,
-        percentageprofit: profitPercentage,
-
-        accountId: activeAccountId || null,
-        tableNumber: tableNum,
-
-        saleType: hasAccount ? "ACCOUNT" : "WALK_IN",
-        date: new Date()
-    };
-
-    try {
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> SAVING...`;
-        }
-
-        const endpoint =
-            department === 'Restaurant'
-                ? `${API_BASE_URL}/kitchen/order`
-                : `${API_BASE_URL}/sales`;
-
-        const res = await authenticatedFetch(endpoint, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-
-        if (!res) return;
-        if (!res.ok) throw new Error("Failed to record sale");
-
-        const savedSale = await res.json();
-
-        // ✅ SUCCESS MESSAGES
-        if (department === 'Restaurant') {
-            showMessage('Kitchen order sent 🍳', 'success');
-        } else if (hasAccount) {
-            showMessage('Charged to guest account 📄', 'success');
-        } else {
-            showMessage('Walk-in sale recorded 💰', 'success');
-        }
-
-        // ✅ CRITICAL: ALWAYS REFRESH ACTIVE ACCOUNT IF EXISTS
-        if (hasAccount) {
-            await refreshActiveAccount();
-        }
-
-        // Reset item form only (NOT full page state)
-        document.getElementById('addChargeForm')?.reset();
-
-        if (typeof fetchSales === 'function') fetchSales();
-        if (typeof refreshTodayPOSStats === 'function') refreshTodayPOSStats();
-
-    } catch (err) {
-        console.error("Add Charge Error:", err);
-        showMessage(err.message, 'error');
-    } finally {
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = "SUBMIT ITEM";
-        }
+        showMessage(err.message, "error");
     }
 };
 
