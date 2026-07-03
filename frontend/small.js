@@ -5841,14 +5841,14 @@ const addCharge = async (description, number, department) => {
         } else {
             showMessage('Success', 'Direct Sale Recorded! 💰✅', false);
         }
-        //if (typeof updateActiveAccountUI === 'function') updateActiveAccountUI(updatedAccount);
+        if (typeof updateActiveAccountUI === 'function') updateActiveAccountUI(updatedAccount);
 
         // 3. Update the UI safely using the server response instead of making a 2nd API call
         // Note: You may need your backend to return the updated account info, or fetch it fresh here.
         if (activeAccountId && typeof updateActiveAccountUI === 'function') {
             // If your backend returns the sale, you might want to fetch the updated folio fresh 
             // OR adjust your backend sales route to return { sale, updatedAccount }
-            if (typeof updateActiveAccountUI === 'function') updateActiveAccountUI(updatedAccount);
+            //if (typeof updateActiveAccountUI === 'function') updateActiveAccountUI(updatedAccount);
             if (typeof fetchActiveAccount === 'function') fetchActiveAccount(activeAccountId);
         }
 
