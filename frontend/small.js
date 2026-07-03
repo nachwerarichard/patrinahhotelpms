@@ -8850,7 +8850,7 @@ document.getElementById('exportposReportBtn').addEventListener('click', function
     // New function to handle the modal display and population
 // New function to handle the modal display and population
 function openEditModal(item) {
-    // 1. Permission check
+    // 1. Permission check (Adjust this array to match your app's rules!)
     const authorizedRoles = ['admin', 'super-admin', 'manager'];
     if (!authorizedRoles.includes(currentUserRole)) {
         if (typeof showMessage === 'function') showMessage('Permission Denied', true);
@@ -8858,7 +8858,7 @@ function openEditModal(item) {
         return;
     }
 
-    // 2. Data Validation - Only error if item name is missing
+    // 2. Data Validation
     if (!item || !item.item) {
         console.error("Item object is invalid:", item);
         showMessage("Error: Could not identify the inventory item.");
@@ -8868,8 +8868,7 @@ function openEditModal(item) {
     const modal = document.getElementById('edit-inventory-modal');
     if (!modal) return console.error("Modal 'edit-inventory-modal' missing from HTML");
 
-    // 3. Populate Form
-    // If _id is missing, it's a new record for that day
+    // 3. Populate Form (Safely handling potentially missing DOM fields)
     const idField = document.getElementById('edit-inventory-id');
     if (idField) idField.value = item._id || '';
 
@@ -8896,10 +8895,10 @@ function openEditModal(item) {
         trackInput.checked = item.trackInventory !== undefined ? item.trackInventory : true;
     }
 
-    // 4. Update Modal Header
+    // 4. Dynamic Modal Header (Great for UX)
     const title = modal.querySelector('h2');
     if (title) {
-        title.textContent = item._id ? `Edit ${item.item}` : `Initialize ${item.item} for ${item.viewingDate}`;
+        title.textContent = item._id ? `Edit ${item.item}` : `Initialize ${item.item} for ${item.viewingDate || 'Today'}`;
     }
 
     // 5. Open Modal
@@ -8962,51 +8961,7 @@ function closeEditModal() {
 // Add an event listener to the new edit form
         // New function to handle the modal display and population
 // New function to handle the modal display and population
-function openEditModal(item) {
-    // Check permission
-    const allowedToEditInventory = ['admin'];
-    if (!allowedToEditInventory.includes(currentUserRole)) {
-        showMessage('Permission Denied: You cannot edit inventory items.');
-        return;
-    }
 
-    if (!item || !item._id) {
-        showMessage('Error: Inventory item data is missing or invalid.');
-        return;
-    }
-
-    // Get the modal and form elements
-    const modal = document.getElementById('edit-inventory-modal');
-    const idInput = document.getElementById('edit-inventory-id');
-    const itemInput = document.getElementById('edit-item');
-    const openingInput = document.getElementById('edit-opening');
-    const purchasesInput = document.getElementById('edit-purchases');
-    const salesInput = document.getElementById('edit-inventory-sales');
-    const spoilageInput = document.getElementById('edit-spoilage');
-    const buyingpriceInput = document.getElementById('edit-buyingprice');
-    const sellingpriceInput = document.getElementById('edit-sellingprice');
-    
-    // NEW: Get the checkbox element
-    const trackInventoryInput = document.getElementById('edit-trackInventory');
-
-    // Populate the form with the item's data
-    idInput.value = item._id;
-    itemInput.value = item.item;
-    openingInput.value = item.opening;
-    purchasesInput.value = item.purchases;
-    salesInput.value = item.sales;
-    spoilageInput.value = item.spoilage;
-    sellingpriceInput.value = item.sellingprice;
-    buyingpriceInput.value = item.buyingprice;
-
-    // NEW: Set the checkbox state
-    // Use the value from the database, default to true if it doesn't exist yet
-    trackInventoryInput.checked = item.trackInventory !== undefined ? item.trackInventory : true;
-
-    // Show the modal
-    modal.classList.remove('hidden'); // Using classList is cleaner for Tailwind
-    modal.style.display = 'flex';
-}
         
 // New function to handle the form submission for the modal
 
