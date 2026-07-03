@@ -2924,7 +2924,6 @@ async function renderHousekeepingRooms() {
     if (typeof updateBookingStats === 'function') updateBookingStats();
     
     try {
-        // Fetch only this hotel's rooms and types
         const [roomsRes, typesRes] = await Promise.all([
             authenticatedFetch(`${API_BASE_URL}/rooms`, { method: 'GET' }),
             authenticatedFetch(`${API_BASE_URL}/room-types`, { method: 'GET' })
@@ -2935,12 +2934,27 @@ async function renderHousekeepingRooms() {
         globalRoomsData = await roomsRes.json();
         const roomTypesData = await typesRes.json();
         
-        // Also sync back to your older 'rooms' global reference if other parts of the app use it
         rooms = globalRoomsData; 
 
-        // Build the type lookup object
+        // 1. Build lookup dictionary & populate Room Type Selector Dropdown dynamically
         globalTypeLookup = {};
-        roomTypesData.forEach(t => { globalTypeLookup[t._id] = t.name; });
+        const typeFilterSelect = document.getElementById('roomTypeFilter');
+        
+        // Reset option list while preserving the default "All Categories" option
+        if (typeFilterSelect) {
+            typeFilterSelect.innerHTML = '<option value="all">ALL CATEGORIES</option>';
+        }
+
+        roomTypesData.forEach(type => { 
+            globalTypeLookup[type._id] = type.name; 
+            
+            if (typeFilterSelect) {
+                const opt = document.createElement('option');
+                opt.value = type._id;
+                opt.textContent = type.name.toUpperCase();
+                typeFilterSelect.appendChild(opt);
+            }
+        });
 
     } catch (error) {
         console.error('Housekeeping Load Error:', error);
@@ -2951,25 +2965,27 @@ async function renderHousekeepingRooms() {
         return;
     }
 
-    // Always update status counters using the UNFILTERED source pool
     updateStatusCounters(globalRoomsData);
-
-    // Initial render invocation
     applyFiltersAndRender();
 }
 
-// Separate function dedicated entirely to managing logic filters and HTML composition
 function applyFiltersAndRender() {
     housekeepingRoomGrid.innerHTML = ''; 
 
     const searchQuery = document.getElementById('roomSearchInput')?.value.trim().toLowerCase() || '';
     const selectedStatus = document.getElementById('roomStatusFilter')?.value || 'all';
+    const selectedType = document.getElementById('roomTypeFilter')?.value || 'all';
 
-    // 1. Process Filters against our cached memory array
+    // 1. Process 3-Way Active Filters Stack
     const filteredRooms = globalRoomsData.filter(room => {
         const matchesSearch = room.number.toLowerCase().includes(searchQuery);
         const matchesStatus = (selectedStatus === 'all') || (room.status === selectedStatus);
-        return matchesSearch && matchesStatus;
+        
+        // Handle variations where roomTypeId could be an object populate payload or a plain string ID
+        const currentRoomTypeId = (room.roomTypeId && typeof room.roomTypeId === 'object') ? room.roomTypeId._id : room.roomTypeId;
+        const matchesType = (selectedType === 'all') || (currentRoomTypeId === selectedType);
+        
+        return matchesSearch && matchesStatus && matchesType;
     });
 
     if (filteredRooms.length === 0) {
@@ -2980,7 +2996,7 @@ function applyFiltersAndRender() {
         return;
     }
 
-    // 2. Grouping & Status Tracking Logic per Category
+    // 2. Structuring Groups & Context Metrics Counters
     const groupedRooms = {};
     
     filteredRooms.forEach(room => {
@@ -2988,7 +3004,6 @@ function applyFiltersAndRender() {
             ? room.roomTypeId.name 
             : (globalTypeLookup[room.roomTypeId] || "Unassigned Category");
 
-        // Initialize structured collection if it doesn't exist yet
         if (!groupedRooms[typeName]) {
             groupedRooms[typeName] = {
                 rooms: [],
@@ -2996,21 +3011,18 @@ function applyFiltersAndRender() {
             };
         }
 
-        // Add room to the list
         groupedRooms[typeName].rooms.push(room);
         
-        // Safely increment specific status counters within this type group
         if (groupedRooms[typeName].statusCounts.hasOwnProperty(room.status)) {
             groupedRooms[typeName].statusCounts[room.status]++;
         }
     });
     
-    // 3. Render Sections & Room Grid Cards
+    // 3. Render HTML Grid Generation Loop
     for (const typeName in groupedRooms) {
         const group = groupedRooms[typeName];
         const counts = group.statusCounts;
 
-        // Build localized status pills string dynamically
         let statusMetricsHTML = '';
         if (counts.clean > 0) statusMetricsHTML += `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-100">${counts.clean} Clean</span>`;
         if (counts.dirty > 0) statusMetricsHTML += `<span class="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100">${counts.dirty} Dirty</span>`;
@@ -3018,7 +3030,6 @@ function applyFiltersAndRender() {
         if (counts['under-maintenance'] > 0) statusMetricsHTML += `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200">${counts['under-maintenance']} Maint.</span>`;
         if (counts.blocked > 0) statusMetricsHTML += `<span class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-bold border border-indigo-100">${counts.blocked} Occ/Blk</span>`;
 
-        // Render Category Header Section with Status Badges
         const sectionHeader = document.createElement('div');
         sectionHeader.className = "col-span-full mt-10 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4";
         sectionHeader.innerHTML = `
@@ -3032,7 +3043,6 @@ function applyFiltersAndRender() {
         `;
         housekeepingRoomGrid.appendChild(sectionHeader);
 
-        // Sort and render the grid cards inside this group
         group.rooms
             .sort((a, b) => a.number.localeCompare(b.number, undefined, {numeric: true}))
             .forEach(room => {
@@ -3075,7 +3085,6 @@ function applyFiltersAndRender() {
     }
 }
 
-// Helper to keep counters clean and readable
 function updateStatusCounters(roomsArray) {
     const counts = { clean: 0, dirty: 0, maintenance: 0, blocked: 0 };
     roomsArray.forEach(room => {
@@ -3093,11 +3102,13 @@ function updateStatusCounters(roomsArray) {
     }
 }
 
-// Bind active filter listeners to DOM elements once loaded
+// Event bindings configuration setup
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('roomSearchInput')?.addEventListener('input', applyFiltersAndRender);
     document.getElementById('roomStatusFilter')?.addEventListener('change', applyFiltersAndRender);
+    document.getElementById('roomTypeFilter')?.addEventListener('change', applyFiltersAndRender);
 });
+
 
 async function updateRoomStatus(roomMongoId, newStatus) {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
