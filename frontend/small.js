@@ -2965,7 +2965,7 @@ function applyFiltersAndRender() {
     const searchQuery = document.getElementById('roomSearchInput')?.value.trim().toLowerCase() || '';
     const selectedStatus = document.getElementById('roomStatusFilter')?.value || 'all';
 
-    // 1. Process Filters
+    // 1. Process Filters against our cached memory array
     const filteredRooms = globalRoomsData.filter(room => {
         const matchesSearch = room.number.toLowerCase().includes(searchQuery);
         const matchesStatus = (selectedStatus === 'all') || (room.status === selectedStatus);
@@ -2980,29 +2980,60 @@ function applyFiltersAndRender() {
         return;
     }
 
-    // 2. Grouping Logic
+    // 2. Grouping & Status Tracking Logic per Category
     const groupedRooms = {};
+    
     filteredRooms.forEach(room => {
         let typeName = (room.roomTypeId && typeof room.roomTypeId === 'object') 
             ? room.roomTypeId.name 
             : (globalTypeLookup[room.roomTypeId] || "Unassigned Category");
 
-        if (!groupedRooms[typeName]) groupedRooms[typeName] = [];
-        groupedRooms[typeName].push(room);
+        // Initialize structured collection if it doesn't exist yet
+        if (!groupedRooms[typeName]) {
+            groupedRooms[typeName] = {
+                rooms: [],
+                statusCounts: { clean: 0, dirty: 0, 'In progress': 0, 'under-maintenance': 0, blocked: 0 }
+            };
+        }
+
+        // Add room to the list
+        groupedRooms[typeName].rooms.push(room);
+        
+        // Safely increment specific status counters within this type group
+        if (groupedRooms[typeName].statusCounts.hasOwnProperty(room.status)) {
+            groupedRooms[typeName].statusCounts[room.status]++;
+        }
     });
     
-    // 3. Render Sections & Cards
+    // 3. Render Sections & Room Grid Cards
     for (const typeName in groupedRooms) {
+        const group = groupedRooms[typeName];
+        const counts = group.statusCounts;
+
+        // Build localized status pills string dynamically
+        let statusMetricsHTML = '';
+        if (counts.clean > 0) statusMetricsHTML += `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-100">${counts.clean} Clean</span>`;
+        if (counts.dirty > 0) statusMetricsHTML += `<span class="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100">${counts.dirty} Dirty</span>`;
+        if (counts['In progress'] > 0) statusMetricsHTML += `<span class="bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-100">${counts['In progress']} In Progress</span>`;
+        if (counts['under-maintenance'] > 0) statusMetricsHTML += `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200">${counts['under-maintenance']} Maint.</span>`;
+        if (counts.blocked > 0) statusMetricsHTML += `<span class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-bold border border-indigo-100">${counts.blocked} Occ/Blk</span>`;
+
+        // Render Category Header Section with Status Badges
         const sectionHeader = document.createElement('div');
-        sectionHeader.className = "col-span-full mt-10 mb-6 flex items-center gap-4";
+        sectionHeader.className = "col-span-full mt-10 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4";
         sectionHeader.innerHTML = `
-            <h3 class="text-sm font-black uppercase tracking-[0.3em] text-slate-400 whitespace-nowrap">${typeName}</h3>
-            <div class="h-px bg-slate-200 w-full"></div>
-            <span class="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-bold">${groupedRooms[typeName].length} Rooms</span>
+            <div class="flex items-center gap-3">
+                <h3 class="text-sm font-black uppercase tracking-[0.3em] text-slate-800 whitespace-nowrap">${typeName}</h3>
+                <span class="bg-slate-800 text-white px-2.5 py-0.5 rounded-full text-[10px] font-black">${group.rooms.length} TOTAL</span>
+            </div>
+            <div class="flex flex-wrap gap-2 items-center">
+                ${statusMetricsHTML}
+            </div>
         `;
         housekeepingRoomGrid.appendChild(sectionHeader);
 
-        groupedRooms[typeName]
+        // Sort and render the grid cards inside this group
+        group.rooms
             .sort((a, b) => a.number.localeCompare(b.number, undefined, {numeric: true}))
             .forEach(room => {
                 const isDirty = room.status === 'dirty';
