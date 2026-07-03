@@ -5738,89 +5738,134 @@ const createAccount = async (guestName, roomNumber) => {
         showMessage(`Account active for ${data.guestName}`, 'success');
     } catch (err) { showMessage(err.message, 'error'); }
 };
+const refreshActiveAccount = async () => {
+    if (!activeAccountId) return;
 
-const searchAccounts = async (query) => {
-    const hotelId = getHotelId();
-    const searchResults = document.getElementById('searchResults');
-    
     try {
         const res = await authenticatedFetch(
-    `${API_BASE_URL}/pos/search/in-house?query=${encodeURIComponent(query)}`,
-    {
-        method: 'GET'
-    }
-);
+            `${API_BASE_URL}/pos/client/account/${activeAccountId}`
+        );
 
-if (!res) return; // in case redirect happened
+        if (!res || !res.ok) return;
 
         const data = await res.json();
-        
-        searchResults.innerHTML = data.length ? '' : '<p class="text-xs text-center text-slate-400 py-4">No records found</p>';
-        
+
+        activeAccountData = data;
+        updateActiveAccountUI(data);
+
+    } catch (err) {
+        console.error("Account refresh failed:", err);
+    }
+};
+const searchAccounts = async (query) => {
+    const searchResults = document.getElementById('searchResults');
+
+    if (!query) {
+        searchResults.innerHTML = '';
+        return;
+    }
+
+    try {
+        const res = await authenticatedFetch(
+            `${API_BASE_URL}/pos/search/in-house?query=${encodeURIComponent(query)}`
+        );
+
+        if (!res) return;
+
+        const data = await res.json();
+
+        searchResults.innerHTML = data.length
+            ? ''
+            : '<p class="text-xs text-center text-slate-400 py-4">No records found</p>';
+
         data.forEach(acc => {
             const el = document.createElement('div');
-            el.className = 'p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-300 transition-all group';
+            el.className =
+                'p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-300 transition-all group';
+
             el.innerHTML = `
                 <div class="flex justify-between items-center">
                     <div>
                         <p class="text-sm font-bold text-slate-700">${acc.guestName}</p>
-                        <p class="text-[10px] uppercase font-bold text-slate-400">Room: ${acc.roomNumber || 'Walk-In'}</p>
+                        <p class="text-[10px] uppercase font-bold text-slate-400">
+                            Room: ${acc.roomNumber || 'Walk-In'}
+                        </p>
                     </div>
-                    <span class="text-xs font-black text-indigo-600 opacity-0 group-hover:opacity-100">SELECT →</span>
-                </div>`;
+                    <span class="text-xs font-black text-indigo-600 opacity-0 group-hover:opacity-100">
+                        SELECT →
+                    </span>
+                </div>
+            `;
+
             el.onclick = () => {
                 activeAccountId = acc._id;
                 activeAccountData = acc;
                 updateActiveAccountUI(acc);
             };
+
             searchResults.appendChild(el);
         });
-    } catch (err) { showMessage(err.message, 'error'); }
+
+    } catch (err) {
+        console.error(err);
+        showMessage(err.message, 'error');
+    }
 };
 
 const addCharge = async (description, number, department) => {
-    const hotelId = localStorage.getItem('hotelId') || (typeof getHotelId === 'function' ? getHotelId() : null);
+    const hotelId = getHotelId();
     const submitBtn = document.getElementById('submitBtn');
-    const isQuickSale = (!activeAccountId);
 
-    const itemInfo = document.getElementById('itemDesc').dataset;
     const qtyValue = parseInt(number) || 1;
+
+    const itemInfo = document.getElementById('itemDesc')?.dataset || {};
     const tableNum = document.getElementById('tableNum')?.value || "N/A";
 
     const basePrice = parseFloat(itemInfo.bp || 0);
-    const sellingPrice = parseFloat(document.getElementById('itemPrice').value || itemInfo.sp || 0);
-    const calculatedProfit = (sellingPrice - basePrice) * qtyValue;
-    const profitPercentage = basePrice !== 0 ? (calculatedProfit / (basePrice * qtyValue)) * 100 : 0;
+    const sellingPrice = parseFloat(
+        document.getElementById('itemPrice')?.value || itemInfo.sp || 0
+    );
 
     if (!description || isNaN(qtyValue) || isNaN(sellingPrice)) {
-        return showMessage('Incomplete Form', 'Please fill all fields with valid data.', true);
+        return showMessage('Incomplete Form', 'Invalid item data', true);
     }
 
+    const calculatedProfit = (sellingPrice - basePrice) * qtyValue;
+    const profitPercentage =
+        basePrice !== 0
+            ? (calculatedProfit / (basePrice * qtyValue)) * 100
+            : 0;
+
+    // ✅ KEY LOGIC: determine sale type properly
+    const hasAccount = Boolean(activeAccountId);
+
     const payload = {
-        hotelId: hotelId,
+        hotelId,
         item: description.trim(),
-        department: department,
+        department,
         number: qtyValue,
         bp: basePrice,
         sp: sellingPrice,
         profit: calculatedProfit,
         percentageprofit: profitPercentage,
+
         accountId: activeAccountId || null,
         tableNumber: tableNum,
-        isQuickSale: isQuickSale,
+
+        saleType: hasAccount ? "ACCOUNT" : "WALK_IN",
         date: new Date()
     };
 
-   try {
+    try {
         if (submitBtn) {
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> SAVING...`;
         }
 
-        // 1. Send Order to correct Endpoint
-        const endpoint = (department === 'Restaurant') 
-            ? `${API_BASE_URL}/kitchen/order` 
-            : `${API_BASE_URL}/sales`;
+        const endpoint =
+            department === 'Restaurant'
+                ? `${API_BASE_URL}/kitchen/order`
+                : `${API_BASE_URL}/sales`;
 
         const res = await authenticatedFetch(endpoint, {
             method: 'POST',
@@ -5828,44 +5873,37 @@ const addCharge = async (description, number, department) => {
         });
 
         if (!res) return;
-        if (!res.ok) throw new Error("Failed to record primary sale.");
+        if (!res.ok) throw new Error("Failed to record sale");
 
-        // Grab the response from the server once
         const savedSale = await res.json();
 
-        // 2. Process Notifications
+        // ✅ SUCCESS MESSAGES
         if (department === 'Restaurant') {
-            showMessage('Success', 'Kitchen order has been sent! 🍳✅', false);
-        } else if (activeAccountId) {
-            showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
+            showMessage('Kitchen order sent 🍳', 'success');
+        } else if (hasAccount) {
+            showMessage('Charged to guest account 📄', 'success');
         } else {
-            showMessage('Success', 'Direct Sale Recorded! 💰✅', false);
+            showMessage('Walk-in sale recorded 💰', 'success');
         }
 
-        // 3. Update the UI using your function by fetching the targeted account data
-       // Inside your frontend addCharge function (Step 3)
-if (activeAccountId && typeof updateActiveAccountUI === 'function') {
-    // URL prefix matches the new GET route configuration
-    const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
-    if (accountRes && accountRes.ok) {
-        const freshAccountData = await accountRes.json();
-        updateActiveAccountUI(freshAccountData);
-    }
-}
+        // ✅ CRITICAL: ALWAYS REFRESH ACTIVE ACCOUNT IF EXISTS
+        if (hasAccount) {
+            await refreshActiveAccount();
+        }
 
-        // --- SUCCESS CLEANUP ---
-        document.getElementById('addChargeForm').reset();
-        
-        if (typeof fetchSales === 'function') fetchSales(); 
+        // Reset item form only (NOT full page state)
+        document.getElementById('addChargeForm')?.reset();
+
+        if (typeof fetchSales === 'function') fetchSales();
         if (typeof refreshTodayPOSStats === 'function') refreshTodayPOSStats();
 
     } catch (err) {
         console.error("Add Charge Error:", err);
-        showMessage('Error', err.message, true);
+        showMessage(err.message, 'error');
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = "SUBMIT ITEM"; 
+            submitBtn.innerHTML = "SUBMIT ITEM";
         }
     }
 };
