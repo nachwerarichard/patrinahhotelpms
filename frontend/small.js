@@ -5844,7 +5844,7 @@ const addCharge = async (description, number, department) => {
 
         // 3. Update the UI safely by fetching the fresh data from the server
         if (activeAccountId) {
-
+                const updatedAccount = await res.json();
             // This will pull the newly updated folio data (with the backend charge added) and update your UI
             if (typeof updateActiveAccountUI === 'function') {
                 await updateActiveAccountUI(updatedAccount);
