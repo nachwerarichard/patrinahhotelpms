@@ -5830,8 +5830,8 @@ const addCharge = async (description, number, department) => {
         if (!res) return;
         if (!res.ok) throw new Error("Failed to record primary sale.");
 
-        // Grab the response from the server once
-        const savedSale = await res.json();
+        // Grab the data returned directly from your updated backend route
+        const serverResponse = await res.json(); // contains { sale, updatedAccount }
 
         // 2. Process Notifications
         if (department === 'Restaurant') {
@@ -5839,19 +5839,23 @@ const addCharge = async (description, number, department) => {
         } else if (activeAccountId) {
             showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
         } else {
-            showMessage('Success', 'Direct Sale Recorded! 💰✅', false);
+            showMessage('Success', 'Walk-in Sale Recorded to Ledger! 💰✅', false);
         }
 
-        // 3. Update the UI using your function by fetching the targeted account data
-       // Inside your frontend addCharge function (Step 3)
-if (activeAccountId && typeof updateActiveAccountUI === 'function') {
-    // URL prefix matches the new GET route configuration
-    const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
-    if (accountRes && accountRes.ok) {
-        const freshAccountData = await accountRes.json();
-        updateActiveAccountUI(freshAccountData);
-    }
-}
+        // 3. Update the UI efficiently using the server response data
+        if (typeof updateActiveAccountUI === 'function') {
+            if (activeAccountId) {
+                // For existing registered guests, proceed with your standard refresh
+                const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
+                if (accountRes && accountRes.ok) {
+                    const freshAccountData = await accountRes.json();
+                    updateActiveAccountUI(freshAccountData);
+                }
+            } else if (serverResponse.updatedAccount) {
+                // 💡 CHIP IN HERE: For walk-ins, use the auto-created account straight from the response!
+                updateActiveAccountUI(serverResponse.updatedAccount);
+            }
+        }
 
         // --- SUCCESS CLEANUP ---
         document.getElementById('addChargeForm').reset();
@@ -5869,45 +5873,55 @@ if (activeAccountId && typeof updateActiveAccountUI === 'function') {
         }
     }
 };
-
 const settleAccount = async (method) => {
     if (!activeAccountId) return;
 
-    // Use 'room' or 'Cash' based on the method clicked
-    const payload = method === 'room' 
-        ? { roomPost: true } 
-        : { paymentMethod: 'Cash' };
+    // 1. DYNAMIC PAYLOAD OPTIMIZATION
+    // Accept standard payment options directly ('Cash', 'Card', etc.)
+    let payload = {};
+    if (method === 'room') {
+        payload = { roomPost: true };
+    } else {
+        // Fallback to whichever method was clicked, defaulting to 'Cash' if mixed up
+        payload = { paymentMethod: ['Cash', 'Card', 'MobileMoney'].includes(method) ? method : 'Cash' };
+    }
 
     try {
         const res = await authenticatedFetch(
             `${API_BASE_URL}/pos/client/account/${activeAccountId}/settle`,
             {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }, // Ensure headers are set
+                headers: { 'Content-Type': 'application/json' }, 
                 body: JSON.stringify(payload)
             }
         );
 
-        const data = await res.json(); // Read the JSON once
+        const data = await res.json(); 
 
         if (!res.ok) {
-            // This will now show the actual message like "No matching active booking..."
             console.error("Settle failed:", data.message);
-            showMessage(data.message || 'Settlement failed', 'error');
+            showMessage('Settlement failed', data.message || 'Check balance logs', true);
             return;
         }
 
-        if (method === 'receipt') {
-            //printReceiptFromAccount(data.receipt);
-            showMessage('Bill settled!', 'success');
-            setTimeout(() => resetUI(), 2000);
-        } else {
-            showMessage('Posted to room successfully', 'success');
+        // 2. RECONCILED NOTIFICATION AND STATE RESET MATCHES
+        if (method === 'room') {
+            showMessage('Success', 'Posted to room successfully! 📄✅', false);
             resetUI();
+        } else {
+            // This captures Cash, Card, Receipt settlements cleanly!
+            showMessage('Success', 'Bill settled completely! 💵✅', false);
+            
+            // Clean up global UI reference tracking if we were clearing a walk-in ledger
+            if (typeof activeAccountId !== 'undefined') {
+                activeAccountId = null; // Reset the pointer tracking state
+            }
+            
+            setTimeout(() => resetUI(), 2000);
         }
     } catch (err) { 
         console.error(err);
-        showMessage("Connection error", 'error'); 
+        showMessage("Error", "Connection failure during settlement process.", true); 
     }
 };
 
@@ -6081,9 +6095,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const description = fd.get('description');
     const number = fd.get('number');
     const department = document.getElementById('deptSelect').value;
-
     // Run the primary charge logic
-    await addCharge(description, number, department);
+    await addCharge(description, number, department );
 };
 
     document.getElementById('itemDesc').addEventListener('input', (e) => autoFillPrices(e.target.value));
