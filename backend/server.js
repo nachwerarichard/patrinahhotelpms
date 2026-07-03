@@ -4363,6 +4363,12 @@ const Sale = mongoose.model('Sale', new mongoose.Schema({
     sp: { type: Number, required: true, min: 0 },
     profit: Number,
     percentageprofit: Number,
+    paymentMethod: { 
+    type: String, 
+    required: true, 
+    enum: ['Cash', 'Card', 'MobileMoney', 'Folio'], // Enforces standard values
+    default: 'Cash'
+  },
     date: { type: Date, default: Date.now } // Keep just this one
 }));
 
