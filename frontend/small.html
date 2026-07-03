@@ -290,29 +290,7 @@ body {
     }
 }
 
-@media print {
-    /* Hide absolutely every element on the screen by default */
-    body * {
-        visibility: hidden;
-    }
-    
-    /* Make ONLY your receipt wrapper and its child trees visible on the page */
-    .print-only-receipt, .print-only-receipt * {
-        visibility: visible;
-    }
-    
-    /* Lock the alignment rules tightly to the top left of the printing thermal sheet */
-    .print-only-receipt {
-        display: block !important;
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        max-width: 80mm; /* Standard receipt diameter bounds */
-        padding: 10px;
-        box-shadow: none !important;
-    }
-}
+
     
 
     </style>

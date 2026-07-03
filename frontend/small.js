@@ -5843,15 +5843,15 @@ const addCharge = async (description, number, department) => {
         }
 
         // 3. Update the UI using your function by fetching the targeted account data
-        if (activeAccountId && typeof updateActiveAccountUI === 'function') {
-            // Fetch the updated account object specifically for this guest
-            const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
-            if (accountRes && accountRes.ok) {
-                const freshAccountData = await accountRes.json();
-                // Pass the fresh account data right into your UI updater
-                updateActiveAccountUI(freshAccountData);
-            }
-        }
+       // Inside your frontend addCharge function (Step 3)
+if (activeAccountId && typeof updateActiveAccountUI === 'function') {
+    // URL prefix matches the new GET route configuration
+    const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
+    if (accountRes && accountRes.ok) {
+        const freshAccountData = await accountRes.json();
+        updateActiveAccountUI(freshAccountData);
+    }
+}
 
         // --- SUCCESS CLEANUP ---
         document.getElementById('addChargeForm').reset();

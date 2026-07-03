@@ -289,6 +289,8 @@ body {
         border-right: 2px solid #e2e8f0 !important;
     }
 }
+
+
     
 
     </style>
@@ -1829,7 +1831,7 @@ body {
                             <div class="grid grid-cols-3 gap-4">
                                 <div class="col-span-1">
                                     <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Qty</label>
-                                    <input type="number" name="number" id="number" value="1" min="1" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
+                                    <input type="number" name="number" id="number" value="1"  class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
                                 </div>
                                 <div class="col-span-2">
                                     <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Selling Price</label>
@@ -1864,10 +1866,10 @@ body {
                                 <i class="fas fa-bed mb-1 group-hover:scale-110"></i>
                                 <span class="text-[10px] font-extrabold uppercase">Post to Room</span>
                             </button>
-                            <!--<button id="issueReceiptBtn" class="flex flex-col items-center justify-center p-3 bg-slate-900 text-white rounded-2xl hover:bg-black transition-all group">
+                            <button id="issueReceiptBtn" class="flex flex-col items-center justify-center p-3 bg-slate-900 text-white rounded-2xl hover:bg-black transition-all group">
                                 <i class="fas fa-print mb-1 group-hover:scale-110"></i>
                                 <span class="text-[10px] font-extrabold uppercase">Settle Bill</span>
-                            </button>-->
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -2334,6 +2336,38 @@ body {
       <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
     </svg>
   </a> -->
+</div>
+<div class="flex flex-col md:flex-row gap-4 mb-6">
+    <!-- Search Input -->
+    <div class="relative flex-1">
+        <input type="text" id="roomSearchInput" placeholder="Search room number..." 
+            class="w-full bg-white border border-slate-200 p-3 pl-10 rounded-xl text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+    </div>
+
+    <!-- Room Type Dropdown Filter -->
+    <div class="relative w-full md:w-56">
+        <select id="roomTypeFilter" 
+            class="w-full bg-white border border-slate-200 p-3 pr-10 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer transition-all">
+            <option value="all">ALL CATEGORIES</option>
+            <!-- Room types will be rendered here dynamically -->
+        </select>
+        <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
+    </div>
+    
+    <!-- Status Filter Dropdown -->
+    <div class="relative w-full md:w-56">
+        <select id="roomStatusFilter" 
+            class="w-full bg-white border border-slate-200 p-3 pr-10 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer transition-all">
+            <option value="all">ALL STATUSES</option>
+            <option value="clean">CLEAN</option>
+            <option value="dirty">DIRTY</option>
+            <option value="In progress">IN PROGRESS</option>
+            <option value="under-maintenance">MAINTENANCE</option>
+            <option value="blocked">OCCUPIED / BLOCKED</option>
+        </select>
+        <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
+    </div>
 </div>
                 
                 <div id="housekeepingRoomGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
@@ -3459,9 +3493,12 @@ Add Guest Details            </h2>
   </div>
 </div>
 
-    <div id="receipt-print">
-  <div id="receipt-details"></div>
-  <span id="receipt-date"></span>
+    <!-- This wrapper stays hidden on your primary dashboard screen but centers perfectly on thermal roll papers when printing -->
+<div id="receipt-print" class="print-only-receipt hidden max-w-[80mm] mx-auto p-4 bg-white text-black shadow-sm rounded-sm">
+    <div id="receipt-details"></div>
+    <div class="text-center text-[10px] font-mono text-gray-400 mt-2">
+        <span>Printed on: </span><span id="receipt-date"></span>
+    </div>
 </div>
     <div id="addPaymentModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
   <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl transition-all relative">
@@ -3676,7 +3713,7 @@ Add Guest Details            </h2>
     <script src="housekeep.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="script4.js"></script>
+    <script src="small.js"></script>
 <script>
 function googleTranslateElementInit() {
     new google.translate.TranslateElement(

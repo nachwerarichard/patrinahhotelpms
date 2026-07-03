@@ -2912,29 +2912,50 @@ function exportReport() {
 /**
  * Renders the room cards for housekeeping, fetching data from the backend.
  */
+// Global memory caches to hold fetched data for instant filtering
+let globalRoomsData = [];
+let globalTypeLookup = {};
+
 async function renderHousekeepingRooms() {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const token = sessionData?.token;
     const hotelId = sessionData?.hotelId;
 
     if (typeof updateBookingStats === 'function') updateBookingStats();
-    housekeepingRoomGrid.innerHTML = ''; 
-
-    let currentRooms = [];
-    let roomTypesData = [];
-
+    
     try {
-        // Fetch only this hotel's rooms and types
         const [roomsRes, typesRes] = await Promise.all([
-    authenticatedFetch(` ${API_BASE_URL}/rooms`, { method: 'GET' }),
-    authenticatedFetch(`${API_BASE_URL}/room-types`, { method: 'GET' })
-]);
+            authenticatedFetch(`${API_BASE_URL}/rooms`, { method: 'GET' }),
+            authenticatedFetch(`${API_BASE_URL}/room-types`, { method: 'GET' })
+        ]);
 
         if (!roomsRes.ok || !typesRes.ok) throw new Error("Failed to fetch data");
 
-        currentRooms = await roomsRes.json();
-        roomTypesData = await typesRes.json();
-        rooms = currentRooms; 
+        globalRoomsData = await roomsRes.json();
+        const roomTypesData = await typesRes.json();
+        
+        rooms = globalRoomsData; 
+
+        // 1. Build lookup dictionary & populate Room Type Selector Dropdown dynamically
+        globalTypeLookup = {};
+        const typeFilterSelect = document.getElementById('roomTypeFilter');
+        
+        // Reset option list while preserving the default "All Categories" option
+        if (typeFilterSelect) {
+            typeFilterSelect.innerHTML = '<option value="all">ALL CATEGORIES</option>';
+        }
+
+        roomTypesData.forEach(type => { 
+            globalTypeLookup[type._id] = type.name; 
+            
+            if (typeFilterSelect) {
+                const opt = document.createElement('option');
+                opt.value = type._id;
+                opt.textContent = type.name.toUpperCase();
+                typeFilterSelect.appendChild(opt);
+            }
+        });
+
     } catch (error) {
         console.error('Housekeeping Load Error:', error);
         housekeepingRoomGrid.innerHTML = `
@@ -2944,48 +2965,85 @@ async function renderHousekeepingRooms() {
         return;
     }
 
-    const typeLookup = {};
-    roomTypesData.forEach(t => { typeLookup[t._id] = t.name; });
+    updateStatusCounters(globalRoomsData);
+    applyFiltersAndRender();
+}
 
-    // Status Counting
-    const counts = { clean: 0, dirty: 0, maintenance: 0, blocked: 0 };
-    currentRooms.forEach(room => {
-        if (room.status === 'clean') counts.clean++;
-        else if (room.status === 'dirty') counts.dirty++;
-        else if (room.status === 'under-maintenance') counts.maintenance++;
-        else if (room.status === 'blocked') counts.blocked++;
+function applyFiltersAndRender() {
+    housekeepingRoomGrid.innerHTML = ''; 
+
+    const searchQuery = document.getElementById('roomSearchInput')?.value.trim().toLowerCase() || '';
+    const selectedStatus = document.getElementById('roomStatusFilter')?.value || 'all';
+    const selectedType = document.getElementById('roomTypeFilter')?.value || 'all';
+
+    // 1. Process 3-Way Active Filters Stack
+    const filteredRooms = globalRoomsData.filter(room => {
+        const matchesSearch = room.number.toLowerCase().includes(searchQuery);
+        const matchesStatus = (selectedStatus === 'all') || (room.status === selectedStatus);
+        
+        // Handle variations where roomTypeId could be an object populate payload or a plain string ID
+        const currentRoomTypeId = (room.roomTypeId && typeof room.roomTypeId === 'object') ? room.roomTypeId._id : room.roomTypeId;
+        const matchesType = (selectedType === 'all') || (currentRoomTypeId === selectedType);
+        
+        return matchesSearch && matchesStatus && matchesType;
     });
 
-    if(document.getElementById('stat-clean')) {
-        document.getElementById('stat-clean').textContent = counts.clean;
-        document.getElementById('stat-dirty').textContent = counts.dirty;
-        document.getElementById('stat-maintenance').textContent = counts.maintenance;
-        document.getElementById('stat-occupied').textContent = counts.blocked;
+    if (filteredRooms.length === 0) {
+        housekeepingRoomGrid.innerHTML = `
+            <div class="col-span-full text-center py-10 bg-slate-50 rounded-2xl border border-slate-100">
+                <p class="text-slate-500 font-medium">No rooms match your active search filters.</p>
+            </div>`;
+        return;
     }
 
-    // Grouping logic
+    // 2. Structuring Groups & Context Metrics Counters
     const groupedRooms = {};
-    currentRooms.forEach(room => {
+    
+    filteredRooms.forEach(room => {
         let typeName = (room.roomTypeId && typeof room.roomTypeId === 'object') 
             ? room.roomTypeId.name 
-            : (typeLookup[room.roomTypeId] || "Unassigned Category");
+            : (globalTypeLookup[room.roomTypeId] || "Unassigned Category");
 
-        if (!groupedRooms[typeName]) groupedRooms[typeName] = [];
-        groupedRooms[typeName].push(room);
+        if (!groupedRooms[typeName]) {
+            groupedRooms[typeName] = {
+                rooms: [],
+                statusCounts: { clean: 0, dirty: 0, 'In progress': 0, 'under-maintenance': 0, blocked: 0 }
+            };
+        }
+
+        groupedRooms[typeName].rooms.push(room);
+        
+        if (groupedRooms[typeName].statusCounts.hasOwnProperty(room.status)) {
+            groupedRooms[typeName].statusCounts[room.status]++;
+        }
     });
     
-    // Render Sections
+    // 3. Render HTML Grid Generation Loop
     for (const typeName in groupedRooms) {
+        const group = groupedRooms[typeName];
+        const counts = group.statusCounts;
+
+        let statusMetricsHTML = '';
+        if (counts.clean > 0) statusMetricsHTML += `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-100">${counts.clean} Clean</span>`;
+        if (counts.dirty > 0) statusMetricsHTML += `<span class="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100">${counts.dirty} Dirty</span>`;
+        if (counts['In progress'] > 0) statusMetricsHTML += `<span class="bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-100">${counts['In progress']} In Progress</span>`;
+        if (counts['under-maintenance'] > 0) statusMetricsHTML += `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200">${counts['under-maintenance']} Maint.</span>`;
+        if (counts.blocked > 0) statusMetricsHTML += `<span class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-bold border border-indigo-100">${counts.blocked} Occ/Blk</span>`;
+
         const sectionHeader = document.createElement('div');
-        sectionHeader.className = "col-span-full mt-10 mb-6 flex items-center gap-4";
+        sectionHeader.className = "col-span-full mt-10 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4";
         sectionHeader.innerHTML = `
-            <h3 class="text-sm font-black uppercase tracking-[0.3em] text-slate-400 whitespace-nowrap">${typeName}</h3>
-            <div class="h-px bg-slate-200 w-full"></div>
-            <span class="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-bold">${groupedRooms[typeName].length} Rooms</span>
+            <div class="flex items-center gap-3">
+                <h3 class="text-sm font-black uppercase tracking-[0.3em] text-slate-800 whitespace-nowrap">${typeName}</h3>
+                <span class="bg-slate-800 text-white px-2.5 py-0.5 rounded-full text-[10px] font-black">${group.rooms.length} TOTAL</span>
+            </div>
+            <div class="flex flex-wrap gap-2 items-center">
+                ${statusMetricsHTML}
+            </div>
         `;
         housekeepingRoomGrid.appendChild(sectionHeader);
 
-        groupedRooms[typeName]
+        group.rooms
             .sort((a, b) => a.number.localeCompare(b.number, undefined, {numeric: true}))
             .forEach(room => {
                 const isDirty = room.status === 'dirty';
@@ -3014,6 +3072,7 @@ async function renderHousekeepingRooms() {
                                     class="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer transition-all">
                                     <option value="clean" ${room.status === 'clean' ? 'selected' : ''}>SET AS CLEAN</option>
                                     <option value="dirty" ${room.status === 'dirty' ? 'selected' : ''}>SET AS DIRTY</option>
+                                    <option value="In progress" ${room.status === 'In progress' ? 'selected' : ''}>IN PROGRESS</option>
                                     <option value="under-maintenance" ${room.status === 'under-maintenance' ? 'selected' : ''}>MAINTENANCE</option>
                                     <option value="blocked" ${room.status === 'blocked' ? 'selected' : ''}>${isOccupied ? 'OCCUPIED' : 'BLOCKED'}</option>
                                 </select>
@@ -3025,6 +3084,32 @@ async function renderHousekeepingRooms() {
             });
     }
 }
+
+function updateStatusCounters(roomsArray) {
+    const counts = { clean: 0, dirty: 0, maintenance: 0, blocked: 0 };
+    roomsArray.forEach(room => {
+        if (room.status === 'clean') counts.clean++;
+        else if (room.status === 'dirty') counts.dirty++;
+        else if (room.status === 'under-maintenance') counts.maintenance++;
+        else if (room.status === 'blocked') counts.blocked++;
+    });
+
+    if (document.getElementById('stat-clean')) {
+        document.getElementById('stat-clean').textContent = counts.clean;
+        document.getElementById('stat-dirty').textContent = counts.dirty;
+        document.getElementById('stat-maintenance').textContent = counts.maintenance;
+        document.getElementById('stat-occupied').textContent = counts.blocked;
+    }
+}
+
+// Event bindings configuration setup
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('roomSearchInput')?.addEventListener('input', applyFiltersAndRender);
+    document.getElementById('roomStatusFilter')?.addEventListener('change', applyFiltersAndRender);
+    document.getElementById('roomTypeFilter')?.addEventListener('change', applyFiltersAndRender);
+});
+
+
 async function updateRoomStatus(roomMongoId, newStatus) {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const token = sessionData?.token;
@@ -3586,7 +3671,7 @@ function renderRadialOptions() {
         modulesToShow = [SYSTEM_LINKS.systemA, SYSTEM_LINKS.systemB, SYSTEM_LINKS.KDS, SYSTEM_LINKS.staff];
     } else if (['bar', 'cashier'].includes(role)) {
         modulesToShow = [SYSTEM_LINKS.systemA];
-    } else if (['housekeeping', 'reception'].includes(role)) {
+    } else if (['housekeeping', 'front office'].includes(role)) {
         modulesToShow = [SYSTEM_LINKS.systemB];
     }
 
@@ -5267,7 +5352,7 @@ async function fetchUsers() {
                     <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
                     <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
                     <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
-                    <option value="reception" ${user.role === 'reception' ? 'selected' : ''}>Reception</option>
+                    <option value="front office" ${user.role === 'front office' ? 'selected' : ''}>Front Office</option>
                     <option value="chef" ${user.role === 'chef' ? 'selected' : ''}>Chef</option>
                     <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
                 </select>
@@ -5536,7 +5621,7 @@ function getRoleClass(role) {
     const classes = {
         admin: 'bg-purple-50 text-purple-600 border-purple-100',
         bar: 'bg-amber-50 text-amber-600 border-amber-100',
-        reception: 'bg-blue-50 text-blue-600 border-blue-100',
+        'front office': 'bg-blue-50 text-blue-600 border-blue-100',
         cashier: 'bg-cyan-50 text-cyan-600 border-cyan-100',
         housekeeper: 'bg-emerald-50 text-emerald-600 border-emerald-100'
     };
@@ -5630,32 +5715,7 @@ const getAuthToken = () => localStorage.getItem('token');
     messageBox.classList.remove('translate-x-full');
 };*/
 
-// --- QUICK SALE LOGIC ---
-function startQuickSale() {
-    activeAccountId = null; 
-    const activeSection = document.getElementById('activeAccountSection');
-    activeSection.classList.remove('hidden');
-    
-    // Flag this as a direct cash sale
-    const orderTypeInput = document.getElementById('currentOrderType');
-    if(orderTypeInput) orderTypeInput.value = 'Direct';
-    
-    document.getElementById('currentGuestName').textContent = "Quick Sale Guest";
-    document.getElementById('currentRoomNumber').textContent = "Direct Payment";
-    document.getElementById('totalCharges').textContent = "0";
-    
-    const chargesList = document.getElementById('chargesList');
-    if (chargesList) {
-        chargesList.innerHTML = `
-            <tr>
-                <td colspan="3" class="text-center py-10 text-slate-400 italic">
-                    <i class="fas fa-plus-circle block text-2xl mb-2 opacity-20"></i>
-                    Select items to start Quick Sale
-                </td>
-            </tr>`;
-    }
-    activeSection.scrollIntoView({ behavior: 'smooth' });
-}
+
 
 // --- CORE API FUNCTIONS (UPDATED FOR MULTI-TENANCY) ---
 
@@ -5727,13 +5787,11 @@ const addCharge = async (description, number, department) => {
     const qtyValue = parseInt(number) || 1;
     const tableNum = document.getElementById('tableNum')?.value || "N/A";
 
-    // Grab pricing dynamically
     const basePrice = parseFloat(itemInfo.bp || 0);
     const sellingPrice = parseFloat(document.getElementById('itemPrice').value || itemInfo.sp || 0);
     const calculatedProfit = (sellingPrice - basePrice) * qtyValue;
     const profitPercentage = basePrice !== 0 ? (calculatedProfit / (basePrice * qtyValue)) * 100 : 0;
 
-    // Form input validation check
     if (!description || isNaN(qtyValue) || isNaN(sellingPrice)) {
         return showMessage('Incomplete Form', 'Please fill all fields with valid data.', true);
     }
@@ -5753,7 +5811,7 @@ const addCharge = async (description, number, department) => {
         date: new Date()
     };
 
-    try {
+   try {
         if (submitBtn) {
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> SAVING...`;
@@ -5772,47 +5830,37 @@ const addCharge = async (description, number, department) => {
         if (!res) return;
         if (!res.ok) throw new Error("Failed to record primary sale.");
 
-        // 2. Process Notifications based on destination matching your function signature
+        // Grab the response from the server once
+        const savedSale = await res.json();
+
+        // 2. Process Notifications
         if (department === 'Restaurant') {
             showMessage('Success', 'Kitchen order has been sent! 🍳✅', false);
-        }
-
-        // 3. Update guest accounts if linked to an active folio
-        if (activeAccountId) {
-            const folioRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}/charge`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    description: `${description} (x${qtyValue})`,
-                    amount: payload.sp * payload.number,
-                    type: payload.department,
-                    hotelId: hotelId
-                })
-            });
-
-            if (folioRes && folioRes.ok) {
-                const updatedAccount = await folioRes.json();
-                if (typeof updateActiveAccountUI === 'function') updateActiveAccountUI(updatedAccount);
-                
-                if (department !== 'Restaurant') {
-                    showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
-                }
-            }
+        } else if (activeAccountId) {
+            showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
         } else {
-            if (department !== 'Restaurant') {
-                showMessage('Success', 'Direct Sale Recorded! 💰✅', false);
-            }
+            showMessage('Success', 'Direct Sale Recorded! 💰✅', false);
         }
+
+        // 3. Update the UI using your function by fetching the targeted account data
+       // Inside your frontend addCharge function (Step 3)
+if (activeAccountId && typeof updateActiveAccountUI === 'function') {
+    // URL prefix matches the new GET route configuration
+    const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
+    if (accountRes && accountRes.ok) {
+        const freshAccountData = await accountRes.json();
+        updateActiveAccountUI(freshAccountData);
+    }
+}
 
         // --- SUCCESS CLEANUP ---
         document.getElementById('addChargeForm').reset();
         
-        // Refresh UI components safely if defined
         if (typeof fetchSales === 'function') fetchSales(); 
         if (typeof refreshTodayPOSStats === 'function') refreshTodayPOSStats();
 
     } catch (err) {
         console.error("Add Charge Error:", err);
-        // FIX: Pass 'Error' as Title, the err message as Body, and 'true' to trigger red text
         showMessage('Error', err.message, true);
     } finally {
         if (submitBtn) {
@@ -5850,8 +5898,8 @@ const settleAccount = async (method) => {
         }
 
         if (method === 'receipt') {
-            printReceiptFromAccount(data.receipt);
-            showMessage('Receipt issued!', 'success');
+            //printReceiptFromAccount(data.receipt);
+            showMessage('Bill settled!', 'success');
             setTimeout(() => resetUI(), 2000);
         } else {
             showMessage('Posted to room successfully', 'success');
@@ -5950,20 +5998,56 @@ function autoFillPrices(selectedItemName) {
 // --- PRINTING ---
 const printReceiptFromAccount = (receipt) => {
     const details = document.getElementById('receipt-details');
-    const itemsHtml = receipt.charges.map(c => `
-        <div class="flex justify-between text-sm">
-            <span>${c.description}</span>
-            <span>${Number(c.amount).toLocaleString()}</span>
-        </div>`).join('');
+    const dateSpan = document.getElementById('receipt-date');
+    
+    // Set the receipt timestamp cleanly
+    dateSpan.innerText = new Date().toLocaleString('en-GB', { 
+        dateStyle: 'short', 
+        timeStyle: 'short' 
+    });
 
+    // Generate individual lines for items cleanly formatted
+    const itemsHtml = receipt.charges.map(c => `
+        <div class="flex justify-between items-start text-xs font-mono my-1">
+            <span class="max-w-[70%] text-left break-words">${c.description}</span>
+            <span class="font-bold">${Number(c.amount).toLocaleString()}</span>
+        </div>
+    `).join('');
+
+    // Inject beautifully structured semantic POS layout
     details.innerHTML = `
-        <p class="font-bold">${receipt.guestName}</p>
-        <p class="text-xs mb-2">Hotel ID: ${receipt.hotelId}</p>
-        ${itemsHtml}
-        <div class="border-t mt-2 pt-2 flex justify-between font-bold">
-            <span>TOTAL</span>
-            <span>UGX ${Number(receipt.total).toLocaleString()}</span>
-        </div>`;
+        <div class="text-center border-b border-dashed pb-3 mb-3">
+            <h2 class="text-lg font-bold tracking-wider">NOVUS CLOUD PMS</h2>
+            <p class="text-[10px] text-gray-500 uppercase font-mono mt-0.5">Official Guest Receipt</p>
+        </div>
+
+        <div class="text-xs font-mono space-y-1 mb-3 pb-2 border-b border-dashed">
+            <div class="flex justify-between"><span class="text-gray-500">GUEST:</span> <span class="font-bold uppercase">${receipt.guestName}</span></div>
+            <div class="flex justify-between"><span class="text-gray-500">HOTEL REF:</span> <span class="font-bold">#${receipt.hotelId.toString().slice(-6).toUpperCase()}</span></div>
+        </div>
+
+        <div class="mb-4">
+            <div class="flex justify-between text-[11px] font-bold text-gray-500 uppercase border-b pb-1 font-mono mb-2">
+                <span>Description</span>
+                <span>Amount (UGX)</span>
+            </div>
+            ${itemsHtml}
+        </div>
+
+        <div class="border-t-2 border-double pt-3 mt-2 font-mono">
+            <div class="flex justify-between items-center text-sm font-bold">
+                <span>NET TOTAL</span>
+                <span class="text-base">UGX ${Number(receipt.total).toLocaleString()}</span>
+            </div>
+        </div>
+
+        <div class="text-center mt-6 pt-3 border-t border-dashed text-[10px] font-mono text-gray-500">
+            <p>Thank you for your visit!</p>
+            <p class="mt-1 font-bold">Powered by Novus Cloud</p>
+        </div>
+    `;
+
+    // Trigger physical paper printer print dialog cleanly
     window.print();
 };
 
@@ -6005,7 +6089,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('itemDesc').addEventListener('input', (e) => autoFillPrices(e.target.value));
     document.getElementById('postToRoomBtn').onclick = () => settleAccount('room');
   });
-    /*document.getElementById('issueReceiptBtn').onclick = () => settleAccount('receipt');*/
+document.getElementById('issueReceiptBtn').onclick = () => settleAccount('receipt');
 
 //bar.js code 
 
@@ -8853,7 +8937,7 @@ document.getElementById('exportposReportBtn').addEventListener('click', function
     // New function to handle the modal display and population
 // New function to handle the modal display and population
 function openEditModal(item) {
-    // 1. Permission check
+    // 1. Permission check (Adjust this array to match your app's rules!)
     const authorizedRoles = ['admin', 'super-admin', 'manager'];
     if (!authorizedRoles.includes(currentUserRole)) {
         if (typeof showMessage === 'function') showMessage('Permission Denied', true);
@@ -8861,7 +8945,7 @@ function openEditModal(item) {
         return;
     }
 
-    // 2. Data Validation - Only error if item name is missing
+    // 2. Data Validation
     if (!item || !item.item) {
         console.error("Item object is invalid:", item);
         showMessage("Error: Could not identify the inventory item.");
@@ -8871,8 +8955,7 @@ function openEditModal(item) {
     const modal = document.getElementById('edit-inventory-modal');
     if (!modal) return console.error("Modal 'edit-inventory-modal' missing from HTML");
 
-    // 3. Populate Form
-    // If _id is missing, it's a new record for that day
+    // 3. Populate Form (Safely handling potentially missing DOM fields)
     const idField = document.getElementById('edit-inventory-id');
     if (idField) idField.value = item._id || '';
 
@@ -8899,10 +8982,10 @@ function openEditModal(item) {
         trackInput.checked = item.trackInventory !== undefined ? item.trackInventory : true;
     }
 
-    // 4. Update Modal Header
+    // 4. Dynamic Modal Header (Great for UX)
     const title = modal.querySelector('h2');
     if (title) {
-        title.textContent = item._id ? `Edit ${item.item}` : `Initialize ${item.item} for ${item.viewingDate}`;
+        title.textContent = item._id ? `Edit ${item.item}` : `Initialize ${item.item} for ${item.viewingDate || 'Today'}`;
     }
 
     // 5. Open Modal
@@ -8965,51 +9048,7 @@ function closeEditModal() {
 // Add an event listener to the new edit form
         // New function to handle the modal display and population
 // New function to handle the modal display and population
-function openEditModal(item) {
-    // Check permission
-    const allowedToEditInventory = ['admin'];
-    if (!allowedToEditInventory.includes(currentUserRole)) {
-        showMessage('Permission Denied: You cannot edit inventory items.');
-        return;
-    }
 
-    if (!item || !item._id) {
-        showMessage('Error: Inventory item data is missing or invalid.');
-        return;
-    }
-
-    // Get the modal and form elements
-    const modal = document.getElementById('edit-inventory-modal');
-    const idInput = document.getElementById('edit-inventory-id');
-    const itemInput = document.getElementById('edit-item');
-    const openingInput = document.getElementById('edit-opening');
-    const purchasesInput = document.getElementById('edit-purchases');
-    const salesInput = document.getElementById('edit-inventory-sales');
-    const spoilageInput = document.getElementById('edit-spoilage');
-    const buyingpriceInput = document.getElementById('edit-buyingprice');
-    const sellingpriceInput = document.getElementById('edit-sellingprice');
-    
-    // NEW: Get the checkbox element
-    const trackInventoryInput = document.getElementById('edit-trackInventory');
-
-    // Populate the form with the item's data
-    idInput.value = item._id;
-    itemInput.value = item.item;
-    openingInput.value = item.opening;
-    purchasesInput.value = item.purchases;
-    salesInput.value = item.sales;
-    spoilageInput.value = item.spoilage;
-    sellingpriceInput.value = item.sellingprice;
-    buyingpriceInput.value = item.buyingprice;
-
-    // NEW: Set the checkbox state
-    // Use the value from the database, default to true if it doesn't exist yet
-    trackInventoryInput.checked = item.trackInventory !== undefined ? item.trackInventory : true;
-
-    // Show the modal
-    modal.classList.remove('hidden'); // Using classList is cleaner for Tailwind
-    modal.style.display = 'flex';
-}
         
 // New function to handle the form submission for the modal
 
@@ -9967,34 +10006,7 @@ async function markAsServed(orderId) {
         showMessage("Failed to update status: " + err.message);
     }
 }
-    function startNewTransaction() {
-    // 1. Reset all forms
-    document.getElementById('searchAccountForm').reset();
-    document.getElementById('createAccountForm').reset();
-    
-    // 2. Clear visual labels for the active guest
-    document.getElementById('currentGuestName').textContent = '-';
-    document.getElementById('currentRoomNumber').textContent = '';
-    document.getElementById('totalCharges').textContent = '0.00';
-    
-    // 3. Clear the Live Folio table
-    const chargesList = document.getElementById('chargesList');
-    if (chargesList) {
-        chargesList.innerHTML = `
-            <tr>
-                <td colspan="2" class="px-6 py-10 text-center text-slate-400 italic text-sm">No items posted yet</td>
-            </tr>
-        `;
-    }
-
-    // 4. Clear search results list
-    const searchResults = document.getElementById('searchResults');
-    if (searchResults) {
-        searchResults.innerHTML = '';
-    }
-    
-    console.log("UI Cleared for new transaction.");
-}
+   
 
 const suggestInput = document.getElementById('guestname');
 const suggestionBox = document.getElementById('bookingSuggestions');
