@@ -4,10 +4,12 @@
 let rooms = [];
 let bookings = []; // This will now hold the currentAly displayed page's bookings or filtered bookings
 let currentPage = 1;
-const recordsPerPage = 20; // Maximum 5 booking records per page
+const recordsPerPage = 30; // Maximum 5 booking records per page
 let currentSearchTerm = ''; // New: To keep track of the active search term for pagination
 let currentBookingObjectId = null;
-const logsPerPage =20;
+const logsPerPage =100;
+let filteredStatusReports = [];
+
 // Calendar state
 let currentCalendarDate = new Date(); // Stores the month/year currently displayed in the calendar
 
