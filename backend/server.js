@@ -4053,7 +4053,6 @@ app.get('/api/rooms/lookup/:number', auth, async (req, res) => {
         res.json({
             category: room.roomTypeId ? room.roomTypeId.name : '',
             // Map room schema status to your housekeeping select values
-            status: mapMasterStatusToReportStatus(room.status)
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -4062,11 +4061,7 @@ app.get('/api/rooms/lookup/:number', auth, async (req, res) => {
 
 // Helper to bridge the gap between Room schema (dirty/clean) 
 // and Report select (vacant_ready/arrival/etc)
-function mapMasterStatusToReportStatus(masterStatus) {
-    if (masterStatus === 'dirty') return 'vacant_not_ready';
-    if (masterStatus === 'clean') return 'vacant_ready';
-    return ''; 
-}
+
 
 // POST: Create a new report
 app.post('/api/status-reports', auth, async (req, res) => {
@@ -4095,9 +4090,6 @@ app.post('/api/status-reports', auth, async (req, res) => {
 
         // 4. Update the Room's actual status in the Room collection
         // Map housekeeping status to room schema status
-        let roomMasterStatus = 'clean';
-        if (status === 'occupied') roomMasterStatus = 'clean'; // or keep as is
-        if (status === 'departure' || status === 'vacant_not_ready') roomMasterStatus = 'dirty';
         
         await Room.findByIdAndUpdate(roomDoc._id, { status: roomMasterStatus });
 
