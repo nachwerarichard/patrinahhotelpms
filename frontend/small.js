@@ -10244,7 +10244,11 @@ document.getElementById('statusReportForm').onsubmit = async (e) => {
     const data = Object.fromEntries(formData.entries());
     const reportId = data._id;
 
-    // Determine method and URL
+    // FIX: Remove the blank string key completely if it's a fresh creation
+    if (!reportId || reportId.trim() === "") {
+        delete data._id;
+    }
+
     const method = reportId ? 'PUT' : 'POST';
     const url = reportId 
         ? `${API_BASE_URL}/status-reports/${reportId}` 

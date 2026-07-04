@@ -3995,11 +3995,16 @@ const Checklist = mongoose.models.Checklist || mongoose.model('Checklist', check
 // StatusReport Schema and Model
 const statusReportSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
-    roomId: { type: mongoose.Schema.Types.ObjectId, ref: 'Room', required: true }, // LINKED HERE
-    status: { type: String, required: true },
-    remarks: { type: String, default: '' },
-    dateTime: { type: Date, required: true, default: Date.now },
-}, { timestamps: true });
+    roomId: { type: mongoose.Schema.Types.ObjectId, ref: 'Room', required: true },
+    status: { 
+        type: String, 
+        enum: ['clean', 'dirty', 'In progress', 'under-maintenance', 'blocked'], // Must match Room schema exactly
+        required: true 
+    },
+    remarks: { type: String },
+    dateTime: { type: Date, default: Date.now }
+});
+
 const StatusReport = mongoose.model('StatusReport', statusReportSchema);
 
 const transactionSchema = new mongoose.Schema({
@@ -4043,24 +4048,7 @@ app.get('/api/status-reports', auth, async (req, res) => {
     }
 });
 
-app.get('/api/rooms/lookup/:number', auth, async (req, res) => {
-    try {
-        // Find room and populate its type to get the category name
-        const room = await Room.findOne({ 
-            number: req.params.number, 
-            hotelId: req.user.hotelId 
-        }).populate('roomTypeId');
 
-        if (!room) return res.status(404).json({ error: 'Room not found' });
-
-        res.json({
-            category: room.roomTypeId ? room.roomTypeId.name : '',
-            // Map room schema status to your housekeeping select values
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
 
 // Helper to bridge the gap between Room schema (dirty/clean) 
 // and Report select (vacant_ready/arrival/etc)
