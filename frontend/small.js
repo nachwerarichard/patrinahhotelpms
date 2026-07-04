@@ -10811,71 +10811,89 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
 // Keep this global array to store room objects
-let fetchRooms = []; 
+let fetchRooms = []; // Global cache for current options
+let lookupTimeout = null; // Holds the active debounce timer
 
 const roomInpt = document.getElementById('reportRoom');
 const datalist = document.getElementById('roomOptions');
 const statusSelect = document.getElementById('reportStatus');
 const categoryInput = document.getElementById('reportCategory');
 
-// 1. Listen for the input event to fetch data AND update selections instantly
-roomInpt.addEventListener('input', async (e) => {
+// Helper function to update target fields from a selected option
+function applySelection(optionNode) {
+    categoryInput.value = optionNode.getAttribute('data-category') || '';
+    statusSelect.value = optionNode.getAttribute('data-status') || '';
+    
+    // Add the temporary visual indicator
+    categoryInput.classList.add('bg-blue-50');
+    statusSelect.classList.add('bg-blue-50');
+    setTimeout(() => {
+        categoryInput.classList.remove('bg-blue-50');
+        statusSelect.classList.remove('bg-blue-50');
+    }, 1000);
+}
+
+// 1. Manage typing, auto-suggestions, and performance debouncing
+roomInpt.addEventListener('input', (e) => {
     const inputValue = e.target.value.trim();
 
+    // Reset fields if input is wiped clean
     if (inputValue.length < 1) {
         datalist.innerHTML = '';
+        categoryInput.value = '';
+        statusSelect.value = '';
         return;
     }
 
-    // Direct Check: Look at the DOM options directly to avoid cache timing mismatches
-    const optionsArray = Array.from(datalist.options);
-    const matchedOption = optionsArray.find(opt => opt.value === inputValue);
-    
+    // Direct Match Check: If user selected an item or finished typing a known option
+    const matchedOption = Array.from(datalist.options).find(opt => opt.value === inputValue);
     if (matchedOption) {
-        // Pull data directly from the option node attributes
-        categoryInput.value = matchedOption.getAttribute('data-category') || '';
-        statusSelect.value = matchedOption.getAttribute('data-status') || '';
+        applySelection(matchedOption);
         return;
     }
 
-    // Fetch rooms from backend based on current typing input
-    try {
-        const response = await authenticatedFetch(`${API_BASE_URL}/rooms/search?number=${encodeURIComponent(inputValue)}`);
-        if (!response.ok) throw new Error('Failed to fetch rooms');
-        
-        fetchRooms = await response.json();
-        datalist.innerHTML = '';
-        
-        fetchRooms.forEach(room => {
-            const option = document.createElement('option');
-            option.value = room.number;
-            
-            // Attach attributes safely to the element directly
-            option.setAttribute('data-category', room.roomTypeId ? room.roomTypeId.name : 'Unknown');
-            option.setAttribute('data-status', room.status || '');
-            
-            datalist.appendChild(option);
-        });
+    // Debounce Loop: Clear the previous timer while the user is actively hitting keys
+    clearTimeout(lookupTimeout);
 
-        // Check if our freshly loaded items contain the value the user just finished typing
-        const postFetchOption = Array.from(datalist.options).find(opt => opt.value === inputValue);
-        if (postFetchOption) {
-            categoryInput.value = postFetchOption.getAttribute('data-category') || '';
-            statusSelect.value = postFetchOption.getAttribute('data-status') || '';
+    // Wait 500ms after typing stops before searching the backend
+    lookupTimeout = setTimeout(async () => {
+        try {
+            const response = await authenticatedFetch(`${API_BASE_URL}/rooms/search?number=${encodeURIComponent(inputValue)}`);
+            if (!response.ok) throw new Error('Failed to fetch rooms');
+            
+            fetchRooms = await response.json();
+            datalist.innerHTML = '';
+            
+            // Build suggestion list nodes
+            fetchRooms.forEach(room => {
+                const option = document.createElement('option');
+                option.value = room.number;
+                
+                // Embed values cleanly as custom data-attributes
+                option.setAttribute('data-category', room.roomTypeId ? room.roomTypeId.name : 'Unknown');
+                option.setAttribute('data-status', room.status || '');
+                
+                datalist.appendChild(option);
+            });
+
+            // Instant check: Did the fetched payload produce an exact match for what's in the box?
+            const postFetchOption = Array.from(datalist.options).find(opt => opt.value === inputValue);
+            if (postFetchOption) {
+                applySelection(postFetchOption);
+            }
+            
+        } catch (error) {
+            console.error('Error auto-populating rooms:', error);
         }
-        
-    } catch (error) {
-        console.error('Error auto-populating rooms:', error);
-    }
+    }, 500);
 });
 
-// 2. Listen for the change event (fires explicitly when an option is selected from datalist)
+// 2. Fallback listener to immediately lock values when choosing from the dropdown menu
 roomInpt.addEventListener('change', (e) => {
     const inputValue = e.target.value.trim();
     const matchedOption = Array.from(datalist.options).find(opt => opt.value === inputValue);
     
     if (matchedOption) {
-        categoryInput.value = matchedOption.getAttribute('data-category') || '';
-        statusSelect.value = matchedOption.getAttribute('data-status') || '';
+        applySelection(matchedOption);
     }
 });

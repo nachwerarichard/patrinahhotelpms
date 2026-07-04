@@ -641,20 +641,23 @@ app.get('/api/rooms', auth, async (req, res) => {
 app.get('/api/rooms/search', auth, async (req, res) => {
     try {
         const { number } = req.query;
-        // Assume req.hotelId comes from your authentication/session middleware
-        const hotelId = req.hotelId; 
+        
+        // Dynamic fallback checking for token auth properties
+        const hotelId = req.user ? req.user.hotelId : req.hotelId; 
 
         if (!number) return res.json([]);
 
+        // Perform partial case-insensitive query match
         const rooms = await Room.find({
             hotelId: hotelId,
-            number: { $regex: number, $options: 'i' } // Case-insensitive partial match
+            number: { $regex: number, $options: 'i' }
         })
-        .populate('roomTypeId') // Crucial: Brings in the RoomType document ('name')
-        .limit(10); // Keeps UI snappy
+        .populate('roomTypeId') // Pulls in the linked RoomType data schema
+        .limit(10);             // Caps output size to optimize performance
 
         res.json(rooms);
     } catch (error) {
+        console.error("Room search endpoint error:", error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
