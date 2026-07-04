@@ -10291,43 +10291,101 @@ async function fetchStatusReports() {
 }
 
 function renderStatusTable(reports) {
-    const tbody = document.getElementById('statusReportTableBody');
-    if (!tbody) return;
+    const tableBody = document.getElementById("statusReportTableBody");
+    const mobileGrid = document.getElementById("statusReportMobileGrid");
+    
+    // 1. Wipe baseline stale data logs out cleanly before painting UI
+    if (tableBody) tableBody.innerHTML = '';
+    if (mobileGrid) mobileGrid.innerHTML = '';
 
-    if (reports.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">No status reports found.</td></tr>`;
+    // 2. Handle empty state scenario gracefully
+    if (!reports || reports.length === 0) {
+        const fallbackMsg = '<div class="text-center p-6 text-gray-400 text-sm font-medium">No housekeeping reports mapped for this cycle.</div>';
+        if (tableBody) tableBody.innerHTML = `<tr><td colspan="6">${fallbackMsg}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
         return;
     }
 
-    tbody.innerHTML = reports.map(r => {
-        // Safe extractions using optional chaining in case a data reference is missing
+    // 3. Loop through records and paint both desktop and mobile views
+    reports.forEach(r => {
+        // Safe data extractions using optional chaining based on deep backend populating
         const roomNumber = r.roomId?.number || 'Unknown Room';
-        const categoryName = r.roomId?.roomTypeId?.name || 'Unassigned';
+        const categoryName = r.roomId?.roomTypeId?.name || 'Standard Type';
         const displayStatus = r.status ? r.status.replace('-', ' ').toUpperCase() : 'UNKNOWN';
+        
+        // Match tailwind badge styles using your app's helper function
+        const statusBadgeColorClass = typeof getStatusColor === 'function' ? getStatusColor(r.status) : "bg-gray-100 text-gray-800";
 
-        return `
-            <tr class="border-b hover:bg-gray-50">
-                <td class="p-3">${roomNumber}</td>
-                <td class="p-3">${categoryName}</td>
+        // Construct the modular action dropdown block using the correct MongoDB ._id key
+        const actionHtml = `
+            <div class="relative inline-block text-left">
+                <button class="p-2 hover:bg-gray-200 rounded-full transition-colors focus:outline-none" onclick="toggleActionButtons(event, this)">
+                    <i class="fas fa-ellipsis-v text-gray-500"></i>
+                </button>
+                <div class="hidden absolute right-0 mt-2 w-40 bg-white border border-gray-200 shadow-2xl rounded-lg p-1.5 z-50">
+                    <button class="w-full text-left px-3 py-2 text-xs font-semibold rounded-md hover:bg-gray-100 text-gray-700 flex items-center" onclick="editReport('${r._id}')">
+                        <i class="fa-solid fa-pen-to-square mr-2 text-gray-400"></i> Edit Report
+                    </button>
+                    <button class="w-full text-left px-3 py-2 text-xs font-semibold rounded-md hover:bg-red-50 text-red-600 flex items-center" onclick="deleteReport('${r._id}')">
+                        <i class="fa-solid fa-trash mr-2 text-red-400"></i> Delete
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // VIEW A: Desktop Table Row Painting
+        if (tableBody) {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50/80 transition-colors border-b border-gray-100";
+            tr.innerHTML = `
+                <td class="p-3 font-semibold text-slate-900">${roomNumber}</td>
+                <td class="p-3 text-gray-500">${categoryName}</td>
                 <td class="p-3">
-                    <span class="px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(r.status)}">
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${statusBadgeColorClass}">
                         ${displayStatus}
                     </span>
                 </td>
-                <td class="p-3">${r.remarks || ''}</td>
-                <td class="p-3 text-sm text-gray-500">${new Date(r.dateTime).toLocaleString()}</td>
-                <td class="p-3 flex gap-3">
-                    <!-- FIX: Passing just the ID to avoid breaking HTML attributes -->
-                    <button onclick="editReport('${r._id}')" class="text-indigo-500 hover:text-indigo-700 transition-colors" title="Edit">
-                        <i class="fa-solid fa-pen-to-square"></i>
-                    </button>
-                    <button onclick="deleteReport('${r._id}')" class="text-red-400 hover:text-red-600 transition-colors" title="Delete">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                <td class="p-3 text-gray-500 max-w-xs truncate" title="${r.remarks || ''}">
+                    ${r.remarks || '<span class="text-gray-300 italic">No notes</span>'}
                 </td>
-            </tr>
-        `;
-    }).join('');
+                <td class="p-3 text-xs text-gray-400 font-normal">${r.dateTime ? new Date(r.dateTime).toLocaleString() : 'N/A'}</td>
+                <td class="p-3 text-center">${actionHtml}</td>
+            `;
+            tableBody.appendChild(tr);
+        }
+
+        // VIEW B: Mobile Stacked Card View Painting
+        if (mobileGrid) {
+            const card = document.createElement('div');
+            card.className = "p-4 bg-slate-50/60 border border-gray-200 rounded-xl shadow-sm relative hover:bg-slate-50 transition-colors";
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h4 class="text-base font-bold text-slate-900">Room ${roomNumber}</h4>
+                        <p class="text-xs text-gray-400 font-medium">${categoryName}</p>
+                    </div>
+                    <div>
+                        ${actionHtml}
+                    </div>
+                </div>
+                
+                <div class="my-2 text-xs text-gray-600 bg-white border border-gray-100 rounded-lg p-2.5 min-h-[40px]">
+                    <span class="text-[10px] uppercase tracking-wider font-bold text-gray-400 block mb-0.5">Remarks / Details</span>
+                    <p class="italic">${r.remarks || 'No descriptive comments captured.'}</p>
+                </div>
+
+                <div class="flex justify-between items-center pt-2 text-xs">
+                    <div class="text-gray-400 text-[11px]">
+                        <i class="far fa-clock mr-1"></i> ${r.dateTime ? new Date(r.dateTime).toLocaleString() : 'N/A'}
+                    </div>
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold ${statusBadgeColorClass}">
+                        ${displayStatus}
+                    </span>
+                </div>
+            `;
+            mobileGrid.appendChild(card);
+        }
+    });
 }
 
 // DELETE Operation
@@ -10405,97 +10463,7 @@ async function filterStatusReportsByDate() {
 }
 
 // Complete Dual UI rendering companion function to copy/paste 
-function renderStatusTable(reports) {
-    const tableBody = document.getElementById("statusReportTableBody");
-    const mobileGrid = document.getElementById("statusReportMobileGrid");
-    
-    // Wipe baseline stale data logs out cleanly before painting UI
-    if (tableBody) tableBody.innerHTML = '';
-    if (mobileGrid) mobileGrid.innerHTML = '';
 
-    if (!reports || reports.length === 0) {
-        const fallbackMsg = '<div class="text-center p-6 text-gray-400 text-sm font-medium">No housekeeping reports mapped for this cycle.</div>';
-        if (tableBody) tableBody.innerHTML = `<tr><td colspan="6">${fallbackMsg}</td></tr>`;
-        if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
-        return;
-    }
-
-    reports.forEach(report => {
-        // Dynamic color tags based on standard housekeeping assignments
-        let statusBadgeClass = "bg-gray-100 text-gray-800";
-        if (report.status?.toLowerCase() === 'clean') statusBadgeClass = "bg-green-100 text-green-800";
-        if (report.status?.toLowerCase() === 'dirty') statusBadgeClass = "bg-amber-100 text-amber-800";
-        if (report.status?.toLowerCase() === 'inspected') statusBadgeClass = "bg-blue-100 text-blue-800";
-
-        // Setup shared row item actionable items HTML string template block
-        const actionHtml = `
-            <div class="relative inline-block text-left">
-                <button class="p-2 hover:bg-gray-200 rounded-full transition-colors focus:outline-none" onclick="toggleActionButtons(event, this)">
-                    <i class="fas fa-ellipsis-v text-gray-500"></i>
-                </button>
-                <div class="hidden absolute right-0 mt-2 w-40 bg-white border border-gray-200 shadow-2xl rounded-lg p-1.5 z-50">
-                    <button class="w-full text-left px-3 py-2 text-xs font-semibold rounded-md hover:bg-gray-100 text-gray-700" onclick="viewReportDetails('${report.id}')">
-                        <i class="fas fa-eye mr-2 text-gray-400"></i> View Details
-                    </button>
-                    <button class="w-full text-left px-3 py-2 text-xs font-semibold rounded-md hover:bg-red-50 text-red-600" onclick="deleteReportRecord('${report.id}')">
-                        <i class="fas fa-trash-can mr-2 text-red-400"></i> Delete
-                    </button>
-                </div>
-            </div>
-        `;
-
-        // POPULATE VIEW 1: Traditional Large Desktop Layout Matrix Row
-        if (tableBody) {
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-50/80 transition-colors border-b border-gray-100";
-            tr.innerHTML = `
-                <td class="p-3 font-semibold text-slate-900">${report.room || 'N/A'}</td>
-                <td class="p-3 text-gray-500">${report.category || 'Standard'}</td>
-                <td class="p-3">
-                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${statusBadgeClass}">
-                        ${report.status || 'Unknown'}
-                    </span>
-                </td>
-                <td class="p-3 text-gray-500 max-w-xs truncate" title="${report.remarks || ''}">
-                    ${report.remarks || '<span class="text-gray-300 italic">No notes</span>'}
-                </td>
-                <td class="p-3 text-xs text-gray-400 font-normal">${report.dateTime || report.createdAt || 'N/A'}</td>
-                <td class="p-3 text-center">${actionHtml}</td>
-            `;
-            tableBody.appendChild(tr);
-        }
-
-        // POPULATE VIEW 2: Elegant Stacked Card Module (Optimized for Small Touchscreens)
-        if (mobileGrid) {
-            const card = document.createElement('div');
-            card.className = "p-4 bg-slate-50/60 border border-gray-200 rounded-xl shadow-sm relative hover:bg-slate-50 transition-colors";
-            card.innerHTML = `
-                <div class="flex justify-between items-start mb-2">
-                    <div>
-                        <h4 class="text-base font-bold text-slate-900">Room ${report.room || 'N/A'}</h4>
-                        <p class="text-xs text-gray-400 font-medium">${report.category || 'Standard Type'}</p>
-                    </div>
-                    <div>
-                        ${actionHtml}
-                    </div>
-                </div>
-                
-                <div class="my-2 text-xs text-gray-600 bg-white border border-gray-100 rounded-lg p-2.5 min-h-[40px]">
-                    <span class="text-[10px] uppercase tracking-wider font-bold text-gray-400 block mb-0.5">Remarks / Details</span>
-                    <p class="italic">${report.remarks || 'No descriptive comments captured.'}</p>
-                </div>
-
-                <div class="flex justify-between items-center pt-2 text-xs">
-                    <div class="text-gray-400 text-[11px]"><i class="far fa-clock mr-1"></i> ${report.dateTime || report.createdAt || 'N/A'}</div>
-                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold ${statusBadgeClass}">
-                        ${report.status || 'Unknown'}
-                    </span>
-                </div>
-            `;
-            mobileGrid.appendChild(card);
-        }
-    });
-}
 document.addEventListener('DOMContentLoaded', () => {
     loadOrders();
 });
