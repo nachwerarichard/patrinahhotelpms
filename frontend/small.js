@@ -8,7 +8,6 @@ const recordsPerPage = 30; // Maximum 5 booking records per page
 let currentSearchTerm = ''; // New: To keep track of the active search term for pagination
 let currentBookingObjectId = null;
 const logsPerPage =100;
-let filteredStatusReports = [];
 
 // Calendar state
 let currentCalendarDate = new Date(); // Stores the month/year currently displayed in the calendar
@@ -10292,9 +10291,15 @@ async function fetchStatusReports() {
     }
 }
 
+// Keep this global declaration at the top level of your script file
+let filteredStatusReports = [];
+
 function renderStatusTable(reports) {
     const tableBody = document.getElementById("statusReportTableBody");
     const mobileGrid = document.getElementById("statusReportMobileGrid");
+    
+    // 0. FIX: Store the currently rendered reports globally so Export & Print can read them!
+    filteredStatusReports = reports || [];
     
     // 1. Wipe baseline stale data logs out cleanly before painting UI
     if (tableBody) tableBody.innerHTML = '';
