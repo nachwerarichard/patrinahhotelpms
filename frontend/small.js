@@ -10889,3 +10889,75 @@ roomInpt.addEventListener('change', (e) => {
         applySelection(matchedOption);
     }
 });
+
+function exportStatusReportsToExcel() {
+  // Guard clause: Don't try to export if the array is empty
+  if (!filteredStatusReports || filteredStatusReports.length === 0) {
+    alert("No data available to export.");
+    return;
+  }
+
+  const dataToExport = filteredStatusReports.map((report) => {
+    // Safely pull from populated sub-documents
+    const roomNumber = report.roomId?.number || 'Unknown';
+    const categoryName = report.roomId?.roomTypeId?.name || 'Standard Type';
+    const displayStatus = report.status ? report.status.replace('-', ' ').toUpperCase() : 'UNKNOWN';
+
+    return {
+      'Room': roomNumber,
+      'Category': categoryName,
+      'Status': typeof humanize === 'function' ? humanize(report.status) : displayStatus,
+      'Remarks': report.remarks || '',
+      'Date & Time': report.dateTime ? new Date(report.dateTime).toLocaleString() : 'N/A',
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(dataToExport);
+  const wb = XLSX.utils.book_new();
+  XXLSX.utils.book_append_sheet(wb, ws, 'Housekeeping Reports');
+  XLSX.writeFile(wb, 'Hotel_Housekeeping_Reports.xlsx');
+}
+
+function printStatusReports() {
+  if (!filteredStatusReports || filteredStatusReports.length === 0) {
+    alert("No data available to print.");
+    return;
+  }
+
+  const win = window.open('', '_blank');
+  if (!win) {
+    alert("Popup blocked! Please allow popups to print reports.");
+    return;
+  }
+
+  win.document.write('<html><head><title>Housekeeping Report</title>');
+  win.document.write('<style>body{font-family:sans-serif;margin:20px;}h1{text-align:center;margin-bottom:5px;font-size:24px;}p.subtitle{text-align:center;color:#666;margin-bottom:20px;font-size:12px;}table{width:100%;border-collapse:collapse;margin-bottom:20px;}th,td{border:1px solid #ccc;padding:8px;text-align:left;font-size:13px;}th{background:#f2f2f2;font-weight:bold;}</style>');
+  win.document.write('</head><body>');
+  win.document.write('<h1>Housekeeping Room Status Report</h1>');
+  win.document.write(`<p class="subtitle">Generated on: ${new Date().toLocaleString()}</p>`);
+  win.document.write('<table><thead><tr><th>Room</th><th>Category</th><th>Status</th><th>Remarks</th><th>Date & Time</th></tr></thead><tbody>');
+  
+  filteredStatusReports.forEach((report) => {
+    const roomNumber = report.roomId?.number || 'Unknown';
+    const categoryName = report.roomId?.roomTypeId?.name || 'Standard';
+    const displayStatus = report.status ? report.status.replace('-', ' ').toUpperCase() : 'UNKNOWN';
+    const cleanStatus = typeof humanize === 'function' ? humanize(report.status) : displayStatus;
+
+    win.document.write('<tr>');
+    win.document.write(`<td><strong>${roomNumber}</strong></td>`);
+    win.document.write(`<td>${categoryName}</td>`);
+    win.document.write(`<td>${cleanStatus}</td>`);
+    win.document.write(`<td>${report.remarks || ''}</td>`);
+    win.document.write(`<td>${report.dateTime ? new Date(report.dateTime).toLocaleString() : 'N/A'}</td>`);
+    win.document.write('</tr>');
+  });
+  
+  win.document.write('</tbody></table></body></html>');
+  win.document.close();
+
+  // FIX: Wait for document stream window wrapper context to finish loading before initializing print dialog
+  win.onload = function() {
+    win.print();
+    // Optional: win.close(); // Automatically shuts the tab down after printing/cancelling
+  };
+}
