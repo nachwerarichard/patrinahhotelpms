@@ -10843,33 +10843,35 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// Store fetched rooms globally to access them easily when selected
 // Keep this global array to store room objects
-let fetchRooms = []; // Keep this global
+let fetchRooms = []; 
 
 const roomInpt = document.getElementById('reportRoom');
 const datalist = document.getElementById('roomOptions');
 const statusSelect = document.getElementById('reportStatus');
 const categoryInput = document.getElementById('reportCategory');
 
-// 1. Listen for the input event ONLY to fetch list items while typing
+// 1. Listen for the input event to fetch data AND update selections instantly
 roomInpt.addEventListener('input', async (e) => {
     const inputValue = e.target.value.trim();
 
-    // If empty, reset
     if (inputValue.length < 1) {
         datalist.innerHTML = '';
         return;
     }
 
-    // Check if the input exactly matches a room we already have loaded
-    const matchedRoom = fetchRooms.find(room => room.number === inputValue);
-    if (matchedRoom) {
-        populateFormFields(matchedRoom);
+    // Direct Check: Look at the DOM options directly to avoid cache timing mismatches
+    const optionsArray = Array.from(datalist.options);
+    const matchedOption = optionsArray.find(opt => opt.value === inputValue);
+    
+    if (matchedOption) {
+        // Pull data directly from the option node attributes
+        categoryInput.value = matchedOption.getAttribute('data-category') || '';
+        statusSelect.value = matchedOption.getAttribute('data-status') || '';
         return;
     }
 
-    // Fetch rooms from backend based on typing
+    // Fetch rooms from backend based on current typing input
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/rooms/search?number=${encodeURIComponent(inputValue)}`);
         if (!response.ok) throw new Error('Failed to fetch rooms');
@@ -10880,13 +10882,19 @@ roomInpt.addEventListener('input', async (e) => {
         fetchRooms.forEach(room => {
             const option = document.createElement('option');
             option.value = room.number;
+            
+            // Attach attributes safely to the element directly
+            option.setAttribute('data-category', room.roomTypeId ? room.roomTypeId.name : 'Unknown');
+            option.setAttribute('data-status', room.status || '');
+            
             datalist.appendChild(option);
         });
 
-        // Double check if the fetched items contain our exact match now
-        const instantMatch = fetchRooms.find(room => room.number === inputValue);
-        if (instantMatch) {
-            populateFormFields(instantMatch);
+        // Check if our freshly loaded items contain the value the user just finished typing
+        const postFetchOption = Array.from(datalist.options).find(opt => opt.value === inputValue);
+        if (postFetchOption) {
+            categoryInput.value = postFetchOption.getAttribute('data-category') || '';
+            statusSelect.value = postFetchOption.getAttribute('data-status') || '';
         }
         
     } catch (error) {
@@ -10897,33 +10905,10 @@ roomInpt.addEventListener('input', async (e) => {
 // 2. Listen for the change event (fires explicitly when an option is selected from datalist)
 roomInpt.addEventListener('change', (e) => {
     const inputValue = e.target.value.trim();
-    const matchedRoom = fetchRooms.find(room => room.number === inputValue);
-    if (matchedRoom) {
-        populateFormFields(matchedRoom);
+    const matchedOption = Array.from(datalist.options).find(opt => opt.value === inputValue);
+    
+    if (matchedOption) {
+        categoryInput.value = matchedOption.getAttribute('data-category') || '';
+        statusSelect.value = matchedOption.getAttribute('data-status') || '';
     }
 });
-
-// Helper function to safely update the DOM fields
-function populateFormFields(room) {
-    // Populate Category
-    categoryInput.value = room.roomTypeId ? room.roomTypeId.name : 'Unknown';
-    
-    // Populate Status Select Dropdown
-    if (room.status) {
-        const dbStatus = room.status.trim();
-        
-        // Timeout pushes the assignment past the browser's input-redraw sequence
-        setTimeout(() => {
-            statusSelect.value = dbStatus;
-            
-            // Fallback case-insensitive check if it still doesn't register 
-            if (statusSelect.value !== dbStatus) {
-                const lowerStatus = dbStatus.toLowerCase();
-                const optionMatch = Array.from(statusSelect.options).find(opt => opt.value.toLowerCase() === lowerStatus);
-                if (optionMatch) {
-                    statusSelect.value = optionMatch.value;
-                }
-            }
-        }, 50);
-    }
-}
