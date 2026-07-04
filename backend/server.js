@@ -4067,7 +4067,13 @@ app.get('/api/rooms/lookup/:number', auth, async (req, res) => {
 app.post('/api/status-reports', auth, async (req, res) => {
     try {
         const { room, status, category, remarks, dateTime } = req.body;
-        const hotelId = req.user.hotelId;
+        
+        // Ensure this matches how your auth middleware stores user/hotel data
+        const hotelId = req.user ? req.user.hotelId : req.hotelId; 
+
+        if (!hotelId) {
+            return res.status(401).json({ error: "Unauthorized: No hotel context found." });
+        }
 
         // 1. Find the physical Room document using the number and hotel context
         const roomDoc = await Room.findOne({ number: room, hotelId: hotelId });
@@ -4080,7 +4086,7 @@ app.post('/api/status-reports', auth, async (req, res) => {
         const report = new StatusReport({
             hotelId: hotelId,
             roomId: roomDoc._id, // Link to the Room's ObjectId
-            status: status,
+            status: status,      // e.g., 'dirty', 'clean', 'In progress'
             remarks: remarks,
             dateTime: dateTime || new Date()
         });
@@ -4089,9 +4095,8 @@ app.post('/api/status-reports', auth, async (req, res) => {
         await report.save();
 
         // 4. Update the Room's actual status in the Room collection
-        // Map housekeeping status to room schema status
-        
-        await Room.findByIdAndUpdate(roomDoc._id, { status: roomMasterStatus });
+        // FIX: Replaced undefined 'roomMasterStatus' with the valid incoming 'status' value
+        await Room.findByIdAndUpdate(roomDoc._id, { status: status }, { new: true });
 
         res.status(201).json(report);
     } catch (err) {
