@@ -4016,10 +4016,14 @@ const transactionSchema = new mongoose.Schema({
 });
 
 const Transaction = mongoose.model('Transaction', transactionSchema);
+
 app.get('/api/status-reports', auth, async (req, res) => {
     try {
         const { date } = req.query;
-        let query = { hotelId: req.user.hotelId };
+        
+        // Dynamic fallback to ensure hotelId matches your middleware injection style
+        const hotelId = req.user ? req.user.hotelId : req.hotelId;
+        let query = { hotelId: hotelId };
 
         if (date) {
             const start = new Date(date);
@@ -4029,14 +4033,15 @@ app.get('/api/status-reports', auth, async (req, res) => {
             query.dateTime = { $gte: start, $lte: end };
         }
 
-        // --- THE MODIFICATION: POPULATE ---
         const reports = await StatusReport.find(query)
             .populate({
-                path: 'roomId',           // 1. Look at the roomId field in StatusReport
-                select: 'number',        // 2. Only pull the room number
-                populate: {              // 3. Deep populate: look at roomTypeId inside the Room
+                path: 'roomId',
+                // FIX: Explicitly include 'roomTypeId' alongside 'number' 
+                // so the deep populate sub-parser can read the relation model.
+                select: 'number roomTypeId', 
+                populate: {
                     path: 'roomTypeId',
-                    select: 'name'       // 4. Only pull the category name (e.g., "Deluxe")
+                    select: 'name'
                 }
             })
             .sort({ dateTime: -1 });
@@ -4047,8 +4052,6 @@ app.get('/api/status-reports', auth, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
-
 
 // Helper to bridge the gap between Room schema (dirty/clean) 
 // and Report select (vacant_ready/arrival/etc)
