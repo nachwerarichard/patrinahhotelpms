@@ -10845,7 +10845,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // Store fetched rooms globally to access them easily when selected
 // Keep this global array to store room objects
-let fetchedRooms = []; // Keep this global
+let fetchRooms = []; // Keep this global
 
 const roomInpt = document.getElementById('reportRoom');
 const datalist = document.getElementById('roomOptions');
@@ -10863,7 +10863,7 @@ roomInpt.addEventListener('input', async (e) => {
     }
 
     // Check if the input exactly matches a room we already have loaded
-    const matchedRoom = fetchedRooms.find(room => room.number === inputValue);
+    const matchedRoom = fetchRooms.find(room => room.number === inputValue);
     if (matchedRoom) {
         populateFormFields(matchedRoom);
         return;
@@ -10874,17 +10874,17 @@ roomInpt.addEventListener('input', async (e) => {
         const response = await authenticatedFetch(`${API_BASE_URL}/rooms/search?number=${encodeURIComponent(inputValue)}`);
         if (!response.ok) throw new Error('Failed to fetch rooms');
         
-        fetchedRooms = await response.json();
+        fetchRooms = await response.json();
         datalist.innerHTML = '';
         
-        fetchedRooms.forEach(room => {
+        fetchRooms.forEach(room => {
             const option = document.createElement('option');
             option.value = room.number;
             datalist.appendChild(option);
         });
 
         // Double check if the fetched items contain our exact match now
-        const instantMatch = fetchedRooms.find(room => room.number === inputValue);
+        const instantMatch = fetchRooms.find(room => room.number === inputValue);
         if (instantMatch) {
             populateFormFields(instantMatch);
         }
@@ -10897,7 +10897,7 @@ roomInpt.addEventListener('input', async (e) => {
 // 2. Listen for the change event (fires explicitly when an option is selected from datalist)
 roomInpt.addEventListener('change', (e) => {
     const inputValue = e.target.value.trim();
-    const matchedRoom = fetchedRooms.find(room => room.number === inputValue);
+    const matchedRoom = fetchRooms.find(room => room.number === inputValue);
     if (matchedRoom) {
         populateFormFields(matchedRoom);
     }
