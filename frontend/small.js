@@ -10921,7 +10921,7 @@ function exportStatusReportsToExcel() {
 
   const ws = XLSX.utils.json_to_sheet(dataToExport);
   const wb = XLSX.utils.book_new();
-  XXLSX.utils.book_append_sheet(wb, ws, 'Housekeeping Reports');
+  XLSX.utils.book_append_sheet(wb, ws, 'Housekeeping Reports');
   XLSX.writeFile(wb, 'Hotel_Housekeeping_Reports.xlsx');
 }
 
