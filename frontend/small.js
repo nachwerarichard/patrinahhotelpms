@@ -10275,14 +10275,59 @@ document.getElementById('statusReportForm').onsubmit = async (e) => {
 };
 
 // READ Operation (Fetching data for a table)
+// Global storage to hold reports so we can access them by ID during edits
+let statusReportsCache = [];
+
 async function fetchStatusReports() {
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/status-reports`);
-        const reports = await response.json();
-        renderStatusTable(reports);
+        if (!response.ok) throw new Error("Failed to fetch reports");
+        
+        statusReportsCache = await response.json();
+        renderStatusTable(statusReportsCache);
     } catch (err) {
         console.error("Failed to load reports:", err);
     }
+}
+
+function renderStatusTable(reports) {
+    const tbody = document.getElementById('statusReportTableBody');
+    if (!tbody) return;
+
+    if (reports.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">No status reports found.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = reports.map(r => {
+        // Safe extractions using optional chaining in case a data reference is missing
+        const roomNumber = r.roomId?.number || 'Unknown Room';
+        const categoryName = r.roomId?.roomTypeId?.name || 'Unassigned';
+        const displayStatus = r.status ? r.status.replace('-', ' ').toUpperCase() : 'UNKNOWN';
+
+        return `
+            <tr class="border-b hover:bg-gray-50">
+                <td class="p-3">${roomNumber}</td>
+                <td class="p-3">${categoryName}</td>
+                <td class="p-3">
+                    <span class="px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(r.status)}">
+                        ${displayStatus}
+                    </span>
+                </td>
+                <td class="p-3">${r.remarks || ''}</td>
+                <td class="p-3 text-sm text-gray-500">${new Date(r.dateTime).toLocaleString()}</td>
+                <td class="p-3 flex gap-3">
+                    <!-- FIX: Passing just the ID to avoid breaking HTML attributes -->
+                    <button onclick="editReport('${r._id}')" class="text-indigo-500 hover:text-indigo-700 transition-colors" title="Edit">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                    <button onclick="deleteReport('${r._id}')" class="text-red-400 hover:text-red-600 transition-colors" title="Delete">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
 // DELETE Operation
@@ -10302,32 +10347,7 @@ async function deleteReport(id) {
     }
 }
 
-function renderStatusTable(reports) {
-    const tbody = document.getElementById('statusReportTableBody');
-    if (!tbody) return;
 
-    tbody.innerHTML = reports.map(r => `
-        <tr class="border-b hover:bg-gray-50">
-            <td>${r.roomId.number}</td>
-            <td>${r.roomId.roomTypeId.name}</td>
-            <td class="p-3">
-                <span class="px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(r.status)}">
-                    ${r.status.replace('_', ' ').toUpperCase()}
-                </span>
-            </td>
-            <td class="p-3">${r.remarks}</td>
-            <td class="p-3 text-sm text-gray-500">${new Date(r.dateTime).toLocaleString()}</td>
-<td class="p-3 flex gap-3">
-    <button onclick="editReport('${encodeURIComponent(JSON.stringify(r))}')" class="text-indigo-500 hover:text-indigo-700 transition-colors">
-        <i class="fa-solid fa-pen-to-square"></i>
-    </button>
-    <button onclick="deleteReport('${r._id}')" class="text-red-400 hover:text-red-600 transition-colors">
-        <i class="fa-solid fa-trash"></i>
-    </button>
-</td>
-        </tr>
-    `).join('');
-}
 
 function getStatusColor(status) {
     const colors = {
