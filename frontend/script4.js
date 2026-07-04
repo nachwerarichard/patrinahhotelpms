@@ -4,10 +4,11 @@
 let rooms = [];
 let bookings = []; // This will now hold the currentAly displayed page's bookings or filtered bookings
 let currentPage = 1;
-const recordsPerPage = 20; // Maximum 5 booking records per page
+const recordsPerPage = 30; // Maximum 5 booking records per page
 let currentSearchTerm = ''; // New: To keep track of the active search term for pagination
 let currentBookingObjectId = null;
-const logsPerPage =20;
+const logsPerPage =100;
+
 // Calendar state
 let currentCalendarDate = new Date(); // Stores the month/year currently displayed in the calendar
 
@@ -10244,7 +10245,11 @@ document.getElementById('statusReportForm').onsubmit = async (e) => {
     const data = Object.fromEntries(formData.entries());
     const reportId = data._id;
 
-    // Determine method and URL
+    // FIX: Remove the blank string key completely if it's a fresh creation
+    if (!reportId || reportId.trim() === "") {
+        delete data._id;
+    }
+
     const method = reportId ? 'PUT' : 'POST';
     const url = reportId 
         ? `${API_BASE_URL}/status-reports/${reportId}` 
@@ -10271,14 +10276,123 @@ document.getElementById('statusReportForm').onsubmit = async (e) => {
 };
 
 // READ Operation (Fetching data for a table)
+// Global storage to hold reports so we can access them by ID during edits
+let statusReportsCache = [];
+
 async function fetchStatusReports() {
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/status-reports`);
-        const reports = await response.json();
-        renderStatusTable(reports);
+        if (!response.ok) throw new Error("Failed to fetch reports");
+        
+        statusReportsCache = await response.json();
+        renderStatusTable(statusReportsCache);
     } catch (err) {
         console.error("Failed to load reports:", err);
     }
+}
+
+// Keep this global declaration at the top level of your script file
+let filteredStatusReports = [];
+
+function renderStatusTable(reports) {
+    const tableBody = document.getElementById("statusReportTableBody");
+    const mobileGrid = document.getElementById("statusReportMobileGrid");
+    
+    // 0. FIX: Store the currently rendered reports globally so Export & Print can read them!
+    filteredStatusReports = reports || [];
+    
+    // 1. Wipe baseline stale data logs out cleanly before painting UI
+    if (tableBody) tableBody.innerHTML = '';
+    if (mobileGrid) mobileGrid.innerHTML = '';
+
+    // 2. Handle empty state scenario gracefully
+    if (!reports || reports.length === 0) {
+        const fallbackMsg = '<div class="text-center p-6 text-gray-400 text-sm font-medium">No housekeeping reports mapped for this cycle.</div>';
+        if (tableBody) tableBody.innerHTML = `<tr><td colspan="6">${fallbackMsg}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
+        return;
+    }
+
+    // 3. Loop through records and paint both desktop and mobile views
+    reports.forEach(r => {
+        // Safe data extractions using optional chaining based on deep backend populating
+        const roomNumber = r.roomId?.number || 'Unknown Room';
+        const categoryName = r.roomId?.roomTypeId?.name || 'Standard Type';
+        const displayStatus = r.status ? r.status.replace('-', ' ').toUpperCase() : 'UNKNOWN';
+        
+        // Match tailwind badge styles using your app's helper function
+        const statusBadgeColorClass = typeof getStatusColor === 'function' ? getStatusColor(r.status) : "bg-gray-100 text-gray-800";
+
+        // Construct the modular action dropdown block using the correct MongoDB ._id key
+        const actionHtml = `
+            <div class="relative inline-block text-left">
+                <button class="p-2 hover:bg-gray-200 rounded-full transition-colors focus:outline-none" onclick="toggleActionButtons(event, this)">
+                    <i class="fas fa-ellipsis-v text-gray-500"></i>
+                </button>
+                <div class="hidden absolute right-0 mt-2 w-40 bg-white border border-gray-200 shadow-2xl rounded-lg p-1.5 z-50">
+                    <button class="w-full text-left px-3 py-2 text-xs font-semibold rounded-md hover:bg-gray-100 text-gray-700 flex items-center" onclick="editReport('${r._id}')">
+                        <i class="fa-solid fa-pen-to-square mr-2 text-gray-400"></i> Edit Report
+                    </button>
+                    <button class="w-full text-left px-3 py-2 text-xs font-semibold rounded-md hover:bg-red-50 text-red-600 flex items-center" onclick="deleteReport('${r._id}')">
+                        <i class="fa-solid fa-trash mr-2 text-red-400"></i> Delete
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // VIEW A: Desktop Table Row Painting
+        if (tableBody) {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50/80 transition-colors border-b border-gray-100";
+            tr.innerHTML = `
+                <td class="p-3 font-semibold text-slate-900">${roomNumber}</td>
+                <td class="p-3 text-gray-500">${categoryName}</td>
+                <td class="p-3">
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${statusBadgeColorClass}">
+                        ${displayStatus}
+                    </span>
+                </td>
+                <td class="p-3 text-gray-500 max-w-xs truncate" title="${r.remarks || ''}">
+                    ${r.remarks || '<span class="text-gray-300 italic">No notes</span>'}
+                </td>
+                <td class="p-3 text-xs text-gray-400 font-normal">${r.dateTime ? new Date(r.dateTime).toLocaleString() : 'N/A'}</td>
+                <td class="p-3 text-center">${actionHtml}</td>
+            `;
+            tableBody.appendChild(tr);
+        }
+
+        // VIEW B: Mobile Stacked Card View Painting
+        if (mobileGrid) {
+            const card = document.createElement('div');
+            card.className = "p-4 bg-slate-50/60 border border-gray-200 rounded-xl shadow-sm relative hover:bg-slate-50 transition-colors";
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h4 class="text-base font-bold text-slate-900">Room ${roomNumber}</h4>
+                        <p class="text-xs text-gray-400 font-medium">${categoryName}</p>
+                    </div>
+                    <div>
+                        ${actionHtml}
+                    </div>
+                </div>
+                
+                <div class="my-2 text-xs text-gray-600 bg-white border border-gray-100 rounded-lg p-2.5 min-h-[40px]">
+                    <span class="text-[10px] uppercase tracking-wider font-bold text-gray-400 block mb-0.5">Remarks / Details</span>
+                    <p class="italic">${r.remarks || 'No descriptive comments captured.'}</p>
+                </div>
+
+                <div class="flex justify-between items-center pt-2 text-xs">
+                    <div class="text-gray-400 text-[11px]">
+                        <i class="far fa-clock mr-1"></i> ${r.dateTime ? new Date(r.dateTime).toLocaleString() : 'N/A'}
+                    </div>
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold ${statusBadgeColorClass}">
+                        ${displayStatus}
+                    </span>
+                </div>
+            `;
+            mobileGrid.appendChild(card);
+        }
+    });
 }
 
 // DELETE Operation
@@ -10298,32 +10412,7 @@ async function deleteReport(id) {
     }
 }
 
-function renderStatusTable(reports) {
-    const tbody = document.getElementById('statusReportTableBody');
-    if (!tbody) return;
 
-    tbody.innerHTML = reports.map(r => `
-        <tr class="border-b hover:bg-gray-50">
-            <td>${r.roomId.number}</td>
-            <td>${r.roomId.roomTypeId.name}</td>
-            <td class="p-3">
-                <span class="px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(r.status)}">
-                    ${r.status.replace('_', ' ').toUpperCase()}
-                </span>
-            </td>
-            <td class="p-3">${r.remarks}</td>
-            <td class="p-3 text-sm text-gray-500">${new Date(r.dateTime).toLocaleString()}</td>
-<td class="p-3 flex gap-3">
-    <button onclick="editReport('${encodeURIComponent(JSON.stringify(r))}')" class="text-indigo-500 hover:text-indigo-700 transition-colors">
-        <i class="fa-solid fa-pen-to-square"></i>
-    </button>
-    <button onclick="deleteReport('${r._id}')" class="text-red-400 hover:text-red-600 transition-colors">
-        <i class="fa-solid fa-trash"></i>
-    </button>
-</td>
-        </tr>
-    `).join('');
-}
 
 function getStatusColor(status) {
     const colors = {
@@ -10381,159 +10470,36 @@ async function filterStatusReportsByDate() {
 }
 
 // Complete Dual UI rendering companion function to copy/paste 
-function renderStatusTable(reports) {
-    const tableBody = document.getElementById("statusReportTableBody");
-    const mobileGrid = document.getElementById("statusReportMobileGrid");
-    
-    // Wipe baseline stale data logs out cleanly before painting UI
-    if (tableBody) tableBody.innerHTML = '';
-    if (mobileGrid) mobileGrid.innerHTML = '';
 
-    if (!reports || reports.length === 0) {
-        const fallbackMsg = '<div class="text-center p-6 text-gray-400 text-sm font-medium">No housekeeping reports mapped for this cycle.</div>';
-        if (tableBody) tableBody.innerHTML = `<tr><td colspan="6">${fallbackMsg}</td></tr>`;
-        if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
-        return;
-    }
-
-    reports.forEach(report => {
-        // Dynamic color tags based on standard housekeeping assignments
-        let statusBadgeClass = "bg-gray-100 text-gray-800";
-        if (report.status?.toLowerCase() === 'clean') statusBadgeClass = "bg-green-100 text-green-800";
-        if (report.status?.toLowerCase() === 'dirty') statusBadgeClass = "bg-amber-100 text-amber-800";
-        if (report.status?.toLowerCase() === 'inspected') statusBadgeClass = "bg-blue-100 text-blue-800";
-
-        // Setup shared row item actionable items HTML string template block
-        const actionHtml = `
-            <div class="relative inline-block text-left">
-                <button class="p-2 hover:bg-gray-200 rounded-full transition-colors focus:outline-none" onclick="toggleActionButtons(event, this)">
-                    <i class="fas fa-ellipsis-v text-gray-500"></i>
-                </button>
-                <div class="hidden absolute right-0 mt-2 w-40 bg-white border border-gray-200 shadow-2xl rounded-lg p-1.5 z-50">
-                    <button class="w-full text-left px-3 py-2 text-xs font-semibold rounded-md hover:bg-gray-100 text-gray-700" onclick="viewReportDetails('${report.id}')">
-                        <i class="fas fa-eye mr-2 text-gray-400"></i> View Details
-                    </button>
-                    <button class="w-full text-left px-3 py-2 text-xs font-semibold rounded-md hover:bg-red-50 text-red-600" onclick="deleteReportRecord('${report.id}')">
-                        <i class="fas fa-trash-can mr-2 text-red-400"></i> Delete
-                    </button>
-                </div>
-            </div>
-        `;
-
-        // POPULATE VIEW 1: Traditional Large Desktop Layout Matrix Row
-        if (tableBody) {
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-50/80 transition-colors border-b border-gray-100";
-            tr.innerHTML = `
-                <td class="p-3 font-semibold text-slate-900">${report.room || 'N/A'}</td>
-                <td class="p-3 text-gray-500">${report.category || 'Standard'}</td>
-                <td class="p-3">
-                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${statusBadgeClass}">
-                        ${report.status || 'Unknown'}
-                    </span>
-                </td>
-                <td class="p-3 text-gray-500 max-w-xs truncate" title="${report.remarks || ''}">
-                    ${report.remarks || '<span class="text-gray-300 italic">No notes</span>'}
-                </td>
-                <td class="p-3 text-xs text-gray-400 font-normal">${report.dateTime || report.createdAt || 'N/A'}</td>
-                <td class="p-3 text-center">${actionHtml}</td>
-            `;
-            tableBody.appendChild(tr);
-        }
-
-        // POPULATE VIEW 2: Elegant Stacked Card Module (Optimized for Small Touchscreens)
-        if (mobileGrid) {
-            const card = document.createElement('div');
-            card.className = "p-4 bg-slate-50/60 border border-gray-200 rounded-xl shadow-sm relative hover:bg-slate-50 transition-colors";
-            card.innerHTML = `
-                <div class="flex justify-between items-start mb-2">
-                    <div>
-                        <h4 class="text-base font-bold text-slate-900">Room ${report.room || 'N/A'}</h4>
-                        <p class="text-xs text-gray-400 font-medium">${report.category || 'Standard Type'}</p>
-                    </div>
-                    <div>
-                        ${actionHtml}
-                    </div>
-                </div>
-                
-                <div class="my-2 text-xs text-gray-600 bg-white border border-gray-100 rounded-lg p-2.5 min-h-[40px]">
-                    <span class="text-[10px] uppercase tracking-wider font-bold text-gray-400 block mb-0.5">Remarks / Details</span>
-                    <p class="italic">${report.remarks || 'No descriptive comments captured.'}</p>
-                </div>
-
-                <div class="flex justify-between items-center pt-2 text-xs">
-                    <div class="text-gray-400 text-[11px]"><i class="far fa-clock mr-1"></i> ${report.dateTime || report.createdAt || 'N/A'}</div>
-                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold ${statusBadgeClass}">
-                        ${report.status || 'Unknown'}
-                    </span>
-                </div>
-            `;
-            mobileGrid.appendChild(card);
-        }
-    });
-}
 document.addEventListener('DOMContentLoaded', () => {
     loadOrders();
 });
-function editReport(reportDataJson) {
-    const report = JSON.parse(decodeURIComponent(reportDataJson));
-    
-    // Open the modal
+
+
+function editReport(id) {
+    // Find the loaded report inside our global array cache
+    const report = statusReportsCache.find(r => r._id === id);
+    if (!report) return;
+
+    // Open the modal form container
     openReportModal();
-    
-    // Fill the fields
+
+    // Dynamically auto-fill the form inputs
     document.getElementById('reportId').value = report._id;
-    document.getElementById('reportRoom').value = report.room;
-    document.getElementById('reportCategory').value = report.category;
-    document.getElementById('reportStatus').value = report.status;
+    document.getElementById('reportRoom').value = report.roomId?.number || '';
+    document.getElementById('reportCategory').value = report.roomId?.roomTypeId?.name || '';
+    document.getElementById('reportStatus').value = report.status || '';
     document.getElementById('reportRemarks').value = report.remarks || '';
     
-    // Format date for datetime-local input (YYYY-MM-DDTHH:mm)
+    // Format the date string cleanly so that input[type="datetime-local"] understands it
     if (report.dateTime) {
-        const dt = new Date(report.dateTime);
-        const formattedDt = dt.toISOString().slice(0, 16);
-        document.getElementById('reportDateTime').value = formattedDt;
+        const localDate = new Date(report.dateTime);
+        localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
+        document.getElementById('reportDateTime').value = localDate.toISOString().slice(0, 16);
     }
-
-    // Change button text to indicate update
-    const submitBtn = document.querySelector('#statusReportForm button[type="submit"]');
-    submitBtn.innerHTML = '<i class="fa-solid fa-save mr-2"></i> Update Report';
 }
 
-let lookupTimeout;
 
-document.getElementById('reportRoom').addEventListener('input', function(e) {
-    const roomNumber = e.target.value.trim();
-    
-    // Clear the previous timer
-    clearTimeout(lookupTimeout);
-
-    if (roomNumber.length > 0) {
-        // Wait 500ms after typing stops to search
-        lookupTimeout = setTimeout(async () => {
-            try {
-                const response = await authenticatedFetch(`${API_BASE_URL}/rooms/lookup/${roomNumber}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    // Auto-fill fields
-                    const categoryInput = document.getElementById('reportCategory');
-                    const statusSelect = document.getElementById('reportStatus');
-
-                    // Only fill if user hasn't manually typed something else yet
-                    if (data.category) categoryInput.value = data.category;
-                    if (data.status) statusSelect.value = data.status;
-
-                    // Add a subtle visual cue that auto-fill worked
-                    categoryInput.classList.add('bg-blue-50');
-                    setTimeout(() => categoryInput.classList.remove('bg-blue-50'), 1000);
-                }
-            } catch (err) {
-                console.log("Room not found in inventory yet.");
-            }
-        }, 500);
-    }
-});
 
 async function loadRoomDatalist() {
     try {
@@ -10843,3 +10809,162 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 
+// Keep this global array to store room objects
+let fetchRooms = []; // Global cache for current options
+let lookupTimeout = null; // Holds the active debounce timer
+
+const roomInpt = document.getElementById('reportRoom');
+const datalist = document.getElementById('roomOptions');
+const statusSelect = document.getElementById('reportStatus');
+const categoryInput = document.getElementById('reportCategory');
+
+// Helper function to update target fields from a selected option
+function applySelection(optionNode) {
+    categoryInput.value = optionNode.getAttribute('data-category') || '';
+    statusSelect.value = optionNode.getAttribute('data-status') || '';
+    
+    // Add the temporary visual indicator
+    categoryInput.classList.add('bg-blue-50');
+    statusSelect.classList.add('bg-blue-50');
+    setTimeout(() => {
+        categoryInput.classList.remove('bg-blue-50');
+        statusSelect.classList.remove('bg-blue-50');
+    }, 1000);
+}
+
+// 1. Manage typing, auto-suggestions, and performance debouncing
+roomInpt.addEventListener('input', (e) => {
+    const inputValue = e.target.value.trim();
+
+    // Reset fields if input is wiped clean
+    if (inputValue.length < 1) {
+        datalist.innerHTML = '';
+        categoryInput.value = '';
+        statusSelect.value = '';
+        return;
+    }
+
+    // Direct Match Check: If user selected an item or finished typing a known option
+    const matchedOption = Array.from(datalist.options).find(opt => opt.value === inputValue);
+    if (matchedOption) {
+        applySelection(matchedOption);
+        return;
+    }
+
+    // Debounce Loop: Clear the previous timer while the user is actively hitting keys
+    clearTimeout(lookupTimeout);
+
+    // Wait 500ms after typing stops before searching the backend
+    lookupTimeout = setTimeout(async () => {
+        try {
+            const response = await authenticatedFetch(`${API_BASE_URL}/rooms/search?number=${encodeURIComponent(inputValue)}`);
+            if (!response.ok) throw new Error('Failed to fetch rooms');
+            
+            fetchRooms = await response.json();
+            datalist.innerHTML = '';
+            
+            // Build suggestion list nodes
+            fetchRooms.forEach(room => {
+                const option = document.createElement('option');
+                option.value = room.number;
+                
+                // Embed values cleanly as custom data-attributes
+                option.setAttribute('data-category', room.roomTypeId ? room.roomTypeId.name : 'Unknown');
+                option.setAttribute('data-status', room.status || '');
+                
+                datalist.appendChild(option);
+            });
+
+            // Instant check: Did the fetched payload produce an exact match for what's in the box?
+            const postFetchOption = Array.from(datalist.options).find(opt => opt.value === inputValue);
+            if (postFetchOption) {
+                applySelection(postFetchOption);
+            }
+            
+        } catch (error) {
+            console.error('Error auto-populating rooms:', error);
+        }
+    }, 500);
+});
+
+// 2. Fallback listener to immediately lock values when choosing from the dropdown menu
+roomInpt.addEventListener('change', (e) => {
+    const inputValue = e.target.value.trim();
+    const matchedOption = Array.from(datalist.options).find(opt => opt.value === inputValue);
+    
+    if (matchedOption) {
+        applySelection(matchedOption);
+    }
+});
+
+function exportStatusReportsToExcel() {
+  // Guard clause: Don't try to export if the array is empty
+  if (!filteredStatusReports || filteredStatusReports.length === 0) {
+    alert("No data available to export.");
+    return;
+  }
+
+  const dataToExport = filteredStatusReports.map((report) => {
+    // Safely pull from populated sub-documents
+    const roomNumber = report.roomId?.number || 'Unknown';
+    const categoryName = report.roomId?.roomTypeId?.name || 'Standard Type';
+    const displayStatus = report.status ? report.status.replace('-', ' ').toUpperCase() : 'UNKNOWN';
+
+    return {
+      'Room': roomNumber,
+      'Category': categoryName,
+      'Status': typeof humanize === 'function' ? humanize(report.status) : displayStatus,
+      'Remarks': report.remarks || '',
+      'Date & Time': report.dateTime ? new Date(report.dateTime).toLocaleString() : 'N/A',
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(dataToExport);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Housekeeping Reports');
+  XLSX.writeFile(wb, 'Hotel_Housekeeping_Reports.xlsx');
+}
+
+function printStatusReports() {
+  if (!filteredStatusReports || filteredStatusReports.length === 0) {
+    alert("No data available to print.");
+    return;
+  }
+
+  const win = window.open('', '_blank');
+  if (!win) {
+    alert("Popup blocked! Please allow popups to print reports.");
+    return;
+  }
+
+  win.document.write('<html><head><title>Housekeeping Report</title>');
+  win.document.write('<style>body{font-family:sans-serif;margin:20px;}h1{text-align:center;margin-bottom:5px;font-size:24px;}p.subtitle{text-align:center;color:#666;margin-bottom:20px;font-size:12px;}table{width:100%;border-collapse:collapse;margin-bottom:20px;}th,td{border:1px solid #ccc;padding:8px;text-align:left;font-size:13px;}th{background:#f2f2f2;font-weight:bold;}</style>');
+  win.document.write('</head><body>');
+  win.document.write('<h1>Housekeeping Room Status Report</h1>');
+  win.document.write(`<p class="subtitle">Generated on: ${new Date().toLocaleString()}</p>`);
+  win.document.write('<table><thead><tr><th>Room</th><th>Category</th><th>Status</th><th>Remarks</th><th>Date & Time</th></tr></thead><tbody>');
+  
+  filteredStatusReports.forEach((report) => {
+    const roomNumber = report.roomId?.number || 'Unknown';
+    const categoryName = report.roomId?.roomTypeId?.name || 'Standard';
+    const displayStatus = report.status ? report.status.replace('-', ' ').toUpperCase() : 'UNKNOWN';
+    const cleanStatus = typeof humanize === 'function' ? humanize(report.status) : displayStatus;
+
+    win.document.write('<tr>');
+    win.document.write(`<td><strong>${roomNumber}</strong></td>`);
+    win.document.write(`<td>${categoryName}</td>`);
+    win.document.write(`<td>${cleanStatus}</td>`);
+    win.document.write(`<td>${report.remarks || ''}</td>`);
+    win.document.write(`<td>${report.dateTime ? new Date(report.dateTime).toLocaleString() : 'N/A'}</td>`);
+    win.document.write('</tr>');
+  });
+  
+  win.document.write('</tbody></table></body></html>');
+  win.document.close();
+
+  // FIX: Wait for document stream window wrapper context to finish loading before initializing print dialog
+  win.onload = function() {
+    win.print();
+    // Optional: win.close(); // Automatically shuts the tab down after printing/cancelling
+  };
+}
