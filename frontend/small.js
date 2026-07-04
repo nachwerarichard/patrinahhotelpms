@@ -10845,51 +10845,85 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // Store fetched rooms globally to access them easily when selected
 // Keep this global array to store room objects
-let fetchedRooms = [];
+let fetchedRooms = []; // Keep this global
 
-document.getElementById('reportRoom').addEventListener('input', async (e) => {
+const roomInput = document.getElementById('reportRoom');
+const datalist = document.getElementById('roomOptions');
+const statusSelect = document.getElementById('reportStatus');
+const categoryInput = document.getElementById('reportCategory');
+
+// 1. Listen for the input event ONLY to fetch list items while typing
+roomInput.addEventListener('input', async (e) => {
     const inputValue = e.target.value.trim();
-    const datalist = document.getElementById('roomOptions');
-    
-    // 1. Check if the user selected/typed a complete valid room number from our fetched list
-    const selectedRoom = fetchedRooms.find(room => room.number === inputValue);
-    
-    if (selectedRoom) {
-        // Find category name from the populated roomTypeId object
-        const categoryName = selectedRoom.roomTypeId ? selectedRoom.roomTypeId.name : 'Unknown';
-        document.getElementById('reportCategory').value = categoryName;
-        
-        // Directly set the dropdown value to the exact database string (e.g., 'clean', 'dirty', 'In progress')
-        const statusSelect = document.getElementById('reportStatus');
-        statusSelect.value = selectedRoom.status; 
-        
-        return; // Stop here since the fields are filled!
-    }
 
-    // 2. Fetch matches when typing
+    // If empty, reset
     if (inputValue.length < 1) {
         datalist.innerHTML = '';
         return;
     }
 
+    // Check if the input exactly matches a room we already have loaded
+    const matchedRoom = fetchedRooms.find(room => room.number === inputValue);
+    if (matchedRoom) {
+        populateFormFields(matchedRoom);
+        return;
+    }
+
+    // Fetch rooms from backend based on typing
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/rooms/search?number=${encodeURIComponent(inputValue)}`);
         if (!response.ok) throw new Error('Failed to fetch rooms');
         
-        // Save the raw objects array globally so we can read it on selection above
         fetchedRooms = await response.json();
-        
-        // Clear old options
         datalist.innerHTML = '';
         
-        // Populate the datalist options cleanly
         fetchedRooms.forEach(room => {
             const option = document.createElement('option');
             option.value = room.number;
             datalist.appendChild(option);
         });
+
+        // Double check if the fetched items contain our exact match now
+        const instantMatch = fetchedRooms.find(room => room.number === inputValue);
+        if (instantMatch) {
+            populateFormFields(instantMatch);
+        }
         
     } catch (error) {
         console.error('Error auto-populating rooms:', error);
     }
 });
+
+// 2. Listen for the change event (fires explicitly when an option is selected from datalist)
+roomInput.addEventListener('change', (e) => {
+    const inputValue = e.target.value.trim();
+    const matchedRoom = fetchedRooms.find(room => room.number === inputValue);
+    if (matchedRoom) {
+        populateFormFields(matchedRoom);
+    }
+});
+
+// Helper function to safely update the DOM fields
+function populateFormFields(room) {
+    // Populate Category
+    categoryInput.value = room.roomTypeId ? room.roomTypeId.name : 'Unknown';
+    
+    // Populate Status Select Dropdown
+    if (room.status) {
+        const dbStatus = room.status.trim();
+        
+        // Timeout pushes the assignment past the browser's input-redraw sequence
+        setTimeout(() => {
+            statusSelect.value = dbStatus;
+            
+            // Fallback case-insensitive check if it still doesn't register 
+            if (statusSelect.value !== dbStatus) {
+                const lowerStatus = dbStatus.toLowerCase();
+                const optionMatch = Array.from(statusSelect.options).find(opt => opt.value.toLowerCase() === lowerStatus);
+                if (optionMatch) {
+                    statusSelect.value = optionMatch.value;
+                }
+            }
+        }, 50);
+    }
+}
