@@ -10499,29 +10499,29 @@ function renderStatusTable(reports) {
 document.addEventListener('DOMContentLoaded', () => {
     loadOrders();
 });
-function editReport(reportDataJson) {
-    const report = JSON.parse(decodeURIComponent(reportDataJson));
-    
-    // Open the modal
+
+
+function editReport(id) {
+    // Find the loaded report inside our global array cache
+    const report = statusReportsCache.find(r => r._id === id);
+    if (!report) return;
+
+    // Open the modal form container
     openReportModal();
-    
-    // Fill the fields
+
+    // Dynamically auto-fill the form inputs
     document.getElementById('reportId').value = report._id;
-    document.getElementById('reportRoom').value = report.room;
-    document.getElementById('reportCategory').value = report.category;
-    document.getElementById('reportStatus').value = report.status;
+    document.getElementById('reportRoom').value = report.roomId?.number || '';
+    document.getElementById('reportCategory').value = report.roomId?.roomTypeId?.name || '';
+    document.getElementById('reportStatus').value = report.status || '';
     document.getElementById('reportRemarks').value = report.remarks || '';
     
-    // Format date for datetime-local input (YYYY-MM-DDTHH:mm)
+    // Format the date string cleanly so that input[type="datetime-local"] understands it
     if (report.dateTime) {
-        const dt = new Date(report.dateTime);
-        const formattedDt = dt.toISOString().slice(0, 16);
-        document.getElementById('reportDateTime').value = formattedDt;
+        const localDate = new Date(report.dateTime);
+        localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
+        document.getElementById('reportDateTime').value = localDate.toISOString().slice(0, 16);
     }
-
-    // Change button text to indicate update
-    const submitBtn = document.querySelector('#statusReportForm button[type="submit"]');
-    submitBtn.innerHTML = '<i class="fa-solid fa-save mr-2"></i> Update Report';
 }
 
 
