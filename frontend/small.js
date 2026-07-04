@@ -10847,13 +10847,13 @@ window.addEventListener('DOMContentLoaded', () => {
 // Keep this global array to store room objects
 let fetchedRooms = []; // Keep this global
 
-const roomInput = document.getElementById('reportRoom');
+const roomInpt = document.getElementById('reportRoom');
 const datalist = document.getElementById('roomOptions');
 const statusSelect = document.getElementById('reportStatus');
 const categoryInput = document.getElementById('reportCategory');
 
 // 1. Listen for the input event ONLY to fetch list items while typing
-roomInput.addEventListener('input', async (e) => {
+roomInpt.addEventListener('input', async (e) => {
     const inputValue = e.target.value.trim();
 
     // If empty, reset
@@ -10895,7 +10895,7 @@ roomInput.addEventListener('input', async (e) => {
 });
 
 // 2. Listen for the change event (fires explicitly when an option is selected from datalist)
-roomInput.addEventListener('change', (e) => {
+roomInpt.addEventListener('change', (e) => {
     const inputValue = e.target.value.trim();
     const matchedRoom = fetchedRooms.find(room => room.number === inputValue);
     if (matchedRoom) {
