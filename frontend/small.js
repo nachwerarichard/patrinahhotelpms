@@ -10843,3 +10843,56 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 
+// Store fetched rooms globally to access them easily when selected
+let fetchedRooms = [];
+
+document.getElementById('reportRoom').addEventListener('input', async (e) => {
+    const inputValue = e.target.value.trim();
+    const datalist = document.getElementById('roomOptions');
+    
+    // 1. Check if the user selected a room from the dropdown list
+    const selectedOption = Array.from(datalist.options).find(option => option.value === inputValue);
+    
+    if (selectedOption) {
+        // Automatically populate Category and Status fields from data attributes
+        document.getElementById('reportCategory').value = selectedOption.dataset.category || '';
+        document.getElementById('reportStatus').value = selectedOption.dataset.status || '';
+        return; // Stop here since the room is selected
+    }
+
+    // 2. If the user is just typing, fetch matches (Debounce this if needed)
+    if (inputValue.length < 1) {
+        datalist.innerHTML = '';
+        return;
+    }
+
+    try {
+        // Adjust this endpoint URL according to your backend routing
+        // Assuming your backend expects a query parameter 'number'
+        const response = await authenticatedFetch(`${API_BASE_URL}/rooms/search?number=${encodeURIComponent(inputValue)}`);
+        
+        if (!response.ok) throw new Error('Failed to fetch rooms');
+        
+        fetchedRooms = await response.json();
+        
+        // Clear old options
+        datalist.innerHTML = '';
+        
+        // Populate datalist options dynamically
+        fetchedRooms.forEach(room => {
+            const option = document.createElement('option');
+            option.value = room.number;
+            
+            // Attach hidden attributes so we can grab them on selection
+            // Using roomTypeId.name assuming your backend populates the room type
+            option.dataset.category = room.roomTypeId ? room.roomTypeId.name : 'Unknown';
+            option.dataset.status = room.status;
+            
+            datalist.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.error('Error auto-populating rooms:', error);
+    }
+});
+

@@ -638,6 +638,26 @@ app.get('/api/rooms', auth, async (req, res) => {
     }
 });
 
+app.get('/api/rooms/search', auth, async (req, res) => {
+    try {
+        const { number } = req.query;
+        // Assume req.hotelId comes from your authentication/session middleware
+        const hotelId = req.hotelId; 
+
+        if (!number) return res.json([]);
+
+        const rooms = await Room.find({
+            hotelId: hotelId,
+            number: { $regex: number, $options: 'i' } // Case-insensitive partial match
+        })
+        .populate('roomTypeId') // Crucial: Brings in the RoomType document ('name')
+        .limit(10); // Keeps UI snappy
+
+        res.json(rooms);
+    } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
 // DELETE a room (Secure)
 app.delete('/api/rooms/:id', auth, async (req, res) => {
     try {
