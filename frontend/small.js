@@ -10844,50 +10844,48 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
 // Store fetched rooms globally to access them easily when selected
+// Keep this global array to store room objects
 let fetchedRooms = [];
 
 document.getElementById('reportRoom').addEventListener('input', async (e) => {
     const inputValue = e.target.value.trim();
     const datalist = document.getElementById('roomOptions');
     
-    // 1. Check if the user selected a room from the dropdown list
-    const selectedOption = Array.from(datalist.options).find(option => option.value === inputValue);
+    // 1. Check if the user selected/typed a complete valid room number from our fetched list
+    const selectedRoom = fetchedRooms.find(room => room.number === inputValue);
     
-    if (selectedOption) {
-        // Automatically populate Category and Status fields from data attributes
-        document.getElementById('reportCategory').value = selectedOption.dataset.category || '';
-        document.getElementById('reportStatus').value = selectedOption.dataset.status || '';
-        return; // Stop here since the room is selected
+    if (selectedRoom) {
+        // Find category name from the populated roomTypeId object
+        const categoryName = selectedRoom.roomTypeId ? selectedRoom.roomTypeId.name : 'Unknown';
+        document.getElementById('reportCategory').value = categoryName;
+        
+        // Directly set the dropdown value to the exact database string (e.g., 'clean', 'dirty', 'In progress')
+        const statusSelect = document.getElementById('reportStatus');
+        statusSelect.value = selectedRoom.status; 
+        
+        return; // Stop here since the fields are filled!
     }
 
-    // 2. If the user is just typing, fetch matches (Debounce this if needed)
+    // 2. Fetch matches when typing
     if (inputValue.length < 1) {
         datalist.innerHTML = '';
         return;
     }
 
     try {
-        // Adjust this endpoint URL according to your backend routing
-        // Assuming your backend expects a query parameter 'number'
         const response = await authenticatedFetch(`${API_BASE_URL}/rooms/search?number=${encodeURIComponent(inputValue)}`);
-        
         if (!response.ok) throw new Error('Failed to fetch rooms');
         
+        // Save the raw objects array globally so we can read it on selection above
         fetchedRooms = await response.json();
         
         // Clear old options
         datalist.innerHTML = '';
         
-        // Populate datalist options dynamically
+        // Populate the datalist options cleanly
         fetchedRooms.forEach(room => {
             const option = document.createElement('option');
             option.value = room.number;
-            
-            // Attach hidden attributes so we can grab them on selection
-            // Using roomTypeId.name assuming your backend populates the room type
-            option.dataset.category = room.roomTypeId ? room.roomTypeId.name : 'Unknown';
-            option.dataset.status = room.status;
-            
             datalist.appendChild(option);
         });
         
@@ -10895,4 +10893,3 @@ document.getElementById('reportRoom').addEventListener('input', async (e) => {
         console.error('Error auto-populating rooms:', error);
     }
 });
-
