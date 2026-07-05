@@ -5358,8 +5358,8 @@ async function fetchUsers() {
 
             // Shared modular dropdown element template string
             const selectOptionsHtml = `
-                <select onchange="updateRole('${user._id}', this.value)" 
-                        class="w-full sm:w-auto text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition shadow-sm text-slate-700">
+                <select onchange="updateRole('${user._id}', this.value, '${user.username}')" 
+                  class="w-full sm:w-auto text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition shadow-sm text-slate-700">
                     <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
                     <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
                     <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
@@ -5542,17 +5542,23 @@ async function deleteUser(id) {
     }
 }
 
-async function updateRole(id, newRole) {
+async function updateRole(id, newRole, currentUsername) {
     try {
         const res = await authenticatedFetch(`${API_BASE_URL}/admin/users/${id}`, {
             method: 'PUT',
-            body: JSON.stringify({ role: newRole })
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                targetUsername: currentUsername, // Keep their existing name intact
+                newRole: newRole                 // Backend expects 'newRole', not 'role'
+            })
         });
 
-        if (!res) return; // Token missing or redirected
+        if (!res) return; 
 
         if (res.ok) {
-            fetchUsers(); // Refresh after role update
+            fetchUsers(); 
             showMessage("Role updated successfully!");
         } else {
             const data = await res.json();
