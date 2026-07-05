@@ -11037,23 +11037,45 @@ function renderTableRow(room) {
         // Render Existing Server Images
         // Inside renderTableRow(room) -> Replace the liveImages.forEach block with this:
 
-          liveImages.forEach((url) => {
+         liveImages.forEach((url) => {
     imagesHtml += `
-        <!-- The container MUST have the 'group' class for Tailwind to register the hover -->
-        <div class="relative group w-12 h-12 rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-slate-50 cursor-pointer">
-            <img src="${url}" class="w-full h-full object-cover">
+        <div class="relative w-12 h-12 rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-slate-50 cursor-pointer" 
+             style="position: relative; display: inline-block;">
             
-            ${isEditing ? `
-                <!-- Full Edit Mode Overlay -->
-                <button onclick="removeExistingImageState('${room._id}', '${url}')" class="absolute inset-0 bg-red-600/80 text-white text-xs opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center font-bold z-10">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>
-            ` : `
-                <!-- Normal Mode Instant Purge Overlay -->
-                <button onclick="deleteSingleImageInstantly('${room._id}', '${url}', '${room.name.replace(/'/g, "\\'")}')" class="absolute inset-0 bg-red-600/90 text-white text-xs opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center font-bold z-10" title="Delete image instantly">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>
-            `}
+            <!-- Room Thumbnail Image -->
+            <img src="${url}" class="w-full h-full object-cover" style="display: block; width: 100%; height: 100%;">
+            
+            <!-- Plain CSS Hover Button Wrapper -->
+            <div class="image-delete-overlay" style="
+                position: absolute; 
+                top: 0; 
+                left: 0; 
+                width: 100%; 
+                height: 100%; 
+                background: rgba(220, 38, 38, 0.85); 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                opacity: 0; 
+                transition: opacity 0.2s ease-in-out;
+                z-index: 20;
+            "
+            onmouseenter="this.style.opacity='1'"
+            onmouseleave="this.style.opacity='0'">
+                
+                ${isEditing ? `
+                    <button onclick="removeExistingImageState('${room._id}', '${url}')" 
+                            style="width: 100%; height: 100%; background: transparent; border: none; color: white; font-weight: bold; font-size: 11px; cursor: pointer;">
+                        Remove
+                    </button>
+                ` : `
+                    <button onclick="deleteSingleImageInstantly('${room._id}', '${url}', '${room.name.replace(/'/g, "\\'")}')" 
+                            style="width: 100%; height: 100%; background: transparent; border: none; color: white; font-weight: bold; font-size: 11px; cursor: pointer;" 
+                            title="Delete image instantly">
+                        Delete
+                    </button>
+                `}
+            </div>
         </div>`;
 });
         // Render Pending UI local additions
