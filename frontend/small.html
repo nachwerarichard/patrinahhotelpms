@@ -755,7 +755,7 @@ body {
                     <p id="today-balance" class="text-xl font-bold text-gray-900 mt-1 text-red-500">UGX 0</p>
                     <div class="absolute left-0 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
                 </div>
-                <div class="relative pl-4">
+                <div class="relative pl-4 ">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pending Invoices</p>
                     <p id="pending-count" class="text-xl font-bold text-gray-900 mt-1">0</p>
                     <div class="absolute left-0 top-0 h-full w-1 bg-yellow-500 rounded-full"></div>
@@ -780,12 +780,32 @@ body {
                     <p id="postoday-profit" class="text-xl font-bold text-gray-900 mt-1 text-green-600">UGX 0</p>
                     <div class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-full"></div>
                 </div>
+                <div class="relative pl-4 hidden">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Expense</p>
+                    <p id="postoday-expense" class="text-xl font-bold text-gray-900 mt-1 text-red-500">UGX 0</p>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
+                </div>
+                <div class="relative pl-4 hidden">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Net Balance</p>
+                    <p id="postoday-balance" class="text-xl font-bold text-gray-900 mt-1">0</p>
+                    <div class="absolute left-0 top-0 h-full w-1 bg-yellow-500 rounded-full"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+            <div class="flex items-center gap-2 mb-6">
+                <div class="h-1 w-8 bg-indigo-500 rounded-full"></div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">otal Expenses</h3>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                
                 <div class="relative pl-4">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Expense</p>
                     <p id="postoday-expense" class="text-xl font-bold text-gray-900 mt-1 text-red-500">UGX 0</p>
                     <div class="absolute left-0 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
                 </div>
-                <div class="relative pl-4">
+                <div class="relative pl-4 hidden">
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Net Balance</p>
                     <p id="postoday-balance" class="text-xl font-bold text-gray-900 mt-1">0</p>
                     <div class="absolute left-0 top-0 h-full w-1 bg-yellow-500 rounded-full"></div>
@@ -2246,7 +2266,7 @@ body {
             </div>
         </div>
 
-        <div id="net-balance-container" class="bg-slate-900 border border-slate-800 p-6 rounded-[2rem] shadow-xl relative overflow-hidden">
+        <div id="net-balance-container" class="bg-slate-900 border border-slate-800 p-6 rounded-[2rem] shadow-xl relative overflow-hidden hiddens">
             <p class="text-xs font-black text-indigo-300 uppercase tracking-widest mb-1">Net Balance</p>
             <div class="flex items-baseline gap-2">
                 <span class="text-indigo-400 font-medium">UGX</span>
