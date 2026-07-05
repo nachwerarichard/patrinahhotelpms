@@ -534,6 +534,52 @@ app.put('/api/room-types/:id', auth, upload.array('images', 5), async (req, res)
     }
 });
 
+app.delete('/api/room-types/:id/image', auth, async (req, res) => {
+    try {
+        if (!req.user || !req.user.hotelId) {
+            return res.status(401).json({ error: "Unauthorized. Missing hotel configuration." });
+        }
+
+        const { id } = req.params;
+        const { imageUrl, username } = req.body; // Pass the target URL in the request body
+
+        if (!imageUrl) {
+            return res.status(400).json({ error: "Image URL is required for deletion." });
+        }
+
+        // 1. Find the room type and pull the image from the array
+        const roomType = await RoomType.findOneAndUpdate(
+            { _id: id, hotelId: req.user.hotelId },
+            { $pull: { imageUrls: imageUrl } },
+            { new: true } // returns the updated document
+        );
+
+        if (!roomType) {
+            return res.status(404).json({ error: "Room type not found or access denied." });
+        }
+
+        // 2. Safety cleanup: Fix the defaultImage if the deleted image was the default
+        if (roomType.defaultImage === imageUrl) {
+            roomType.defaultImage = roomType.imageUrls.length > 0 ? roomType.imageUrls[0] : 'room_.webp';
+            await roomType.save();
+        }
+
+        // 3. Log the action
+        await addAuditLog(
+            'Room Type Image Deleted', 
+            username || req.user.username || 'System', 
+            req.user.hotelId,
+            { roomTypeId: roomType._id, deletedImageUrl: imageUrl }
+        );
+
+        return res.status(200).json({ message: "Image removed successfully.", imageUrls: roomType.imageUrls });
+
+    } catch (err) {
+        console.error("❌ Single image deletion failed:", err);
+        return res.status(500).json({ error: err.message || "Internal server error." });
+    }
+});
+
 app.delete('/api/room-types/:id', auth, async (req, res) => {
     try {
         if (!req.user || !req.user.hotelId) {

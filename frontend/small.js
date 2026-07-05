@@ -11035,17 +11035,26 @@ function renderTableRow(room) {
         imagesHtml += `<div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-[10px] text-slate-400 border border-slate-200">No Image</div>`;
     } else {
         // Render Existing Server Images
-        liveImages.forEach((url) => {
-            imagesHtml += `
-                <div class="relative group w-12 h-12 rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-slate-50">
-                    <img src="${url}" class="w-full h-full object-cover">
-                    ${isEditing ? `
-                        <button onclick="removeExistingImageState('${room._id}', '${url}')" class="absolute inset-0 bg-red-600/80 text-white text-[10px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center font-bold">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    ` : ''}
-                </div>`;
-        });
+        // Inside renderTableRow(room) -> Replace the liveImages.forEach block with this:
+
+liveImages.forEach((url) => {
+    imagesHtml += `
+        <div class="relative group w-12 h-12 rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-slate-50">
+            <img src="${url}" class="w-full h-full object-cover">
+            
+            ${isEditing ? `
+                <!-- In Full Edit Mode: Removes image from local state array -->
+                <button onclick="removeExistingImageState('${room._id}', '${url}')" class="absolute inset-0 bg-red-600/80 text-white text-[10px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center font-bold">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            ` : `
+                <!-- Normal Mode: Instantly purges image from database via the new API -->
+                <button onclick="deleteSingleImageInstantly('${room._id}', '${url}', '${room.name.replace(/'/g, "\\'")}')" class="absolute inset-0 bg-red-600/90 text-white text-[10px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center font-bold" title="Delete image instantly">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            `}
+        </div>`;
+});
         // Render Pending UI local additions
         newFiles.forEach((file, index) => {
             const previewUrl = URL.createObjectURL(file);
@@ -11282,3 +11291,34 @@ async function deleteRoomType(id, descriptiveName) {
 
 // Initial structural download hook assignment call execution
 document.addEventListener('DOMContentLoaded', loadRoomTypes);
+
+
+/**
+ * Deletes a single image instantly from the database without requiring an overall row save
+ */
+async function deleteSingleImageInstantly(roomTypeId, imageUrl, roomName) {
+    if (!confirm(`Are you sure you want to remove this image from "${roomName}"?`)) return;
+
+    try {
+        const res = await authenticatedFetch(`${API_BASE_URL}/room-types/${roomTypeId}/image`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ imageUrl: imageUrl })
+        });
+
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Failed to drop image asset.");
+        }
+
+        showMessage("Image deleted successfully! 🗑️");
+        
+        // Refresh the table UI to visually remove the image
+        loadRoomTypes(); 
+    } catch (err) {
+        console.error(err);
+        showMessage(err.message || "Network transaction error.", true);
+    }
+}
