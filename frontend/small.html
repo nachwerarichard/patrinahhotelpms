@@ -796,7 +796,7 @@ body {
         <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
             <div class="flex items-center gap-2 mb-6">
                 <div class="h-1 w-8 bg-indigo-500 rounded-full"></div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">otal Expenses</h3>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Expenses</h3>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 
@@ -956,213 +956,247 @@ body {
         </div>
     </div>
 </section>
-            <section id="inventory" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-                <div class="p-4 md:p-12">
-    <div class="max-w-5xl mx-auto space-y-10">
-        
-        <div class="border-b border-slate-200 pb-6">
-            <h1 class="text-3xl font-light text-slate-800 tracking-tight">Rate & Inventory <span class="font-bold text-indigo-600">Control</span></h1>
-            <p class="text-slate-500 text-sm mt-1">Configure room types, seasonal pricing, and physical assets.</p>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <section class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 transition-all hover:shadow-md">
-                <div class="flex items-center gap-3 mb-6">
-                    <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                        <i class="fa-solid fa-bed text-lg"></i>
-                    </div>
-                    <h2 class="text-xl font-bold text-slate-800">1. Room Types</h2>
+      <section id="inventory" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+    <div class="p-4 md:p-12">
+        <div class="max-w-5xl mx-auto space-y-10">
+            
+            <!-- Header Area & Action Trigger Buttons -->
+            <div class="border-b border-slate-200 pb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-light text-slate-800 tracking-tight">Rate & Inventory <span class="font-bold text-indigo-600">Control</span></h1>
+                    <p class="text-slate-500 text-sm mt-1">Configure room types, seasonal pricing, and physical assets.</p>
                 </div>
-                <form id="typeForm" class="space-y-4">
-    <div class="grid grid-cols-1 gap-4">
-        <div class="space-y-1">
-            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Type</label>
-            <input type="text" id="typeName" placeholder="e.g. Presidential Suite" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all shadow-inner">
-        </div>
-        <div class="space-y-1">
-            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Standard Rate (UGX)</label>
-            <input type="number" id="basePrice" placeholder="0.00" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all shadow-inner font-mono">
-        </div>
-        <div class="space-y-1">
-            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Amenities</label>
-            <textarea id="typeAmenities" placeholder="e.g. Free Wi-Fi, AC, Flat Screen TV, Mini Bar (comma-separated)" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all shadow-inner rows=3"></textarea>
-        </div>
-        <div class="space-y-1">
-            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Category Image (Optional)</label>
-            <input type="file" id="roomImage" multiple accept="image/*" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-        </div>
-    </div>
-
-    <button type="submit" id="submitTypeBtn" class="w-full bg-slate-900 text-white font-bold py-4 px-4 rounded-2xl hover:bg-indigo-600 transition-all shadow-lg shadow-slate-200 active:scale-95 uppercase text-xs tracking-widest flex items-center justify-center gap-2">
-        <span id="btnText">Create Room Type</span>
-    </button>
-</form>
-            </section>
-
-<!-- Global Hidden Input for target row image selection -->
-
-            <section class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 transition-all hover:shadow-md">
-                <div class="flex items-center gap-3 mb-6">
-                    <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-                        <i class="fa-solid fa-calendar-day text-lg"></i>
-                    </div>
-                    <h2 class="text-xl font-bold text-slate-800">2. Seasonal Rules</h2>
+                <!-- Action Buttons to Open Modals -->
+                <div class="flex flex-wrap gap-2.5">
+                    <button onclick="openInventoryModal('roomTypeModal')" class="bg-slate-900 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-slate-800 transition-all text-xs tracking-wider flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-plus"></i> Room Type
+                    </button>
+                    <button onclick="openInventoryModal('seasonalModal')" class="bg-amber-600 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-amber-700 transition-all text-xs tracking-wider flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-calendar-day"></i> Seasonal Rule
+                    </button>
+                    <button onclick="openInventoryModal('roomRegistryModal')" class="bg-indigo-600 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-indigo-700 transition-all text-xs tracking-wider flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-bed"></i> Register Room
+                    </button>
                 </div>
-                <form id="seasonForm" class="grid grid-cols-2 gap-4">
-                    <div class="col-span-2 space-y-1">
-                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Type</label>
-                        <select id="targetType" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 appearance-none font-medium"></select>
-                    </div>
-                    <div class="col-span-2 space-y-1">
-                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Season Label</label>
-                        <input type="text" id="seasonName" placeholder="e.g. Peak Summer" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">From</label>
-                        <input type="date" id="startDate" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">To</label>
-                        <input type="date" id="endDate" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none">
-                    </div>
-                    <div class="col-span-2 space-y-1">
-                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Adjusted Price (UGX)</label>
-                        <input type="number" id="seasonRate" placeholder="0.00" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-mono focus:ring-2 focus:ring-indigo-500 outline-none">
-                    </div>
-<button type="submit" id="seasonBtn" class="col-span-2 bg-indigo-600 text-white font-bold py-4 px-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95 uppercase text-xs tracking-widest mt-2 flex items-center justify-center gap-2">
-    <span id="seasonBtnText">Apply Market Rate</span>
-</button>
-                </form>
-            </section>
-        </div>
-<section class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 transition-all hover:shadow-md">
-    <div class="flex items-center gap-3 mb-6">
-        <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-            <i class="fa-solid fa-bed text-lg"></i>
-        </div>
-        <h2 class="text-xl font-bold text-slate-800">Room Registry</h2>
-    </div>
-
-    <form id="roomForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="space-y-1">
-            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Number</label>
-            <input type="text" id="regRoomNumber" placeholder="e.g. 101" 
-                class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-        </div>
-
-        <div class="space-y-1">
-            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Type</label>
-            <select id="roomTypeSelect" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 appearance-none font-medium">
-                <option value="">Select Room Type...</option>
-            </select>
-        </div>
-
-        <button type="submit" id="regRoomBtn" 
-            class="md:col-span-2 bg-indigo-600 text-white font-bold py-4 px-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95 uppercase text-xs tracking-widest mt-2 flex items-center justify-center gap-2">
-            <span id="regRoomBtnText">Register Room</span>
-        </button>
-    </form>
-</section>
-
-<div class="w-full bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-    <!-- Header Area -->
-    <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-        <div>
-            <h2 class="text-sm font-bold uppercase tracking-widest text-slate-800">Room Categories</h2>
-            <p class="text-xs text-slate-400 mt-1">Manage configurations, images, pricing, and amenities.</p>
-        </div>
-        <button onclick="loadRoomTypes()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
-            <i class="fa-solid fa-rotate-right"></i>
-        </button>
-    </div>
-
-    <!-- Table Container -->
-    <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="border-b border-slate-100 bg-slate-50 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                    <th class="p-4 pl-6">Images</th>
-                    <th class="p-4">Room Category Details</th>
-                    <th class="p-4">Amenities</th>
-                    <th class="p-4 text-right">Standard Rate</th>
-                    <th class="p-4 pr-6 text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="roomTypesTableBody" class="divide-y divide-slate-100 text-slate-700 text-sm">
-                <tr>
-                    <td colspan="5" class="p-8 text-center text-xs text-slate-400">
-                        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Loading room configurations...
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
-        <section class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
-    <div class="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-        <h2 class="text-xl font-bold text-slate-800">Room Inventory</h2>
-        <div class="flex gap-2">
-            <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wider">Live View</span>
-        </div>
-    </div>
-
-    <div class="hidden md:block overflow-x-auto">
-        <table class="min-w-full">
-            <thead>
-                <tr class="bg-slate-50 text-slate-400 uppercase text-[10px] font-bold tracking-[0.2em] border-b border-slate-100">
-                    <th class="px-8 py-5 text-left">Room Number</th>
-                    <th class="px-8 py-5 text-left">Room Type</th>
-                    <th class="px-8 py-5 text-left">Base Rate</th>
-                    <th class="px-8 py-5 text-left">Status</th>
-                    <th class="px-8 py-5 text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="roomTableBody" class="divide-y divide-slate-100">
-                </tbody>
-        </table>
-    </div>
-
-    <div id="roomMobileGrid" class="block md:hidden p-4 space-y-4 bg-slate-50/30">
-        </div>
-</section>
-
-        <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center z-50">
-            <div class="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-md w-full mx-4 border border-white/20">
-                <div class="mb-8">
-                    <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Modify Asset</h2>
-                    <p class="text-slate-400 text-xs uppercase tracking-widest font-bold mt-1">Room Records Department</p>
-                </div>
-                
-                <form id="editRoomForm" class="space-y-6">
-                    <input type="hidden" id="editRoomId">
-                    <input type="hidden" id="editTypeId">
-
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Room Number</label>
-                        <input type="text" id="editRoomNumber" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner">
-                    </div>
-
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Current Type (Immutable)</label>
-                        <input type="text" id="editTypeName" class="w-full p-4 bg-slate-100 border border-slate-100 rounded-2xl text-slate-400 outline-none cursor-not-allowed font-medium">
-                    </div>
-
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Override Base Price ($)</label>
-                        <input type="number" id="editBasePrice" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner font-mono">
-                    </div>
-
-                    <div class="flex gap-4 mt-10">
-                        <button type="button" onclick="closeModal()" class="flex-1 py-4 text-slate-400 hover:text-slate-600 font-bold uppercase text-[10px] tracking-widest transition-colors">Discard</button>
-                        <button type="submit" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all active:scale-95 uppercase text-[10px] tracking-widest">Update Record</button>
-                    </div>
-                </form>
             </div>
+
+            <!-- MODAL 1: Room Types Form -->
+            <div id="roomTypeModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center z-50 transition-opacity duration-300">
+                <div class="bg-white rounded-[2.5rem] shadow-2xl p-8 max-w-lg w-full mx-4 border border-white/20 relative max-h-[90vh] overflow-y-auto">
+                    <button onclick="closeInventoryModal('roomTypeModal')" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                            <i class="fa-solid fa-bed text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-800">Add New Room Type</h2>
+                            <p class="text-xs text-slate-400 mt-0.5">Define your tier specifications and baselines</p>
+                        </div>
+                    </div>
+                    <form id="typeForm" class="space-y-4">
+                        <div class="grid grid-cols-1 gap-4">
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Type</label>
+                                <input type="text" id="typeName" placeholder="e.g. Presidential Suite" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all shadow-inner">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Standard Rate (UGX)</label>
+                                <input type="number" id="basePrice" placeholder="0.00" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all shadow-inner font-mono">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Amenities</label>
+                                <textarea id="typeAmenities" placeholder="e.g. Free Wi-Fi, AC, Flat Screen TV, Mini Bar (comma-separated)" rows="3" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all shadow-inner"></textarea>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Category Image (Optional)</label>
+                                <input type="file" id="roomImage" multiple accept="image/*" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                            </div>
+                        </div>
+                        <div class="flex gap-4 mt-6">
+                            <button type="button" onclick="closeInventoryModal('roomTypeModal')" class="flex-1 py-4 text-slate-400 hover:text-slate-600 font-bold uppercase text-[10px] tracking-widest transition-colors">Cancel</button>
+                            <button type="submit" id="submitTypeBtn" class="flex-1 bg-slate-900 text-white font-bold py-4 px-4 rounded-2xl hover:bg-indigo-600 transition-all shadow-lg active:scale-95 uppercase text-xs tracking-widest flex items-center justify-center gap-2">
+                                <span id="btnText">Create Room Type</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- MODAL 2: Seasonal Rules Form -->
+            <div id="seasonalModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center z-50 transition-opacity duration-300">
+                <div class="bg-white rounded-[2.5rem] shadow-2xl p-8 max-w-lg w-full mx-4 border border-white/20 relative max-h-[90vh] overflow-y-auto">
+                    <button onclick="closeInventoryModal('seasonalModal')" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+                            <i class="fa-solid fa-calendar-day text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-800">Apply Seasonal Rule</h2>
+                            <p class="text-xs text-slate-400 mt-0.5">Override standard base rates dynamically</p>
+                        </div>
+                    </div>
+                    <form id="seasonForm" class="grid grid-cols-2 gap-4">
+                        <div class="col-span-2 space-y-1">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Type</label>
+                            <select id="targetType" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium"></select>
+                        </div>
+                        <div class="col-span-2 space-y-1">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Season Label</label>
+                            <input type="text" id="seasonName" placeholder="e.g. Peak Summer" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">From</label>
+                            <input type="date" id="startDate" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">To</label>
+                            <input type="date" id="endDate" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div class="col-span-2 space-y-1">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Adjusted Price (UGX)</label>
+                            <input type="number" id="seasonRate" placeholder="0.00" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-mono focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div class="col-span-2 flex gap-4 mt-4">
+                            <button type="button" onclick="closeInventoryModal('seasonalModal')" class="flex-1 py-4 text-slate-400 hover:text-slate-600 font-bold uppercase text-[10px] tracking-widest transition-colors">Cancel</button>
+                            <button type="submit" id="seasonBtn" class="flex-1 bg-amber-600 text-white font-bold py-4 px-4 rounded-2xl hover:bg-amber-700 transition-all shadow-lg active:scale-95 uppercase text-xs tracking-widest flex items-center justify-center gap-2">
+                                <span id="seasonBtnText">Apply Market Rate</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- MODAL 3: Room Registry Form -->
+            <div id="roomRegistryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center z-50 transition-opacity duration-300">
+                <div class="bg-white rounded-[2.5rem] shadow-2xl p-8 max-w-lg w-full mx-4 border border-white/20 relative max-h-[90vh] overflow-y-auto">
+                    <button onclick="closeInventoryModal('roomRegistryModal')" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                            <i class="fa-solid fa-bed text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-800">Room Registry</h2>
+                            <p class="text-xs text-slate-400 mt-0.5">Map physical physical units to defined categories</p>
+                        </div>
+                    </div>
+                    <form id="roomForm" class="space-y-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Number</label>
+                            <input type="text" id="regRoomNumber" placeholder="e.g. 101" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Type</label>
+                            <select id="roomTypeSelect" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+                                <option value="">Select Room Type...</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-4 mt-6">
+                            <button type="button" onclick="closeInventoryModal('roomRegistryModal')" class="flex-1 py-4 text-slate-400 hover:text-slate-600 font-bold uppercase text-[10px] tracking-widest transition-colors">Cancel</button>
+                            <button type="submit" id="regRoomBtn" class="flex-1 bg-indigo-600 text-white font-bold py-4 px-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg active:scale-95 uppercase text-xs tracking-widest flex items-center justify-center gap-2">
+                                <span id="regRoomBtnText">Register Room</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Table 1: Categories -->
+            <div class="w-full bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <div>
+                        <h2 class="text-sm font-bold uppercase tracking-widest text-slate-800">Room Categories</h2>
+                        <p class="text-xs text-slate-400 mt-1">Manage configurations, images, pricing, and amenities.</p>
+                    </div>
+                    <button onclick="loadRoomTypes()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-100 bg-slate-50 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                <th class="p-4 pl-6">Images</th>
+                                <th class="p-4">Room Category Details</th>
+                                <th class="p-4">Amenities</th>
+                                <th class="p-4 text-right">Standard Rate</th>
+                                <th class="p-4 pr-6 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roomTypesTableBody" class="divide-y divide-slate-100 text-slate-700 text-sm">
+                            <tr>
+                                <td colspan="5" class="p-8 text-center text-xs text-slate-400">
+                                    <i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Loading room configurations...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Table 2: Room Inventory Live View -->
+            <section class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h2 class="text-xl font-bold text-slate-800">Room Inventory</h2>
+                    <div class="flex gap-2">
+                        <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wider">Live View</span>
+                    </div>
+                </div>
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-400 uppercase text-[10px] font-bold tracking-[0.2em] border-b border-slate-100">
+                                <th class="px-8 py-5 text-left">Room Number</th>
+                                <th class="px-8 py-5 text-left">Room Type</th>
+                                <th class="px-8 py-5 text-left">Base Rate</th>
+                                <th class="px-8 py-5 text-left">Status</th>
+                                <th class="px-8 py-5 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roomTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <div id="roomMobileGrid" class="block md:hidden p-4 space-y-4 bg-slate-50/30"></div>
+            </section>
+
+            <!-- Pre-existing Edit Modal -->
+            <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center z-50">
+                <div class="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-md w-full mx-4 border border-white/20">
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Modify Asset</h2>
+                        <p class="text-slate-400 text-xs uppercase tracking-widest font-bold mt-1">Room Records Department</p>
+                    </div>
+                    <form id="editRoomForm" class="space-y-6">
+                        <input type="hidden" id="editRoomId">
+                        <input type="hidden" id="editTypeId">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Room Number</label>
+                            <input type="text" id="editRoomNumber" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Current Type (Immutable)</label>
+                            <input type="text" id="editTypeName" class="w-full p-4 bg-slate-100 border border-slate-100 rounded-2xl text-slate-400 outline-none cursor-not-allowed font-medium" readonly>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Override Base Price ($)</label>
+                            <input type="number" id="editBasePrice" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner font-mono">
+                        </div>
+                        <div class="flex gap-4 mt-10">
+                            <button type="button" onclick="closeModal()" class="flex-1 py-4 text-slate-400 hover:text-slate-600 font-bold uppercase text-[10px] tracking-widest transition-colors">Discard</button>
+                            <button type="submit" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all active:scale-95 uppercase text-[10px] tracking-widest">Update Record</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
         </div>
     </div>
-</div>
-
-     </section>
+</section>      
 <section id="housekeepingreports" class="section bg-white p-4 md:p-6 rounded-lg shadow-md mb-8 hidden">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-blue-600">Housekeeping Reports</h2>
@@ -5014,6 +5048,48 @@ function renderDiscrepancyChart(labels, voids, overrides) {
 }
 // Trigger initialization when script mounts or main dashboard loads
 document.addEventListener('DOMContentLoaded', loadStaffPerformanceCharts);
+</script>
+<script>
+    /**
+ * Opens a designated inventory component modal
+ * @param {string} modalId - The DOM ID of target element
+ */
+function openInventoryModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden'; // Prevents background body scrolling
+    }
+}
+
+/**
+ * Closes a designated inventory modal component and flushes form inputs
+ * @param {string} modalId - The DOM ID of target element
+ */
+function closeInventoryModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = ''; // Restores background scrolling
+        
+        // Optional: Reset form fields inside when closing out
+        const internalForm = modal.querySelector('form');
+        if (internalForm) internalForm.reset();
+    }
+}
+
+// Global window event listener to intercept backdrop clicks for easier dismissal
+window.addEventListener('click', function(event) {
+    const targetModalIds = ['roomTypeModal', 'seasonalModal', 'roomRegistryModal'];
+    targetModalIds.forEach(id => {
+        const targetModal = document.getElementById(id);
+        if (event.target === targetModal) {
+            closeInventoryModal(id);
+        }
+    });
+});
 </script>
 </body>
 </html>
