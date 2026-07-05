@@ -10216,10 +10216,6 @@ async function refreshTodayPOSStats() {
         
         const balanceEl = document.getElementById('postoday-balance');
         
-        // Color coding the balance
-        balanceEl.className = data.netBalance >= 0 
-            ? "text-xl font-bold mt-1 text-green-600" 
-            : "text-xl font-bold mt-1 text-red-600";
 
     } catch (err) {
         console.error("Failed to refresh today's POS stats:", err);
