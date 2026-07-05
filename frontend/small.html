@@ -979,41 +979,6 @@ body {
 </form>
             </section>
 
-            <div class="w-full bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-    <!-- Header Area -->
-    <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-        <div>
-            <h2 class="text-sm font-bold uppercase tracking-widest text-slate-800">Room Categories</h2>
-            <p class="text-xs text-slate-400 mt-1">Manage configurations, images, pricing, and amenities.</p>
-        </div>
-        <button onclick="loadRoomTypes()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
-            <i class="fa-solid fa-rotate-right"></i>
-        </button>
-    </div>
-
-    <!-- Table Container -->
-    <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="border-b border-slate-100 bg-slate-50 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                    <th class="p-4 pl-6">Images</th>
-                    <th class="p-4">Room Category Details</th>
-                    <th class="p-4">Amenities</th>
-                    <th class="p-4 text-right">Standard Rate</th>
-                    <th class="p-4 pr-6 text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="roomTypesTableBody" class="divide-y divide-slate-100 text-slate-700 text-sm">
-                <tr>
-                    <td colspan="5" class="p-8 text-center text-xs text-slate-400">
-                        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Loading room configurations...
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
-
 <!-- Global Hidden Input for target row image selection -->
 
             <section class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 transition-all hover:shadow-md">
@@ -1079,6 +1044,40 @@ body {
     </form>
 </section>
 
+<div class="w-full bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <!-- Header Area -->
+    <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <div>
+            <h2 class="text-sm font-bold uppercase tracking-widest text-slate-800">Room Categories</h2>
+            <p class="text-xs text-slate-400 mt-1">Manage configurations, images, pricing, and amenities.</p>
+        </div>
+        <button onclick="loadRoomTypes()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
+            <i class="fa-solid fa-rotate-right"></i>
+        </button>
+    </div>
+
+    <!-- Table Container -->
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="border-b border-slate-100 bg-slate-50 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    <th class="p-4 pl-6">Images</th>
+                    <th class="p-4">Room Category Details</th>
+                    <th class="p-4">Amenities</th>
+                    <th class="p-4 text-right">Standard Rate</th>
+                    <th class="p-4 pr-6 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="roomTypesTableBody" class="divide-y divide-slate-100 text-slate-700 text-sm">
+                <tr>
+                    <td colspan="5" class="p-8 text-center text-xs text-slate-400">
+                        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Loading room configurations...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
         <section class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
     <div class="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
         <h2 class="text-xl font-bold text-slate-800">Room Inventory</h2>
