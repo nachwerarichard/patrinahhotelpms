@@ -5494,16 +5494,18 @@ async function handleSaveUser() {
         if (password) payload.newPassword = password;
 
         const res = await authenticatedFetch(url, {
-            method: method,
-            body: JSON.stringify(payload)
-        });
+    method: method,
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+});
 
         if (!res) return;
 
         if (res.ok) {
             showMessage(isEdit ? "User updated successfully!" : "User created successfully!");
-            closeModal();
-            // Reset the hidden ID for next time
+            document.getElementById('userModal').classList.add('hidden');            // Reset the hidden ID for next time
             document.getElementById('staffId').value = ""; 
             fetchUsers(); 
         } else {
@@ -10213,7 +10215,6 @@ async function refreshTodayPOSStats() {
         document.getElementById('postoday-expense').innerText = `UGX ${data.expenses.toLocaleString()}`;
         
         const balanceEl = document.getElementById('postoday-balance');
-        balanceEl.innerText = `UGX ${data.netBalance.toLocaleString()}`;
         
         // Color coding the balance
         balanceEl.className = data.netBalance >= 0 
