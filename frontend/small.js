@@ -11037,19 +11037,20 @@ function renderTableRow(room) {
         // Render Existing Server Images
         // Inside renderTableRow(room) -> Replace the liveImages.forEach block with this:
 
-liveImages.forEach((url) => {
+          liveImages.forEach((url) => {
     imagesHtml += `
-        <div class="relative group w-12 h-12 rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-slate-50">
+        <!-- The container MUST have the 'group' class for Tailwind to register the hover -->
+        <div class="relative group w-12 h-12 rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-slate-50 cursor-pointer">
             <img src="${url}" class="w-full h-full object-cover">
             
             ${isEditing ? `
-                <!-- In Full Edit Mode: Removes image from local state array -->
-                <button onclick="removeExistingImageState('${room._id}', '${url}')" class="absolute inset-0 bg-red-600/80 text-white text-[10px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center font-bold">
+                <!-- Full Edit Mode Overlay -->
+                <button onclick="removeExistingImageState('${room._id}', '${url}')" class="absolute inset-0 bg-red-600/80 text-white text-xs opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center font-bold z-10">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
             ` : `
-                <!-- Normal Mode: Instantly purges image from database via the new API -->
-                <button onclick="deleteSingleImageInstantly('${room._id}', '${url}', '${room.name.replace(/'/g, "\\'")}')" class="absolute inset-0 bg-red-600/90 text-white text-[10px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center font-bold" title="Delete image instantly">
+                <!-- Normal Mode Instant Purge Overlay -->
+                <button onclick="deleteSingleImageInstantly('${room._id}', '${url}', '${room.name.replace(/'/g, "\\'")}')" class="absolute inset-0 bg-red-600/90 text-white text-xs opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center font-bold z-10" title="Delete image instantly">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
             `}
