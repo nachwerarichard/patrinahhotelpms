@@ -4588,7 +4588,7 @@ const Expense = mongoose.model('Expense', new mongoose.Schema({
  department: { 
     type: String, 
     required: true,
-    enum: ['Bar', 'Restaurant', 'Kitchen'], // Strict list of allowed values
+    enum: ['Bar', 'Restaurant', 'Housekeeping','front office','Other'], // Strict list of allowed values
     trim: true
   },
     description: String,
