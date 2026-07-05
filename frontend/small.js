@@ -5553,6 +5553,7 @@ async function updateRole(id, newRole) {
 
         if (res.ok) {
             fetchUsers(); // Refresh after role update
+            showMessage("Role updated successfully!");
         } else {
             const data = await res.json();
             showMessage(`Failed to update role: ${data.message || 'Unknown error'}`);
