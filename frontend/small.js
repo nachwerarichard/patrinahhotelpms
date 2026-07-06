@@ -11498,34 +11498,35 @@ settleBillForm.addEventListener('submit', async (e) => {
 });
 
 
-// This script runs globally once when the file finishes executing
-document.addEventListener('DOMContentLoaded', () => {
-    const settleModal = document.getElementById('settleBillModal');
-    const settleBillForm = document.getElementById('settleBillForm');
-    const closeSettleModalBtn = document.getElementById('closeSettleModalBtn');
+// Remove any "DOMContentLoaded" wrappers surrounding these specific lines
+const settleModal = document.getElementById('settleBillModal');
+const settleBillForm = document.getElementById('settleBillForm');
+const closeSettleModalBtn = document.getElementById('closeSettleModalBtn');
 
-    if (settleBillForm) {
-        settleBillForm.onsubmit = async (e) => {
-            e.preventDefault();
-            
-            const selectedMethod = document.getElementById('settlePaymentMethod').value;
-            
-            // Immediately drop the modal view layer out of sight
-            settleModal.classList.add('hidden');
-            settleModal.classList.remove('flex');
+if (settleBillForm) {
+    // Explicitly use .onsubmit to override any unattached or dead listeners
+    settleBillForm.onsubmit = async (e) => {
+        e.preventDefault();
+        
+        console.log("Form submit captured! Attempting to settle..."); // Temporary debug check
+        
+        const selectedMethod = document.getElementById('settlePaymentMethod').value;
+        
+        // 1. Hide the modal visually
+        settleModal.classList.add('hidden');
+        settleModal.classList.remove('flex');
 
-            // Fire off your core async network post with the target value
-            await settleAccount(selectedMethod);
-            
-            // Reset form fields back to default state
-            settleBillForm.reset();
-        };
-    }
+        // 2. Fire the network function explicitly passing the selected select option
+        await settleAccount(selectedMethod);
+        
+        // 3. Reset the payment dropdown option back to default
+        settleBillForm.reset();
+    };
+}
 
-    if (closeSettleModalBtn) {
-        closeSettleModalBtn.onclick = () => {
-            settleModal.classList.add('hidden');
-            settleModal.classList.remove('flex');
-        };
-    }
-});
+if (closeSettleModalBtn) {
+    closeSettleModalBtn.onclick = () => {
+        settleModal.classList.add('hidden');
+        settleModal.classList.remove('flex');
+    };
+}
