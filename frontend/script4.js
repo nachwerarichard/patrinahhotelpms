@@ -919,9 +919,9 @@ function applyRoleAccess(role) {
     // 1. Select all nav items (using a class is cleaner, but keeping your ID method for now)
     const navIds = [
         'nav-booking', 'nav-dashboard', 'nav-housekeeping', 'nav-inventory', 
-        'nav-sales', 'nav-posinventory', 'nav-kds', 
+        'nav-sales', 'nav-payments','nav-posinventory', 'nav-kds', 
          'nav-expenses', 'nav-cash', , 'nav-checklistform', 'nav-checklisttable','nav-missingitems' ,
-        'nav-posreports', 'nav-salereport', 'nav-housekeepingreports', 
+        'nav-posreports', 'nav-salereport', 'nav-expensereport','nav-housekeepingreports', 
         'nav-staff', 'nav-reports', 'nav-calendar', 'nav-audit-logs'
     ];
 
@@ -960,10 +960,14 @@ function applyRoleAccess(role) {
 
         case 'cashier':
             document.getElementById('nav-sales').style.display = 'list-item';
+            document.getElementById('nav-payments').style.display = 'list-item';
+            document.getElementById('nav-payments').style.display = 'list-item';
             document.getElementById('nav-expenses').style.display = 'list-item';
             document.getElementById('nav-cash').style.display = 'list-item';
             document.getElementById('nav-posreports').style.display = 'list-item';
             document.getElementById('nav-salereport').style.display = 'list-item';
+            document.getElementById('nav-expensereport').style.display = 'list-item';
+            document.getElementById('nav-housekeepingreports').style.display = 'list-item';
             break;
 
         case 'front office':
@@ -4674,14 +4678,31 @@ document.addEventListener('DOMContentLoaded', () => {
       const navCash = document.getElementById('nav-cash');
       const navInventory = document.getElementById('nav-inventory');
         const navExpense = document.getElementById('nav-expenses');
+        const navPayments = document.getElementById('nav-payments');
       const navSale = document.getElementById('nav-sales');
       const navPOSreport = document.getElementById('nav-posreports');
         const navBarReport = document.getElementById('nav-salereport');
+        const navExpReport = document.getElementById('nav-expensereport');
+
+if (navPayments) {
+        navPayments.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('payments');
+        });
+    }
 
   if (navCash) {
         navCash.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
             showSection('cash');
+        });
+    }
+
+    
+  if (navExpReport) {
+        navExpReport.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('expensereport');
         });
     }
   if (navKDS) {
@@ -5358,8 +5379,8 @@ async function fetchUsers() {
 
             // Shared modular dropdown element template string
             const selectOptionsHtml = `
-                <select onchange="updateRole('${user._id}', this.value)" 
-                        class="w-full sm:w-auto text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition shadow-sm text-slate-700">
+                <select onchange="updateRole('${user._id}', this.value, '${user.username}')" 
+                  class="w-full sm:w-auto text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition shadow-sm text-slate-700">
                     <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
                     <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
                     <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
@@ -5494,16 +5515,18 @@ async function handleSaveUser() {
         if (password) payload.newPassword = password;
 
         const res = await authenticatedFetch(url, {
-            method: method,
-            body: JSON.stringify(payload)
-        });
+    method: method,
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+});
 
         if (!res) return;
 
         if (res.ok) {
             showMessage(isEdit ? "User updated successfully!" : "User created successfully!");
-            closeModal();
-            // Reset the hidden ID for next time
+            document.getElementById('userModal').classList.add('hidden');            // Reset the hidden ID for next time
             document.getElementById('staffId').value = ""; 
             fetchUsers(); 
         } else {
@@ -5540,17 +5563,24 @@ async function deleteUser(id) {
     }
 }
 
-async function updateRole(id, newRole) {
+async function updateRole(id, newRole, currentUsername) {
     try {
         const res = await authenticatedFetch(`${API_BASE_URL}/admin/users/${id}`, {
             method: 'PUT',
-            body: JSON.stringify({ role: newRole })
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                targetUsername: currentUsername, // Keep their existing name intact
+                newRole: newRole                 // Backend expects 'newRole', not 'role'
+            })
         });
 
-        if (!res) return; // Token missing or redirected
+        if (!res) return; 
 
         if (res.ok) {
-            fetchUsers(); // Refresh after role update
+            fetchUsers(); 
+            showMessage("Role updated successfully!");
         } else {
             const data = await res.json();
             showMessage(`Failed to update role: ${data.message || 'Unknown error'}`);
@@ -5884,22 +5914,27 @@ const addCharge = async (description, number, department) => {
         }
     }
 };
-const settleAccount = async (method) => {
-    if (!activeAccountId) return;
 
-    // 1. DYNAMIC PAYLOAD OPTIMIZATION
-    // Accept standard payment options directly ('Cash', 'Card', etc.)
+// Add accountId as an explicit second argument
+const settleAccount = async (method, accountId) => {
+    // Look at the passed argument instead of the flaky global variable
+    const targetId = accountId || activeAccountId;
+    
+    if (!targetId) {
+        console.error("Settlement halted: No valid Account ID provided.");
+        return;
+    }
+
     let payload = {};
     if (method === 'room') {
         payload = { roomPost: true };
     } else {
-        // Fallback to whichever method was clicked, defaulting to 'Cash' if mixed up
         payload = { paymentMethod: ['Cash', 'Card', 'MobileMoney'].includes(method) ? method : 'Cash' };
     }
 
     try {
         const res = await authenticatedFetch(
-            `${API_BASE_URL}/pos/client/account/${activeAccountId}/settle`,
+            `${API_BASE_URL}/pos/client/account/${targetId}/settle`, // Use targetId here
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }, 
@@ -5915,27 +5950,23 @@ const settleAccount = async (method) => {
             return;
         }
 
-        // 2. RECONCILED NOTIFICATION AND STATE RESET MATCHES
         if (method === 'room') {
             showMessage('Success', 'Posted to room successfully! 📄✅', false);
             resetUI();
         } else {
-            // This captures Cash, Card, Receipt settlements cleanly!
             showMessage('Success', 'Bill settled completely! 💵✅', false);
+            resetUI();
             
-            // Clean up global UI reference tracking if we were clearing a walk-in ledger
+            // Clean up global tracker safely if needed
             if (typeof activeAccountId !== 'undefined') {
-                activeAccountId = null; // Reset the pointer tracking state
+                activeAccountId = null; 
             }
-            
-            setTimeout(() => resetUI(), 2000);
         }
     } catch (err) { 
         console.error(err);
         showMessage("Error", "Connection failure during settlement process.", true); 
     }
 };
-
 // --- UI UPDATES ---
 const updateActiveAccountUI = (account) => {
     const charges = account.charges || [];
@@ -5959,6 +5990,37 @@ const updateActiveAccountUI = (account) => {
     }
     document.getElementById('postToRoomBtn').classList.toggle('hidden', !account.roomNumber);
     document.getElementById('activeAccountSection').classList.remove('hidden');
+
+    // --- ADD/UPDATE THIS BLOCK RIGHT HERE ---
+    // Every time the UI updates, re-bind the click explicitly to the live elements
+    // Inside updateActiveAccountUI(account)...
+     // Inside updateActiveAccountUI(account)...
+// Inside updateActiveAccountUI(account)...
+const issueBtn = document.getElementById('issueReceiptBtn');
+if (issueBtn) {
+    // Clear out any old listeners completely
+    issueBtn.onclick = null; 
+    
+    issueBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Stop event bubbling up the DOM tree
+        
+        const exactId = account._id || account.id || activeAccountId;
+        console.log("Setting form data attribute with Account ID:", exactId);
+
+        const settleForm = document.getElementById('settleBillForm');
+        settleForm.setAttribute('data-account-id', exactId); 
+
+        // Update display text values inside the modal view
+        document.getElementById('settleModalTotal').textContent = liveTotal.toLocaleString();
+        document.getElementById('settleModalGuest').textContent = `${account.guestName} (${account.roomNumber ? 'Room ' + account.roomNumber : 'Walk-In Guest'})`;
+
+        // Open the modal container layout safely
+        const settleModal = document.getElementById('settleBillModal');
+        settleModal.classList.remove('hidden');
+        settleModal.classList.add('flex');
+    };
+}
 };
 
 const resetUI = () => {
@@ -6113,8 +6175,28 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('itemDesc').addEventListener('input', (e) => autoFillPrices(e.target.value));
     document.getElementById('postToRoomBtn').onclick = () => settleAccount('room');
   });
-document.getElementById('issueReceiptBtn').onclick = () => settleAccount('receipt');
 
+  // 1. DELETE OR REMOVE THIS OLD LINE COMPLETELY:
+// document.getElementById('issueReceiptBtn').onclick = () => settleAccount('receipt');
+
+// 2. MAKE SURE YOUR SCRIPT USES ONLY THE INTERCEPTOR:
+document.getElementById('issueReceiptBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!activeAccountId) return; 
+
+    // Pull the active values to show the user what they are paying
+    const dynamicTotal = document.getElementById('totalCharges').textContent;
+    const dynamicGuest = document.getElementById('currentGuestName').textContent;
+    const dynamicRoom = document.getElementById('currentRoomNumber').textContent;
+
+    document.getElementById('settleModalTotal').textContent = dynamicTotal;
+    document.getElementById('settleModalGuest').textContent = `${dynamicGuest} (${dynamicRoom})`;
+
+    // Open the modal container layout
+    const settleModal = document.getElementById('settleBillModal');
+    settleModal.classList.remove('hidden');
+    settleModal.classList.add('flex');
+});
 //bar.js code 
 
 
@@ -8152,44 +8234,34 @@ function populateEditCashModal(record) {
     modal.style.display = 'flex';
 }
 // --- Reports Functions ---
-async function generateReports() {
-    const generateButton = document.getElementById('generate-report-btn');
+// ==================== 1. GENERATE SALES REPORTS ====================
+async function generateSalesReports() {
+    const generateButton = document.getElementById('generate-sales-report-btn');
     let originalButtonHtml = generateButton ? generateButton.innerHTML : '';
     
-    // 1. Context Check
     const hotelId = localStorage.getItem('hotelId');
-    if (!hotelId) {
-        showMessage('Session expired. Please log in again.', true);
-        return;
-    }
+    if (!hotelId) { showMessage('Session expired. Please log in again.', true); return; }
 
-    const startDate = document.getElementById('report-start-date').value;
-    const endDate = document.getElementById('report-end-date').value;
+    const startDate = document.getElementById('sales-report-start-date').value;
+    const endDate = document.getElementById('sales-report-end-date').value;
 
-    if (!startDate || !endDate) {
-        showMessage('Please select both start and end dates.', true);
-        return;
-    }
+    if (!startDate || !endDate) { showMessage('Please select both start and end dates.', true); return; }
 
-    // UI Loading State
     if (generateButton) {
         generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
         generateButton.disabled = true;
     }
 
-    const tbody = document.getElementById('department-report-tbody');
-    const cardContainer = document.getElementById('department-report-cards');
-    
+    const tbody = document.getElementById('sales-department-report-tbody');
+    const cardContainer = document.getElementById('sales-department-report-cards');
     if (tbody) tbody.innerHTML = ''; 
     if (cardContainer) cardContainer.innerHTML = ''; 
 
     try {
         const queryParams = `hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`;
-        
-        let allSales = [], allExpenses = [];
+        let allSales = [];
         let page = 1, totalPages = 1;
 
-        // --- Fetch Sales ---
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/sales?${queryParams}&page=${page}&limit=100`);
             const res = await resp.json();
@@ -8200,8 +8272,94 @@ async function generateReports() {
             } else { break; }
         } while (page <= totalPages);
 
-        // --- Fetch Expenses ---
-        page = 1; totalPages = 1;
+        const salesReport = {};
+        allSales.forEach(sale => {
+            const dept = sale.department || 'Other';
+            if (!salesReport[dept]) salesReport[dept] = 0;
+            salesReport[dept] += (Number(sale.number) * Number(sale.sp));
+        });
+
+        let totalSalesSum = 0;
+        const sortedDepts = Object.keys(salesReport).sort();
+
+        if (sortedDepts.length === 0) {
+            const emptyStateHtml = 'No sales activity found for this period.';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
+            if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
+        } else {
+            let tableRowsHTML = [];
+            let mobileCardsHTML = [];
+
+            sortedDepts.forEach(dept => {
+                const sales = salesReport[dept];
+                totalSalesSum += sales;
+
+                tableRowsHTML.push(`
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
+                        <td class="px-6 py-4 text-right font-mono text-emerald-600 font-semibold">${sales.toLocaleString()}</td>
+                    </tr>
+                `);
+
+                mobileCardsHTML.push(`
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-slate-800 text-base">${dept}</h4>
+                            <span class="font-mono font-black text-emerald-600">${sales.toLocaleString()} UGX</span>
+                        </div>
+                    </div>
+                `);
+            });
+
+            if (tbody) tbody.innerHTML = tableRowsHTML.join('');
+            if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
+        }
+
+        document.getElementById('overall-sales-card').textContent = totalSalesSum.toLocaleString();
+        
+        // Populate hidden export table fields
+        const exportSalesElem = document.getElementById('overall-sales-export');
+        if (exportSalesElem) exportSalesElem.textContent = totalSalesSum.toLocaleString();
+
+    } catch (error) {
+        console.error('Sales Report Error:', error);
+        showMessage('Error generating sales report: ' + error.message, true);
+    } finally {
+        if (generateButton) {
+            generateButton.innerHTML = originalButtonHtml;
+            generateButton.disabled = false;
+        }
+    }
+}
+
+// ==================== 2. GENERATE EXPENSES REPORTS ====================
+async function generateExpensesReports() {
+    const generateButton = document.getElementById('generate-expenses-report-btn');
+    let originalButtonHtml = generateButton ? generateButton.innerHTML : '';
+    
+    const hotelId = localStorage.getItem('hotelId');
+    if (!hotelId) { showMessage('Session expired. Please log in again.', true); return; }
+
+    const startDate = document.getElementById('expenses-report-start-date').value;
+    const endDate = document.getElementById('expenses-report-end-date').value;
+
+    if (!startDate || !endDate) { showMessage('Please select both start and end dates.', true); return; }
+
+    if (generateButton) {
+        generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        generateButton.disabled = true;
+    }
+
+    const tbody = document.getElementById('expenses-department-report-tbody');
+    const cardContainer = document.getElementById('expenses-department-report-cards');
+    if (tbody) tbody.innerHTML = ''; 
+    if (cardContainer) cardContainer.innerHTML = ''; 
+
+    try {
+        const queryParams = `hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`;
+        let allExpenses = [];
+        let page = 1, totalPages = 1;
+
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/expenses?${queryParams}&page=${page}&limit=100`);
             const res = await resp.json();
@@ -8212,92 +8370,58 @@ async function generateReports() {
             } else { break; }
         } while (page <= totalPages);
 
-        // 3. AGGREGATE
-        const report = {};
-
-        allSales.forEach(sale => {
-            const dept = sale.department || 'Other';
-            if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
-            report[dept].sales += (Number(sale.number) * Number(sale.sp));
-        });
-
+        const expensesReport = {};
         allExpenses.forEach(exp => {
             const dept = exp.department || 'Other';
-            if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
-            report[dept].expenses += (Number(exp.amount) || 0);
+            if (!expensesReport[dept]) expensesReport[dept] = 0;
+            expensesReport[dept] += (Number(exp.amount) || 0);
         });
 
-        // 4. RENDER
-        let totalS = 0, totalE = 0;
-        const sortedDepts = Object.keys(report).sort();
+        let totalExpensesSum = 0;
+        const sortedDepts = Object.keys(expensesReport).sort();
 
         if (sortedDepts.length === 0) {
-            const emptyStateHtml = 'No activity found for this period.';
-            if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
+            const emptyStateHtml = 'No expenditure found for this period.';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
             if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
         } else {
             let tableRowsHTML = [];
             let mobileCardsHTML = [];
 
             sortedDepts.forEach(dept => {
-                const { sales, expenses } = report[dept];
-                totalS += sales; totalE += expenses;
-                const balance = sales - expenses;
+                const expenses = expensesReport[dept];
+                totalExpensesSum += expenses;
 
-                const balanceColorClass = balance >= 0 ? 'text-emerald-600' : 'text-red-600';
-                const balanceBgClass = balance >= 0 ? 'bg-emerald-50/50 border border-emerald-100' : 'bg-rose-50/50 border border-rose-100';
-
-                // Desktop row generation
                 tableRowsHTML.push(`
                     <tr class="border-b border-gray-100 hover:bg-gray-50">
                         <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
-                        <td class="px-6 py-4 font-mono text-slate-600">${sales.toLocaleString()}</td>
-                        <td class="px-6 py-4 font-mono text-slate-600">${expenses.toLocaleString()}</td>
-                        <td class="px-6 py-4 text-right font-mono font-bold ${balanceColorClass}">
-                            ${balance.toLocaleString()}
-                        </td>
+                        <td class="px-6 py-4 text-right font-mono text-red-600 font-semibold">${expenses.toLocaleString()}</td>
                     </tr>
                 `);
 
-                // Mobile card template generation
                 mobileCardsHTML.push(`
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                        <div class="flex justify-between items-center pb-2 border-b border-slate-100">
-                            <h4 class="font-bold text-slate-800 text-base tracking-tight">${dept}</h4>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-3 text-center">
-                            <div class="bg-slate-50/80 p-2 rounded-lg">
-                                <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wide mb-0.5">Revenue (Sales)</span>
-                                <span class="font-mono font-semibold text-slate-700 text-sm">${sales.toLocaleString()}</span>
-                            </div>
-                            <div class="bg-slate-50/80 p-2 rounded-lg">
-                                <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wide mb-0.5">Costs (Expenses)</span>
-                                <span class="font-mono font-semibold text-slate-700 text-sm">${expenses.toLocaleString()}</span>
-                            </div>
-                        </div>
-
-                        <div class="${balanceBgClass} p-2.5 rounded-lg flex justify-between items-center px-4">
-                            <span class="text-xs font-bold uppercase text-slate-500 tracking-wide">Net Position</span>
-                            <span class="font-mono font-black text-base ${balanceColorClass}">${balance.toLocaleString()}</span>
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-slate-800 text-base">${dept}</h4>
+                            <span class="font-mono font-black text-red-600">${expenses.toLocaleString()} UGX</span>
                         </div>
                     </div>
                 `);
             });
 
-            // Injection
             if (tbody) tbody.innerHTML = tableRowsHTML.join('');
             if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
         }
 
-        // 5. UPDATE UI CARDS (Matching your specific HTML IDs)
-        document.getElementById('overall-sales-card').textContent = totalS.toLocaleString();
-        document.getElementById('overall-expenses-card').textContent = totalE.toLocaleString();
-        document.getElementById('overall-balance-card').textContent = (totalS - totalE).toLocaleString();
+        document.getElementById('overall-expenses-card').textContent = totalExpensesSum.toLocaleString();
+        
+        // Populate hidden export table fields
+        const exportExpensesElem = document.getElementById('overall-expenses-export');
+        if (exportExpensesElem) exportExpensesElem.textContent = totalExpensesSum.toLocaleString();
 
     } catch (error) {
-        console.error('Report Error:', error);
-        showMessage('Error generating report: ' + error.message, true);
+        console.error('Expenses Report Error:', error);
+        showMessage('Error generating expenses report: ' + error.message, true);
     } finally {
         if (generateButton) {
             generateButton.innerHTML = originalButtonHtml;
@@ -10086,6 +10210,109 @@ document.addEventListener('click', (e) => {
     }
 });
 
+async function generatePaymentsReports() {
+    // 1. Gather all HTML filter states
+    const startDate = document.getElementById('payment-report-start-date').value;
+    const endDate = document.getElementById('payment-report-end-date').value;
+    const search = document.getElementById('payment-report-search').value;
+    const method = document.getElementById('payment-report-method').value;
+
+    // 2. Build URLSearchParams dynamically
+    const queryParams = new URLSearchParams();
+    if (startDate) queryParams.append('startDate', startDate);
+    if (endDate) queryParams.append('endDate', endDate);
+    if (search) queryParams.append('search', search);
+    if (method) queryParams.append('method', method);
+
+    const tbody = document.getElementById('payments-report-tbody');
+    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-blue-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading payment records...</td></tr>`;
+
+    try {
+        // 3. Make the API Call
+        const response = await authenticatedFetch(`${API_BASE_URL}/pos/client/accounts/closed?${queryParams.toString()}`);
+        if (!response.ok) throw new Error('Could not pull report arrays.');
+        
+        const accounts = await response.json();
+
+        // Check if no accounts returned
+        if (!accounts || accounts.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">No matching transaction history found for chosen metrics.</td></tr>`;
+            document.getElementById('overall-sales-card').textContent = "0";
+            document.getElementById('overall-transactions-card').textContent = "0";
+            document.getElementById('sales-department-report-tbody').innerHTML = "";
+            return;
+        }
+
+        // 4. Initialize Data Matrices for Analytics Compute
+        let grandTotal = 0;
+        let departmentSplits = { 'Bar': 0, 'Restaurant': 0, 'Other': 0 };
+        let tableHTML = '';
+
+        // 5. Build dynamic table layout rows
+        accounts.forEach(account => {
+            const paidAmount = account.finalAmountPaid || 0;
+            grandTotal += paidAmount;
+
+            // Formulate item breakdown descriptive string lists
+            const itemizedSummary = (account.charges || []).map(c => {
+                // Compile inner revenue department metrics at the same time
+                if (departmentSplits[c.type] !== undefined) {
+                    departmentSplits[c.type] += (c.amount || 0);
+                } else {
+                    departmentSplits['Other'] += (c.amount || 0);
+                }
+                return `${c.description} (x1)`;
+            }).join(', ') || 'No line items recorded';
+
+            // Clean formatted settlement date strings
+            const settleDate = account.settledAt ? new Date(account.settledAt).toLocaleString() : 'N/A';
+            const roomDisplay = account.roomNumber ? `Room ${account.roomNumber}` : '<span class="text-gray-400 italic">Walk-In</span>';
+            
+            // Build Row HTML
+            tableHTML += `
+                <tr class="hover:bg-slate-50/80 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500">${settleDate}</td>
+                    <td class="px-6 py-4 font-semibold text-slate-800">${account.guestName || 'Walk-In'}</td>
+                    <td class="px-6 py-4 text-slate-600">${roomDisplay}</td>
+                    <td class="px-6 py-4 text-xs text-slate-500 max-w-xs truncate" title="${itemizedSummary}">${itemizedSummary}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2.5 py-1 text-xs font-semibold rounded-full 
+                            ${account.settledByMethod === 'Cash' ? 'bg-emerald-100 text-emerald-800' : ''}
+                            ${account.settledByMethod === 'Card' ? 'bg-blue-100 text-blue-800' : ''}
+                            ${account.settledByMethod === 'MobileMoney' ? 'bg-amber-100 text-amber-800' : ''}
+                            ${account.settledByMethod === 'Room Charge' ? 'bg-purple-100 text-purple-800' : ''}
+                        ">
+                            ${account.settledByMethod || 'Cash'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-right font-bold text-slate-900">${paidAmount.toLocaleString()}</td>
+                </tr>
+            `;
+        });
+
+        // 6. Update KPIs & Table DOM layout blocks
+        tbody.innerHTML = tableHTML;
+        document.getElementById('overall-sales-card').textContent = grandTotal.toLocaleString();
+        document.getElementById('overall-transactions-card').textContent = accounts.length.toString();
+
+        // 7. Populate Department Splitting sub-tables
+        let deptHTML = '';
+        Object.keys(departmentSplits).forEach(dept => {
+            deptHTML += `
+                <tr class="bg-white">
+                    <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
+                    <td class="px-6 py-4 text-right font-bold text-slate-900">UGX ${departmentSplits[dept].toLocaleString()}</td>
+                </tr>
+            `;
+        });
+        document.getElementById('sales-department-report-tbody').innerHTML = deptHTML;
+
+    } catch (err) {
+        console.error("Failed executing payments generation routine:", err);
+        tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>Failed to fetch reporting information. Check connection.</td></tr>`;
+    }
+}
+
 async function fetchActiveAccounts() {
     const tableBody = document.getElementById('activeAccountsTableBody');
     const mobileGrid = document.getElementById('activeAccountsMobileGrid');
@@ -10213,12 +10440,7 @@ async function refreshTodayPOSStats() {
         document.getElementById('postoday-expense').innerText = `UGX ${data.expenses.toLocaleString()}`;
         
         const balanceEl = document.getElementById('postoday-balance');
-        balanceEl.innerText = `UGX ${data.netBalance.toLocaleString()}`;
         
-        // Color coding the balance
-        balanceEl.className = data.netBalance >= 0 
-            ? "text-xl font-bold mt-1 text-green-600" 
-            : "text-xl font-bold mt-1 text-red-600";
 
     } catch (err) {
         console.error("Failed to refresh today's POS stats:", err);
@@ -11344,4 +11566,102 @@ async function deleteSingleImageInstantly(roomTypeId, imageUrl, roomName) {
         console.error(err);
         showMessage(err.message || "Network transaction error.", true);
     }
+}
+
+
+// 1. Get DOM references
+const settleModal = document.getElementById('settleBillModal');
+const issueReceiptBtn = document.getElementById('issueReceiptBtn');
+const closeSettleModalBtn = document.getElementById('closeSettleModalBtn');
+const settleBillForm = document.getElementById('settleBillForm');
+
+// 2. Open settlement layout step
+issueReceiptBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    
+    // Safety check: Don't open if no active folio session exists
+    if (!activeAccountId) return; 
+
+    // Extract dynamic metadata from your existing elements
+    const dynamicTotal = document.getElementById('totalCharges').textContent;
+    const dynamicGuest = document.getElementById('currentGuestName').textContent;
+    const dynamicRoom = document.getElementById('currentRoomNumber').textContent;
+
+    // Map content safely into the receipt configuration fields
+    document.getElementById('settleModalTotal').textContent = dynamicTotal;
+    document.getElementById('settleModalGuest').textContent = `${dynamicGuest} (${dynamicRoom})`;
+
+    // Display the modal cleanly matching Tailwind utilities
+    settleModal.classList.remove('hidden');
+    settleModal.classList.add('flex');
+});
+
+// 3. Simple layout close mechanisms
+const closeSettleModal = () => {
+    settleModal.classList.add('hidden');
+    settleModal.classList.remove('flex');
+    settleBillForm.reset();
+};
+
+closeSettleModalBtn.addEventListener('click', closeSettleModal);
+
+// Close if user clicks background overlay backdrop zone
+settleModal.addEventListener('click', (e) => {
+    if (e.target === settleModal) closeSettleModal();
+});
+
+// 4. Submit processing handler
+settleBillForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const selectedMethod = document.getElementById('settlePaymentMethod').value;
+    
+    // Close the interface overlay right before network handoff
+    closeSettleModal();
+
+    // Pass chosen method cleanly straight into your base settlement function
+    await settleAccount(selectedMethod);
+});
+
+
+if (settleBillForm) {
+    settleBillForm.onsubmit = async (e) => {
+        e.preventDefault();
+        
+        console.log("--- SETTLEMENT START ---");
+        
+        const savedId = settleBillForm.getAttribute('data-account-id');
+        console.log("Extracted Account ID from form element:", savedId);
+
+        if (!savedId || savedId === 'null' || savedId === 'undefined') {
+            console.error("CRITICAL ERROR: Refusing submission. The extracted ID is invalid.");
+            console.log("--- SETTLEMENT END ---");
+            return;
+        }
+
+        const selectedMethod = document.getElementById('settlePaymentMethod').value;
+        console.log("Target payment method captured:", selectedMethod);
+        
+        // Close modal layout visually
+        settleModal.classList.add('hidden');
+        settleModal.classList.remove('flex');
+
+        console.log(`Calling settleAccount with method: ${selectedMethod} and ID: ${savedId}`);
+        
+        // Explicitly fire the network request using our saved form ID
+        await settleAccount(selectedMethod, savedId);
+        
+        console.log("settleAccount completed execution chain.");
+        
+        settleBillForm.reset();
+        settleBillForm.removeAttribute('data-account-id'); 
+        console.log("--- SETTLEMENT END ---");
+    };
+}
+
+if (closeSettleModalBtn) {
+    closeSettleModalBtn.onclick = () => {
+        settleModal.classList.add('hidden');
+        settleModal.classList.remove('flex');
+    };
 }
