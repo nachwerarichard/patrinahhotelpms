@@ -11403,3 +11403,58 @@ async function deleteSingleImageInstantly(roomTypeId, imageUrl, roomName) {
         showMessage(err.message || "Network transaction error.", true);
     }
 }
+
+
+// 1. Get DOM references
+const settleModal = document.getElementById('settleBillModal');
+const issueReceiptBtn = document.getElementById('issueReceiptBtn');
+const closeSettleModalBtn = document.getElementById('closeSettleModalBtn');
+const settleBillForm = document.getElementById('settleBillForm');
+
+// 2. Open settlement layout step
+issueReceiptBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    
+    // Safety check: Don't open if no active folio session exists
+    if (!activeAccountId) return; 
+
+    // Extract dynamic metadata from your existing elements
+    const dynamicTotal = document.getElementById('totalCharges').textContent;
+    const dynamicGuest = document.getElementById('currentGuestName').textContent;
+    const dynamicRoom = document.getElementById('currentRoomNumber').textContent;
+
+    // Map content safely into the receipt configuration fields
+    document.getElementById('settleModalTotal').textContent = dynamicTotal;
+    document.getElementById('settleModalGuest').textContent = `${dynamicGuest} (${dynamicRoom})`;
+
+    // Display the modal cleanly matching Tailwind utilities
+    settleModal.classList.remove('hidden');
+    settleModal.classList.add('flex');
+});
+
+// 3. Simple layout close mechanisms
+const closeSettleModal = () => {
+    settleModal.classList.add('hidden');
+    settleModal.classList.remove('flex');
+    settleBillForm.reset();
+};
+
+closeSettleModalBtn.addEventListener('click', closeSettleModal);
+
+// Close if user clicks background overlay backdrop zone
+settleModal.addEventListener('click', (e) => {
+    if (e.target === settleModal) closeSettleModal();
+});
+
+// 4. Submit processing handler
+settleBillForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const selectedMethod = document.getElementById('settlePaymentMethod').value;
+    
+    // Close the interface overlay right before network handoff
+    closeSettleModal();
+
+    // Pass chosen method cleanly straight into your base settlement function
+    await settleAccount(selectedMethod);
+});
