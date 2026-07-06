@@ -5985,20 +5985,25 @@ const updateActiveAccountUI = (account) => {
     // --- ADD/UPDATE THIS BLOCK RIGHT HERE ---
     // Every time the UI updates, re-bind the click explicitly to the live elements
     // Inside updateActiveAccountUI(account)...
+     // Inside updateActiveAccountUI(account)...
 const issueBtn = document.getElementById('issueReceiptBtn');
 if (issueBtn) {
     issueBtn.onclick = (e) => {
         e.preventDefault();
         
-        // 1. Store the ID securely directly on the form DOM element
-        const settleForm = document.getElementById('settleBillForm');
-        settleForm.setAttribute('data-account-id', account.id || activeAccountId); 
+        // 1. Grab the ID checking both Mongoose formats (_id or id)
+        const exactId = account._id || account.id || activeAccountId;
+        
+        console.log("Setting form data attribute with Account ID:", exactId); // Quick debug verification
 
-        // 2. Set your text fields as normal
+        const settleForm = document.getElementById('settleBillForm');
+        settleForm.setAttribute('data-account-id', exactId); 
+
+        // 2. Map totals and guest metadata matching your existing DOM variables
         document.getElementById('settleModalTotal').textContent = liveTotal.toLocaleString();
         document.getElementById('settleModalGuest').textContent = `${account.guestName} (${account.roomNumber ? 'Room ' + account.roomNumber : 'Walk-In Guest'})`;
 
-        // 3. Open the modal container layout
+        // 3. Open the modal layout
         const settleModal = document.getElementById('settleBillModal');
         settleModal.classList.remove('hidden');
         settleModal.classList.add('flex');
@@ -11510,29 +11515,25 @@ if (settleBillForm) {
         
         console.log("--- SETTLEMENT START ---");
         
-        // Grab the ID directly from the form attribute note we left
         const savedId = settleBillForm.getAttribute('data-account-id');
         console.log("Extracted Account ID from form element:", savedId);
 
-        if (!savedId) {
-            console.error("CRITICAL: Form submission blocked. data-account-id attribute is completely missing!");
+        // Reject if missing, undefined, or explicitly holding the literal string "null"
+        if (!savedId || savedId === 'null' || savedId === 'undefined') {
+            console.error("CRITICAL ERROR: Refusing submission. The extracted ID is invalid.");
+            alert("Error: Active Account ID tracking token was lost. Please re-select the guest folio.");
             console.log("--- SETTLEMENT END ---");
             return;
         }
 
         const selectedMethod = document.getElementById('settlePaymentMethod').value;
-        console.log("Target payment method captured:", selectedMethod);
         
-        // Hide the modal views
+        // Hide the layout container
         settleModal.classList.add('hidden');
         settleModal.classList.remove('flex');
 
-        console.log(`Calling settleAccount('${selectedMethod}', '${savedId}')...`);
-        
-        // Pass BOTH values directly to the API function safely
+        // Execute API route handoff
         await settleAccount(selectedMethod, savedId);
-        
-        console.log("settleAccount completed execution chain.");
         
         settleBillForm.reset();
         settleBillForm.removeAttribute('data-account-id'); 
