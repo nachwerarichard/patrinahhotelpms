@@ -11497,11 +11497,6 @@ settleBillForm.addEventListener('submit', async (e) => {
 });
 
 
-
-const settleModal = document.getElementById('settleBillModal');
-const settleBillForm = document.getElementById('settleBillForm');
-const closeSettleModalBtn = document.getElementById('closeSettleModalBtn');
-
 if (settleBillForm) {
     settleBillForm.onsubmit = async (e) => {
         e.preventDefault();
