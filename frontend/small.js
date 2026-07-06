@@ -6134,8 +6134,28 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('itemDesc').addEventListener('input', (e) => autoFillPrices(e.target.value));
     document.getElementById('postToRoomBtn').onclick = () => settleAccount('room');
   });
-document.getElementById('issueReceiptBtn').onclick = () => settleAccount('receipt');
 
+  // 1. DELETE OR REMOVE THIS OLD LINE COMPLETELY:
+// document.getElementById('issueReceiptBtn').onclick = () => settleAccount('receipt');
+
+// 2. MAKE SURE YOUR SCRIPT USES ONLY THE INTERCEPTOR:
+document.getElementById('issueReceiptBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!activeAccountId) return; 
+
+    // Pull the active values to show the user what they are paying
+    const dynamicTotal = document.getElementById('totalCharges').textContent;
+    const dynamicGuest = document.getElementById('currentGuestName').textContent;
+    const dynamicRoom = document.getElementById('currentRoomNumber').textContent;
+
+    document.getElementById('settleModalTotal').textContent = dynamicTotal;
+    document.getElementById('settleModalGuest').textContent = `${dynamicGuest} (${dynamicRoom})`;
+
+    // Open the modal container layout
+    const settleModal = document.getElementById('settleBillModal');
+    settleModal.classList.remove('hidden');
+    settleModal.classList.add('flex');
+});
 //bar.js code 
 
 
