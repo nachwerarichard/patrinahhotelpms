@@ -8173,44 +8173,34 @@ function populateEditCashModal(record) {
     modal.style.display = 'flex';
 }
 // --- Reports Functions ---
-async function generateReports() {
-    const generateButton = document.getElementById('generate-report-btn');
+// ==================== 1. GENERATE SALES REPORTS ====================
+async function generateSalesReports() {
+    const generateButton = document.getElementById('generate-sales-report-btn');
     let originalButtonHtml = generateButton ? generateButton.innerHTML : '';
     
-    // 1. Context Check
     const hotelId = localStorage.getItem('hotelId');
-    if (!hotelId) {
-        showMessage('Session expired. Please log in again.', true);
-        return;
-    }
+    if (!hotelId) { showMessage('Session expired. Please log in again.', true); return; }
 
-    const startDate = document.getElementById('report-start-date').value;
-    const endDate = document.getElementById('report-end-date').value;
+    const startDate = document.getElementById('sales-report-start-date').value;
+    const endDate = document.getElementById('sales-report-end-date').value;
 
-    if (!startDate || !endDate) {
-        showMessage('Please select both start and end dates.', true);
-        return;
-    }
+    if (!startDate || !endDate) { showMessage('Please select both start and end dates.', true); return; }
 
-    // UI Loading State
     if (generateButton) {
         generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
         generateButton.disabled = true;
     }
 
-    const tbody = document.getElementById('department-report-tbody');
-    const cardContainer = document.getElementById('department-report-cards');
-    
+    const tbody = document.getElementById('sales-department-report-tbody');
+    const cardContainer = document.getElementById('sales-department-report-cards');
     if (tbody) tbody.innerHTML = ''; 
     if (cardContainer) cardContainer.innerHTML = ''; 
 
     try {
         const queryParams = `hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`;
-        
-        let allSales = [], allExpenses = [];
+        let allSales = [];
         let page = 1, totalPages = 1;
 
-        // --- Fetch Sales ---
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/sales?${queryParams}&page=${page}&limit=100`);
             const res = await resp.json();
@@ -8221,8 +8211,94 @@ async function generateReports() {
             } else { break; }
         } while (page <= totalPages);
 
-        // --- Fetch Expenses ---
-        page = 1; totalPages = 1;
+        const salesReport = {};
+        allSales.forEach(sale => {
+            const dept = sale.department || 'Other';
+            if (!salesReport[dept]) salesReport[dept] = 0;
+            salesReport[dept] += (Number(sale.number) * Number(sale.sp));
+        });
+
+        let totalSalesSum = 0;
+        const sortedDepts = Object.keys(salesReport).sort();
+
+        if (sortedDepts.length === 0) {
+            const emptyStateHtml = 'No sales activity found for this period.';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
+            if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
+        } else {
+            let tableRowsHTML = [];
+            let mobileCardsHTML = [];
+
+            sortedDepts.forEach(dept => {
+                const sales = salesReport[dept];
+                totalSalesSum += sales;
+
+                tableRowsHTML.push(`
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
+                        <td class="px-6 py-4 text-right font-mono text-emerald-600 font-semibold">${sales.toLocaleString()}</td>
+                    </tr>
+                `);
+
+                mobileCardsHTML.push(`
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-slate-800 text-base">${dept}</h4>
+                            <span class="font-mono font-black text-emerald-600">${sales.toLocaleString()} UGX</span>
+                        </div>
+                    </div>
+                `);
+            });
+
+            if (tbody) tbody.innerHTML = tableRowsHTML.join('');
+            if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
+        }
+
+        document.getElementById('overall-sales-card').textContent = totalSalesSum.toLocaleString();
+        
+        // Populate hidden export table fields
+        const exportSalesElem = document.getElementById('overall-sales-export');
+        if (exportSalesElem) exportSalesElem.textContent = totalSalesSum.toLocaleString();
+
+    } catch (error) {
+        console.error('Sales Report Error:', error);
+        showMessage('Error generating sales report: ' + error.message, true);
+    } finally {
+        if (generateButton) {
+            generateButton.innerHTML = originalButtonHtml;
+            generateButton.disabled = false;
+        }
+    }
+}
+
+// ==================== 2. GENERATE EXPENSES REPORTS ====================
+async function generateExpensesReports() {
+    const generateButton = document.getElementById('generate-expenses-report-btn');
+    let originalButtonHtml = generateButton ? generateButton.innerHTML : '';
+    
+    const hotelId = localStorage.getItem('hotelId');
+    if (!hotelId) { showMessage('Session expired. Please log in again.', true); return; }
+
+    const startDate = document.getElementById('expenses-report-start-date').value;
+    const endDate = document.getElementById('expenses-report-end-date').value;
+
+    if (!startDate || !endDate) { showMessage('Please select both start and end dates.', true); return; }
+
+    if (generateButton) {
+        generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        generateButton.disabled = true;
+    }
+
+    const tbody = document.getElementById('expenses-department-report-tbody');
+    const cardContainer = document.getElementById('expenses-department-report-cards');
+    if (tbody) tbody.innerHTML = ''; 
+    if (cardContainer) cardContainer.innerHTML = ''; 
+
+    try {
+        const queryParams = `hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`;
+        let allExpenses = [];
+        let page = 1, totalPages = 1;
+
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/expenses?${queryParams}&page=${page}&limit=100`);
             const res = await resp.json();
@@ -8233,92 +8309,58 @@ async function generateReports() {
             } else { break; }
         } while (page <= totalPages);
 
-        // 3. AGGREGATE
-        const report = {};
-
-        allSales.forEach(sale => {
-            const dept = sale.department || 'Other';
-            if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
-            report[dept].sales += (Number(sale.number) * Number(sale.sp));
-        });
-
+        const expensesReport = {};
         allExpenses.forEach(exp => {
             const dept = exp.department || 'Other';
-            if (!report[dept]) report[dept] = { sales: 0, expenses: 0 };
-            report[dept].expenses += (Number(exp.amount) || 0);
+            if (!expensesReport[dept]) expensesReport[dept] = 0;
+            expensesReport[dept] += (Number(exp.amount) || 0);
         });
 
-        // 4. RENDER
-        let totalS = 0, totalE = 0;
-        const sortedDepts = Object.keys(report).sort();
+        let totalExpensesSum = 0;
+        const sortedDepts = Object.keys(expensesReport).sort();
 
         if (sortedDepts.length === 0) {
-            const emptyStateHtml = 'No activity found for this period.';
-            if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
+            const emptyStateHtml = 'No expenditure found for this period.';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
             if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
         } else {
             let tableRowsHTML = [];
             let mobileCardsHTML = [];
 
             sortedDepts.forEach(dept => {
-                const { sales, expenses } = report[dept];
-                totalS += sales; totalE += expenses;
-                const balance = sales - expenses;
+                const expenses = expensesReport[dept];
+                totalExpensesSum += expenses;
 
-                const balanceColorClass = balance >= 0 ? 'text-emerald-600' : 'text-red-600';
-                const balanceBgClass = balance >= 0 ? 'bg-emerald-50/50 border border-emerald-100' : 'bg-rose-50/50 border border-rose-100';
-
-                // Desktop row generation
                 tableRowsHTML.push(`
                     <tr class="border-b border-gray-100 hover:bg-gray-50">
                         <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
-                        <td class="px-6 py-4 font-mono text-slate-600">${sales.toLocaleString()}</td>
-                        <td class="px-6 py-4 font-mono text-slate-600">${expenses.toLocaleString()}</td>
-                        <td class="px-6 py-4 text-right font-mono font-bold ${balanceColorClass}">
-                            ${balance.toLocaleString()}
-                        </td>
+                        <td class="px-6 py-4 text-right font-mono text-red-600 font-semibold">${expenses.toLocaleString()}</td>
                     </tr>
                 `);
 
-                // Mobile card template generation
                 mobileCardsHTML.push(`
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                        <div class="flex justify-between items-center pb-2 border-b border-slate-100">
-                            <h4 class="font-bold text-slate-800 text-base tracking-tight">${dept}</h4>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-3 text-center">
-                            <div class="bg-slate-50/80 p-2 rounded-lg">
-                                <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wide mb-0.5">Revenue (Sales)</span>
-                                <span class="font-mono font-semibold text-slate-700 text-sm">${sales.toLocaleString()}</span>
-                            </div>
-                            <div class="bg-slate-50/80 p-2 rounded-lg">
-                                <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wide mb-0.5">Costs (Expenses)</span>
-                                <span class="font-mono font-semibold text-slate-700 text-sm">${expenses.toLocaleString()}</span>
-                            </div>
-                        </div>
-
-                        <div class="${balanceBgClass} p-2.5 rounded-lg flex justify-between items-center px-4">
-                            <span class="text-xs font-bold uppercase text-slate-500 tracking-wide">Net Position</span>
-                            <span class="font-mono font-black text-base ${balanceColorClass}">${balance.toLocaleString()}</span>
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-slate-800 text-base">${dept}</h4>
+                            <span class="font-mono font-black text-red-600">${expenses.toLocaleString()} UGX</span>
                         </div>
                     </div>
                 `);
             });
 
-            // Injection
             if (tbody) tbody.innerHTML = tableRowsHTML.join('');
             if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
         }
 
-        // 5. UPDATE UI CARDS (Matching your specific HTML IDs)
-        document.getElementById('overall-sales-card').textContent = totalS.toLocaleString();
-        document.getElementById('overall-expenses-card').textContent = totalE.toLocaleString();
-        //document.getElementById('overall-balance-card').textContent = (totalS - totalE).toLocaleString();
+        document.getElementById('overall-expenses-card').textContent = totalExpensesSum.toLocaleString();
+        
+        // Populate hidden export table fields
+        const exportExpensesElem = document.getElementById('overall-expenses-export');
+        if (exportExpensesElem) exportExpensesElem.textContent = totalExpensesSum.toLocaleString();
 
     } catch (error) {
-        console.error('Report Error:', error);
-        showMessage('Error generating report: ' + error.message, true);
+        console.error('Expenses Report Error:', error);
+        showMessage('Error generating expenses report: ' + error.message, true);
     } finally {
         if (generateButton) {
             generateButton.innerHTML = originalButtonHtml;

@@ -2239,14 +2239,16 @@ body {
         </form>
     </div>
 </div>
-            <section id="salereport" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+<!-- ================= SALES REPORT SECTION ================= -->
+<section id="salereport" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
     <div class="flex justify-between items-center mb-6 border-b pb-4">
         <div>
-            <h2 class="text-2xl font-bold text-blue-600">Expenses Reports</h2>
+            <h2 class="text-2xl font-bold text-blue-600">Sales Reports</h2>
             <p class="text-sm text-gray-500">Analyze departmental performance and net profitability</p>
         </div>
         <div class="flex gap-2">
-            <button onclick="exportTableToExcel('overall-reports-table', 'Expenses_Summary')" class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition shadow-sm flex items-center gap-2">
+            <!-- Updated table ID target -->
+            <button onclick="exportTableToExcel('overall-sales-reports-table', 'Sales_Summary')" class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition shadow-sm flex items-center gap-2">
                 <i class="fas fa-file-export"></i> Export Report
             </button>
         </div>
@@ -2254,15 +2256,16 @@ body {
 
     <div class="filter-controls grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 items-end p-5 bg-slate-50 rounded-2xl border border-slate-100">
         <div class="flex flex-col">
-            <label for="report-start-date" class="text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
-            <input type="date" id="report-start-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+            <label for="sales-report-start-date" class="text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
+            <input type="date" id="sales-report-start-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
         <div class="flex flex-col">
-            <label for="report-end-date" class="text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
-            <input type="date" id="report-end-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+            <label for="sales-report-end-date" class="text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
+            <input type="date" id="sales-report-end-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
-        <button id="generate-report-btn" onclick="generateReports()" class="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-            <i class="fas fa-sync-alt"></i> Generate & Refresh Reports
+        <!-- Changed function call to generateSalesReports() -->
+        <button id="generate-sales-report-btn" onclick="generateSalesReports()" class="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
+            <i class="fas fa-sync-alt"></i> Generate & Refresh Sales
         </button>
     </div>
 
@@ -2276,65 +2279,48 @@ body {
             <div class="absolute -right-4 -bottom-4 opacity-5">
                 <i class="fas fa-cash-register text-7xl text-emerald-600"></i>
             </div>
-        </div>
-        
-        <div class="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm relative overflow-hidden">
-            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Expenses</p>
-            <div class="flex items-baseline gap-2">
-                <span class="text-slate-400 font-medium">UGX</span>
-                <span id="overall-expenses-card" class="text-3xl font-black text-red-600">0</span>
-            </div>
-            <div class="absolute -right-4 -bottom-4 opacity-5">
-                <i class="fas fa-file-invoice-dollar text-7xl text-red-600"></i>
-            </div>
-        </div>
-
-        
+        </div>    
     </div>
 
     <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm mb-8">
-    <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
-        <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Departmental Breakdown</h3>
-    </div>
-    
-    <div class="hidden md:block table-responsive">
-        <table id="department-table" class="min-w-full text-left">
-            <thead>
-                <tr class="bg-white text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
-                    <th class="px-6 py-4">Department</th>
-                    <th class="px-6 py-4">Revenue (Sales)</th>
-                    <th class="px-6 py-4">Costs (Expenses)</th>
-                    <th class="px-6 py-4 text-right">Net Position</th>
-                </tr>
-            </thead>
-            <tbody id="department-report-tbody" class="divide-y divide-slate-50">
-            </tbody>
-        </table>
-    </div>
-
-    <div id="department-report-cards" class="block md:hidden p-4 space-y-4 bg-slate-50/40">
+        <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
+            <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Departmental Sales Breakdown</h3>
         </div>
-</div>
+        <div class="hidden md:block table-responsive">
+            <table id="sales-department-table" class="min-w-full text-left">
+                <thead>
+                    <tr class="bg-white text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
+                        <th class="px-6 py-4">Department</th>
+                        <th class="px-6 py-4 text-right">Revenue (Sales)</th>
+                    </tr>
+                </thead>
+                <!-- Unique Tbody ID -->
+                <tbody id="sales-department-report-tbody" class="divide-y divide-slate-50"></tbody>
+            </table>
+        </div>
+        <!-- Unique Mobile Card Container ID -->
+        <div id="sales-department-report-cards" class="block md:hidden p-4 space-y-4 bg-slate-50/40"></div>
+    </div>
 
-    <table id="overall-reports-table" class="hidden">
-        <thead>
-            <tr><th>Metric</th><th>Amount (UGX)</th></tr>
-        </thead>
+    <!-- Unique hidden Export Table ID -->
+    <table id="overall-sales-reports-table" class="hidden">
+        <thead><tr><th>Metric</th><th>Amount (UGX)</th></tr></thead>
         <tbody>
-            <tr><td>Total Sales</td><td id="overall-sales">0</td></tr>
-            <tr><td>Total Expenses</td><td id="overall-expenses">0</td></tr>
-            <tr><td>Net Balance</td><td id="overall-balance">0</td></tr>
+            <tr><td>Total Sales</td><td id="overall-sales-export">0</td></tr>
         </tbody>
     </table>
 </section>
+
+<!-- ================= EXPENSES REPORT SECTION ================= -->
 <section id="expensereport" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
     <div class="flex justify-between items-center mb-6 border-b pb-4">
         <div>
             <h2 class="text-2xl font-bold text-blue-600">Expenses Reports</h2>
-            <p class="text-sm text-gray-500">Analyze departmental performance and net profitability</p>
+            <p class="text-sm text-gray-500">Analyze departmental costs and expenses patterns</p>
         </div>
         <div class="flex gap-2">
-            <button onclick="exportTableToExcel('overall-reports-table', 'Financial_Summary')" class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition shadow-sm flex items-center gap-2">
+            <!-- Updated table ID target -->
+            <button onclick="exportTableToExcel('overall-expenses-reports-table', 'Expenses_Summary')" class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition shadow-sm flex items-center gap-2">
                 <i class="fas fa-file-export"></i> Export Report
             </button>
         </div>
@@ -2342,30 +2328,20 @@ body {
 
     <div class="filter-controls grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 items-end p-5 bg-slate-50 rounded-2xl border border-slate-100">
         <div class="flex flex-col">
-            <label for="report-start-date" class="text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
-            <input type="date" id="report-start-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+            <label for="expenses-report-start-date" class="text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
+            <input type="date" id="expenses-report-start-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
         <div class="flex flex-col">
-            <label for="report-end-date" class="text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
-            <input type="date" id="report-end-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+            <label for="expenses-report-end-date" class="text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
+            <input type="date" id="expenses-report-end-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
-        <button id="generate-report-btn" onclick="generateReports()" class="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-            <i class="fas fa-sync-alt"></i> Generate & Refresh Reports
+        <!-- Changed function call to generateExpensesReports() -->
+        <button id="generate-expenses-report-btn" onclick="generateExpensesReports()" class="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
+            <i class="fas fa-sync-alt"></i> Generate & Refresh Expenses
         </button>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm relative overflow-hidden">
-            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Sales</p>
-            <div class="flex items-baseline gap-2">
-                <span class="text-slate-400 font-medium">UGX</span>
-                <span id="overall-sales-card" class="text-3xl font-black text-slate-800">0</span>
-            </div>
-            <div class="absolute -right-4 -bottom-4 opacity-5">
-                <i class="fas fa-cash-register text-7xl text-emerald-600"></i>
-            </div>
-        </div>
-        
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"> 
         <div class="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm relative overflow-hidden">
             <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Expenses</p>
             <div class="flex items-baseline gap-2">
@@ -2375,43 +2351,36 @@ body {
             <div class="absolute -right-4 -bottom-4 opacity-5">
                 <i class="fas fa-file-invoice-dollar text-7xl text-red-600"></i>
             </div>
-        </div>
-
-        
+        </div>    
     </div>
 
     <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm mb-8">
-    <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
-        <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Departmental Breakdown</h3>
-    </div>
-    
-    <div class="hidden md:block table-responsive">
-        <table id="department-table" class="min-w-full text-left">
-            <thead>
-                <tr class="bg-white text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
-                    <th class="px-6 py-4">Department</th>
-                    <th class="px-6 py-4">Revenue (Sales)</th>
-                    <th class="px-6 py-4">Costs (Expenses)</th>
-                    <th class="px-6 py-4 text-right">Net Position</th>
-                </tr>
-            </thead>
-            <tbody id="department-report-tbody" class="divide-y divide-slate-50">
-            </tbody>
-        </table>
-    </div>
-
-    <div id="department-report-cards" class="block md:hidden p-4 space-y-4 bg-slate-50/40">
+        <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
+            <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Departmental Expenses Breakdown</h3>
         </div>
-</div>
+        
+        <div class="hidden md:block table-responsive">
+            <table id="expenses-department-table" class="min-w-full text-left">
+                <thead>
+                    <tr class="bg-white text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
+                        <th class="px-6 py-4">Department</th>
+                        <th class="px-6 py-4 text-right">Costs (Expenses)</th>
+                    </tr>
+                </thead>
+                <!-- Unique Tbody ID -->
+                <tbody id="expenses-department-report-tbody" class="divide-y divide-slate-50"></tbody>
+            </table>
+        </div>
 
-    <table id="overall-reports-table" class="hidden">
-        <thead>
-            <tr><th>Metric</th><th>Amount (UGX)</th></tr>
-        </thead>
+        <!-- Unique Mobile Card Container ID -->
+        <div id="expenses-department-report-cards" class="block md:hidden p-4 space-y-4 bg-slate-50/40"></div>
+    </div>
+
+    <!-- Unique hidden Export Table ID -->
+    <table id="overall-expenses-reports-table" class="hidden">
+        <thead><tr><th>Metric</th><th>Amount (UGX)</th></tr></thead>
         <tbody>
-            <tr><td>Total Sales</td><td id="overall-sales">0</td></tr>
-            <tr><td>Total Expenses</td><td id="overall-expenses">0</td></tr>
-            <tr><td>Net Balance</td><td id="overall-balance">0</td></tr>
+            <tr><td>Total Expenses</td><td id="overall-expenses-export">0</td></tr>
         </tbody>
     </table>
 </section>
