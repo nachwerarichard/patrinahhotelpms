@@ -5905,16 +5905,14 @@ const addCharge = async (description, number, department) => {
         }
     }
 };
+
 const settleAccount = async (method) => {
     if (!activeAccountId) return;
 
-    // 1. DYNAMIC PAYLOAD OPTIMIZATION
-    // Accept standard payment options directly ('Cash', 'Card', etc.)
     let payload = {};
     if (method === 'room') {
         payload = { roomPost: true };
     } else {
-        // Fallback to whichever method was clicked, defaulting to 'Cash' if mixed up
         payload = { paymentMethod: ['Cash', 'Card', 'MobileMoney'].includes(method) ? method : 'Cash' };
     }
 
@@ -5936,20 +5934,21 @@ const settleAccount = async (method) => {
             return;
         }
 
-        // 2. RECONCILED NOTIFICATION AND STATE RESET MATCHES
+        // --- ORDER FIXES HAPPEN HERE ---
         if (method === 'room') {
             showMessage('Success', 'Posted to room successfully! 📄✅', false);
             resetUI();
         } else {
-            // This captures Cash, Card, Receipt settlements cleanly!
+            // 1. Show the success message immediately while things are still in memory
             showMessage('Success', 'Bill settled completely! 💵✅', false);
             
-            // Clean up global UI reference tracking if we were clearing a walk-in ledger
+            // 2. Clear the UI first so the screen updates immediately without a refresh
+            resetUI();
+
+            // 3. ONLY reset your tracking pointer AFTER the UI state has been fully wiped down
             if (typeof activeAccountId !== 'undefined') {
-                activeAccountId = null; // Reset the pointer tracking state
+                activeAccountId = null; 
             }
-            
-            setTimeout(() => resetUI(), 2000);
         }
     } catch (err) { 
         console.error(err);
