@@ -11498,9 +11498,6 @@ settleBillForm.addEventListener('submit', async (e) => {
 });
 
 
-// Remove any "DOMContentLoaded" wrappers surrounding these specific lines
-const settleBillForm = document.getElementById('settleBillForm');
-const closeSettleModalBtn = document.getElementById('closeSettleModalBtn');
 
 if (settleBillForm) {
     // Explicitly use .onsubmit to override any unattached or dead listeners
