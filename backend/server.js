@@ -280,8 +280,8 @@ async function addAuditLog(action, username, hotelId, details = {}) {
 
 // Add this new schema and model definition with your other schemas
 const walkInChargeSchema = new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
-    receiptId: { type: String, required: true, unique: true }, // Unique ID for the receipt
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+    receiptId: { type: String, required: true, unique: true }, 
     guestName: { type: String, required: true },
     type: { // e.g., 'Bar', 'Restaurant', 'Spa', 'Other'
         type: String,
@@ -294,6 +294,13 @@ const walkInChargeSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    // --- ADD THE FIELD HERE ---
+    paymentMethod: {
+        type: String,
+        enum: ['Cash', 'Card', 'MobileMoney'], // Restricts input to only your valid choices
+        required: true,
+        default: 'Cash'
+    },
     date: {
         type: Date,
         default: Date.now
@@ -303,6 +310,7 @@ const walkInChargeSchema = new mongoose.Schema({
         default: false
     }
 });
+
 const WalkInCharge = mongoose.model('WalkInCharge', walkInChargeSchema);
 const roomTypeSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
@@ -1031,22 +1039,27 @@ const IncidentalCharge = mongoose.model('IncidentalCharge', incidentalChargeSche
 
 // --- Define Mongoose Schemas and Models (cont.) ---
 const clientAccountSchema = new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
     guestName: { type: String, required: true },
     roomNumber: { type: String },
     charges: [{
         description: { type: String, required: true },
         amount: { type: Number, required: true },
         type: { 
-        type: String,
-        enum: ['Bar', 'Restaurant', 'Other'],
-        required: true
-    },
+            type: String,
+            enum: ['Bar', 'Restaurant', 'Other'],
+            required: true
+        }, // Cleaned up the bracket property structure here
         date: { type: Date, default: Date.now }
     }],
     totalCharges: { type: Number, default: 0 },
+    
+    // Audit reporting trackers
+    settledAt: { type: Date },
+    settledByMethod: { type: String, enum: ['Cash', 'Card', 'MobileMoney', 'Room Charge'] },
+    finalAmountPaid: { type: Number },
     isClosed: { type: Boolean, default: false }
-}, { timestamps: true }); // <--- ADD THIS LINE
+}, { timestamps: true });
 
 const ClientAccount = mongoose.model('ClientAccount', clientAccountSchema);
 
@@ -1433,8 +1446,10 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
             return res.status(400).json({ message: 'Invalid or already closed account' });
         }
 
+        // Defensive fix: Ensure charges is always an array to prevent crashes
+        const currentCharges = account.charges || [];
+
         if (roomPost && account.roomNumber) {
-            // Use Regex for flexible room matching (ignores accidental spaces)
             const booking = await Booking.findOne({
                 room: { $regex: new RegExp(`^${account.roomNumber.trim()}$`, 'i') },
                 hotelId: hotelId,
@@ -1444,31 +1459,31 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
             const accountName = (account.guestName || "").trim().toLowerCase();
             const bookingName = (booking?.name || "").trim().toLowerCase();
 
-            // Relaxed check: Logic fails if booking doesn't exist OR if names are wildly different
             if (!booking || !accountName.includes(bookingName.split(' ')[0])) { 
                 return res.status(400).json({ 
                     message: `No active booking found for ${account.guestName} in Room ${account.roomNumber}` 
                 });
             }
 
-            const newCharges = account.charges.map(charge => ({
+            const newCharges = currentCharges.map(charge => ({
                 description: charge.description,
                 amount: charge.amount,
                 type: charge.type,
                 hotelId,
                 bookingId: booking._id,
-                bookingCustomId: booking.id, // Your 'BKG001' style ID
+                bookingCustomId: booking.id, 
                 guestName: account.guestName,
                 date: new Date()
             }));
 
-            await IncidentalCharge.insertMany(newCharges);
+            if (newCharges.length > 0) {
+                await IncidentalCharge.insertMany(newCharges);
+            }
 
         } else if (paymentMethod) {
-            // 1. Group items by description and type to eliminate itemized duplicates
             const consolidatedChargesMap = {};
 
-            account.charges.forEach(charge => {
+            currentCharges.forEach(charge => {
                 const key = `${charge.description}-${charge.type || 'Other'}`;
                 if (consolidatedChargesMap[key]) {
                     consolidatedChargesMap[key].amount += charge.amount;
@@ -1481,7 +1496,6 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
                 }
             });
 
-            // 2. Map consolidated values to WalkInCharge structures
             const walkInCharges = Object.values(consolidatedChargesMap).map((charge, index) => ({
                 hotelId: hotelId,
                 guestName: account.guestName,
@@ -1494,7 +1508,6 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
                 date: new Date()
             }));
 
-            // 3. Single guarded write operation (Stray repeated insert cleanly removed)
             if (walkInCharges.length > 0) {
                 await WalkInCharge.insertMany(walkInCharges);
             }
@@ -1502,13 +1515,19 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
 
         // Close the folio account to complete the process
         account.isClosed = true;
+        account.settledAt = new Date();
+        account.settledByMethod = roomPost ? 'Room Charge' : paymentMethod;
+        
+        // Calculated safely with a clear numerical fallback structure
+        account.finalAmountPaid = account.totalCharges || currentCharges.reduce((sum, c) => sum + (c.amount || 0), 0);
+
         await account.save();
 
         const receiptData = {
             guestName: account.guestName,
             hotelId: hotelId,
-            charges: account.charges,
-            total: account.totalCharges || account.charges.reduce((sum, c) => sum + c.amount, 0)
+            charges: currentCharges,
+            total: account.finalAmountPaid 
         };
 
         res.status(200).json({ 
@@ -1519,6 +1538,50 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
     } catch (error) {
         console.error("Settlement Error:", error);
         res.status(500).json({ message: 'Settlement failed', details: error.message });
+    }
+});
+
+app.get('/api/pos/client/accounts/closed', auth, async (req, res) => {
+    const hotelId = req.user.hotelId;
+    const { startDate, endDate, search, method } = req.query;
+
+    try {
+        // Base filter: always look for closed accounts under this hotel
+        let query = { hotelId, isClosed: true };
+
+        // Date Range Filter
+        if (startDate || endDate) {
+            query.settledAt = {};
+            if (startDate) query.settledAt.$gte = new Date(startDate);
+            if (endDate) {
+                // Set end date to 23:59:59 to capture the entire day
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                query.settledAt.$lte = end;
+            }
+        }
+
+        // Text Search Filter (Guest Name or Room Number)
+        if (search && search.trim() !== "") {
+            const searchRegex = new RegExp(search.trim(), 'i');
+            query.$or = [
+                { guestName: searchRegex },
+                { roomNumber: searchRegex }
+            ];
+        }
+
+        // Payment Method Filter
+        if (method && method !== 'All') {
+            query.settledByMethod = method;
+        }
+
+        // Fetch accounts sorted by newest settlement first
+        const closedAccounts = await ClientAccount.find(query).sort({ settledAt: -1 });
+        
+        res.status(200).json(closedAccounts);
+    } catch (error) {
+        console.error("Error fetching closed accounts:", error);
+        res.status(500).json({ message: 'Failed to retrieve records', details: error.message });
     }
 });
 // Audit Log Schema

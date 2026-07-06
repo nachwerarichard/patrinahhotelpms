@@ -919,7 +919,7 @@ function applyRoleAccess(role) {
     // 1. Select all nav items (using a class is cleaner, but keeping your ID method for now)
     const navIds = [
         'nav-booking', 'nav-dashboard', 'nav-housekeeping', 'nav-inventory', 
-        'nav-sales', 'nav-posinventory', 'nav-kds', 
+        'nav-sales', 'nav-payments','nav-posinventory', 'nav-kds', 
          'nav-expenses', 'nav-cash', , 'nav-checklistform', 'nav-checklisttable','nav-missingitems' ,
         'nav-posreports', 'nav-salereport', 'nav-expensereport','nav-housekeepingreports', 
         'nav-staff', 'nav-reports', 'nav-calendar', 'nav-audit-logs'
@@ -960,6 +960,8 @@ function applyRoleAccess(role) {
 
         case 'cashier':
             document.getElementById('nav-sales').style.display = 'list-item';
+            document.getElementById('nav-payments').style.display = 'list-item';
+            document.getElementById('nav-payments').style.display = 'list-item';
             document.getElementById('nav-expenses').style.display = 'list-item';
             document.getElementById('nav-cash').style.display = 'list-item';
             document.getElementById('nav-posreports').style.display = 'list-item';
@@ -4676,11 +4678,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const navCash = document.getElementById('nav-cash');
       const navInventory = document.getElementById('nav-inventory');
         const navExpense = document.getElementById('nav-expenses');
+        const navPayments = document.getElementById('nav-payments');
       const navSale = document.getElementById('nav-sales');
       const navPOSreport = document.getElementById('nav-posreports');
         const navBarReport = document.getElementById('nav-salereport');
         const navExpReport = document.getElementById('nav-expensereport');
 
+if (navPayments) {
+        navPayments.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('payments');
+        });
+    }
 
   if (navCash) {
         navCash.addEventListener('click', (e) => {
@@ -10200,6 +10209,109 @@ document.addEventListener('click', (e) => {
         }
     }
 });
+
+async function generatePaymentsReports() {
+    // 1. Gather all HTML filter states
+    const startDate = document.getElementById('payment-report-start-date').value;
+    const endDate = document.getElementById('payment-report-end-date').value;
+    const search = document.getElementById('payment-report-search').value;
+    const method = document.getElementById('payment-report-method').value;
+
+    // 2. Build URLSearchParams dynamically
+    const queryParams = new URLSearchParams();
+    if (startDate) queryParams.append('startDate', startDate);
+    if (endDate) queryParams.append('endDate', endDate);
+    if (search) queryParams.append('search', search);
+    if (method) queryParams.append('method', method);
+
+    const tbody = document.getElementById('payments-report-tbody');
+    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-blue-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading payment records...</td></tr>`;
+
+    try {
+        // 3. Make the API Call
+        const response = await authenticatedFetch(`${API_BASE_URL}/pos/client/accounts/closed?${queryParams.toString()}`);
+        if (!response.ok) throw new Error('Could not pull report arrays.');
+        
+        const accounts = await response.json();
+
+        // Check if no accounts returned
+        if (!accounts || accounts.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">No matching transaction history found for chosen metrics.</td></tr>`;
+            document.getElementById('overall-sales-card').textContent = "0";
+            document.getElementById('overall-transactions-card').textContent = "0";
+            document.getElementById('sales-department-report-tbody').innerHTML = "";
+            return;
+        }
+
+        // 4. Initialize Data Matrices for Analytics Compute
+        let grandTotal = 0;
+        let departmentSplits = { 'Bar': 0, 'Restaurant': 0, 'Other': 0 };
+        let tableHTML = '';
+
+        // 5. Build dynamic table layout rows
+        accounts.forEach(account => {
+            const paidAmount = account.finalAmountPaid || 0;
+            grandTotal += paidAmount;
+
+            // Formulate item breakdown descriptive string lists
+            const itemizedSummary = (account.charges || []).map(c => {
+                // Compile inner revenue department metrics at the same time
+                if (departmentSplits[c.type] !== undefined) {
+                    departmentSplits[c.type] += (c.amount || 0);
+                } else {
+                    departmentSplits['Other'] += (c.amount || 0);
+                }
+                return `${c.description} (x1)`;
+            }).join(', ') || 'No line items recorded';
+
+            // Clean formatted settlement date strings
+            const settleDate = account.settledAt ? new Date(account.settledAt).toLocaleString() : 'N/A';
+            const roomDisplay = account.roomNumber ? `Room ${account.roomNumber}` : '<span class="text-gray-400 italic">Walk-In</span>';
+            
+            // Build Row HTML
+            tableHTML += `
+                <tr class="hover:bg-slate-50/80 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500">${settleDate}</td>
+                    <td class="px-6 py-4 font-semibold text-slate-800">${account.guestName || 'Walk-In'}</td>
+                    <td class="px-6 py-4 text-slate-600">${roomDisplay}</td>
+                    <td class="px-6 py-4 text-xs text-slate-500 max-w-xs truncate" title="${itemizedSummary}">${itemizedSummary}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2.5 py-1 text-xs font-semibold rounded-full 
+                            ${account.settledByMethod === 'Cash' ? 'bg-emerald-100 text-emerald-800' : ''}
+                            ${account.settledByMethod === 'Card' ? 'bg-blue-100 text-blue-800' : ''}
+                            ${account.settledByMethod === 'MobileMoney' ? 'bg-amber-100 text-amber-800' : ''}
+                            ${account.settledByMethod === 'Room Charge' ? 'bg-purple-100 text-purple-800' : ''}
+                        ">
+                            ${account.settledByMethod || 'Cash'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-right font-bold text-slate-900">${paidAmount.toLocaleString()}</td>
+                </tr>
+            `;
+        });
+
+        // 6. Update KPIs & Table DOM layout blocks
+        tbody.innerHTML = tableHTML;
+        document.getElementById('overall-sales-card').textContent = grandTotal.toLocaleString();
+        document.getElementById('overall-transactions-card').textContent = accounts.length.toString();
+
+        // 7. Populate Department Splitting sub-tables
+        let deptHTML = '';
+        Object.keys(departmentSplits).forEach(dept => {
+            deptHTML += `
+                <tr class="bg-white">
+                    <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
+                    <td class="px-6 py-4 text-right font-bold text-slate-900">UGX ${departmentSplits[dept].toLocaleString()}</td>
+                </tr>
+            `;
+        });
+        document.getElementById('sales-department-report-tbody').innerHTML = deptHTML;
+
+    } catch (err) {
+        console.error("Failed executing payments generation routine:", err);
+        tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>Failed to fetch reporting information. Check connection.</td></tr>`;
+    }
+}
 
 async function fetchActiveAccounts() {
     const tableBody = document.getElementById('activeAccountsTableBody');
