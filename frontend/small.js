@@ -5980,6 +5980,24 @@ const updateActiveAccountUI = (account) => {
     }
     document.getElementById('postToRoomBtn').classList.toggle('hidden', !account.roomNumber);
     document.getElementById('activeAccountSection').classList.remove('hidden');
+
+    // --- ADD/UPDATE THIS BLOCK RIGHT HERE ---
+    // Every time the UI updates, re-bind the click explicitly to the live elements
+    const issueBtn = document.getElementById('issueReceiptBtn');
+    if (issueBtn) {
+        issueBtn.onclick = (e) => {
+            e.preventDefault();
+            
+            // Format data straight from the current active account object
+            document.getElementById('settleModalTotal').textContent = liveTotal.toLocaleString();
+            document.getElementById('settleModalGuest').textContent = `${account.guestName} (${account.roomNumber ? 'Room ' + account.roomNumber : 'Walk-In Guest'})`;
+
+            // Instantly toggle the modal view
+            const settleModal = document.getElementById('settleBillModal');
+            settleModal.classList.remove('hidden');
+            settleModal.classList.add('flex');
+        };
+    }
 };
 
 const resetUI = () => {
@@ -11477,4 +11495,37 @@ settleBillForm.addEventListener('submit', async (e) => {
 
     // Pass chosen method cleanly straight into your base settlement function
     await settleAccount(selectedMethod);
+});
+
+
+// This script runs globally once when the file finishes executing
+document.addEventListener('DOMContentLoaded', () => {
+    const settleModal = document.getElementById('settleBillModal');
+    const settleBillForm = document.getElementById('settleBillForm');
+    const closeSettleModalBtn = document.getElementById('closeSettleModalBtn');
+
+    if (settleBillForm) {
+        settleBillForm.onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const selectedMethod = document.getElementById('settlePaymentMethod').value;
+            
+            // Immediately drop the modal view layer out of sight
+            settleModal.classList.add('hidden');
+            settleModal.classList.remove('flex');
+
+            // Fire off your core async network post with the target value
+            await settleAccount(selectedMethod);
+            
+            // Reset form fields back to default state
+            settleBillForm.reset();
+        };
+    }
+
+    if (closeSettleModalBtn) {
+        closeSettleModalBtn.onclick = () => {
+            settleModal.classList.add('hidden');
+            settleModal.classList.remove('flex');
+        };
+    }
 });
