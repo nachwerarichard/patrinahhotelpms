@@ -5982,21 +5982,26 @@ const updateActiveAccountUI = (account) => {
 
     // --- ADD/UPDATE THIS BLOCK RIGHT HERE ---
     // Every time the UI updates, re-bind the click explicitly to the live elements
-    const issueBtn = document.getElementById('issueReceiptBtn');
-    if (issueBtn) {
-        issueBtn.onclick = (e) => {
-            e.preventDefault();
-            
-            // Format data straight from the current active account object
-            document.getElementById('settleModalTotal').textContent = liveTotal.toLocaleString();
-            document.getElementById('settleModalGuest').textContent = `${account.guestName} (${account.roomNumber ? 'Room ' + account.roomNumber : 'Walk-In Guest'})`;
+    // Inside updateActiveAccountUI(account)...
+const issueBtn = document.getElementById('issueReceiptBtn');
+if (issueBtn) {
+    issueBtn.onclick = (e) => {
+        e.preventDefault();
+        
+        // 1. Store the ID securely directly on the form DOM element
+        const settleForm = document.getElementById('settleBillForm');
+        settleForm.setAttribute('data-account-id', account.id || activeAccountId); 
 
-            // Instantly toggle the modal view
-            const settleModal = document.getElementById('settleBillModal');
-            settleModal.classList.remove('hidden');
-            settleModal.classList.add('flex');
-        };
-    }
+        // 2. Set your text fields as normal
+        document.getElementById('settleModalTotal').textContent = liveTotal.toLocaleString();
+        document.getElementById('settleModalGuest').textContent = `${account.guestName} (${account.roomNumber ? 'Room ' + account.roomNumber : 'Walk-In Guest'})`;
+
+        // 3. Open the modal container layout
+        const settleModal = document.getElementById('settleBillModal');
+        settleModal.classList.remove('hidden');
+        settleModal.classList.add('flex');
+    };
+}
 };
 
 const resetUI = () => {
@@ -11501,34 +11506,28 @@ if (settleBillForm) {
     settleBillForm.onsubmit = async (e) => {
         e.preventDefault();
         
-        console.log("--- SETTLEMENT START ---");
-        console.log("Current activeAccountId tracking state:", typeof activeAccountId !== 'undefined' ? activeAccountId : "UNDEFINED GLOBAL");
-
-        // 1. Get the raw element safely
-        const methodSelect = document.getElementById('settlePaymentMethod');
-        if (!methodSelect) {
-            console.error("CRITICAL: Element '#settlePaymentMethod' could not be found in the DOM.");
+        // Pull the ID that we securely locked to this form structure
+        const savedId = settleBillForm.getAttribute('data-account-id');
+        
+        if (!savedId) {
+            console.error("Could not find an account ID associated with this settlement request.");
             return;
         }
-        
-        const selectedMethod = methodSelect.value;
-        console.log("Target payment method captured from dropdown:", selectedMethod);
-        
-        try {
-            // 2. Clear out layout overlays
-            settleModal.classList.add('hidden');
-            settleModal.classList.remove('flex');
 
-            // 3. Hand over execution control flow to api runner
-            console.log("Calling settleAccount()...");
-            await settleAccount(selectedMethod);
-            console.log("settleAccount completed execution chain.");
-            
-            settleBillForm.reset();
-        } catch (submissionError) {
-            console.error("Runtime exception caught during submit intercept pipeline:", submissionError);
-        }
-        console.log("--- SETTLEMENT END ---");
+        // Restore the active tracking pointer context before running the network task
+        activeAccountId = savedId; 
+
+        const selectedMethod = document.getElementById('settlePaymentMethod').value;
+        
+        // Hide modal layout
+        settleModal.classList.add('hidden');
+        settleModal.classList.remove('flex');
+
+        // Fire off network operation
+        await settleAccount(selectedMethod);
+        
+        settleBillForm.reset();
+        settleBillForm.removeAttribute('data-account-id'); // Clean up attributes
     };
 }
 
