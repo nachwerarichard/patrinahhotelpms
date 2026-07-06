@@ -5906,8 +5906,15 @@ const addCharge = async (description, number, department) => {
     }
 };
 
-const settleAccount = async (method) => {
-    if (!activeAccountId) return;
+// Add accountId as an explicit second argument
+const settleAccount = async (method, accountId) => {
+    // Look at the passed argument instead of the flaky global variable
+    const targetId = accountId || activeAccountId;
+    
+    if (!targetId) {
+        console.error("Settlement halted: No valid Account ID provided.");
+        return;
+    }
 
     let payload = {};
     if (method === 'room') {
@@ -5918,7 +5925,7 @@ const settleAccount = async (method) => {
 
     try {
         const res = await authenticatedFetch(
-            `${API_BASE_URL}/pos/client/account/${activeAccountId}/settle`,
+            `${API_BASE_URL}/pos/client/account/${targetId}/settle`, // Use targetId here
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }, 
@@ -5934,18 +5941,14 @@ const settleAccount = async (method) => {
             return;
         }
 
-        // --- ORDER FIXES HAPPEN HERE ---
         if (method === 'room') {
             showMessage('Success', 'Posted to room successfully! 📄✅', false);
             resetUI();
         } else {
-            // 1. Show the success message immediately while things are still in memory
             showMessage('Success', 'Bill settled completely! 💵✅', false);
-            
-            // 2. Clear the UI first so the screen updates immediately without a refresh
             resetUI();
-
-            // 3. ONLY reset your tracking pointer AFTER the UI state has been fully wiped down
+            
+            // Clean up global tracker safely if needed
             if (typeof activeAccountId !== 'undefined') {
                 activeAccountId = null; 
             }
@@ -5955,7 +5958,6 @@ const settleAccount = async (method) => {
         showMessage("Error", "Connection failure during settlement process.", true); 
     }
 };
-
 // --- UI UPDATES ---
 const updateActiveAccountUI = (account) => {
     const charges = account.charges || [];
@@ -11506,28 +11508,35 @@ if (settleBillForm) {
     settleBillForm.onsubmit = async (e) => {
         e.preventDefault();
         
-        // Pull the ID that we securely locked to this form structure
-        const savedId = settleBillForm.getAttribute('data-account-id');
+        console.log("--- SETTLEMENT START ---");
         
+        // Grab the ID directly from the form attribute note we left
+        const savedId = settleBillForm.getAttribute('data-account-id');
+        console.log("Extracted Account ID from form element:", savedId);
+
         if (!savedId) {
-            console.error("Could not find an account ID associated with this settlement request.");
+            console.error("CRITICAL: Form submission blocked. data-account-id attribute is completely missing!");
+            console.log("--- SETTLEMENT END ---");
             return;
         }
 
-        // Restore the active tracking pointer context before running the network task
-        activeAccountId = savedId; 
-
         const selectedMethod = document.getElementById('settlePaymentMethod').value;
+        console.log("Target payment method captured:", selectedMethod);
         
-        // Hide modal layout
+        // Hide the modal views
         settleModal.classList.add('hidden');
         settleModal.classList.remove('flex');
 
-        // Fire off network operation
-        await settleAccount(selectedMethod);
+        console.log(`Calling settleAccount('${selectedMethod}', '${savedId}')...`);
+        
+        // Pass BOTH values directly to the API function safely
+        await settleAccount(selectedMethod, savedId);
+        
+        console.log("settleAccount completed execution chain.");
         
         settleBillForm.reset();
-        settleBillForm.removeAttribute('data-account-id'); // Clean up attributes
+        settleBillForm.removeAttribute('data-account-id'); 
+        console.log("--- SETTLEMENT END ---");
     };
 }
 
