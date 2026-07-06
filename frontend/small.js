@@ -921,7 +921,7 @@ function applyRoleAccess(role) {
         'nav-booking', 'nav-dashboard', 'nav-housekeeping', 'nav-inventory', 
         'nav-sales', 'nav-posinventory', 'nav-kds', 
          'nav-expenses', 'nav-cash', , 'nav-checklistform', 'nav-checklisttable','nav-missingitems' ,
-        'nav-posreports', 'nav-salereport', 'nav-housekeepingreports', 
+        'nav-posreports', 'nav-salereport', 'nav-expensereport','nav-housekeepingreports', 
         'nav-staff', 'nav-reports', 'nav-calendar', 'nav-audit-logs'
     ];
 
@@ -964,6 +964,8 @@ function applyRoleAccess(role) {
             document.getElementById('nav-cash').style.display = 'list-item';
             document.getElementById('nav-posreports').style.display = 'list-item';
             document.getElementById('nav-salereport').style.display = 'list-item';
+            document.getElementById('nav-expensereport').style.display = 'list-item';
+            document.getElementById('nav-housekeepingreports').style.display = 'list-item';
             break;
 
         case 'front office':
@@ -4677,11 +4679,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const navSale = document.getElementById('nav-sales');
       const navPOSreport = document.getElementById('nav-posreports');
         const navBarReport = document.getElementById('nav-salereport');
+        const navExpReport = document.getElementById('nav-expensereport');
+
 
   if (navCash) {
         navCash.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
             showSection('cash');
+        });
+    }
+
+    
+  if (navExpReport) {
+        navExpReport.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('expensereport');
         });
     }
   if (navKDS) {
@@ -8302,7 +8314,7 @@ async function generateReports() {
         // 5. UPDATE UI CARDS (Matching your specific HTML IDs)
         document.getElementById('overall-sales-card').textContent = totalS.toLocaleString();
         document.getElementById('overall-expenses-card').textContent = totalE.toLocaleString();
-        document.getElementById('overall-balance-card').textContent = (totalS - totalE).toLocaleString();
+        //document.getElementById('overall-balance-card').textContent = (totalS - totalE).toLocaleString();
 
     } catch (error) {
         console.error('Report Error:', error);
