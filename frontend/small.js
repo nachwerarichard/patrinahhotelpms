@@ -11499,7 +11499,6 @@ settleBillForm.addEventListener('submit', async (e) => {
 
 
 // Remove any "DOMContentLoaded" wrappers surrounding these specific lines
-const settleModal = document.getElementById('settleBillModal');
 const settleBillForm = document.getElementById('settleBillForm');
 const closeSettleModalBtn = document.getElementById('closeSettleModalBtn');
 
