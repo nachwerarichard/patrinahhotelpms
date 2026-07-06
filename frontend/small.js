@@ -11498,24 +11498,42 @@ settleBillForm.addEventListener('submit', async (e) => {
 
 
 
+const settleModal = document.getElementById('settleBillModal');
+const settleBillForm = document.getElementById('settleBillForm');
+const closeSettleModalBtn = document.getElementById('closeSettleModalBtn');
+
 if (settleBillForm) {
-    // Explicitly use .onsubmit to override any unattached or dead listeners
     settleBillForm.onsubmit = async (e) => {
         e.preventDefault();
         
-        console.log("Form submit captured! Attempting to settle..."); // Temporary debug check
-        
-        const selectedMethod = document.getElementById('settlePaymentMethod').value;
-        
-        // 1. Hide the modal visually
-        settleModal.classList.add('hidden');
-        settleModal.classList.remove('flex');
+        console.log("--- SETTLEMENT START ---");
+        console.log("Current activeAccountId tracking state:", typeof activeAccountId !== 'undefined' ? activeAccountId : "UNDEFINED GLOBAL");
 
-        // 2. Fire the network function explicitly passing the selected select option
-        await settleAccount(selectedMethod);
+        // 1. Get the raw element safely
+        const methodSelect = document.getElementById('settlePaymentMethod');
+        if (!methodSelect) {
+            console.error("CRITICAL: Element '#settlePaymentMethod' could not be found in the DOM.");
+            return;
+        }
         
-        // 3. Reset the payment dropdown option back to default
-        settleBillForm.reset();
+        const selectedMethod = methodSelect.value;
+        console.log("Target payment method captured from dropdown:", selectedMethod);
+        
+        try {
+            // 2. Clear out layout overlays
+            settleModal.classList.add('hidden');
+            settleModal.classList.remove('flex');
+
+            // 3. Hand over execution control flow to api runner
+            console.log("Calling settleAccount()...");
+            await settleAccount(selectedMethod);
+            console.log("settleAccount completed execution chain.");
+            
+            settleBillForm.reset();
+        } catch (submissionError) {
+            console.error("Runtime exception caught during submit intercept pipeline:", submissionError);
+        }
+        console.log("--- SETTLEMENT END ---");
     };
 }
 
