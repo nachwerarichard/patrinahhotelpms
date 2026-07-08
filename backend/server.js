@@ -4840,13 +4840,13 @@ app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
             return res.status(400).json({ error: "This order has already been processed." });
         }
 
-        // 2. Fetch & Update Inventory (Stock Check with Restaurant Bypass)
+        // 2. Fetch & Update Inventory (Bypass stock validation and deductions for Restaurant)
         const dept = order.department || 'Kitchen'; 
         const todayInventory = await getTodayInventory(order.item, 0, hotelId);
         
         const currentAvailableStock = todayInventory.opening + todayInventory.purchases;
         
-        // 🌟 Fix: Skip the hard block error entirely if the department is 'Restaurant'
+        // 🌟 Only track and enforce stock checks if it's NOT a Restaurant item
         const shouldTrackStock = todayInventory.trackInventory && dept !== 'Restaurant';
 
         if (shouldTrackStock && (todayInventory.sales + order.number) > currentAvailableStock) {
@@ -4855,8 +4855,7 @@ app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
             });
         }
 
-        // 🌟 Fix: Only update the inventory metrics if we are actively tracking stock for this department
-        // If your business rule requires updating inventory into negative numbers for Restaurant, remove the wrapper.
+        // 🌟 Only deduct from stock if it's NOT a Restaurant item
         if (dept !== 'Restaurant') {
             todayInventory.sales += order.number;
             await todayInventory.save();
@@ -4872,7 +4871,7 @@ app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
                         charges: {
                             description: `${order.item} (x${order.number})`,
                             amount: order.sp * order.number,
-                            type: ['Bar', 'Restaurant'].includes(dept) ? dept : 'Other', // Aligned safe type fallback matching schema
+                            type: ['Bar', 'Restaurant'].includes(dept) ? dept : 'Other', // Enum safety
                             date: new Date()
                         }
                     },
@@ -4890,7 +4889,7 @@ app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
             bp: order.bp || 0,
             sp: order.sp || 0,
             date: new Date(),
-            accountId: order.accountId || null, // Ensure the account links back just like your post route
+            accountId: order.accountId || null,
             profit: ((order.sp || 0) - (order.bp || 0)) * order.number,
             percentageprofit: order.bp && order.bp !== 0 ? (((order.sp - order.bp) / order.bp) * 100) : 0
         });
