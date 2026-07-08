@@ -5852,31 +5852,37 @@ const addCharge = async (description, number, department) => {
         date: new Date()
     };
 
-   try {
+    try {
         if (submitBtn) {
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> SAVING...`;
         }
 
-        // 1. Send Order to correct Endpoint
-        const endpoint = (department === 'Restaurant') 
-            ? `${API_BASE_URL}/kitchen/order` 
-            : `${API_BASE_URL}/sales`;
+        // 1. Send Order to correct Endpoints
+        // If it's a Restaurant item, fire off the ticket to the kitchen asynchronously
+        if (department === 'Restaurant') {
+            authenticatedFetch(`${API_BASE_URL}/kitchen/order`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            }).catch(err => console.error("Kitchen ticket routing failed:", err));
+        }
 
+        // EVERY department item (including Restaurant) must hit the sales ledger endpoint
+        const endpoint = `${API_BASE_URL}/sales`;
         const res = await authenticatedFetch(endpoint, {
             method: 'POST',
             body: JSON.stringify(payload)
         });
 
         if (!res) return;
-        if (!res.ok) throw new Error("Failed to record primary sale.");
+        if (!res.ok) throw new Error("Failed to record sale to the ledger.");
 
-        // Grab the data returned directly from your updated backend route
+        // Grab the data returned directly from your backend route
         const serverResponse = await res.json(); // contains { sale, updatedAccount }
 
         // 2. Process Notifications
         if (department === 'Restaurant') {
-            showMessage('Success', 'Kitchen order has been sent! 🍳✅', false);
+            showMessage('Success', 'Kitchen order sent & added to ledger! 🍳💰', false);
         } else if (activeAccountId) {
             showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
         } else {
@@ -5893,7 +5899,7 @@ const addCharge = async (description, number, department) => {
                     updateActiveAccountUI(freshAccountData);
                 }
             } else if (serverResponse.updatedAccount) {
-                // 💡 CHIP IN HERE: For walk-ins, use the auto-created account straight from the response!
+                // For walk-ins, use the auto-created account straight from the response!
                 updateActiveAccountUI(serverResponse.updatedAccount);
             }
         }
