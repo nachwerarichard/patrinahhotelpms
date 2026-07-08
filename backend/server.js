@@ -4840,19 +4840,27 @@ app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
             return res.status(400).json({ error: "This order has already been processed." });
         }
 
-        // 2. Fetch & Update Inventory (Stock Check)
+        // 2. Fetch & Update Inventory (Stock Check with Restaurant Bypass)
         const dept = order.department || 'Kitchen'; 
         const todayInventory = await getTodayInventory(order.item, 0, hotelId);
         
         const currentAvailableStock = todayInventory.opening + todayInventory.purchases;
-        if (todayInventory.trackInventory && (todayInventory.sales + order.number) > currentAvailableStock) {
+        
+        // 🌟 Fix: Skip the hard block error entirely if the department is 'Restaurant'
+        const shouldTrackStock = todayInventory.trackInventory && dept !== 'Restaurant';
+
+        if (shouldTrackStock && (todayInventory.sales + order.number) > currentAvailableStock) {
             return res.status(400).json({ 
                 error: `Insufficient stock for ${order.item}. Available: ${currentAvailableStock - todayInventory.sales}` 
             });
         }
 
-        todayInventory.sales += order.number;
-        await todayInventory.save();
+        // 🌟 Fix: Only update the inventory metrics if we are actively tracking stock for this department
+        // If your business rule requires updating inventory into negative numbers for Restaurant, remove the wrapper.
+        if (dept !== 'Restaurant') {
+            todayInventory.sales += order.number;
+            await todayInventory.save();
+        }
 
         // 3. Folio Charging (Room Billing)
         if (order.accountId) {
@@ -4864,7 +4872,7 @@ app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
                         charges: {
                             description: `${order.item} (x${order.number})`,
                             amount: order.sp * order.number,
-                            type: dept,
+                            type: ['Bar', 'Restaurant'].includes(dept) ? dept : 'Other', // Aligned safe type fallback matching schema
                             date: new Date()
                         }
                     },
@@ -4882,6 +4890,7 @@ app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
             bp: order.bp || 0,
             sp: order.sp || 0,
             date: new Date(),
+            accountId: order.accountId || null, // Ensure the account links back just like your post route
             profit: ((order.sp || 0) - (order.bp || 0)) * order.number,
             percentageprofit: order.bp && order.bp !== 0 ? (((order.sp - order.bp) / order.bp) * 100) : 0
         });
@@ -4891,12 +4900,12 @@ app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
         order.readyAt = new Date();
         await order.save();
 
-        // 📝 6. Fixed: Swapped to addAuditLog, forced req.user.username, and aligned arguments
+        // 📝 6. Audit Log Execution
         await addAuditLog(
             'Kitchen Order Ready', 
-            req.user.username, // ✅ Pulls directly from auth middleware (No "System" defaults)
-            hotelId,           // ✅ 3rd argument: hotelId
-            {                  // ✅ 4th argument: details object
+            req.user.username, 
+            hotelId,           
+            {                  
                 orderId: order._id,
                 saleId: sale._id,
                 item: order.item,
