@@ -5852,31 +5852,37 @@ const addCharge = async (description, number, department) => {
         date: new Date()
     };
 
-   try {
+    try {
         if (submitBtn) {
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> SAVING...`;
         }
 
-        // 1. Send Order to correct Endpoint
-        const endpoint = (department === 'Restaurant') 
-            ? `${API_BASE_URL}/kitchen/order` 
-            : `${API_BASE_URL}/sales`;
+        // 1. Send Order to correct Endpoints
+        // If it's a Restaurant item, fire off the ticket to the kitchen asynchronously
+        if (department === 'Restaurant') {
+            authenticatedFetch(`${API_BASE_URL}/kitchen/order`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            }).catch(err => console.error("Kitchen ticket routing failed:", err));
+        }
 
+        // EVERY department item (including Restaurant) must hit the sales ledger endpoint
+        const endpoint = `${API_BASE_URL}/sales`;
         const res = await authenticatedFetch(endpoint, {
             method: 'POST',
             body: JSON.stringify(payload)
         });
 
         if (!res) return;
-        if (!res.ok) throw new Error("Failed to record primary sale.");
+        if (!res.ok) throw new Error("Failed to record sale to the ledger.");
 
-        // Grab the data returned directly from your updated backend route
+        // Grab the data returned directly from your backend route
         const serverResponse = await res.json(); // contains { sale, updatedAccount }
 
         // 2. Process Notifications
         if (department === 'Restaurant') {
-            showMessage('Success', 'Kitchen order has been sent! 🍳✅', false);
+            showMessage('Success', 'Kitchen order sent & added to ledger! 🍳💰', false);
         } else if (activeAccountId) {
             showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
         } else {
@@ -5893,7 +5899,7 @@ const addCharge = async (description, number, department) => {
                     updateActiveAccountUI(freshAccountData);
                 }
             } else if (serverResponse.updatedAccount) {
-                // 💡 CHIP IN HERE: For walk-ins, use the auto-created account straight from the response!
+                // For walk-ins, use the auto-created account straight from the response!
                 updateActiveAccountUI(serverResponse.updatedAccount);
             }
         }
@@ -10210,6 +10216,20 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// Variable to store the typing cooldown timer state
+let paymentsSearchTimeout = null;
+
+/**
+ * Debounce controller that captures text input fields, preventing 
+ * an API fetch crash loop while someone is actively typing names.
+ */
+function debouncedPaymentsReports() {
+    clearTimeout(paymentsSearchTimeout);
+    paymentsSearchTimeout = setTimeout(() => {
+        generatePaymentsReports();
+    }, 400); // 400ms pause configuration
+}
+
 async function generatePaymentsReports() {
     // 1. Gather all HTML filter states
     const startDate = document.getElementById('payment-report-start-date').value;
@@ -10225,7 +10245,9 @@ async function generatePaymentsReports() {
     if (method) queryParams.append('method', method);
 
     const tbody = document.getElementById('payments-report-tbody');
-    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-blue-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading payment records...</td></tr>`;
+    
+    // Smooth inline processing spinner indicator inside the table frame
+    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-blue-500"><i class="fas fa-spinner fa-spin mr-2"></i>Updating records matching criteria...</td></tr>`;
 
     try {
         // 3. Make the API Call
@@ -10254,15 +10276,17 @@ async function generatePaymentsReports() {
             grandTotal += paidAmount;
 
             // Formulate item breakdown descriptive string lists
-            const itemizedSummary = (account.charges || []).map(c => {
-                // Compile inner revenue department metrics at the same time
+            (account.charges || []).forEach(c => {
                 if (departmentSplits[c.type] !== undefined) {
                     departmentSplits[c.type] += (c.amount || 0);
                 } else {
                     departmentSplits['Other'] += (c.amount || 0);
                 }
-                return `${c.description} (x1)`;
-            }).join(', ') || 'No line items recorded';
+            });
+
+            const itemizedSummary = (account.charges || [])
+                .map(c => `${c.description}`)
+                .join(', ') || 'No line items recorded';
 
             // Clean formatted settlement date strings
             const settleDate = account.settledAt ? new Date(account.settledAt).toLocaleString() : 'N/A';

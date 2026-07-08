@@ -410,12 +410,12 @@ body {
         </div>
 
         <div class="bg-white border border-slate-200 md:border-0 md:border-b-2 border-l-4 md:border-l-0 border-l-green-500 md:border-b-green-500 px-3 py-1.5 md:p-3 rounded-lg shadow-sm flex flex-row md:flex-col items-center justify-between md:justify-center text-center min-w-[45%] md:min-w-0">
-            <p class="text-[10px] uppercase font-bold text-green-600 tracking-wider md:mb-1">Clean</p>
+            <p class="text-[10px] uppercase font-bold text-green-600 tracking-wider md:mb-1">Ready to assign</p>
             <p class="text-base md:text-xl font-bold text-slate-800" id="stat-clean">0</p>
         </div>
 
         <div class="bg-white border border-slate-200 md:border-0 md:border-b-2 border-l-4 md:border-l-0 border-l-orange-500 md:border-b-orange-500 px-3 py-1.5 md:p-3 rounded-lg shadow-sm flex flex-row md:flex-col items-center justify-between md:justify-center text-center min-w-[45%] md:min-w-0">
-            <p class="text-[10px] uppercase font-bold text-orange-600 tracking-wider md:mb-1">Dirty</p>
+            <p class="text-[10px] uppercase font-bold text-orange-600 tracking-wider md:mb-1">Needs Cleaning</p>
             <p class="text-base md:text-xl font-bold text-slate-800" id="stat-dirty">0</p>
         </div>
 
@@ -2314,23 +2314,24 @@ body {
         </div>
     </div>
 
-    <!-- Enhanced Advanced Filters Group -->
+    <!-- Enhanced Live-Filtering Group -->
     <div class="filter-controls grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-8 items-end p-5 bg-slate-50 rounded-2xl border border-slate-100">
         <div class="flex flex-col">
             <label for="payment-report-start-date" class="text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
-            <input type="date" id="payment-report-start-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+            <input type="date" id="payment-report-start-date" onchange="generatePaymentsReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white">
         </div>
         <div class="flex flex-col">
             <label for="payment-report-end-date" class="text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
-            <input type="date" id="payment-report-end-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+            <input type="date" id="payment-report-end-date" onchange="generatePaymentsReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white">
         </div>
         <div class="flex flex-col">
             <label for="payment-report-search" class="text-xs font-bold text-slate-500 uppercase mb-1">Search Guest / Room</label>
-            <input type="text" id="payment-report-search" placeholder="e.g. John Doe or 104" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+            <!-- Triggers the smart typing delay function -->
+            <input type="text" id="payment-report-search" oninput="debouncedPaymentsReports()" placeholder="e.g. John Doe or 104" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white">
         </div>
         <div class="flex flex-col">
             <label for="payment-report-method" class="text-xs font-bold text-slate-500 uppercase mb-1">Payment Method</label>
-            <select id="payment-report-method" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+            <select id="payment-report-method" onchange="generatePaymentsReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                 <option value="All">All Methods</option>
                 <option value="Cash">Cash</option>
                 <option value="Card">Card</option>
@@ -2339,7 +2340,7 @@ body {
             </select>
         </div>
         <button id="generate-payments-report-btn" onclick="generatePaymentsReports()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-            <i class="fas fa-sync-alt"></i> Filter & Refresh
+            <i class="fas fa-sync-alt"></i> Force Refresh
         </button>
     </div>
 
@@ -2386,7 +2387,7 @@ body {
                 </thead>
                 <tbody id="payments-report-tbody" class="divide-y divide-slate-100 text-sm text-slate-700">
                     <tr>
-                        <td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">Click "Filter & Refresh" to retrieve transaction data.</td>
+                        <td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">No configurations selected. Adjust filters above to pull records.</td>
                     </tr>
                 </tbody>
             </table>
