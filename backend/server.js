@@ -5,6 +5,7 @@ const axios = require('axios');
 const cors = require('cors'); // Required for Cross-Origin Resource Sharing
 const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
 const cloudinary = require('cloudinary').v2;
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const multer = require('multer');
 const { GoogleGenAI } = require("@google/genai");
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
@@ -4146,22 +4147,26 @@ app.get('/api/quick-sales', auth, async (req, res) => {
 // =========================================================================
 // MULTI-TENANT MONGODB DATA MODEL DEFINITION
 // =========================================================================
+// Keep your existing GatewaySchema but modify the data mapping to scale
 const GatewaySchema = new mongoose.Schema({
-    // 🔒 Links this specific gateway configuration to a single tenant hotel
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, 
-    gatewayId: { type: String, required: true }, // 'pesapal', 'flutterwave'
-    consumerKey: { type: String, required: true },
-    consumerSecret: { type: String, required: true },
+    gatewayId: { type: String, enum: ['pesapal', 'stripe'], required: true }, 
+    
+    // Traditional configurations (Used by Pesapal)
+    consumerKey: { type: String, default: null },
+    consumerSecret: { type: String, default: null },
+    
+    // Future-proof configurations (Used by Stripe Connect)
+    stripeAccountId: { type: String, default: null }, 
+    
     environment: { type: String, enum: ['Sandbox', 'Live'], required: true },
-    ipnUrlId: { type: String, default: null }, // 🔥 Added to track Pesapal IPN Registration
+    ipnUrlId: { type: String, default: null }, 
     isConnected: { type: Boolean, default: false },
     isDefault: { type: Boolean, default: false },
     updatedAt: { type: Date, default: Date.now }
 });
 
-// 🔥 CRITICAL FOR MULTI-TENANCY: A hotel can only configure one instance of each gateway type
 GatewaySchema.index({ hotelId: 1, gatewayId: 1 }, { unique: true });
-
 const Gateway = mongoose.model('Gateway', GatewaySchema);
 
 const PaymentTransaction = mongoose.model(
@@ -4218,28 +4223,110 @@ const PaymentTransaction = mongoose.model(
 
 app.get('/api/gateways', auth, async (req, res) => {
     try {
-        // Query the single unique config for this hotel & gateway
-        let gatewayConfig = await Gateway.findOne({ 
-            hotelId: req.user.hotelId, 
-            gatewayId: 'pesapal' 
-        });
-
-        // If no document exists in the collection yet, send a mock mock fallback status
-        if (!gatewayConfig) {
-            gatewayConfig = {
+        const configuredGateways = await Gateway.find({ hotelId: req.user.hotelId });
+        
+        // Define the global SaaS catalog mapping baseline states
+        const catalog = [
+            {
                 gatewayId: 'pesapal',
+                name: 'Pesapal',
+                description: 'Mobile Money, Cards & Local Bank Payments (East Africa)',
                 isConnected: false,
                 isDefault: false,
                 environment: '—'
-            };
-        }
+            },
+            {
+                gatewayId: 'stripe',
+                name: 'Stripe',
+                description: 'Global Card Processing, Apple Pay & Localized Global Railings',
+                isConnected: false,
+                isDefault: false,
+                environment: '—'
+            }
+        ];
 
-        res.json(gatewayConfig);
+        // Merge active multi-tenant configurations into the global catalog definition
+        const responseData = catalog.map(item => {
+            const match = configuredGateways.find(g => g.gatewayId === item.gatewayId);
+            if (match) {
+                return {
+                    ...item,
+                    isConnected: match.isConnected,
+                    isDefault: match.isDefault,
+                    environment: match.environment
+                };
+            }
+            return item;
+        });
+
+        res.json(responseData);
     } catch (error) {
-        res.status(500).json({ message: 'Error retrieving gateway credentials', error: error.message });
+        res.status(500).json({ message: 'Error retrieving gateway configs', error: error.message });
     }
 });
 
+
+/**
+ * Endpoint 1: Generate Authorization Redirect URL
+ * GET /api/gateways/stripe/authorize-url
+ */
+app.get('/api/gateways/stripe/authorize-url', auth, async (req, res) => {
+    try {
+        // Enforce state validation to safely align tenant payload keys on callback matches
+        const state = req.user.hotelId.toString(); 
+        
+        const stripeAuthUrl = `https://connect.stripe.com/oauth/authorize?response_type=code&client_id=${process.env.STRIPE_CLIENT_ID}&scope=read_write&state=${state}&redirect_uri=${encodeURIComponent(process.env.STRIPE_REDIRECT_URI)}`;
+        
+        res.json({ url: stripeAuthUrl });
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to build Stripe redirection handshake payload', error: error.message });
+    }
+});
+
+/**
+ * Endpoint 2: Public OAuth Redirect Target Callback Processing
+ * GET /api/gateways/stripe/callback
+ */
+app.get('/api/gateways/stripe/callback', async (req, res) => {
+    const { code, state, error, error_description } = req.query;
+
+    if (error) {
+        return res.redirect(`${process.env.FRONTEND_DASHBOARD_URL}?payment_status=error&msg=${encodeURIComponent(error_description)}`);
+    }
+
+    try {
+        // The state field contains our secure hotelId dropped into the URL payload above
+        const hotelId = state;
+
+        // Exchange the temporary auth code parameter for the merchant's target Account ID token
+        const response = await stripe.oauth.token({
+            grant_type: 'authorization_code',
+            code: code,
+        });
+
+        const stripeAccountId = response.stripe_user_id;
+
+        // Save or update the connection within your multi-tenant Gateway schema matrix 
+        await Gateway.findOneAndUpdate(
+            { hotelId: hotelId, gatewayId: 'stripe' },
+            {
+                hotelId: hotelId,
+                gatewayId: 'stripe',
+                stripeAccountId: stripeAccountId,
+                environment: process.env.STRIPE_ENV || 'Live', // Pulled directly from system runtime configs
+                isConnected: true,
+                updatedAt: new Date()
+            },
+            { upsert: true, new: true }
+        );
+
+        // Redirect hotel user back cleanly to your tenant setup view pane with verification indicators
+        res.redirect(`${process.env.FRONTEND_DASHBOARD_URL}?payment_status=success&gateway=stripe`);
+    } catch (error) {
+        console.error('Stripe Connect Handshake Error:', error);
+        res.redirect(`${process.env.FRONTEND_DASHBOARD_URL}?payment_status=error&msg=TokenExchangeFailed`);
+    }
+});
 //Housekeeping
 
 
