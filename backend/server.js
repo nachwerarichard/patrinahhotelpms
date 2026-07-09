@@ -4347,7 +4347,7 @@ const GatewaySchema = new mongoose.Schema({
     // Future-proof configurations (Used by Stripe Connect)
     stripeAccountId: { type: String, default: null }, 
     
-    environment: { type: String, enum: ['Sandbox', 'Live'], required: true },
+    environment: { type: String, enum: ['Sandbox','Test','Live'], required: true },
     ipnUrlId: { type: String, default: null }, 
     isConnected: { type: Boolean, default: false },
     isDefault: { type: Boolean, default: false },
@@ -4388,8 +4388,15 @@ const PaymentTransaction = mongoose.model(
             default: null
         },
 
-         paymentMethod: { type: String, enum: ['Pesapal', 'Online','Visa', 'MasterCard', 'Mobile Money', 'Cash', 'M-Pesa', 'MTN Momo', 'Airtel Pay','Bank'], default: 'Cash' },
-
+paymentMethod: { 
+    type: String, 
+    enum: [
+        'Pesapal', 'Online', 'Visa', 'MasterCard', 'Mobile Money', 
+        'Cash', 'M-Pesa', 'MTN Momo', 'Airtel Pay', 'Bank',
+        'Stripe', 'Stripe Card' // ➔ Added to prevent validation failures on payment records
+    ], 
+    default: 'Cash' 
+},
         status: {
             type: String,
             enum: ['Pending', 'Completed', 'Failed', 'Cancelled'],
@@ -4475,6 +4482,10 @@ app.get('/api/gateways/stripe/authorize-url', auth, async (req, res) => {
  * Endpoint 2: Public OAuth Redirect Target Callback Processing
  * GET /api/gateways/stripe/callback
  */
+/**
+ * Endpoint 2: Public OAuth Redirect Target Callback Processing
+ * GET /api/gateways/stripe/callback
+ */
 app.get('/api/gateways/stripe/callback', async (req, res) => {
     const { code, state, error, error_description } = req.query;
 
@@ -4483,10 +4494,7 @@ app.get('/api/gateways/stripe/callback', async (req, res) => {
     }
 
     try {
-        // The state field contains our secure hotelId dropped into the URL payload above
-        const hotelId = state;
-
-        // Exchange the temporary auth code parameter for the merchant's target Account ID token
+        // 1. Exchange the temporary auth code parameter for the merchant's target Account ID token
         const response = await stripe.oauth.token({
             grant_type: 'authorization_code',
             code: code,
@@ -4494,19 +4502,29 @@ app.get('/api/gateways/stripe/callback', async (req, res) => {
 
         const stripeAccountId = response.stripe_user_id;
 
+        // ==========================================
+        // ADD THE NEW CONVERSION & CASTING CODE HERE
+        // ==========================================
+
+        // Safely convert the string state parameter into a proper MongoDB ObjectId
+        const mappedHotelId = mongoose.Types.ObjectId.isValid(state) 
+            ? new mongoose.Types.ObjectId(state) 
+            : state;
+
         // Save or update the connection within your multi-tenant Gateway schema matrix 
         await Gateway.findOneAndUpdate(
-            { hotelId: hotelId, gatewayId: 'stripe' },
+            { hotelId: mappedHotelId, gatewayId: 'stripe' }, // Use the casted ID here
             {
-                hotelId: hotelId,
+                hotelId: mappedHotelId,
                 gatewayId: 'stripe',
                 stripeAccountId: stripeAccountId,
-                environment: process.env.STRIPE_ENV || 'Live', // Pulled directly from system runtime configs
+                environment: process.env.STRIPE_ENV || 'Live', // Now safely saves 'Test'
                 isConnected: true,
                 updatedAt: new Date()
             },
             { upsert: true, new: true }
         );
+        // ==========================================
 
         // Redirect hotel user back cleanly to your tenant setup view pane with verification indicators
         res.redirect(`${process.env.FRONTEND_DASHBOARD_URL}?payment_status=success&gateway=stripe`);
