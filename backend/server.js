@@ -4116,7 +4116,7 @@ app.post('/api/payments/stripe-webhook', express.raw({ type: 'application/json' 
         
         const bookingId = session.metadata.bookingId;
         
-        // ➔ THE CRITICAL FIX: Convert Stripe's processed minor units back to standard UGX figures safely
+        // Convert Stripe's processed minor units back to standard UGX figures safely
         const paymentAmount = Number(session.amount_total) / 100; 
 
         try {
@@ -4142,11 +4142,17 @@ app.post('/api/payments/stripe-webhook', express.raw({ type: 'application/json' 
 
                 booking.amountPaid = newAmountPaid;
                 booking.balance = newBalance;
-                booking.paymentMethod = 'Stripe Card'; // Clean enum match
+                
+                // ➔ FORCE BOTH STRINGS EXPLICITLY (Deals with schema defaults overwriting values)
+                booking.paymentMethod = 'Stripe Card'; 
                 booking.paymentStatus = newBalance === 0 ? 'Paid' : 'Partially Paid';
+                
                 booking.gueststatus = 'confirmed';
                 booking.transactionid = session.id;
                 booking.paidAt = new Date();
+
+                // ➔ THE FIX: Force Mongoose to mark the paymentMethod path as updated so it doesn't default to empty
+                booking.markModified('paymentMethod');
 
                 await booking.save();
 
