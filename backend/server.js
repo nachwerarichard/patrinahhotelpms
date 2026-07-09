@@ -3986,7 +3986,7 @@ app.post('/api/bookings/:id/initiate-stripe-payment', auth, async (req, res) => 
 
         // Find standard multi-tenant booking
         const booking = await Booking.findOne({
-            id: id, // if your custom key relies on "id". Switch to _id if using raw ObjectIDs
+            id: id, // Switch to _id if using raw ObjectIDs
             hotelId: req.user.hotelId
         });
 
@@ -3995,21 +3995,21 @@ app.post('/api/bookings/:id/initiate-stripe-payment', auth, async (req, res) => 
         }
 
         // Fetch custom multi-tenant credentials for Stripe
-      const gateway = await mongoose.model('Gateway').findOne({
-    hotelId: req.user.hotelId,
-    gatewayId: 'stripe'
-});
+        const gateway = await mongoose.model('Gateway').findOne({
+            hotelId: req.user.hotelId,
+            gatewayId: 'stripe'
+        });
 
-// Fix: Verify that the hotel has connected their account successfully
-if (!gateway || !gateway.stripeAccountId || !gateway.isConnected) {
-    return res.status(400).json({
-        success: false,
-        message: 'Stripe gateway properties are not configured for this hotel property.'
-    });
-}
+        // Verify that the hotel has connected their account successfully
+        if (!gateway || !gateway.stripeAccountId || !gateway.isConnected) {
+            return res.status(400).json({
+                success: false,
+                message: 'Stripe gateway properties are not configured for this hotel property.'
+            });
+        }
 
-        // Initialize Stripe dynamically with target secret credentials
-        const stripe = new Stripe(gateway.secretKey);
+        // Initialize Stripe dynamically with platform's master secret key
+        const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
         
         const merchantReference = `BKG-${booking._id || booking.id}-${Date.now()}`;
 
@@ -4034,9 +4034,11 @@ if (!gateway || !gateway.stripeAccountId || !gateway.isConnected) {
                 merchantReference: merchantReference
             },
             client_reference_id: merchantReference,
-            // Redirect inside iframe space back to success files on completion
             success_url: `https://patrinahhotelpms.onrender.com/api/payments/stripe-callback?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `https://elegant-pasca-cea136.netlify.app/frontend/failure.html`,
+        }, {
+            // ➔ THIS IS THE CRITICAL FIX: Directs funds to the hotel's Connect account ID
+            stripeAccount: gateway.stripeAccountId 
         });
 
         // Sync local property context with temporary status tracking
