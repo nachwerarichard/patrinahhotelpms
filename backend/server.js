@@ -97,9 +97,7 @@ async function auth(req, res, next) {
         return res.status(401).json({ error: 'No authorization header' });
     }
 
-    // Accept both: "Bearer xxx" and "Basic xxx"
     let token;
-
     if (authHeader.startsWith('Bearer ')) {
         token = authHeader.split(' ')[1];
     } else if (authHeader.startsWith('Basic ')) {
@@ -113,7 +111,6 @@ async function auth(req, res, next) {
     }
 
     try {
-        // Decode base64 safely
         let credentials;
         try {
             credentials = Buffer.from(token, 'base64').toString('ascii');
@@ -127,18 +124,16 @@ async function auth(req, res, next) {
         }
 
         const [username, password] = parts;
-
         let user;
 
-        // 1️⃣ Super Admin (global access)
+        // 1️⃣ Super Admin Check
         user = await User.findOne({ username, role: 'super-admin' });
 
-        // 2️⃣ Normal user must belong to a hotel
+        // 2️⃣ Property Tenant Check
         if (!user) {
             if (!hotelId) {
                 return res.status(400).json({ error: 'Hotel ID header required' });
             }
-
             user = await User.findOne({ username, hotelId });
         }
 
@@ -146,19 +141,26 @@ async function auth(req, res, next) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        // 🌍 Dynamic Currency Injection Step
-        // Determine the targeted hotel ID context
+        // Determine context hotel ID safely
         const activeHotelId = user.role === 'super-admin' ? hotelId : user.hotelId;
-        let detectedCurrency = { currency: req.user.currency || "UGX" }; // Baseline default fallback
+        
+        // 🌍 CRITICAL BUG FIX ZONE: Ultra-safe database extraction
+        let detectedCurrency = 'UGX'; 
 
         if (activeHotelId) {
-            const hotelProfile = await Hotel.findById(activeHotelId);
-            if (hotelProfile && hotelProfile.hotelCurrency) {
-                detectedCurrency = { currency: hotelProfile.hotelCurrency };
+            try {
+                // Querying the collection directly to keep it completely independent
+                const hotelProfile = await mongoose.model('Hotel').findById(activeHotelId);
+                if (hotelProfile && hotelProfile.hotelCurrency) {
+                    detectedCurrency = hotelProfile.hotelCurrency;
+                }
+            } catch (dbErr) {
+                console.error("Non-fatal background currency resolution failure:", dbErr.message);
+                // Keeps moving with default 'UGX' fallback instead of throwing a 500
             }
         }
 
-        // Attach safe user object with dynamic currency profile attached
+        // Attach safe user object to request
         req.user = {
             id: user._id,
             username: user.username,
