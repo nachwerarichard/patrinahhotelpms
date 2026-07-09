@@ -3995,7 +3995,7 @@ app.post('/api/bookings/:id/initiate-stripe-payment', auth, async (req, res) => 
 
         // Find standard multi-tenant booking
         const booking = await Booking.findOne({
-            id: id, // Switch to _id if using raw ObjectIDs
+            id: id, 
             hotelId: req.user.hotelId
         });
 
@@ -4009,7 +4009,6 @@ app.post('/api/bookings/:id/initiate-stripe-payment', auth, async (req, res) => 
             gatewayId: 'stripe'
         });
 
-        // Verify that the hotel has connected their account successfully
         if (!gateway || !gateway.stripeAccountId || !gateway.isConnected) {
             return res.status(400).json({
                 success: false,
@@ -4023,33 +4022,34 @@ app.post('/api/bookings/:id/initiate-stripe-payment', auth, async (req, res) => 
         const merchantReference = `BKG-${booking._id || booking.id}-${Date.now()}`;
 
         // Calculate final minor units safely (e.g. 200,000 becomes 20,000,000 cents/units)
-const finalAmountInCents = Math.round(parseFloat(amount) * 100);
+        const finalAmountInCents = Math.round(parseFloat(amount) * 100);
 
-// Create a hosted Checkout Session
-const session = await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
-    line_items: [{
-        price_data: {
-            currency: 'ugx', 
-            product_data: {
-                name: `Room Reservation Payment`,
-                description: `Booking Reference Context: ${booking._id || booking.id}`,
-            },
-            unit_amount: finalAmountInCents, // ➔ Hand Stripe the correct minor unit value!
-        },
-        quantity: 1,
-    }],
-    mode: 'payment',
+        // Create a hosted Checkout Session
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [{
+                price_data: {
+                    currency: 'ugx', 
+                    product_data: {
+                        name: `Room Reservation Payment`,
+                        description: `Booking Reference Context: ${booking._id || booking.id}`,
+                    },
+                    unit_amount: finalAmountInCents, 
+                },
+                quantity: 1,
+            }],
+            mode: 'payment',
             metadata: {
                 bookingId: String(booking._id || booking.id),
                 hotelId: String(req.user.hotelId),
-                merchantReference: merchantReference
+                merchantReference: merchantReference,
+                // ➔ ADD THIS LINE: Pass the clean, base UGX amount safely over to the async processor
+                realAmount: String(amount) 
             },
             client_reference_id: merchantReference,
             success_url: `https://patrinahhotelpms.onrender.com/api/payments/stripe-callback?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `https://elegant-pasca-cea136.netlify.app/frontend/failure.html`,
         }, {
-            // ➔ THIS IS THE CRITICAL FIX: Directs funds to the hotel's Connect account ID
             stripeAccount: gateway.stripeAccountId 
         });
 
