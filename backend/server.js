@@ -931,7 +931,16 @@ const bookingSchema = new mongoose.Schema({
     amountPaid: { type: Number}, // This is ROOM amount paid
     balance: { type: Number, default: 0 }, // This is ROOM balance
     paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Partially Paid'], default: 'Pending' },
-    paymentMethod: { type: String, enum: ['Pesapal', 'Online','Visa', 'MasterCard', 'Mobile Money', 'Cash', 'M-Pesa', 'MTN Momo', 'Airtel Pay','Bank'], default: 'Cash' },
+// Inside your BookingSchema definitions file:
+paymentMethod: {
+    type: String,
+    enum: [
+        'Pesapal', 'Online', 'Visa', 'MasterCard', 'Mobile Money', 
+        'Cash', 'M-Pesa', 'MTN Momo', 'Airtel Pay', 'Bank',
+        'Stripe', 'Stripe Card' // ➔ Add 'Stripe Card' or 'Stripe' here to allow it
+    ],
+    default: 'Cash'
+},
     guestsource: { type: String, required: true, enum: ['Walk in','Hotel Website', 'Expedia', 'Booking.com','Trip'], default: 'Walk in' },
     gueststatus: { type: String, required: true, enum: ['confirmed', 'cancelled', 'no show', 'checkedin', 'reserved','checkedout','void'], default: 'confirmed' },
     cancellationReason: { type: String, default: '' },
@@ -4396,8 +4405,7 @@ paymentMethod: {
     enum: [
         'Pesapal', 'Online', 'Visa', 'MasterCard', 'Mobile Money', 
         'Cash', 'M-Pesa', 'MTN Momo', 'Airtel Pay', 'Bank',
-        'Stripe', 'Stripe Card' // ➔ Added to prevent validation failures on payment records
-    ], 
+        'Stripe', 'Stripe Card'], 
     default: 'Cash' 
 },
         status: {
