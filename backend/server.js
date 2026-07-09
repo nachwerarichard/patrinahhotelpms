@@ -3100,6 +3100,135 @@ app.post('/api/public/bookings', async (req, res) => {
     }
 });
 
+app.post('/api/public/bookings', async (req, res) => {
+    console.log("====================================================");
+    console.log("📥 [STRIPE INTEGRATED PUBLIC CHECKOUT] /api/public/bookings");
+    console.log("====================================================");
+
+    try {
+        // Resolve target hotel scope matching your domain tracking framework
+        const rawHotelId = await getHotelIdFromRequest(req);
+        if (!rawHotelId) {
+            return res.status(400).json({ message: "Hotel identity context could not be resolved." });
+        }
+
+        const hotelId = new mongoose.Types.ObjectId(rawHotelId);
+        const { name, guestEmail, phoneNo, checkIn, checkOut, roomsRequested } = req.body;
+
+        if (!roomsRequested || !Array.isArray(roomsRequested) || roomsRequested.length === 0) {
+            return res.status(400).json({ message: "Cannot checkout an empty shopping cart." });
+        }
+
+        // 1. Core metrics aggregation structures
+        const totalPeopleCount = roomsRequested.reduce((sum, item) => sum + (Number(item.people) || 1), 0);
+        const calculatedTotalDue = roomsRequested.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+        
+        const start = new Date(checkIn);
+        const end = new Date(checkOut);
+        const totalNights = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) || 1;
+        const generatedBookingId = `BKG-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+        // 2. Fetch unique tenant Stripe Connect properties
+        console.log(`🔑 Fetching active Stripe gateway settings for Hotel ID: ${hotelId}...`);
+        const gatewaySettings = await mongoose.model('Gateway').findOne({ 
+            hotelId, 
+            gatewayId: 'stripe' 
+        });
+
+        if (!gatewaySettings || !gatewaySettings.stripeAccountId || !gatewaySettings.isConnected) {
+            console.error("❌ Gateway Configuration Missing: Tenant has not connected their Stripe details.");
+            return res.status(422).json({ 
+                message: "This hotel hasn't completed their online Stripe billing payment terminal configuration steps yet." 
+            });
+        }
+
+        // 3. Initialize Stripe Master Client
+        const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+        const merchantReference = `BKG-${generatedBookingId}-${Date.now()}`;
+
+        // 4. Calculate minor units safely (e.g. UGX 200,000 stays 200,000,000 cents/units internally)
+        const finalAmountInCents = Math.round(parseFloat(calculatedTotalDue) * 100);
+
+        // 5. Register the reservation document placeholder as "Pending" inside MongoDB
+        const completeBookingPayload = {
+            hotelId,
+            id: generatedBookingId,
+            name,
+            guestEmail,
+            phoneNo,
+            checkIn,
+            checkOut,
+            nights: totalNights,
+            people: totalPeopleCount,
+            totalDue: calculatedTotalDue,
+            balance: calculatedTotalDue,
+            amountPaid: 0,
+            paymentStatus: 'Pending',
+            paymentMethod: 'Stripe Card', 
+            guestsource: 'Hotel Website', 
+            gueststatus: 'reserved', 
+            room: "Unassigned",
+            occupation: "Unassigned"
+        };
+
+        const newBooking = new Booking(completeBookingPayload);
+        const savedBooking = await newBooking.save();
+        console.log(`💾 Local Pending Public Reservation Stored: ${savedBooking.id}`);
+
+        // 6. Create Hosted Stripe Checkout Session
+        console.log("🛰️ Initializing transaction session with Stripe Connect profile context...");
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [{
+                price_data: {
+                    currency: 'ugx', 
+                    product_data: {
+                        name: `Room Reservation - Accommodation Payment`,
+                        description: `Booking Reference Context: ${generatedBookingId}`,
+                    },
+                    unit_amount: finalAmountInCents, 
+                },
+                quantity: 1,
+            }],
+            mode: 'payment',
+            metadata: {
+                bookingId: String(savedBooking._id || savedBooking.id),
+                hotelId: String(hotelId),
+                merchantReference: merchantReference,
+                realAmount: String(calculatedTotalDue) 
+            },
+            customer_email: guestEmail,
+            client_reference_id: merchantReference,
+            success_url: `https://elegant-pasca-cea136.netlify.app/frontend/success.html?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `https://elegant-pasca-cea136.netlify.app/frontend/failure.html`,
+        }, {
+            stripeAccount: gatewaySettings.stripeAccountId 
+        });
+
+        // 7. Atomic update targeting transaction tracking without crashing unrelated enum properties
+        await Booking.updateOne(
+            { _id: savedBooking._id },
+            { $set: { transactionid: session.id } }
+        );
+
+        console.log(`✅ Success! Secure Stripe Session Link Created: ${session.url}`);
+
+        // Pass payload session paths clean back to the customer window client interface
+        res.status(200).json({
+            success: true,
+            redirectUrl: session.url,
+            message: "Initialization parameters constructed successfully."
+        });
+
+    } catch (error) {
+        console.error("💥 SYSTEM FAULT GENERATING STRIPE CHECKOUT EXCEPTION:", error);
+        res.status(500).json({
+            message: 'Internal Checkout application pipeline breakdown.',
+            error: error.message
+        });
+    }
+});
+
 
 // Public endpoint to add a new booking (from external website)
 //End of app.post
