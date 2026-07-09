@@ -3906,29 +3906,44 @@ async function submitPayment() {
 
         // Handle both Gateway IFRAME loading pipelines 
         if (isPesapalGateway || isStripeGateway) {
-            if (result.success && result.redirectUrl) {
-                document.getElementById('paymentFormInputs').classList.add('hidden');
-                document.getElementById('modalActionButtons').classList.add('hidden');
-                
-                const container = document.getElementById('pesapalIframeContainer');
-                const iframe = document.getElementById('pesapalIframe');
-                const label = document.getElementById('gatewayProviderLabel');
-                
-                label.innerText = isStripeGateway ? "🔒 Secured Via Stripe Checkout Framework" : "🔒 Secured Via Pesapal Merchant Framework V3";
-                container.classList.remove('hidden');
-                iframe.src = result.redirectUrl; 
-                
-                showMessage("Checkout Loaded", "Please complete payment inside the secure gateway frame.", false);
-            } else {
-                throw new Error(result.message || "Failed initializing gateway session.");
-            }
-        } else {
-            // Cash path
-            showMessage("Success", `Payment of UGX ${amount.toLocaleString()} recorded to ledger! ✅`);
-            amountInput.value = '';
-            closePaymentModal();
-            refreshDashboardViews();
+    if (result.success && result.redirectUrl) {
+        
+        // ➔ STRIPE PATH: Redirect the entire window safely
+        if (isStripeGateway) {
+            showMessage("Redirecting", "Transferring you to secure Stripe Checkout...", false);
+            window.location.href = result.redirectUrl;
+            return; // Exit the function here
         }
+
+        // ➔ PESAPAL PATH: Keep loading inside the local iframe container
+        document.getElementById('paymentFormInputs').classList.add('hidden');
+        document.getElementById('modalActionButtons').classList.add('hidden');
+        
+        const container = document.getElementById('pesapalIframeContainer');
+        const iframe = document.getElementById('pesapalIframe');
+        const label = document.getElementById('gatewayProviderLabel');
+        
+        // Use optional chaining (?.) so it never crashes even if the label element is missing
+        if (label) {
+            label.innerText = "🔒 Secured Via Pesapal Merchant Framework V3";
+        }
+        
+        if (container && iframe) {
+            container.classList.remove('hidden');
+            iframe.src = result.redirectUrl; 
+        }
+        
+        showMessage("Checkout Loaded", "Please complete payment inside the secure gateway frame.", false);
+    } else {
+        throw new Error(result.message || "Failed initializing gateway session.");
+    }
+} else {
+    // Cash path
+    showMessage("Success", `Payment of UGX ${amount.toLocaleString()} recorded to ledger! ✅`);
+    amountInput.value = '';
+    closePaymentModal();
+    refreshDashboardViews();
+}
 
     } catch (err) {
         console.error("Critical Execution Fault:", err);
