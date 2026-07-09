@@ -3989,7 +3989,6 @@ await addAuditLog(
 });
 
 app.post('/api/bookings/:id/initiate-stripe-payment', auth, async (req, res) => {
-    console.log("RAW AMOUNT RECEIVED FROM FRONTEND:", req.body.amount, "TYPE:", typeof req.body.amount);
     try {
         const { id } = req.params;
         const { amount } = req.body;
@@ -4031,7 +4030,7 @@ const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: [{
         price_data: {
-            currency: hotelCurrency, 
+            currency: 'ugx', 
             product_data: {
                 name: `Room Reservation Payment`,
                 description: `Booking Reference Context: ${booking._id || booking.id}`,
