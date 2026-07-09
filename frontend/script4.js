@@ -4398,6 +4398,9 @@ updateroomDashboard();
     // Only run if autoLogin flag is present
     if (urlParams.get('autoLogin') === 'true') {
         
+        console.log("==================== HOOK DEBUG START ====================");
+        console.log("🔗 Full URL query parameters caught on arrival:", Object.fromEntries(urlParams.entries()));
+
         // 1. Inject CSS for the Preloader
         const style = document.createElement('style');
         style.id = 'auto-login-styles';
@@ -4457,8 +4460,10 @@ updateroomDashboard();
         const role = urlParams.get('r');
         const hotelId = urlParams.get('h');
         const hotelName = urlParams.get('n');
-        const hotelCurrency = urlParams.get('c'); // ➔ ADDED: Read currency key from URL string
+        const hotelCurrency = urlParams.get('c'); 
 
+        // 🔍 HOOK DEBUG 1: Verify URL extraction before variables are used
+        console.log("📥 Extracted currency string ('c') directly from URL:", hotelCurrency);
 
         if (token && user) {
             // Save data to the current domain's storage
@@ -4467,21 +4472,28 @@ updateroomDashboard();
             localStorage.setItem('userRole', role);
             localStorage.setItem('hotelId', hotelId || 'global');
             localStorage.setItem('hotelName', hotelName || 'global');
-            localStorage.setItem('hotelCurrency', hotelCurrency || 'UGX'); // ➔ ADDED: Persist raw currency string
+            localStorage.setItem('hotelCurrency', hotelCurrency || 'UGX'); 
 
             // Re-create the loggedInUser object if your other scripts need it
-            localStorage.setItem('loggedInUser', JSON.stringify({
+            const targetUserObject = {
                 username: user,
                 role: role,
                 token: token,
                 hotelName: hotelName,
                 hotelId: hotelId || 'global',
-                hotelCurrency: hotelCurrency || 'UGX' // ➔ ADDED: Include currency structure inside main object representation
-            }));
+                hotelCurrency: hotelCurrency || 'UGX'
+            };
+            localStorage.setItem('loggedInUser', JSON.stringify(targetUserObject));
+
+            // 🔍 HOOK DEBUG 2: Verify exactly what was committed to browser storage
+            console.log("💾 Storage Key 'hotelCurrency' value:", localStorage.getItem('hotelCurrency'));
+            console.log("💾 Storage Key 'loggedInUser' complete parsed contents:", JSON.parse(localStorage.getItem('loggedInUser')));
 
             // Clean the URL (remove sensitive data from address bar)
             const cleanUrl = window.location.origin + window.location.pathname;
             window.history.replaceState({}, document.title, cleanUrl);
+            console.log("🧹 Address bar cleaned. Parameter data shielded.");
+            console.log("===================== HOOK DEBUG END =====================");
 
             // 4. Initialize the App
             console.log("Session synchronized. Initializing dashboard...");
@@ -4506,7 +4518,8 @@ updateroomDashboard();
             }, 3000);
 
         } else {
-            console.error("Auto-login failed: Missing parameters in URL.");
+            console.error("❌ Auto-login failed: Missing parameters in URL string.");
+            console.log("===================== HOOK DEBUG END =====================");
             removeOverlay();
         }
     }
