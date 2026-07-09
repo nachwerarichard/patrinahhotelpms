@@ -118,7 +118,7 @@ const auditLogEndDateFilter = document.getElementById('auditLogEndDateFilter');
 const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn');
   // Add this to the TOP of your scripts on the destination pages
 // At the top of script4.js
-
+const CURRENT_CURRENCY = localStorage.getItem('hotelCurrency') || 'UGX';
 const getHotelId = () => {
     // 1. Get the role and hotelId from separate keys
     const role = localStorage.getItem('userRole');
@@ -145,11 +145,15 @@ const getHotelId = () => {
     return hotelId;
 };
 
+const getHotelCurrency = () => {
+    return localStorage.getItem('hotelCurrency') || 'UGX'; // Fallback default global currency code
+};
+
 async function authenticatedFetch(url, options = {}) {
     let token = localStorage.getItem('token');
     const params = new URLSearchParams(window.location.search);
     
-    // 1. Wait for token logic (kept as is)
+    // 1. Wait for token logic
     if (!token && params.get('autoLogin') === 'true') {
         await new Promise((resolve) => {
             let attempts = 0;
@@ -169,20 +173,18 @@ async function authenticatedFetch(url, options = {}) {
         return null;
     }
 
-    // 2. Start with standard headers
+    // 2. Start with standard headers + AUTOMATED MULTI-TENANT CURRENCY PASSTHROUGH
     const headers = {
         'Authorization': `Bearer ${token}`,
         'x-hotel-id': localStorage.getItem('hotelId') || 'global',
+        'x-hotel-currency': localStorage.getItem('hotelCurrency') || 'UGX', // ➔ INJECT CURRENCY HERE
         ...options.headers 
     };
 
     // 3. Smart Content-Type Assignment
-    // If the body is NOT FormData, we assume it's JSON.
-    // If it IS FormData, we delete the header to let the browser handle boundaries.
     if (options.body instanceof FormData) {
         delete headers['Content-Type']; 
     } else if (options.body) { 
-        // Only set JSON if there is actually a body to describe
         headers['Content-Type'] = 'application/json';
     }
 
@@ -404,9 +406,9 @@ const response = await authenticatedFetch(`${API_BASE_URL}/bookings/all?limit=50
     updateText('total-departures', kpis.departures);
     updateText('pending-count', kpis.pending);
     updateText('no-show-count', kpis.noShow);
-    updateText('today-amountpaid', `UGX ${kpis.amountpaid.toLocaleString()}`);
-    updateText('today-revenue', `UGX ${kpis.revenue.toLocaleString()}`);
-    updateText('today-balance', `UGX ${kpis.balance.toLocaleString()}`);
+    updateText('today-amountpaid', `${CURRENT_CURRENCY} ${kpis.amountpaid.toLocaleString()}`);
+    updateText('today-revenue', `${CURRENT_CURRENCY} ${kpis.revenue.toLocaleString()}`);
+    updateText('today-balance', `${CURRENT_CURRENCY} ${kpis.balance.toLocaleString()}`);
 
     const statusCounts = { 'confirmed': 0, 'cancelled': 0, 'no show': 0, 'checkedin': 0, 'reserved': 0 };
     const sourceCounts = { 'Walk in': 0, 'Booking.com': 0, 'Expedia': 0, 'Trip': 0, 'Hotel Website': 0 };
@@ -1450,7 +1452,7 @@ async function moveBooking(id) {
         // 3️⃣ Populate dropdown
         select.innerHTML = availableRoomsForMove
             .map(r => `<option value="${r.number}">
-                Room ${r.number} (${r.type || ''} - UGX ${r.basePrice || 0})
+                Room ${r.number} (${r.type || ''} - ${CURRENT_CURRENCY} ${r.basePrice || 0})
             </option>`)
             .join('');
 
@@ -1472,7 +1474,7 @@ function updateMovePricePreview() {
     const room = availableRoomsForMove.find(r => r.number === selectedNumber);
     
     if (room) {
-        document.getElementById('moveRoomBasePriceDisplay').innerText = `UGX ${room.basePrice}`;
+        document.getElementById('moveRoomBasePriceDisplay').innerText = `${CURRENT_CURRENCY} ${room.basePrice}`;
         document.getElementById('moveRoomNegotiatedPrice').value = room.basePrice; // Set default
     }
 }
@@ -3768,7 +3770,7 @@ function openAddPaymentModal(bookingId, balance) {
         // We store the raw number in a data-attribute just in case logic needs it
         balanceDisplay.dataset.rawBalance = balance;
         // Display formatted text
-        balanceDisplay.value = `UGX ${Number(balance).toLocaleString()}`;
+        balanceDisplay.value = `${CURRENT_CURRENCY} ${Number(balance).toLocaleString()}`;
     }
 
     // 3. Reset form fields
@@ -3811,21 +3813,7 @@ document.getElementById('addPaymentModal')?.addEventListener('click', function(e
  * Updates the booking balance and records the transaction.
  */
 /** Toggles context validation fields based on selected method */
-function toggleDigitalPaymentFields(method) {
-    const pesapalBox = document.getElementById('pesapalFields');
-    if (method === 'MTN Momo' || method === 'Airtel Pay') {
-        pesapalBox.classList.remove('hidden');
-        
-        // Attempt to auto-extract existing customer information out of dashboard context if available
-        const currentGuestPhone = document.getElementById('guestPhoneField')?.innerText || '';
-        const currentGuestEmail = document.getElementById('guestEmailField')?.innerText || '';
-        
-        if(currentGuestPhone) document.getElementById('pesapalPhone').value = currentGuestPhone;
-        if(currentGuestEmail) document.getElementById('pesapalEmail').value = currentGuestEmail;
-    } else {
-        pesapalBox.classList.add('hidden');
-    }
-}
+
 
 /** Aborts active digital session frames */
 function abortPesapalCheckout() {
@@ -3836,16 +3824,36 @@ function abortPesapalCheckout() {
 }
 
 /** Fully Refactored Submission Engine */
+function toggleDigitalPaymentFields(method) {
+    const pesapalBox = document.getElementById('pesapalFields');
+    
+    // Stripe does not require Pesapal checkout details fields
+    if (method === 'MTN Momo' || method === 'Airtel Pay') {
+        pesapalBox.classList.remove('hidden');
+        
+        const currentGuestPhone = document.getElementById('guestPhoneField')?.innerText || '';
+        const currentGuestEmail = document.getElementById('guestEmailField')?.innerText || '';
+        
+        if(currentGuestPhone) document.getElementById('pesapalPhone').value = currentGuestPhone;
+        if(currentGuestEmail) document.getElementById('pesapalEmail').value = currentGuestEmail;
+    } else {
+        pesapalBox.classList.add('hidden');
+    }
+}
+
+// Modify your submitPayment() block where routing endpoints are evaluated:
 async function submitPayment() {
     const bookingId = document.getElementById('paymentBookingId').value;
     const amountInput = document.getElementById('paymentAmount');
     const methodInput = document.getElementById('payMethod');
     const submitBtn = document.getElementById('submitPaymentBtn');
+// Add this adjustment in your small.js file:
+     const rawAmount = amountInput.value.replace(/,/g, '').trim(); 
 
-    const amount = parseFloat(amountInput.value);
+// 2. Parse it cleanly as a float
+const amount = parseFloat(rawAmount);
     const method = methodInput.value;
 
-    // 1. Core Validations
     if (!bookingId) return showMessage("Error", "No booking context linked.", true);
     if (!amount || amount <= 0) return showMessage("Error", "Please enter a valid amount.", true);
     if (!method) return showMessage("Error", "Select a payment channel.", true);
@@ -3853,8 +3861,8 @@ async function submitPayment() {
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelId = user ? user.hotelId : null;
 
-    // 2. Identify Routing Path: Digital Gateway vs Offline Processing
     const isPesapalGateway = (method === 'MTN Momo' || method === 'Airtel Pay');
+    const isStripeGateway = (method === 'Stripe');
 
     let payload = { 
         amount, 
@@ -3878,13 +3886,16 @@ async function submitPayment() {
     try {
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<svg class="animate-spin h-4 w-4 inline mr-2 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing Payment...';
+            submitBtn.innerHTML = 'Processing Payment...';
         }
 
-        // Determine destination target endpoint route
-        const endpoint = isPesapalGateway 
-            ? `${API_BASE_URL}/bookings/${bookingId}/initiate-pesapal-payment`
-            : `${API_BASE_URL}/bookings/${bookingId}/add-payment`;
+        // --- NEW POLYMORPHIC ROUTING ENDPOINTS ---
+        let endpoint = `${API_BASE_URL}/bookings/${bookingId}/add-payment`;
+        if (isPesapalGateway) {
+            endpoint = `${API_BASE_URL}/bookings/${bookingId}/initiate-pesapal-payment`;
+        } else if (isStripeGateway) {
+            endpoint = `${API_BASE_URL}/bookings/${bookingId}/initiate-stripe-payment`;
+        }
 
         const response = await authenticatedFetch(endpoint, {
             method: "POST",
@@ -3892,36 +3903,52 @@ async function submitPayment() {
         });
 
         if (!response || !response.ok) {
-            const errBody = await response.json().catch(() => ({ message: "Server connection crash." }));
+            const errBody = await response.json().catch(() => ({ message: "Server connection error." }));
             throw new Error(errBody.message || "Failed execution pipeline.");
         }
 
         const result = await response.json();
 
-        if (isPesapalGateway) {
-            // STEP 3: Handle the Live Pesapal V3 Gateway Response Link
-            if (result.success && result.redirectUrl) {
-                // Swap layout containers visibility views inside modal panel context safely
-                document.getElementById('paymentFormInputs').classList.add('hidden');
-                document.getElementById('modalActionButtons').classList.add('hidden');
-                
-                const container = document.getElementById('pesapalIframeContainer');
-                const iframe = document.getElementById('pesapalIframe');
-                
-                container.classList.remove('hidden');
-                iframe.src = result.redirectUrl; 
-                
-                showMessage("Iframe Loaded", "Please complete payment inside the secure gateway frame.", false);
-            } else {
-                throw new Error(result.message || "Failed initializing digital gateway.");
-            }
-        } else {
-            // Step 4: Fallback to standard success pipeline for native paths (Cash)
-            showMessage("Success", `Payment of UGX ${amount.toLocaleString()} recorded to ledger! ✅`);
-            amountInput.value = '';
-            closePaymentModal();
-            refreshDashboardViews();
+        // Handle both Gateway IFRAME loading pipelines 
+        if (isPesapalGateway || isStripeGateway) {
+    if (result.success && result.redirectUrl) {
+        
+        // ➔ STRIPE PATH: Redirect the entire window safely
+        if (isStripeGateway) {
+            showMessage("Redirecting", "Transferring you to secure Stripe Checkout...", false);
+            window.location.href = result.redirectUrl;
+            return; // Exit the function here
         }
+
+        // ➔ PESAPAL PATH: Keep loading inside the local iframe container
+        document.getElementById('paymentFormInputs').classList.add('hidden');
+        document.getElementById('modalActionButtons').classList.add('hidden');
+        
+        const container = document.getElementById('pesapalIframeContainer');
+        const iframe = document.getElementById('pesapalIframe');
+        const label = document.getElementById('gatewayProviderLabel');
+        
+        // Use optional chaining (?.) so it never crashes even if the label element is missing
+        if (label) {
+            label.innerText = "🔒 Secured Via Pesapal Merchant Framework V3";
+        }
+        
+        if (container && iframe) {
+            container.classList.remove('hidden');
+            iframe.src = result.redirectUrl; 
+        }
+        
+        showMessage("Checkout Loaded", "Please complete payment inside the secure gateway frame.", false);
+    } else {
+        throw new Error(result.message || "Failed initializing gateway session.");
+    }
+} else {
+    // Cash path
+    showMessage("Success", `Payment of ${CURRENT_CURRENCY} ${amount.toLocaleString()} recorded to ledger! ✅`);
+    amountInput.value = '';
+    closePaymentModal();
+    refreshDashboardViews();
+}
 
     } catch (err) {
         console.error("Critical Execution Fault:", err);
@@ -3997,8 +4024,8 @@ async function fetchReport() {
     if (!hasActiveFilter) {
         if (tableBody) tableBody.innerHTML = '';
         if (mobileGrid) mobileGrid.innerHTML = '';
-        if (sumPaid) sumPaid.textContent = "UGX 0.00";
-        if (sumBalance) sumBalance.textContent = "UGX 0.00";
+        if (sumPaid) sumPaid.textContent = `${CURRENT_CURRENCY} 0.00`;
+        if (sumBalance) sumBalance.textContent = `${CURRENT_CURRENCY} 0.00`;
         return;
     }
 
@@ -4061,8 +4088,8 @@ function renderTable(bookings) {
         const fallbackMsg = '<div class="p-8 text-center text-gray-400 font-medium italic">No match logs mapped for active criteria.</div>';
         if (tbody) tbody.innerHTML = `<tr><td colspan="9">${fallbackMsg}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
-        if (sumPaidDisplay) sumPaidDisplay.textContent = "UGX 0.00";
-        if (sumBalanceDisplay) sumBalanceDisplay.textContent = "UGX 0.00";
+        if (sumPaidDisplay) sumPaidDisplay.textContent = `${CURRENT_CURRENCY} 0.00`;
+        if (sumBalanceDisplay) sumBalanceDisplay.textContent = `${CURRENT_CURRENCY} 0.00`;
         return;
     }
 
@@ -4071,8 +4098,8 @@ function renderTable(bookings) {
     const totalBalance = bookings.reduce((sum, b) => sum + Number(b.balance || 0), 0);
 
     // B. Reformat Financial String Representations
-    if (sumPaidDisplay) sumPaidDisplay.textContent = `UGX ${totalPaid.toLocaleString()}`;
-    if (sumBalanceDisplay) sumBalanceDisplay.textContent = `UGX ${totalBalance.toLocaleString()}`;
+    if (sumPaidDisplay) sumPaidDisplay.textContent = `${CURRENT_CURRENCY} ${totalPaid.toLocaleString()}`;
+    if (sumBalanceDisplay) sumBalanceDisplay.textContent = `${CURRENT_CURRENCY}  ${totalBalance.toLocaleString()}`;
 
     // C. Process Collections and Run Render Loops
     bookings.forEach(b => {
@@ -4121,11 +4148,11 @@ function renderTable(bookings) {
                 <div class="grid grid-cols-2 gap-2 bg-gray-50 border border-gray-100 rounded-lg p-3 text-xs">
                     <div>
                         <span class="text-[10px] text-gray-400 font-bold uppercase block tracking-tight">Paid Amount</span>
-                        <span class="text-green-600 font-bold font-mono text-sm">UGX ${Number(b.amountPaid || 0).toLocaleString()}</span>
+                        <span class="text-green-600 font-bold font-mono text-sm">${CURRENT_CURRENCY} ${Number(b.amountPaid || 0).toLocaleString()}</span>
                     </div>
                     <div>
                         <span class="text-[10px] text-gray-400 font-bold uppercase block tracking-tight">Balance Outstanding</span>
-                        <span class="text-red-600 font-bold font-mono text-sm">UGX ${Number(b.balance || 0).toLocaleString()}</span>
+                        <span class="text-red-600 font-bold font-mono text-sm">${CURRENT_CURRENCY} ${Number(b.balance || 0).toLocaleString()}</span>
                     </div>
                 </div>
 
@@ -4460,44 +4487,8 @@ updateDashboard();
 }
 // Initialize on page load
 updateroomDashboard();
-async function logout() {
-    console.log("Initiating secure logout...");
-    
-    try {
-        // Create an AbortController to prevent the logout from hanging 
-        // if the server is slow or the internet is spotty.
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000); 
 
-        // authenticatedFetch handles Authorization and x-hotel-id automatically
-        await authenticatedFetch(`${API_BASE_URL}/logout`, {
-            method: 'POST',
-            signal: controller.signal
-        });
 
-        clearTimeout(timeoutId);
-    } catch (error) {
-        // If the server fails, we log it but continue with the local wipe
-        console.warn('Backend logout sync skipped or timed out:', error.message);
-    }
-
-    /* ---------- WIPE LOCAL STATE ---------- */
-    // 1. Clear in-memory variables (if they exist in your scope)
-    if (typeof authToken !== 'undefined') authToken = '';
-    if (typeof currentUsername !== 'undefined') currentUsername = '';
-    if (typeof currentUserRole !== 'undefined') currentUserRole = '';
-
-    // 2. Clear all persistence (Critical for multi-tenant security)
-    localStorage.clear();
-    sessionStorage.clear();
-
-    // 3. Secure Redirect
-    const LOGIN_PAGE = 'https://elegant-pasca-cea136.netlify.app/frontend/login.html';
-    console.log("Session cleared. Redirecting to login...");
-    
-    // .replace prevents the user from clicking the "Back" button to see cached data
-    window.location.replace(LOGIN_PAGE);
-}
 (function autoLoginHook() {
     const urlParams = new URLSearchParams(window.location.search);
 
@@ -4563,6 +4554,7 @@ async function logout() {
         const role = urlParams.get('r');
         const hotelId = urlParams.get('h');
         const hotelName = urlParams.get('n');
+        const hotelCurrency = urlParams.get('c'); // ➔ ADDED: Read currency key from URL string
 
 
         if (token && user) {
@@ -4572,14 +4564,16 @@ async function logout() {
             localStorage.setItem('userRole', role);
             localStorage.setItem('hotelId', hotelId || 'global');
             localStorage.setItem('hotelName', hotelName || 'global');
+            localStorage.setItem('hotelCurrency', hotelCurrency || 'UGX'); // ➔ ADDED: Persist raw currency string
 
             // Re-create the loggedInUser object if your other scripts need it
             localStorage.setItem('loggedInUser', JSON.stringify({
                 username: user,
                 role: role,
                 token: token,
-                hotelName:hotelName,
-                hotelId: hotelId || 'global'
+                hotelName: hotelName,
+                hotelId: hotelId || 'global',
+                hotelCurrency: hotelCurrency || 'UGX' // ➔ ADDED: Include currency structure inside main object representation
             }));
 
             // Clean the URL (remove sensitive data from address bar)
@@ -4595,7 +4589,6 @@ async function logout() {
 
             // Watchdog: Hide overlay when specific UI elements appear
             const checkUI = setInterval(() => {
-                // Check if your dashboard container exists and is visible
                 const mainContent = document.getElementById('main-content') || document.querySelector('nav');
                 if (mainContent) {
                     removeOverlay();
@@ -4615,6 +4608,43 @@ async function logout() {
         }
     }
 })();
+
+async function logout() {
+    console.log("Initiating secure logout...");
+    
+    try {
+        // Create an AbortController to prevent the logout from hanging 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000); 
+
+        // authenticatedFetch handles Authorization, x-hotel-id, and x-hotel-currency automatically
+        await authenticatedFetch(`${API_BASE_URL}/logout`, {
+            method: 'POST',
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+    } catch (error) {
+        console.warn('Backend logout sync skipped or timed out:', error.message);
+    }
+
+    /* ---------- WIPE LOCAL STATE ---------- */
+    // 1. Clear All in-memory variables safely
+    if (typeof authToken !== 'undefined') authToken = '';
+    if (typeof currentUsername !== 'undefined') currentUsername = '';
+    if (typeof currentUserRole !== 'undefined') currentUserRole = '';
+    if (typeof currentCurrency !== 'undefined') currentCurrency = ''; // ➔ ADDED: Local runtime scope wipe
+
+    // 2. Clear all persistence (Critical for multi-tenant security)
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // 3. Secure Redirect
+    const LOGIN_PAGE = 'https://elegant-pasca-cea136.netlify.app/frontend/login.html';
+    console.log("Session cleared. Redirecting to login...");
+    
+    window.location.replace(LOGIN_PAGE);
+}
 
 
 function closeSection(sectionId) {
@@ -5145,7 +5175,7 @@ async function fetchRoomsV2() {
                 tr.innerHTML = `
                     <td class="px-8 py-5 font-bold text-slate-700">${room.number}</td>
                     <td class="px-8 py-5 text-slate-500 font-medium">${categoryName}</td>
-                    <td class="px-8 py-5 font-mono text-sm text-indigo-600 font-bold">UGX ${rate}</td>
+                    <td class="px-8 py-5 font-mono text-sm text-indigo-600 font-bold">${CURRENT_CURRENCY} ${rate}</td>
                     <td class="px-8 py-5">
                         <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${badgeClass}">
                             ${room.status || 'Unknown'}
@@ -5182,7 +5212,7 @@ async function fetchRoomsV2() {
                         </div>
                         <div class="text-right">
                             <span class="text-[9px] uppercase font-bold tracking-tight text-slate-400 block">Nightly Price</span>
-                            <span class="text-sm font-black font-mono text-indigo-600">UGX ${rate}</span>
+                            <span class="text-sm font-black font-mono text-indigo-600">${CURRENT_CURRENCY} ${rate}</span>
                         </div>
                     </div>
 
@@ -6073,7 +6103,7 @@ if (!res.ok) {
         inventoryData.forEach(itemRecord => {
             const option = document.createElement('option');
             option.value = itemRecord.item; 
-            option.label = `UGX ${itemRecord.sellingprice.toLocaleString()}`;
+            option.label = `${CURRENT_CURRENCY} ${itemRecord.sellingprice.toLocaleString()}`;
             list.appendChild(option);
         });
     } catch (err) { console.error(err); }
@@ -6103,7 +6133,7 @@ const printReceiptFromAccount = (receipt) => {
     const itemsHtml = receipt.charges.map(c => `
         <div class="flex justify-between items-start text-xs font-mono my-1">
             <span class="max-w-[70%] text-left break-words">${c.description}</span>
-            <span class="font-bold">${Number(c.amount).toLocaleString()}</span>
+            <span class="font-bold">${CURRENT_CURRENCY} ${Number(c.amount).toLocaleString()}</span>
         </div>
     `).join('');
 
@@ -6122,7 +6152,7 @@ const printReceiptFromAccount = (receipt) => {
         <div class="mb-4">
             <div class="flex justify-between text-[11px] font-bold text-gray-500 uppercase border-b pb-1 font-mono mb-2">
                 <span>Description</span>
-                <span>Amount (UGX)</span>
+                <span>Amount (${CURRENT_CURRENCY})</span>
             </div>
             ${itemsHtml}
         </div>
@@ -6130,7 +6160,7 @@ const printReceiptFromAccount = (receipt) => {
         <div class="border-t-2 border-double pt-3 mt-2 font-mono">
             <div class="flex justify-between items-center text-sm font-bold">
                 <span>NET TOTAL</span>
-                <span class="text-base">UGX ${Number(receipt.total).toLocaleString()}</span>
+                <span class="text-base">${CURRENT_CURRENCY} ${Number(receipt.total).toLocaleString()}</span>
             </div>
         </div>
 
@@ -7164,7 +7194,7 @@ function renderSalesSummary(tbody, departmentTotals, grandTotal) {
             row.className = "summary-row bg-slate-50 text-slate-600 font-medium border-b border-slate-200/60";
             row.innerHTML = `
                 <td colspan="4" class="text-right py-3 pr-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">${dept} Subtotal:</td>
-                <td class="px-6 py-3 font-mono font-bold text-slate-900">UGX ${total.toLocaleString()}</td>
+                <td class="px-6 py-3 font-mono font-bold text-slate-900">${CURRENT_CURRENCY} ${total.toLocaleString()}</td>
                 <td colspan="4"></td>
             `;
         }
@@ -7174,7 +7204,7 @@ function renderSalesSummary(tbody, departmentTotals, grandTotal) {
         grandRow.className = "summary-row bg-indigo-600 text-white font-bold border-none shadow-sm";
         grandRow.innerHTML = `
             <td colspan="4" class="text-right py-3.5 pr-4 text-sm uppercase tracking-widest font-black">Grand Total:</td>
-            <td class="px-6 py-3.5 text-base font-mono font-black">UGX ${grandTotal.toLocaleString()}</td>
+            <td class="px-6 py-3.5 text-base font-mono font-black">${CURRENT_CURRENCY} ${grandTotal.toLocaleString()}</td>
             <td colspan="4"></td>
         `;
     }
@@ -7187,7 +7217,7 @@ function renderSalesSummary(tbody, departmentTotals, grandTotal) {
             .map(([dept, total]) => `
                 <div class="flex justify-between items-center py-2 border-b border-amber-200/40 last:border-0 text-xs">
                     <span class="text-slate-500 font-medium">${dept} Subtotal</span>
-                    <span class="font-mono font-bold text-slate-800">UGX ${total.toLocaleString()}</span>
+                    <span class="font-mono font-bold text-slate-800">${CURRENT_CURRENCY} ${total.toLocaleString()}</span>
                 </div>
             `).join('');
 
@@ -7205,7 +7235,7 @@ function renderSalesSummary(tbody, departmentTotals, grandTotal) {
 
                 <div class="mt-3 p-3 bg-indigo-600 text-white rounded-xl flex justify-between items-center shadow-inner">
                     <span class="text-[10px] uppercase tracking-widest font-black">Grand Total</span>
-                    <span class="text-base font-mono font-black">UGX ${grandTotal.toLocaleString()}</span>
+                    <span class="text-base font-mono font-black">${CURRENT_CURRENCY} ${grandTotal.toLocaleString()}</span>
                 </div>
             </div>
         `;
@@ -7475,7 +7505,7 @@ function renderExpensesTable(expenses) {
     expenses.forEach(expense => {
         const dept = expense.department || 'General';
         const desc = expense.description || 'No description provided';
-        const amountDisplay = `UGX ${Number(expense.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const amountDisplay = `${CURRENT_CURRENCY} ${Number(expense.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         const dateDisplay = new Date(expense.date).toLocaleDateString();
         const receipt = expense.receiptId || '—';
         const source = expense.source || 'N/A';
@@ -8009,9 +8039,9 @@ function updateCashSearchButton(text, iconClass) {
         // Formatting outputs for localization
         const dateDisplay = new Date(record.date).toLocaleDateString();
         const receiptDisplay = record.bankReceiptId || 'N/A';
-        const handStr = `UGX ${hand.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        const bankedStr = `UGX ${banked.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        const phoneStr = `UGX ${phone.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const handStr = `${CURRENT_CURRENCY} ${hand.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const bankedStr = `${CURRENT_CURRENCY} ${banked.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const phoneStr = `${CURRENT_CURRENCY} ${phone.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
         // --- HELPER: CENTRALIZED ACCOUNTABILITY ACTION BUTTONS ---
         const createActionsButton = (isMobileLayout) => {
@@ -8311,7 +8341,7 @@ async function generateSalesReports() {
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                         <div class="flex justify-between items-center">
                             <h4 class="font-bold text-slate-800 text-base">${dept}</h4>
-                            <span class="font-mono font-black text-emerald-600">${sales.toLocaleString()} UGX</span>
+                            <span class="font-mono font-black text-emerald-600">${sales.toLocaleString()} ${CURRENT_CURRENCY}</span>
                         </div>
                     </div>
                 `);
@@ -8409,7 +8439,7 @@ async function generateExpensesReports() {
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                         <div class="flex justify-between items-center">
                             <h4 class="font-bold text-slate-800 text-base">${dept}</h4>
-                            <span class="font-mono font-black text-red-600">${expenses.toLocaleString()} UGX</span>
+                            <span class="font-mono font-black text-red-600">${expenses.toLocaleString()} ${CURRENT_CURRENCY}</span>
                         </div>
                     </div>
                 `);
@@ -10325,7 +10355,7 @@ async function generatePaymentsReports() {
             deptHTML += `
                 <tr class="bg-white">
                     <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
-                    <td class="px-6 py-4 text-right font-bold text-slate-900">UGX ${departmentSplits[dept].toLocaleString()}</td>
+                    <td class="px-6 py-4 text-right font-bold text-slate-900">${CURRENT_CURRENCY} ${departmentSplits[dept].toLocaleString()}</td>
                 </tr>
             `;
         });
@@ -10363,7 +10393,7 @@ async function fetchActiveAccounts() {
         accounts.forEach(acc => {
             const guestName = acc.guestName || 'Unknown Guest';
             const roomDisplay = acc.roomNumber ? `Room ${acc.roomNumber}` : 'N/A';
-            const chargesDisplay = `UGX ${Number(acc.totalCharges || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const chargesDisplay = `${CURRENT_CURRENCY} ${Number(acc.totalCharges || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             const dateDisplay = acc.lastUpdated ? new Date(acc.lastUpdated).toLocaleDateString() : 'No Date';
 
             // --- A. POPULATE VIEW 1: DESKTOP TABLE ROW INTERFACE ---
@@ -10459,10 +10489,10 @@ async function refreshTodayPOSStats() {
         const data = await response.json();
 
         // Update the UI with formatted currency
-        document.getElementById('postoday-revenue').innerText = `UGX ${data.revenue.toLocaleString()}`;
-        document.getElementById('postoday-profit').innerText = `UGX ${data.profit.toLocaleString()}`;
-        document.getElementById('postoday-expense').innerText = `UGX ${data.expenses.toLocaleString()}`;
-        
+        document.getElementById('postoday-revenue').innerText = `${CURRENT_CURRENCY} ${data.revenue.toLocaleString()}`;
+        document.getElementById('postoday-profit').innerText = `${CURRENT_CURRENCY} ${data.profit.toLocaleString()}`;
+        document.getElementById('postoday-expense').innerText = `${CURRENT_CURRENCY} ${data.expenses.toLocaleString()}`;
+
         const balanceEl = document.getElementById('postoday-balance');
         
 
@@ -10954,106 +10984,7 @@ function saveGatewayCredentials(event) {
     });
 }
 
-async function fetchAndRenderGateway() {
-    const desktopContainer = document.getElementById('gatewayRowContainer');
-    const mobileContainer = document.getElementById('gatewayMobileContainer');
-    if (!desktopContainer || !mobileContainer) return;
 
-    // Loading indicators
-    desktopContainer.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-400">Loading configurations...</td></tr>`;
-    mobileContainer.innerHTML = `<div class="text-center py-6 text-gray-400 text-sm">Loading configurations...</div>`;
-
-    try {
-        const response = await authenticatedFetch(`${API_BASE_URL}/gateways`, {
-            method: 'GET'
-        });
-
-        if (!response || !response.ok) throw new Error('Failed to fetch data');
-        const config = await response.json();
-
-        // Status & Default UI Assets
-        const statusBadge = config.isConnected 
-            ? `<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium inline-block">Connected</span>`
-            : `<span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-medium inline-block">Not Connected</span>`;
-
-        const defaultBadge = config.isDefault 
-            ? `<span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-medium inline-block">Default</span>`
-            : `—`;
-
-        let actionMenuButtons = config.isConnected ? `
-            <div class="py-1">
-                <button onclick="openConfigureModal('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Configure</button>
-                <button onclick="openTestModal('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Test Connection</button>
-            </div>
-            <div class="py-1">
-                <button onclick="openDisconnectModal('pesapal')" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Disconnect</button>
-            </div>
-        ` : `
-            <div class="py-1">
-                <button onclick="openConfigureModal('pesapal')" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700 font-medium">Connect & Setup</button>
-            </div>`;
-
-        // 1. Render Desktop Layout Row
-        desktopContainer.innerHTML = `
-            <tr id="row-pesapal" class="border-t hover:bg-gray-50">
-                <td class="px-4 py-4">
-                    <div class="font-semibold text-gray-900">Pesapal</div>
-                    <div class="text-xs text-gray-500">Mobile Money, Cards & Bank Payments</div>
-                </td>
-                <td class="px-4 py-4 status-cell">${statusBadge}</td>
-                <td class="px-4 py-4 env-cell font-mono text-xs">${config.environment || '—'}</td>
-                <td class="px-4 py-4 default-cell">${defaultBadge}</td>
-                <td class="px-4 py-4 relative text-right pr-6">
-                    <button onclick="toggleGatewayMenu('pesapalMenu', event)" class="p-2 rounded-full hover:bg-gray-200 focus:outline-none transition-colors font-bold text-gray-600 text-lg">
-                        ⋮
-                    </button>
-                    <div id="pesapalMenu" class="hidden absolute right-4 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50 text-left divide-y divide-gray-100">
-                        ${actionMenuButtons}
-                    </div>
-                </td>
-            </tr>`;
-
-        // 2. Render Responsive Mobile Card Component Layout
-        mobileContainer.innerHTML = `
-            <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 relative shadow-sm">
-                <div class="flex justify-between items-start mb-3">
-                    <div>
-                        <div class="font-bold text-base text-gray-900">Pesapal</div>
-                        <div class="text-xs text-gray-500 mt-0.5">Mobile Money, Cards & Bank Payments</div>
-                    </div>
-                    
-                    <div class="relative">
-                        <button onclick="toggleGatewayMenu('pesapalMobileMenu', event)" class="p-2 -mr-2 rounded-full hover:bg-gray-200 focus:outline-none transition-colors font-bold text-gray-600 text-base">
-                            ⋮
-                        </button>
-                        <div id="pesapalMobileMenu" class="hidden absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50 text-left divide-y divide-gray-100">
-                            ${actionMenuButtons}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-y-3 pt-2 border-t border-gray-200 text-xs">
-                    <div>
-                        <span class="block text-gray-400 font-medium mb-0.5">Status</span>
-                        ${statusBadge}
-                    </div>
-                    <div>
-                        <span class="block text-gray-400 font-medium mb-0.5">Environment</span>
-                        <span class="font-mono bg-gray-200 text-gray-800 px-2 py-0.5 rounded text-xs inline-block">${config.environment || '—'}</span>
-                    </div>
-                    <div class="col-span-2">
-                        <span class="block text-gray-400 font-medium mb-0.5">Default Status</span>
-                        ${defaultBadge}
-                    </div>
-                </div>
-            </div>`;
-            
-    } catch (error) {
-        console.error(error);
-        desktopContainer.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Error loading data.</td></tr>`;
-        mobileContainer.innerHTML = `<div class="text-center py-4 text-red-500 text-xs">Error loading data.</div>`;
-    }
-}
 
 // Call this on your main application layout mount event loop / panel initiation step
 // Instead of calling fetchAndRenderGateway() immediately, wait for the page load:
@@ -11384,12 +11315,12 @@ function renderTableRow(room) {
     // --- COLUMN 4: PRICE CONFIGURATION ---
     const priceHtml = isEditing ? `
         <div class="flex justify-end items-center gap-1 font-mono">
-            <span class="text-xs text-slate-400 font-sans font-bold">UGX</span>
+            <span class="text-xs text-slate-400 font-sans font-bold">${CURRENT_CURRENCY}</span>
             <input type="number" id="edit-price-${room._id}" value="${currentPrice}" class="w-24 px-2 py-1 border border-slate-200 rounded-xl text-right text-xs outline-none focus:ring-2 focus:ring-indigo-500">
         </div>
     ` : `
         <div class="text-right font-mono font-bold text-slate-900">
-            <span class="text-[10px] text-slate-400 font-sans font-medium mr-0.5">UGX</span> 
+            <span class="text-[10px] text-slate-400 font-sans font-medium mr-0.5">${CURRENT_CURRENCY}</span> 
             ${Number(currentPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}
         </div>`;
 
