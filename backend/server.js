@@ -1834,6 +1834,9 @@ app.post('/api/login', async (req, res) => {
         const hotelId = user.hotelId?._id || user.hotelId || null;
         const hotelName = user.hotelId?.name || (isSuperAdmin ? 'Global Administration' : 'Unknown Hotel');
 
+        // 🌍 Extract currency directly from the populated hotel object data field
+        const hotelCurrency = user.hotelId?.hotelCurrency || 'UGX';
+
         // 4. Token Generation
         const authToken = Buffer.from(`${username}:${password}`).toString('base64');
 
@@ -1857,7 +1860,7 @@ app.post('/api/login', async (req, res) => {
                 role: user.role, 
                 hotelId: hotelId, 
                 hotelName: hotelName,
-                currency: req.user.currency || "UGX"
+                currency: hotelCurrency // 🌍 Safely passed directly from DB document field
             } 
         });
 
