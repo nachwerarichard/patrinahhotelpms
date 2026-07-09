@@ -118,6 +118,139 @@ const auditLogEndDateFilter = document.getElementById('auditLogEndDateFilter');
 const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn');
   // Add this to the TOP of your scripts on the destination pages
 // At the top of script4.js
+(function autoLoginHook() {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Only run if autoLogin flag is present
+    if (urlParams.get('autoLogin') === 'true') {
+        
+        console.log("==================== HOOK DEBUG START ====================");
+        console.log("🔗 Full URL query parameters caught on arrival:", Object.fromEntries(urlParams.entries()));
+
+        // 1. Inject CSS for the Preloader
+        const style = document.createElement('style');
+        style.id = 'auto-login-styles';
+        style.innerHTML = `
+            #auto-login-overlay {
+                position: fixed; 
+                top: 0; left: 0; 
+                width: 100%; height: 100%;
+                background: white;
+                display: flex; 
+                flex-direction: column;
+                justify-content: center; 
+                align-items: center;
+                z-index: 999999; 
+                transition: opacity 0.4s ease;
+            }
+            .loader {
+                --d: 22px;
+                width: 4px; height: 4px;
+                border-radius: 50%;
+                color: #4f46e5;
+                box-shadow: 
+                    calc(1 * var(--d))      calc(0 * var(--d))      0 0,
+                    calc(0.707 * var(--d)) calc(0.707 * var(--d)) 0 1px,
+                    calc(0 * var(--d))      calc(1 * var(--d))      0 2px,
+                    calc(-0.707 * var(--d)) calc(0.707 * var(--d)) 0 3px,
+                    calc(-1 * var(--d))    calc(0 * var(--d))      0 4px,
+                    calc(-0.707 * var(--d)) calc(-0.707 * var(--d)) 0 5px,
+                    calc(0 * var(--d))      calc(-1 * var(--d))     0 6px;
+                animation: l27 1s infinite steps(8);
+            }
+            @keyframes l27 { 100% { transform: rotate(1turn); } }
+            .sync-text { margin-top: 2rem; font-family: sans-serif; font-size: 12px; color: #64748b; letter-spacing: 0.1em; font-weight: bold; }
+        `;
+        document.head.appendChild(style);
+
+        // 2. Create Overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'auto-login-overlay';
+        overlay.innerHTML = `
+            <div class="loader"></div>
+            <div class="sync-text">ESTABLISHING SECURE SESSION...</div>
+        `;
+        document.body.appendChild(overlay);
+
+        const removeOverlay = () => {
+            const el = document.getElementById('auto-login-overlay');
+            if (el) {
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 400); 
+            }
+        };
+
+        // 3. Extract Data and Sync LocalStorage
+        const token = urlParams.get('t');
+        const user = urlParams.get('u');
+        const role = urlParams.get('r');
+        const hotelId = urlParams.get('h');
+        const hotelName = urlParams.get('n');
+        const hotelCurrency = urlParams.get('c'); 
+
+        // 🔍 HOOK DEBUG 1: Verify URL extraction before variables are used
+        console.log("📥 Extracted currency string ('c') directly from URL:", hotelCurrency);
+
+        if (token && user) {
+            // Save data to the current domain's storage
+            localStorage.setItem('token', token);
+            localStorage.setItem('username', user);
+            localStorage.setItem('userRole', role);
+            localStorage.setItem('hotelId', hotelId || 'global');
+            localStorage.setItem('hotelName', hotelName || 'global');
+            localStorage.setItem('hotelCurrency', hotelCurrency || 'UGX'); 
+
+            // Re-create the loggedInUser object if your other scripts need it
+            const targetUserObject = {
+                username: user,
+                role: role,
+                token: token,
+                hotelName: hotelName,
+                hotelId: hotelId || 'global',
+                hotelCurrency: hotelCurrency || 'UGX'
+            };
+            localStorage.setItem('loggedInUser', JSON.stringify(targetUserObject));
+
+            // 🔍 HOOK DEBUG 2: Verify exactly what was committed to browser storage
+            console.log("💾 Storage Key 'hotelCurrency' value:", localStorage.getItem('hotelCurrency'));
+            console.log("💾 Storage Key 'loggedInUser' complete parsed contents:", JSON.parse(localStorage.getItem('loggedInUser')));
+
+            // Clean the URL (remove sensitive data from address bar)
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+            console.log("🧹 Address bar cleaned. Parameter data shielded.");
+            console.log("===================== HOOK DEBUG END =====================");
+
+            // 4. Initialize the App
+            console.log("Session synchronized. Initializing dashboard...");
+            
+            if (typeof initDashboard === "function") {
+                initDashboard();
+            }
+
+            // Watchdog: Hide overlay when specific UI elements appear
+            const checkUI = setInterval(() => {
+                const mainContent = document.getElementById('main-content') || document.querySelector('nav');
+                if (mainContent) {
+                    removeOverlay();
+                    clearInterval(checkUI);
+                }
+            }, 100);
+
+            // Safety timeout: Remove overlay after 3 seconds anyway
+            setTimeout(() => {
+                removeOverlay();
+                clearInterval(checkUI);
+            }, 3000);
+
+        } else {
+            console.error("❌ Auto-login failed: Missing parameters in URL string.");
+            console.log("===================== HOOK DEBUG END =====================");
+            removeOverlay();
+        }
+    }
+})();
+
 const CURRENT_CURRENCY = localStorage.getItem('hotelCurrency') || 'UGX';
 const getHotelId = () => {
     // 1. Get the role and hotelId from separate keys
@@ -4392,138 +4525,7 @@ updateDashboard();
 updateroomDashboard();
 
 
-(function autoLoginHook() {
-    const urlParams = new URLSearchParams(window.location.search);
 
-    // Only run if autoLogin flag is present
-    if (urlParams.get('autoLogin') === 'true') {
-        
-        console.log("==================== HOOK DEBUG START ====================");
-        console.log("🔗 Full URL query parameters caught on arrival:", Object.fromEntries(urlParams.entries()));
-
-        // 1. Inject CSS for the Preloader
-        const style = document.createElement('style');
-        style.id = 'auto-login-styles';
-        style.innerHTML = `
-            #auto-login-overlay {
-                position: fixed; 
-                top: 0; left: 0; 
-                width: 100%; height: 100%;
-                background: white;
-                display: flex; 
-                flex-direction: column;
-                justify-content: center; 
-                align-items: center;
-                z-index: 999999; 
-                transition: opacity 0.4s ease;
-            }
-            .loader {
-                --d: 22px;
-                width: 4px; height: 4px;
-                border-radius: 50%;
-                color: #4f46e5;
-                box-shadow: 
-                    calc(1 * var(--d))      calc(0 * var(--d))      0 0,
-                    calc(0.707 * var(--d)) calc(0.707 * var(--d)) 0 1px,
-                    calc(0 * var(--d))      calc(1 * var(--d))      0 2px,
-                    calc(-0.707 * var(--d)) calc(0.707 * var(--d)) 0 3px,
-                    calc(-1 * var(--d))    calc(0 * var(--d))      0 4px,
-                    calc(-0.707 * var(--d)) calc(-0.707 * var(--d)) 0 5px,
-                    calc(0 * var(--d))      calc(-1 * var(--d))     0 6px;
-                animation: l27 1s infinite steps(8);
-            }
-            @keyframes l27 { 100% { transform: rotate(1turn); } }
-            .sync-text { margin-top: 2rem; font-family: sans-serif; font-size: 12px; color: #64748b; letter-spacing: 0.1em; font-weight: bold; }
-        `;
-        document.head.appendChild(style);
-
-        // 2. Create Overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'auto-login-overlay';
-        overlay.innerHTML = `
-            <div class="loader"></div>
-            <div class="sync-text">ESTABLISHING SECURE SESSION...</div>
-        `;
-        document.body.appendChild(overlay);
-
-        const removeOverlay = () => {
-            const el = document.getElementById('auto-login-overlay');
-            if (el) {
-                el.style.opacity = '0';
-                setTimeout(() => el.remove(), 400); 
-            }
-        };
-
-        // 3. Extract Data and Sync LocalStorage
-        const token = urlParams.get('t');
-        const user = urlParams.get('u');
-        const role = urlParams.get('r');
-        const hotelId = urlParams.get('h');
-        const hotelName = urlParams.get('n');
-        const hotelCurrency = urlParams.get('c'); 
-
-        // 🔍 HOOK DEBUG 1: Verify URL extraction before variables are used
-        console.log("📥 Extracted currency string ('c') directly from URL:", hotelCurrency);
-
-        if (token && user) {
-            // Save data to the current domain's storage
-            localStorage.setItem('token', token);
-            localStorage.setItem('username', user);
-            localStorage.setItem('userRole', role);
-            localStorage.setItem('hotelId', hotelId || 'global');
-            localStorage.setItem('hotelName', hotelName || 'global');
-            localStorage.setItem('hotelCurrency', hotelCurrency || 'UGX'); 
-
-            // Re-create the loggedInUser object if your other scripts need it
-            const targetUserObject = {
-                username: user,
-                role: role,
-                token: token,
-                hotelName: hotelName,
-                hotelId: hotelId || 'global',
-                hotelCurrency: hotelCurrency || 'UGX'
-            };
-            localStorage.setItem('loggedInUser', JSON.stringify(targetUserObject));
-
-            // 🔍 HOOK DEBUG 2: Verify exactly what was committed to browser storage
-            console.log("💾 Storage Key 'hotelCurrency' value:", localStorage.getItem('hotelCurrency'));
-            console.log("💾 Storage Key 'loggedInUser' complete parsed contents:", JSON.parse(localStorage.getItem('loggedInUser')));
-
-            // Clean the URL (remove sensitive data from address bar)
-            const cleanUrl = window.location.origin + window.location.pathname;
-            window.history.replaceState({}, document.title, cleanUrl);
-            console.log("🧹 Address bar cleaned. Parameter data shielded.");
-            console.log("===================== HOOK DEBUG END =====================");
-
-            // 4. Initialize the App
-            console.log("Session synchronized. Initializing dashboard...");
-            
-            if (typeof initDashboard === "function") {
-                initDashboard();
-            }
-
-            // Watchdog: Hide overlay when specific UI elements appear
-            const checkUI = setInterval(() => {
-                const mainContent = document.getElementById('main-content') || document.querySelector('nav');
-                if (mainContent) {
-                    removeOverlay();
-                    clearInterval(checkUI);
-                }
-            }, 100);
-
-            // Safety timeout: Remove overlay after 3 seconds anyway
-            setTimeout(() => {
-                removeOverlay();
-                clearInterval(checkUI);
-            }, 3000);
-
-        } else {
-            console.error("❌ Auto-login failed: Missing parameters in URL string.");
-            console.log("===================== HOOK DEBUG END =====================");
-            removeOverlay();
-        }
-    }
-})();
 
 async function logout() {
     console.log("Initiating secure logout...");
