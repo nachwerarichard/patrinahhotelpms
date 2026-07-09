@@ -4032,8 +4032,7 @@ app.post('/api/bookings/:id/initiate-stripe-payment', auth, async (req, res) => 
                         name: `Room Reservation Payment`,
                         description: `Booking Reference Context: ${booking._id || booking.id}`,
                     },
-                    unit_amount: Math.round(Number(amount)), // No decimals for UGX in Stripe
-                },
+unit_amount: parseInt(amount, 10),                },
                 quantity: 1,
             }],
             mode: 'payment',

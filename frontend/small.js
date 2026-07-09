@@ -3845,8 +3845,9 @@ async function submitPayment() {
     const amountInput = document.getElementById('paymentAmount');
     const methodInput = document.getElementById('payMethod');
     const submitBtn = document.getElementById('submitPaymentBtn');
-
-    const amount = parseFloat(amountInput.value);
+// Add this adjustment in your small.js file:
+     const rawAmountValue = amountInput.value.replace(/,/g, ''); // Removes all commas
+      const amount = parseFloat(rawAmountValue);
     const method = methodInput.value;
 
     if (!bookingId) return showMessage("Error", "No booking context linked.", true);
