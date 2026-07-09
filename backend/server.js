@@ -3995,17 +3995,18 @@ app.post('/api/bookings/:id/initiate-stripe-payment', auth, async (req, res) => 
         }
 
         // Fetch custom multi-tenant credentials for Stripe
-        const gateway = await mongoose.model('Gateway').findOne({
-            hotelId: req.user.hotelId,
-            gatewayId: 'stripe'
-        });
+      const gateway = await mongoose.model('Gateway').findOne({
+    hotelId: req.user.hotelId,
+    gatewayId: 'stripe'
+});
 
-        if (!gateway || !gateway.secretKey) {
-            return res.status(400).json({
-                success: false,
-                message: 'Stripe gateway properties are not configured for this hotel property.'
-            });
-        }
+// Fix: Verify that the hotel has connected their account successfully
+if (!gateway || !gateway.stripeAccountId || !gateway.isConnected) {
+    return res.status(400).json({
+        success: false,
+        message: 'Stripe gateway properties are not configured for this hotel property.'
+    });
+}
 
         // Initialize Stripe dynamically with target secret credentials
         const stripe = new Stripe(gateway.secretKey);
