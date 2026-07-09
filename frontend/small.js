@@ -118,7 +118,7 @@ const auditLogEndDateFilter = document.getElementById('auditLogEndDateFilter');
 const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn');
   // Add this to the TOP of your scripts on the destination pages
 // At the top of script4.js
-
+const CURRENT_CURRENCY = localStorage.getItem('hotelCurrency') || 'UGX';
 const getHotelId = () => {
     // 1. Get the role and hotelId from separate keys
     const role = localStorage.getItem('userRole');
@@ -406,9 +406,9 @@ const response = await authenticatedFetch(`${API_BASE_URL}/bookings/all?limit=50
     updateText('total-departures', kpis.departures);
     updateText('pending-count', kpis.pending);
     updateText('no-show-count', kpis.noShow);
-    updateText('today-amountpaid', `UGX ${kpis.amountpaid.toLocaleString()}`);
-    updateText('today-revenue', `UGX ${kpis.revenue.toLocaleString()}`);
-    updateText('today-balance', `UGX ${kpis.balance.toLocaleString()}`);
+    updateText('today-amountpaid', `${CURRENT_CURRENCY} ${kpis.amountpaid.toLocaleString()}`);
+    updateText('today-revenue', `${CURRENT_CURRENCY} ${kpis.revenue.toLocaleString()}`);
+    updateText('today-balance', `${CURRENT_CURRENCY} ${kpis.balance.toLocaleString()}`);
 
     const statusCounts = { 'confirmed': 0, 'cancelled': 0, 'no show': 0, 'checkedin': 0, 'reserved': 0 };
     const sourceCounts = { 'Walk in': 0, 'Booking.com': 0, 'Expedia': 0, 'Trip': 0, 'Hotel Website': 0 };
@@ -1452,7 +1452,7 @@ async function moveBooking(id) {
         // 3️⃣ Populate dropdown
         select.innerHTML = availableRoomsForMove
             .map(r => `<option value="${r.number}">
-                Room ${r.number} (${r.type || ''} - UGX ${r.basePrice || 0})
+                Room ${r.number} (${r.type || ''} - ${CURRENT_CURRENCY} ${r.basePrice || 0})
             </option>`)
             .join('');
 
@@ -1474,7 +1474,7 @@ function updateMovePricePreview() {
     const room = availableRoomsForMove.find(r => r.number === selectedNumber);
     
     if (room) {
-        document.getElementById('moveRoomBasePriceDisplay').innerText = `UGX ${room.basePrice}`;
+        document.getElementById('moveRoomBasePriceDisplay').innerText = `${CURRENT_CURRENCY} ${room.basePrice}`;
         document.getElementById('moveRoomNegotiatedPrice').value = room.basePrice; // Set default
     }
 }
@@ -3770,7 +3770,7 @@ function openAddPaymentModal(bookingId, balance) {
         // We store the raw number in a data-attribute just in case logic needs it
         balanceDisplay.dataset.rawBalance = balance;
         // Display formatted text
-        balanceDisplay.value = `UGX ${Number(balance).toLocaleString()}`;
+        balanceDisplay.value = `${CURRENT_CURRENCY} ${Number(balance).toLocaleString()}`;
     }
 
     // 3. Reset form fields
@@ -3944,7 +3944,7 @@ const amount = parseFloat(rawAmount);
     }
 } else {
     // Cash path
-    showMessage("Success", `Payment of UGX ${amount.toLocaleString()} recorded to ledger! ✅`);
+    showMessage("Success", `Payment of ${CURRENT_CURRENCY} ${amount.toLocaleString()} recorded to ledger! ✅`);
     amountInput.value = '';
     closePaymentModal();
     refreshDashboardViews();
@@ -4024,8 +4024,8 @@ async function fetchReport() {
     if (!hasActiveFilter) {
         if (tableBody) tableBody.innerHTML = '';
         if (mobileGrid) mobileGrid.innerHTML = '';
-        if (sumPaid) sumPaid.textContent = "UGX 0.00";
-        if (sumBalance) sumBalance.textContent = "UGX 0.00";
+        if (sumPaid) sumPaid.textContent = `${CURRENT_CURRENCY} 0.00`;
+        if (sumBalance) sumBalance.textContent = `${CURRENT_CURRENCY} 0.00`;
         return;
     }
 
@@ -4088,8 +4088,8 @@ function renderTable(bookings) {
         const fallbackMsg = '<div class="p-8 text-center text-gray-400 font-medium italic">No match logs mapped for active criteria.</div>';
         if (tbody) tbody.innerHTML = `<tr><td colspan="9">${fallbackMsg}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
-        if (sumPaidDisplay) sumPaidDisplay.textContent = "UGX 0.00";
-        if (sumBalanceDisplay) sumBalanceDisplay.textContent = "UGX 0.00";
+        if (sumPaidDisplay) sumPaidDisplay.textContent = `${CURRENT_CURRENCY} 0.00`;
+        if (sumBalanceDisplay) sumBalanceDisplay.textContent = `${CURRENT_CURRENCY} 0.00`;
         return;
     }
 
@@ -4098,8 +4098,8 @@ function renderTable(bookings) {
     const totalBalance = bookings.reduce((sum, b) => sum + Number(b.balance || 0), 0);
 
     // B. Reformat Financial String Representations
-    if (sumPaidDisplay) sumPaidDisplay.textContent = `UGX ${totalPaid.toLocaleString()}`;
-    if (sumBalanceDisplay) sumBalanceDisplay.textContent = `UGX ${totalBalance.toLocaleString()}`;
+    if (sumPaidDisplay) sumPaidDisplay.textContent = `${CURRENT_CURRENCY} ${totalPaid.toLocaleString()}`;
+    if (sumBalanceDisplay) sumBalanceDisplay.textContent = `${CURRENT_CURRENCY}  ${totalBalance.toLocaleString()}`;
 
     // C. Process Collections and Run Render Loops
     bookings.forEach(b => {
@@ -4148,11 +4148,11 @@ function renderTable(bookings) {
                 <div class="grid grid-cols-2 gap-2 bg-gray-50 border border-gray-100 rounded-lg p-3 text-xs">
                     <div>
                         <span class="text-[10px] text-gray-400 font-bold uppercase block tracking-tight">Paid Amount</span>
-                        <span class="text-green-600 font-bold font-mono text-sm">UGX ${Number(b.amountPaid || 0).toLocaleString()}</span>
+                        <span class="text-green-600 font-bold font-mono text-sm">${CURRENT_CURRENCY} ${Number(b.amountPaid || 0).toLocaleString()}</span>
                     </div>
                     <div>
                         <span class="text-[10px] text-gray-400 font-bold uppercase block tracking-tight">Balance Outstanding</span>
-                        <span class="text-red-600 font-bold font-mono text-sm">UGX ${Number(b.balance || 0).toLocaleString()}</span>
+                        <span class="text-red-600 font-bold font-mono text-sm">${CURRENT_CURRENCY} ${Number(b.balance || 0).toLocaleString()}</span>
                     </div>
                 </div>
 
@@ -5175,7 +5175,7 @@ async function fetchRoomsV2() {
                 tr.innerHTML = `
                     <td class="px-8 py-5 font-bold text-slate-700">${room.number}</td>
                     <td class="px-8 py-5 text-slate-500 font-medium">${categoryName}</td>
-                    <td class="px-8 py-5 font-mono text-sm text-indigo-600 font-bold">UGX ${rate}</td>
+                    <td class="px-8 py-5 font-mono text-sm text-indigo-600 font-bold">${CURRENT_CURRENCY} ${rate}</td>
                     <td class="px-8 py-5">
                         <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${badgeClass}">
                             ${room.status || 'Unknown'}
@@ -5212,7 +5212,7 @@ async function fetchRoomsV2() {
                         </div>
                         <div class="text-right">
                             <span class="text-[9px] uppercase font-bold tracking-tight text-slate-400 block">Nightly Price</span>
-                            <span class="text-sm font-black font-mono text-indigo-600">UGX ${rate}</span>
+                            <span class="text-sm font-black font-mono text-indigo-600">${CURRENT_CURRENCY} ${rate}</span>
                         </div>
                     </div>
 
@@ -6103,7 +6103,7 @@ if (!res.ok) {
         inventoryData.forEach(itemRecord => {
             const option = document.createElement('option');
             option.value = itemRecord.item; 
-            option.label = `UGX ${itemRecord.sellingprice.toLocaleString()}`;
+            option.label = `${CURRENT_CURRENCY} ${itemRecord.sellingprice.toLocaleString()}`;
             list.appendChild(option);
         });
     } catch (err) { console.error(err); }
@@ -6133,7 +6133,7 @@ const printReceiptFromAccount = (receipt) => {
     const itemsHtml = receipt.charges.map(c => `
         <div class="flex justify-between items-start text-xs font-mono my-1">
             <span class="max-w-[70%] text-left break-words">${c.description}</span>
-            <span class="font-bold">${Number(c.amount).toLocaleString()}</span>
+            <span class="font-bold">${CURRENT_CURRENCY} ${Number(c.amount).toLocaleString()}</span>
         </div>
     `).join('');
 
@@ -6152,7 +6152,7 @@ const printReceiptFromAccount = (receipt) => {
         <div class="mb-4">
             <div class="flex justify-between text-[11px] font-bold text-gray-500 uppercase border-b pb-1 font-mono mb-2">
                 <span>Description</span>
-                <span>Amount (UGX)</span>
+                <span>Amount (${CURRENT_CURRENCY})</span>
             </div>
             ${itemsHtml}
         </div>
@@ -6160,7 +6160,7 @@ const printReceiptFromAccount = (receipt) => {
         <div class="border-t-2 border-double pt-3 mt-2 font-mono">
             <div class="flex justify-between items-center text-sm font-bold">
                 <span>NET TOTAL</span>
-                <span class="text-base">UGX ${Number(receipt.total).toLocaleString()}</span>
+                <span class="text-base">${CURRENT_CURRENCY} ${Number(receipt.total).toLocaleString()}</span>
             </div>
         </div>
 
@@ -7194,7 +7194,7 @@ function renderSalesSummary(tbody, departmentTotals, grandTotal) {
             row.className = "summary-row bg-slate-50 text-slate-600 font-medium border-b border-slate-200/60";
             row.innerHTML = `
                 <td colspan="4" class="text-right py-3 pr-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">${dept} Subtotal:</td>
-                <td class="px-6 py-3 font-mono font-bold text-slate-900">UGX ${total.toLocaleString()}</td>
+                <td class="px-6 py-3 font-mono font-bold text-slate-900">${CURRENT_CURRENCY} ${total.toLocaleString()}</td>
                 <td colspan="4"></td>
             `;
         }
@@ -7204,7 +7204,7 @@ function renderSalesSummary(tbody, departmentTotals, grandTotal) {
         grandRow.className = "summary-row bg-indigo-600 text-white font-bold border-none shadow-sm";
         grandRow.innerHTML = `
             <td colspan="4" class="text-right py-3.5 pr-4 text-sm uppercase tracking-widest font-black">Grand Total:</td>
-            <td class="px-6 py-3.5 text-base font-mono font-black">UGX ${grandTotal.toLocaleString()}</td>
+            <td class="px-6 py-3.5 text-base font-mono font-black">${CURRENT_CURRENCY} ${grandTotal.toLocaleString()}</td>
             <td colspan="4"></td>
         `;
     }
@@ -7217,7 +7217,7 @@ function renderSalesSummary(tbody, departmentTotals, grandTotal) {
             .map(([dept, total]) => `
                 <div class="flex justify-between items-center py-2 border-b border-amber-200/40 last:border-0 text-xs">
                     <span class="text-slate-500 font-medium">${dept} Subtotal</span>
-                    <span class="font-mono font-bold text-slate-800">UGX ${total.toLocaleString()}</span>
+                    <span class="font-mono font-bold text-slate-800">${CURRENT_CURRENCY} ${total.toLocaleString()}</span>
                 </div>
             `).join('');
 
@@ -7235,7 +7235,7 @@ function renderSalesSummary(tbody, departmentTotals, grandTotal) {
 
                 <div class="mt-3 p-3 bg-indigo-600 text-white rounded-xl flex justify-between items-center shadow-inner">
                     <span class="text-[10px] uppercase tracking-widest font-black">Grand Total</span>
-                    <span class="text-base font-mono font-black">UGX ${grandTotal.toLocaleString()}</span>
+                    <span class="text-base font-mono font-black">${CURRENT_CURRENCY} ${grandTotal.toLocaleString()}</span>
                 </div>
             </div>
         `;
@@ -7505,7 +7505,7 @@ function renderExpensesTable(expenses) {
     expenses.forEach(expense => {
         const dept = expense.department || 'General';
         const desc = expense.description || 'No description provided';
-        const amountDisplay = `UGX ${Number(expense.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const amountDisplay = `${CURRENT_CURRENCY} ${Number(expense.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         const dateDisplay = new Date(expense.date).toLocaleDateString();
         const receipt = expense.receiptId || '—';
         const source = expense.source || 'N/A';
@@ -8039,9 +8039,9 @@ function updateCashSearchButton(text, iconClass) {
         // Formatting outputs for localization
         const dateDisplay = new Date(record.date).toLocaleDateString();
         const receiptDisplay = record.bankReceiptId || 'N/A';
-        const handStr = `UGX ${hand.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        const bankedStr = `UGX ${banked.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        const phoneStr = `UGX ${phone.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const handStr = `${CURRENT_CURRENCY} ${hand.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const bankedStr = `${CURRENT_CURRENCY} ${banked.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const phoneStr = `${CURRENT_CURRENCY} ${phone.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
         // --- HELPER: CENTRALIZED ACCOUNTABILITY ACTION BUTTONS ---
         const createActionsButton = (isMobileLayout) => {
@@ -8341,7 +8341,7 @@ async function generateSalesReports() {
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                         <div class="flex justify-between items-center">
                             <h4 class="font-bold text-slate-800 text-base">${dept}</h4>
-                            <span class="font-mono font-black text-emerald-600">${sales.toLocaleString()} UGX</span>
+                            <span class="font-mono font-black text-emerald-600">${sales.toLocaleString()} ${CURRENT_CURRENCY}</span>
                         </div>
                     </div>
                 `);
@@ -8439,7 +8439,7 @@ async function generateExpensesReports() {
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                         <div class="flex justify-between items-center">
                             <h4 class="font-bold text-slate-800 text-base">${dept}</h4>
-                            <span class="font-mono font-black text-red-600">${expenses.toLocaleString()} UGX</span>
+                            <span class="font-mono font-black text-red-600">${expenses.toLocaleString()} ${CURRENT_CURRENCY}</span>
                         </div>
                     </div>
                 `);
@@ -10355,7 +10355,7 @@ async function generatePaymentsReports() {
             deptHTML += `
                 <tr class="bg-white">
                     <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
-                    <td class="px-6 py-4 text-right font-bold text-slate-900">UGX ${departmentSplits[dept].toLocaleString()}</td>
+                    <td class="px-6 py-4 text-right font-bold text-slate-900">${CURRENT_CURRENCY} ${departmentSplits[dept].toLocaleString()}</td>
                 </tr>
             `;
         });
@@ -10393,7 +10393,7 @@ async function fetchActiveAccounts() {
         accounts.forEach(acc => {
             const guestName = acc.guestName || 'Unknown Guest';
             const roomDisplay = acc.roomNumber ? `Room ${acc.roomNumber}` : 'N/A';
-            const chargesDisplay = `UGX ${Number(acc.totalCharges || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const chargesDisplay = `${CURRENT_CURRENCY} ${Number(acc.totalCharges || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             const dateDisplay = acc.lastUpdated ? new Date(acc.lastUpdated).toLocaleDateString() : 'No Date';
 
             // --- A. POPULATE VIEW 1: DESKTOP TABLE ROW INTERFACE ---
@@ -10489,10 +10489,10 @@ async function refreshTodayPOSStats() {
         const data = await response.json();
 
         // Update the UI with formatted currency
-        document.getElementById('postoday-revenue').innerText = `UGX ${data.revenue.toLocaleString()}`;
-        document.getElementById('postoday-profit').innerText = `UGX ${data.profit.toLocaleString()}`;
-        document.getElementById('postoday-expense').innerText = `UGX ${data.expenses.toLocaleString()}`;
-        
+        document.getElementById('postoday-revenue').innerText = `${CURRENT_CURRENCY} ${data.revenue.toLocaleString()}`;
+        document.getElementById('postoday-profit').innerText = `${CURRENT_CURRENCY} ${data.profit.toLocaleString()}`;
+        document.getElementById('postoday-expense').innerText = `${CURRENT_CURRENCY} ${data.expenses.toLocaleString()}`;
+
         const balanceEl = document.getElementById('postoday-balance');
         
 
@@ -11315,12 +11315,12 @@ function renderTableRow(room) {
     // --- COLUMN 4: PRICE CONFIGURATION ---
     const priceHtml = isEditing ? `
         <div class="flex justify-end items-center gap-1 font-mono">
-            <span class="text-xs text-slate-400 font-sans font-bold">UGX</span>
+            <span class="text-xs text-slate-400 font-sans font-bold">${CURRENT_CURRENCY}</span>
             <input type="number" id="edit-price-${room._id}" value="${currentPrice}" class="w-24 px-2 py-1 border border-slate-200 rounded-xl text-right text-xs outline-none focus:ring-2 focus:ring-indigo-500">
         </div>
     ` : `
         <div class="text-right font-mono font-bold text-slate-900">
-            <span class="text-[10px] text-slate-400 font-sans font-medium mr-0.5">UGX</span> 
+            <span class="text-[10px] text-slate-400 font-sans font-medium mr-0.5">${CURRENT_CURRENCY}</span> 
             ${Number(currentPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}
         </div>`;
 

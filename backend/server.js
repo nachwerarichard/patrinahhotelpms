@@ -86,6 +86,9 @@ const User = mongoose.model('User', userSchema);
 
 
 
+// 🌍 Note: Ensure your Hotel schema/model is imported at the top of this file
+// const Hotel = require('../models/Hotel'); 
+
 async function auth(req, res, next) {
     const authHeader = req.headers.authorization;
     const hotelId = req.headers['x-hotel-id'];
@@ -94,9 +97,7 @@ async function auth(req, res, next) {
         return res.status(401).json({ error: 'No authorization header' });
     }
 
-    // Accept both:
-    // "Bearer xxx"
-    // "Basic xxx"
+    // Accept both: "Bearer xxx" and "Basic xxx"
     let token;
 
     if (authHeader.startsWith('Bearer ')) {
@@ -145,12 +146,25 @@ async function auth(req, res, next) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        // Attach safe user object
+        // 🌍 Dynamic Currency Injection Step
+        // Determine the targeted hotel ID context
+        const activeHotelId = user.role === 'super-admin' ? hotelId : user.hotelId;
+        let detectedCurrency = { currency: req.user.currency || "UGX" }; // Baseline default fallback
+
+        if (activeHotelId) {
+            const hotelProfile = await Hotel.findById(activeHotelId);
+            if (hotelProfile && hotelProfile.hotelCurrency) {
+                detectedCurrency = { currency: hotelProfile.hotelCurrency };
+            }
+        }
+
+        // Attach safe user object with dynamic currency profile attached
         req.user = {
             id: user._id,
             username: user.username,
             role: user.role,
-            hotelId: user.role === 'super-admin' ? hotelId : user.hotelId
+            hotelId: activeHotelId,
+            currency: detectedCurrency // 🌍 Available downstream as req.user.currency
         };
 
         next();
@@ -1842,7 +1856,8 @@ app.post('/api/login', async (req, res) => {
                 username: user.username, 
                 role: user.role, 
                 hotelId: hotelId, 
-                hotelName: hotelName
+                hotelName: hotelName,
+                currency: req.user.currency || "UGX"
             } 
         });
 
@@ -3048,7 +3063,7 @@ app.post('/api/public/bookings', async (req, res) => {
 
         const pesapalOrderPayload = {
             id: generatedBookingId, 
-            currency: 'UGX', // Synced explicitly with working quick-sales configuration matrix
+            currency: { currency: req.user.currency || "UGX" }, // Synced explicitly with working quick-sales configuration matrix
             amount: Number(calculatedTotalDue),
             description: `Accommodation Reservation Code ${generatedBookingId}`,
             redirect_mode: 'TOP_WINDOW',
@@ -3190,7 +3205,7 @@ app.post('/api/public/bookings', async (req, res) => {
             payment_method_types: ['card'],
             line_items: [{
                 price_data: {
-                    currency: 'ugx', 
+                    currency: { currency: req.user.currency || "UGX" },
                     product_data: {
                         name: `Room Reservation - Accommodation Payment`,
                         description: `Booking Reference Context: ${generatedBookingId}`,
@@ -3809,7 +3824,7 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
 
         const orderPayload = {
             id: merchantReference,
-            currency: 'UGX',
+            currency: { currency: req.user.currency || "UGX" },
             amount: Number(amount),
             description: `Booking Payment ${booking._id}`,
             callback_url: 'https://patrinahhotelpms.onrender.com/api/payments/pesapal-callback',
@@ -4167,7 +4182,7 @@ app.post('/api/bookings/:id/initiate-stripe-payment', auth, async (req, res) => 
             payment_method_types: ['card'],
             line_items: [{
                 price_data: {
-                    currency: 'ugx', 
+                    currency: req.user.currency || "UGX",
                     product_data: {
                         name: `Room Reservation Payment`,
                         description: `Booking Reference Context: ${booking._id || booking.id}`,
@@ -4393,7 +4408,7 @@ const orderResponse = await axios.post(
     orderUrl,
     {
         id: merchantReference,
-        currency: 'UGX',
+        currency: req.user.currency || 'UGX',
         amount: Number(amount),
         description: `${outlet} Quick Sale Payment`,
         
