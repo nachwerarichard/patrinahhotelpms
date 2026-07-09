@@ -3989,6 +3989,7 @@ await addAuditLog(
 });
 
 app.post('/api/bookings/:id/initiate-stripe-payment', auth, async (req, res) => {
+    console.log("RAW AMOUNT RECEIVED FROM FRONTEND:", req.body.amount, "TYPE:", typeof req.body.amount);
     try {
         const { id } = req.params;
         const { amount } = req.body;
