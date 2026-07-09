@@ -1639,6 +1639,16 @@ const hotelSchema = new mongoose.Schema({
             message: "Domain name must not include protocol schemas (http:// or https://)."
         }
     },
+    // 🌍 GLOBAL CURRENCY SETTING
+    hotelCurrency: {
+        type: String,
+        required: true,
+        uppercase: true, // Forces "usd" -> "USD", "ugx" -> "UGX" automatically
+        trim: true,
+        minLength: 3,
+        maxLength: 3,
+        default: 'UGX' // Default fallback currency code
+    },
     location: String,
     phoneNumber: String,
     email: String,
@@ -1646,7 +1656,6 @@ const hotelSchema = new mongoose.Schema({
 });
 
 const Hotel = mongoose.model('Hotel', hotelSchema);
-
 
 app.post('/api/admin/onboard-hotel', async (req, res) => {
     const { name, location, phoneNumber, email } = req.body;

@@ -145,11 +145,15 @@ const getHotelId = () => {
     return hotelId;
 };
 
+const getHotelCurrency = () => {
+    return localStorage.getItem('hotelCurrency') || 'UGX'; // Fallback default global currency code
+};
+
 async function authenticatedFetch(url, options = {}) {
     let token = localStorage.getItem('token');
     const params = new URLSearchParams(window.location.search);
     
-    // 1. Wait for token logic (kept as is)
+    // 1. Wait for token logic
     if (!token && params.get('autoLogin') === 'true') {
         await new Promise((resolve) => {
             let attempts = 0;
@@ -169,20 +173,18 @@ async function authenticatedFetch(url, options = {}) {
         return null;
     }
 
-    // 2. Start with standard headers
+    // 2. Start with standard headers + AUTOMATED MULTI-TENANT CURRENCY PASSTHROUGH
     const headers = {
         'Authorization': `Bearer ${token}`,
         'x-hotel-id': localStorage.getItem('hotelId') || 'global',
+        'x-hotel-currency': localStorage.getItem('hotelCurrency') || 'UGX', // ➔ INJECT CURRENCY HERE
         ...options.headers 
     };
 
     // 3. Smart Content-Type Assignment
-    // If the body is NOT FormData, we assume it's JSON.
-    // If it IS FormData, we delete the header to let the browser handle boundaries.
     if (options.body instanceof FormData) {
         delete headers['Content-Type']; 
     } else if (options.body) { 
-        // Only set JSON if there is actually a body to describe
         headers['Content-Type'] = 'application/json';
     }
 
@@ -4485,44 +4487,8 @@ updateDashboard();
 }
 // Initialize on page load
 updateroomDashboard();
-async function logout() {
-    console.log("Initiating secure logout...");
-    
-    try {
-        // Create an AbortController to prevent the logout from hanging 
-        // if the server is slow or the internet is spotty.
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000); 
 
-        // authenticatedFetch handles Authorization and x-hotel-id automatically
-        await authenticatedFetch(`${API_BASE_URL}/logout`, {
-            method: 'POST',
-            signal: controller.signal
-        });
 
-        clearTimeout(timeoutId);
-    } catch (error) {
-        // If the server fails, we log it but continue with the local wipe
-        console.warn('Backend logout sync skipped or timed out:', error.message);
-    }
-
-    /* ---------- WIPE LOCAL STATE ---------- */
-    // 1. Clear in-memory variables (if they exist in your scope)
-    if (typeof authToken !== 'undefined') authToken = '';
-    if (typeof currentUsername !== 'undefined') currentUsername = '';
-    if (typeof currentUserRole !== 'undefined') currentUserRole = '';
-
-    // 2. Clear all persistence (Critical for multi-tenant security)
-    localStorage.clear();
-    sessionStorage.clear();
-
-    // 3. Secure Redirect
-    const LOGIN_PAGE = 'https://elegant-pasca-cea136.netlify.app/frontend/login.html';
-    console.log("Session cleared. Redirecting to login...");
-    
-    // .replace prevents the user from clicking the "Back" button to see cached data
-    window.location.replace(LOGIN_PAGE);
-}
 (function autoLoginHook() {
     const urlParams = new URLSearchParams(window.location.search);
 
@@ -4588,6 +4554,7 @@ async function logout() {
         const role = urlParams.get('r');
         const hotelId = urlParams.get('h');
         const hotelName = urlParams.get('n');
+        const hotelCurrency = urlParams.get('c'); // ➔ ADDED: Read currency key from URL string
 
 
         if (token && user) {
@@ -4597,14 +4564,16 @@ async function logout() {
             localStorage.setItem('userRole', role);
             localStorage.setItem('hotelId', hotelId || 'global');
             localStorage.setItem('hotelName', hotelName || 'global');
+            localStorage.setItem('hotelCurrency', hotelCurrency || 'UGX'); // ➔ ADDED: Persist raw currency string
 
             // Re-create the loggedInUser object if your other scripts need it
             localStorage.setItem('loggedInUser', JSON.stringify({
                 username: user,
                 role: role,
                 token: token,
-                hotelName:hotelName,
-                hotelId: hotelId || 'global'
+                hotelName: hotelName,
+                hotelId: hotelId || 'global',
+                hotelCurrency: hotelCurrency || 'UGX' // ➔ ADDED: Include currency structure inside main object representation
             }));
 
             // Clean the URL (remove sensitive data from address bar)
@@ -4620,7 +4589,6 @@ async function logout() {
 
             // Watchdog: Hide overlay when specific UI elements appear
             const checkUI = setInterval(() => {
-                // Check if your dashboard container exists and is visible
                 const mainContent = document.getElementById('main-content') || document.querySelector('nav');
                 if (mainContent) {
                     removeOverlay();
@@ -4640,6 +4608,43 @@ async function logout() {
         }
     }
 })();
+
+async function logout() {
+    console.log("Initiating secure logout...");
+    
+    try {
+        // Create an AbortController to prevent the logout from hanging 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000); 
+
+        // authenticatedFetch handles Authorization, x-hotel-id, and x-hotel-currency automatically
+        await authenticatedFetch(`${API_BASE_URL}/logout`, {
+            method: 'POST',
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+    } catch (error) {
+        console.warn('Backend logout sync skipped or timed out:', error.message);
+    }
+
+    /* ---------- WIPE LOCAL STATE ---------- */
+    // 1. Clear All in-memory variables safely
+    if (typeof authToken !== 'undefined') authToken = '';
+    if (typeof currentUsername !== 'undefined') currentUsername = '';
+    if (typeof currentUserRole !== 'undefined') currentUserRole = '';
+    if (typeof currentCurrency !== 'undefined') currentCurrency = ''; // ➔ ADDED: Local runtime scope wipe
+
+    // 2. Clear all persistence (Critical for multi-tenant security)
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // 3. Secure Redirect
+    const LOGIN_PAGE = 'https://elegant-pasca-cea136.netlify.app/frontend/login.html';
+    console.log("Session cleared. Redirecting to login...");
+    
+    window.location.replace(LOGIN_PAGE);
+}
 
 
 function closeSection(sectionId) {
