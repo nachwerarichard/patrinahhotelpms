@@ -4023,21 +4023,24 @@ app.post('/api/bookings/:id/initiate-stripe-payment', auth, async (req, res) => 
         
         const merchantReference = `BKG-${booking._id || booking.id}-${Date.now()}`;
 
-        // Create a hosted Checkout Session
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            line_items: [{
-                price_data: {
-                    currency: 'ugx', // Stripe supports UGX (Zero-decimal currency)
-                    product_data: {
-                        name: `Room Reservation Payment`,
-                        description: `Booking Reference Context: ${booking._id || booking.id}`,
-                    },
-                    unit_amount: Math.round(parseFloat(amount))
-                },
-                quantity: 1,
-            }],
-            mode: 'payment',
+        // Calculate final minor units safely (e.g. 200,000 becomes 20,000,000 cents/units)
+const finalAmountInCents = Math.round(parseFloat(amount) * 100);
+
+// Create a hosted Checkout Session
+const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: [{
+        price_data: {
+            currency: hotelCurrency, 
+            product_data: {
+                name: `Room Reservation Payment`,
+                description: `Booking Reference Context: ${booking._id || booking.id}`,
+            },
+            unit_amount: finalAmountInCents, // ➔ Hand Stripe the correct minor unit value!
+        },
+        quantity: 1,
+    }],
+    mode: 'payment',
             metadata: {
                 bookingId: String(booking._id || booking.id),
                 hotelId: String(req.user.hotelId),
