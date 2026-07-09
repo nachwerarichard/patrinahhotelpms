@@ -4100,25 +4100,24 @@ app.post('/api/payments/stripe-webhook', express.raw({ type: 'application/json' 
     const sig = req.headers['stripe-signature'];
     let event;
 
-    // Inside your app.post('/api/payments/stripe-webhook') route:
-try {
-    const endpointSecret = process.env.STRIPE_CONNECT_WEBHOOK_SECRET; 
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-    
-    // Changing req.body to req.rawBody here ensures Stripe receives the raw stream buffer
-    event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
-} catch (err) {
-    console.error(`⚠️ Webhook signature validation failed:`, err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-}
+    try {
+        const endpointSecret = process.env.STRIPE_CONNECT_WEBHOOK_SECRET; 
+        const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+        
+        event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+    } catch (err) {
+        console.error(`⚠️ Webhook signature validation failed:`, err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
 
     // Handle checkout session completion event logs
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object;
         
         const bookingId = session.metadata.bookingId;
-        const hotelId = session.metadata.hotelId;
-        const paymentAmount = session.amount_total; // or calculate from native line items / currency metrics
+        
+        // ➔ THE CRITICAL FIX: Convert Stripe's processed minor units back to standard UGX figures safely
+        const paymentAmount = Number(session.amount_total) / 100; 
 
         try {
             const booking = await Booking.findOne({
@@ -4131,9 +4130,11 @@ try {
                     return res.json({ received: true });
                 }
 
-                // Balance calculations (remembering Stripe converts zero-decimal for UGX directly)
+                // Balance calculations 
                 const finalCollectedValue = Number(paymentAmount); 
                 const totalDue = Number(booking.totalDue) || 0;
+                
+                // Read what has already been stored inside your database field
                 const currentPaid = Number(booking.amountPaid) || 0;
 
                 const newAmountPaid = currentPaid + finalCollectedValue;
@@ -4141,7 +4142,7 @@ try {
 
                 booking.amountPaid = newAmountPaid;
                 booking.balance = newBalance;
-                booking.paymentMethod = 'Stripe Card';
+                booking.paymentMethod = 'Stripe Card'; // Clean enum match
                 booking.paymentStatus = newBalance === 0 ? 'Paid' : 'Partially Paid';
                 booking.gueststatus = 'confirmed';
                 booking.transactionid = session.id;
