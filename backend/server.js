@@ -44,6 +44,7 @@ const app = express();
 // Configure CORS
 
 // This is the "Open Door" policy
+// 1. Keep your CORS setup exactly as it is
 app.use(cors({
   origin: [
     'https://elegant-pasca-cea136.netlify.app'
@@ -57,7 +58,17 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json()); // This should also be before your routes to parse JSON bodies
+// 2. MODIFIED: Update this line to catch the raw request body buffer for Stripe
+app.use(express.json({
+  verify: (req, res, buf) => {
+    if (req.originalUrl.startsWith('/api/payments/stripe-webhook')) {
+      req.rawBody = buf; // This preserves the exact, unparsed string for Stripe's verification hash
+    }
+  }
+}));
+
+// 3. Keep any other parsing middleware below it
+app.use(express.urlencoded({ extended: true })); // This should also be before your routes to parse JSON bodies
  
 const userSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' },
@@ -3968,6 +3979,183 @@ await addAuditLog(
     }
 });
 
+app.post('/api/bookings/:id/initiate-stripe-payment', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { amount } = req.body;
+
+        // Find standard multi-tenant booking
+        const booking = await Booking.findOne({
+            id: id, // if your custom key relies on "id". Switch to _id if using raw ObjectIDs
+            hotelId: req.user.hotelId
+        });
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        // Fetch custom multi-tenant credentials for Stripe
+        const gateway = await mongoose.model('Gateway').findOne({
+            hotelId: req.user.hotelId,
+            gatewayId: 'stripe'
+        });
+
+        if (!gateway || !gateway.secretKey) {
+            return res.status(400).json({
+                success: false,
+                message: 'Stripe gateway properties are not configured for this hotel property.'
+            });
+        }
+
+        // Initialize Stripe dynamically with target secret credentials
+        const stripe = new Stripe(gateway.secretKey);
+        
+        const merchantReference = `BKG-${booking._id || booking.id}-${Date.now()}`;
+
+        // Create a hosted Checkout Session
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [{
+                price_data: {
+                    currency: 'ugx', // Stripe supports UGX (Zero-decimal currency)
+                    product_data: {
+                        name: `Room Reservation Payment`,
+                        description: `Booking Reference Context: ${booking._id || booking.id}`,
+                    },
+                    unit_amount: Math.round(Number(amount)), // No decimals for UGX in Stripe
+                },
+                quantity: 1,
+            }],
+            mode: 'payment',
+            metadata: {
+                bookingId: String(booking._id || booking.id),
+                hotelId: String(req.user.hotelId),
+                merchantReference: merchantReference
+            },
+            client_reference_id: merchantReference,
+            // Redirect inside iframe space back to success files on completion
+            success_url: `https://patrinahhotelpms.onrender.com/api/payments/stripe-callback?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `https://elegant-pasca-cea136.netlify.app/frontend/failure.html`,
+        });
+
+        // Sync local property context with temporary status tracking
+        booking.transactionid = session.id;
+        await booking.save();
+
+        return res.json({
+            success: true,
+            redirectUrl: session.url,
+            sessionId: session.id
+        });
+
+    } catch (error) {
+        console.error('STRIPE GATEWAY FAULT:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to initialize Stripe engine session framework.',
+            error: error.message
+        });
+    }
+});
+
+app.get('/api/payments/stripe-callback', async (req, res) => {
+    try {
+        const { session_id } = req.query;
+
+        if (!session_id) {
+            return res.status(400).send('<h1>Invalid Stripe Redirect Context</h1>');
+        }
+
+        const FRONTEND_URL = 'https://elegant-pasca-cea136.netlify.app/frontend'; 
+        
+        // Pass parameters down to success.html to let your UI know it was Stripe
+        const redirectUrl = `${FRONTEND_URL}/success.html?GatewayProvider=Stripe&OrderTrackingId=${session_id}`;
+        
+        return res.redirect(redirectUrl);
+
+    } catch (error) {
+        console.error('Error handling stripe synchronous page route:', error);
+        return res.status(500).send('<h1>Something went wrong</h1>');
+    }
+});
+
+// NOTE: This endpoint needs the raw request body to verify Stripe's signature. 
+// Place it BEFORE your global app.use(express.json()) parser, or use express.raw() middle tier middleware.
+app.post('/api/payments/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    let event;
+
+    // Inside your app.post('/api/payments/stripe-webhook') route:
+try {
+    const endpointSecret = process.env.STRIPE_CONNECT_WEBHOOK_SECRET; 
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    
+    // Changing req.body to req.rawBody here ensures Stripe receives the raw stream buffer
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+} catch (err) {
+    console.error(`⚠️ Webhook signature validation failed:`, err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+}
+
+    // Handle checkout session completion event logs
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        
+        const bookingId = session.metadata.bookingId;
+        const hotelId = session.metadata.hotelId;
+        const paymentAmount = session.amount_total; // or calculate from native line items / currency metrics
+
+        try {
+            const booking = await Booking.findOne({
+                $or: [{ _id: bookingId }, { id: bookingId }]
+            });
+
+            if (booking) {
+                // Prevent processing duplicates
+                if (booking.transactionid === session.id && booking.paymentStatus === 'Paid') {
+                    return res.json({ received: true });
+                }
+
+                // Balance calculations (remembering Stripe converts zero-decimal for UGX directly)
+                const finalCollectedValue = Number(paymentAmount); 
+                const totalDue = Number(booking.totalDue) || 0;
+                const currentPaid = Number(booking.amountPaid) || 0;
+
+                const newAmountPaid = currentPaid + finalCollectedValue;
+                const newBalance = Math.max(0, totalDue - newAmountPaid);
+
+                booking.amountPaid = newAmountPaid;
+                booking.balance = newBalance;
+                booking.paymentMethod = 'Stripe Card';
+                booking.paymentStatus = newBalance === 0 ? 'Paid' : 'Partially Paid';
+                booking.gueststatus = 'confirmed';
+                booking.transactionid = session.id;
+                booking.paidAt = new Date();
+
+                await booking.save();
+
+                // Call audit logging service component smoothly
+                await addAuditLog(
+                    'Stripe Payment Confirmed',
+                    'Stripe Gateway Webhook Engine',
+                    booking.hotelId,
+                    {
+                        bookingId: booking._id,
+                        trackingId: session.id,
+                        amount: finalCollectedValue,
+                        paymentStatus: booking.paymentStatus
+                    }
+                );
+                
+                console.log(`✅ Stripe webhook balance reconciled cleanly for Booking: ${bookingId}`);
+            }
+        } catch (dbError) {
+            console.error("Database updates failure during stripe async execution: ", dbError);
+        }
+    }
+
+    res.json({ received: true });
+});
 
 app.post('/api/quick-sales/initiate-payment', auth, async (req, res) => {
     try {

@@ -3811,21 +3811,7 @@ document.getElementById('addPaymentModal')?.addEventListener('click', function(e
  * Updates the booking balance and records the transaction.
  */
 /** Toggles context validation fields based on selected method */
-function toggleDigitalPaymentFields(method) {
-    const pesapalBox = document.getElementById('pesapalFields');
-    if (method === 'MTN Momo' || method === 'Airtel Pay') {
-        pesapalBox.classList.remove('hidden');
-        
-        // Attempt to auto-extract existing customer information out of dashboard context if available
-        const currentGuestPhone = document.getElementById('guestPhoneField')?.innerText || '';
-        const currentGuestEmail = document.getElementById('guestEmailField')?.innerText || '';
-        
-        if(currentGuestPhone) document.getElementById('pesapalPhone').value = currentGuestPhone;
-        if(currentGuestEmail) document.getElementById('pesapalEmail').value = currentGuestEmail;
-    } else {
-        pesapalBox.classList.add('hidden');
-    }
-}
+
 
 /** Aborts active digital session frames */
 function abortPesapalCheckout() {
@@ -3836,6 +3822,24 @@ function abortPesapalCheckout() {
 }
 
 /** Fully Refactored Submission Engine */
+function toggleDigitalPaymentFields(method) {
+    const pesapalBox = document.getElementById('pesapalFields');
+    
+    // Stripe does not require Pesapal checkout details fields
+    if (method === 'MTN Momo' || method === 'Airtel Pay') {
+        pesapalBox.classList.remove('hidden');
+        
+        const currentGuestPhone = document.getElementById('guestPhoneField')?.innerText || '';
+        const currentGuestEmail = document.getElementById('guestEmailField')?.innerText || '';
+        
+        if(currentGuestPhone) document.getElementById('pesapalPhone').value = currentGuestPhone;
+        if(currentGuestEmail) document.getElementById('pesapalEmail').value = currentGuestEmail;
+    } else {
+        pesapalBox.classList.add('hidden');
+    }
+}
+
+// Modify your submitPayment() block where routing endpoints are evaluated:
 async function submitPayment() {
     const bookingId = document.getElementById('paymentBookingId').value;
     const amountInput = document.getElementById('paymentAmount');
@@ -3845,7 +3849,6 @@ async function submitPayment() {
     const amount = parseFloat(amountInput.value);
     const method = methodInput.value;
 
-    // 1. Core Validations
     if (!bookingId) return showMessage("Error", "No booking context linked.", true);
     if (!amount || amount <= 0) return showMessage("Error", "Please enter a valid amount.", true);
     if (!method) return showMessage("Error", "Select a payment channel.", true);
@@ -3853,8 +3856,8 @@ async function submitPayment() {
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelId = user ? user.hotelId : null;
 
-    // 2. Identify Routing Path: Digital Gateway vs Offline Processing
     const isPesapalGateway = (method === 'MTN Momo' || method === 'Airtel Pay');
+    const isStripeGateway = (method === 'Stripe');
 
     let payload = { 
         amount, 
@@ -3878,13 +3881,16 @@ async function submitPayment() {
     try {
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<svg class="animate-spin h-4 w-4 inline mr-2 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing Payment...';
+            submitBtn.innerHTML = 'Processing Payment...';
         }
 
-        // Determine destination target endpoint route
-        const endpoint = isPesapalGateway 
-            ? `${API_BASE_URL}/bookings/${bookingId}/initiate-pesapal-payment`
-            : `${API_BASE_URL}/bookings/${bookingId}/add-payment`;
+        // --- NEW POLYMORPHIC ROUTING ENDPOINTS ---
+        let endpoint = `${API_BASE_URL}/bookings/${bookingId}/add-payment`;
+        if (isPesapalGateway) {
+            endpoint = `${API_BASE_URL}/bookings/${bookingId}/initiate-pesapal-payment`;
+        } else if (isStripeGateway) {
+            endpoint = `${API_BASE_URL}/bookings/${bookingId}/initiate-stripe-payment`;
+        }
 
         const response = await authenticatedFetch(endpoint, {
             method: "POST",
@@ -3892,31 +3898,32 @@ async function submitPayment() {
         });
 
         if (!response || !response.ok) {
-            const errBody = await response.json().catch(() => ({ message: "Server connection crash." }));
+            const errBody = await response.json().catch(() => ({ message: "Server connection error." }));
             throw new Error(errBody.message || "Failed execution pipeline.");
         }
 
         const result = await response.json();
 
-        if (isPesapalGateway) {
-            // STEP 3: Handle the Live Pesapal V3 Gateway Response Link
+        // Handle both Gateway IFRAME loading pipelines 
+        if (isPesapalGateway || isStripeGateway) {
             if (result.success && result.redirectUrl) {
-                // Swap layout containers visibility views inside modal panel context safely
                 document.getElementById('paymentFormInputs').classList.add('hidden');
                 document.getElementById('modalActionButtons').classList.add('hidden');
                 
                 const container = document.getElementById('pesapalIframeContainer');
                 const iframe = document.getElementById('pesapalIframe');
+                const label = document.getElementById('gatewayProviderLabel');
                 
+                label.innerText = isStripeGateway ? "🔒 Secured Via Stripe Checkout Framework" : "🔒 Secured Via Pesapal Merchant Framework V3";
                 container.classList.remove('hidden');
                 iframe.src = result.redirectUrl; 
                 
-                showMessage("Iframe Loaded", "Please complete payment inside the secure gateway frame.", false);
+                showMessage("Checkout Loaded", "Please complete payment inside the secure gateway frame.", false);
             } else {
-                throw new Error(result.message || "Failed initializing digital gateway.");
+                throw new Error(result.message || "Failed initializing gateway session.");
             }
         } else {
-            // Step 4: Fallback to standard success pipeline for native paths (Cash)
+            // Cash path
             showMessage("Success", `Payment of UGX ${amount.toLocaleString()} recorded to ledger! ✅`);
             amountInput.value = '';
             closePaymentModal();
