@@ -1825,8 +1825,20 @@ app.post('/api/login', async (req, res) => {
         // 1. Find user (don't worry if populate fails for super-admin)
         const user = await User.findOne({ username }).populate('hotelId');
         
+        // 🔍 BACKEND DEBUG 1: Did we find a user? What does the raw hotelId object look like?
+        console.log("==================== LOGIN DEBUG START ====================");
+        console.log(`👤 User attempting login: ${username}`);
+        if (!user) {
+            console.log("❌ DB RESULT: No user found matching that username.");
+        } else {
+            console.log(`📋 User role from DB: ${user.role}`);
+            console.log("🏢 Populated 'hotelId' document field contents:", JSON.stringify(user.hotelId, null, 2));
+        }
+
         // 2. Validate existence and password (Plain text as per your current setup)
         if (!user || user.password !== password) {
+            console.log("❌ LOGIN FAILURE: Invalid credentials provided.");
+            console.log("===================== LOGIN DEBUG END =====================");
             return res.status(401).json({ message: 'Invalid username or password' });
         }
 
@@ -1838,7 +1850,13 @@ app.post('/api/login', async (req, res) => {
         const hotelName = user.hotelId?.name || (isSuperAdmin ? 'Global Administration' : 'Unknown Hotel');
 
         // 🌍 Extract currency directly from the populated hotel object data field
-        const hotelCurrency = user.hotelId?.hotelCurrency || 'UGX';
+        const hotelCurrency = user.hotelId?.hotelCurrency;
+
+        // 🔍 BACKEND DEBUG 2: Check the exact fallback behavior
+        console.log(`🔍 DEBUG: Raw user.hotelId?.hotelCurrency reads as: "${hotelCurrency}"`);
+        
+        const finalCurrency = hotelCurrency || 'UGX';
+        console.log(`🌍 DEBUG: Final currency falling back to: "${finalCurrency}"`);
 
         // 4. Token Generation
         const authToken = Buffer.from(`${username}:${password}`).toString('base64');
@@ -1855,20 +1873,26 @@ app.post('/api/login', async (req, res) => {
             }
         }
 
-        // 6. Response (Matches what your frontend expects)
-        res.status(200).json({ 
+        // 🔍 BACKEND DEBUG 3: Exactly what payload is being transmitted to the client?
+        const responsePayload = { 
             token: authToken, 
             user: { 
                 username: user.username, 
                 role: user.role, 
                 hotelId: hotelId, 
                 hotelName: hotelName,
-                hotelCurrency: hotelCurrency // 🌍 Safely passed directly from DB document field
+                hotelCurrency: finalCurrency // 🌍 Sent directly to frontend
             } 
-        });
+        };
+        console.log("🚀 SENDING RESPONSE PAYLOAD TO FRONTEND:", JSON.stringify(responsePayload, null, 2));
+        console.log("===================== LOGIN DEBUG END =====================");
+
+        // 6. Response (Matches what your frontend expects)
+        res.status(200).json(responsePayload);
 
     } catch (error) {
         console.error("FULL LOGIN ERROR:", error.message);
+        console.log("===================== LOGIN DEBUG END =====================");
         res.status(500).json({ message: 'Internal server error', details: error.message });
     }
 });
