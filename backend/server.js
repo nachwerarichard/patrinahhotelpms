@@ -4032,7 +4032,8 @@ app.post('/api/bookings/:id/initiate-stripe-payment', auth, async (req, res) => 
                         name: `Room Reservation Payment`,
                         description: `Booking Reference Context: ${booking._id || booking.id}`,
                     },
-unit_amount: parseInt(amount, 10),                },
+                    unit_amount: Math.round(parseFloat(amount))
+                },
                 quantity: 1,
             }],
             mode: 'payment',
