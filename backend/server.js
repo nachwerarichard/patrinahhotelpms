@@ -49,11 +49,12 @@ app.use(cors({
   origin: [
     'https://elegant-pasca-cea136.netlify.app'
   ],
-  methods: ['GET','POST','PUT','PATCH', 'DELETE','OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type',
     'Authorization',
-    'x-hotel-id'
+    'x-hotel-id',
+    'x-hotel-currency' // 🌍 Added to clear the preflight security check
   ],
   credentials: true
 }));
