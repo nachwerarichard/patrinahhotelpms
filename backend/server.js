@@ -4053,9 +4053,11 @@ app.post('/api/bookings/:id/initiate-stripe-payment', auth, async (req, res) => 
             stripeAccount: gateway.stripeAccountId 
         });
 
-        // Sync local property context with temporary status tracking
-        booking.transactionid = session.id;
-        await booking.save();
+        //  UPDATED ATOMIC FIX:
+await Booking.updateOne(
+    { _id: booking._id },
+    { $set: { transactionid: session.id } }
+);
 
         return res.json({
             success: true,
