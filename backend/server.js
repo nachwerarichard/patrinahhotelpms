@@ -1863,7 +1863,7 @@ app.post('/api/login', async (req, res) => {
                 role: user.role, 
                 hotelId: hotelId, 
                 hotelName: hotelName,
-                currency: hotelCurrency // 🌍 Safely passed directly from DB document field
+                hotelCurrency: hotelCurrency // 🌍 Safely passed directly from DB document field
             } 
         });
 
