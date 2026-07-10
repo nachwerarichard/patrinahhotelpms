@@ -1294,47 +1294,26 @@ app.get('/api/pos/reports/daily', auth, async (req, res) => {
 
         const { utcStart, utcEnd } = getStartAndEndOfDayInUTC(date);
 
-        // Fetching data scoped strictly to the authenticated hotelId
-        const [roomCharges, walkinCharges, restaurantSales] = await Promise.all([
-            IncidentalCharge.find({ hotelId, date: { $gte: utcStart, $lt: utcEnd } }),
-            WalkInCharge.find({ hotelId, date: { $gte: utcStart, $lt: utcEnd } }),
-            Sale.find({ hotelId, date: { $gte: utcStart, $lt: utcEnd } })
-        ]);
+        // Fetching data scoped strictly to the authenticated hotelId (Only Incidental Charges)
+        const roomCharges = await IncidentalCharge.find({ 
+            hotelId, 
+            date: { $gte: utcStart, $lt: utcEnd } 
+        });
 
-        // ... (rest of your formatting logic remains the same)
-      const formattedRestaurantSales = restaurantSales.map(s => ({
-            guestName: s.waiter || 'Restaurant Guest',
-            roomNumber: 'Restaurant',
-            description: `${s.item} (x${s.number})`,
-            amount: Number(s.sp * s.number) || 0,
-            source: 'Restaurant Sale',
-            time: s.date
+        const allTransactions = roomCharges.map(c => ({
+            guestName: c.guestName,
+            roomNumber: c.roomNumber || 'N/A',
+            description: c.description || 'Room Charge',
+            amount: Number(c.amount) || 0,
+            source: 'Room Charge',
+            time: c.date 
         }));
-
-        const allTransactions = [
-            ...roomCharges.map(c => ({
-                guestName: c.guestName,
-                roomNumber: c.roomNumber || 'N/A',
-                description: c.description || 'Room Charge',
-                amount: Number(c.amount) || 0,
-                source: 'Room Charge',
-                time: c.date 
-            })),
-            ...walkinCharges.map(c => ({
-                guestName: c.guestName,
-                roomNumber: 'Walk-In',
-                description: c.description || 'Walk-in Sale',
-                amount: Number(c.amount) || 0,
-                source: 'Walk-In',
-                time: c.date 
-            })),
-            ...formattedRestaurantSales
-        ];
-
         
         res.status(200).json({
             reportDate: date,
-            tenant: hotelId, // Good for debugging
+            startDateUTC: utcStart, // Included start date
+            endDateUTC: utcEnd,     // Included end date
+            tenant: hotelId,        // Good for debugging
             totalRevenue: allTransactions.reduce((sum, t) => sum + t.amount, 0),
             transactions: allTransactions.sort((a, b) => new Date(b.time) - new Date(a.time))
         });
@@ -1343,6 +1322,7 @@ app.get('/api/pos/reports/daily', auth, async (req, res) => {
         res.status(500).json({ message: 'Error generating POS report' });
     }
 });
+
 app.get('/api/rooms/available', auth, async (req, res) => {
     try {
         const { checkIn, checkOut } = req.query;

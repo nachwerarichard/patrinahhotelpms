@@ -9052,9 +9052,17 @@ async function generatePOSReport(event) {
 
         if (!response.ok) throw new Error(data.message || 'Report failed');
 
-        // Update Summary Card
+        // Update Summary Card & Dates
         totalRevenueEl.textContent = Number(data.totalRevenue).toLocaleString();
         document.getElementById('posreportDateDisplay').textContent = data.reportDate;
+        
+        // Render the exact query range if tracking elements exist
+        const rangeEl = document.getElementById('posreportDateRange');
+        if (rangeEl && data.startDateUTC && data.endDateUTC) {
+            const startStr = new Date(data.startDateUTC).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const endStr = new Date(data.endDateUTC).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            rangeEl.textContent = `(${startStr} to ${endStr} UTC)`;
+        }
 
         // Populate Table
         tableBody.innerHTML = data.transactions.length ? '' : '<tr><td colspan="4" class="text-center py-10">No records found.</td></tr>';
@@ -9068,7 +9076,7 @@ async function generatePOSReport(event) {
                     </td>
                     <td class="px-8 py-4 text-slate-600">${trx.description}</td>
                     <td class="px-8 py-4 text-center">
-                        <span class="px-2 py-1 rounded text-[10px] font-bold ${getSourceStyle(trx.source)}">
+                        <span class="px-2 py-1 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
                             ${trx.source}
                         </span>
                     </td>

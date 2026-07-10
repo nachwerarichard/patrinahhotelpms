@@ -2577,11 +2577,12 @@ body {
         </tbody>
     </table>
 </section>
- <section id="posreport" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+ 
+<section id="posreport" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
     <div class="flex justify-between items-center mb-6 border-b pb-4">
         <div>
-            <h2 class="text-2xl font-bold text-blue-600">Room Charges</h2>
-            <p class="text-sm text-gray-500">View detailed room charge revenue breakdownsS</p>
+            <h2 class="text-2xl font-bold text-blue-600">Incidental Charges</h2>
+            <p class="text-sm text-gray-500">View detailed room charge revenue breakdowns</p>
         </div>
     </div>
 
@@ -2603,7 +2604,7 @@ body {
 
             <div class="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-5 text-white shadow-lg">
                 <p class="text-indigo-100 text-xs font-bold uppercase tracking-wider">Note</p>
-                <p class="text-sm mt-2 opacity-90">This report includes  Restaurant and  Bar transactions for the selected period.</p>
+                <p class="text-sm mt-2 opacity-90">This report isolates all miscellaneous Incidental Room Charges applied over the filtered day cycle.</p>
             </div>
         </div>
 
@@ -2614,7 +2615,8 @@ body {
                         <h2 class="text-indigo-900 font-black text-xl">Daily Summary: <span id="posreportDateDisplay" class="text-indigo-600 font-normal ml-2">---</span></h2>
                         <p class="text-indigo-600 text-sm flex items-center gap-2">
                             <span class="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></span>
-                            Revenue generated across all POS points
+                            <span>Revenue generated through incidental charges</span>
+                            <span id="posreportDateRange" class="text-xs text-indigo-400 font-mono"></span>
                         </p>
                     </div>
                     <div class="text-center md:text-right bg-white px-6 py-3 rounded-2xl shadow-inner border border-indigo-100">
@@ -2655,6 +2657,7 @@ body {
         </div>
     </div>
 </section>
+
   <section id="housekeeping" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
                 <h2 class="text-2xl font-bold mb-4 text-blue-600">Room Management</h2>
              
