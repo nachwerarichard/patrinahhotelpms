@@ -758,7 +758,7 @@ body {
                     <div class="absolute left-0 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
                 </div>
                 <div class="relative pl-4 ">
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pending </p>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pending</p>
                     <p id="pending-count" class="text-xl font-bold text-gray-900 mt-1">0</p>
                     <div class="absolute left-0 top-0 h-full w-1 bg-yellow-500 rounded-full"></div>
                 </div>
@@ -2792,7 +2792,7 @@ body {
                 </select>
             </div>
 
-             <div class="flex flex-col">
+            <div class="flex flex-col">
     <label class="text-[11px] font-bold text-gray-500 uppercase mb-1">Payment Method</label>
     <select id="filterPaymentMethod" class="border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
         <option value="">All Payment Methods</option>
@@ -2915,31 +2915,37 @@ body {
                 </div>
             </section>
 
- <section id="audit-logs" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden min-w-[2600px] overflow-hidden">
+ <!-- REMOVED min-w-[2600px] and added w-full max-w-full -->
+<section id="audit-logs" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden w-full max-w-full overflow-hidden">
     <h2 class="text-2xl font-bold mb-4 text-blue-600">Audit Logs</h2>
     
     <div class="sticky top-0 z-30 bg-white pb-4">
         <div class="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100 shadow-sm">
             <div class="flex items-center space-x-2">
                 <label for="auditLogUserFilter" class="text-gray-700 font-semibold text-sm">User:</label>
-                <input type="text" id="auditLogUserFilter" placeholder="Username" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <!-- Added 'filter-input' class for JS targeting -->
+                <input type="text" id="auditLogUserFilter" placeholder="Username" class="filter-input border border-gray-300 rounded-lg px-3 py-2 text-sm">
             </div>
             
             <div class="flex items-center space-x-2">
                 <label for="auditLogActionFilter" class="text-gray-700 font-semibold text-sm">Action:</label>
-                <input type="text" id="auditLogActionFilter" placeholder="Action" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <!-- Added 'filter-input' class for JS targeting -->
+                <input type="text" id="auditLogActionFilter" placeholder="Action" class="filter-input border border-gray-300 rounded-lg px-3 py-2 text-sm">
             </div>
             
             <div class="flex items-center space-x-2">
                 <label for="auditLogStartDateFilter" class="text-gray-700 font-semibold text-sm">Start:</label>
-                <input type="date" id="auditLogStartDateFilter" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <!-- Added 'filter-input' class for JS targeting -->
+                <input type="date" id="auditLogStartDateFilter" class="filter-input border border-gray-300 rounded-lg px-3 py-2 text-sm">
             </div>
             
             <div class="flex items-center space-x-2">
                 <label for="auditLogEndDateFilter" class="text-gray-700 font-semibold text-sm">End:</label>
-                <input type="date" id="auditLogEndDateFilter" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <!-- Added 'filter-input' class for JS targeting -->
+                <input type="date" id="auditLogEndDateFilter" class="filter-input border border-gray-300 rounded-lg px-3 py-2 text-sm">
             </div>
             
+            <!-- Kept search button just as a backup fallback, though hidden or optional now -->
             <button class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition" id="applyAuditLogFiltersBtn">
                 Search
             </button>
@@ -2947,23 +2953,21 @@ body {
     </div>
 
     <div class="relative border border-gray-200 rounded-lg overflow-x-auto shadow-inner">
-    <!-- Changed to table-auto and removed min-w-[2600px] -->
-    <table id="auditLogTable" class="table-auto w-full min-w-[800px] bg-white">
-        <thead class="sticky top-0 z-20 shadow-sm">
-            <!-- Adjusted padding to keep rows compact vertically and horizontally -->
-            <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
-                <th class="py-3 px-4 text-left bg-gray-100 whitespace-nowrap w-48">Timestamp</th>
-                <th class="py-3 px-4 text-left bg-gray-100 whitespace-nowrap w-32">User</th>
-                <th class="py-3 px-4 text-left bg-gray-100 whitespace-nowrap w-48">Action</th>
-                <th class="py-3 px-4 text-left bg-gray-100 w-64">Reasons</th>
-                <th class="py-3 px-4 text-left bg-gray-100">Details</th>
-            </tr>
-        </thead>
-        <tbody class="text-gray-600 text-sm divide-y divide-gray-100">
-            <!-- Your dynamic backend data goes here -->
-        </tbody>
-    </table>
-</div>
+        <table id="auditLogTable" class="table-auto w-full min-w-full bg-white">
+            <thead class="sticky top-0 z-20 shadow-sm">
+                <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
+                    <th class="py-3 px-4 text-left bg-gray-100 whitespace-nowrap w-48">Timestamp</th>
+                    <th class="py-3 px-4 text-left bg-gray-100 whitespace-nowrap w-32">User</th>
+                    <th class="py-3 px-4 text-left bg-gray-100 whitespace-nowrap w-48">Action</th>
+                    <th class="py-3 px-4 text-left bg-gray-100 w-64">Reasons</th>
+                    <th class="py-3 px-4 text-left bg-gray-100">Details</th>
+                </tr>
+            </thead>
+            <tbody class="text-gray-600 text-sm divide-y divide-gray-100">
+                <!-- Data injected dynamically -->
+            </tbody>
+        </table>
+    </div>
 
     <div class="flex justify-between items-center mt-6 bg-white py-2">
         <button id="prevAuditPage" class="bg-gray-100 px-4 py-2 rounded-lg disabled:opacity-50">Previous</button>
