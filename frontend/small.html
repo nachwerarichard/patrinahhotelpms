@@ -2428,24 +2428,8 @@ body {
         </div>
     </div>
 
-    <!-- Breakdown Sub-Table Matrix -->
-    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm mb-8">
-        <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
-            <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Departmental Revenue Splits</h3>
-        </div>
-        <div class="table-responsive">
-            <table id="sales-department-table" class="min-w-full text-left">
-                <thead>
-                    <tr class="bg-white text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
-                        <th class="px-6 py-4">Department</th>
-                        <th class="px-6 py-4 text-right">Revenue (Sales)</th>
-                    </tr>
-                </thead>
-                <tbody id="sales-department-report-tbody" class="divide-y divide-slate-50"></tbody>
-            </table>
-        </div>
-    </div>
-</section>
+
+    
 
 <!-- ================= SALES REPORT SECTION ================= -->
 <section id="salereport" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
@@ -2455,6 +2439,7 @@ body {
             <p class="text-sm text-gray-500">Analyze departmental performance and net profitability</p>
         </div>
         <div class="flex gap-2">
+            <!-- Updated table ID target -->
             <button onclick="exportTableToExcel('overall-sales-reports-table', 'Sales_Summary')" class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition shadow-sm flex items-center gap-2">
                 <i class="fas fa-file-export"></i> Export Report
             </button>
@@ -2464,14 +2449,15 @@ body {
     <div class="filter-controls grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 items-end p-5 bg-slate-50 rounded-2xl border border-slate-100">
         <div class="flex flex-col">
             <label for="sales-report-start-date" class="text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
-            <!-- Added oninput here -->
+            <!-- Added automatic live refresh hook here -->
             <input type="date" id="sales-report-start-date" oninput="generateSalesReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
         <div class="flex flex-col">
             <label for="sales-report-end-date" class="text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
-            <!-- Added oninput here -->
+            <!-- Added automatic live refresh hook here -->
             <input type="date" id="sales-report-end-date" oninput="generateSalesReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
+        <!-- Manual button backup -->
         <button id="generate-sales-report-btn" onclick="generateSalesReports()" class="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
             <i class="fas fa-sync-alt"></i> Generate & Refresh Sales
         </button>
@@ -2494,6 +2480,8 @@ body {
         <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
             <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Departmental Sales Breakdown</h3>
         </div>
+        
+        <!-- Large Desktop Screen View -->
         <div class="hidden md:block table-responsive">
             <table id="sales-department-table" class="min-w-full text-left">
                 <thead>
@@ -2502,14 +2490,16 @@ body {
                         <th class="px-6 py-4 text-right">Revenue (Sales)</th>
                     </tr>
                 </thead>
-                <tbody id="sales-department-report-tbody" class="divide-y divide-slate-50">
-                    
-                </tbody>
+                <!-- Unique Tbody Target -->
+                <tbody id="sales-department-report-tbody" class="divide-y divide-slate-50"></tbody>
             </table>
         </div>
+        
+        <!-- Mobile View Card Block -->
         <div id="sales-department-report-cards" class="block md:hidden p-4 space-y-4 bg-slate-50/40"></div>
     </div>
 
+    <!-- Unique hidden Export Table -->
     <table id="overall-sales-reports-table" class="hidden">
         <thead><tr><th>Metric</th><th>Amount (UGX)</th></tr></thead>
         <tbody>
