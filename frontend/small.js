@@ -8357,7 +8357,7 @@ async function generateSalesReports() {
             if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
         }
 
-        document.getElementById('overall-sales-card').textContent = totalSalesSum.toLocaleString();
+        document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY}${totalSalesSum.toLocaleString()}`;
         const exportSalesElem = document.getElementById('overall-sales-export');
         if (exportSalesElem) exportSalesElem.textContent = totalSalesSum.toLocaleString();
 
@@ -10389,7 +10389,7 @@ async function generatePaymentsReports() {
 
         // 6. Update KPIs & Table DOM layout blocks
         tbody.innerHTML = tableHTML;
-        document.getElementById('overall-sales-card').textContent = grandTotal.toLocaleString();
+        document.getElementById('overall-sales-card').textContent = `${CURRENT_CURRENCY}${grandTotal.toLocaleString()}`;
         document.getElementById('overall-transactions-card').textContent = accounts.length.toString();
 
         // 7. Populate Department Splitting sub-tables
