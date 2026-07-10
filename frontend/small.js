@@ -7905,13 +7905,11 @@ async function fetchCashJournal() {
         const dateFilterInput = document.getElementById('cash-filter-date');
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
         
-        // 1. FIX: Get hotelId from localStorage
         const hotelId = localStorage.getItem('hotelId');
 
         let url = `${API_BASE_URL}/cash-journal`;
         const params = new URLSearchParams();
         
-        // 2. FIX: Append hotelId to the URL parameters
         if (hotelId) params.append('hotelId', hotelId);
         if (dateFilter) params.append('date', dateFilter);
 
@@ -7926,12 +7924,15 @@ async function fetchCashJournal() {
         }
         
         const result = await response.json();
-        
-        // 3. FIX: Access the 'journals' array specifically, not the whole result object
-        // Use a fallback empty array [] so .forEach never fails
         const journalsArray = result.journals || [];
         
+        // Pass records to render table layout structures
         renderCashJournalTable(journalsArray);
+
+        // 4. ADDED: Show feedback message if backend returns an empty dataset
+        if (journalsArray.length === 0) {
+            showMessage('No cash records found for the selected filters.', false);
+        }
 
         updateCashSearchButton('Done', 'fas fa-check');
         setTimeout(() => {
@@ -7940,7 +7941,7 @@ async function fetchCashJournal() {
 
     } catch (error) {
         console.error('Error fetching cash journal:', error);
-        showMessage('Failed to fetch cash journal: ' + error.message);
+        showMessage('Failed to fetch cash journal: ' + error.message, true);
         updateCashSearchButton('Search', 'fas fa-search');
     }
 }
