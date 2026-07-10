@@ -10516,7 +10516,7 @@ async function initPage() {
         allStatusReports = data || [];
         
         // Paint the complete baseline elements instantly
-        renderStatusTable(allStatusReports);
+        //renderStatusTable(allStatusReports);
         
     } catch (err) {
         console.error("Initialization Error:", err);
