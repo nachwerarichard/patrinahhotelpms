@@ -425,32 +425,27 @@ async function renderAuditLogs() {
         if (!logs || logs.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No audit logs found.</td></tr>';
         } else {
-            logs.forEach(log => {
-    const reason = (log.details?.reason && log.details.reason !== 'N/A') ? log.details.reason : '—';
-    const row = tableBody.insertRow();
-    row.className = "border-b border-gray-100 hover:bg-gray-50 transition-colors";
+             logs.forEach(log => {
+                const reason = (log.details?.reason && log.details.reason !== 'N/A') ? log.details.reason : '';
+                const row = tableBody.insertRow();
+                row.className = "border-b border-gray-200 hover:bg-gray-50 transition-colors";
 
-    row.innerHTML = `
-        <!-- Shrank padding from py-3 px-6 to py-2 px-4, added whitespace-nowrap -->
-        <td class="py-2 px-4 text-left text-xs text-gray-500 whitespace-nowrap">${new Date(log.timestamp).toLocaleString()}</td>
-        <td class="py-2 px-4 text-left text-sm font-medium text-gray-700 whitespace-nowrap">${log.user}</td>
-        <td class="py-2 px-4 text-left whitespace-nowrap">
-            <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] tracking-wide uppercase font-semibold border border-blue-100">${log.action}</span>
-        </td>
-        <!-- Allow reasons to wrap cleanly without blowing up cell spacing -->
-        <td class="py-2 px-4 text-left text-xs text-gray-600 max-w-xs break-words">${reason}</td>
-        <!-- Keep the button cell tight so the rest of the layout doesn't overstretch -->
-        <td class="py-2 px-4 text-right w-24">
-            <button class="view-details-btn text-indigo-600 hover:text-indigo-900 text-xs font-medium bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded transition-colors">
-                View Details
-            </button>
-        </td>
-    `;
+                row.innerHTML = `
+                    <td class="py-3 px-6 text-left text-sm">${new Date(log.timestamp).toLocaleString()}</td>
+                    <td class="py-3 px-6 text-left font-medium">${log.user}</td>
+                    <td class="py-3 px-6 text-left">
+                        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs uppercase font-bold">${log.action}</span>
+                    </td>
+                    <td class="py-3 px-6 text-left text-sm italic text-gray-600">${reason}</td>
+                    <td class="py-3 px-6 text-left">
+                        <button class="view-details-btn text-indigo-600 hover:underline text-xs font-mono">View Details</button>
+                    </td>
+                `;
 
-    row.querySelector('.view-details-btn').addEventListener('click', () => {
-        openAuditModal(log.details);
-    });
-});
+                row.querySelector('.view-details-btn').addEventListener('click', () => {
+                    openAuditModal(log.details);
+                });
+            });
         }
     } catch (error) {
         console.error('Error fetching audit logs:', error);
