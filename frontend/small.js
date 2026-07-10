@@ -368,8 +368,18 @@ function closeMessageBox() {
     }
 }
 // IMPROVED FRONTEND FETCH
+// 1. Debounce helper to keep API calls efficient while typing
+let debounceTimer;
+function debounce(func, delay = 300) {
+    return (...args) => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+// Your updated rendering function with tighter cell padding classes
 async function renderAuditLogs() {
-    const hotelId = getHotelId(); // ✅ Kept: Essential multi-tenant isolation
+    const hotelId = getHotelId(); 
     const tableBody = document.querySelector("#auditLogTable tbody");
     
     if (!hotelId) {
@@ -386,10 +396,9 @@ async function renderAuditLogs() {
     const params = {
         page: currentAuditPage,
         limit: logsPerPage,
-        hotelId // ✅ Kept: Sent to backend
+        hotelId 
     };
 
-    // ✅ Enhanced: Safely read values using ?. syntax to avoid unexpected crashes
     const userFilter = document.getElementById('auditLogUserFilter')?.value;
     if (userFilter) params.user = userFilter;
 
@@ -418,9 +427,9 @@ async function renderAuditLogs() {
         const logs = await response.json();
         tableBody.innerHTML = '';
 
-        pageIndicator.innerText = `Page ${currentAuditPage}`;
-        prevBtn.disabled = (currentAuditPage === 1);
-        nextBtn.disabled = (logs.length < logsPerPage);
+        if (pageIndicator) pageIndicator.innerText = `Page ${currentAuditPage}`;
+        if (prevBtn) prevBtn.disabled = (currentAuditPage === 1);
+        if (nextBtn) nextBtn.disabled = (logs.length < logsPerPage);
 
         if (!logs || logs.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No audit logs found.</td></tr>';
@@ -430,14 +439,15 @@ async function renderAuditLogs() {
                 const row = tableBody.insertRow();
                 row.className = "border-b border-gray-200 hover:bg-gray-50 transition-colors";
 
+                // Changed cells from px-6 to px-4 to stay compact on smaller screens
                 row.innerHTML = `
-                    <td class="py-3 px-6 text-left text-sm">${new Date(log.timestamp).toLocaleString()}</td>
-                    <td class="py-3 px-6 text-left font-medium">${log.user}</td>
-                    <td class="py-3 px-6 text-left">
+                    <td class="py-3 px-4 text-left text-sm">${new Date(log.timestamp).toLocaleString()}</td>
+                    <td class="py-3 px-4 text-left font-medium">${log.user}</td>
+                    <td class="py-3 px-4 text-left">
                         <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs uppercase font-bold">${log.action}</span>
                     </td>
-                    <td class="py-3 px-6 text-left text-sm italic text-gray-600">${reason}</td>
-                    <td class="py-3 px-6 text-left">
+                    <td class="py-3 px-4 text-left text-sm italic text-gray-600">${reason}</td>
+                    <td class="py-3 px-4 text-left">
                         <button class="view-details-btn text-indigo-600 hover:underline text-xs font-mono">View Details</button>
                     </td>
                 `;
@@ -452,6 +462,20 @@ async function renderAuditLogs() {
         tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Error loading audit logs.</td></tr>';
     }
 }
+
+// 2. Attach Live Triggers (Put this block inside your initialization / DOMContentLoaded function)
+document.querySelectorAll('.filter-input').forEach(input => {
+    input.addEventListener('input', debounce(() => {
+        currentAuditPage = 1; // Reset to page 1 during a live filter search
+        renderAuditLogs();
+    }, 300));
+});
+
+// Backup click listener for the search button if clicked
+document.getElementById('applyAuditLogFiltersBtn')?.addEventListener('click', () => {
+    currentAuditPage = 1;
+    renderAuditLogs();
+});
 
 // 1. Get the raw string from storage
 const userDataString = localStorage.getItem('loggedInUser');
