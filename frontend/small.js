@@ -10512,24 +10512,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // REAL-TIME CHANGE HANDLER: Runs automatically when a date picker value settles
 function filterStatusReportsByDate() {
-    const filterDateValue = document.getElementById("statusReportFilterDate").value;
+    const dateInput = document.getElementById("statusReportFilterDate");
+    const filterDateValue = dateInput ? dateInput.value : '';
     
-    // If user clears input directly via the datepicker interface native clear icon
+    // If the user clears the date picker, instantly show all reports
     if (!filterDateValue) {
         renderStatusTable(allStatusReports);
         return;
     }
 
-    // Process matching datasets down locally from cached storage
+    // Filter down your locally cached master data array
     const matchedRecords = allStatusReports.filter(report => {
         if (!report.dateTime) return false;
         
-        // Extract YYYY-MM-DD template segments accurately to match input value
+        // Strip down the ISO string to YYYY-MM-DD
         const standardReportDateStr = new Date(report.dateTime).toISOString().split('T')[0];
         return standardReportDateStr === filterDateValue;
     });
 
-    // Re-render UI views dynamically
+    // Re-render desktop & mobile grids instantly
     renderStatusTable(matchedRecords);
 }
 
@@ -10660,50 +10661,7 @@ function getStatusColor(status) {
     return colors[status] || 'bg-gray-100 text-gray-700';
 }
 
-async function filterStatusReportsByDate() {
-    const dateInput = document.getElementById('statusReportFilterDate');
-    const selectedDate = dateInput ? dateInput.value : '';
-    
-    const filterBtn = document.getElementById('filterBtn');
-    const filterBtnText = document.getElementById('filterBtnText');
 
-    if (!selectedDate) {
-        showMessage("Please select a date to filter.");
-        return;
-    }
-
-    // 1. Set Loading State
-    filterBtn.disabled = true;
-    filterBtn.classList.add('opacity-70', 'cursor-not-allowed');
-    filterBtnText.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>`;
-
-    try {
-        const url = `${API_BASE_URL}/status-reports?date=${selectedDate}`;
-        const response = await authenticatedFetch(url);
-        
-        if (!response.ok) throw new Error("Failed to filter reports");
-
-        const reports = await response.json();
-        
-        // 2. Render logic + Empty state feedback
-        if (reports && reports.length > 0) {
-            renderStatusTable(reports);
-            console.log(`Filtered results for ${selectedDate}: ${reports.length} found.`);
-        } else {
-            renderStatusTable([]); 
-            showMessage(`No reports found for ${selectedDate}.`);
-        }
-        
-    } catch (err) {
-        console.error("Filter Error:", err);
-        showMessage("Could not filter reports: " + err.message);
-    } finally {
-        // 3. Reset Button State
-        filterBtn.disabled = false;
-        filterBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-        filterBtnText.innerHTML = `Search`;
-    }
-}
 
 // Complete Dual UI rendering companion function to copy/paste 
 
