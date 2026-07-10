@@ -6390,7 +6390,30 @@ function handleItemDeletionWorkflow(item) {
     }
 }
 
+document.addEventListener("DOMContentLoaded", () => {
+    // 1. Handle Inventory Setup
+    const inventoryDateInput = document.getElementById('search-inventory-date');
+    if (inventoryDateInput && !inventoryDateInput.value) {
+        inventoryDateInput.value = new Date().toISOString().split('T')[0];
+    }
+    if (typeof fetchInventory === 'function') {
+        fetchInventory();
+    }
 
+    // 2. Handle Status Reports Setup
+    // Change 'search-report-date' to match the exact ID used in your status reports HTML layout
+    const reportDateInput = document.getElementById('search-report-date') || document.getElementById('report-date');
+    if (reportDateInput && !reportDateInput.value) {
+        reportDateInput.value = new Date().toISOString().split('T')[0];
+    }
+    
+    // Change 'fetchStatusReports' to match your actual JavaScript fetch function name for reports
+    if (typeof fetchStatusReports === 'function') {
+        fetchStatusReports();
+    } else if (typeof fetchReports === 'function') {
+        fetchReports();
+    }
+});
 
 async function deleteInventoryItem(id) {
     // 1. Confirm with the user
@@ -9263,25 +9286,26 @@ window.renderInventoryTable = function(inventory) {
     }
 
     // --- UPDATED EMPTY STATE & PRE-SEARCH CHECK ---
+    // --- UPDATED EMPTY STATE & PRE-SEARCH CHECK ---
     if (!inventory || inventory.length === 0) {
         console.warn("⚠️ Array is empty inside rendering execution context.");
         
-        // Check if the user hasn't typed anything or picked a date yet
+        // If the fields are genuinely completely untouched/empty
         if (!selectedDate && !selectedItem) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="9" class="text-center p-6 text-slate-400 font-medium">
-                        <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Please select a date or enter filters, then click search.
+                        <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Type an item name or pick a date to start searching.
                     </td>
                 </tr>`;
             cardContainer.innerHTML = `
                 <div class="text-center p-6 bg-white border border-slate-200 rounded-xl text-slate-400 font-medium shadow-sm">
-                    <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Please select a date or enter filters, then click search.
+                    <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Type an item name or pick a date to start searching.
                 </div>`;
         } else {
-            // If they DID search but nothing came back, show the actual "No results" error
-            tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic"><i class="fas fa-exclamation-circle mr-2"></i> No stock records found for your chosen parameters.</td></tr>`;
-            cardContainer.innerHTML = `<div class="p-6 text-center text-slate-400 font-medium italic bg-white rounded-xl border border-slate-200 shadow-sm"><i class="fas fa-exclamation-circle mr-2"></i> No stock records found for your chosen parameters.</div>`;
+            // If they DID type or select a date but nothing matches
+            tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic"><i class="fas fa-exclamation-circle mr-2"></i> No matching stock records found.</td></tr>`;
+            cardContainer.innerHTML = `<div class="p-6 text-center text-slate-400 font-medium italic bg-white rounded-xl border border-slate-200 shadow-sm"><i class="fas fa-exclamation-circle mr-2"></i> No matching stock records found.</div>`;
         }
         return;
     }
