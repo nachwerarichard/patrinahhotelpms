@@ -6400,6 +6400,17 @@ document.addEventListener("DOMContentLoaded", () => {
         fetchInventory();
     }
 
+    const expensesDateInput = document.getElementById('expenses-date-filter');
+    if (expensesDateInput && !expensesDateInput.value) {
+        // Default the picker to today's date context
+        expensesDateInput.value = todayString;
+    }
+    
+    // Execute data retrieval immediately on system launch
+    if (typeof fetchExpenses === 'function') {
+        fetchExpenses();
+    }
+
     const salesDateInput = document.getElementById('sales-date-filter');
     if (salesDateInput && !salesDateInput.value) {
         // Automatically default sales date selector parameters to today

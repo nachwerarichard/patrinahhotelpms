@@ -1686,7 +1686,7 @@ body {
             <input type="date" id="search-inventory-date" onchange="fetchInventory()" class="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm transition">
         </div>
         <div class="flex flex-col sm:flex-row gap-3">
-            <button onclick="fetchInventory()" id="inventory-search-button" class="w-full sm:w-initial bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg transition flex items-center justify-center gap-2 text-sm shadow-sm hidden">
+            <button onclick="fetchInventory()" id="inventory-search-button" class="w-full sm:w-initial bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg transition flex items-center justify-center gap-2 text-sm shadow-sm ">
                 <i class="fas fa-search"></i> <span>Search</span>
             </button>
             <button class="w-full sm:w-initial bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 shadow-sm" onclick="exportTableToExcel('inventory-table', 'Inventory_Report')">
@@ -2215,7 +2215,8 @@ body {
     <div class="filter-controls flex flex-col sm:flex-row flex-wrap gap-4 mb-6 items-stretch sm:items-end bg-slate-50 p-4 rounded-xl border border-slate-200/60">
         <div class="flex-1 min-w-[200px]">
             <label for="expenses-date-filter" class="text-xs font-bold text-slate-500 uppercase mb-1.5 tracking-wider block">Search by Date</label>
-            <input type="date" id="expenses-date-filter" class="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm transition">
+            <!-- ADDED onchange="fetchExpenses()" HERE -->
+            <input type="date" id="expenses-date-filter" onchange="fetchExpenses()" class="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm transition">
         </div>
         
         <div class="flex gap-3">
@@ -2244,12 +2245,12 @@ body {
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
-                </tbody>
+            </tbody>
         </table>
     </div>
 
     <div id="expenses-mobile-grid" class="block md:hidden space-y-4">
-        </div>
+    </div>
 </div>
 </section>
 
@@ -2357,7 +2358,7 @@ body {
             </select>
         </div>
         <button id="generate-payments-report-btn" onclick="generatePaymentsReports()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-            <i class="fas fa-sync-alt"></i> Force Refresh
+            <i class="fas fa-sync-alt"></i> Search
         </button>
     </div>
 
@@ -2918,7 +2919,7 @@ body {
             </div>
             
             <button class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition" id="applyAuditLogFiltersBtn">
-                Apply
+                Search
             </button>
         </div>
     </div>
