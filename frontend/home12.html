@@ -2792,16 +2792,32 @@ body {
                 </select>
             </div>
 
-            <div class="flex flex-col">
-                <label class="text-[11px] font-bold text-gray-500 uppercase mb-1">Payment Method</label>
-                <select id="filterPaymentMethod" class="border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                    <option value="">Payment Method</option>
-                    <option value="Cash">Cash</option>
-                    <option value="MTN Momo">MTN Momo</option>
-                    <option value="Airtel Pay">Airtel Pay</option>
-                    <option value="Bank">Bank</option>
-                </select>
-            </div>
+             <div class="flex flex-col">
+    <label class="text-[11px] font-bold text-gray-500 uppercase mb-1">Payment Method</label>
+    <select id="filterPaymentMethod" class="border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        <option value="">All Payment Methods</option>
+           <!-- Offline / Traditional options -->
+        <option value="Cash">Cash</option>
+        <option value="Bank">Bank</option>
+        <!-- Gateways / Aggregators -->
+        <option value="Pesapal">Pesapal</option>
+        <option value="Online">Online</option>
+        <option value="Stripe">Stripe</option>
+        
+        <!-- Cards -->
+        <option value="Visa">Visa</option>
+        <option value="MasterCard">MasterCard</option>
+        <option value="Stripe Card">Stripe Card</option>
+        
+        <!-- Mobile Money channels -->
+        <option value="Mobile Money">Mobile Money</option>
+        <option value="M-Pesa">M-Pesa</option>
+        <option value="MTN Momo">MTN Momo</option>
+        <option value="Airtel Pay">Airtel Pay</option>
+        
+     
+    </select>
+</div>
 
             <div class="flex flex-col">
                 <label for="filterDate" class="text-[11px] font-bold text-gray-500 uppercase mb-1">Check-In Date</label>
