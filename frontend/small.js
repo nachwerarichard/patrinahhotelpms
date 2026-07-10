@@ -10496,30 +10496,44 @@ async function fetchStatusReports() {
 }
 
 // State Arrays
-let allStatusReports = [];       // Master data cache (read-only destination)
-let filteredStatusReports = [];  // Currently active filtered set (used by print/export)
+let allStatusReports = [];       // Master data cache
+let filteredStatusReports = [];  // Active filtered set
 
-// IMMEDIATE LOAD: Run as soon as DOM mounts
-document.addEventListener("DOMContentLoaded", () => {
-    // NOTE: Populate this array with your live database array injection or API fetch response
-    allStatusReports = [
-        /* Your objects/documents array populate here */
-    ];
+// 1. RUN ON LOAD: Fetch real backend reports dynamically
+document.addEventListener("DOMContentLoaded", initPage);
 
-    // Force paint the complete baseline table instantly
-    renderStatusTable(allStatusReports);
-});
+async function initPage() {
+    try {
+        // Fetch all base data on load (remove date query to get default baseline reports)
+        const url = `${API_BASE_URL}/status-reports`;
+        const response = await authenticatedFetch(url);
+        
+        if (!response.ok) throw new Error("Failed to pull initial data logs");
+        
+        const data = await response.json();
+        
+        // Cache it safely in your master pointer
+        allStatusReports = data || [];
+        
+        // Paint the complete baseline elements instantly
+        renderStatusTable(allStatusReports);
+        
+    } catch (err) {
+        console.error("Initialization Error:", err);
+        showMessage("Could not populate baseline reports: " + err.message);
+        // Fall back to empty layout safely
+        renderStatusTable([]);
+    }
+}
 
-// REAL-TIME CHANGE HANDLER: Runs automatically when a date picker value settles
+// 2. REAL-TIME CHANGE HANDLER: Hits API when date picker changes
 async function filterStatusReportsByDate() {
     const dateInput = document.getElementById('statusReportFilterDate');
     const selectedDate = dateInput ? dateInput.value : '';
     
-    // If user clears input, reset the table or fetch default baseline context
+    // If user clears input, reset back to cached full baseline list instantly
     if (!selectedDate) {
-        // Option B1: If you have a local array fallback:
         renderStatusTable(allStatusReports);
-        // Option B2: If you want to wipe it or make a default API hit, do that here instead.
         return;
     }
 
@@ -10545,12 +10559,12 @@ async function filterStatusReportsByDate() {
     }
 }
 
-// CLEAR FILTER HANDLER
+// 3. CLEAR FILTER HANDLER
 function clearStatusDateFilter() {
     const dateElement = document.getElementById("statusReportFilterDate");
-    if (dateElement) dateElement.value = ''; // Clean the picker value visually
+    if (dateElement) dateElement.value = ''; // Clean view
     
-    // Fallback immediately to full data array rendering
+    // Re-render cache
     renderStatusTable(allStatusReports);
 }
 
