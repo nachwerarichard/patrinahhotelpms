@@ -5978,7 +5978,7 @@ if (issueBtn) {
         settleForm.setAttribute('data-account-id', exactId); 
 
         // Update display text values inside the modal view
-        document.getElementById('settleModalTotal').textContent = liveTotal.toLocaleString();
+        document.getElementById('settleModalTotal').textContent = `${CURRENT_CURRENCY}${liveTotal.toLocaleString()}`;
         document.getElementById('settleModalGuest').textContent = `${account.guestName} (${account.roomNumber ? 'Room ' + account.roomNumber : 'Walk-In Guest'})`;
 
         // Open the modal container layout safely
