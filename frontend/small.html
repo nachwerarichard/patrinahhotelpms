@@ -2946,20 +2946,24 @@ body {
         </div>
     </div>
 
-    <div class="relative border border-gray-200 rounded-lg overflow-x-auto overflow-y-auto shadow-inner">
-        <table id="auditLogTable" class="table-fixed min-w-[2600px] bg-white">
-            <thead class="sticky top-0 z-20 shadow-sm">
-                <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
-                    <th class="py-4 px-6 text-left w-48 bg-gray-100">Timestamp</th>
-                    <th class="py-4 px-6 text-left w-32 bg-gray-100">User</th>
-                    <th class="py-4 px-6 text-left w-48 bg-gray-100">Action</th>
-                    <th class="py-4 px-6 text-left w-64 bg-gray-100">Reasons</th>
-                    <th class="py-4 px-6 text-left w-auto bg-gray-100">Details</th>
-                </tr>
-            </thead>
-            <tbody class="text-gray-600 text-sm divide-y divide-gray-100"></tbody>
-        </table>
-    </div>
+    <div class="relative border border-gray-200 rounded-lg overflow-x-auto shadow-inner">
+    <!-- Changed to table-auto and removed min-w-[2600px] -->
+    <table id="auditLogTable" class="table-auto w-full min-w-[800px] bg-white">
+        <thead class="sticky top-0 z-20 shadow-sm">
+            <!-- Adjusted padding to keep rows compact vertically and horizontally -->
+            <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
+                <th class="py-3 px-4 text-left bg-gray-100 whitespace-nowrap w-48">Timestamp</th>
+                <th class="py-3 px-4 text-left bg-gray-100 whitespace-nowrap w-32">User</th>
+                <th class="py-3 px-4 text-left bg-gray-100 whitespace-nowrap w-48">Action</th>
+                <th class="py-3 px-4 text-left bg-gray-100 w-64">Reasons</th>
+                <th class="py-3 px-4 text-left bg-gray-100">Details</th>
+            </tr>
+        </thead>
+        <tbody class="text-gray-600 text-sm divide-y divide-gray-100">
+            <!-- Your dynamic backend data goes here -->
+        </tbody>
+    </table>
+</div>
 
     <div class="flex justify-between items-center mt-6 bg-white py-2">
         <button id="prevAuditPage" class="bg-gray-100 px-4 py-2 rounded-lg disabled:opacity-50">Previous</button>
