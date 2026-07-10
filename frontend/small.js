@@ -6400,9 +6400,16 @@ document.addEventListener("DOMContentLoaded", () => {
         fetchInventory();
     }
 
-    // 2. Handle Status Reports Setup
+    const salesDateInput = document.getElementById('sales-date-filter');
+    if (salesDateInput && !salesDateInput.value) {
+        // Automatically default sales date selector parameters to today
+        salesDateInput.value = todayString;
+    }
+    if (typeof fetchSales === 'function') {
+        fetchSales();
+    }
     // Change 'search-report-date' to match the exact ID used in your status reports HTML layout
-    const reportDateInput = document.getElementById('search-report-date') || document.getElementById('report-date');
+    const reportDateInput = document.getElementById('statusReportFilterDate') || document.getElementById('statusReportFilterDate');
     if (reportDateInput && !reportDateInput.value) {
         reportDateInput.value = new Date().toISOString().split('T')[0];
     }
@@ -6873,20 +6880,20 @@ async function fetchSales() {
         const dateFilterInput = document.getElementById('sales-date-filter');
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
 
-        // If no date is picked, handle it or point to your general endpoint
-        if (!dateFilter) {
-            showMessage('Please select a date first.');
-            updateSalesSearchButton('Search', 'fas fa-search');
-            return;
-        }
-
         // Pointing to your brand new single-date endpoint
         let url = `${API_BASE_URL}/sales/by-date`; 
         
         const params = new URLSearchParams();
-        params.append('date', dateFilter); // Only sending the single date string
-        params.append('page', currentSalesPage);
-        params.append('limit', salesPerPage);
+        
+        // If a date exists, apply it to the parameters
+        if (dateFilter) params.append('date', dateFilter); 
+        
+        // Dynamically track active pagination variables safely
+        const activeSalesPage = (typeof currentSalesPage !== 'undefined') ? currentSalesPage : 1;
+        const activeSalesLimit = (typeof salesPerPage !== 'undefined') ? salesPerPage : 10;
+        
+        params.append('page', activeSalesPage);
+        params.append('limit', activeSalesLimit);
         
         const hotelId = localStorage.getItem('hotelId'); 
         if (hotelId) params.append('hotelId', hotelId);
@@ -6901,22 +6908,25 @@ async function fetchSales() {
 
         const result = await response.json();
         
-        const salesData = result.sales || [];
+        const salesData = result.sales || result.items || result.data || [];
         const totalPages = result.totalPages || 1;
         const currentPage = result.currentPage || 1;
 
         renderSalesTable(salesData); 
-        renderSalesPagination(currentPage, totalPages);
+        
+        if (typeof renderSalesPagination === 'function') {
+            renderSalesPagination(currentPage, totalPages);
+        }
 
         updateSalesSearchButton('Done', 'fas fa-check');
 
         setTimeout(() => {
             updateSalesSearchButton('Search', 'fas fa-search');
-        }, 2000);
+        }, 1500);
         
     } catch (error) {
         console.error('Error fetching sales:', error);
-        showMessage('Failed to fetch sales: ' + error.message);
+        showMessage('Failed to fetch sales: ' + error.message, true);
         updateSalesSearchButton('Search', 'fas fa-search');
     }
 }
