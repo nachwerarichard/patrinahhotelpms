@@ -9249,21 +9249,40 @@ window.renderInventoryTable = function(inventory) {
     cardContainer.innerHTML = '';
 
     const dateInput = document.getElementById('search-inventory-date');
+    const itemInput = document.getElementById('search-inventory-item');
     const desktopStockHeader = document.querySelector('#inventory-table thead .stock-header-cell');
     
-    const selectedDate = dateInput?.value || new Date().toISOString().split('T')[0];
+    const selectedDate = dateInput?.value || '';
+    const selectedItem = itemInput?.value ? itemInput.value.trim() : '';
+    
     const todayStr = new Date().toISOString().split('T')[0];
-    const isToday = selectedDate === todayStr;
+    const isToday = !selectedDate || selectedDate === todayStr;
 
     if (desktopStockHeader) { 
         desktopStockHeader.textContent = isToday ? 'Current Stock' : 'Closing Stock';
     }
 
-    // Empty State Check
+    // --- UPDATED EMPTY STATE & PRE-SEARCH CHECK ---
     if (!inventory || inventory.length === 0) {
         console.warn("⚠️ Array is empty inside rendering execution context.");
-        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic">No stock records found for your chosen parameters.</td></tr>`;
-        cardContainer.innerHTML = `<div class="p-6 text-center text-slate-400 font-medium italic bg-white rounded-xl border border-slate-200 shadow-sm">No stock records found for your chosen parameters.</div>`;
+        
+        // Check if the user hasn't typed anything or picked a date yet
+        if (!selectedDate && !selectedItem) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="text-center p-6 text-slate-400 font-medium">
+                        <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Please select a date or enter filters, then click search.
+                    </td>
+                </tr>`;
+            cardContainer.innerHTML = `
+                <div class="text-center p-6 bg-white border border-slate-200 rounded-xl text-slate-400 font-medium shadow-sm">
+                    <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Please select a date or enter filters, then click search.
+                </div>`;
+        } else {
+            // If they DID search but nothing came back, show the actual "No results" error
+            tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic"><i class="fas fa-exclamation-circle mr-2"></i> No stock records found for your chosen parameters.</td></tr>`;
+            cardContainer.innerHTML = `<div class="p-6 text-center text-slate-400 font-medium italic bg-white rounded-xl border border-slate-200 shadow-sm"><i class="fas fa-exclamation-circle mr-2"></i> No stock records found for your chosen parameters.</div>`;
+        }
         return;
     }
 
@@ -9278,7 +9297,7 @@ window.renderInventoryTable = function(inventory) {
 
     // Populate loop
     inventory.forEach((item, index) => {
-        item.viewingDate = selectedDate;
+        item.viewingDate = selectedDate || todayStr;
 
         const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
         const badgeClasses = hasMovement ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100';
