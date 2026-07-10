@@ -6390,7 +6390,57 @@ function handleItemDeletionWorkflow(item) {
     }
 }
 
+document.addEventListener("DOMContentLoaded", () => {
+    // 1. Handle Inventory Setup
+    const inventoryDateInput = document.getElementById('search-inventory-date');
+    if (inventoryDateInput && !inventoryDateInput.value) {
+        inventoryDateInput.value = new Date().toISOString().split('T')[0];
+    }
+    if (typeof fetchInventory === 'function') {
+        fetchInventory();
+    }
 
+    const cashDateInput = document.getElementById('cash-filter-date');
+    if (cashDateInput && !cashDateInput.value) {
+        // Set the default filter criteria instantly to today
+        cashDateInput.value = todayString;
+    }
+    if (typeof fetchCashJournal === 'function') {
+        fetchCashJournal();
+    }
+
+    const expensesDateInput = document.getElementById('expenses-date-filter');
+    if (expensesDateInput && !expensesDateInput.value) {
+        // Default the picker to today's date context
+        expensesDateInput.value = todayString;
+    }
+    
+    // Execute data retrieval immediately on system launch
+    if (typeof fetchExpenses === 'function') {
+        fetchExpenses();
+    }
+
+    const salesDateInput = document.getElementById('sales-date-filter');
+    if (salesDateInput && !salesDateInput.value) {
+        // Automatically default sales date selector parameters to today
+        salesDateInput.value = todayString;
+    }
+    if (typeof fetchSales === 'function') {
+        fetchSales();
+    }
+    // Change 'search-report-date' to match the exact ID used in your status reports HTML layout
+    const reportDateInput = document.getElementById('statusReportFilterDate') || document.getElementById('statusReportFilterDate');
+    if (reportDateInput && !reportDateInput.value) {
+        reportDateInput.value = new Date().toISOString().split('T')[0];
+    }
+    
+    // Change 'fetchStatusReports' to match your actual JavaScript fetch function name for reports
+    if (typeof fetchStatusReports === 'function') {
+        fetchStatusReports();
+    } else if (typeof fetchReports === 'function') {
+        fetchReports();
+    }
+});
 
 async function deleteInventoryItem(id) {
     // 1. Confirm with the user
@@ -6850,20 +6900,20 @@ async function fetchSales() {
         const dateFilterInput = document.getElementById('sales-date-filter');
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
 
-        // If no date is picked, handle it or point to your general endpoint
-        if (!dateFilter) {
-            showMessage('Please select a date first.');
-            updateSalesSearchButton('Search', 'fas fa-search');
-            return;
-        }
-
         // Pointing to your brand new single-date endpoint
         let url = `${API_BASE_URL}/sales/by-date`; 
         
         const params = new URLSearchParams();
-        params.append('date', dateFilter); // Only sending the single date string
-        params.append('page', currentSalesPage);
-        params.append('limit', salesPerPage);
+        
+        // If a date exists, apply it to the parameters
+        if (dateFilter) params.append('date', dateFilter); 
+        
+        // Dynamically track active pagination variables safely
+        const activeSalesPage = (typeof currentSalesPage !== 'undefined') ? currentSalesPage : 1;
+        const activeSalesLimit = (typeof salesPerPage !== 'undefined') ? salesPerPage : 10;
+        
+        params.append('page', activeSalesPage);
+        params.append('limit', activeSalesLimit);
         
         const hotelId = localStorage.getItem('hotelId'); 
         if (hotelId) params.append('hotelId', hotelId);
@@ -6878,22 +6928,25 @@ async function fetchSales() {
 
         const result = await response.json();
         
-        const salesData = result.sales || [];
+        const salesData = result.sales || result.items || result.data || [];
         const totalPages = result.totalPages || 1;
         const currentPage = result.currentPage || 1;
 
         renderSalesTable(salesData); 
-        renderSalesPagination(currentPage, totalPages);
+        
+        if (typeof renderSalesPagination === 'function') {
+            renderSalesPagination(currentPage, totalPages);
+        }
 
         updateSalesSearchButton('Done', 'fas fa-check');
 
         setTimeout(() => {
             updateSalesSearchButton('Search', 'fas fa-search');
-        }, 2000);
+        }, 1500);
         
     } catch (error) {
         console.error('Error fetching sales:', error);
-        showMessage('Failed to fetch sales: ' + error.message);
+        showMessage('Failed to fetch sales: ' + error.message, true);
         updateSalesSearchButton('Search', 'fas fa-search');
     }
 }
@@ -7852,13 +7905,11 @@ async function fetchCashJournal() {
         const dateFilterInput = document.getElementById('cash-filter-date');
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
         
-        // 1. FIX: Get hotelId from localStorage
         const hotelId = localStorage.getItem('hotelId');
 
         let url = `${API_BASE_URL}/cash-journal`;
         const params = new URLSearchParams();
         
-        // 2. FIX: Append hotelId to the URL parameters
         if (hotelId) params.append('hotelId', hotelId);
         if (dateFilter) params.append('date', dateFilter);
 
@@ -7873,12 +7924,15 @@ async function fetchCashJournal() {
         }
         
         const result = await response.json();
-        
-        // 3. FIX: Access the 'journals' array specifically, not the whole result object
-        // Use a fallback empty array [] so .forEach never fails
         const journalsArray = result.journals || [];
         
+        // Pass records to render table layout structures
         renderCashJournalTable(journalsArray);
+
+        // 4. ADDED: Show feedback message if backend returns an empty dataset
+        if (journalsArray.length === 0) {
+            showMessage('No cash records found for the selected filters.', false);
+        }
 
         updateCashSearchButton('Done', 'fas fa-check');
         setTimeout(() => {
@@ -7887,7 +7941,7 @@ async function fetchCashJournal() {
 
     } catch (error) {
         console.error('Error fetching cash journal:', error);
-        showMessage('Failed to fetch cash journal: ' + error.message);
+        showMessage('Failed to fetch cash journal: ' + error.message, true);
         updateCashSearchButton('Search', 'fas fa-search');
     }
 }
@@ -8194,12 +8248,22 @@ async function generateSalesReports() {
     let originalButtonHtml = generateButton ? generateButton.innerHTML : '';
     
     const hotelId = localStorage.getItem('hotelId');
-    if (!hotelId) { showMessage('Session expired. Please log in again.', true); return; }
+    if (!hotelId) { 
+        showMessage('Session expired. Please log in again.', true); 
+        return; 
+    }
 
     const startDate = document.getElementById('sales-report-start-date').value;
     const endDate = document.getElementById('sales-report-end-date').value;
 
-    if (!startDate || !endDate) { showMessage('Please select both start and end dates.', true); return; }
+    if (!startDate || !endDate) { 
+        const tbody = document.getElementById('sales-department-report-tbody');
+        const cardContainer = document.getElementById('sales-department-report-cards');
+        if (tbody) tbody.innerHTML = ''; 
+        if (cardContainer) cardContainer.innerHTML = ''; 
+        document.getElementById('overall-sales-card').textContent = '0';
+        return; 
+    }
 
     if (generateButton) {
         generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
@@ -8208,6 +8272,7 @@ async function generateSalesReports() {
 
     const tbody = document.getElementById('sales-department-report-tbody');
     const cardContainer = document.getElementById('sales-department-report-cards');
+    
     if (tbody) tbody.innerHTML = ''; 
     if (cardContainer) cardContainer.innerHTML = ''; 
 
@@ -8227,19 +8292,32 @@ async function generateSalesReports() {
         } while (page <= totalPages);
 
         const salesReport = {};
+        
         allSales.forEach(sale => {
-            const dept = sale.department || 'Other';
+            // Trim whitespace to avoid missing categories
+            let dept = (sale.department || 'Other').trim();
+            if (!dept) dept = 'Other';
+
+            // Strip out non-numeric characters (like commas or currency letters) if any exist dynamically
+            const rawNumber = String(sale.number || '0').replace(/[^0-9.-]/g, '');
+            const rawSp = String(sale.sp || '0').replace(/[^0-9.-]/g, '');
+
+            const quantity = Number(rawNumber) || 0;
+            const unitPrice = Number(rawSp) || 0;
+            const lineTotal = quantity * unitPrice;
+
             if (!salesReport[dept]) salesReport[dept] = 0;
-            salesReport[dept] += (Number(sale.number) * Number(sale.sp));
+            salesReport[dept] += lineTotal;
         });
 
         let totalSalesSum = 0;
-        const sortedDepts = Object.keys(salesReport).sort();
+        const sortedDepts = Object.keys(salesReport).filter(k => !isNaN(salesReport[k])).sort();
 
         if (sortedDepts.length === 0) {
             const emptyStateHtml = 'No sales activity found for this period.';
             if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
             if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
+            showMessage('No sales records found for the selected date range.', false);
         } else {
             let tableRowsHTML = [];
             let mobileCardsHTML = [];
@@ -8249,18 +8327,16 @@ async function generateSalesReports() {
                 totalSalesSum += sales;
 
                 tableRowsHTML.push(`
-                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <tr class="border-b border-slate-100 hover:bg-slate-50/80">
                         <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
                         <td class="px-6 py-4 text-right font-mono text-emerald-600 font-semibold">${sales.toLocaleString()}</td>
                     </tr>
                 `);
 
                 mobileCardsHTML.push(`
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                        <div class="flex justify-between items-center">
-                            <h4 class="font-bold text-slate-800 text-base">${dept}</h4>
-                            <span class="font-mono font-black text-emerald-600">${sales.toLocaleString()} ${CURRENT_CURRENCY}</span>
-                        </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                        <h4 class="font-bold text-slate-800 text-sm">${dept}</h4>
+                        <span class="font-mono font-black text-emerald-600">${sales.toLocaleString()} UGX</span>
                     </div>
                 `);
             });
@@ -8270,8 +8346,6 @@ async function generateSalesReports() {
         }
 
         document.getElementById('overall-sales-card').textContent = totalSalesSum.toLocaleString();
-        
-        // Populate hidden export table fields
         const exportSalesElem = document.getElementById('overall-sales-export');
         if (exportSalesElem) exportSalesElem.textContent = totalSalesSum.toLocaleString();
 
@@ -8292,12 +8366,25 @@ async function generateExpensesReports() {
     let originalButtonHtml = generateButton ? generateButton.innerHTML : '';
     
     const hotelId = localStorage.getItem('hotelId');
-    if (!hotelId) { showMessage('Session expired. Please log in again.', true); return; }
+    if (!hotelId) { 
+        showMessage('Session expired. Please log in again.', true); 
+        return; 
+    }
 
     const startDate = document.getElementById('expenses-report-start-date').value;
     const endDate = document.getElementById('expenses-report-end-date').value;
 
-    if (!startDate || !endDate) { showMessage('Please select both start and end dates.', true); return; }
+    // Silent clear on incomplete dates so typing isn't interrupted by alerts
+    if (!startDate || !endDate) { 
+        const tbody = document.getElementById('expenses-department-report-tbody');
+        const cardContainer = document.getElementById('expenses-department-report-cards');
+        if (tbody) tbody.innerHTML = ''; 
+        if (cardContainer) cardContainer.innerHTML = ''; 
+        document.getElementById('overall-expenses-card').textContent = '0';
+        const exportExpensesElem = document.getElementById('overall-expenses-export');
+        if (exportExpensesElem) exportExpensesElem.textContent = '0';
+        return; 
+    }
 
     if (generateButton) {
         generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
@@ -8338,6 +8425,9 @@ async function generateExpensesReports() {
             const emptyStateHtml = 'No expenditure found for this period.';
             if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
             if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
+            
+            // Fires message popup for zero records found
+            showMessage('No expense records found for the selected date range.', false);
         } else {
             let tableRowsHTML = [];
             let mobileCardsHTML = [];
@@ -8357,7 +8447,7 @@ async function generateExpensesReports() {
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                         <div class="flex justify-between items-center">
                             <h4 class="font-bold text-slate-800 text-base">${dept}</h4>
-                            <span class="font-mono font-black text-red-600">${expenses.toLocaleString()} ${CURRENT_CURRENCY}</span>
+                            <span class="font-mono font-black text-red-600">${expenses.toLocaleString()} ${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX'}</span>
                         </div>
                     </div>
                 `);
@@ -8369,7 +8459,6 @@ async function generateExpensesReports() {
 
         document.getElementById('overall-expenses-card').textContent = totalExpensesSum.toLocaleString();
         
-        // Populate hidden export table fields
         const exportExpensesElem = document.getElementById('overall-expenses-export');
         if (exportExpensesElem) exportExpensesElem.textContent = totalExpensesSum.toLocaleString();
 
@@ -8944,31 +9033,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-async function generatePOSReport(event) {
-    event.preventDefault();
-    const dateInput = document.getElementById('reportDate');
+// Add event listeners to trigger automatically on date selection
+document.addEventListener('DOMContentLoaded', () => {
+    const startInput = document.getElementById('reportStartDate');
+    const endInput = document.getElementById('reportEndDate');
+    
+    if (startInput && endInput) {
+        startInput.addEventListener('change', generatePOSReport);
+        endInput.addEventListener('change', generatePOSReport);
+    }
+});
+
+async function generatePOSReport() {
+    const startDate = document.getElementById('reportStartDate').value;
+    const endDate = document.getElementById('reportEndDate').value;
     const tableBody = document.getElementById('posreportTableBody');
     const totalRevenueEl = document.getElementById('posreportTotalRevenue');
-    const submitBtn = event.submitter;
+    const loadingEl = document.getElementById('loadingIndicator');
 
-    if (!dateInput.value) return;
+    // Only fetch if both dates are selected
+    if (!startDate || !endDate) return;
 
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading...';
+    // Prevent fetching if end date is before start date
+    if (new Date(endDate) < new Date(startDate)) {
+        // Optional: showMessage('End date cannot be before start date', true);
+        return; 
+    }
+
+    // Show loading text
+    loadingEl.classList.remove('hidden');
 
     try {
-        // The hotelId is handled automatically by authenticatedFetch headers
-        const response = await authenticatedFetch(`${API_BASE_URL}/pos/reports/daily?date=${dateInput.value}`);
+        const response = await authenticatedFetch(`${API_BASE_URL}/pos/reports/daily?startDate=${startDate}&endDate=${endDate}`);
         const data = await response.json();
 
         if (!response.ok) throw new Error(data.message || 'Report failed');
 
         // Update Summary Card
         totalRevenueEl.textContent = Number(data.totalRevenue).toLocaleString();
-        document.getElementById('posreportDateDisplay').textContent = data.reportDate;
+        document.getElementById('posreportDateDisplay').textContent = data.reportRange;
 
         // Populate Table
-        tableBody.innerHTML = data.transactions.length ? '' : '<tr><td colspan="4" class="text-center py-10">No records found.</td></tr>';
+        tableBody.innerHTML = data.transactions.length ? '' : '<tr><td colspan="4" class="text-center py-10">No records found for this date range.</td></tr>';
 
         data.transactions.forEach(trx => {
             const row = `
@@ -8979,7 +9085,7 @@ async function generatePOSReport(event) {
                     </td>
                     <td class="px-8 py-4 text-slate-600">${trx.description}</td>
                     <td class="px-8 py-4 text-center">
-                        <span class="px-2 py-1 rounded text-[10px] font-bold ${getSourceStyle(trx.source)}">
+                        <span class="px-2 py-1 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
                             ${trx.source}
                         </span>
                     </td>
@@ -8993,8 +9099,8 @@ async function generatePOSReport(event) {
     } catch (err) {
         showMessage(err.message, true);
     } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-chart-line"></i> Generate Summary';
+        // Hide loading text
+        loadingEl.classList.add('hidden');
     }
 }
 
@@ -9249,21 +9355,41 @@ window.renderInventoryTable = function(inventory) {
     cardContainer.innerHTML = '';
 
     const dateInput = document.getElementById('search-inventory-date');
+    const itemInput = document.getElementById('search-inventory-item');
     const desktopStockHeader = document.querySelector('#inventory-table thead .stock-header-cell');
     
-    const selectedDate = dateInput?.value || new Date().toISOString().split('T')[0];
+    const selectedDate = dateInput?.value || '';
+    const selectedItem = itemInput?.value ? itemInput.value.trim() : '';
+    
     const todayStr = new Date().toISOString().split('T')[0];
-    const isToday = selectedDate === todayStr;
+    const isToday = !selectedDate || selectedDate === todayStr;
 
     if (desktopStockHeader) { 
         desktopStockHeader.textContent = isToday ? 'Current Stock' : 'Closing Stock';
     }
 
-    // Empty State Check
+    // --- UPDATED EMPTY STATE & PRE-SEARCH CHECK ---
+    // --- UPDATED EMPTY STATE & PRE-SEARCH CHECK ---
     if (!inventory || inventory.length === 0) {
         console.warn("⚠️ Array is empty inside rendering execution context.");
-        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic">No stock records found for your chosen parameters.</td></tr>`;
-        cardContainer.innerHTML = `<div class="p-6 text-center text-slate-400 font-medium italic bg-white rounded-xl border border-slate-200 shadow-sm">No stock records found for your chosen parameters.</div>`;
+        
+        // If the fields are genuinely completely untouched/empty
+        if (!selectedDate && !selectedItem) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="text-center p-6 text-slate-400 font-medium">
+                        <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Type an item name or pick a date to start searching.
+                    </td>
+                </tr>`;
+            cardContainer.innerHTML = `
+                <div class="text-center p-6 bg-white border border-slate-200 rounded-xl text-slate-400 font-medium shadow-sm">
+                    <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Type an item name or pick a date to start searching.
+                </div>`;
+        } else {
+            // If they DID type or select a date but nothing matches
+            tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic"><i class="fas fa-exclamation-circle mr-2"></i> No matching stock records found.</td></tr>`;
+            cardContainer.innerHTML = `<div class="p-6 text-center text-slate-400 font-medium italic bg-white rounded-xl border border-slate-200 shadow-sm"><i class="fas fa-exclamation-circle mr-2"></i> No matching stock records found.</div>`;
+        }
         return;
     }
 
@@ -9278,7 +9404,7 @@ window.renderInventoryTable = function(inventory) {
 
     // Populate loop
     inventory.forEach((item, index) => {
-        item.viewingDate = selectedDate;
+        item.viewingDate = selectedDate || todayStr;
 
         const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
         const badgeClasses = hasMovement ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100';
@@ -10495,21 +10621,90 @@ async function fetchStatusReports() {
     }
 }
 
-// Keep this global declaration at the top level of your script file
-let filteredStatusReports = [];
+// State Arrays
+let allStatusReports = [];       // Master data cache
+let filteredStatusReports = [];  // Active filtered set
 
+// 1. RUN ON LOAD: Fetch real backend reports dynamically
+document.addEventListener("DOMContentLoaded", initPage);
+
+async function initPage() {
+    try {
+        // Fetch all base data on load (remove date query to get default baseline reports)
+        const url = `${API_BASE_URL}/status-reports`;
+        const response = await authenticatedFetch(url);
+        
+        if (!response.ok) throw new Error("Failed to pull initial data logs");
+        
+        const data = await response.json();
+        
+        // Cache it safely in your master pointer
+        allStatusReports = data || [];
+        
+        // Paint the complete baseline elements instantly
+        //renderStatusTable(allStatusReports);
+        
+    } catch (err) {
+        console.error("Initialization Error:", err);
+        showMessage("Could not populate baseline reports: " + err.message);
+        // Fall back to empty layout safely
+        renderStatusTable([]);
+    }
+}
+
+// 2. REAL-TIME CHANGE HANDLER: Hits API when date picker changes
+async function filterStatusReportsByDate() {
+    const dateInput = document.getElementById('statusReportFilterDate');
+    const selectedDate = dateInput ? dateInput.value : '';
+    
+    // If user clears input, reset back to cached full baseline list instantly
+    if (!selectedDate) {
+        renderStatusTable(allStatusReports);
+        return;
+    }
+
+    try {
+        const url = `${API_BASE_URL}/status-reports?date=${selectedDate}`;
+        const response = await authenticatedFetch(url);
+        
+        if (!response.ok) throw new Error("Failed to filter reports");
+
+        const reports = await response.json();
+        
+        if (reports && reports.length > 0) {
+            renderStatusTable(reports);
+            console.log(`Filtered results for ${selectedDate}: ${reports.length} found.`);
+        } else {
+            renderStatusTable([]); 
+            showMessage(`No reports found for ${selectedDate}.`);
+        }
+        
+    } catch (err) {
+        console.error("Filter Error:", err);
+        showMessage("Could not filter reports: " + err.message);
+    }
+}
+
+// 3. CLEAR FILTER HANDLER
+function clearStatusDateFilter() {
+    const dateElement = document.getElementById("statusReportFilterDate");
+    if (dateElement) dateElement.value = ''; // Clean view
+    
+    // Re-render cache
+    renderStatusTable(allStatusReports);
+}
+
+
+// --- YOUR EXISTING RENDER LOGIC (Kept intact with global pointer) ---
 function renderStatusTable(reports) {
     const tableBody = document.getElementById("statusReportTableBody");
     const mobileGrid = document.getElementById("statusReportMobileGrid");
     
-    // 0. FIX: Store the currently rendered reports globally so Export & Print can read them!
     filteredStatusReports = reports || [];
     
-    // 1. Wipe baseline stale data logs out cleanly before painting UI
     if (tableBody) tableBody.innerHTML = '';
     if (mobileGrid) mobileGrid.innerHTML = '';
 
-    // 2. Handle empty state scenario gracefully
     if (!reports || reports.length === 0) {
         const fallbackMsg = '<div class="text-center p-6 text-gray-400 text-sm font-medium">No housekeeping reports mapped for this cycle.</div>';
         if (tableBody) tableBody.innerHTML = `<tr><td colspan="6">${fallbackMsg}</td></tr>`;
@@ -10517,17 +10712,12 @@ function renderStatusTable(reports) {
         return;
     }
 
-    // 3. Loop through records and paint both desktop and mobile views
     reports.forEach(r => {
-        // Safe data extractions using optional chaining based on deep backend populating
         const roomNumber = r.roomId?.number || 'Unknown Room';
         const categoryName = r.roomId?.roomTypeId?.name || 'Standard Type';
         const displayStatus = r.status ? r.status.replace('-', ' ').toUpperCase() : 'UNKNOWN';
-        
-        // Match tailwind badge styles using your app's helper function
         const statusBadgeColorClass = typeof getStatusColor === 'function' ? getStatusColor(r.status) : "bg-gray-100 text-gray-800";
 
-        // Construct the modular action dropdown block using the correct MongoDB ._id key
         const actionHtml = `
             <div class="relative inline-block text-left">
                 <button class="p-2 hover:bg-gray-200 rounded-full transition-colors focus:outline-none" onclick="toggleActionButtons(event, this)">
@@ -10544,7 +10734,6 @@ function renderStatusTable(reports) {
             </div>
         `;
 
-        // VIEW A: Desktop Table Row Painting
         if (tableBody) {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50/80 transition-colors border-b border-gray-100";
@@ -10565,7 +10754,6 @@ function renderStatusTable(reports) {
             tableBody.appendChild(tr);
         }
 
-        // VIEW B: Mobile Stacked Card View Painting
         if (mobileGrid) {
             const card = document.createElement('div');
             card.className = "p-4 bg-slate-50/60 border border-gray-200 rounded-xl shadow-sm relative hover:bg-slate-50 transition-colors";
@@ -10575,16 +10763,12 @@ function renderStatusTable(reports) {
                         <h4 class="text-base font-bold text-slate-900">Room ${roomNumber}</h4>
                         <p class="text-xs text-gray-400 font-medium">${categoryName}</p>
                     </div>
-                    <div>
-                        ${actionHtml}
-                    </div>
+                    <div>${actionHtml}</div>
                 </div>
-                
                 <div class="my-2 text-xs text-gray-600 bg-white border border-gray-100 rounded-lg p-2.5 min-h-[40px]">
                     <span class="text-[10px] uppercase tracking-wider font-bold text-gray-400 block mb-0.5">Remarks / Details</span>
                     <p class="italic">${r.remarks || 'No descriptive comments captured.'}</p>
                 </div>
-
                 <div class="flex justify-between items-center pt-2 text-xs">
                     <div class="text-gray-400 text-[11px]">
                         <i class="far fa-clock mr-1"></i> ${r.dateTime ? new Date(r.dateTime).toLocaleString() : 'N/A'}
@@ -10628,50 +10812,7 @@ function getStatusColor(status) {
     return colors[status] || 'bg-gray-100 text-gray-700';
 }
 
-async function filterStatusReportsByDate() {
-    const dateInput = document.getElementById('statusReportFilterDate');
-    const selectedDate = dateInput ? dateInput.value : '';
-    
-    const filterBtn = document.getElementById('filterBtn');
-    const filterBtnText = document.getElementById('filterBtnText');
 
-    if (!selectedDate) {
-        showMessage("Please select a date to filter.");
-        return;
-    }
-
-    // 1. Set Loading State
-    filterBtn.disabled = true;
-    filterBtn.classList.add('opacity-70', 'cursor-not-allowed');
-    filterBtnText.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>`;
-
-    try {
-        const url = `${API_BASE_URL}/status-reports?date=${selectedDate}`;
-        const response = await authenticatedFetch(url);
-        
-        if (!response.ok) throw new Error("Failed to filter reports");
-
-        const reports = await response.json();
-        
-        // 2. Render logic + Empty state feedback
-        if (reports && reports.length > 0) {
-            renderStatusTable(reports);
-            console.log(`Filtered results for ${selectedDate}: ${reports.length} found.`);
-        } else {
-            renderStatusTable([]); 
-            showMessage(`No reports found for ${selectedDate}.`);
-        }
-        
-    } catch (err) {
-        console.error("Filter Error:", err);
-        showMessage("Could not filter reports: " + err.message);
-    } finally {
-        // 3. Reset Button State
-        filterBtn.disabled = false;
-        filterBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-        filterBtnText.innerHTML = `Search`;
-    }
-}
 
 // Complete Dual UI rendering companion function to copy/paste 
 

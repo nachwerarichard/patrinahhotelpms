@@ -1196,52 +1196,57 @@ body {
     </div>
 
     <div id="reportsTable">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 mb-6 border-b border-gray-100">
-            <div class="flex flex-wrap items-center gap-3">
-                <label for="statusReportFilterDate" class="font-semibold text-slate-700 text-sm">Search by Date:</label>
-                <input type="date" id="statusReportFilterDate" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-44">
-                
-                <div class="flex gap-2 w-full sm:w-auto">
-                    <button id="filterBtn" onclick="filterStatusReportsByDate()" class="flex-1 sm:flex-initial bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-2 active:scale-95 text-sm font-medium">
-                        <i class="fa-solid fa-search"></i>
-                        <span id="filterBtnText">Search</span>
-                    </button>
-                    <button onclick="clearStatusDateFilter()" class="bg-slate-400 hover:bg-slate-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                        Clear
-                    </button>
-                </div>
-            </div>
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 mb-6 border-b border-gray-100">
+        <div class="flex flex-wrap items-center gap-3">
+            <label for="statusReportFilterDate" class="font-semibold text-slate-700 text-sm">Filter by Date:</label>
+            <!-- ADDED: onchange="filterStatusReportsByDate()" -->
+            <input type="date" id="statusReportFilterDate" onchange="filterStatusReportsByDate()" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-44">
             
-            <div class="flex gap-2 justify-end">
-                <button onclick="exportStatusReportsToExcel()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors">
-                    <i class="fa-solid fa-file-export"></i> Export
-                </button>
-                <button onclick="printStatusReports()" class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors">
-                    <i class="fa-solid fa-print"></i> Print
+            <div class="flex gap-2 w-full sm:w-auto">
+                <!-- REMOVED: Search Button -->
+                <button onclick="clearStatusDateFilter()" class="bg-slate-400 hover:bg-slate-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto">
+                    Clear Filter
                 </button>
             </div>
         </div>
-
-        <div class="hidden md:block overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
-            <table id="statusReportTable" class="w-full text-left border-collapse bg-white">
-                <thead>
-                    <tr class="bg-slate-100 text-slate-700 uppercase text-xs font-bold tracking-wider">
-                        <th class="p-3.5 border-b border-gray-200">Room</th>
-                        <th class="p-3.5 border-b border-gray-200">Category</th>
-                        <th class="p-3.5 border-b border-gray-200">Status</th>
-                        <th class="p-3.5 border-b border-gray-200">Remarks</th>
-                        <th class="p-3.5 border-b border-gray-200">Date & Time</th>
-                        <th class="p-3.5 border-b border-gray-200 text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="statusReportTableBody" class="text-gray-600 text-sm divide-y divide-gray-100 font-medium">
-                    </tbody>
-            </table>
+        
+        <div class="flex gap-2 justify-end">
+            <button onclick="exportStatusReportsToExcel()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors">
+                <i class="fa-solid fa-file-export"></i> Export
+            </button>
+            <button onclick="printStatusReports()" class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors">
+                <i class="fa-solid fa-print"></i> Print
+            </button>
         </div>
-
-        <div id="statusReportMobileGrid" class="block md:hidden space-y-4">
-            </div>
     </div>
+
+    <!-- Desktop View -->
+    <div class="hidden md:block overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+        <table id="statusReportTable" class="w-full text-left border-collapse bg-white">
+            <thead>
+                <tr class="bg-slate-100 text-slate-700 uppercase text-xs font-bold tracking-wider">
+                    <th class="p-3.5 border-b border-gray-200">Room</th>
+                    <th class="p-3.5 border-b border-gray-200">Category</th>
+                    <th class="p-3.5 border-b border-gray-200">Status</th>
+                    <th class="p-3.5 border-b border-gray-200">Remarks</th>
+                    <th class="p-3.5 border-b border-gray-200">Date & Time</th>
+                    <th class="p-3.5 border-b border-gray-200 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="statusReportTableBody" class="text-gray-600 text-sm divide-y divide-gray-100 font-medium">
+    <!-- Static Initial Placeholder State -->
+    <tr>
+        <td colspan="6" class="text-center p-6 text-gray-400 font-medium">
+            <i class="fa-regular fa-calendar-days mr-2 text-gray-300"></i> Please select a date to view reports.
+        </td>
+    </tr>
+</tbody>
+        </table>
+    </div>
+
+    <!-- Mobile View -->
+    <div id="statusReportMobileGrid" class="block md:hidden space-y-4"></div>
+</div>
 </section>
 
 <div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
@@ -1563,41 +1568,52 @@ body {
         </button>
     </div>
 
-    <div id="cash-records">
-        <div class="filter-controls flex flex-wrap gap-4 mb-6 items-end bg-gray-50 p-4 rounded-xl border border-gray-100">
-            <div class="flex flex-col">
-                <label for="cash-filter-date" class="text-xs font-bold text-gray-500 uppercase mb-1">Search by Date</label>
-                <input type="date" id="cash-filter-date" class="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
-            </div>
-            
-            <button id="cash-search-button" onclick="fetchCashJournal()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition flex items-center gap-2">
-                <i class="fas fa-search"></i>
-                <span id="cash-search-button-text">Search Journal</span>
-            </button>
+         <div id="cash-records">
+    <div class="filter-controls flex flex-wrap gap-4 mb-6 items-end bg-gray-50 p-4 rounded-xl border border-gray-100">
+        <div class="flex flex-col">
+            <label for="cash-filter-date" class="text-xs font-bold text-gray-500 uppercase mb-1">Search by Date</label>
+            <!-- ADDED onchange="fetchCashJournal()" HERE -->
+            <input type="date" id="cash-filter-date" onchange="fetchCashJournal()" class="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
+        
+        <button id="cash-search-button" onclick="fetchCashJournal()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition flex items-center gap-2">
+            <i class="fas fa-search"></i>
+            <span id="cash-search-button-text">Search Journal</span>
+        </button>
+    </div>
 
-        <div class="w-full bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-    <div class="hidden md:block overflow-x-auto">
-        <table id="cash-journal-table" class="w-full text-left border-collapse">
-            <thead>
-                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    <th class="px-6 py-4">Date</th>
-                    <th class="px-6 py-4">Cash At Hand</th>
-                    <th class="px-6 py-4">Cash Banked</th>
-                    <th class="px-6 py-4">Cash On Phone</th>
-                    <th class="px-6 py-4">Bank Receipt ID</th>
-                    <th class="px-6 py-4 text-right">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
+    <div class="w-full bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="hidden md:block overflow-x-auto">
+            <table id="cash-journal-table" class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                        <th class="px-6 py-4">Date</th>
+                        <th class="px-6 py-4">Cash At Hand</th>
+                        <th class="px-6 py-4">Cash Banked</th>
+                        <th class="px-6 py-4">Cash On Phone</th>
+                        <th class="px-6 py-4">Bank Receipt ID</th>
+                        <th class="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
+                    <!-- Default placeholder message for Desktop -->
+                    <tr class="initial-placeholder">
+                        <td colspan="6" class="py-10 text-center text-slate-400 font-medium italic">
+                            Please select a date to view cash journal records.
+                        </td>
+                    </tr>
                 </tbody>
-        </table>
-    </div>
-
-    <div id="cash-journal-mobile-grid" class="block md:hidden p-4 space-y-4 bg-slate-50/30">
+            </table>
         </div>
-</div>
+
+        <!-- Default placeholder message for Mobile Grid -->
+        <div id="cash-journal-mobile-grid" class="block md:hidden p-4 space-y-4 bg-slate-50/30">
+            <div class="p-8 text-center text-slate-400 font-medium text-sm border border-slate-200 bg-white rounded-xl italic initial-placeholder">
+                Please select a date to view cash journal records.
+            </div>
+        </div>
     </div>
+</div>
 </section>
 
 <div id="cash-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center z-[80] p-4 backdrop-blur-sm">
@@ -1668,18 +1684,20 @@ body {
     </button>
   </div>
 
-  <div id="inventory-records" class="mt-4">
+ <div id="inventory-records" class="mt-4">
     <div class="filter-controls flex flex-col sm:flex-row flex-wrap gap-4 mb-6 items-stretch sm:items-end bg-slate-50 p-4 rounded-xl border border-slate-200/60">
         <div class="flex-1 min-w-[200px]">
             <label for="search-inventory-item" class="block text-xs font-bold text-slate-500 uppercase mb-1 tracking-wider">Item Name:</label>
-            <input type="text" id="search-inventory-item" placeholder="Search item name..." class="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm transition">
+            <!-- ADDED oninput HERE -->
+            <input type="text" id="search-inventory-item" oninput="fetchInventory()" placeholder="Search item name..." class="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm transition">
         </div>
         <div class="flex-1 min-w-[160px]">
             <label for="search-inventory-date" class="block text-xs font-bold text-slate-500 uppercase mb-1 tracking-wider">Inventory Date:</label>
-            <input type="date" id="search-inventory-date" class="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm transition">
+            <!-- ADDED onchange HERE -->
+            <input type="date" id="search-inventory-date" onchange="fetchInventory()" class="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm transition">
         </div>
         <div class="flex flex-col sm:flex-row gap-3">
-            <button onclick="fetchInventory()" id="inventory-search-button" class="w-full sm:w-initial bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg transition flex items-center justify-center gap-2 text-sm shadow-sm">
+            <button onclick="fetchInventory()" id="inventory-search-button" class="w-full sm:w-initial bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg transition flex items-center justify-center gap-2 text-sm shadow-sm ">
                 <i class="fas fa-search"></i> <span>Search</span>
             </button>
             <button class="w-full sm:w-initial bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 shadow-sm" onclick="exportTableToExcel('inventory-table', 'Inventory_Report')">
@@ -1689,31 +1707,40 @@ body {
     </div>
 
     <div class="w-full py-2">
-  <div class="hidden sm:block w-full overflow-x-auto border border-slate-200/80 rounded-xl bg-white shadow-sm">
-    <table id="inventory-table" class="w-full min-w-max text-left border-collapse table-auto">
-      <thead>
-        <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-          <th class="px-5 py-4 min-w-[150px]">Item</th>
-          <th class="px-4 py-4 text-center">Opening</th>
-          <th class="px-4 py-4 text-center">Purchases</th>
-          <th class="px-4 py-4 text-center">Sales</th>
-          <th class="px-4 py-4 text-center">Spoilage</th>
-          <th class="px-4 py-4 text-center stock-header-cell">Closing</th>
-          <th class="px-4 py-4 text-center">BP</th>
-          <th class="px-4 py-4 text-center">SP</th>
-          <th class="px-5 py-4 text-right">Actions</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
-      </tbody>
-    </table>
-  </div>
+        <div class="hidden sm:block w-full overflow-x-auto border border-slate-200/80 rounded-xl bg-white shadow-sm">
+            <table id="inventory-table" class="w-full min-w-max text-left border-collapse table-auto">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                        <th class="px-5 py-4 min-w-[150px]">Item</th>
+                        <th class="px-4 py-4 text-center">Opening</th>
+                        <th class="px-4 py-4 text-center">Purchases</th>
+                        <th class="px-4 py-4 text-center">Sales</th>
+                        <th class="px-4 py-4 text-center">Spoilage</th>
+                        <th class="px-4 py-4 text-center stock-header-cell">Closing</th>
+                        <th class="px-4 py-4 text-center">BP</th>
+                        <th class="px-4 py-4 text-center">SP</th>
+                        <th class="px-5 py-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <!-- UPDATED PLACEHOLDER FOR TABLE -->
+                <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
+                    <tr>
+                        <td colspan="9" class="text-center p-6 text-slate-400 font-medium">
+                            <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Please select a date or enter filters, then click search.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-  <div id="inventory-cards" class="block sm:hidden space-y-4">
+        <!-- UPDATED PLACEHOLDER FOR MOBILE GRID -->
+        <div id="inventory-cards" class="block sm:hidden space-y-4">
+            <div class="text-center p-6 bg-white border border-slate-200 rounded-xl text-slate-400 font-medium shadow-sm">
+                <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Please select a date or enter filters, then click search.
+            </div>
+        </div>
     </div>
 </div>
-
-  </div>
 </section>
 
 <div id="inventory-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50 p-4">
@@ -2094,19 +2121,20 @@ body {
     <h3 class="text-xl font-bold mb-6 text-slate-800">Historical Sales Records</h3>
     
     <div class="filter-controls flex flex-col sm:flex-row flex-wrap gap-4 mb-6 items-stretch sm:items-end bg-slate-50 p-4 rounded-2xl border border-slate-100">
-        <div class="flex-1 min-w-[200px]">
-            <label for="sales-date-filter" class="block text-xs font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Search by Date:</label>
-            <input type="date" id="sales-date-filter" class="w-full p-2.5 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm shadow-sm">
-        </div>
-        <div class="flex gap-3">
-            <button id="sales-search-button" onclick="fetchSales()" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm focus:outline-none">
-                <i class="fas fa-search"></i> Search
-            </button>
-            <button class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm focus:outline-none" onclick="exportTableToExcel('sales-table', 'Sales_Report')">
-                <i class="fas fa-file-excel"></i> Export Excel
-            </button>
-        </div>
+    <div class="flex-1 min-w-[200px]">
+        <label for="sales-date-filter" class="block text-xs font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Search by Date:</label>
+        <!-- ADDED onchange HERE -->
+        <input type="date" id="sales-date-filter" onchange="fetchSales()" class="w-full p-2.5 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm shadow-sm">
     </div>
+    <div class="flex gap-3">
+        <button id="sales-search-button" onclick="fetchSales()" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm focus:outline-none">
+            <i class="fas fa-search"></i> Search
+        </button>
+        <button class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm focus:outline-none" onclick="exportTableToExcel('sales-table', 'Sales_Report')">
+            <i class="fas fa-file-excel"></i> Export Excel
+        </button>
+    </div>
+</div>
     
     <div class="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
         <table id="sales-table" class="w-full text-left border-collapse">
@@ -2198,7 +2226,8 @@ body {
     <div class="filter-controls flex flex-col sm:flex-row flex-wrap gap-4 mb-6 items-stretch sm:items-end bg-slate-50 p-4 rounded-xl border border-slate-200/60">
         <div class="flex-1 min-w-[200px]">
             <label for="expenses-date-filter" class="text-xs font-bold text-slate-500 uppercase mb-1.5 tracking-wider block">Search by Date</label>
-            <input type="date" id="expenses-date-filter" class="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm transition">
+            <!-- ADDED onchange="fetchExpenses()" HERE -->
+            <input type="date" id="expenses-date-filter" onchange="fetchExpenses()" class="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm transition">
         </div>
         
         <div class="flex gap-3">
@@ -2227,12 +2256,17 @@ body {
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
-                </tbody>
+                <tr class="initial-placeholder">
+                <td colspan="7" class="py-10 text-center text-slate-400 font-medium italic">
+                    Please select a date to view expense records.
+                </td>
+            </tr>
+            </tbody>
         </table>
     </div>
 
     <div id="expenses-mobile-grid" class="block md:hidden space-y-4">
-        </div>
+    </div>
 </div>
 </section>
 
@@ -2340,7 +2374,7 @@ body {
             </select>
         </div>
         <button id="generate-payments-report-btn" onclick="generatePaymentsReports()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-            <i class="fas fa-sync-alt"></i> Force Refresh
+            <i class="fas fa-sync-alt"></i> Search
         </button>
     </div>
 
@@ -2393,24 +2427,7 @@ body {
             </table>
         </div>
     </div>
-
-    <!-- Breakdown Sub-Table Matrix -->
-    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm mb-8">
-        <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
-            <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Departmental Revenue Splits</h3>
-        </div>
-        <div class="table-responsive">
-            <table id="sales-department-table" class="min-w-full text-left">
-                <thead>
-                    <tr class="bg-white text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
-                        <th class="px-6 py-4">Department</th>
-                        <th class="px-6 py-4 text-right">Revenue (Sales)</th>
-                    </tr>
-                </thead>
-                <tbody id="sales-department-report-tbody" class="divide-y divide-slate-50"></tbody>
-            </table>
-        </div>
-    </div>
+  
 </section>
 
 <!-- ================= SALES REPORT SECTION ================= -->
@@ -2431,13 +2448,15 @@ body {
     <div class="filter-controls grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 items-end p-5 bg-slate-50 rounded-2xl border border-slate-100">
         <div class="flex flex-col">
             <label for="sales-report-start-date" class="text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
-            <input type="date" id="sales-report-start-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+            <!-- Added automatic live refresh hook here -->
+            <input type="date" id="sales-report-start-date" oninput="generateSalesReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
         <div class="flex flex-col">
             <label for="sales-report-end-date" class="text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
-            <input type="date" id="sales-report-end-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+            <!-- Added automatic live refresh hook here -->
+            <input type="date" id="sales-report-end-date" oninput="generateSalesReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
-        <!-- Changed function call to generateSalesReports() -->
+        <!-- Manual button backup -->
         <button id="generate-sales-report-btn" onclick="generateSalesReports()" class="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
             <i class="fas fa-sync-alt"></i> Generate & Refresh Sales
         </button>
@@ -2460,6 +2479,8 @@ body {
         <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
             <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Departmental Sales Breakdown</h3>
         </div>
+        
+        <!-- Large Desktop Screen View -->
         <div class="hidden md:block table-responsive">
             <table id="sales-department-table" class="min-w-full text-left">
                 <thead>
@@ -2468,15 +2489,16 @@ body {
                         <th class="px-6 py-4 text-right">Revenue (Sales)</th>
                     </tr>
                 </thead>
-                <!-- Unique Tbody ID -->
+                <!-- Unique Tbody Target -->
                 <tbody id="sales-department-report-tbody" class="divide-y divide-slate-50"></tbody>
             </table>
         </div>
-        <!-- Unique Mobile Card Container ID -->
+        
+        <!-- Mobile View Card Block -->
         <div id="sales-department-report-cards" class="block md:hidden p-4 space-y-4 bg-slate-50/40"></div>
     </div>
 
-    <!-- Unique hidden Export Table ID -->
+    <!-- Unique hidden Export Table -->
     <table id="overall-sales-reports-table" class="hidden">
         <thead><tr><th>Metric</th><th>Amount (UGX)</th></tr></thead>
         <tbody>
@@ -2493,7 +2515,6 @@ body {
             <p class="text-sm text-gray-500">Analyze departmental costs and expenses patterns</p>
         </div>
         <div class="flex gap-2">
-            <!-- Updated table ID target -->
             <button onclick="exportTableToExcel('overall-expenses-reports-table', 'Expenses_Summary')" class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition shadow-sm flex items-center gap-2">
                 <i class="fas fa-file-export"></i> Export Report
             </button>
@@ -2503,13 +2524,14 @@ body {
     <div class="filter-controls grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 items-end p-5 bg-slate-50 rounded-2xl border border-slate-100">
         <div class="flex flex-col">
             <label for="expenses-report-start-date" class="text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
-            <input type="date" id="expenses-report-start-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+            <!-- Added oninput here -->
+            <input type="date" id="expenses-report-start-date" oninput="generateExpensesReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
         <div class="flex flex-col">
             <label for="expenses-report-end-date" class="text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
-            <input type="date" id="expenses-report-end-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+            <!-- Added oninput here -->
+            <input type="date" id="expenses-report-end-date" oninput="generateExpensesReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
-        <!-- Changed function call to generateExpensesReports() -->
         <button id="generate-expenses-report-btn" onclick="generateExpensesReports()" class="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
             <i class="fas fa-sync-alt"></i> Generate & Refresh Expenses
         </button>
@@ -2541,16 +2563,13 @@ body {
                         <th class="px-6 py-4 text-right">Costs (Expenses)</th>
                     </tr>
                 </thead>
-                <!-- Unique Tbody ID -->
                 <tbody id="expenses-department-report-tbody" class="divide-y divide-slate-50"></tbody>
             </table>
         </div>
 
-        <!-- Unique Mobile Card Container ID -->
         <div id="expenses-department-report-cards" class="block md:hidden p-4 space-y-4 bg-slate-50/40"></div>
     </div>
 
-    <!-- Unique hidden Export Table ID -->
     <table id="overall-expenses-reports-table" class="hidden">
         <thead><tr><th>Metric</th><th>Amount (UGX)</th></tr></thead>
         <tbody>
@@ -2558,11 +2577,12 @@ body {
         </tbody>
     </table>
 </section>
-           <section id="posreport" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+ 
+<section id="posreport" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
     <div class="flex justify-between items-center mb-6 border-b pb-4">
         <div>
-            <h2 class="text-2xl font-bold text-blue-600">Room Charges</h2>
-            <p class="text-sm text-gray-500">View detailed room charge revenue breakdownsS</p>
+            <h2 class="text-2xl font-bold text-blue-600">Incidental Charges</h2>
+            <p class="text-sm text-gray-500">View detailed room charge revenue breakdowns</p>
         </div>
     </div>
 
@@ -2570,32 +2590,35 @@ body {
         <div id="posreportsPanel" class="lg:col-span-1 space-y-6">
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
                 <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Report Filters</h2>
-                <form id="posdailyReportForm" class="space-y-4" onsubmit="generatePOSReport(event)">
+                
+                <!-- Replaced Form with Auto-Filtering Date Range -->
+                <div class="space-y-4">
                     <div>
-                        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Select Date</label>
-                        <input type="date" id="reportDate" required class="w-full mt-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Start Date</label>
+                        <input type="date" id="reportStartDate" class="w-full mt-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                     </div>
-                    <button type="submit" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transform active:scale-95 transition-all shadow-md flex items-center justify-center gap-2">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Generate Summary</span>
-                    </button>
-                </form>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">End Date</label>
+                        <input type="date" id="reportEndDate" class="w-full mt-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                    </div>
+                    
+                    <!-- Loading text for when the query runs -->
+                    <div id="loadingIndicator" class="hidden text-center text-indigo-600 font-bold text-sm mt-2">
+                        <i class="fas fa-circle-notch fa-spin mr-2"></i> Fetching data...
+                    </div>
+                </div>
             </div>
 
-            <div class="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-5 text-white shadow-lg">
-                <p class="text-indigo-100 text-xs font-bold uppercase tracking-wider">Note</p>
-                <p class="text-sm mt-2 opacity-90">This report includes  Restaurant and  Bar transactions for the selected period.</p>
-            </div>
         </div>
 
         <div id="posreportResults" class="lg:col-span-3 animate-in fade-in slide-in-from-right-4 duration-500">
             <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="px-8 py-8 bg-indigo-50 border-b border-indigo-100 flex flex-col md:flex-row justify-between items-center gap-4">
                     <div>
-                        <h2 class="text-indigo-900 font-black text-xl">Daily Summary: <span id="posreportDateDisplay" class="text-indigo-600 font-normal ml-2">---</span></h2>
+                        <h2 class="text-indigo-900 font-black text-xl">Summary: <span id="posreportDateDisplay" class="text-indigo-600 font-normal ml-2">---</span></h2>
                         <p class="text-indigo-600 text-sm flex items-center gap-2">
                             <span class="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></span>
-                            Revenue generated across all POS points
+                            <span>Revenue generated through incidental charges</span>
                         </p>
                     </div>
                     <div class="text-center md:text-right bg-white px-6 py-3 rounded-2xl shadow-inner border border-indigo-100">
@@ -2617,7 +2640,7 @@ body {
                         <tbody id="posreportTableBody" class="divide-y divide-slate-100 text-sm text-slate-600">
                             <tr>
                                 <td colspan="4" class="px-8 py-10 text-center text-slate-400 italic">
-                                    Please select a date and click "Generate Summary" to view data.
+                                    Please select a start and end date to view records.
                                 </td>
                             </tr>
                         </tbody>
@@ -2636,6 +2659,7 @@ body {
         </div>
     </div>
 </section>
+
   <section id="housekeeping" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
                 <h2 class="text-2xl font-bold mb-4 text-blue-600">Room Management</h2>
              
@@ -2901,7 +2925,7 @@ body {
             </div>
             
             <button class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition" id="applyAuditLogFiltersBtn">
-                Apply
+                Search
             </button>
         </div>
     </div>
