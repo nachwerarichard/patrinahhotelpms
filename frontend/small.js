@@ -10511,27 +10511,38 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // REAL-TIME CHANGE HANDLER: Runs automatically when a date picker value settles
-function filterStatusReportsByDate() {
-    const dateInput = document.getElementById("statusReportFilterDate");
-    const filterDateValue = dateInput ? dateInput.value : '';
+async function filterStatusReportsByDate() {
+    const dateInput = document.getElementById('statusReportFilterDate');
+    const selectedDate = dateInput ? dateInput.value : '';
     
-    // If the user clears the date picker, instantly show all reports
-    if (!filterDateValue) {
+    // If user clears input, reset the table or fetch default baseline context
+    if (!selectedDate) {
+        // Option B1: If you have a local array fallback:
         renderStatusTable(allStatusReports);
+        // Option B2: If you want to wipe it or make a default API hit, do that here instead.
         return;
     }
 
-    // Filter down your locally cached master data array
-    const matchedRecords = allStatusReports.filter(report => {
-        if (!report.dateTime) return false;
+    try {
+        const url = `${API_BASE_URL}/status-reports?date=${selectedDate}`;
+        const response = await authenticatedFetch(url);
         
-        // Strip down the ISO string to YYYY-MM-DD
-        const standardReportDateStr = new Date(report.dateTime).toISOString().split('T')[0];
-        return standardReportDateStr === filterDateValue;
-    });
+        if (!response.ok) throw new Error("Failed to filter reports");
 
-    // Re-render desktop & mobile grids instantly
-    renderStatusTable(matchedRecords);
+        const reports = await response.json();
+        
+        if (reports && reports.length > 0) {
+            renderStatusTable(reports);
+            console.log(`Filtered results for ${selectedDate}: ${reports.length} found.`);
+        } else {
+            renderStatusTable([]); 
+            showMessage(`No reports found for ${selectedDate}.`);
+        }
+        
+    } catch (err) {
+        console.error("Filter Error:", err);
+        showMessage("Could not filter reports: " + err.message);
+    }
 }
 
 // CLEAR FILTER HANDLER
