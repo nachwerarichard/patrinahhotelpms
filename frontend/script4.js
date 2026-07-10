@@ -11538,3 +11538,19 @@ if (closeSettleModalBtn) {
         settleModal.classList.remove('flex');
     };
 }
+
+function toggleActionButtons(event, button) {
+    const menu = button.nextElementSibling;
+
+    // 1. Close all other open menus
+    document.querySelectorAll('.relative .absolute:not(.hidden)').forEach(openMenu => {
+        if (openMenu !== menu) {
+            openMenu.classList.add('hidden');
+        }
+    });
+
+    // 2. Toggle the current menu
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
+}
