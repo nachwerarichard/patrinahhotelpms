@@ -6674,6 +6674,16 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             return await Room.find(filter).populate('roomTypeId').lean();
         };
 
+        // ✨ 1. ADDED: StatusReport Tool Definition
+        const searchStatusReportsTool = async (queryFilter) => {
+            const filter = { ...queryFilter, hotelId };
+            return await StatusReport.find(filter)
+                .populate('roomId') // Populates room details if the AI needs numbers or info
+                .sort({ dateTime: -1 })
+                .limit(50)
+                .lean();
+        };
+
         const getOperationalSummaryTool = async () => {
             const todayStr = new Date().toISOString().split('T')[0];
             const [totalRooms, dirtyRooms, cleanRooms,inprogress, maintenanceRooms, arrivals, departures, checkedIn] = await Promise.all([
@@ -6800,6 +6810,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         const internalFunctions = {
             searchBookings: searchBookingsTool,
             searchRooms: searchRoomsTool,
+            searchStatusReports: searchStatusReportsTool, // ✨ 2. ADDED: Map internal handle
             searchCashJournal: searchCashJournalTool,
             searchInventory: searchInventoryTool,
             searchSales: searchSalesTool,
@@ -6840,6 +6851,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             - If a prompt asks for a complex picture (e.g., "Show me everything happening today"), you can call multiple functions sequentially or parallelly in your execution loop.
             - Combine data cleanly into unified, exhaustive responses. For instance, combine metrics from sales, cash balance updates, and active kitchen orders to provide a holistic operational landscape overview.
             - Provide descriptive, deeply itemized, and granular analytical answers rather than short generalized summaries when supervisors request deep insights.
+            - You can track room history changes, room maintenance remarks, or room blocking reasons via the searchStatusReports tool.
             
             SECURITY AND PRIVACY PROTOCOLS:
             - You only pull records matching the current isolated hotel properties context.
@@ -6862,6 +6874,28 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                                 checkIn: { type: "STRING", description: "Format: YYYY-MM-DD" },
                                 checkOut: { type: "STRING", description: "Format: YYYY-MM-DD" },
                                 name: { type: "STRING" }
+                            }
+                        }
+                    },
+                    // ✨ 3. ADDED: Function Declaration configuration for Gemini
+                    {
+                        name: "searchStatusReports",
+                        description: "Queries historical logs for housekeeping status updates, room remarks, maintenance flags, or blocked room justifications.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                roomId: { type: "STRING", description: "MongoDB ObjectId of the specific room" },
+                                status: { type: "STRING", description: "Filter by specific status: clean, dirty, In progress, under-maintenance, blocked" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchRooms",
+                        description: "Queries the hotel rooms inventory and their current live states.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                status: { type: "STRING" }
                             }
                         }
                     },
@@ -7030,9 +7064,8 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
 
         let responseText = "";
         let loops = 0;
-        const maxLoops = 5; // Allow sequential multi-tool calls to gather diverse data streams
+        const maxLoops = 5; 
 
-        // Multi-turn tool execution loop to allow the AI to chain data queries dynamically
         while (loops < maxLoops) {
             const aiResponse = await ai.models.generateContent({
                 model: "gemini-3.1-flash-lite",
@@ -7044,12 +7077,9 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                 }
             });
 
-            // Check if model wants to call functions
             if (aiResponse.functionCalls && aiResponse.functionCalls.length > 0) {
-                // Add the model's call request to history
                 formattedContents.push(aiResponse.candidates[0].content);
 
-                // Execute all structural tool requests made in this turn
                 for (const call of aiResponse.functionCalls) {
                     const toolName = call.name;
                     const toolArgs = call.args;
@@ -7070,7 +7100,6 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                 }
                 loops++;
             } else {
-                // Final descriptive response delivered by the model
                 responseText = aiResponse.text;
                 break;
             }
