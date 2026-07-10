@@ -5749,9 +5749,33 @@ app.post('/api/inventory', auth, async (req, res) => {
 // Add 'auth' middleware here to make it secure
 
 
+// DELETE /api/sales/:id
+app.delete('/api/sales/:id', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
 
+    // 1. Swap the old line out for this secured query:
+    const deletedSale = await Sale.findOneAndDelete({
+      _id: id,
+      hotelId: req.user.hotelId // Ensures the user's hotel owns this record
+    });
+
+    // 2. If the sale doesn't exist OR belongs to another hotel, this triggers
+    if (!deletedSale) {
+      return res.status(404).json({ message: "Sale record not found or unauthorized." });
+    }
+
+    res.status(200).json({ 
+      message: "Sale record successfully deleted.", 
+      deletedSale 
+    });
+  } catch (error) {
+    console.error("Error deleting sale:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
 // PUT /api/sales/:id
-app.put('/api/sales/:id', async (req, res) => {
+app.put('/api/sales/:id',auth,  async (req, res) => {
   try {
     const { id } = req.params;
     const { department, item, number, bp, sp, date } = req.body;
@@ -5793,7 +5817,7 @@ app.put('/api/sales/:id', async (req, res) => {
   }
 });
 
-app.get('/api/sales/by-date', async (req, res) => {
+app.get('/api/sales/by-date', auth,async (req, res) => {
     try {
         const { hotelId, page = 1, limit = 15, department, date } = req.query;
         
@@ -5952,7 +5976,7 @@ app.post('/api/sales', auth, async (req, res) => {
 });
 
 // GET Sales endpoint
-app.get('/api/sales', async (req, res) => {
+app.get('/api/sales', auth,async (req, res) => {
     try {
         const { hotelId, page = 1, limit = 15, department, startDate, endDate } = req.query;
         if (!hotelId) return res.status(400).json({ error: 'hotelId required' });
