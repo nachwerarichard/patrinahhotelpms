@@ -8256,16 +8256,12 @@ async function generateSalesReports() {
     const startDate = document.getElementById('sales-report-start-date').value;
     const endDate = document.getElementById('sales-report-end-date').value;
 
-    // Silent return on missing dates to allow smooth typing via oninput
     if (!startDate || !endDate) { 
-        // Reset dashboard visuals to clean state if user clears a date input
         const tbody = document.getElementById('sales-department-report-tbody');
         const cardContainer = document.getElementById('sales-department-report-cards');
         if (tbody) tbody.innerHTML = ''; 
         if (cardContainer) cardContainer.innerHTML = ''; 
         document.getElementById('overall-sales-card').textContent = '0';
-        const exportSalesElem = document.getElementById('overall-sales-export');
-        if (exportSalesElem) exportSalesElem.textContent = '0';
         return; 
     }
 
@@ -8276,6 +8272,7 @@ async function generateSalesReports() {
 
     const tbody = document.getElementById('sales-department-report-tbody');
     const cardContainer = document.getElementById('sales-department-report-cards');
+    
     if (tbody) tbody.innerHTML = ''; 
     if (cardContainer) cardContainer.innerHTML = ''; 
 
@@ -8295,21 +8292,31 @@ async function generateSalesReports() {
         } while (page <= totalPages);
 
         const salesReport = {};
+        
         allSales.forEach(sale => {
-            const dept = sale.department || 'Other';
+            // Trim whitespace to avoid missing categories
+            let dept = (sale.department || 'Other').trim();
+            if (!dept) dept = 'Other';
+
+            // Strip out non-numeric characters (like commas or currency letters) if any exist dynamically
+            const rawNumber = String(sale.number || '0').replace(/[^0-9.-]/g, '');
+            const rawSp = String(sale.sp || '0').replace(/[^0-9.-]/g, '');
+
+            const quantity = Number(rawNumber) || 0;
+            const unitPrice = Number(rawSp) || 0;
+            const lineTotal = quantity * unitPrice;
+
             if (!salesReport[dept]) salesReport[dept] = 0;
-            salesReport[dept] += (Number(sale.number) * Number(sale.sp));
+            salesReport[dept] += lineTotal;
         });
 
         let totalSalesSum = 0;
-        const sortedDepts = Object.keys(salesReport).sort();
+        const sortedDepts = Object.keys(salesReport).filter(k => !isNaN(salesReport[k])).sort();
 
         if (sortedDepts.length === 0) {
             const emptyStateHtml = 'No sales activity found for this period.';
             if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
             if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
-            
-            // Trigger feedback banner alert for empty states
             showMessage('No sales records found for the selected date range.', false);
         } else {
             let tableRowsHTML = [];
@@ -8320,18 +8327,16 @@ async function generateSalesReports() {
                 totalSalesSum += sales;
 
                 tableRowsHTML.push(`
-                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <tr class="border-b border-slate-100 hover:bg-slate-50/80">
                         <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
                         <td class="px-6 py-4 text-right font-mono text-emerald-600 font-semibold">${sales.toLocaleString()}</td>
                     </tr>
                 `);
 
                 mobileCardsHTML.push(`
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                        <div class="flex justify-between items-center">
-                            <h4 class="font-bold text-slate-800 text-base">${dept}</h4>
-                            <span class="font-mono font-black text-emerald-600">${sales.toLocaleString()} ${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX'}</span>
-                        </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                        <h4 class="font-bold text-slate-800 text-sm">${dept}</h4>
+                        <span class="font-mono font-black text-emerald-600">${sales.toLocaleString()} UGX</span>
                     </div>
                 `);
             });
@@ -8341,7 +8346,6 @@ async function generateSalesReports() {
         }
 
         document.getElementById('overall-sales-card').textContent = totalSalesSum.toLocaleString();
-        
         const exportSalesElem = document.getElementById('overall-sales-export');
         if (exportSalesElem) exportSalesElem.textContent = totalSalesSum.toLocaleString();
 
