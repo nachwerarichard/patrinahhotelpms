@@ -8248,12 +8248,26 @@ async function generateSalesReports() {
     let originalButtonHtml = generateButton ? generateButton.innerHTML : '';
     
     const hotelId = localStorage.getItem('hotelId');
-    if (!hotelId) { showMessage('Session expired. Please log in again.', true); return; }
+    if (!hotelId) { 
+        showMessage('Session expired. Please log in again.', true); 
+        return; 
+    }
 
     const startDate = document.getElementById('sales-report-start-date').value;
     const endDate = document.getElementById('sales-report-end-date').value;
 
-    if (!startDate || !endDate) { showMessage('Please select both start and end dates.', true); return; }
+    // Silent return on missing dates to allow smooth typing via oninput
+    if (!startDate || !endDate) { 
+        // Reset dashboard visuals to clean state if user clears a date input
+        const tbody = document.getElementById('sales-department-report-tbody');
+        const cardContainer = document.getElementById('sales-department-report-cards');
+        if (tbody) tbody.innerHTML = ''; 
+        if (cardContainer) cardContainer.innerHTML = ''; 
+        document.getElementById('overall-sales-card').textContent = '0';
+        const exportSalesElem = document.getElementById('overall-sales-export');
+        if (exportSalesElem) exportSalesElem.textContent = '0';
+        return; 
+    }
 
     if (generateButton) {
         generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
@@ -8294,6 +8308,9 @@ async function generateSalesReports() {
             const emptyStateHtml = 'No sales activity found for this period.';
             if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
             if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
+            
+            // Trigger feedback banner alert for empty states
+            showMessage('No sales records found for the selected date range.', false);
         } else {
             let tableRowsHTML = [];
             let mobileCardsHTML = [];
@@ -8313,7 +8330,7 @@ async function generateSalesReports() {
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                         <div class="flex justify-between items-center">
                             <h4 class="font-bold text-slate-800 text-base">${dept}</h4>
-                            <span class="font-mono font-black text-emerald-600">${sales.toLocaleString()} ${CURRENT_CURRENCY}</span>
+                            <span class="font-mono font-black text-emerald-600">${sales.toLocaleString()} ${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX'}</span>
                         </div>
                     </div>
                 `);
@@ -8325,7 +8342,6 @@ async function generateSalesReports() {
 
         document.getElementById('overall-sales-card').textContent = totalSalesSum.toLocaleString();
         
-        // Populate hidden export table fields
         const exportSalesElem = document.getElementById('overall-sales-export');
         if (exportSalesElem) exportSalesElem.textContent = totalSalesSum.toLocaleString();
 
@@ -8346,12 +8362,25 @@ async function generateExpensesReports() {
     let originalButtonHtml = generateButton ? generateButton.innerHTML : '';
     
     const hotelId = localStorage.getItem('hotelId');
-    if (!hotelId) { showMessage('Session expired. Please log in again.', true); return; }
+    if (!hotelId) { 
+        showMessage('Session expired. Please log in again.', true); 
+        return; 
+    }
 
     const startDate = document.getElementById('expenses-report-start-date').value;
     const endDate = document.getElementById('expenses-report-end-date').value;
 
-    if (!startDate || !endDate) { showMessage('Please select both start and end dates.', true); return; }
+    // Silent clear on incomplete dates so typing isn't interrupted by alerts
+    if (!startDate || !endDate) { 
+        const tbody = document.getElementById('expenses-department-report-tbody');
+        const cardContainer = document.getElementById('expenses-department-report-cards');
+        if (tbody) tbody.innerHTML = ''; 
+        if (cardContainer) cardContainer.innerHTML = ''; 
+        document.getElementById('overall-expenses-card').textContent = '0';
+        const exportExpensesElem = document.getElementById('overall-expenses-export');
+        if (exportExpensesElem) exportExpensesElem.textContent = '0';
+        return; 
+    }
 
     if (generateButton) {
         generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
@@ -8392,6 +8421,9 @@ async function generateExpensesReports() {
             const emptyStateHtml = 'No expenditure found for this period.';
             if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
             if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
+            
+            // Fires message popup for zero records found
+            showMessage('No expense records found for the selected date range.', false);
         } else {
             let tableRowsHTML = [];
             let mobileCardsHTML = [];
@@ -8411,7 +8443,7 @@ async function generateExpensesReports() {
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                         <div class="flex justify-between items-center">
                             <h4 class="font-bold text-slate-800 text-base">${dept}</h4>
-                            <span class="font-mono font-black text-red-600">${expenses.toLocaleString()} ${CURRENT_CURRENCY}</span>
+                            <span class="font-mono font-black text-red-600">${expenses.toLocaleString()} ${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX'}</span>
                         </div>
                     </div>
                 `);
@@ -8423,7 +8455,6 @@ async function generateExpensesReports() {
 
         document.getElementById('overall-expenses-card').textContent = totalExpensesSum.toLocaleString();
         
-        // Populate hidden export table fields
         const exportExpensesElem = document.getElementById('overall-expenses-export');
         if (exportExpensesElem) exportExpensesElem.textContent = totalExpensesSum.toLocaleString();
 
