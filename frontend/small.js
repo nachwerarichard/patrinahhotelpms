@@ -369,13 +369,7 @@ function closeMessageBox() {
 }
 // IMPROVED FRONTEND FETCH
 // 1. Debounce helper to keep API calls efficient while typing
-let debounceTimer;
-function debounce(func, delay = 300) {
-    return (...args) => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => func.apply(this, args), delay);
-    };
-}
+
 
 // Your updated rendering function with tighter cell padding classes
 async function renderAuditLogs() {
@@ -4248,13 +4242,7 @@ function renderTable(bookings) {
 }
 
 // 2. AUTO-FILTER LOGIC (WITH DEBOUNCE)
-function debounce(func, timeout = 300) {
-    let timer;
-    return (...args) => {
-        clearTimeout(timer);
-        timer = setTimeout(() => { func.apply(this, args); }, timeout);
-    };
-}
+
 
 const filterInputs = [
     'filterSearch', 'filterPaymentStatus', 'filterGuestStatus', 
@@ -8502,14 +8490,7 @@ function updateElementText(id, value) {
     if (el) el.textContent = value.toLocaleString(undefined, { minimumFractionDigits: 2 });
 }
 // --- Audit Logs Functions ---
-function debounce(func, delay) {
-    let timeout;
-    return function(...args) {
-        const context = this;
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(context, args), delay);
-    };
-}
+
 
 // Function to fetch audit logs (modified)
 async function fetchAuditLogs() {
@@ -8597,13 +8578,7 @@ if (auditSearchInput) {
         fetchAuditLogs();
     }, 500)); // 500ms delay
 }
-function debounce(func, delay) {
-    let timeout;
-    return (...args) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), delay);
-    };
-}
+
 // Function to render pagination (no change needed here)
 function renderAuditPagination(current, totalPages) {
     const container = document.getElementById('audit-pagination');
