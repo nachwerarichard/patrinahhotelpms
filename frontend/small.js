@@ -6400,6 +6400,15 @@ document.addEventListener("DOMContentLoaded", () => {
         fetchInventory();
     }
 
+    const cashDateInput = document.getElementById('cash-filter-date');
+    if (cashDateInput && !cashDateInput.value) {
+        // Set the default filter criteria instantly to today
+        cashDateInput.value = todayString;
+    }
+    if (typeof fetchCashJournal === 'function') {
+        fetchCashJournal();
+    }
+
     const expensesDateInput = document.getElementById('expenses-date-filter');
     if (expensesDateInput && !expensesDateInput.value) {
         // Default the picker to today's date context
