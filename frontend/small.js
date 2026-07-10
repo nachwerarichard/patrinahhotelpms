@@ -9033,39 +9033,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-async function generatePOSReport(event) {
-    event.preventDefault();
-    const dateInput = document.getElementById('reportDate');
+// Add event listeners to trigger automatically on date selection
+document.addEventListener('DOMContentLoaded', () => {
+    const startInput = document.getElementById('reportStartDate');
+    const endInput = document.getElementById('reportEndDate');
+    
+    if (startInput && endInput) {
+        startInput.addEventListener('change', generatePOSReport);
+        endInput.addEventListener('change', generatePOSReport);
+    }
+});
+
+async function generatePOSReport() {
+    const startDate = document.getElementById('reportStartDate').value;
+    const endDate = document.getElementById('reportEndDate').value;
     const tableBody = document.getElementById('posreportTableBody');
     const totalRevenueEl = document.getElementById('posreportTotalRevenue');
-    const submitBtn = event.submitter;
+    const loadingEl = document.getElementById('loadingIndicator');
 
-    if (!dateInput.value) return;
+    // Only fetch if both dates are selected
+    if (!startDate || !endDate) return;
 
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading...';
+    // Prevent fetching if end date is before start date
+    if (new Date(endDate) < new Date(startDate)) {
+        // Optional: showMessage('End date cannot be before start date', true);
+        return; 
+    }
+
+    // Show loading text
+    loadingEl.classList.remove('hidden');
 
     try {
-        // The hotelId is handled automatically by authenticatedFetch headers
-        const response = await authenticatedFetch(`${API_BASE_URL}/pos/reports/daily?date=${dateInput.value}`);
+        const response = await authenticatedFetch(`${API_BASE_URL}/pos/reports/daily?startDate=${startDate}&endDate=${endDate}`);
         const data = await response.json();
 
         if (!response.ok) throw new Error(data.message || 'Report failed');
 
-        // Update Summary Card & Dates
+        // Update Summary Card
         totalRevenueEl.textContent = Number(data.totalRevenue).toLocaleString();
-        document.getElementById('posreportDateDisplay').textContent = data.reportDate;
-        
-        // Render the exact query range if tracking elements exist
-        const rangeEl = document.getElementById('posreportDateRange');
-        if (rangeEl && data.startDateUTC && data.endDateUTC) {
-            const startStr = new Date(data.startDateUTC).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            const endStr = new Date(data.endDateUTC).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            rangeEl.textContent = `(${startStr} to ${endStr} UTC)`;
-        }
+        document.getElementById('posreportDateDisplay').textContent = data.reportRange;
 
         // Populate Table
-        tableBody.innerHTML = data.transactions.length ? '' : '<tr><td colspan="4" class="text-center py-10">No records found.</td></tr>';
+        tableBody.innerHTML = data.transactions.length ? '' : '<tr><td colspan="4" class="text-center py-10">No records found for this date range.</td></tr>';
 
         data.transactions.forEach(trx => {
             const row = `
@@ -9090,8 +9099,8 @@ async function generatePOSReport(event) {
     } catch (err) {
         showMessage(err.message, true);
     } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-chart-line"></i> Generate Summary';
+        // Hide loading text
+        loadingEl.classList.add('hidden');
     }
 }
 

@@ -1284,20 +1284,24 @@ app.get('/api/rooms/report-daily', auth, async (req, res) => {
 });
 
 app.get('/api/pos/reports/daily', auth, async (req, res) => {
-    const { date } = req.query; 
+    const { startDate, endDate } = req.query; 
     
-    // SECURITY: Use the hotelId from the AUTH middleware, not the request body/query
+    // SECURITY: Use the hotelId from the AUTH middleware
     const hotelId = req.user.hotelId;
     
     try {
-        if (!date) return res.status(400).json({ message: 'Date is required' });
+        if (!startDate || !endDate) {
+            return res.status(400).json({ message: 'Start and end dates are required' });
+        }
 
-        const { utcStart, utcEnd } = getStartAndEndOfDayInUTC(date);
+        // Query the database directly without UTC shift functions. 
+        // We set the start to 00:00:00 and end to 23:59:59 of the local server time.
+        const start = new Date(`${startDate}T00:00:00.000`);
+        const end = new Date(`${endDate}T23:59:59.999`);
 
-        // Fetching data scoped strictly to the authenticated hotelId (Only Incidental Charges)
         const roomCharges = await IncidentalCharge.find({ 
             hotelId, 
-            date: { $gte: utcStart, $lt: utcEnd } 
+            date: { $gte: start, $lte: end } 
         });
 
         const allTransactions = roomCharges.map(c => ({
@@ -1310,15 +1314,14 @@ app.get('/api/pos/reports/daily', auth, async (req, res) => {
         }));
         
         res.status(200).json({
-            reportDate: date,
-            startDateUTC: utcStart, // Included start date
-            endDateUTC: utcEnd,     // Included end date
-            tenant: hotelId,        // Good for debugging
+            reportRange: `${startDate} to ${endDate}`,
+            tenant: hotelId,
             totalRevenue: allTransactions.reduce((sum, t) => sum + t.amount, 0),
             transactions: allTransactions.sort((a, b) => new Date(b.time) - new Date(a.time))
         });
 
     } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'Error generating POS report' });
     }
 });
