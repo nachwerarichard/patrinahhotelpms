@@ -10495,66 +10495,64 @@ async function fetchStatusReports() {
     }
 }
 
-// Keep this global declaration at the top level of your script file
-let allStatusReports = [];       // Master source of truth from your backend
-let filteredStatusReports = [];  // Currently active matching filter set
+// State Arrays
+let allStatusReports = [];       // Master data cache (read-only destination)
+let filteredStatusReports = [];  // Currently active filtered set (used by print/export)
 
-// 2. RUN IMMEDIATELY: Simulated Fetch or Initialization routine
+// IMMEDIATE LOAD: Run as soon as DOM mounts
 document.addEventListener("DOMContentLoaded", () => {
-    // Replace this simulation with your actual API fetch call or backend injection
-    // e.g., fetch('/api/reports').then(res => res.json()).then(data => { ... })
+    // NOTE: Populate this array with your live database array injection or API fetch response
     allStatusReports = [
-        /* Your raw database records go here initially */
+        /* Your objects/documents array populate here */
     ];
 
-    // Trigger the paint routine immediately so user sees data instantly
+    // Force paint the complete baseline table instantly
     renderStatusTable(allStatusReports);
 });
 
+// REAL-TIME CHANGE HANDLER: Runs automatically when a date picker value settles
 function filterStatusReportsByDate() {
-    const filterDateInput = document.getElementById("statusReportFilterDate").value;
+    const filterDateValue = document.getElementById("statusReportFilterDate").value;
     
-    if (!filterDateInput) {
-        // If they click search but haven't selected a date, fall back to everything
+    // If user clears input directly via the datepicker interface native clear icon
+    if (!filterDateValue) {
         renderStatusTable(allStatusReports);
         return;
     }
 
-    // Filter against the master array 
-    const matches = allStatusReports.filter(report => {
+    // Process matching datasets down locally from cached storage
+    const matchedRecords = allStatusReports.filter(report => {
         if (!report.dateTime) return false;
         
-        // Match the YYYY-MM-DD string formatting
-        const reportDateString = new Date(report.dateTime).toISOString().split('T')[0];
-        return reportDateString === filterDateInput;
+        // Extract YYYY-MM-DD template segments accurately to match input value
+        const standardReportDateStr = new Date(report.dateTime).toISOString().split('T')[0];
+        return standardReportDateStr === filterDateValue;
     });
 
-    // Re-render the visual blocks with just the matched items
-    renderStatusTable(matches);
+    // Re-render UI views dynamically
+    renderStatusTable(matchedRecords);
 }
 
-// 4. Clear Action Handler
+// CLEAR FILTER HANDLER
 function clearStatusDateFilter() {
-    const dateInput = document.getElementById("statusReportFilterDate");
-    if (dateInput) dateInput.value = ''; // Reset input element
+    const dateElement = document.getElementById("statusReportFilterDate");
+    if (dateElement) dateElement.value = ''; // Clean the picker value visually
     
-    // Fall back immediately to displaying everything
+    // Fallback immediately to full data array rendering
     renderStatusTable(allStatusReports);
 }
 
 
+// --- YOUR EXISTING RENDER LOGIC (Kept intact with global pointer) ---
 function renderStatusTable(reports) {
     const tableBody = document.getElementById("statusReportTableBody");
     const mobileGrid = document.getElementById("statusReportMobileGrid");
     
-    // 0. FIX: Store the currently rendered reports globally so Export & Print can read them!
     filteredStatusReports = reports || [];
     
-    // 1. Wipe baseline stale data logs out cleanly before painting UI
     if (tableBody) tableBody.innerHTML = '';
     if (mobileGrid) mobileGrid.innerHTML = '';
 
-    // 2. Handle empty state scenario gracefully
     if (!reports || reports.length === 0) {
         const fallbackMsg = '<div class="text-center p-6 text-gray-400 text-sm font-medium">No housekeeping reports mapped for this cycle.</div>';
         if (tableBody) tableBody.innerHTML = `<tr><td colspan="6">${fallbackMsg}</td></tr>`;
@@ -10562,17 +10560,12 @@ function renderStatusTable(reports) {
         return;
     }
 
-    // 3. Loop through records and paint both desktop and mobile views
     reports.forEach(r => {
-        // Safe data extractions using optional chaining based on deep backend populating
         const roomNumber = r.roomId?.number || 'Unknown Room';
         const categoryName = r.roomId?.roomTypeId?.name || 'Standard Type';
         const displayStatus = r.status ? r.status.replace('-', ' ').toUpperCase() : 'UNKNOWN';
-        
-        // Match tailwind badge styles using your app's helper function
         const statusBadgeColorClass = typeof getStatusColor === 'function' ? getStatusColor(r.status) : "bg-gray-100 text-gray-800";
 
-        // Construct the modular action dropdown block using the correct MongoDB ._id key
         const actionHtml = `
             <div class="relative inline-block text-left">
                 <button class="p-2 hover:bg-gray-200 rounded-full transition-colors focus:outline-none" onclick="toggleActionButtons(event, this)">
@@ -10589,7 +10582,6 @@ function renderStatusTable(reports) {
             </div>
         `;
 
-        // VIEW A: Desktop Table Row Painting
         if (tableBody) {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50/80 transition-colors border-b border-gray-100";
@@ -10610,7 +10602,6 @@ function renderStatusTable(reports) {
             tableBody.appendChild(tr);
         }
 
-        // VIEW B: Mobile Stacked Card View Painting
         if (mobileGrid) {
             const card = document.createElement('div');
             card.className = "p-4 bg-slate-50/60 border border-gray-200 rounded-xl shadow-sm relative hover:bg-slate-50 transition-colors";
@@ -10620,16 +10611,12 @@ function renderStatusTable(reports) {
                         <h4 class="text-base font-bold text-slate-900">Room ${roomNumber}</h4>
                         <p class="text-xs text-gray-400 font-medium">${categoryName}</p>
                     </div>
-                    <div>
-                        ${actionHtml}
-                    </div>
+                    <div>${actionHtml}</div>
                 </div>
-                
                 <div class="my-2 text-xs text-gray-600 bg-white border border-gray-100 rounded-lg p-2.5 min-h-[40px]">
                     <span class="text-[10px] uppercase tracking-wider font-bold text-gray-400 block mb-0.5">Remarks / Details</span>
                     <p class="italic">${r.remarks || 'No descriptive comments captured.'}</p>
                 </div>
-
                 <div class="flex justify-between items-center pt-2 text-xs">
                     <div class="text-gray-400 text-[11px]">
                         <i class="far fa-clock mr-1"></i> ${r.dateTime ? new Date(r.dateTime).toLocaleString() : 'N/A'}
