@@ -2049,39 +2049,52 @@ body {
 
         <!-- Form Context -->
         <form id="settleBillForm" class="p-8 space-y-6">
-            <!-- Summary Card -->
-            <div class="bg-slate-900 rounded-2xl p-5 text-white flex justify-between items-center">
-                <div>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Amount Due</p>
-                    <span id="settleModalGuest" class="text-xs font-semibold text-indigo-300 block mt-0.5">Guest Folio</span>
-                </div>
-                <div class="text-right">
-                    <span id="settleModalTotal" class="text-3xl font-black text-white">0.00</span>
-                </div>
-            </div>
+    <!-- Summary Card -->
+    <div class="bg-slate-900 rounded-2xl p-5 text-white flex justify-between items-center">
+        <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Amount Due</p>
+            <span id="settleModalGuest" class="text-xs font-semibold text-indigo-300 block mt-0.5">Guest Folio</span>
+        </div>
+        <div class="text-right">
+            <span id="settleModalTotal" class="text-3xl font-black text-white">0.00</span>
+        </div>
+    </div>
 
-            <!-- Payment Selection -->
-            <div class="space-y-2">
-                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Choose Payment Method</label>
-                <select
-                    id="settlePaymentMethod"
-                    required
-                    class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"
-                >
-                    <option value="Cash">Cash 💵</option>
-                    <option value="Card">Credit/Debit Card 💳</option>
-                    <option value="MobileMoney">Mobile Money 📱</option>
-                </select>
-            </div>
+    <!-- Payment Selection -->
+    <div class="space-y-2">
+        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Choose Payment Method</label>
+        <select
+            id="settlePaymentMethod"
+            required
+            class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"
+            onchange="togglePesapalFields(this.value)"
+        >
+            <option value="Cash">Cash </option>
+            <option value="MTN Momo">MTN Momo</option>
+            <option value="Airtel Pay">Airtel Pay </option>
+            <option value="Pesapal">Pesapal Online </option>
+        </select>
+    </div>
 
-            <!-- Action Buttons -->
-            <button
-                type="submit"
-                class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg transition-all uppercase tracking-widest text-sm"
-            >
-                Confirm Settlement
-            </button>
-        </form>
+    <!-- Conditionally Visible Pesapal Phone Input Container -->
+    <div id="pesapalPhoneContainer" class="space-y-2 hidden">
+        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Guest Phone Number (Required for Pesapal)</label>
+        <input 
+            type="tel" 
+            id="settlePesapalPhone" 
+            placeholder="e.g. +256770000000"
+            class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 font-semibold"
+        />
+    </div>
+
+    <!-- Action Buttons -->
+    <button
+        type="submit"
+        class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg transition-all uppercase tracking-widest text-sm"
+    >
+        Confirm Settlement
+    </button>
+</form>
     </div>
 </div>
 
