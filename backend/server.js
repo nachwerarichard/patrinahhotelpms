@@ -4492,7 +4492,7 @@ app.post('/api/pos/client/account/:accountId/initiate-pesapal', auth, async (req
         const payment = await PaymentTransaction.create({
             hotelId,
             amount: totalAmount,
-            outlet: 'POS Folio Settlement',
+            outlet: 'POS',
             phone: phone || '',
             merchantReference,
             createdBy: req.user.id,
@@ -4784,7 +4784,7 @@ const PaymentTransaction = mongoose.model(
 
         outlet: {
             type: String,
-            enum: ['Bar', 'Restaurant', 'Kitchen'],
+            enum: ['Bar', 'Restaurant', 'Kitchen','POS', 'Front Desk', 'Other'],
             required: true
         },
 
