@@ -8405,7 +8405,7 @@ async function generateSalesReports() {
 
         document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY}${totalSalesSum.toLocaleString()}`;
         const exportSalesElem = document.getElementById('overall-sales-export');
-        if (exportSalesElem) exportSalesElem.textContent = totalSalesSum.toLocaleString();
+        if (exportSalesElem) exportSalesElem.textContent = `${CURRENT_CURRENCY}${totalSalesSum.toLocaleString()}`;
 
     } catch (error) {
         console.error('Sales Report Error:', error);
@@ -8515,10 +8515,10 @@ async function generateExpensesReports() {
             if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
         }
 
-        document.getElementById('overall-expenses-card').textContent = totalExpensesSum.toLocaleString();
+        document.getElementById('overall-expenses-card').textContent = `${CURRENT_CURRENCY}${totalExpensesSum.toLocaleString()}`
         
         const exportExpensesElem = document.getElementById('overall-expenses-export');
-        if (exportExpensesElem) exportExpensesElem.textContent = totalExpensesSum.toLocaleString();
+        if (exportExpensesElem) exportExpensesElem.textContent = `${CURRENT_CURRENCY}${totalExpensesSum.toLocaleString()}`;
 
     } catch (error) {
         console.error('Expenses Report Error:', error);
