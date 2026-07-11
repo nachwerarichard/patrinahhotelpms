@@ -5883,7 +5883,6 @@ const addCharge = async (description, number, department) => {
 
 // Add accountId as an explicit second argument
 const settleAccount = async (method, accountId) => {
-    // Look at the passed argument instead of the flaky global variable
     const targetId = accountId || activeAccountId;
     
     if (!targetId) {
@@ -5891,6 +5890,42 @@ const settleAccount = async (method, accountId) => {
         return;
     }
 
+    // INTERCEPT METHOD FOR PESAPAL INTERACTION
+    if (method === 'Pesapal') {
+        const guestPhone = prompt("Please enter the guest's mobile phone number for Pesapal updates:");
+        
+        try {
+            const res = await authenticatedFetch(
+                `${API_BASE_URL}/pos/client/account/${targetId}/initiate-pesapal`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ phone: guestPhone })
+                }
+            );
+
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                console.error("Pesapal Init failed:", data.message);
+                showMessage('Pesapal Initialization Failed', data.message || 'Check gateway logs', true);
+                return;
+            }
+
+            showMessage('Redirecting', 'Opening secure Pesapal payment gateway...', false);
+            
+            // Redirect the user to the generated payment page
+            window.location.href = data.redirectUrl;
+            return;
+
+        } catch (err) {
+            console.error(err);
+            showMessage("Error", "Connection failure while establishing gateway connection.", true);
+            return;
+        }
+    }
+
+    // STANDARD LEGACY DOWNSTREAM METHOD FLOW (Cash, Card, MobileMoney, Room)
     let payload = {};
     if (method === 'room') {
         payload = { roomPost: true };
@@ -5900,7 +5935,7 @@ const settleAccount = async (method, accountId) => {
 
     try {
         const res = await authenticatedFetch(
-            `${API_BASE_URL}/pos/client/account/${targetId}/settle`, // Use targetId here
+            `${API_BASE_URL}/pos/client/account/${targetId}/settle`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }, 
@@ -5922,11 +5957,7 @@ const settleAccount = async (method, accountId) => {
         } else {
             showMessage('Success', 'Bill settled completely! 💵✅', false);
             resetUI();
-            
-            // Clean up global tracker safely if needed
-            if (typeof activeAccountId !== 'undefined') {
-                activeAccountId = null; 
-            }
+            if (typeof activeAccountId !== 'undefined') { activeAccountId = null; }
         }
     } catch (err) { 
         console.error(err);
