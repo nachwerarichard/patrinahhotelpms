@@ -325,11 +325,13 @@ const walkInChargeSchema = new mongoose.Schema({
     },
     // --- ADD THE FIELD HERE ---
     paymentMethod: {
-        type: String,
-        enum: ['Cash', 'Card', 'MobileMoney'], // Restricts input to only your valid choices
-        required: true,
-        default: 'Cash'
-    },
+    type: String,
+    enum: [
+        'Pesapal', 'Online', 'Visa', 'MasterCard', 'Mobile Money', 
+        'Cash', 'M-Pesa', 'MTN Momo', 'Airtel Pay', 'Bank',
+        'Stripe', 'Stripe Card' ],
+    default: 'Cash'
+},
     date: {
         type: Date,
         default: Date.now
