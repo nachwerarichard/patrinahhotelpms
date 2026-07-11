@@ -5882,7 +5882,24 @@ const addCharge = async (description, number, department) => {
 };
 
 // Add accountId as an explicit second argument
-const settleAccount = async (method, accountId) => {
+// Add phone parameter to function definition signature
+window.togglePesapalFields = function(selectedMethod) {
+    const container = document.getElementById('pesapalPhoneContainer');
+    const phoneInput = document.getElementById('settlePesapalPhone');
+    
+    if (!container || !phoneInput) return;
+
+    if (selectedMethod === 'Pesapal') {
+        container.classList.remove('hidden');
+        phoneInput.required = true;
+    } else {
+        container.classList.add('hidden');
+        phoneInput.required = false;
+        phoneInput.value = '';
+    }
+};
+
+const settleAccount = async (method, accountId, phone = '') => {
     const targetId = accountId || activeAccountId;
     
     if (!targetId) {
@@ -5892,15 +5909,13 @@ const settleAccount = async (method, accountId) => {
 
     // INTERCEPT METHOD FOR PESAPAL INTERACTION
     if (method === 'Pesapal') {
-        const guestPhone = prompt("Please enter the guest's mobile phone number for Pesapal updates:");
-        
         try {
             const res = await authenticatedFetch(
                 `${API_BASE_URL}/pos/client/account/${targetId}/initiate-pesapal`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ phone: guestPhone })
+                    body: JSON.stringify({ phone: phone }) // Use phone variable directly passed from form input state
                 }
             );
 
@@ -5914,7 +5929,7 @@ const settleAccount = async (method, accountId) => {
 
             showMessage('Redirecting', 'Opening secure Pesapal payment gateway...', false);
             
-            // Redirect the user to the generated payment page
+            // Redirect window environment frame context
             window.location.href = data.redirectUrl;
             return;
 
@@ -11654,23 +11669,15 @@ settleModal.addEventListener('click', (e) => {
     if (e.target === settleModal) closeSettleModal();
 });
 
-// 4. Submit processing handler
-settleBillForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const selectedMethod = document.getElementById('settlePaymentMethod').value;
-    
-    // Close the interface overlay right before network handoff
-    closeSettleModal();
-
-    // Pass chosen method cleanly straight into your base settlement function
-    await settleAccount(selectedMethod);
-});
 
 
+
+// Ensure we ONLY have ONE unified submit handler attached to the form
 if (settleBillForm) {
-    settleBillForm.onsubmit = async (e) => {
+    // Unbind any previous listener dynamically if assigned somewhere else
+    settleBillForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        e.stopImmediatePropagation(); // Prevents multiple script blocks from stepping on each other
         
         console.log("--- SETTLEMENT START ---");
         
@@ -11686,21 +11693,34 @@ if (settleBillForm) {
         const selectedMethod = document.getElementById('settlePaymentMethod').value;
         console.log("Target payment method captured:", selectedMethod);
         
+        // Safely extract the conditional pesapal phone value from input DOM element
+        const pesapalPhoneField = document.getElementById('settlePesapalPhone');
+        const guestPhone = pesapalPhoneField ? pesapalPhoneField.value.trim() : '';
+
         // Close modal layout visually
-        settleModal.classList.add('hidden');
-        settleModal.classList.remove('flex');
+        if (typeof closeSettleModal === 'function') {
+            closeSettleModal();
+        } else if (typeof settleModal !== 'undefined') {
+            settleModal.classList.add('hidden');
+            settleModal.classList.remove('flex');
+        }
 
         console.log(`Calling settleAccount with method: ${selectedMethod} and ID: ${savedId}`);
         
-        // Explicitly fire the network request using our saved form ID
-        await settleAccount(selectedMethod, savedId);
+        // Pass the method, target account ID, and phone number parameters cleanly
+        await settleAccount(selectedMethod, savedId, guestPhone);
         
         console.log("settleAccount completed execution chain.");
         
         settleBillForm.reset();
         settleBillForm.removeAttribute('data-account-id'); 
+        
+        // Hide phone container field safely post-reset
+        const phoneContainer = document.getElementById('pesapalPhoneContainer');
+        if (phoneContainer) phoneContainer.classList.add('hidden');
+        
         console.log("--- SETTLEMENT END ---");
-    };
+    });
 }
 
 if (closeSettleModalBtn) {
