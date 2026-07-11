@@ -1096,8 +1096,26 @@ const clientAccountSchema = new mongoose.Schema({
     
     // Audit reporting trackers
     settledAt: { type: Date },
-    settledByMethod: { type: String, enum: ['Pesapal', 'Visa', 'Room Charge', 'MasterCard', 'Mobile Money', 'Cash', 'M-Pesa', 'MTN Momo', 'Airtel Pay', 'Bank', 'Stripe', 'Stripe Card'] },
-    finalAmountPaid: { type: Number },
+settledByMethod: { 
+    type: String, 
+    enum: [
+        'Pesapal', 
+        'Card', 
+        'Visa', 
+        'Visa Card', 
+        'MasterCard', 
+        'Amex', 
+        'Room Charge', 
+        'Mobile Money', 
+        'Cash', 
+        'M-Pesa', 
+        'MTN Momo', 
+        'Airtel Pay', 
+        'Bank', 
+        'Stripe', 
+        'Stripe Card'
+    ] 
+},
     isClosed: { type: Boolean, default: false }
 }, { timestamps: true });
 
