@@ -1,79 +1,65 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Payment Verification</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
-            margin: 0;
-            background-color: #ffffff;
-        }
-        .success-icon { color: #4CAF50; font-size: 56px; margin-bottom: 15px; }
-        h2 { color: #333; margin: 10px 0; font-size: 22px; }
-        p { color: #666; font-size: 14px; margin: 8px 0; }
-        .details-box {
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            display: inline-block;
-            text-align: left;
-            margin: 15px 0;
-            font-family: monospace;
-            border: 1px solid #eef0f2;
-        }
-        .btn-close {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 24px;
-            font-size: 14px;
-            font-weight: bold;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-    </style>
-</head>
-<body>
-    <div class="success-icon">✔</div>
-    <h2>Payment Completed Successfully!</h2>
-    <p>The transaction has been safely authorized.</p>
-    
-    <div class="details-box">
-        <strong>Merchant Ref:</strong> <span id="ref-val">Loading...</span><br/>
-        <strong>Tracking ID:</strong> <span id="id-val">Loading...</span>
-    </div>
-    <br/>
-
-    <button class="btn-close hidden" onclick="notifyParentToClose()">Return to Dashboard</button>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful - Novus Cloud</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // 1. Parse out the tracking information directly from the frontend URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const trackingId = urlParams.get('OrderTrackingId');
-        const merchantRef = urlParams.get('OrderMerchantReference');
+        // Break out of the Pesapal payment iframe if trapped
+        if (window.top !== window.self) {
+            window.top.location = window.self.location.href;
+        }
+    </script>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4 antialiased">
 
-        // Populate the UI text boxes dynamically
-        document.getElementById('id-val').innerText = trackingId || 'N/A';
-        document.getElementById('ref-val').innerText = merchantRef || 'N/A';
+    <div class="bg-white max-w-md w-full rounded-2xl shadow-xl border border-slate-100 p-8 text-center transition-all duration-300 transform scale-100">
+        <!-- Success Icon Graphic -->
+        <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-emerald-50 mb-6">
+            <svg class="h-10 w-10 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+            </svg>
+        </div>
 
-        // 2. Safely announce the payment success status straight to the parent window
-         function notifyParentToClose() {
-    // Define your absolute or relative frontend dashboard URL
-    const dashboardUrl = 'https://elegant-pasca-cea136.netlify.app/frontend/pesapal.html'; 
+        <!-- Headline Text -->
+        <h1 class="text-2xl font-bold text-slate-900 mb-2">Payment Confirmed</h1>
+        <p class="text-slate-500 text-sm mb-6">Your transaction was processed successfully. The system has updated your folio state.</p>
 
-    // window.top ensures it changes the main browser tab's address bar,
-    // completely breaking out of the iframe and clearing the modal.
-    if (window.top) {
-        window.top.location.href = dashboardUrl;
-    } else {
-        // Fallback safety case
-        window.location.href = dashboardUrl;
-    }
-}
+        <!-- Transaction Specs Grid -->
+        <div class="bg-slate-50 rounded-xl p-4 text-left border border-slate-100 space-y-3 mb-8 text-sm">
+            <div class="flex justify-between items-center">
+                <span class="text-slate-400 font-medium">Reference Code:</span>
+                <span id="merchantRef" class="text-slate-700 font-mono font-bold">---</span>
+            </div>
+            <div class="flex justify-between items-center border-t border-slate-200/60 pt-3">
+                <span class="text-slate-400 font-medium">Gateway Tracking ID:</span>
+                <span id="trackingId" class="text-slate-600 font-mono text-xs">---</span>
+            </div>
+        </div>
+
+        <!-- Navigation Actions -->
+        <div class="space-y-3">
+            <a href="/dashboard" class="block w-full text-center bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 px-4 rounded-xl transition duration-200 shadow-sm text-sm">
+                Return to Management Panel
+            </a>
+            <button onclick="window.print()" class="block w-full text-center bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-medium py-2.5 px-4 rounded-xl transition duration-200 text-xs">
+                Print Confirmation Receipt
+            </button>
+        </div>
+    </div>
+
+    <!-- Live Script Interface String Processor -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const trackingId = urlParams.get('OrderTrackingId');
+            const merchantRef = urlParams.get('OrderMerchantReference');
+
+            if (merchantRef) document.getElementById('merchantRef').textContent = merchantRef;
+            if (trackingId) document.getElementById('trackingId').textContent = trackingId;
+        });
     </script>
 </body>
 </html>

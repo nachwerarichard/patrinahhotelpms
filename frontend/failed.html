@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Declined - Novus Cloud</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Break out of the Pesapal payment iframe if trapped
+        if (window.top !== window.self) {
+            window.top.location = window.self.location.href;
+        }
+    </script>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4 antialiased">
+
+    <div class="bg-white max-w-md w-full rounded-2xl shadow-xl border border-slate-100 p-8 text-center transition-all duration-300">
+        <!-- Failure Warning Icon Graphic -->
+        <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-rose-50 mb-6">
+            <svg class="h-10 w-10 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+        </div>
+
+        <!-- Headline Text -->
+        <h1 class="text-2xl font-bold text-slate-900 mb-2">Transaction Declined</h1>
+        <p class="text-slate-500 text-sm mb-6">The payment attempt was rejected by the issuing gateway ecosystem network rules.</p>
+
+        <!-- Gateway Failure Message Context Box -->
+        <div class="bg-rose-50/50 rounded-xl p-4 border border-rose-100/70 text-left mb-6">
+            <span class="text-xs font-semibold uppercase tracking-wider text-rose-600 block mb-1">Rejection Reason</span>
+            <p id="failureReason" class="text-slate-700 text-sm font-medium">The transaction was explicitly declined by the banking validation systems.</p>
+        </div>
+
+        <!-- Core Reference Logging Details -->
+        <div class="bg-slate-50 rounded-xl p-4 text-left border border-slate-100 space-y-2.5 mb-8 text-xs">
+            <div class="flex justify-between">
+                <span class="text-slate-400 font-medium">Merchant Reference:</span>
+                <span id="merchantRef" class="text-slate-600 font-mono font-bold">---</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-slate-400 font-medium">Tracking Tracker ID:</span>
+                <span id="trackingId" class="text-slate-500 font-mono">---</span>
+            </div>
+        </div>
+
+        <!-- Action Control Interface -->
+        <div class="space-y-3">
+            <button onclick="window.history.back()" class="block w-full text-center bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 px-4 rounded-xl transition duration-200 shadow-sm text-sm">
+                Try Another Payment Card
+            </button>
+            <a href="/dashboard" class="block w-full text-center bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-medium py-2.5 px-4 rounded-xl transition duration-200 text-xs">
+                Cancel and Review Folio Ledger
+            </a>
+        </div>
+    </div>
+
+    <!-- Live Script Interface String Processor -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const trackingId = urlParams.get('OrderTrackingId');
+            const merchantRef = urlParams.get('OrderMerchantReference');
+            const reason = urlParams.get('reason');
+
+            if (merchantRef) document.getElementById('merchantRef').textContent = merchantRef;
+            if (trackingId) document.getElementById('trackingId').textContent = trackingId;
+            if (reason) document.getElementById('failureReason').textContent = decodeURIComponent(reason);
+        });
+    </script>
+</body>
+</html>

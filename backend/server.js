@@ -3896,25 +3896,62 @@ app.post('/api/bookings/:id/initiate-pesapal-payment', auth, async (req, res) =>
 app.get('/api/payments/pesapal-callback', async (req, res) => {
     try {
         const { OrderTrackingId, OrderMerchantReference } = req.query;
-
         console.log('User redirected back from Pesapal payment page:', OrderTrackingId);
 
         if (!OrderTrackingId) {
             return res.status(400).send('<h1>Invalid Request</h1><p>Missing transaction tracking ID.</p>');
         }
 
-        // 1. Optional: Find the booking if you need to run quick synchronous validation
-        // const booking = await Booking.findOne({ transactionid: OrderTrackingId });
+        // 1. We need a quick lookup to find out which hotel's credentials to use
+        // We look up the PaymentTransaction ledger row we initialized before checkout
+        const accountPayment = await PaymentTransaction.findOne({
+            $or: [{ orderTrackingId: OrderTrackingId }, { merchantReference: OrderMerchantReference }]
+        });
 
-        // 2. Define your actual hosted frontend domain url 
-        // In production, this can come from an environment variable: process.env.FRONTEND_URL
-        const FRONTEND_URL = 'https://elegant-pasca-cea136.netlify.app/frontend'; 
+        // Fallback check against Booking schema if it's a standard room booking
+        let hotelId;
+        if (accountPayment) {
+            hotelId = accountPayment.hotelId;
+        } else {
+            const booking = await Booking.findOne({
+                $or: [{ transactionid: OrderTrackingId }, { id: OrderMerchantReference }]
+            });
+            if (booking) hotelId = booking.hotelId;
+        }
 
-        // 3. Redirect the iframe viewport back to your actual frontend application space
-        // We pass the tracking metrics via query parameters so the frontend can read them
-        const redirectUrl = `${FRONTEND_URL}/success.html?OrderTrackingId=${OrderTrackingId}&OrderMerchantReference=${OrderMerchantReference || ''}`;
+        const FRONTEND_URL = 'https://elegant-pasca-cea136.netlify.app/frontend';
+
+        // 2. If we can't determine the hotel context, default redirect to validation screen safely
+        if (!hotelId) {
+            return res.redirect(`${FRONTEND_URL}/verify.html?OrderTrackingId=${OrderTrackingId}&OrderMerchantReference=${OrderMerchantReference || ''}`);
+        }
+
+        // 3. Query the status right now to give the user immediate feedback
+        const tenantGateway = await Gateway.findOne({ hotelId: hotelId, gatewayId: 'pesapal' });
+        if (!tenantGateway) return res.status(404).send('Gateway not found');
+
+        const isLiveEnvironment = tenantGateway.environment === 'Live';
+        const authResponse = await axios.post(isLiveEnvironment ? 'https://pay.pesapal.com/v3/api/Auth/RequestToken' : 'https://cybqa.pesapal.com/pesapalv3/api/Auth/RequestToken', {
+            consumer_key: tenantGateway.consumerKey,
+            consumer_secret: tenantGateway.consumerSecret
+        });
         
-        return res.redirect(redirectUrl);
+        const targetVerificationBaseUrl = isLiveEnvironment ? 'https://pay.pesapal.com/v3' : 'https://cybqa.pesapal.com/pesapalv3';
+        const statusResponse = await axios.get(
+            `${targetVerificationBaseUrl}/api/Transactions/GetTransactionStatus?orderTrackingId=${OrderTrackingId}`,
+            { headers: { Authorization: `Bearer ${authResponse.data.token}`, Accept: 'application/json' } }
+        );
+
+        const transaction = statusResponse.data;
+
+        // 4. Smart Routing based on actual card status payload
+        if (Number(transaction.status_code) === 1) {
+            // Card was successful!
+            return res.redirect(`${FRONTEND_URL}/success.html?OrderTrackingId=${OrderTrackingId}&OrderMerchantReference=${OrderMerchantReference || ''}`);
+        } else {
+            // Card failed or was declined! Send to a failure or retry view
+            return res.redirect(`${FRONTEND_URL}/failed.html?OrderTrackingId=${OrderTrackingId}&OrderMerchantReference=${OrderMerchantReference || ''}&reason=${encodeURIComponent(transaction.description || 'Declined')}`);
+        }
 
     } catch (error) {
         console.error('Error on user redirect callback:', error);
