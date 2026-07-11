@@ -949,7 +949,7 @@ const bookingSchema = new mongoose.Schema({
     totalDue: { type: Number }, // This is ROOM total due
     amountPaid: { type: Number}, // This is ROOM amount paid
     balance: { type: Number, default: 0 }, // This is ROOM balance
-    paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Partially Paid'], default: 'Pending' },
+    paymentStatus: { type: String, enum: ['Pending','Failed', 'Partially Paid'], default: 'Pending' },
 // Inside your BookingSchema definitions file:
 paymentMethod: {
     type: String,
@@ -3927,9 +3927,6 @@ app.get('/api/payments/pesapal-callback', async (req, res) => {
 // (Kept completely intact — no changes needed here!)
 app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
     try {
-        // =====================================================
-        // PESAPAL MAY SEND GET OR POST
-        // =====================================================
         const OrderTrackingId = req.query.OrderTrackingId || req.body.OrderTrackingId;
         const OrderMerchantReference = req.query.OrderMerchantReference || req.body.OrderMerchantReference;
         const OrderNotificationType = req.query.OrderNotificationType || req.body.OrderNotificationType;
@@ -3938,7 +3935,6 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
         console.log('📥 PESAPAL UNIFIED IPN RECEIVED');
         console.log('Tracking ID:', OrderTrackingId);
         console.log('Merchant Ref:', OrderMerchantReference);
-        console.log('Notification Type:', OrderNotificationType);
         console.log('====================================');
 
         if (!OrderTrackingId) {
@@ -3946,239 +3942,135 @@ app.all('/api/payments/pesapal-ipn-callback', async (req, res) => {
         }
 
         // =====================================================
-        // CASE A: QUICK SALES / POS PAYMENTS ROUTING (Prefix: QS-)
+        // CASE A: ACCOUNT FOLIO ROUTING (ACC-)
         // =====================================================
-        if (OrderMerchantReference && OrderMerchantReference.startsWith('QS-')) {
-            console.log(`🔀 [ROUTING] Quick Sale prefix detected. Processing PaymentTransaction...`);
+        if (OrderMerchantReference && OrderMerchantReference.startsWith('ACC-')) {
+            console.log(`🔀 [ROUTING] Account Folio prefix detected. Processing...`);
 
-            const quickSalePayment = await PaymentTransaction.findOne({
+            const accountPayment = await PaymentTransaction.findOne({
                 $or: [
                     { orderTrackingId: OrderTrackingId },
                     { merchantReference: OrderMerchantReference }
                 ]
             });
 
-            if (!quickSalePayment) {
-                console.log('❌ No PaymentTransaction record found for reference:', OrderMerchantReference);
-                return res.status(200).json({
-                    OrderNotificationType: OrderNotificationType || 'IPNCHANGE',
-                    OrderTrackingId: OrderTrackingId,
-                    OrderMerchantReference: OrderMerchantReference,
-                    Status: 200
-                });
+            if (!accountPayment) {
+                console.log('❌ No PaymentTransaction record found for Account reference:', OrderMerchantReference);
+                return res.status(200).json({ OrderNotificationType: OrderNotificationType || 'IPNCHANGE', OrderTrackingId, OrderMerchantReference, Status: 200 });
             }
 
-            if (quickSalePayment.status === 'Completed') {
-                console.log('⚠️ Quick Sale payment already processed previously:', OrderMerchantReference);
-                return res.status(200).json({
-                    OrderNotificationType: OrderNotificationType || 'IPNCHANGE',
-                    OrderTrackingId: OrderTrackingId,
-                    OrderMerchantReference: OrderMerchantReference,
-                    Status: 200
-                });
+            // Prevent duplicate actions if already run successfully
+            if (accountPayment.status === 'Completed') {
+                console.log('⚠️ Folio account settlement process has already executed and wrapped previously.');
+                return res.status(200).json({ OrderNotificationType: 'IPNCHANGE', OrderTrackingId, OrderMerchantReference, Status: 200 });
             }
 
-            const tenantGateway = await Gateway.findOne({ hotelId: quickSalePayment.hotelId, gatewayId: 'pesapal' });
-            if (!tenantGateway) {
-                console.log('❌ Gateway config missing for Tenant ID:', quickSalePayment.hotelId);
-                return res.status(200).json({ message: 'Gateway layout not found' });
-            }
+            // Fetch gateway credentials
+            const tenantGateway = await Gateway.findOne({ hotelId: accountPayment.hotelId, gatewayId: 'pesapal' });
+            if (!tenantGateway) return res.status(200).json({ message: 'Gateway layout not found' });
 
             const isLiveEnvironment = tenantGateway.environment === 'Live';
-            const authUrl = isLiveEnvironment
-                ? 'https://pay.pesapal.com/v3/api/Auth/RequestToken'
-                : 'https://cybqa.pesapal.com/pesapalv3/api/Auth/RequestToken';
-
-            const targetVerificationBaseUrl = isLiveEnvironment ? 'https://pay.pesapal.com/v3' : 'https://cybqa.pesapal.com/pesapalv3';
-
-            const authResponse = await axios.post(authUrl, {
+            const authResponse = await axios.post(isLiveEnvironment ? 'https://pay.pesapal.com/v3/api/Auth/RequestToken' : 'https://cybqa.pesapal.com/pesapalv3/api/Auth/RequestToken', {
                 consumer_key: tenantGateway.consumerKey,
                 consumer_secret: tenantGateway.consumerSecret
             });
-            const token = authResponse.data.token;
-
+            
+            const targetVerificationBaseUrl = isLiveEnvironment ? 'https://pay.pesapal.com/v3' : 'https://cybqa.pesapal.com/pesapalv3';
             const statusResponse = await axios.get(
                 `${targetVerificationBaseUrl}/api/Transactions/GetTransactionStatus?orderTrackingId=${OrderTrackingId}`,
-                { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } }
+                { headers: { Authorization: `Bearer ${authResponse.data.token}`, Accept: 'application/json' } }
             );
 
             const transaction = statusResponse.data;
+            console.log('PESAPAL STATUS RESPONSE (ACC):', JSON.stringify(transaction, null, 2));
+
+            // ❌ HANDLE FAILURE CARDS / DECLINED PAYMENTS HERE
             if (Number(transaction.status_code) !== 1) {
-                console.log(`❌ Quick Sale payment incomplete on gateway. Status: ${transaction.status_code}`);
-                return res.status(200).json({
-                    OrderNotificationType: OrderNotificationType || 'IPNCHANGE',
-                    OrderTrackingId: OrderTrackingId,
-                    OrderMerchantReference: OrderMerchantReference,
-                    Status: 200
-                });
+                console.log(`❌ Account payment DECLINED on gateway. Status Code: ${transaction.status_code}`);
+                
+                // Explicitly record the failure into your transaction ledger rows
+                accountPayment.status = 'Failed';
+                accountPayment.metadata = { ...accountPayment.metadata, errorDescription: transaction.description || 'Declined' };
+                await accountPayment.save();
+
+                await addAuditLog(
+                    'Pesapal Account Folio Payment Failed',
+                    'Pesapal Gateway POS',
+                    accountPayment.hotelId,
+                    { trackingId: OrderTrackingId, merchantReference: OrderMerchantReference, reason: transaction.description }
+                );
+
+                // Always return HTTP 200 to Pesapal acknowledge receipt of IPN
+                return res.status(200).json({ OrderNotificationType: OrderNotificationType || 'IPNCHANGE', OrderTrackingId, OrderMerchantReference, Status: 200 });
             }
 
-            quickSalePayment.status = 'Completed';
-            quickSalePayment.completedAt = new Date();
-            if (transaction.payment_method) {
-                quickSalePayment.paymentMethod = transaction.payment_method;
+            // ======= SUCCESS PATH FOR ACCOUNT FOLIOS =======
+            let targetAccountId = accountPayment.metadata?.accountId;
+            if (!targetAccountId && OrderMerchantReference) {
+                const parts = OrderMerchantReference.split('-');
+                if (parts.length >= 2) targetAccountId = parts[1];
             }
 
-            await quickSalePayment.save();
+            const account = await ClientAccount.findOne({ _id: targetAccountId, hotelId: accountPayment.hotelId });
+            if (!account) {
+                console.log(`❌ Target ClientAccount not found for ID: ${targetAccountId}`);
+                return res.status(200).json({ OrderNotificationType: OrderNotificationType || 'IPNCHANGE', OrderTrackingId, OrderMerchantReference, Status: 200 });
+            }
+
+            const currentCharges = account.charges || [];
+            const consolidatedChargesMap = {};
+
+            currentCharges.forEach(charge => {
+                const key = `${charge.description}-${charge.type || 'Other'}`;
+                if (consolidatedChargesMap[key]) {
+                    consolidatedChargesMap[key].amount += charge.amount;
+                } else {
+                    consolidatedChargesMap[key] = { description: charge.description, type: charge.type || 'Other', amount: charge.amount };
+                }
+            });
+
+            const resolvedPaymentMethodName = transaction.payment_method || 'Pesapal';
+            const walkInCharges = Object.values(consolidatedChargesMap).map((charge, index) => ({
+                hotelId: accountPayment.hotelId,
+                guestName: account.guestName,
+                type: charge.type,
+                description: charge.description,
+                amount: charge.amount,
+                receiptId: `POS-${accountPayment.hotelId.toString().slice(-3)}-${Date.now()}-${Math.floor(Math.random() * 1000)}-${index}`,
+                paymentMethod: resolvedPaymentMethodName,
+                isPaid: true,
+                date: new Date()
+            }));
+
+            if (walkInCharges.length > 0) {
+                await WalkInCharge.insertMany(walkInCharges);
+            }
+
+            account.isClosed = true;
+            account.settledAt = new Date();
+            account.settledByMethod = resolvedPaymentMethodName;
+            account.finalAmountPaid = account.totalCharges || currentCharges.reduce((sum, c) => sum + (c.amount || 0), 0);
+            await account.save();
+
+            accountPayment.status = 'Completed';
+            accountPayment.completedAt = new Date();
+            accountPayment.paymentMethod = resolvedPaymentMethodName;
+            await accountPayment.save();
 
             await addAuditLog(
-                'Pesapal Quick Sale Confirmed',
+                'Pesapal Account Folio Settled',
                 'Pesapal Gateway POS',
-                quickSalePayment.hotelId,
-                { 
-                    transactionId: quickSalePayment._id, 
-                    trackingId: OrderTrackingId, 
-                    amount: quickSalePayment.amount,
-                    outlet: quickSalePayment.outlet
-                }
+                accountPayment.hotelId,
+                { accountId: targetAccountId, trackingId: OrderTrackingId, amount: account.finalAmountPaid }
             );
 
-            console.log('✅ PaymentTransaction updated securely:', OrderMerchantReference);
-
-            return res.status(200).json({
-                OrderNotificationType: 'IPNCHANGE',
-                OrderTrackingId: OrderTrackingId,
-                OrderMerchantReference: OrderMerchantReference,
-                Status: 200
-            });
+            console.log('✅ Folio Account Settled cleanly via IPN:', OrderMerchantReference);
+            return res.status(200).json({ OrderNotificationType: 'IPNCHANGE', OrderTrackingId, OrderMerchantReference, Status: 200 });
         }
 
-        // =====================================================
-        // CASE B: CLIENT FOLIO ACCOUNT SETTLEMENT (Prefix: ACC-)
-        // =====================================================
-        // =====================================================
-// CASE B: CLIENT FOLIO ACCOUNT SETTLEMENT (Prefix: ACC-)
-// =====================================================
-if (OrderMerchantReference && OrderMerchantReference.startsWith('ACC-')) {
-    console.log(`🔀 [ROUTING] Account Folio prefix detected. Processing Settlement...`);
-
-    // 1. Locate the master transaction instance log
-    const accountPayment = await PaymentTransaction.findOne({
-        $or: [
-            { orderTrackingId: OrderTrackingId },
-            { merchantReference: OrderMerchantReference }
-        ]
-    });
-
-    if (!accountPayment) {
-        console.log('❌ No PaymentTransaction record found for Account reference:', OrderMerchantReference);
-        return res.status(200).json({ OrderNotificationType: OrderNotificationType || 'IPNCHANGE', OrderTrackingId, OrderMerchantReference, Status: 200 });
-    }
-
-    // 💡 FIX: Extract the accountId directly from the Merchant Reference string
-    // Format is: ACC-[accountId]-[timestamp]
-    let targetAccountId = accountPayment.metadata?.accountId;
-    
-    if (!targetAccountId && OrderMerchantReference) {
-        const parts = OrderMerchantReference.split('-');
-        if (parts.length >= 2) {
-            targetAccountId = parts[1]; // Grabs the middle segment containing the exact MongoDB Object ID
-            console.log(`ℹ️ Extracted targetAccountId from Merchant Reference string: ${targetAccountId}`);
-        }
-    }
-
-    if (!targetAccountId) {
-        console.log('❌ Fatal: Could not parse target AccountId from reference context or metadata.');
-        return res.status(200).json({ OrderNotificationType: OrderNotificationType || 'IPNCHANGE', OrderTrackingId, OrderMerchantReference, Status: 200 });
-    }
-
-    // Fetch the client account folio
-    const account = await ClientAccount.findOne({ _id: targetAccountId, hotelId: accountPayment.hotelId });
-    if (!account) {
-        console.log(`❌ Target ClientAccount not found for ID: ${targetAccountId} with hotelId: ${accountPayment.hotelId}`);
-        return res.status(200).json({ OrderNotificationType: OrderNotificationType || 'IPNCHANGE', OrderTrackingId, OrderMerchantReference, Status: 200 });
-    }
-
-    // Prevent duplicate folio settlement actions if already run
-    if (account.isClosed || accountPayment.status === 'Completed') {
-        console.log('⚠️ Folio account settlement process has already executed and wrapped previously.');
-        return res.status(200).json({ OrderNotificationType: 'IPNCHANGE', OrderTrackingId, OrderMerchantReference, Status: 200 });
-    }
-
-    // Authenticate and verify status code directly with Pesapal Ecosystem
-    const tenantGateway = await Gateway.findOne({ hotelId: accountPayment.hotelId, gatewayId: 'pesapal' });
-    if (!tenantGateway) return res.status(200).json({ message: 'Gateway layout not found' });
-
-    const isLiveEnvironment = tenantGateway.environment === 'Live';
-    const authResponse = await axios.post(isLiveEnvironment ? 'https://pay.pesapal.com/v3/api/Auth/RequestToken' : 'https://cybqa.pesapal.com/pesapalv3/api/Auth/RequestToken', {
-        consumer_key: tenantGateway.consumerKey,
-        consumer_secret: tenantGateway.consumerSecret
-    });
-    
-    const targetVerificationBaseUrl = isLiveEnvironment ? 'https://pay.pesapal.com/v3' : 'https://cybqa.pesapal.com/pesapalv3';
-    const statusResponse = await axios.get(
-        `${targetVerificationBaseUrl}/api/Transactions/GetTransactionStatus?orderTrackingId=${OrderTrackingId}`,
-        { headers: { Authorization: `Bearer ${authResponse.data.token}`, Accept: 'application/json' } }
-    );
-
-    const transaction = statusResponse.data;
-    if (Number(transaction.status_code) !== 1) {
-        console.log(`❌ Account payment unverified on core gateway structure. Status: ${transaction.status_code}`);
-        return res.status(200).json({ OrderNotificationType: OrderNotificationType || 'IPNCHANGE', OrderTrackingId, OrderMerchantReference, Status: 200 });
-    }
-
-    // 2. CONSOLIDATION LOGIC
-    const currentCharges = account.charges || [];
-    const consolidatedChargesMap = {};
-
-    currentCharges.forEach(charge => {
-        const key = `${charge.description}-${charge.type || 'Other'}`;
-        if (consolidatedChargesMap[key]) {
-            consolidatedChargesMap[key].amount += charge.amount;
-        } else {
-            consolidatedChargesMap[key] = {
-                description: charge.description,
-                type: charge.type || 'Other',
-                amount: charge.amount
-            };
-        }
-    });
-
-    const resolvedPaymentMethodName = transaction.payment_method || 'Pesapal';
-
-    const walkInCharges = Object.values(consolidatedChargesMap).map((charge, index) => ({
-        hotelId: accountPayment.hotelId,
-        guestName: account.guestName,
-        type: charge.type,
-        description: charge.description,
-        amount: charge.amount,
-        receiptId: `POS-${accountPayment.hotelId.toString().slice(-3)}-${Date.now()}-${Math.floor(Math.random() * 1000)}-${index}`,
-        paymentMethod: resolvedPaymentMethodName,
-        isPaid: true,
-        date: new Date()
-    }));
-
-    if (walkInCharges.length > 0) {
-        await WalkInCharge.insertMany(walkInCharges);
-    }
-
-    // 3. Update the Folio to Closed
-    account.isClosed = true;
-    account.settledAt = new Date();
-    account.settledByMethod = resolvedPaymentMethodName;
-    account.finalAmountPaid = account.totalCharges || currentCharges.reduce((sum, c) => sum + (c.amount || 0), 0);
-    await account.save();
-
-    // Mark transaction log row complete
-    accountPayment.status = 'Completed';
-    accountPayment.completedAt = new Date();
-    accountPayment.paymentMethod = resolvedPaymentMethodName;
-    await accountPayment.save();
-
-    // Log clean audit data footprint trace
-    await addAuditLog(
-        'Pesapal Account Folio Settled',
-        'Pesapal Gateway POS',
-        accountPayment.hotelId,
-        { accountId: targetAccountId, trackingId: OrderTrackingId, amount: account.finalAmountPaid }
-    );
-
-    console.log('✅ Folio Account Settled and Closed cleanly via IPN String Parsing:', OrderMerchantReference);
-    return res.status(200).json({ OrderNotificationType: 'IPNCHANGE', OrderTrackingId, OrderMerchantReference, Status: 200 });
-}
 
         // =====================================================
-        // CASE C: STANDARD ROOM BOOKING ROUTING (Default / BKG-)
+        // CASE B: STANDARD ROOM BOOKING ROUTING (Default / BKG-)
         // =====================================================
         const booking = await Booking.findOne({
             $or: [
@@ -4189,22 +4081,12 @@ if (OrderMerchantReference && OrderMerchantReference.startsWith('ACC-')) {
 
         if (!booking) {
             console.log('❌ No room booking found for tracking ID:', OrderTrackingId);
-            return res.status(200).json({
-                OrderNotificationType: OrderNotificationType || 'IPNCHANGE',
-                OrderTrackingId: OrderTrackingId,
-                OrderMerchantReference: OrderMerchantReference || '',
-                Status: 200
-            });
+            return res.status(200).json({ OrderNotificationType: OrderNotificationType || 'IPNCHANGE', OrderTrackingId, OrderMerchantReference, Status: 200 });
         }
 
         if (booking.paymentStatus === 'Paid' && booking.balance === 0) {
             console.log('⚠️ Room booking payment already processed:', OrderTrackingId);
-            return res.status(200).json({
-                OrderNotificationType: OrderNotificationType || 'IPNCHANGE',
-                OrderTrackingId: OrderTrackingId,
-                OrderMerchantReference: OrderMerchantReference || '',
-                Status: 200
-            });
+            return res.status(200).json({ OrderNotificationType: OrderNotificationType || 'IPNCHANGE', OrderTrackingId, OrderMerchantReference, Status: 200 });
         }
 
         const { token } = await getPesapalAccessToken(booking.hotelId);
@@ -4219,18 +4101,27 @@ if (OrderMerchantReference && OrderMerchantReference.startsWith('ACC-')) {
         );
 
         const transaction = statusResponse.data;
-        console.log('PESAPAL STATUS RESPONSE:', JSON.stringify(transaction, null, 2));
+        console.log('PESAPAL STATUS RESPONSE (BKG):', JSON.stringify(transaction, null, 2));
 
+        // ❌ HANDLE FAILURE CARDS / DECLINED PAYMENTS HERE
         if (Number(transaction.status_code) !== 1) {
-            console.log(`❌ Room booking payment incomplete. Status: ${transaction.status_code}`);
-            return res.status(200).json({
-                OrderNotificationType: OrderNotificationType || 'IPNCHANGE',
-                OrderTrackingId: OrderTrackingId,
-                OrderMerchantReference: OrderMerchantReference || '',
-                Status: 200
-            });
+            console.log(`❌ Room booking payment FAILED on gateway. Status Code: ${transaction.status_code}`);
+            
+            // Mark the specific booking payment attempt status as Failed
+            booking.paymentStatus = 'Failed';
+            await booking.save();
+
+            await addAuditLog(
+                'Pesapal Room Booking Payment Failed',
+                'Pesapal Gateway Room Booking',
+                booking.hotelId,
+                { bookingId: booking._id, trackingId: OrderTrackingId, reason: transaction.description || 'Declined' }
+            );
+
+            return res.status(200).json({ OrderNotificationType: OrderNotificationType || 'IPNCHANGE', OrderTrackingId, OrderMerchantReference, Status: 200 });
         }
 
+        // ======= SUCCESS PATH FOR ROOM BOOKINGS =======
         const paymentAmount = Number(transaction.amount) || 0;
         const totalDue = Number(booking.totalDue) || 0;
         const currentPaid = Number(booking.amountPaid) || 0;
@@ -4252,28 +4143,15 @@ if (OrderMerchantReference && OrderMerchantReference.startsWith('ACC-')) {
             'Pesapal Payment Confirmed',
             'Pesapal Gateway Room Booking',
             booking.hotelId,
-            {
-                bookingId: booking._id,
-                trackingId: OrderTrackingId,
-                amount: paymentAmount,
-                paymentStatus: booking.paymentStatus
-            }
+            { bookingId: booking._id, trackingId: OrderTrackingId, amount: paymentAmount, paymentStatus: booking.paymentStatus }
         );
 
         console.log('✅ Room booking payment successfully recorded:', OrderTrackingId);
-
-        return res.status(200).json({
-            OrderNotificationType: 'IPNCHANGE',
-            OrderTrackingId: OrderTrackingId,
-            OrderMerchantReference: OrderMerchantReference || '',
-            Status: 200
-        });
+        return res.status(200).json({ OrderNotificationType: 'IPNCHANGE', OrderTrackingId, OrderMerchantReference, Status: 200 });
 
     } catch (error) {
         console.error('💥 PESAPAL IPN UNIFIED RUNTIME ERROR:', error.response?.data || error.message);
-        return res.status(200).json({
-            message: 'IPN received but processing failed internal multi-tenant runtime.'
-        });
+        return res.status(200).json({ message: 'IPN received but processing failed internal multi-tenant runtime.' });
     }
 });
 
