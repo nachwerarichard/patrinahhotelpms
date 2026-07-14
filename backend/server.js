@@ -7448,10 +7448,11 @@ const CREDENTIALS = {
         clientId: process.env.XERO_CLIENT_ID,
         clientSecret: process.env.XERO_CLIENT_SECRET,
         authUri: 'https://login.xero.com/identity/connect/authorize',
-        tokenUri: 'https://identity.xero.com/connect/token',
-        redirectUri: (process.env.APP_URL || 'https://patrinahhotelpms.onrender.com') + '/api/integrations/xero/callback',
-        scope: 'offline_access accounting.settings accounting.transactions'
+        redirectUri: 'https://patrinahhotelpms.onrender.com/api/integrations/xero/callback',
+        // Update this line exactly as shown below (space-separated, no commas):
+        scope: 'openid profile email offline_access accounting.settings accounting.contacts accounting.invoices accounting.payments'
     },
+    
     zoho: {
         clientId: process.env.ZOHO_CLIENT_ID,
         clientSecret: process.env.ZOHO_CLIENT_SECRET,
