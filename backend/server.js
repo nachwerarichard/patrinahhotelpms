@@ -84,17 +84,6 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve static frontend assets (HTML, CSS, JS) from your public directory
 
-// Fallback wild card handler:
-// If a frontend route falls out of standard routes, do not let it block API calls
-app.get('*', (req, res) => {
-  // If the user made a broken API call, return a JSON error instead of your frontend index.html
-  if (req.originalUrl.startsWith('/api/')) {
-    return res.status(404).json({ error: 'API endpoint not found' });
-  }
-  
-  // Otherwise, serve your main single-page application entry file
-});
-
 const userSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' },
     username: { type: String, required: true }, // Removed unique: true
