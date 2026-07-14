@@ -1075,7 +1075,7 @@ function applyRoleAccess(role) {
         'nav-sales', 'nav-payments','nav-posinventory', 'nav-kds', 
          'nav-expenses', 'nav-cash', , 'nav-checklistform', 'nav-checklisttable','nav-missingitems' ,
         'nav-posreports', 'nav-salereport', 'nav-expensereport','nav-housekeepingreports', 
-        'nav-staff', 'nav-reports', 'nav-calendar', 'nav-audit-logs'
+        'nav-staff', 'nav-reports', 'nav-calendar','nav-channelmanager','nav-integration','nav-audit-logs'
     ];
 
     // Hide everything first
@@ -4640,9 +4640,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const navExpense = document.getElementById('nav-expenses');
         const navPayments = document.getElementById('nav-payments');
       const navSale = document.getElementById('nav-sales');
+            const navChannelManager = document.getElementById('nav-channelmanager');
       const navPOSreport = document.getElementById('nav-posreports');
         const navBarReport = document.getElementById('nav-salereport');
         const navExpReport = document.getElementById('nav-expensereport');
+
+        if (navChannelManager) {
+            navChannelManager.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                showSection('channelmanager');
+            });
+        }
 
 if (navPayments) {
         navPayments.addEventListener('click', (e) => {
