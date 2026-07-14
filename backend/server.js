@@ -83,7 +83,6 @@ app.use(express.urlencoded({ extended: true }));
 // ==========================================
 
 // Serve static frontend assets (HTML, CSS, JS) from your public directory
-app.use(express.static(path.join(__dirname, 'frontend')));
 
 // Fallback wild card handler:
 // If a frontend route falls out of standard routes, do not let it block API calls
@@ -94,7 +93,6 @@ app.get('*', (req, res) => {
   }
   
   // Otherwise, serve your main single-page application entry file
-  res.sendFile(path.join(__dirname, 'frontend', 'home12.html')); 
 });
 
 const userSchema = new mongoose.Schema({
