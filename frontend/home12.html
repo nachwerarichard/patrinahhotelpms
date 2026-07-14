@@ -526,6 +526,7 @@ body {
             <ul id="booking-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
                 <li id="nav-booking"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Booking Management</a></li>
                 <li id="nav-calendar"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Calendar</a></li>
+                <li id="nav-channelmanager"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Channel Manager</a></li>
                 <li id="nav-inventory"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Inventory & Pricing</a></li>
             </ul>
         </li>
@@ -2584,6 +2585,62 @@ body {
         </div>
 
     </div>
+</section>
+
+<section id="channelmanager" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+    <div class="flex justify-between items-center mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-blue-600">Channel Manager (iCal Sync)</h2>
+            <p class="text-sm text-gray-500">Synchronize your hotel rooms directly with Airbnb, Booking.com, and VRBO.</p>
+        </div>
+        <button id="btn-sync-ical" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded flex items-center transition">
+            <span id="ical-sync-spinner" class="hidden mr-2 animate-spin">🔄</span>
+            Sync All Channels Now
+        </button>
+    </div>
+
+    <!-- Active Rooms Mapping Grid -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+            <thead>
+                <tr class="bg-gray-100 text-gray-600 uppercase text-xs leading-normal">
+                    <th class="py-3 px-6 text-left">Room Number</th>
+                    <th class="py-3 px-6 text-left">Export Feed URL (Give to OTAs)</th>
+                    <th class="py-3 px-6 text-left">Import Feeds (From OTAs)</th>
+                    <th class="py-3 px-6 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="channel-manager-tbody" class="text-gray-600 text-sm font-light">
+                <!-- Dynamically Populated by JS -->
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- Add Import Channel Feed Modal -->
+<div id="modal-add-ical" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+        <h3 class="text-lg font-bold mb-4 text-gray-800">Add New OTA iCal Import</h3>
+        <input type="hidden" id="modal-ical-room-id">
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">OTA Source</label>
+            <select id="modal-ical-source" class="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="Booking.com">Booking.com</option>
+                <option value="Expedia">Expedia</option>
+                <option value="Trip">Trip.com</option>
+                <option value="Airbnb">Airbnb</option>
+            </select>
+        </div>
+        <div class="mb-6">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Calendar Feed URL (.ics)</label>
+            <input type="url" id="modal-ical-url" placeholder="https://booking.com/ical/..." class="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div class="flex justify-end gap-2">
+            <button onclick="closeIcalModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded">Cancel</button>
+            <button onclick="submitIcalImport()" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded font-bold">Save Link</button>
+        </div>
+    </div>
+</div>
 </section>
 
 <!-- ================= SALES REPORT SECTION ================= -->
@@ -5887,6 +5944,128 @@ if (!response) {
         btn.classList.remove('opacity-50', 'cursor-not-allowed');
     }
 });
+</script>
+<script>
+    const CHANNEL_API_BASE = 'https://patrinahhotelpms.onrender.com/ical';
+    // Load the Channel Manager UI
+async function loadChannelManager() {
+    try {
+        // 1. Fetch Rooms to retrieve their configurations
+        const response = await authenticatedFetch(`${API_BASE_URL}/rooms`, { method: 'GET' });
+        if (!response) return;
+        const rooms = await response.json();
+
+        const tbody = document.getElementById('channel-manager-tbody');
+        tbody.innerHTML = '';
+
+        rooms.forEach(room => {
+            const exportUrl = `${CHANNEL_API_BASE}/export/${room._id}/${room.icalExportToken || 'global'}`;
+            
+            // Format existing import feeds
+            let importsHtml = '';
+            if (room.icalImportUrls && room.icalImportUrls.length > 0) {
+                importsHtml = room.icalImportUrls.map(link => `
+                    <div class="flex justify-between items-center bg-gray-50 border p-1.5 rounded mb-1 text-xs">
+                        <span><strong>${link.source}:</strong> <code class="text-gray-500 truncate max-w-[150px] inline-block align-middle">${link.url}</code></span>
+                        <button onclick="deleteImportLink('${room._id}', '${link._id}')" class="text-red-500 hover:text-red-700 ml-2 font-bold">×</button>
+                    </div>
+                `).join('');
+            } else {
+                importsHtml = '<span class="text-gray-400 text-xs italic">No OTA import feeds connected</span>';
+            }
+
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-gray-200 hover:bg-gray-50';
+            tr.innerHTML = `
+                <td class="py-3 px-6 text-left font-bold text-gray-800">Room ${room.number}</td>
+                <td class="py-3 px-6 text-left">
+                    <div class="flex items-center gap-1.5">
+                        <input type="text" readonly value="${exportUrl}" class="bg-gray-100 border border-gray-200 text-xs p-1.5 rounded w-full select-all font-mono">
+                        <button onclick="navigator.clipboard.writeText('${exportUrl}'); alert('Copied to clipboard!')" class="bg-gray-200 hover:bg-gray-300 text-xs px-2 py-1.5 rounded">Copy</button>
+                    </div>
+                </td>
+                <td class="py-3 px-6 text-left">${importsHtml}</td>
+                <td class="py-3 px-6 text-center">
+                    <button onclick="openIcalModal('${room._id}')" class="bg-blue-100 text-blue-700 hover:bg-blue-200 font-bold px-3 py-1.5 rounded text-xs">Add OTA Feed</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (err) {
+        console.error('Error rendering channel manager:', err);
+    }
+}
+
+// Global modal triggers
+function openIcalModal(roomId) {
+    document.getElementById('modal-ical-room-id').value = roomId;
+    document.getElementById('modal-ical-url').value = '';
+    document.getElementById('modal-add-ical').classList.remove('hidden');
+}
+
+function closeIcalModal() {
+    document.getElementById('modal-add-ical').classList.add('hidden');
+}
+
+async function submitIcalImport() {
+    const roomId = document.getElementById('modal-ical-room-id').value;
+    const source = document.getElementById('modal-ical-source').value;
+    const url = document.getElementById('modal-ical-url').value;
+
+    if (!url) return alert('Please enter a valid URL.');
+
+    try {
+        const response = await authenticatedFetch(`${CHANNEL_API_BASE}/import-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ roomId, source, url })
+        });
+
+        if (response && response.ok) {
+            closeIcalModal();
+            loadChannelManager();
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function deleteImportLink(roomId, linkId) {
+    if (!confirm('Are you sure you want to delete this channel import feed?')) return;
+    try {
+        const response = await authenticatedFetch(`${CHANNEL_API_BASE}/import-link/${roomId}/${linkId}`, {
+            method: 'DELETE'
+        });
+        if (response && response.ok) loadChannelManager();
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+// Global Channel Ingestion Trigger Button Action
+document.getElementById('btn-sync-ical').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-sync-ical');
+    const spinner = document.getElementById('ical-sync-spinner');
+
+    btn.disabled = true;
+    spinner.classList.remove('hidden');
+
+    try {
+        const response = await authenticatedFetch(`${CHANNEL_API_BASE}/sync-imports`, { method: 'POST' });
+        if (response && response.ok) {
+            const data = await response.json();
+            alert(data.message);
+        }
+    } catch (err) {
+        console.error(err);
+    } finally {
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+    }
+});
+
+            loadChannelManager();
+
 </script>
 </body>
 </html>
