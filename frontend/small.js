@@ -8253,7 +8253,6 @@ async function handleCashFormSubmit(event) {
         if (success) {
             document.getElementById('cash-journal-form').reset(); // Clear form
             fetchCashJournal(); // Refresh table
-            
             // If you use a modal, uncomment this line:
             // toggleCashModal(false); 
         }
@@ -8282,6 +8281,7 @@ async function createCashEntry(cashData) {
         }
         
         showMessage('Cash entry recorded! 💰');
+        document.getElementById('cash-journal-form').style.display='none';
         return true;
     } catch (error) {
         showMessage(error.message, true);
