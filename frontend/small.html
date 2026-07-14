@@ -5762,22 +5762,32 @@ window.addEventListener('click', function(event) {
         }
     }
 
-    async function checkIntegrationStatus(provider) {
-        try {
-            // Replaced fetch with authenticatedFetch
-            const res = await authenticatedFetch(`${API_BASE}/${provider}/status`);
-            if (!res) return;
-            const data = await res.json();
-            
-            updateCardState(provider, data.connected, data.config);
-            if (data.connected && data.accounts) {
-                populateAccounts(provider, data.accounts, data.config?.targetAccount);
+   async function checkIntegrationStatus(provider) {
+    try {
+        const response = await fetch(`/api/integrations/${provider}/status`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-hotel-id': localStorage.getItem('hotelId') || 'global', // Adjust based on how you store hotel context
+                'Authorization': `Bearer ${localStorage.getItem('token')}` // Adjust based on your auth system
             }
-        } catch (err) {
-            console.error(`Error loading state for ${provider}:`, err);
-        }
-    }
+        });
 
+        // 1. Verify if the network request actually succeeded (not a 404, 500, etc.)
+        if (!response.ok) {
+            console.warn(`Server responded with status ${response.status} for ${provider}`);
+            return { connected: false, error: `Server error: ${response.status}` };
+        }
+
+        // 2. Safely parse the JSON payload
+        const data = await response.json();
+        return data;
+
+    } catch (error) {
+        console.error(`Error loading state for ${provider}:`, error);
+        return { connected: false, error: error.message };
+    }
+}
     function updateCardState(provider, isConnected, config = null) {
         const card = document.querySelector(`[data-provider="${provider}"]`);
         if (!card) return;

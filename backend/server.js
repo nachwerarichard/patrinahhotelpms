@@ -30,21 +30,14 @@ const storage = new CloudinaryStorage({
 const upload = multer({ storage: storage });
 //CLOUDINARY_URL=cloudinary://986177637794957:**********@dckvyguun
 //CLOUDINARY_URL=cloudinary://478483388418876:**********@dreiyg73q
+
+// ... (Your other imports like mongoose, dotenv, etc.)
+
 const app = express();
 
-
-// ... (other imports like mongoose, dotenv if you use it, etc.)
-
-// Middleware setup
-// 2. Configure CORS middleware - IMPORTANT: place this BEFORE your routes
-
-// 1. npm install cors (run this in your backend terminal)
-
-// 2. Add this BEFORE your routes
-// Configure CORS
-
-// This is the "Open Door" policy
-// 1. Keep your CORS setup exactly as it is
+// ==========================================
+// 1. CORS MIDDLEWARE (Always placed first!)
+// ==========================================
 app.use(cors({
   origin: [
     'https://elegant-pasca-cea136.netlify.app'
@@ -59,18 +52,53 @@ app.use(cors({
   credentials: true
 }));
 
-// 2. MODIFIED: Update this line to catch the raw request body buffer for Stripe
+// ==========================================
+// 2. PARSING MIDDLEWARE & WEBHOOK PROTECTION
+// ==========================================
+
+// Parse JSON bodies, but preserve raw buffer specifically for the Stripe webhook
 app.use(express.json({
   verify: (req, res, buf) => {
     if (req.originalUrl.startsWith('/api/payments/stripe-webhook')) {
-      req.rawBody = buf; // This preserves the exact, unparsed string for Stripe's verification hash
+      req.rawBody = buf; // Preserves the exact, unparsed string for Stripe's verification hash
     }
   }
 }));
 
-// 3. Keep any other parsing middleware below it
-app.use(express.urlencoded({ extended: true })); // This should also be before your routes to parse JSON bodies
- 
+app.use(express.urlencoded({ extended: true }));
+
+// ==========================================
+// 3. API ROUTES & ROUTER IMPORT
+// ==========================================
+
+// Import your new multi-tenant API integrations router
+const integrationRouter = require('./routes/integrations'); 
+
+// ... Your existing route mounts (e.g., app.use('/api/payments', paymentsRouter))
+
+// Mount the integrations router securely under the correct prefix
+app.use('/api/integrations', integrationRouter);
+
+
+// ==========================================
+// 4. STATIC FILE SERVING & FALLBACK (Monolith Rules)
+// ==========================================
+
+// Serve static frontend assets (HTML, CSS, JS) from your public directory
+app.use(express.static(path.join(__dirname, 'frontend')));
+
+// Fallback wild card handler:
+// If a frontend route falls out of standard routes, do not let it block API calls
+app.get('*', (req, res) => {
+  // If the user made a broken API call, return a JSON error instead of your frontend index.html
+  if (req.originalUrl.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API endpoint not found' });
+  }
+  
+  // Otherwise, serve your main single-page application entry file
+  res.sendFile(path.join(__dirname, 'frontend', 'home12.html')); 
+});
+
 const userSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' },
     username: { type: String, required: true }, // Removed unique: true
