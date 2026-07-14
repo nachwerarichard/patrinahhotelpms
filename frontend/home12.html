@@ -5697,7 +5697,7 @@ window.addEventListener('click', function(event) {
             // NOTE: Keep standard window.open here since it's a browser popup redirecting to OAuth screens.
             // We append the token to the URL so the server can authorize the initial handshake if required.
             const token = localStorage.getItem('token');
-            const authUrl = `${API_BASE}/${provider}/auth?token=${encodeURIComponent(token)}`;
+            const authUrl = `${API_BASES}/${provider}/auth?token=${encodeURIComponent(token)}`;
             
             const popup = window.open(
                 authUrl,
