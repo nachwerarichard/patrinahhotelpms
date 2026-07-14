@@ -5856,7 +5856,7 @@ document.getElementById('btn-sync-all').addEventListener('click', async () => {
     btn.classList.add('opacity-50', 'cursor-not-allowed');
 
     try {
-        const response = await authenticatedFetch('/api/integrations/sync-all', {
+        const response = await authenticatedFetch('${API_BASE}/sync-all', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
