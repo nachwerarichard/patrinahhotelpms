@@ -4633,7 +4633,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const navCalendar = document.getElementById('nav-calendar');
     const navAuditLogs = document.getElementById('nav-audit-logs');
     const navPaymentGateway = document.getElementById('nav-paymentgateway');
-    const navChannelManager = document.getElementById('nav-channel-manager');
     const navPOSInventory = document.getElementById('nav-posinventory');
       const navCash = document.getElementById('nav-cash');
       const navInventory = document.getElementById('nav-inventory');
@@ -4824,13 +4823,7 @@ if (navPayments) {
     }
 
     
-
-    if (navChannelManager) {
-        navChannelManager.addEventListener('click', (e) => {
-            e.preventDefault();
-           showSection('channel-manager');
-       });
-    }});
+});
     
     /*function showMessage(title, content) {
     document.getElementById('messageBoxTitle').textContent = title;
