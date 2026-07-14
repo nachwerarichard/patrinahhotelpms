@@ -72,12 +72,10 @@ app.use(express.urlencoded({ extended: true }));
 // ==========================================
 
 // Import your new multi-tenant API integrations router
-const integrationRouter = require('./routes/integrations'); 
 
 // ... Your existing route mounts (e.g., app.use('/api/payments', paymentsRouter))
 
 // Mount the integrations router securely under the correct prefix
-app.use('/api/integrations', integrationRouter);
 
 
 // ==========================================
@@ -7423,6 +7421,11 @@ app.get('/api/analytics/staff-performance', auth, async (req, res) => {
 // Assuming standard router mounting. Substitute with "app" if necessary.
 
 // Ensure your Schemas & Models are defined
+// =========================================================================
+// INTEGRATIONS PORTION (QUICKBOOKS, XERO, ZOHO MULTI-TENANT CONFIG)
+// =========================================================================
+
+// 1. Integration Database Schema & Model
 const IntegrationSchema = new mongoose.Schema({
     tenantId: { type: String, required: true },
     provider: { type: String, required: true, enum: ['quickbooks', 'xero', 'zoho'] },
@@ -7441,14 +7444,14 @@ IntegrationSchema.index({ tenantId: 1, provider: 1 }, { unique: true });
 
 const Integration = mongoose.models.Integration || mongoose.model('Integration', IntegrationSchema);
 
-// Client configurations derived from your provider developer portals
+// 2. Client credentials for developers portals
 const CREDENTIALS = {
     quickbooks: {
         clientId: process.env.QBO_CLIENT_ID,
         clientSecret: process.env.QBO_CLIENT_SECRET,
         authUri: 'https://appcenter.intuit.com/connect/oauth2',
         tokenUri: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
-        redirectUri: process.env.APP_URL + '/api/integrations/quickbooks/callback',
+        redirectUri: (process.env.APP_URL || 'https://patrinahhotelpms.onrender.com') + '/api/integrations/quickbooks/callback',
         scope: 'com.intuit.quickbooks.accounting'
     },
     xero: {
@@ -7456,7 +7459,7 @@ const CREDENTIALS = {
         clientSecret: process.env.XERO_CLIENT_SECRET,
         authUri: 'https://login.xero.com/identity/connect/authorize',
         tokenUri: 'https://identity.xero.com/connect/token',
-        redirectUri: process.env.APP_URL + '/api/integrations/xero/callback',
+        redirectUri: (process.env.APP_URL || 'https://patrinahhotelpms.onrender.com') + '/api/integrations/xero/callback',
         scope: 'offline_access accounting.settings accounting.transactions'
     },
     zoho: {
@@ -7464,16 +7467,12 @@ const CREDENTIALS = {
         clientSecret: process.env.ZOHO_CLIENT_SECRET,
         authUri: 'https://accounts.zoho.com/oauth/v2/auth',
         tokenUri: 'https://accounts.zoho.com/oauth/v2/token',
-        redirectUri: process.env.APP_URL + '/api/integrations/zoho/callback',
+        redirectUri: (process.env.APP_URL || 'https://patrinahhotelpms.onrender.com') + '/api/integrations/zoho/callback',
         scope: '組織.会計,ZohoBooks.fullaccess.all'
     }
 };
 
-/**
- * Multi-tenant helper:
- * Extracts the hotelId mapped from the custom auth middleware.
- * Standardizes to 'global' if the user context is missing.
- */
+// 3. Multi-tenant helper matching your core auth system
 const getTenantId = (req) => {
     if (req.user && req.user.hotelId) {
         return req.user.hotelId;
@@ -7481,7 +7480,7 @@ const getTenantId = (req) => {
     return req.headers['x-hotel-id'] || 'global';
 };
 
-// Helper: Refresh access token if expired
+// 4. Token refreshing mechanism
 async function getValidToken(integration) {
     if (!integration.connected) return null;
     if (integration.tokenExpiresAt && new Date() < new Date(integration.tokenExpiresAt)) {
@@ -7516,10 +7515,8 @@ async function getValidToken(integration) {
     }
 }
 
-// 1. Initiate OAuth authorization flow redirect
-// Since this is a browser redirect (initiated via window.open), standard HTTP headers aren't sent.
-// We expect a query-based token '?token=...' to authorize the initiation step and extract the tenant.
-app.get('/:provider/auth', async (req, res) => {
+// 5. OAuth initiation endpoint (no auth headers required as it uses URL token query)
+app.get('/api/integrations/:provider/auth', async (req, res) => {
     const { provider } = req.params;
     const { token } = req.query;
     const creds = CREDENTIALS[provider];
@@ -7530,11 +7527,9 @@ app.get('/:provider/auth', async (req, res) => {
     let tenantId = 'global';
 
     try {
-        // Run a lightweight inline validation of the token (Basic auth matching your middleware model)
         const credentials = Buffer.from(token, 'base64').toString('ascii');
         const [username, password] = credentials.split(':');
         
-        // Use global mongoose reference to retrieve user without circular dependencies
         const User = mongoose.model('User');
         const user = await User.findOne({ username });
         if (user && user.password === password) {
@@ -7544,16 +7539,14 @@ app.get('/:provider/auth', async (req, res) => {
         console.error('Pre-OAuth initialization token inspection failed:', err);
     }
 
-    // Embed authenticated tenant id state so it survives callback redirects securely
     const state = Buffer.from(JSON.stringify({ tenantId, provider })).toString('base64');
-    
     const authUrl = `${creds.authUri}?client_id=${creds.clientId}&response_type=code&scope=${encodeURIComponent(creds.scope)}&redirect_uri=${encodeURIComponent(creds.redirectUri)}&state=${state}&prompt=consent&access_type=offline`;
     
     res.redirect(authUrl);
 });
 
-// 2. Process system OAuth validation callback
-app.get('/:provider/callback', async (req, res) => {
+// 6. OAuth secure redirect verification callback
+app.get('/api/integrations/:provider/callback', async (req, res) => {
     const { provider } = req.params;
     const { code, state, error } = req.query;
 
@@ -7566,7 +7559,6 @@ app.get('/:provider/callback', async (req, res) => {
         const { tenantId } = decodedState;
         const creds = CREDENTIALS[provider];
 
-        // Exchange authorization code for active tokens
         const params = new URLSearchParams({
             grant_type: 'authorization_code',
             code,
@@ -7599,12 +7591,8 @@ app.get('/:provider/callback', async (req, res) => {
     }
 });
 
-// ==========================================
-// SECURED MULTI-TENANT ENDPOINTS USING AUTH
-// ==========================================
-
-// 3. Retrieve connectivity and dropdown accounts list
-app.get('/:provider/status', auth, async (req, res) => {
+// 7. Protected Status check (Uses your existing 'auth' middleware)
+app.get('/api/integrations/:provider/status', auth, async (req, res) => {
     const { provider } = req.params;
     const tenantId = getTenantId(req);
 
@@ -7619,7 +7607,6 @@ app.get('/:provider/status', auth, async (req, res) => {
             return res.json({ connected: false });
         }
 
-        // Dropdown dynamic chart of accounts configuration mapping
         let accountsList = [];
         try {
             if (provider === 'quickbooks') {
@@ -7639,7 +7626,7 @@ app.get('/:provider/status', auth, async (req, res) => {
                 ];
             }
         } catch (fetchErr) {
-            console.warn('Fallback accounts issued due to target system offline status.');
+            console.warn('Fallback accounts list mapping used.');
         }
 
         res.json({
@@ -7652,8 +7639,8 @@ app.get('/:provider/status', auth, async (req, res) => {
     }
 });
 
-// 4. Update ledger target and auto-sync toggles
-app.post('/:provider/config', auth, async (req, res) => {
+// 8. Save targeting configurations
+app.post('/api/integrations/:provider/config', auth, async (req, res) => {
     const { provider } = req.params;
     const tenantId = getTenantId(req);
     const { targetAccount, autoSync } = req.body;
@@ -7672,8 +7659,8 @@ app.post('/:provider/config', auth, async (req, res) => {
     }
 });
 
-// 5. Explicitly strip connection records
-app.post('/:provider/disconnect', auth, async (req, res) => {
+// 9. Unlink and strip connection credentials
+app.post('/api/integrations/:provider/disconnect', auth, async (req, res) => {
     const { provider } = req.params;
     const tenantId = getTenantId(req);
 
@@ -7685,8 +7672,8 @@ app.post('/:provider/disconnect', auth, async (req, res) => {
     }
 });
 
-// 6. Global Bulk Manual Synchronisation Trigger
-app.post('/sync-all', auth, async (req, res) => {
+// 10. Manual synchronization trigger
+app.post('/api/integrations/sync-all', auth, async (req, res) => {
     const tenantId = getTenantId(req);
 
     try {
@@ -7700,7 +7687,7 @@ app.post('/sync-all', auth, async (req, res) => {
             const token = await getValidToken(integration);
             if (!token) continue;
             
-            console.log(`Pushed current transactional logs to ${integration.provider} under tenant ${tenantId} via target account code: ${integration.config.targetAccount}`);
+            console.log(`Pushed current transactional logs to ${integration.provider} under tenant ${tenantId}`);
         }
 
         res.json({ message: `Successfully synchronized ${activeIntegrations.length} active ledger database(s).` });
@@ -7708,8 +7695,6 @@ app.post('/sync-all', auth, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
-
 
 
 const port = process.env.PORT || 3000;
