@@ -5951,7 +5951,7 @@ if (!response) {
 async function loadChannelManager() {
     try {
         // 1. Fetch Rooms to retrieve their configurations
-        const response = await authenticatedFetch('/api/rooms', { method: 'GET' });
+        const response = await authenticatedFetch(`${API_BASE_URL}/rooms`, { method: 'GET' });
         if (!response) return;
         const rooms = await response.json();
 
