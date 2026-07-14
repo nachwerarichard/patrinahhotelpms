@@ -4642,7 +4642,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const navChannelManager = document.getElementById('nav-channelmanager');
       const navPOSreport = document.getElementById('nav-posreports');
         const navBarReport = document.getElementById('nav-salereport');
+                const navKitch = document.getElementById('nav-prep-list-section');
+
         const navExpReport = document.getElementById('nav-expensereport');
+
+        if (navKitch) {
+            navChannelManager.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                showSection('prep-list-section');
+            });
+        }
 
         if (navChannelManager) {
             navChannelManager.addEventListener('click', (e) => {
