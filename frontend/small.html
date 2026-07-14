@@ -5649,7 +5649,7 @@ window.addEventListener('click', function(event) {
 </script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-    const API_BASE = 'https://patrinahhotelpms.onrender.com/api/integrations';
+    const API_BASES = 'https://patrinahhotelpms.onrender.com/api/integrations';
     const providers = ['quickbooks', 'xero', 'zoho'];
 
     // Initialize state
@@ -5664,7 +5664,7 @@ window.addEventListener('click', function(event) {
         
         try {
             // Replaced fetch with authenticatedFetch
-            const res = await authenticatedFetch(`${API_BASE}/sync-all`, { method: 'POST' });
+            const res = await authenticatedFetch(`${API_BASES}/sync-all`, { method: 'POST' });
             if (!res) return; // Exit if authenticatedFetch redirects to login
             const result = await res.json();
             alert(result.message || 'Accounting sync triggered successfully!');
@@ -5718,7 +5718,7 @@ window.addEventListener('click', function(event) {
             if (!confirm(`Are you sure you want to disconnect from ${provider}?`)) return;
             try {
                 // Replaced fetch with authenticatedFetch
-                const res = await authenticatedFetch(`${API_BASE}/${provider}/disconnect`, { method: 'POST' });
+                const res = await authenticatedFetch(`${API_BASES}/${provider}/disconnect`, { method: 'POST' });
                 if (res && res.ok) {
                     updateCardState(provider, false);
                 }
@@ -5746,7 +5746,7 @@ window.addEventListener('click', function(event) {
             try {
                 // Replaced fetch with authenticatedFetch. 
                 // Removed 'Content-Type' header because authenticatedFetch assigns it automatically.
-                await authenticatedFetch(`${API_BASE}/${provider}/config`, {
+                await authenticatedFetch(`${API_BASES}/${provider}/config`, {
                     method: 'POST',
                     body: JSON.stringify({ targetAccount: accountSelect.value })
                 });
@@ -5766,7 +5766,7 @@ window.addEventListener('click', function(event) {
 async function checkIntegrationStatus(provider) {
     try {
         // 1. Use authenticatedFetch - it automatically handles your headers!
-        const response = await authenticatedFetch(`${API_BASE}/${provider}/status`, {
+        const response = await authenticatedFetch(`${API_BASES}/${provider}/status`, {
             method: 'GET'
         });
 
@@ -5857,7 +5857,7 @@ document.getElementById('btn-sync-all').addEventListener('click', async () => {
 
     try {
        // Ensure you are using backticks ` here, NOT single quotes '
-const response = await authenticatedFetch(`${API_BASE}/sync-all`, {
+const response = await authenticatedFetch(`${API_BASES}/sync-all`, {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json'
