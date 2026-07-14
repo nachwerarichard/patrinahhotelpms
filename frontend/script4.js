@@ -4647,7 +4647,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const navExpReport = document.getElementById('nav-expensereport');
 
         if (navKitch) {
-            navChannelManager.addEventListener('click', (e) => {
+            navKitch.addEventListener('click', (e) => {
                 e.preventDefault(); // Prevent default link behavior
                 showSection('prep-list-section');
             });
