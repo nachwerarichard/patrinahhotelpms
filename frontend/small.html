@@ -5866,20 +5866,20 @@ const response = await authenticatedFetch(`${API_BASES}/sync-all`, {
 });
 
 if (!response) {
-    alert("Failed to sync: Session may have expired.");
+    showMessage("Failed to sync: Session may have expired.");
     return;
 }
 
         const data = await response.json();
 
         if (response.ok) {
-            alert(data.message || "Synchronization completed successfully!");
+            showMessage(data.message || "Synchronization completed successfully!");
         } else {
-            alert(`Sync Failed: ${data.message || 'Unknown server error'}`);
+            showMessage(`Sync Failed: ${data.message || 'Unknown server error'}`);
         }
     } catch (error) {
         console.error("Error triggering synchronization:", error);
-        alert("An error occurred while communicating with the server.");
+        showMessage("An error occurred while communicating with the server.");
     } finally {
         // Re-enable button and hide spinner
         btn.disabled = false;
