@@ -7,6 +7,7 @@ const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
 const cloudinary = require('cloudinary').v2;
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const multer = require('multer');
+const { ical } = require('ical-generator');
 const { GoogleGenAI } = require("@google/genai");
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 cloudinary.config({
@@ -374,11 +375,20 @@ roomTypeSchema.index({ hotelId: 1, name: 1 }, { unique: true });
 const RoomType = mongoose.model('RoomType', roomTypeSchema);
 
 const roomSchema = new mongoose.Schema({
-    // We remove the manual 'id' string because MongoDB provides '_id' automatically
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
     number: { type: String, required: true }, 
     roomTypeId: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType', required: true },
-    status: { type: String, enum: ['clean', 'dirty','In progress', 'under-maintenance', 'blocked'], default: 'clean' }
+    status: { type: String, enum: ['clean', 'dirty', 'In progress', 'under-maintenance', 'blocked'], default: 'clean' },
+    
+    // ical configurations
+    icalExportToken: { 
+        type: String, 
+        default: () => require('crypto').randomBytes(16).toString('hex') 
+    },
+    icalImportUrls: [{
+        source: { type: String, placeholder: 'Airbnb, Booking.com, etc.' },
+        url: { type: String }
+    }]
 });
 
 // This ensures Room 101 is unique ONLY within the same hotel
@@ -7452,7 +7462,7 @@ const CREDENTIALS = {
         // Update this line exactly as shown below (space-separated, no commas):
         scope: 'openid profile email offline_access accounting.settings accounting.contacts accounting.invoices accounting.payments'
     },
-    
+
     zoho: {
         clientId: process.env.ZOHO_CLIENT_ID,
         clientSecret: process.env.ZOHO_CLIENT_SECRET,
@@ -8028,6 +8038,152 @@ app.post('/api/integrations/sync-all', auth, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+
+
+// ==========================================
+// 1. EXPORT LOCAL BOOKINGS AS ICAL FEED
+// ==========================================
+// Public endpoint used by Airbnb/Booking.com to fetch your calendar
+app.get('/ical/export/:roomId/:token', async (req, res) => {
+    const { roomId, token } = req.params;
+
+    try {
+        const roomDoc = await Room.findById(roomId);
+        if (!roomDoc || roomDoc.icalExportToken !== token) {
+            return res.status(401).send('Unauthorized calendar request.');
+        }
+
+        const bookings = await Booking.find({
+            hotelId: roomDoc.hotelId,
+            room: roomDoc.number,
+            gueststatus: { $ne: 'cancelled' } // Exclude cancelled reservations
+        });
+
+        const calendar = ical({ name: `Room ${roomDoc.number} Calendar` });
+
+        bookings.forEach(booking => {
+            calendar.createEvent({
+                id: booking.id,
+                start: new Date(booking.checkIn),
+                end: new Date(booking.checkOut),
+                summary: `Reserved - ${booking.name}`,
+                description: `Booking ID: ${booking.id}\nSource: ${booking.guestsource}`,
+                allDay: true
+            });
+        });
+
+        res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="room-${roomDoc.number}.ics"`);
+        return res.send(calendar.toString());
+
+    } catch (err) {
+        console.error('iCal Export Error:', err);
+        return res.status(500).send('Internal server error generating calendar feed.');
+    }
+});
+
+// ==========================================
+// 2. SAVE IMPORT LINK FOR A ROOM
+// ==========================================
+app.post('/ical/import-link', auth, async (req, res) => {
+    const { roomId, source, url } = req.body;
+    try {
+        const room = await Room.findOne({ _id: roomId, hotelId: req.user.hotelId });
+        if (!room) return res.status(404).json({ error: 'Room not found.' });
+
+        room.icalImportUrls.push({ source, url });
+        await room.save();
+
+        res.json({ success: true, message: 'Import URL added successfully!', icalImportUrls: room.icalImportUrls });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
+// 3. REMOVE IMPORT LINK
+// ==========================================
+app.delete('/ical/import-link/:roomId/:linkId', auth, async (req, res) => {
+    const { roomId, linkId } = req.params;
+    try {
+        const room = await Room.findOne({ _id: roomId, hotelId: req.user.hotelId });
+        if (!room) return res.status(404).json({ error: 'Room not found.' });
+
+        room.icalImportUrls = room.icalImportUrls.filter(item => item._id.toString() !== linkId);
+        await room.save();
+
+        res.json({ success: true, message: 'Import URL removed successfully!', icalImportUrls: room.icalImportUrls });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
+// 4. TRIGGER CALENDAR INGESTION (FETCH FROM OTAs)
+// ==========================================
+app.post('/ical/sync-imports', auth, async (req, res) => {
+    const hotelId = req.user.hotelId;
+    // node-ical can parse incoming .ics files
+    const icalParser = require('node-ical'); 
+
+    try {
+        const rooms = await Room.find({ hotelId, 'icalImportUrls.0': { $exists: true } });
+        let newReservationsCount = 0;
+
+        for (const room of rooms) {
+            for (const importConfig of room.icalImportUrls) {
+                // Fetch the external calendar .ics raw data
+                const response = await axios.get(importConfig.url);
+                const webEvents = icalParser.sync.parseICS(response.data);
+
+                for (const key in webEvents) {
+                    const event = webEvents[key];
+                    if (event.type !== 'VEVENT') continue;
+
+                    const uid = event.uid || `ical-${Date.now()}-${Math.random()}`;
+                    const startYmd = new Date(event.start).toISOString().split('T')[0];
+                    const endYmd = new Date(event.end).toISOString().split('T')[0];
+
+                    // Check if we have already imported this specific channel booking
+                    const existingBooking = await Booking.findOne({ 
+                        hotelId, 
+                        $or: [ { id: uid }, { transactionid: uid } ]
+                    });
+
+                    if (!existingBooking) {
+                        const nightsCount = Math.round((new Date(endYmd) - new Date(startYmd)) / (1000 * 60 * 60 * 24));
+
+                        const newBooking = new Booking({
+                            hotelId,
+                            id: uid,
+                            name: event.summary || `OTA Booking (Room ${room.number})`,
+                            room: room.number,
+                            checkIn: startYmd,
+                            checkOut: endYmd,
+                            nights: nightsCount || 1,
+                            people: 1,
+                            guestsource: importConfig.source,
+                            gueststatus: 'confirmed',
+                            totalDue: 0, 
+                            amountPaid: 0,
+                            transactionid: uid
+                        });
+
+                        await newBooking.save();
+                        newReservationsCount++;
+                    }
+                }
+            }
+        }
+
+        res.json({ success: true, message: `Successfully synchronized OTA channels. Imported ${newReservationsCount} new bookings.` });
+    } catch (err) {
+        console.error('iCal Ingest Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 
 const port = process.env.PORT || 3000;
