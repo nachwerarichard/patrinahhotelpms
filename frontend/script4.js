@@ -4623,7 +4623,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const navChecklisttable = document.getElementById('nav-checklisttable');
     const navHousekeeping = document.getElementById('nav-housekeeping');
       const navHousekeepingreports = document.getElementById('nav-housekeepingreports');
-
+      const navIntegrations = document.getElementById('nav-integrations');
         const navRates = document.getElementById('nav-inventory');
         const navStaff = document.getElementById('nav-staff');
     const navKDS = document.getElementById('nav-kds');
@@ -4648,6 +4648,14 @@ if (navPayments) {
         navPayments.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
             showSection('payments');
+        });
+    }
+
+
+    if (navIntegrations) {
+        navIntegrations.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('integrations');
         });
     }
 
