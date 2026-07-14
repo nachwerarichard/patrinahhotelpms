@@ -5762,24 +5762,34 @@ window.addEventListener('click', function(event) {
         }
     }
 
-   async function checkIntegrationStatus(provider) {
+
+async function checkIntegrationStatus(provider) {
     try {
-        const response = await fetch(`/api/integrations/${provider}/status`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-hotel-id': localStorage.getItem('hotelId') || 'global', // Adjust based on how you store hotel context
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // Adjust based on your auth system
-            }
+        // 1. Use authenticatedFetch - it automatically handles your headers!
+        const response = await authenticatedFetch(`${API_BASE}/${provider}/status`, {
+            method: 'GET'
         });
 
-        // 1. Verify if the network request actually succeeded (not a 404, 500, etc.)
+        // 2. Fallback check in case the session expired or authenticatedFetch returned null
+        if (!response) {
+            console.warn(`No response received for ${provider}. User may be unauthorized.`);
+            return { connected: false, error: 'Unauthorized or no response' };
+        }
+
+        // 3. Verify if the network request actually succeeded (not a 404, 500, etc.)
         if (!response.ok) {
             console.warn(`Server responded with status ${response.status} for ${provider}`);
             return { connected: false, error: `Server error: ${response.status}` };
         }
 
-        // 2. Safely parse the JSON payload
+        // 4. Double-check that the response is actually JSON before parsing to avoid syntax crashes
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error(`Expected JSON for ${provider} but received format:`, contentType);
+            return { connected: false, error: 'Invalid response format (not JSON)' };
+        }
+
+        // 5. Safely parse the JSON payload
         const data = await response.json();
         return data;
 
@@ -5788,6 +5798,7 @@ window.addEventListener('click', function(event) {
         return { connected: false, error: error.message };
     }
 }
+
     function updateCardState(provider, isConnected, config = null) {
         const card = document.querySelector(`[data-provider="${provider}"]`);
         if (!card) return;
