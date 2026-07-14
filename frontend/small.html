@@ -2450,10 +2450,10 @@ body {
             <h2 class="text-2xl font-bold text-blue-600">Integrations</h2>
             <p class="text-sm text-gray-500">Sync your financials and invoices with external accounting platforms</p>
         </div>
-        <button id="syncAllIntegrationsBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm py-2 px-4 rounded-md shadow-sm transition flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 15H16M6 8a8 8 0 0114.398-2"></path></svg>
-            Sync All Systems
-        </button>
+        <button id="btn-sync-all" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center">
+    <span id="sync-spinner" class="hidden mr-2 animate-spin">🔄</span>
+    Sync Financials Now
+</button>
     </div>
 
     <!-- Integration Cards Grid -->
@@ -5843,6 +5843,46 @@ async function checkIntegrationStatus(provider) {
             }
             select.appendChild(opt);
         });
+    }
+});
+
+document.getElementById('btn-sync-all').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-sync-all');
+    const spinner = document.getElementById('sync-spinner');
+    
+    // Disable button and show spinner to prevent double-clicking
+    btn.disabled = true;
+    spinner.classList.remove('hidden');
+    btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+    try {
+        const response = await authenticatedFetch('/api/integrations/sync-all', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response) {
+            alert("Failed to sync: Session may have expired.");
+            return;
+        }
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert(data.message || "Synchronization completed successfully!");
+        } else {
+            alert(`Sync Failed: ${data.message || 'Unknown server error'}`);
+        }
+    } catch (error) {
+        console.error("Error triggering synchronization:", error);
+        alert("An error occurred while communicating with the server.");
+    } finally {
+        // Re-enable button and hide spinner
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
     }
 });
 </script>

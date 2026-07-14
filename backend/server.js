@@ -988,7 +988,8 @@ paymentMethod: {
     declarations: { type: String },
     phoneNo: { type: String },
     guestEmail: { type: String }, // Renamed from 'email' to 'guestEmail' for clarity, consistent with frontend
-    nationalIdNo: { type: String }
+    nationalIdNo: { type: String },
+    synced: { type: Boolean, default: false }
 });
 const Booking = mongoose.model('Booking', bookingSchema);
 
@@ -5296,7 +5297,8 @@ const Sale = mongoose.model('Sale', new mongoose.Schema({
     type: String, 
     required: true, 
     enum: ['Cash', 'Card', 'MobileMoney', 'Folio'], // Enforces standard values
-    default: 'Cash'
+    default: 'Cash',
+    synced: { type: Boolean, default: false }
   },
     date: { type: Date, default: Date.now } // Keep just this one
 }));
@@ -5315,6 +5317,7 @@ const Expense = mongoose.model('Expense', new mongoose.Schema({
   date: { type: Date, default: Date.now },
   source: String,
   recordedBy: String,
+  synced: { type: Boolean, default: false }
 }));
 
 
@@ -7678,6 +7681,348 @@ app.post('/api/integrations/sync-all', auth, async (req, res) => {
         }
 
         res.json({ message: `Successfully synchronized ${activeIntegrations.length} active ledger database(s).` });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// =========================================================================
+// ACCOUNTING SYNCHRONIZATION UTILITY (QUICKBOOKS, XERO, ZOHO)
+// =========================================================================
+
+const AccountingSyncer = {
+    /**
+     * Map and push a Sale document (e.g., Restaurant or Bar sale) to the external ledger
+     */
+    async syncSale(integration, sale) {
+        const token = await getValidToken(integration);
+        if (!token) throw new Error(`Integration unauthorized for provider ${integration.provider}`);
+
+        const totalAmount = sale.sp * sale.number;
+        const targetAccount = integration.config.targetAccount || '400'; // Default Account Code/ID
+
+        if (integration.provider === 'xero') {
+            // Xero expects Invoices with a LineItem pointing to an AccountCode
+            const invoicePayload = {
+                Invoices: [{
+                    Type: "ACCREC", // Accounts Receivable (Income)
+                    Contact: { Name: "Hotel Walk-in Guest" },
+                    Date: sale.date ? sale.date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                    Status: "AUTHORISED",
+                    LineItems: [{
+                        Description: `${sale.department} Sale: ${sale.item}`,
+                        Quantity: sale.number,
+                        UnitAmount: sale.sp,
+                        AccountCode: targetAccount // e.g., '400' or '420' mapped in status dropdowns
+                    }]
+                }]
+            };
+
+            // Post to Xero Invoices API endpoint
+            await axios.post('https://api.xero.com/api.xro/2.0/Invoices', invoicePayload, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'xero-tenant-id': integration.tenantId // Tenant mapping saved during callback sequence
+                }
+            });
+        } 
+        
+        else if (integration.provider === 'quickbooks') {
+            // QuickBooks expects an Invoice object with Line objects
+            const invoicePayload = {
+                Line: [{
+                    Amount: totalAmount,
+                    DetailType: "SalesItemLineDetail",
+                    SalesItemLineDetail: {
+                        Qty: sale.number,
+                        UnitPrice: sale.sp,
+                        ItemRef: { name: sale.item },
+                        ClassRef: { name: sale.department } // E.g. 'Bar' or 'Restaurant'
+                    }
+                }],
+                CustomerRef: { value: "1", name: "Hotel Walk-In Guest" }
+            };
+
+            // Post to QBO Invoice Endpoint (Note: realmId/CompanyID must be stored in Integration config)
+            const companyId = integration.config.realmId || 'YOUR_MOCK_QBO_REALM_ID';
+            await axios.post(`https://sandbox-quickbooks.api.intuit.com/v3/company/${companyId}/invoice`, invoicePayload, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+        } 
+        
+        else if (integration.provider === 'zoho') {
+            // Zoho Books Invoice Schema
+            const invoicePayload = {
+                customer_name: "Hotel Walk-in Guest",
+                date: sale.date ? sale.date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                line_items: [{
+                    name: sale.item,
+                    rate: sale.sp,
+                    quantity: sale.number,
+                    account_id: targetAccount
+                }]
+            };
+
+            await axios.post('https://books.zoho.com/api/v3/invoices', invoicePayload, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+        }
+    },
+
+    /**
+     * Map and push an Expense document to the external ledger
+     */
+    async syncExpense(integration, expense) {
+        const token = await getValidToken(integration);
+        if (!token) throw new Error(`Integration unauthorized for provider ${integration.provider}`);
+
+        const targetAccount = integration.config.targetAccount || '500';
+
+        if (integration.provider === 'xero') {
+            // Expenses map to ACCPAY (Accounts Payable / Bills)
+            const billPayload = {
+                Invoices: [{
+                    Type: "ACCPAY", 
+                    Contact: { Name: expense.source || "General Vendor" },
+                    Date: expense.date ? expense.date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                    Status: "AUTHORISED",
+                    LineItems: [{
+                        Description: `[${expense.department}] ${expense.description || 'Hotel Operational Expense'}`,
+                        Quantity: 1,
+                        UnitAmount: expense.amount,
+                        AccountCode: targetAccount
+                    }]
+                }]
+            };
+
+            await axios.post('https://api.xero.com/api.xro/2.0/Invoices', billPayload, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'xero-tenant-id': integration.tenantId
+                }
+            });
+        } 
+        
+        else if (integration.provider === 'quickbooks') {
+            // QBO Expense Bill Payload
+            const billPayload = {
+                Line: [{
+                    Amount: expense.amount,
+                    DetailType: "AccountBasedExpenseLineDetail",
+                    AccountBasedExpenseLineDetail: {
+                        AccountRef: { value: targetAccount }
+                    }
+                }],
+                VendorRef: { name: expense.source || "General Vendor" }
+            };
+
+            const companyId = integration.config.realmId || 'YOUR_MOCK_QBO_REALM_ID';
+            await axios.post(`https://sandbox-quickbooks.api.intuit.com/v3/company/${companyId}/bill`, billPayload, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+        } 
+        
+        else if (integration.provider === 'zoho') {
+            // Zoho Books Bills payload
+            const billPayload = {
+                vendor_name: expense.source || "General Vendor",
+                bill_number: expense.receiptId || `EXP-${Date.now()}`,
+                date: expense.date ? expense.date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                line_items: [{
+                    description: expense.description,
+                    rate: expense.amount,
+                    quantity: 1,
+                    account_id: targetAccount
+                }]
+            };
+
+            await axios.post('https://books.zoho.com/api/v3/bills', billPayload, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+        }
+    },
+
+    /**
+     * Map and push a Booking document to the external ledger
+     */
+    async syncBooking(integration, booking) {
+        const token = await getValidToken(integration);
+        if (!token) throw new Error(`Integration unauthorized for provider ${integration.provider}`);
+
+        const targetAccount = integration.config.targetAccount || '400';
+
+        // ==========================================
+        // 1. XERO IMPLEMENTATION
+        // ==========================================
+        if (integration.provider === 'xero') {
+            const invoicePayload = {
+                Invoices: [{
+                    Type: "ACCREC",
+                    Contact: { 
+                        Name: booking.name, 
+                        EmailAddress: booking.guestEmail || "" 
+                    },
+                    Date: booking.checkIn,
+                    DueDate: booking.checkOut,
+                    InvoiceNumber: booking.id, // e.g., 'BKG001'
+                    Status: "AUTHORISED",
+                    LineItems: [{
+                        Description: `Room ${booking.room || 'N/A'} - Guest Booking Stay (${booking.nights || 1} Nights)`,
+                        Quantity: booking.nights || 1,
+                        UnitAmount: booking.amtPerNight || booking.totalDue,
+                        AccountCode: targetAccount
+                    }]
+                }]
+            };
+
+            await axios.post('https://api.xero.com/api.xro/2.0/Invoices', invoicePayload, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'xero-tenant-id': integration.tenantId
+                }
+            });
+        }
+
+        // ==========================================
+        // 2. QUICKBOOKS IMPLEMENTATION
+        // ==========================================
+        else if (integration.provider === 'quickbooks') {
+            const companyId = integration.config.realmId || 'YOUR_QBO_COMPANY_ID';
+            
+            const invoicePayload = {
+                DocNumber: booking.id, // Use the custom booking ID (e.g., 'BKG001')
+                CustomerRef: { 
+                    value: "1", // Fallback Default customer ID. In production, look up/create Guest by Name.
+                    name: booking.name 
+                },
+                BillEmail: { 
+                    Address: booking.guestEmail || "" 
+                },
+                Line: [{
+                    Description: `Room ${booking.room || 'N/A'} - Guest Booking Stay (${booking.nights || 1} Nights)`,
+                    Amount: booking.totalDue,
+                    DetailType: "SalesItemLineDetail",
+                    SalesItemLineDetail: {
+                        Qty: booking.nights || 1,
+                        UnitPrice: booking.amtPerNight || (booking.totalDue / (booking.nights || 1)),
+                        ItemRef: { 
+                            value: "1", // General "Lodging/Services" ID from QuickBooks Chart of Accounts
+                            name: "Room Charges" 
+                        }
+                    }
+                }]
+            };
+
+            await axios.post(`https://sandbox-quickbooks.api.intuit.com/v3/company/${companyId}/invoice`, invoicePayload, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+        }
+
+        // ==========================================
+        // 3. ZOHO BOOKS IMPLEMENTATION
+        // ==========================================
+        else if (integration.provider === 'zoho') {
+            const organizationId = integration.config.organizationId || 'YOUR_ZOHO_ORG_ID';
+
+            const invoicePayload = {
+                customer_name: booking.name,
+                invoice_number: booking.id, // e.g., 'BKG001'
+                date: booking.checkIn,
+                due_date: booking.checkOut,
+                line_items: [{
+                    name: "Room Charges",
+                    description: `Room ${booking.room || 'N/A'} - Guest Booking Stay (${booking.nights || 1} Nights)`,
+                    rate: booking.amtPerNight || (booking.totalDue / (booking.nights || 1)),
+                    quantity: booking.nights || 1,
+                    account_id: targetAccount
+                }]
+            };
+
+            await axios.post('https://books.zoho.com/api/v3/invoices', invoicePayload, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                params: {
+                    organization_id: organizationId
+                }
+            });
+        }
+    }
+};
+
+app.post('/api/integrations/sync-all', auth, async (req, res) => {
+    const tenantId = getTenantId(req);
+
+    try {
+        const activeIntegrations = await Integration.find({ tenantId, connected: true });
+        
+        if (activeIntegrations.length === 0) {
+            return res.status(400).json({ message: 'No connected integrations found to sync.' });
+        }
+
+        // 1. Fetch unsynced records across all three models (Sales, Expenses, Bookings)
+        // (Assuming you add `synced: { type: Boolean, default: false }` to your schemas)
+        const unsyncedSales = await Sale.find({ hotelId: tenantId, synced: { $ne: true } }).limit(50);
+        const unsyncedExpenses = await Expense.find({ hotelId: tenantId, synced: { $ne: true } }).limit(50);
+        const unsyncedBookings = await Booking.find({ hotelId: tenantId, synced: { $ne: true } }).limit(50);
+
+        let syncedCount = 0;
+
+        for (const integration of activeIntegrations) {
+            // Push Sales
+            for (const sale of unsyncedSales) {
+                await AccountingSyncer.syncSale(integration, sale);
+                sale.synced = true;
+                await sale.save();
+                syncedCount++;
+            }
+            
+            // Push Expenses
+            for (const expense of unsyncedExpenses) {
+                await AccountingSyncer.syncExpense(integration, expense);
+                expense.synced = true;
+                await expense.save();
+                syncedCount++;
+            }
+
+            // 🚀 Push Bookings (New!)
+            for (const booking of unsyncedBookings) {
+                await AccountingSyncer.syncBooking(integration, booking);
+                booking.synced = true;
+                await booking.save();
+                syncedCount++;
+            }
+        }
+
+        res.json({ 
+            message: `Successfully synchronized ${syncedCount} records (including bookings) across ${activeIntegrations.length} active ledger database(s).` 
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
