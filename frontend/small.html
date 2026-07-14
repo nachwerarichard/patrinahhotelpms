@@ -5856,17 +5856,18 @@ document.getElementById('btn-sync-all').addEventListener('click', async () => {
     btn.classList.add('opacity-50', 'cursor-not-allowed');
 
     try {
-        const response = await authenticatedFetch('${API_BASE}/sync-all', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
+       // Ensure you are using backticks ` here, NOT single quotes '
+const response = await authenticatedFetch(`${API_BASE}/sync-all`, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    }
+});
 
-        if (!response) {
-            alert("Failed to sync: Session may have expired.");
-            return;
-        }
+if (!response) {
+    alert("Failed to sync: Session may have expired.");
+    return;
+}
 
         const data = await response.json();
 
