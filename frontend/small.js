@@ -8216,14 +8216,70 @@ function getCashFormData() {
     };
 }
 
+// ==========================================
+// 1. STATE & EVENT LISTENER
+// ==========================================
+let isSubmittingCash = false; // Prevents double-clicks
+
+const cashJournalForm = document.getElementById('cash-journal-form');
+if (cashJournalForm) {
+    cashJournalForm.addEventListener('submit', handleCashFormSubmit);
+}
+
+// ==========================================
+// 2. FORM SUBMIT HANDLER (POST ONLY)
+// ==========================================
+async function handleCashFormSubmit(event) {
+    event.preventDefault();
+    
+    // 1. Guard against double-clicks
+    if (isSubmittingCash) return; 
+
+    // 2. Gather data
+    const cashData = getCashFormData();
+
+    // 3. Validation
+    if (!cashData.bankReceiptId || !cashData.date) {
+        return showMessage("Please fill in all required fields.", true);
+    }
+
+    try {
+        isSubmittingCash = true;     // Lock submissions immediately
+        setsubmitCashButtonLoading(true);  // Disable UI button
+
+        // 4. Send the POST request
+        const success = await createCashEntry(cashData);
+
+        if (success) {
+            document.getElementById('cash-journal-form').reset(); // Clear form
+            fetchCashJournal(); // Refresh table
+            
+            // If you use a modal, uncomment this line:
+            // toggleCashModal(false); 
+        }
+        
+    } finally {
+        // Always unlock and restore the button, even on error
+        isSubmittingCash = false;
+        setsubmitCashButtonLoading(false);
+    }
+}
+
+// ==========================================
+// 3. API WORKER: CREATE ENTRY
+// ==========================================
 async function createCashEntry(cashData) {
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/cash-journal`, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(cashData)
         });
 
-        if (!response.ok) throw new Error('Failed to create entry');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Failed to create entry');
+        }
         
         showMessage('Cash entry recorded! 💰');
         return true;
@@ -8233,35 +8289,25 @@ async function createCashEntry(cashData) {
     }
 }
 
-
-async function handleCashFormSubmit(event) {
-    event.preventDefault();
-    const id = document.getElementById('cash-journal-id').value;
-    const cashData = getCashFormData();
-
-    // Basic Validation
-    if (!cashData.bankReceiptId || !cashData.date) {
-        return showMessage("Please fill in all required fields.", true);
-    }
-
-    setCashButtonLoading(true);
-    let success = false;
-
-    if (id) {
-        // If ID exists, we are UPDATING (PUT)
-        success = await updateCashEntry(id, cashData);
-    } else {
-        // If no ID, we are CREATING (POST)
-        success = await createCashEntry(cashData);
-    }
-
-    if (success) {
-        toggleCashModal(false); // Close Modal
-        document.getElementById('cash-journal-form').reset(); // Clear form
-        fetchCashJournal(); // Refresh table
-    }
+// ==========================================
+// 4. UI HELPER: BUTTON LOADING STATE
+// ==========================================
+function setsubmitCashButtonLoading(isLoading) {
+    const submitButton = document.querySelector('#cash-journal-form button[type="submit"]');
+    const submitTextSpan = document.getElementById('cash-submit-text');
+    const submitIcon = submitButton ? submitButton.querySelector('i.fas') : null;
     
-    setCashButtonLoading(false);
+    if (!submitButton || !submitTextSpan) return;
+
+    if (isLoading) {
+        submitButton.disabled = true; // Blocks hardware clicks
+        submitTextSpan.textContent = 'Processing...';
+        if (submitIcon) submitIcon.className = 'fas fa-spinner fa-spin';
+    } else {
+        submitButton.disabled = false; // Re-enables clicks
+        submitTextSpan.textContent = 'Save Cash Entry';
+        if (submitIcon) submitIcon.className = 'fas fa-money-check-alt';
+    }
 }
 // **You must add an event listener to your edit form when the page loads:**
 
@@ -9994,7 +10040,7 @@ document.getElementById('edit-cash-form').addEventListener('submit', async funct
 
         if (response.ok) {
             showMessage('Cash record updated successfully! 💰');
-            closeModal('edit-cash-modal');
+            document.getElementById('edit-cash-modal').style.display = 'none'; // Hide the ID field after submission
             fetchCashJournal(); // Refresh your table
         } else {
             const error = await response.json();
