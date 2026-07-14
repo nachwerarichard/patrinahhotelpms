@@ -4642,7 +4642,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const navChannelManager = document.getElementById('nav-channelmanager');
       const navPOSreport = document.getElementById('nav-posreports');
         const navBarReport = document.getElementById('nav-salereport');
+                const navKitch = document.getElementById('nav-prep-list-section');
+
         const navExpReport = document.getElementById('nav-expensereport');
+
+        if (navKitch) {
+            navKitch.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                showSection('prep-list-section');
+            });
+        }
 
         if (navChannelManager) {
             navChannelManager.addEventListener('click', (e) => {
@@ -8223,29 +8232,7 @@ async function createCashEntry(cashData) {
         return false;
     }
 }
-async function updateCashEntry(id, cashData) {
-    // Role Check for Edits
-    const userRole = localStorage.getItem('userRole');
-    if (!['admin', 'super-admin'].includes(userRole)) {
-        showMessage('Permission Denied: Admins only.', true);
-        return false;
-    }
 
-    try {
-        const response = await authenticatedFetch(`${API_BASE_URL}/cash-journal/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(cashData)
-        });
-
-        if (!response.ok) throw new Error('Failed to update entry');
-
-        showMessage('Cash entry updated! 🎉');
-        return true;
-    } catch (error) {
-        showMessage(error.message, true);
-        return false;
-    }
-}
 
 async function handleCashFormSubmit(event) {
     event.preventDefault();
@@ -9947,118 +9934,6 @@ function closeModal(id) {
    // }
 //});
 
-async function submitCashJournalForm(event) {
-           event.preventDefault(); // ❌ Prevents default browser form submission (GET → 304)
-
-    // 1. Get elements and store original state
-    const submitButton = document.querySelector('#cash-journal-form button[type="submit"]');
-    const submitTextSpan = document.getElementById('cash-submit-text');
-    const submitIcon = submitButton ? submitButton.querySelector('i.fas') : null;
-    
-    const originalIconClass = submitIcon ? submitIcon.className : 'fas fa-money-check-alt';
-    const originalButtonText = submitTextSpan ? submitTextSpan.textContent : 'Save Cash Entry';
-
-    if (!submitButton || !submitTextSpan) {
-        showMessage('Submit button or text element is missing.');
-        return;
-    }
-
-    // Permission check for adding new entries (adjust roles as needed)
-    const allowedToRecordCash = ['admin'];
-    if (!allowedToRecordCash.includes(currentUserRole)) {
-        showMessage('Permission Denied: You do not have permission to record cash movements.');
-        return;
-    }
-
-    const idInput = document.getElementById('cash-journal-id');
-    const cashAtHandInput = document.getElementById('cash-at-hand');
-    const cashOnPhoneInput = document.getElementById('cash-on-phone');
-    const cashBankedInput = document.getElementById('cash-banked');
-    const bankReceiptIdInput = document.getElementById('bank-receipt-id');
-    const cashDateInput = document.getElementById('cash-date');
-
-    if (!cashAtHandInput || !cashBankedInput || !bankReceiptIdInput) {
-        showMessage('Cash journal form elements are missing.');
-        return;
-    }
-
-    const id = idInput.value;
-    const cashAtHand = parseFloat(cashAtHandInput.value);
-    const cashBanked = parseFloat(cashBankedInput.value);
-    const cashOnPhone = parseFloat(cashOnPhoneInput.value);
-    const bankReceiptId = bankReceiptIdInput.value;
-    const date = cashDateInput.value;
-    const recordedBy = currentUsername;
-
-    // Basic validation
-    if (isNaN(cashAtHand) || isNaN(cashBanked) || !bankReceiptId || !date) {
-        showMessage('Please fill in all cash movement fields correctly.');
-        return;
-    }
-
-    if (id) {
-        showMessage('Please use the edit function to modify existing entries.');
-        return;
-    }
-
-    const cashData = { cashAtHand, cashBanked, bankReceiptId, cashOnPhone,date, recordedBy };
-
-    try {
-        // 2. Change button to 'Processing...' ⏳
-        submitTextSpan.textContent = 'Processing...';
-        if (submitIcon) submitIcon.className = 'fas fa-spinner fa-spin';
-        submitButton.disabled = true;
-
-        // API call (POST for new entry)
-        const response = await authenticatedFetch(`${API_BASE_URL}/cash-journal`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }, // ✅ Important
-            body: JSON.stringify(cashData)
-        });
-
-        if (response.ok) {
-            await response.json();
-            const successMessage = 'Done! ✅';
-
-            // 3. Display success message on the button
-            submitTextSpan.textContent = successMessage;
-            if (submitIcon) submitIcon.className = 'fas fa-check';
-            showMessage('Cash movement successfully recorded! ✅');
-
-            // 4. Wait, reset form, and re-enable button ⏱️
-            setTimeout(() => {
-                const cashJournalForm = document.getElementById('cash-journal-form');
-                if (cashJournalForm) cashJournalForm.reset();
-                if (idInput) idInput.value = '';
-
-                // Revert button text and icon
-                submitTextSpan.textContent = originalButtonText;
-                if (submitIcon) submitIcon.className = originalIconClass;
-                submitButton.disabled = false;
-                fetchCashJournal(); // Refresh the table
-            }, 2000);
-
-        } else {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Server error occurred.');
-        }
-
-    } catch (error) {
-        console.error('Error saving cash journal entry:', error);
-        showMessage('Failed to save cash entry: ' + error.message);
-
-        // 5. Revert button on error ❌
-        submitTextSpan.textContent = originalButtonText;
-        if (submitIcon) submitIcon.className = originalIconClass;
-        submitButton.disabled = false;
-    }
-}
-  const cashJournalForm = document.getElementById('cash-journal-form');
-    if (cashJournalForm) cashJournalForm.addEventListener('submit', submitCashJournalForm);
-/**
- * 1. Fetch data from the lookup endpoint using the Base URL
- */
-
 function populateEditCashModal(record) {
     console.log("Editing Cash Record:", record);
 
@@ -10085,6 +9960,11 @@ function populateEditCashModal(record) {
 }
 document.getElementById('edit-cash-form').addEventListener('submit', async function(e) {
     e.preventDefault();
+    const userRole = localStorage.getItem('userRole');
+    if (!['admin', 'super-admin'].includes(userRole)) {
+        showMessage('Permission Denied: Admins only.', true);
+        return false;
+    }
 
     const id = document.getElementById('edit-cash-id').value;
     const submitBtn = document.getElementById('edit-cash-submit-btn');
