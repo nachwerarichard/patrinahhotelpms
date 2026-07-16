@@ -4946,6 +4946,202 @@ const transactionSchema = new mongoose.Schema({
 
 const Transaction = mongoose.model('Transaction', transactionSchema);
 
+const inventorySchema = new mongoose.Schema({
+  hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // 🏢 Added
+  item: { type: String, required: true },
+  quantity: { type: Number, required: true, min: 0, default: 0 },
+  lowStockLevel: { type: Number, required: true, min: 0, default: 0 }
+}, { timestamps: true });
+
+// Ensure an item name is unique *only within the same hotel*
+inventorySchema.index({ hotelId: 1, item: 1 }, { unique: true });
+
+const Inventory = mongoose.model('Inventory', inventorySchema);
+// 1. Get Inventory Snapshot for a Specific Date
+app.get('/inventory/snapshot/:date', auth, async (req, res) => {
+  try {
+    const { date } = req.params;
+    const startOfDay = new Date(date);
+    const hotelId = new mongoose.Types.ObjectId(req.user.hotelId); 
+
+    if (isNaN(startOfDay.getTime())) {
+      return res.status(400).json({ message: 'Invalid date format' });
+    }
+
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    // Filter transactions strictly by tenant hotelId AND timestamp
+    const snapshotQuantities = await Transaction.aggregate([
+      {
+        $match: {
+          hotelId: hotelId, 
+          timestamp: { $lte: endOfDay }
+        }
+      },
+      {
+        $group: {
+          _id: '$item',
+          totalQuantity: {
+            $sum: {
+              $cond: [
+                { $eq: ['$action', 'add'] },
+                '$quantity',
+                { $multiply: ['$quantity', -1] }
+              ]
+            }
+          }
+        }
+      }
+    ]);
+
+    // Query inventory configurations for this tenant's items
+    const inventoryItems = await Inventory.find({ 
+      hotelId: req.user.hotelId, 
+      item: { $in: snapshotQuantities.map(s => s._id) } 
+    });
+
+    const combinedSnapshot = snapshotQuantities.map(snapshotItem => {
+      const inventoryItem = inventoryItems.find(i => i.item === snapshotItem._id);
+      return {
+        item: snapshotItem._id,
+        quantity: snapshotItem.totalQuantity,
+        lowStockLevel: inventoryItem ? inventoryItem.lowStockLevel : 0
+      };
+    });
+
+    await addAuditLog('Inventory Snapshot Fetched', req.user.username, req.user.hotelId, { date });
+
+    res.status(200).json(combinedSnapshot);
+  } catch (err) {
+    console.error('❌ Error fetching inventory snapshot:', err);
+    res.status(500).json({ message: 'Server error while fetching snapshot' });
+  }
+});
+
+// 2. Add or Use Inventory
+app.post('/inventory', auth, async (req, res) => {
+  const { item, quantity, action, lowStockLevel } = req.body;
+  const tenantId = req.user.hotelId;
+
+  if (!item || !quantity || !action) {
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
+
+  try {
+    // Find item belonging specifically to this hotel
+    let inventoryItem = await Inventory.findOne({ 
+      hotelId: tenantId, 
+      item: { $regex: new RegExp(`^${item}$`, 'i') } 
+    });
+
+    if (inventoryItem) {
+      if (action === 'add') {
+        inventoryItem.quantity += quantity;
+      } else if (action === 'use') {
+        if (inventoryItem.quantity < quantity) {
+          return res.status(400).json({ 
+            message: `Cannot use ${quantity} units. Only ${inventoryItem.quantity} are in stock.` 
+          });
+        }
+        inventoryItem.quantity -= quantity;
+      }
+
+      if (lowStockLevel !== undefined && lowStockLevel !== null) {
+        inventoryItem.lowStockLevel = lowStockLevel;
+      }
+
+      await inventoryItem.save();
+    } else if (action === 'add') {
+      const newLowStockLevel = lowStockLevel !== undefined && lowStockLevel !== null ? Number(lowStockLevel) : 10;
+      
+      inventoryItem = new Inventory({ 
+        hotelId: tenantId, 
+        item, 
+        quantity, 
+        lowStockLevel: newLowStockLevel 
+      });
+      await inventoryItem.save();
+    } else {
+      return res.status(404).json({ message: 'Item not found in inventory' });
+    }
+
+    // Save transaction with hotelId attached
+    const newTransaction = new Transaction({
+      hotelId: tenantId, 
+      item: inventoryItem.item,
+      quantity: quantity,
+      action: action,
+      timestamp: new Date()
+    });
+    await newTransaction.save();
+
+    await addAuditLog('Inventory Transaction', req.user.username, tenantId, { 
+      item: inventoryItem.item, 
+      quantity, 
+      action 
+    });
+
+    return res.status(200).json({ message: 'Inventory updated successfully' });
+  } catch (err) {
+    console.error('❌ Error updating inventory:', err);
+    res.status(500).json({ message: 'Server error while updating inventory' });
+  }
+});
+
+// 3. Get all inventory items (Scoped to Tenant)
+app.get('/inventory', auth, async (req, res) => {
+  try {
+    const items = await Inventory.find({ hotelId: req.user.hotelId }).sort({ item: 1 });
+    res.status(200).json(items);
+  } catch (err) {
+    console.error('❌ Error retrieving inventory:', err);
+    res.status(500).json({ message: 'Failed to retrieve inventory' });
+  }
+});
+
+// 4. Update an inventory item by ID (Verifying Owner Tenant)
+app.put('/inventory/:id', auth, async (req, res) => {
+  try {
+    const updated = await Inventory.findOneAndUpdate(
+      { _id: req.params.id, hotelId: req.user.hotelId }, 
+      req.body, 
+      { new: true, runValidators: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Inventory item not found' });
+    }
+
+    await addAuditLog('Inventory Item Updated', req.user.username, req.user.hotelId, { id: updated._id, item: updated.item });
+    
+    res.status(200).json({ message: 'Inventory item updated successfully', updated });
+  } catch (err) {
+    console.error('❌ Error updating inventory item:', err);
+    res.status(500).json({ message: 'Update failed for inventory item' });
+  }
+});
+
+// 5. Delete an inventory item by ID (Verifying Owner Tenant)
+app.delete('/inventory/:id', auth, async (req, res) => {
+  try {
+    const deleted = await Inventory.findOneAndDelete({ 
+      _id: req.params.id, 
+      hotelId: req.user.hotelId  
+    });
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Inventory item not found' });
+    }
+
+    await addAuditLog('Inventory Item Deleted', req.user.username, req.user.hotelId, { id: req.params.id });
+    res.status(200).json({ message: 'Inventory item deleted successfully' });
+  } catch (err) {
+    console.error('❌ Error deleting inventory item:', err);
+    res.status(500).json({ message: 'Delete failed for inventory item' });
+  }
+});
+
 app.get('/api/status-reports', auth, async (req, res) => {
     try {
         const { date } = req.query;
@@ -8183,6 +8379,8 @@ app.post('/ical/sync-imports', auth, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+
 
 
 
