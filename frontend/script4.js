@@ -1075,7 +1075,7 @@ function applyRoleAccess(role) {
         'nav-sales', 'nav-payments','nav-posinventory', 'nav-kds', 
          'nav-expenses', 'nav-cash', , 'nav-checklistform', 'nav-checklisttable','nav-missingitems' ,
         'nav-posreports', 'nav-salereport', 'nav-expensereport','nav-housekeepingreports', 
-        'nav-staff', 'nav-reports', 'nav-calendar','nav-channelmanager','nav-integration','nav-audit-logs'
+        'nav-staff', 'nav-reports', 'nav-calendar','nav-roominventory','nav-channelmanager','nav-integration','nav-audit-logs'
     ];
 
     // Hide everything first
@@ -4643,13 +4643,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const navPOSreport = document.getElementById('nav-posreports');
         const navBarReport = document.getElementById('nav-salereport');
                 const navKitch = document.getElementById('nav-prep-list-section');
+                const navRoominventory = document.getElementById('nav-roominventory');
 
         const navExpReport = document.getElementById('nav-expensereport');
 
-        if (navKitch) {
+         if (navKitch) {
             navKitch.addEventListener('click', (e) => {
                 e.preventDefault(); // Prevent default link behavior
                 showSection('prep-list-section');
+            });
+        }
+
+        if (navRoominventory) {
+            navRoominventory.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                showSection('roominventory');
             });
         }
 

@@ -6307,7 +6307,7 @@ document.getElementById('inventoryForm')?.addEventListener('submit', async funct
     if (!res || !res.ok) throw new Error(`HTTP error! status: ${res?.status}`);
     
     const result = await res.json();
-    showMessage('inventoryMessage', result.message || 'Inventory updated successfully.');
+    showMessage('inventoryMessage', result.message || 'Inventory added successfully.');
     
     // Brief cosmetic success timeout before closing the modal
     setTimeout(async () => {
