@@ -547,7 +547,7 @@ body {
                 <li id="nav-checklistform"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Checklist form</a></li>
                 <li id="nav-checklisttable"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Checklist table</a></li>
                 <li id="nav-missingitems"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Missing items</a></li>
-                <li id="nav-roominventory"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Room Inventory</a></li>
+                <li id="nav-roominventory"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Housekeeping Inventory</a></li>
             </ul>
         </li>
 
@@ -2672,91 +2672,114 @@ body {
 </section>
 
 <section id="roominventory" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden tab-content">
-    <div class="flex justify-between items-center mb-6 border-b pb-4">
+    <!-- Top Header & Modal Trigger -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 border-b pb-4">
         <div>
-            <h2 class="text-2xl font-bold text-blue-600">Room Inventory</h2>
-            <p class="text-sm text-gray-500">Manage and track room availability and status</p>
+            <h2 class="text-2xl font-bold text-blue-600">Housekeeping Inventory</h2>
+            <p class="text-sm text-gray-500">Manage and track housekeeping supplies and availability</p>
+        </div>
+        <!-- Button to trigger the Modal Form -->
+        <button onclick="openInventoryModal()" 
+            class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2.5 rounded-lg shadow-md transition duration-300 transform hover:-translate-y-0.5 self-start sm:self-auto">
+            + Add / Use Stock
+        </button>
+    </div>
+
+    <!-- Inventory Management Modal (Initially Hidden) -->
+    <div id="inventoryModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 hidden">
+        <div class="bg-white p-6 md:p-8 rounded-xl border border-gray-100 shadow-2xl max-w-md w-full relative mx-4 transform transition-all duration-300">
+            <!-- Close Modal Icon -->
+            <button onclick="closeInventoryModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition" aria-label="Close modal">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+
+            <h3 class="text-2xl font-bold mb-5 text-center text-gray-800">
+                Inventory Action
+            </h3>
+            <form id="inventoryForm" class="space-y-4">
+                <div>
+                    <label for="inventoryItem" class="block text-sm font-medium text-gray-700">Item Name:</label>
+                    <input type="text" id="inventoryItem" name="item" required
+                        class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                        placeholder="e.g., Shampoo, Soap, Towels" />
+                </div>
+                <div>
+                    <label for="inventoryQuantity" class="block text-sm font-medium text-gray-700">Quantity:</label>
+                    <input type="number" id="inventoryQuantity" name="quantity" required
+                        class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                        placeholder="e.g., 50" min="1" />
+                </div>
+                <div>
+                    <label for="inventoryAction" class="block text-sm font-medium text-gray-700">Action:</label>
+                    <select id="inventoryAction" name="action" required
+                        class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                        <option value="add">Add to Stock</option>
+                        <option value="use">Use from Stock</option>
+                    </select>
+                </div>
+                <!-- Interactive Button featuring live spinner during savings -->
+                <button type="submit" id="submitInventoryBtn"
+                    class="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-700 transition duration-300 ease-in-out shadow-md">
+                    <span id="submitBtnText">Update Inventory</span>
+                </button>
+            </form>
+            <p id="inventoryMessage" class="text-center mt-4 text-sm font-medium h-5"></p>
         </div>
     </div>
 
-    <!-- Inventory Management Form Wrapper -->
-    <div id="inventoryUpdateForm" class="bg-white p-6 md:p-8 rounded-xl border border-gray-100 shadow-sm">
-        <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">
-            Inventory Management
-        </h2>
-        <form id="inventoryForm" class="space-y-5">
-            <div>
-                <label for="inventoryItem" class="block font-medium text-gray-700">Item Name:</label>
-                <input type="text" id="inventoryItem" name="item" required
-                    class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="e.g., Shampoo, Soap, Towels" />
-            </div>
-            <div>
-                <label for="inventoryQuantity" class="block font-medium text-gray-700">Quantity:</label>
-                <input type="number" id="inventoryQuantity" name="quantity" required
-                    class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="e.g., 50" min="1" />
-            </div>
-            <div>
-                <label for="inventoryAction" class="block font-medium text-gray-700">Action:</label>
-                <select id="inventoryAction" name="action" required
-                    class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="add">Add to Stock</option>
-                    <option value="use">Use from Stock</option>
-                </select>
-            </div>
-            <button type="submit"
-                class="w-full bg-indigo-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-700 transition duration-300 ease-in-out shadow-md">
-                Update Inventory
-            </button>
-        </form>
-        <p id="inventoryMessage" class="text-center text-green-600 mt-4 text-lg font-medium"></p>
-    </div>
-
     <!-- Stock Levels Section -->
-    <div id="inventoryStockLevels" class="bg-white p-6 md:p-8 rounded-xl border border-gray-100 shadow-sm mt-8">
-        <h3 class="text-2xl font-bold mb-4 text-gray-800">
-            Current Stock Levels
-        </h3>
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-            <input type="search" id="inventorySearch" placeholder="Search item..."
-                class="flex-1 w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
-            <div class="flex gap-2 w-full sm:w-auto">
+    <div id="inventoryStockLevels" class="bg-white p-6 md:p-8 rounded-xl border border-gray-100 shadow-sm">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Stock Overview & Snapshots</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <!-- Search Bar (Triggers Instant Filter Updates) -->
+            <div class="relative">
+                <label for="inventorySearch" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Search Live Stock</label>
+                <div class="relative">
+                    <input type="search" id="inventorySearch" placeholder="Filter items..."
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Date Snapshot Selection (Triggers Instant API Fetching) -->
+            <div>
+                <label for="snapshotDate" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Historic Snapshot Date</label>
+                <input type="date" id="snapshotDate" 
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+
+            <!-- Utility Action buttons -->
+            <div class="flex items-end gap-2">
                 <button onclick="loadInventory()"
-                    class="flex-1 sm:flex-none bg-gray-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-gray-600 transition">
-                    Refresh
+                    class="flex-1 bg-gray-500 text-white font-semibold px-4 py-2.5 rounded-lg hover:bg-gray-600 transition shadow-sm">
+                    Refresh Live
                 </button>
                 <button onclick="exportInventoryToExcel()"
-                    class="flex-1 sm:flex-none bg-yellow-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-yellow-600 transition">
+                    class="flex-1 bg-yellow-500 text-white font-semibold px-4 py-2.5 rounded-lg hover:bg-yellow-600 transition shadow-sm">
                     Export
                 </button>
             </div>
         </div>
 
-        <!-- Inventory Snapshot Section -->
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 mt-8">
-            <h3 class="text-2xl font-bold text-gray-800">Inventory Snapshot</h3>
-            <div class="flex flex-col sm:flex-row items-center gap-4">
-                <label for="snapshotDate" class="font-medium text-gray-700">Select Date:</label>
-                <input type="date" id="snapshotDate" class="px-4 py-2 border border-gray-300 rounded-lg" />
-                <button onclick="getInventorySnapshot()"
-                    class="w-full sm:w-auto bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                    View Snapshot
-                </button>
-            </div>
-        </div>
-
+        <!-- Scrollable Table -->
         <div class="overflow-x-auto rounded-lg border border-gray-200">
             <table id="inventoryTable" class="min-w-full table-auto border-collapse">
                 <thead class="bg-gray-100">
                     <tr>
-                        <th class="border px-4 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                        <th class="border-b px-4 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
                             Item Name
                         </th>
-                        <th class="border px-4 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                        <th class="border-b px-4 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
                             Stock Level
                         </th>
-                        <th class="border px-4 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider" id="actionsHeader">
+                        <th class="border-b px-4 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider" id="actionsHeader">
                             Actions
                         </th>
                     </tr>
@@ -6191,25 +6214,91 @@ document.getElementById('btn-sync-ical').addEventListener('click', async () => {
 
 </script>
 <script>
-/* ---------- Config ---------- */
+    /* ---------- Config ---------- */
 const backendURL = 'https://patrinahhotelpms.onrender.com';
 let allInventory = [];
+let searchDebounceTimeout = null;
 
-/* ---------- Housekeeping Inventory Core ---------- */
+/* ---------- Modal Controls ---------- */
+function openInventoryModal() {
+  const modal = document.getElementById('inventoryModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    document.getElementById('inventoryItem')?.focus();
+  }
+}
 
-// 1. Create or Update (Add/Use) Inventory Transaction
+function closeInventoryModal() {
+  const modal = document.getElementById('inventoryModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    document.getElementById('inventoryForm')?.reset();
+    const msgEl = document.getElementById('inventoryMessage');
+    if (msgEl) msgEl.textContent = '';
+    
+    // Restore button original state
+    const submitBtn = document.getElementById('submitInventoryBtn');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `<span id="submitBtnText">Update Inventory</span>`;
+    }
+  }
+}
+
+/* ---------- UI Loaders & Spinners ---------- */
+
+// Shows a loader directly inside the inventory table rows
+function showTableLoader() {
+  const tbody = document.getElementById('inventoryBody');
+  if (!tbody) return;
+  
+  const isSnapshotActive = !!document.getElementById('snapshotDate')?.value;
+  const colSpan = isSnapshotActive ? 2 : 3;
+  
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="${colSpan}" class="text-center py-10">
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent mb-2"></div>
+        <p class="text-gray-500 text-xs font-semibold uppercase tracking-wider">Processing Request...</p>
+      </td>
+    </tr>
+  `;
+}
+
+// Switches the primary action button to show a spinner during active saving
+function setSavingButtonState(isSaving) {
+  const submitBtn = document.getElementById('submitInventoryBtn');
+  if (!submitBtn) return;
+
+  if (isSaving) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `
+      <div class="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+      <span>Saving Changes...</span>
+    `;
+  } else {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = `<span id="submitBtnText">Update Inventory</span>`;
+  }
+}
+
+/* ---------- Housekeeping Inventory Core Logic ---------- */
+
+// 1. Save (Create Transaction or Add/Use Stock) via Modal Form
 document.getElementById('inventoryForm')?.addEventListener('submit', async function (e) {
   e.preventDefault();
-  const item = document.getElementById('inventoryItem').value;
+  const item = document.getElementById('inventoryItem').value.trim();
   const quantity = parseInt(document.getElementById('inventoryQuantity').value, 10);
   const action = document.getElementById('inventoryAction').value;
 
   if (!item || isNaN(quantity) || quantity <= 0) {
-    showMessage('inventoryMessage', 'Please enter a valid item name and quantity.', true);
+    showMessage('inventoryMessage', 'Please enter a valid item name and positive quantity.', true);
     return;
   }
 
   try {
+    setSavingButtonState(true);
+
     const res = await authenticatedFetch(`${backendURL}/housekeepinginventory`, {
       method: 'POST',
       body: JSON.stringify({ item, quantity, action }),
@@ -6218,20 +6307,30 @@ document.getElementById('inventoryForm')?.addEventListener('submit', async funct
     if (!res || !res.ok) throw new Error(`HTTP error! status: ${res?.status}`);
     
     const result = await res.json();
-    let msg = result.message || 'Inventory updated successfully.';
+    showMessage('inventoryMessage', result.message || 'Inventory updated successfully.');
     
-    showMessage('inventoryMessage', msg);
-    e.target.reset();
-    await loadInventory();
+    // Brief cosmetic success timeout before closing the modal
+    setTimeout(async () => {
+      closeInventoryModal();
+      await loadInventory();
+    }, 1000);
+
   } catch (err) {
     console.error('Error updating inventory:', err);
     showMessage('inventoryMessage', 'An error occurred while updating the inventory.', true);
+    setSavingButtonState(false);
   }
 });
 
-// 2. Load Inventory Scoped to Active Hotel
+// 2. Fetch Live Stock Levels from Backend
 async function loadInventory() {
   try {
+    // Reset snapshot date field when pulling live stock list
+    const dateInput = document.getElementById('snapshotDate');
+    if (dateInput) dateInput.value = '';
+
+    showTableLoader();
+
     const res = await authenticatedFetch(`${backendURL}/housekeepinginventory`);
     if (!res || !res.ok) throw new Error(`HTTP error! status: ${res?.status}`);
     
@@ -6240,10 +6339,36 @@ async function loadInventory() {
   } catch (err) {
     console.error('Error loading inventory:', err);
     showMessage('inventoryMessage', 'Failed to load inventory.', true);
+    const tbody = document.getElementById('inventoryBody');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-red-500">Failed to load current inventory levels.</td></tr>`;
   }
 }
 
-// 3. Render Table to View (lowStockLevel columns removed)
+// 3. Auto-Trigger Historical Snapshots immediately on date picker selection
+async function getInventorySnapshot() {
+  const dateInput = document.getElementById('snapshotDate').value;
+  if (!dateInput) {
+    loadInventory();
+    return;
+  }
+
+  try {
+    showTableLoader();
+
+    const res = await authenticatedFetch(`${backendURL}/housekeepinginventory/snapshot/${dateInput}`);
+    if (!res || !res.ok) throw new Error(`HTTP error! status: ${res?.status}`);
+    
+    const snapshotData = await res.json();
+    renderInventoryTable(snapshotData, true);
+  } catch (err) {
+    console.error('Error fetching snapshot:', err);
+    showMessage('inventoryMessage', 'Failed to fetch inventory snapshot.', true);
+    const tbody = document.getElementById('inventoryBody');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-6 text-red-500">Failed to load snapshot for this date.</td></tr>`;
+  }
+}
+
+// 4. Render Array Data to HTML Table
 function renderInventoryTable(inventoryData, isSnapshot = false) {
   const tbody = document.getElementById('inventoryBody');
   if (!tbody) return;
@@ -6265,30 +6390,31 @@ function renderInventoryTable(inventoryData, isSnapshot = false) {
   tbody.innerHTML = '';
 
   if (filteredInventory.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${isSnapshot ? 2 : 3}" class="text-center py-4 text-gray-500">No inventory items found.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${isSnapshot ? 2 : 3}" class="text-center py-6 text-gray-500">No matching items found.</td></tr>`;
     return;
   }
 
   filteredInventory.forEach((it) => {
     const tr = document.createElement('tr');
+    tr.className = "hover:bg-gray-50 transition-colors";
     tr.dataset.id = it._id;
 
     const actionsHtml = isSnapshot ? '' : `
-      <td class="border px-4 py-2">
-        <button class="bg-yellow-500 text-white px-3 py-1 rounded-md hover:bg-yellow-600 mr-2" onclick="editInventoryItem('${it._id}')">Edit</button>
-        <button class="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600" onclick="deleteInventoryItem('${it._id}')">Delete</button>
+      <td class="border-b px-4 py-2">
+        <button class="bg-yellow-500 text-white text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-yellow-600 mr-2 transition" onclick="editInventoryItem('${it._id}')">Edit</button>
+        <button class="bg-red-500 text-white text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-red-600 transition" onclick="deleteInventoryItem('${it._id}')">Delete</button>
       </td>`;
 
     tr.innerHTML = `
-      <td class="border px-4 py-2 font-medium text-gray-900">${it.item}</td>
-      <td class="border px-4 py-2">${it.quantity}</td>
+      <td class="border-b px-4 py-3 font-medium text-gray-900">${it.item}</td>
+      <td class="border-b px-4 py-3">${it.quantity}</td>
       ${actionsHtml}
     `;
     tbody.appendChild(tr);
   });
 }
 
-// 4. Inline Edit Switcher (lowStockLevel field removed)
+// 5. In-Row Edit Switcher
 function editInventoryItem(id) {
   const target = allInventory.find((x) => x._id === id);
   if (!target) return;
@@ -6298,20 +6424,20 @@ function editInventoryItem(id) {
   
   const editRowHtml = `
     <tr class="bg-blue-50" data-id="${id}">
-      <td class="border px-4 py-2"><input type="text" id="editItem-${id}" value="${target.item}" class="w-full px-2 py-1 border rounded-md"/></td>
-      <td class="border px-4 py-2"><input type="number" id="editQuantity-${id}" value="${target.quantity}" class="w-full px-2 py-1 border rounded-md" min="0"/></td>
-      <td class="border px-4 py-2">
-        <button class="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 mr-2" onclick="saveInventoryItem('${id}')">Save</button>
-        <button class="bg-gray-500 text-white px-3 py-1 rounded-md hover:bg-gray-600" onclick="loadInventory()">Cancel</button>
+      <td class="border-b px-4 py-2"><input type="text" id="editItem-${id}" value="${target.item}" class="w-full px-2 py-1 border rounded focus:ring-1 focus:ring-blue-500 outline-none"/></td>
+      <td class="border-b px-4 py-2"><input type="number" id="editQuantity-${id}" value="${target.quantity}" class="w-full px-2 py-1 border rounded focus:ring-1 focus:ring-blue-500 outline-none" min="0"/></td>
+      <td class="border-b px-4 py-2">
+        <button class="bg-green-600 text-white text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-green-700 mr-1.5 transition" onclick="saveInventoryItem('${id}')">Save</button>
+        <button class="bg-gray-500 text-white text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-gray-600 transition" onclick="loadInventory()">Cancel</button>
       </td>
     </tr>
   `;
   if (row) row.outerHTML = editRowHtml;
 }
 
-// 5. Save Inline Edit Changes (lowStockLevel payload removed)
+// 6. Save inline-row modifications
 async function saveInventoryItem(id) {
-  const item = document.getElementById(`editItem-${id}`).value;
+  const item = document.getElementById(`editItem-${id}`).value.trim();
   const quantity = parseInt(document.getElementById(`editQuantity-${id}`).value, 10);
 
   if (!item || isNaN(quantity)) {
@@ -6320,6 +6446,8 @@ async function saveInventoryItem(id) {
   }
 
   try {
+    showTableLoader();
+
     const res = await authenticatedFetch(`${backendURL}/housekeepinginventory/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ item, quantity }),
@@ -6336,11 +6464,13 @@ async function saveInventoryItem(id) {
   }
 }
 
-// 6. Delete Inventory Item
+// 7. Delete Item
 async function deleteInventoryItem(id) {
   if (!window.confirm('Are you sure you want to delete this inventory item?')) return;
 
   try {
+    showTableLoader();
+
     const res = await authenticatedFetch(`${backendURL}/housekeepinginventory/${id}`, {
       method: 'DELETE',
     });
@@ -6352,45 +6482,25 @@ async function deleteInventoryItem(id) {
     await loadInventory();
   } catch (err) {
     console.error('Error deleting inventory item:', err);
-    showMessage('inventoryMessage', 'An error occurred while deleting the inventory item.', true);
+    showMessage('inventoryMessage', 'An error occurred while deleting the item.', true);
   }
 }
 
-// 7. Get Historic Snapshot
-async function getInventorySnapshot() {
-  const dateInput = document.getElementById('snapshotDate').value;
-  if (!dateInput) {
-    showMessage('inventoryMessage', 'Please select a valid date for the snapshot.', true);
-    return;
-  }
-
-  try {
-    const res = await authenticatedFetch(`${backendURL}/housekeepinginventory/snapshot/${dateInput}`);
-    if (!res || !res.ok) throw new Error(`HTTP error! status: ${res?.status}`);
-    
-    const snapshotData = await res.json();
-    renderInventoryTable(snapshotData, true);
-  } catch (err) {
-    console.error('Error fetching snapshot:', err);
-    showMessage('inventoryMessage', 'Failed to fetch inventory snapshot.', true);
-  }
-}
-
-// Helper to handle alert notification messages inside form layouts
+// Helper to show inline text notifications
 function showMessage(elementId, text, isError = false) {
   const el = document.getElementById(elementId);
   if (!el) return;
   el.textContent = text;
   el.className = isError 
-    ? 'text-center text-red-600 mt-4 text-lg font-medium' 
-    : 'text-center text-green-600 mt-4 text-lg font-medium';
+    ? 'text-center text-red-600 mt-4 text-sm font-semibold' 
+    : 'text-center text-green-600 mt-4 text-sm font-semibold';
   
   setTimeout(() => {
     el.textContent = '';
   }, 5000);
 }
 
-// 8. Export to XLSX
+// 8. Excel Export Helper
 function exportInventoryToExcel() {
   const dataToExport = allInventory.map((it) => ({
     'Item Name': it.item,
@@ -6402,18 +6512,37 @@ function exportInventoryToExcel() {
   XLSX.writeFile(wb, 'Housekeeping_Inventory.xlsx');
 }
 
-/* ---------- DOM Listeners & Bindings ---------- */
-document.getElementById('inventorySearch')?.addEventListener('input', () =>
-  renderInventoryTable(allInventory, false)
-);
+/* ---------- Event Bindings & Listeners ---------- */
 
-// Global window mappings
+// Instant search with preloader simulation
+document.getElementById('inventorySearch')?.addEventListener('input', () => {
+  const searchInput = document.getElementById('inventorySearch');
+  const isSnapshotActive = !!document.getElementById('snapshotDate').value;
+  
+  // Show table loader to display instant filter response feedback
+  showTableLoader();
+
+  if (searchDebounceTimeout) clearTimeout(searchDebounceTimeout);
+  
+  searchDebounceTimeout = setTimeout(() => {
+    renderInventoryTable(allInventory, isSnapshotActive);
+  }, 250); // Small, snappy delay to display search animation smoothness
+});
+
+// Automatic Snapshot Loader (fires whenever a new date is selected on picker)
+document.getElementById('snapshotDate')?.addEventListener('change', () => {
+  getInventorySnapshot();
+});
+
+// Register Global Scopes
 window.exportInventoryToExcel = exportInventoryToExcel;
 window.editInventoryItem = editInventoryItem;
 window.saveInventoryItem = saveInventoryItem;
 window.deleteInventoryItem = deleteInventoryItem;
 window.getInventorySnapshot = getInventorySnapshot;
 window.loadInventory = loadInventory;
+window.openInventoryModal = openInventoryModal;
+window.closeInventoryModal = closeInventoryModal;
 </script>
 </body>
 </html>
