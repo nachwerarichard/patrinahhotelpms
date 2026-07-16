@@ -4002,6 +4002,9 @@ const amount = parseFloat(rawAmount);
     amountInput.value = '';
     closePaymentModal();
     refreshDashboardViews();
+    if (typeof renderBookings === 'function') {
+        renderBookings(currentPage, currentSearchTerm);
+    }
 }
 
     } catch (err) {
