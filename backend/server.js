@@ -4946,21 +4946,21 @@ const transactionSchema = new mongoose.Schema({
 
 const Transaction = mongoose.model('Transaction', transactionSchema);
 
-const inventorySchema = new mongoose.Schema({
-  hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // 🏢 Added
+// 1. Housekeeping Inventory Schema (lowStockLevel removed)
+const housekeepingInventorySchema = new mongoose.Schema({
+  hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
   item: { type: String, required: true },
-  quantity: { type: Number, required: true, min: 0, default: 0 },
-  lowStockLevel: { type: Number, required: true, min: 0, default: 0 }
+  quantity: { type: Number, required: true, min: 0, default: 0 }
 }, { timestamps: true });
 
 // Ensure an item name is unique *only within the same hotel*
-inventorySchema.index({ hotelId: 1, item: 1 }, { unique: true });
+housekeepingInventorySchema.index({ hotelId: 1, item: 1 }, { unique: true });
 
-// Renamed model to RoomInventory to prevent duplicate declaration crashes
-const RoomInventory = mongoose.model('RoomInventory', inventorySchema);
+// Register HousekeepingInventory Model
+const HousekeepingInventory = mongoose.model('HousekeepingInventory', housekeepingInventorySchema);
 
-// 1. Get Inventory Snapshot for a Specific Date
-app.get('/inventory/snapshot/:date', auth, async (req, res) => {
+// 1. Get Housekeeping Inventory Snapshot for a Specific Date
+app.get('/housekeepinginventory/snapshot/:date', auth, async (req, res) => {
   try {
     const { date } = req.params;
     const startOfDay = new Date(date);
@@ -4997,33 +4997,31 @@ app.get('/inventory/snapshot/:date', auth, async (req, res) => {
       }
     ]);
 
-    // Query room inventory configurations for this tenant's items
-    const inventoryItems = await RoomInventory.find({ 
+    // Query housekeeping inventory configurations for this tenant's items
+    const inventoryItems = await HousekeepingInventory.find({ 
       hotelId: req.user.hotelId, 
       item: { $in: snapshotQuantities.map(s => s._id) } 
     });
 
     const combinedSnapshot = snapshotQuantities.map(snapshotItem => {
-      const inventoryItem = inventoryItems.find(i => i.item === snapshotItem._id);
       return {
         item: snapshotItem._id,
-        quantity: snapshotItem.totalQuantity,
-        lowStockLevel: inventoryItem ? inventoryItem.lowStockLevel : 0
+        quantity: snapshotItem.totalQuantity
       };
     });
 
-    await addAuditLog('Inventory Snapshot Fetched', req.user.username, req.user.hotelId, { date });
+    await addAuditLog('Housekeeping Inventory Snapshot Fetched', req.user.username, req.user.hotelId, { date });
 
     res.status(200).json(combinedSnapshot);
   } catch (err) {
-    console.error('❌ Error fetching inventory snapshot:', err);
+    console.error('❌ Error fetching housekeeping inventory snapshot:', err);
     res.status(500).json({ message: 'Server error while fetching snapshot' });
   }
 });
 
-// 2. Add or Use Inventory
-app.post('/inventory', auth, async (req, res) => {
-  const { item, quantity, action, lowStockLevel } = req.body;
+// 2. Add or Use Housekeeping Inventory
+app.post('/housekeepinginventory', auth, async (req, res) => {
+  const { item, quantity, action } = req.body;
   const tenantId = req.user.hotelId;
 
   if (!item || !quantity || !action) {
@@ -5031,8 +5029,8 @@ app.post('/inventory', auth, async (req, res) => {
   }
 
   try {
-    // Find item belonging specifically to this hotel using RoomInventory
-    let inventoryItem = await RoomInventory.findOne({ 
+    // Find item belonging specifically to this hotel using HousekeepingInventory
+    let inventoryItem = await HousekeepingInventory.findOne({ 
       hotelId: tenantId, 
       item: { $regex: new RegExp(`^${item}$`, 'i') } 
     });
@@ -5049,19 +5047,12 @@ app.post('/inventory', auth, async (req, res) => {
         inventoryItem.quantity -= quantity;
       }
 
-      if (lowStockLevel !== undefined && lowStockLevel !== null) {
-        inventoryItem.lowStockLevel = lowStockLevel;
-      }
-
       await inventoryItem.save();
     } else if (action === 'add') {
-      const newLowStockLevel = lowStockLevel !== undefined && lowStockLevel !== null ? Number(lowStockLevel) : 10;
-      
-      inventoryItem = new RoomInventory({ 
+      inventoryItem = new HousekeepingInventory({ 
         hotelId: tenantId, 
         item, 
-        quantity, 
-        lowStockLevel: newLowStockLevel 
+        quantity
       });
       await inventoryItem.save();
     } else {
@@ -5078,69 +5069,69 @@ app.post('/inventory', auth, async (req, res) => {
     });
     await newTransaction.save();
 
-    await addAuditLog('Inventory Transaction', req.user.username, tenantId, { 
+    await addAuditLog('Housekeeping Inventory Transaction', req.user.username, tenantId, { 
       item: inventoryItem.item, 
       quantity, 
       action 
     });
 
-    return res.status(200).json({ message: 'Inventory updated successfully' });
+    return res.status(200).json({ message: 'Housekeeping inventory updated successfully' });
   } catch (err) {
-    console.error('❌ Error updating inventory:', err);
+    console.error('❌ Error updating housekeeping inventory:', err);
     res.status(500).json({ message: 'Server error while updating inventory' });
   }
 });
 
-// 3. Get all inventory items (Scoped to Tenant)
-app.get('/inventory', auth, async (req, res) => {
+// 3. Get all housekeeping inventory items (Scoped to Tenant)
+app.get('/housekeepinginventory', auth, async (req, res) => {
   try {
-    const items = await RoomInventory.find({ hotelId: req.user.hotelId }).sort({ item: 1 });
+    const items = await HousekeepingInventory.find({ hotelId: req.user.hotelId }).sort({ item: 1 });
     res.status(200).json(items);
   } catch (err) {
-    console.error('❌ Error retrieving inventory:', err);
-    res.status(500).json({ message: 'Failed to retrieve inventory' });
+    console.error('❌ Error retrieving housekeeping inventory:', err);
+    res.status(500).json({ message: 'Failed to retrieve housekeeping inventory' });
   }
 });
 
-// 4. Update an inventory item by ID (Verifying Owner Tenant)
-app.put('/inventory/:id', auth, async (req, res) => {
+// 4. Update a housekeeping inventory item by ID (Verifying Owner Tenant)
+app.put('/housekeepinginventory/:id', auth, async (req, res) => {
   try {
-    const updated = await RoomInventory.findOneAndUpdate(
+    const updated = await HousekeepingInventory.findOneAndUpdate(
       { _id: req.params.id, hotelId: req.user.hotelId }, 
       req.body, 
       { new: true, runValidators: true }
     );
 
     if (!updated) {
-      return res.status(404).json({ message: 'Inventory item not found' });
+      return res.status(404).json({ message: 'Housekeeping inventory item not found' });
     }
 
-    await addAuditLog('Inventory Item Updated', req.user.username, req.user.hotelId, { id: updated._id, item: updated.item });
+    await addAuditLog('Housekeeping Inventory Item Updated', req.user.username, req.user.hotelId, { id: updated._id, item: updated.item });
     
-    res.status(200).json({ message: 'Inventory item updated successfully', updated });
+    res.status(200).json({ message: 'Housekeeping inventory item updated successfully', updated });
   } catch (err) {
-    console.error('❌ Error updating inventory item:', err);
-    res.status(500).json({ message: 'Update failed for inventory item' });
+    console.error('❌ Error updating housekeeping inventory item:', err);
+    res.status(500).json({ message: 'Update failed for housekeeping inventory item' });
   }
 });
 
-// 5. Delete an inventory item by ID (Verifying Owner Tenant)
-app.delete('/inventory/:id', auth, async (req, res) => {
+// 5. Delete a housekeeping inventory item by ID (Verifying Owner Tenant)
+app.delete('/housekeepinginventory/:id', auth, async (req, res) => {
   try {
-    const deleted = await RoomInventory.findOneAndDelete({ 
+    const deleted = await HousekeepingInventory.findOneAndDelete({ 
       _id: req.params.id, 
       hotelId: req.user.hotelId  
     });
 
     if (!deleted) {
-      return res.status(404).json({ message: 'Inventory item not found' });
+      return res.status(404).json({ message: 'Housekeeping inventory item not found' });
     }
 
-    await addAuditLog('Inventory Item Deleted', req.user.username, req.user.hotelId, { id: req.params.id });
-    res.status(200).json({ message: 'Inventory item deleted successfully' });
+    await addAuditLog('Housekeeping Inventory Item Deleted', req.user.username, req.user.hotelId, { id: req.params.id });
+    res.status(200).json({ message: 'Housekeeping inventory item deleted successfully' });
   } catch (err) {
-    console.error('❌ Error deleting inventory item:', err);
-    res.status(500).json({ message: 'Delete failed for inventory item' });
+    console.error('❌ Error deleting housekeeping inventory item:', err);
+    res.status(500).json({ message: 'Delete failed for housekeeping inventory item' });
   }
 });
 
