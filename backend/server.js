@@ -4956,7 +4956,9 @@ const inventorySchema = new mongoose.Schema({
 // Ensure an item name is unique *only within the same hotel*
 inventorySchema.index({ hotelId: 1, item: 1 }, { unique: true });
 
-const Inventory = mongoose.model('Inventory', inventorySchema);
+// Renamed model to RoomInventory to prevent duplicate declaration crashes
+const RoomInventory = mongoose.model('RoomInventory', inventorySchema);
+
 // 1. Get Inventory Snapshot for a Specific Date
 app.get('/inventory/snapshot/:date', auth, async (req, res) => {
   try {
@@ -4995,8 +4997,8 @@ app.get('/inventory/snapshot/:date', auth, async (req, res) => {
       }
     ]);
 
-    // Query inventory configurations for this tenant's items
-    const inventoryItems = await Inventory.find({ 
+    // Query room inventory configurations for this tenant's items
+    const inventoryItems = await RoomInventory.find({ 
       hotelId: req.user.hotelId, 
       item: { $in: snapshotQuantities.map(s => s._id) } 
     });
@@ -5029,8 +5031,8 @@ app.post('/inventory', auth, async (req, res) => {
   }
 
   try {
-    // Find item belonging specifically to this hotel
-    let inventoryItem = await Inventory.findOne({ 
+    // Find item belonging specifically to this hotel using RoomInventory
+    let inventoryItem = await RoomInventory.findOne({ 
       hotelId: tenantId, 
       item: { $regex: new RegExp(`^${item}$`, 'i') } 
     });
@@ -5055,7 +5057,7 @@ app.post('/inventory', auth, async (req, res) => {
     } else if (action === 'add') {
       const newLowStockLevel = lowStockLevel !== undefined && lowStockLevel !== null ? Number(lowStockLevel) : 10;
       
-      inventoryItem = new Inventory({ 
+      inventoryItem = new RoomInventory({ 
         hotelId: tenantId, 
         item, 
         quantity, 
@@ -5092,7 +5094,7 @@ app.post('/inventory', auth, async (req, res) => {
 // 3. Get all inventory items (Scoped to Tenant)
 app.get('/inventory', auth, async (req, res) => {
   try {
-    const items = await Inventory.find({ hotelId: req.user.hotelId }).sort({ item: 1 });
+    const items = await RoomInventory.find({ hotelId: req.user.hotelId }).sort({ item: 1 });
     res.status(200).json(items);
   } catch (err) {
     console.error('❌ Error retrieving inventory:', err);
@@ -5103,7 +5105,7 @@ app.get('/inventory', auth, async (req, res) => {
 // 4. Update an inventory item by ID (Verifying Owner Tenant)
 app.put('/inventory/:id', auth, async (req, res) => {
   try {
-    const updated = await Inventory.findOneAndUpdate(
+    const updated = await RoomInventory.findOneAndUpdate(
       { _id: req.params.id, hotelId: req.user.hotelId }, 
       req.body, 
       { new: true, runValidators: true }
@@ -5125,7 +5127,7 @@ app.put('/inventory/:id', auth, async (req, res) => {
 // 5. Delete an inventory item by ID (Verifying Owner Tenant)
 app.delete('/inventory/:id', auth, async (req, res) => {
   try {
-    const deleted = await Inventory.findOneAndDelete({ 
+    const deleted = await RoomInventory.findOneAndDelete({ 
       _id: req.params.id, 
       hotelId: req.user.hotelId  
     });
