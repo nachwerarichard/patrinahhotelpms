@@ -3222,6 +3222,37 @@ body {
 
     </div>
 </section>
+
+<section id="paymentgateway" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-blue-600">Payment Gateways</h2>
+            <p class="text-gray-500 text-sm mt-1">
+Manage payment providers used for guest payments.            </p>
+        </div>
+    </div>
+
+
+    <div class="overflow-x-auto hidden md:block">
+        <table class="w-full border border-gray-200 rounded-lg overflow-hidden" id="gatewayTable">
+            <thead class="bg-gray-100 text-gray-700 font-medium text-sm">
+                <tr>
+                    <th class="text-left px-4 py-3">Gateway</th>
+                    <th class="text-left px-4 py-3">Status</th>
+                    <th class="text-left px-4 py-3">Environment</th>
+                    <th class="text-left px-4 py-3">Default Status</th>
+                    <th class="text-left px-4 py-3 text-right pr-6">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="gatewayRowContainer" class="divide-y divide-gray-200 text-sm text-gray-700">
+                </tbody>
+        </table>
+    </div>
+
+    <div id="gatewayMobileContainer" class="block md:hidden space-y-4">
+        </div>
+
+</section>
             <section id="service-reports" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
                 <h2 class="text-2xl font-bold mb-4 text-blue-600"><i class="fas fa-concierge-bell"></i> Service Reports (Incidental Charges)</h2>
                 <div class="flex flex-wrap items-center gap-4 mb-6">
@@ -4210,7 +4241,7 @@ Add Guest Details            </h2>
     </div>
 </div>
     <div id="addPaymentModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-  <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl transition-all relative">
+    <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl transition-all relative">
     
     <h2 class="text-lg font-bold text-gray-800 mb-4">Add Payment Record</h2>
     <input type="hidden" id="paymentBookingId">
@@ -4236,7 +4267,7 @@ Add Guest Details            </h2>
     <!-- New Option Added Below -->
     <option value="Stripe">Stripe (Card / Global Wallets)</option>
   </select>
-</div>
+      </div>
 
       <div id="pesapalFields" class="hidden space-y-3 bg-blue-50 p-3 rounded-lg border border-blue-100 animate-fadeIn">
          <p class="text-xs text-blue-700 font-medium">Digital checkout parameters needed for Pesapal transaction generation:</p>
@@ -4272,37 +4303,6 @@ Add Guest Details            </h2>
   </div>
 </div>
 
-<section id="paymentgateway" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h2 class="text-2xl font-bold text-blue-600">Payment Gateways</h2>
-            <p class="text-gray-500 text-sm mt-1">
-Manage payment providers used for guest payments.            </p>
-        </div>
-    </div>
-
-
-    <div class="overflow-x-auto hidden md:block">
-        <table class="w-full border border-gray-200 rounded-lg overflow-hidden" id="gatewayTable">
-            <thead class="bg-gray-100 text-gray-700 font-medium text-sm">
-                <tr>
-                    <th class="text-left px-4 py-3">Gateway</th>
-                    <th class="text-left px-4 py-3">Status</th>
-                    <th class="text-left px-4 py-3">Environment</th>
-                    <th class="text-left px-4 py-3">Default Status</th>
-                    <th class="text-left px-4 py-3 text-right pr-6">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="gatewayRowContainer" class="divide-y divide-gray-200 text-sm text-gray-700">
-                </tbody>
-        </table>
-    </div>
-
-    <div id="gatewayMobileContainer" class="block md:hidden space-y-4">
-        </div>
-
-</section>
 
 <div id="configureGatewayModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
     <div class="bg-white w-full max-w-lg rounded-xl shadow-2xl p-6 transform transition-all">
