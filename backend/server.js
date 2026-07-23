@@ -4937,26 +4937,26 @@ const statusReportSchema = new mongoose.Schema({
 const StatusReport = mongoose.model('StatusReport', statusReportSchema);
 
 const transactionSchema = new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
+  hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+  department: { type: String, default: 'housekeeping' }, // Added to segment inventory logs
   item: { type: String, required: true },
   quantity: { type: Number, required: true },
-  action: { type: String, required: true, enum: ['add', 'use'] },
+  action: { type: String },
   timestamp: { type: Date, default: Date.now }
 });
 
 const Transaction = mongoose.model('Transaction', transactionSchema);
 
-// 1. Housekeeping Inventory Schema (lowStockLevel removed)
+// 1. Housekeeping Inventory Schema
 const housekeepingInventorySchema = new mongoose.Schema({
   hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
   item: { type: String, required: true },
   quantity: { type: Number, required: true, min: 0, default: 0 }
 }, { timestamps: true });
 
-// Ensure an item name is unique *only within the same hotel*
+// Unique index per hotel
 housekeepingInventorySchema.index({ hotelId: 1, item: 1 }, { unique: true });
 
-// Register HousekeepingInventory Model
 const HousekeepingInventory = mongoose.model('HousekeepingInventory', housekeepingInventorySchema);
 
 // 1. Get Housekeeping Inventory Snapshot for a Specific Date
@@ -4973,11 +4973,12 @@ app.get('/housekeepinginventory/snapshot/:date', auth, async (req, res) => {
     const endOfDay = new Date(startOfDay);
     endOfDay.setUTCHours(23, 59, 59, 999);
 
-    // Filter transactions strictly by tenant hotelId AND timestamp
+    // Filter strictly by hotelId, date AND housekeeping department
     const snapshotQuantities = await Transaction.aggregate([
       {
         $match: {
           hotelId: hotelId, 
+          department: 'housekeeping', // FIXED: Ensures only housekeeping transactions are aggregated
           timestamp: { $lte: endOfDay }
         }
       },
@@ -4997,18 +4998,10 @@ app.get('/housekeepinginventory/snapshot/:date', auth, async (req, res) => {
       }
     ]);
 
-    // Query housekeeping inventory configurations for this tenant's items
-    const inventoryItems = await HousekeepingInventory.find({ 
-      hotelId: req.user.hotelId, 
-      item: { $in: snapshotQuantities.map(s => s._id) } 
-    });
-
-    const combinedSnapshot = snapshotQuantities.map(snapshotItem => {
-      return {
-        item: snapshotItem._id,
-        quantity: snapshotItem.totalQuantity
-      };
-    });
+    const combinedSnapshot = snapshotQuantities.map(snapshotItem => ({
+      item: snapshotItem._id,
+      quantity: snapshotItem.totalQuantity
+    }));
 
     await addAuditLog('Housekeeping Inventory Snapshot Fetched', req.user.username, req.user.hotelId, { date });
 
@@ -5029,10 +5022,9 @@ app.post('/housekeepinginventory', auth, async (req, res) => {
   }
 
   try {
-    // Find item belonging specifically to this hotel using HousekeepingInventory
     let inventoryItem = await HousekeepingInventory.findOne({ 
       hotelId: tenantId, 
-      item: { $regex: new RegExp(`^${item}$`, 'i') } 
+      item: { $regex: new RegExp(`^${item.trim()}$`, 'i') } 
     });
 
     if (inventoryItem) {
@@ -5051,17 +5043,18 @@ app.post('/housekeepinginventory', auth, async (req, res) => {
     } else if (action === 'add') {
       inventoryItem = new HousekeepingInventory({ 
         hotelId: tenantId, 
-        item, 
+        item: item.trim(), 
         quantity
       });
       await inventoryItem.save();
     } else {
-      return res.status(404).json({ message: 'Item not found in inventory' });
+      return res.status(404).json({ message: 'Item not found in housekeeping inventory' });
     }
 
-    // Save transaction with hotelId attached
+    // Save transaction tagged with department: 'housekeeping'
     const newTransaction = new Transaction({
       hotelId: tenantId, 
+      department: 'housekeeping', // FIXED: Tag explicitly to avoid mixing with main/other inventories
       item: inventoryItem.item,
       quantity: quantity,
       action: action,
@@ -5093,7 +5086,7 @@ app.get('/housekeepinginventory', auth, async (req, res) => {
   }
 });
 
-// 4. Update a housekeeping inventory item by ID (Verifying Owner Tenant)
+// 4. Update a housekeeping inventory item by ID
 app.put('/housekeepinginventory/:id', auth, async (req, res) => {
   try {
     const updated = await HousekeepingInventory.findOneAndUpdate(
@@ -5115,7 +5108,7 @@ app.put('/housekeepinginventory/:id', auth, async (req, res) => {
   }
 });
 
-// 5. Delete a housekeeping inventory item by ID (Verifying Owner Tenant)
+// 5. Delete a housekeeping inventory item by ID
 app.delete('/housekeepinginventory/:id', auth, async (req, res) => {
   try {
     const deleted = await HousekeepingInventory.findOneAndDelete({ 
