@@ -7052,20 +7052,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                 .lean();
         };
 
-        const getOperationalSummaryTool = async () => {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const [totalRooms, dirtyRooms, cleanRooms,inprogress, maintenanceRooms, arrivals, departures, checkedIn] = await Promise.all([
-                Room.countDocuments({ hotelId }),
-                Room.countDocuments({ hotelId, status: 'dirty' }),
-                Room.countDocuments({ hotelId, status: 'clean' }),
-                Room.countDocuments({ hotelId, status: 'In progress' }),
-                Room.countDocuments({ hotelId, status: 'under-maintenance' }),
-                Booking.countDocuments({ hotelId, checkIn: todayStr, gueststatus: { $nin: ['cancelled', 'void'] } }),
-                Booking.countDocuments({ hotelId, checkOut: todayStr, gueststatus: { $nin: ['cancelled', 'void'] } }),
-                Booking.countDocuments({ hotelId, gueststatus: 'checkedin' })
-            ]);
-            return { totalRooms, dirtyRooms, inprogress,cleanRooms, maintenanceRooms, arrivals, departures, checkedIn, date: todayStr };
-        };
+        
 
         const searchCashJournalTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
@@ -7139,41 +7126,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             return await ClientAccount.find(filter).sort({ updatedAt: -1 }).lean();
         };
 
-        // 📊 NEW: AGGREGATE OPERATIONS & FINANCIAL REPORTING TOOL
-        const generateOperationalReportTool = async (queryFilter) => {
-            const { startDate, endDate, department } = queryFilter;
-            const filter = { hotelId };
-            
-            if (startDate || endDate) {
-                filter.date = {};
-                if (startDate) filter.date.$gte = startDate;
-                if (endDate) filter.date.$lte = endDate;
-            }
-
-            const salesFilter = { ...filter };
-            const expenseFilter = { ...filter };
-            if (department) {
-                salesFilter.department = department;
-                expenseFilter.department = department;
-            }
-
-            const [sales, expenses, logs] = await Promise.all([
-                Sale.find(salesFilter).lean(),
-                Expense.find(expenseFilter).lean(),
-                AuditLog.find({ hotelId, timestamp: { $gte: new Date(startDate || new Date().setDate(new Date().getDate()-7)) } }).limit(20).lean()
-            ]);
-
-            const totalRevenue = sales.reduce((sum, item) => sum + (item.amount || item.total || 0), 0);
-            const totalExpenses = expenses.reduce((sum, item) => sum + (item.amount || 0), 0);
-
-            return {
-                reportingPeriod: { startDate: startDate || "7 days ago", endDate: endDate || "Today" },
-                financialSummary: { totalRevenue, totalExpenses, netIncome: totalRevenue - totalExpenses },
-                salesCount: sales.length,
-                expensesCount: expenses.length,
-                recentAuditTrailSummary: logs.map(l => `${l.user}: ${l.action} (${l.timestamp})`)
-            };
-        };
+    
 
         const internalFunctions = {
             searchBookings: searchBookingsTool,
@@ -7191,9 +7144,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             searchGateways: searchGatewaysTool,
             searchPaymentTransactions: searchPaymentTransactionsTool,
             searchIncidentalCharges: searchIncidentalChargesTool,
-            searchClientAccounts: searchClientAccountsTool,
-            getOperationalSummary: getOperationalSummaryTool,
-            generateOperationalReport: generateOperationalReportTool
+            searchClientAccounts: searchClientAccountsTool
         };
 
         // =========================================================================
@@ -7230,22 +7181,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         const toolsConfig = [
             {
                 functionDeclarations: [
-                    { name: "getOperationalSummary", description: "Gets today's core quick metrics including total room status counts, expected arrivals, and departures." },
-                    {
-                        name: "searchBookings",
-                        description: "Queries the hotel bookings database. Filter using fields like gueststatus, paymentStatus, checkIn, checkOut, or name.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                gueststatus: { type: "STRING" },
-                                paymentStatus: { type: "STRING" },
-                                checkIn: { type: "STRING", description: "Format: YYYY-MM-DD" },
-                                checkOut: { type: "STRING", description: "Format: YYYY-MM-DD" },
-                                name: { type: "STRING" }
-                            }
-                        }
-                    },
-                    // ✨ 3. ADDED: Function Declaration configuration for Gemini
+                    
                     {
                         name: "searchStatusReports",
                         description: "Queries historical logs for housekeeping status updates, room remarks, maintenance flags, or blocked room justifications.",
@@ -7408,18 +7344,6 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                             properties: {
                                 guestName: { type: "STRING", description: "Customer ledger owner profile name" },
                                 isClosed: { type: "BOOLEAN", description: "Filters by active vs archived balances" }
-                            }
-                        }
-                    },
-                    {
-                        name: "generateOperationalReport",
-                        description: "Compiles deep financial and operational updates for sales, revenues, and spending metrics across specified ranges.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                startDate: { type: "STRING", description: "Format: YYYY-MM-DD" },
-                                endDate: { type: "STRING", description: "Format: YYYY-MM-DD" },
-                                department: { type: "STRING", description: "Optional filter: Bar, Restaurant, Kitchen" }
                             }
                         }
                     }
