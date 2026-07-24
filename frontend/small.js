@@ -6117,17 +6117,22 @@ if (!res.ok) {
 function autoFillPrices(selectedItemName) {
     if (!selectedItemName) return;
 
-    // Find the item in inventory (case-insensitive trim for safety)
+    // 1. Sanitize search input
+    const cleanSearchName = selectedItemName.trim().toLowerCase();
+
+    // 2. Find matching item in inventory lookup array
     const item = inventoryData.find(
-        i => i.item && i.item.trim().toLowerCase() === selectedItemName.trim().toLowerCase()
+        i => i.item && i.item.trim().toLowerCase() === cleanSearchName
     );
 
     if (item) {
-        // Auto-fill price inputs & data attributes
+        console.log("🎯 Found item record:", item); // Debug log to check contents
+
         const priceInput = document.getElementById('itemPrice');
         const descInput = document.getElementById('itemDesc');
         const deptSelect = document.getElementById('deptSelect');
 
+        // Populate prices
         if (priceInput) priceInput.value = item.sellingprice || 0;
         
         if (descInput) {
@@ -6135,9 +6140,26 @@ function autoFillPrices(selectedItemName) {
             descInput.dataset.sp = item.sellingprice || 0;
         }
 
-        // Auto-select department if available in item data
+        // --- DEPARTMENT AUTO-SELECT ---
         if (deptSelect && item.department) {
-            deptSelect.value = item.department;
+            const targetDept = item.department.trim().toLowerCase();
+            let matched = false;
+
+            // Iterate over options to match case-insensitively
+            for (let i = 0; i < deptSelect.options.length; i++) {
+                const optVal = deptSelect.options[i].value.trim().toLowerCase();
+                if (optVal === targetDept) {
+                    deptSelect.selectedIndex = i;
+                    matched = true;
+                    break;
+                }
+            }
+
+            if (!matched) {
+                console.warn(`⚠️ Item department '${item.department}' is not an option in the #deptSelect dropdown.`);
+            }
+        } else if (!item.department) {
+            console.warn(`⚠️ Item '${item.item}' exists in lookup array but has no 'department' field attached.`);
         }
     }
 }
