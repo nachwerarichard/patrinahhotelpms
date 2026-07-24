@@ -6653,10 +6653,9 @@ confirmDeleteBtn.addEventListener('click', () => {
 
 function openAdjustModal(item) {
     const modal = document.getElementById('edit-inventory-modal');
-    if (!modal) return;
-
+    if (!modal) return;    
     // 1. Fill the data (including department)
-    document.getElementById('edit-inventory-id').value = item._id || '';
+    document.getElementById('edit-inventory-id').value = item._id || item.id || '';
     document.getElementById('edit-item').value = item.item || '';
     
     const deptField = document.getElementById('edit-department');
@@ -9319,7 +9318,7 @@ function openEditModal(item) {
 
     // 3. Populate Form
     const idField = document.getElementById('edit-inventory-id');
-    if (idField) idField.value = item._id || '';
+    if (idField) idField.value = item._id ||item.id || '';
 
     const nameField = document.getElementById('edit-item');
     if (nameField) nameField.value = item.item || '';
