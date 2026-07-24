@@ -5884,21 +5884,35 @@ app.get('/api/kitchen/Pending', auth, async (req, res) => {
     }
 });
 
-// 1. LOOKUP ENDPOINT: Preserves department field
 app.get('/api/inventory/lookup', auth, async (req, res) => {
     try {
         const items = await Inventory.aggregate([
-            { $match: { hotelId: req.user.hotelId } }, // Filter by hotel first
-            { $sort: { date: -1 } },
+            { $match: { hotelId: req.user.hotelId } }, // Filter by hotel
+            { $sort: { date: -1 } },                  // Sort newest first
             { $group: {
                 _id: "$item",
                 item: { $first: "$item" },
-                department: { $first: "$department" }, // 👈 Added department
+                // 🎯 Get all departments for this item, filter out nulls, grab the latest real value
+                departments: { 
+                  $push: { 
+                    $cond: [
+                      { $and: [ { $ne: ["$department", null] }, { $ne: ["$department", ""] } ] }, 
+                      "$department", 
+                      "$$REMOVE"
+                    ] 
+                  } 
+                },
                 buyingprice: { $first: "$buyingprice" },
                 sellingprice: { $first: "$sellingprice" }
             }},
+            { $addFields: {
+                // Pick the first real department from history (or null if it never had one)
+                department: { $arrayElemAt: ["$departments", 0] }
+            }},
+            { $project: { departments: 0 } }, // Clean up temporary array
             { $match: { sellingprice: { $exists: true, $gt: 0 } }}
         ]);
+        
         res.json(items);
     } catch (err) {
         res.status(500).json({ error: err.message });
