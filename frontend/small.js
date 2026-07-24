@@ -6115,11 +6115,30 @@ if (!res.ok) {
 }
 
 function autoFillPrices(selectedItemName) {
-    const item = inventoryData.find(i => i.item === selectedItemName);
+    if (!selectedItemName) return;
+
+    // Find the item in inventory (case-insensitive trim for safety)
+    const item = inventoryData.find(
+        i => i.item && i.item.trim().toLowerCase() === selectedItemName.trim().toLowerCase()
+    );
+
     if (item) {
-        document.getElementById('itemPrice').value = item.sellingprice;
-        document.getElementById('itemDesc').dataset.bp = item.buyingprice;
-        document.getElementById('itemDesc').dataset.sp = item.sellingprice;
+        // Auto-fill price inputs & data attributes
+        const priceInput = document.getElementById('itemPrice');
+        const descInput = document.getElementById('itemDesc');
+        const deptSelect = document.getElementById('deptSelect');
+
+        if (priceInput) priceInput.value = item.sellingprice || 0;
+        
+        if (descInput) {
+            descInput.dataset.bp = item.buyingprice || 0;
+            descInput.dataset.sp = item.sellingprice || 0;
+        }
+
+        // Auto-select department if available in item data
+        if (deptSelect && item.department) {
+            deptSelect.value = item.department;
+        }
     }
 }
 
@@ -6636,9 +6655,13 @@ function openAdjustModal(item) {
     const modal = document.getElementById('edit-inventory-modal');
     if (!modal) return;
 
-    // 1. Fill the data
+    // 1. Fill the data (including department)
     document.getElementById('edit-inventory-id').value = item._id || '';
     document.getElementById('edit-item').value = item.item || '';
+    
+    const deptField = document.getElementById('edit-department');
+    if (deptField) deptField.value = item.department || '';
+
     document.getElementById('edit-opening').value = item.opening || 0;
     document.getElementById('edit-purchases').value = item.purchases || 0;
     document.getElementById('edit-inventory-sales').value = item.sales || 0;
@@ -6647,38 +6670,46 @@ function openAdjustModal(item) {
     document.getElementById('edit-sellingprice').value = item.sellingprice || 0;
     document.getElementById('edit-trackInventory').checked = !!item.trackInventory;
 
-    // 2. Set Read-Only logic for Adjustment mode
+    // 2. Hide locked/read-only input containers
     const lockedIds = [
         'edit-item', 
+        'edit-department',
         'edit-opening', 
         'edit-inventory-sales', 
         'edit-buyingprice', 
-        'edit-sellingprice'
+        'edit-sellingprice',
+        'edit-trackInventory'
     ];
     
     lockedIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            el.readOnly = true;
-            el.classList.add('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+            // Find closest wrapper element (parent <div>) and hide it
+            const container = el.closest('div');
+            if (container) container.classList.add('hidden');
         }
     });
 
-    const trackCheckbox = document.getElementById('edit-trackInventory');
-    if (trackCheckbox) trackCheckbox.disabled = true;
+    // 3. Keep Purchases and Spoilage VISIBLE & EDITABLE
+    const editableIds = ['edit-purchases', 'edit-spoilage'];
+    editableIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            const container = el.closest('div');
+            if (container) container.classList.remove('hidden');
+            el.readOnly = false;
+        }
+    });
 
-    // 3. Keep Purchases and Spoilage EDITABLE
+    // Focus on purchases field for fast entry
     const purchaseInput = document.getElementById('edit-purchases');
-    if (purchaseInput) {
-        purchaseInput.readOnly = false;
-        purchaseInput.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
-        purchaseInput.focus();
-    }
+    if (purchaseInput) purchaseInput.focus();
 
     // 4. Update UI Title
     const title = modal.querySelector('h2');
     if (title) title.textContent = `Adjust Stock: ${item.item}`;
     
+    // 5. Show Modal
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
 }
@@ -6874,60 +6905,74 @@ function setLoadingState(isLoading) {
  * @returns {Object|null} The data object or null if validation fails
  */
 function getInventoryFormData() {
-    const hotelId = localStorage.getItem('hotelId');
-    
+    const hotelId = localStorage.getItem('hotelId'); // or wherever you store hotelId
     if (!hotelId) {
-        showMessage('Error', 'No hotel selected. Please log in again.', true);
+        showMessage('Error', 'Hotel ID missing. Please log in again.', true);
         return null;
     }
 
-    // Map your HTML IDs to the Backend Schema fields
+    const department = document.getElementById('department')?.value;
+    const item = document.getElementById('item')?.value.trim();
+
+    if (!department) {
+        showMessage('Error', 'Please select a department.', true);
+        return null;
+    }
+
+    if (!item) {
+        showMessage('Error', 'Please enter an item name.', true);
+        return null;
+    }
+
     return {
-        item: document.getElementById('item').value.trim(),
-        opening: parseFloat(document.getElementById('opening').value) || 0,
-        purchases: parseFloat(document.getElementById('purchases').value) || 0,
-        sales: parseFloat(document.getElementById('inventory-sales').value) || 0,
-        spoilage: parseFloat(document.getElementById('spoilage').value) || 0,
-        buyingprice: parseFloat(document.getElementById('buyingprice').value) || 0,
-        sellingprice: parseFloat(document.getElementById('sellingprice').value) || 0,
-        trackInventory: document.getElementById('trackInventory').checked
+        hotelId,
+        item,
+        department,
+        opening: Number(document.getElementById('opening')?.value) || 0,
+        purchases: Number(document.getElementById('purchases')?.value) || 0,
+        sales: Number(document.getElementById('inventory-sales')?.value) || 0,
+        spoilage: Number(document.getElementById('spoilage')?.value) || 0,
+        buyingprice: Number(document.getElementById('buyingprice')?.value) || 0,
+        sellingprice: Number(document.getElementById('sellingprice')?.value) || 0,
+        trackInventory: document.getElementById('trackInventory')?.checked ?? true
     };
 }
-/**
- * Sends the form data to the backend
- */
+
 async function submitInventory() {
     const data = getInventoryFormData();
-    if (!data) return; // Stop if data is invalid/missing hotelId
+    if (!data) return; // Stop if form validation fails
 
     const inventoryForm = document.getElementById('inventory-form');
 
     try {
         setLoadingState(true);
 
-        // Ensure the path matches your backend: /api/inventory
         const response = await authenticatedFetch(`${API_BASE_URL}/inventory`, {
             method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(data)
         });
 
-        if (!response) return; // authenticatedFetch handles the redirect on 401
+        if (!response) return; // authenticatedFetch handles redirects on 401
 
         const result = await response.json();
 
         if (response.ok) {
             if (inventoryForm) inventoryForm.reset();
             
-            // Clear hidden ID if you use this for updates too
-            const idField = document.getElementById('inventory-id');
-            if (idField) idField.value = '';
+            // Close modal after saving
+            if (typeof toggleInventoryModal === 'function') {
+                toggleInventoryModal(false);
+            }
 
-            showMessage('Success', `${data.item} saved successfully! ✅`);
+            showMessage('Success', `${data.item} added to ${data.department} inventory! ✅`);
             
-            // Refresh the list if the function exists
+            // Refresh list
             if (typeof fetchInventory === 'function') fetchInventory(); 
         } else {
-            throw new Error(result.error || 'Failed to save item');
+            throw new Error(result.error || result.message || 'Failed to save item');
         }
     } catch (error) {
         console.error('Submission Error:', error);
@@ -6936,8 +6981,6 @@ async function submitInventory() {
         setLoadingState(false);
     }
 }
-
-
 
 
 // --- Sales Functions ---
@@ -9243,7 +9286,7 @@ document.getElementById('exportposReportBtn').addEventListener('click', function
     // New function to handle the modal display and population
 // New function to handle the modal display and population
 function openEditModal(item) {
-    // 1. Permission check (Adjust this array to match your app's rules!)
+    // 1. Permission check
     const authorizedRoles = ['admin', 'super-admin', 'manager'];
     if (!authorizedRoles.includes(currentUserRole)) {
         if (typeof showMessage === 'function') showMessage('Permission Denied', true);
@@ -9261,12 +9304,16 @@ function openEditModal(item) {
     const modal = document.getElementById('edit-inventory-modal');
     if (!modal) return console.error("Modal 'edit-inventory-modal' missing from HTML");
 
-    // 3. Populate Form (Safely handling potentially missing DOM fields)
+    // 3. Populate Form
     const idField = document.getElementById('edit-inventory-id');
     if (idField) idField.value = item._id || '';
 
     const nameField = document.getElementById('edit-item');
     if (nameField) nameField.value = item.item || '';
+
+    // Populate Department dropdown
+    const deptField = document.getElementById('edit-department');
+    if (deptField) deptField.value = item.department || '';
 
     // Numeric fields with 0 fallback
     const numericFields = {
@@ -9280,7 +9327,7 @@ function openEditModal(item) {
 
     for (let [id, val] of Object.entries(numericFields)) {
         const input = document.getElementById(id);
-        if (input) input.value = val || 0;
+        if (input) input.value = val !== undefined ? val : 0;
     }
 
     const trackInput = document.getElementById('edit-trackInventory');
@@ -9288,7 +9335,7 @@ function openEditModal(item) {
         trackInput.checked = item.trackInventory !== undefined ? item.trackInventory : true;
     }
 
-    // 4. Dynamic Modal Header (Great for UX)
+    // 4. Dynamic Modal Header
     const title = modal.querySelector('h2');
     if (title) {
         title.textContent = item._id ? `Edit ${item.item}` : `Initialize ${item.item} for ${item.viewingDate || 'Today'}`;
@@ -9466,16 +9513,14 @@ window.renderInventoryTable = function(inventory) {
         desktopStockHeader.textContent = isToday ? 'Current Stock' : 'Closing Stock';
     }
 
-    // --- UPDATED EMPTY STATE & PRE-SEARCH CHECK ---
-    // --- UPDATED EMPTY STATE & PRE-SEARCH CHECK ---
+    // --- EMPTY STATE & PRE-SEARCH CHECK ---
     if (!inventory || inventory.length === 0) {
         console.warn("⚠️ Array is empty inside rendering execution context.");
         
-        // If the fields are genuinely completely untouched/empty
         if (!selectedDate && !selectedItem) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="9" class="text-center p-6 text-slate-400 font-medium">
+                    <td colspan="10" class="text-center p-6 text-slate-400 font-medium">
                         <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Type an item name or pick a date to start searching.
                     </td>
                 </tr>`;
@@ -9484,8 +9529,7 @@ window.renderInventoryTable = function(inventory) {
                     <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Type an item name or pick a date to start searching.
                 </div>`;
         } else {
-            // If they DID type or select a date but nothing matches
-            tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic"><i class="fas fa-exclamation-circle mr-2"></i> No matching stock records found.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="py-10 text-center text-slate-400 font-medium italic"><i class="fas fa-exclamation-circle mr-2"></i> No matching stock records found.</td></tr>`;
             cardContainer.innerHTML = `<div class="p-6 text-center text-slate-400 font-medium italic bg-white rounded-xl border border-slate-200 shadow-sm"><i class="fas fa-exclamation-circle mr-2"></i> No matching stock records found.</div>`;
         }
         return;
@@ -9509,6 +9553,8 @@ window.renderInventoryTable = function(inventory) {
         const badgeText = hasMovement ? 'Updated' : 'Static';
         const statusBadge = `<span class="ml-1 px-1 py-0.5 text-[8px] font-black uppercase tracking-wider border rounded ${badgeClasses}">${badgeText}</span>`;
 
+        const deptBadge = `<span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-purple-50 text-purple-700 border border-purple-100">${item.department || 'N/A'}</span>`;
+
         const calculatedCurrent = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
         const stockValue = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
 
@@ -9529,6 +9575,7 @@ window.renderInventoryTable = function(inventory) {
                     ${statusBadge}
                 </div>
             </td>
+            <td class="px-4 py-3.5 text-center">${deptBadge}</td>
             <td class="px-4 py-3.5 font-mono text-center text-slate-500">${item.opening || 0}</td>
             <td class="px-4 py-3.5 font-mono text-center text-emerald-600 font-bold">+${item.purchases || 0}</td>
             <td class="px-4 py-3.5 font-mono text-center text-blue-600 font-bold">-${item.sales || 0}</td>
@@ -9547,7 +9594,10 @@ window.renderInventoryTable = function(inventory) {
             <div class="flex justify-between items-start">
                 <div>
                     <h3 class="text-base font-bold text-slate-800 leading-tight">${item.item || 'Unnamed Item'}</h3>
-                    <div class="mt-1">${statusBadge}</div>
+                    <div class="mt-1 flex items-center gap-1.5">
+                        ${deptBadge}
+                        ${statusBadge}
+                    </div>
                 </div>
                 <div id="${mobileCardId}" class="overflow-visible relative"></div>
             </div>

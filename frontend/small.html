@@ -1739,28 +1739,29 @@ body {
     <div class="w-full py-2">
         <div class="hidden sm:block w-full overflow-x-auto border border-slate-200/80 rounded-xl bg-white shadow-sm">
             <table id="inventory-table" class="w-full min-w-max text-left border-collapse table-auto">
-                <thead>
-                    <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-                        <th class="px-5 py-4 min-w-[150px]">Item</th>
-                        <th class="px-4 py-4 text-center">Opening</th>
-                        <th class="px-4 py-4 text-center">Purchases</th>
-                        <th class="px-4 py-4 text-center">Sales</th>
-                        <th class="px-4 py-4 text-center">Spoilage</th>
-                        <th class="px-4 py-4 text-center stock-header-cell">Closing</th>
-                        <th class="px-4 py-4 text-center">BP</th>
-                        <th class="px-4 py-4 text-center">SP</th>
-                        <th class="px-5 py-4 text-right">Actions</th>
-                    </tr>
-                </thead>
-                <!-- UPDATED PLACEHOLDER FOR TABLE -->
-                <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
-                    <tr>
-                        <td colspan="9" class="text-center p-6 text-slate-400 font-medium">
-                            <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Please select a date or enter filters, then click search.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+    <thead>
+        <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+            <th class="px-5 py-4 min-w-[150px]">Item</th>
+            <th class="px-4 py-4 text-center">Department</th>
+            <th class="px-4 py-4 text-center">Opening</th>
+            <th class="px-4 py-4 text-center">Purchases</th>
+            <th class="px-4 py-4 text-center">Sales</th>
+            <th class="px-4 py-4 text-center">Spoilage</th>
+            <th class="px-4 py-4 text-center stock-header-cell">Closing</th>
+            <th class="px-4 py-4 text-center">BP</th>
+            <th class="px-4 py-4 text-center">SP</th>
+            <th class="px-5 py-4 text-right">Actions</th>
+        </tr>
+    </thead>
+    <!-- UPDATED PLACEHOLDER FOR TABLE -->
+    <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
+        <tr>
+            <td colspan="10" class="text-center p-6 text-slate-400 font-medium">
+                <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Please select a date or enter filters, then click search.
+            </td>
+        </tr>
+    </tbody>
+</table>
         </div>
 
         <!-- UPDATED PLACEHOLDER FOR MOBILE GRID -->
@@ -1785,6 +1786,16 @@ body {
         <div>
           <label for="item" class="block text-sm font-medium text-gray-700">Item Name:</label>
           <input type="text" id="item" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500">
+        </div>
+
+        <!-- Added Department Select Field -->
+        <div>
+          <label for="department" class="block text-sm font-medium text-gray-700">Department:</label>
+          <select id="department" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 bg-white">
+            <option value="" disabled selected>Select Department</option>
+            <option value="Bar">Bar</option>
+            <option value="Restaurant">Restaurant</option>
+          </select>
         </div>
 
         <div>
@@ -1817,7 +1828,7 @@ body {
           <input type="number" id="sellingprice" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500">
         </div>
 
-        <div class="flex items-center space-x-3 pt-6">
+        <div class="flex items-center space-x-3 pt-6 md:col-span-2">
           <input type="checkbox" id="trackInventory" checked class="h-5 w-5 text-emerald-600 border-gray-300 rounded">
           <label for="trackInventory" class="text-sm font-medium text-gray-700">Track Stock Levels</label>
         </div>
@@ -1870,124 +1881,35 @@ body {
                         <h3 class="text-xs font-bold text-slate-400 uppercase mb-6 flex items-center gap-2">
                             <i class="fas fa-cart-plus text-indigo-500"></i> POS Terminal
                         </h3>
-                        <button
-    id="openQuickPayModal"
-    class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-5 py-2.5 rounded-lg font-medium w-full md:w-auto shadow-sm transition-colors"
->
-    Quick Pay
-</button>
-
-<div
-    id="quickPayModal"
-    class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4 backdrop-blur-sm"
->
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md transform transition-all">
-
-        <div class="flex justify-between items-center border-b border-gray-100 px-6 py-4">
-            <h2 class="text-lg font-bold text-gray-900">
-                Quick Sale Payment
-            </h2>
-            <button
-                id="closeQuickPayModal"
-                class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1.5 rounded-lg text-xl transition-colors lines-none"
-            >
-                &times;
-            </button>
-        </div>
-
-        <form id="quickPayForm" class="p-6 space-y-4">
-
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">
-                    Amount
-                </label>
-                <div class="relative rounded-lg">
-                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <span class="text-gray-400 text-sm font-medium">UGX</span>
-                    </div>
-                    <input
-                        type="number"
-                        id="amount"
-                        required
-                        min="1"
-                        placeholder="Enter amount"
-                        class="w-full border border-gray-300 rounded-lg pl-14 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                    />
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">
-                    Outlet
-                </label>
-                <select
-                    id="outlet"
-                    required
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                >
-                    <option value="">Select Outlet</option>
-                    <option value="Bar">Bar</option>
-                    <option value="Restaurant">Restaurant</option>
-                    <option value="Kitchen">Kitchen</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">
-                    Customer Phone <span class="text-xs font-normal text-gray-400">(Optional)</span>
-                </label>
-                <input
-                    type="tel"
-                    id="phone"
-                    placeholder="2567XXXXXXXX"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                />
-            </div>
-
-            <div
-                id="quickPayMessage"
-                class="hidden text-sm font-medium rounded-lg p-3.5 border"
-            ></div>
-
-            <button
-                type="submit"
-                id="submitQuickPay"
-                class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                Proceed To Payment
-            </button>
-
-        </form>
-    </div>
-</div>
                         <form id="addChargeForm" class="space-y-5">
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Department</label>
-                                <select name="department" id="deptSelect" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700">
-                                    <option value="">Select Department</option>
-                                    <option value="Bar">Bar</option>
-                                    <option value="Restaurant">Restaurant</option>
-                                </select>
-                            </div>
-                            <div class="space-y-2">
-                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Search Inventory</label>
-                                <input list="inventoryItems" name="description" id="itemDesc" onchange="autoFillPrices(this.value)" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Type item name...">
-                                <datalist id="inventoryItems"></datalist>
-                            </div>
-                            <div class="grid grid-cols-3 gap-4">
-                                <div class="col-span-1">
-                                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Qty</label>
-                                    <input type="number" name="number" id="number" value="1"  class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
-                                </div>
-                                <div class="col-span-2">
-                                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Selling Price</label>
-                                    <input type="number" name="amount" id="itemPrice" class="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl outline-none text-slate-600 font-bold">
-                                </div>
-                            
-                              </div>
-                               
-                            <button type="submit" id="submitBtn" class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg transition-all uppercase tracking-widest text-sm">Submit Item</button>
-                        </form>
+    <div class="space-y-2">
+        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Search Inventory</label>
+        <input list="inventoryItems" name="description" id="itemDesc" onchange="autoFillPrices(this.value)" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Type item name...">
+        <datalist id="inventoryItems"></datalist>
+    </div>
+    <div>
+        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Department</label>
+        <select name="department" id="deptSelect" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700">
+            <option value="">Select Department</option>
+            <option value="Bar">Bar</option>
+            <option value="Restaurant">Restaurant</option>
+            <option value="Kitchen">Kitchen</option>
+        </select>
+    </div>
+    
+    <div class="grid grid-cols-3 gap-4">
+        <div class="col-span-1">
+            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Qty</label>
+            <input type="number" name="number" id="number" value="1" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
+        </div>
+        <div class="col-span-2">
+            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Selling Price</label>
+            <input type="number" name="amount" id="itemPrice" class="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl outline-none text-slate-600 font-bold">
+        </div>
+    </div>
+       
+    <button type="submit" id="submitBtn" class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg transition-all uppercase tracking-widest text-sm">Submit Item</button>
+</form>
                     </div>
 
                     <div class="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
@@ -3983,12 +3905,23 @@ Add Guest Details            </h2>
   <div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl p-6 relative">
     <h2 class="text-xl font-bold text-emerald-600 mb-6">Edit Inventory Item</h2>
     
-    <form id="edit-inventory-form"  onsubmit="handleUpdateSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <form id="edit-inventory-form" onsubmit="handleUpdateSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <input type="hidden" id="edit-inventory-id">
       
-      <div class="md:col-span-2">
+      <div>
         <label for="edit-item" class="block text-sm font-medium text-gray-700">Item:</label>
         <input type="text" id="edit-item" required class="p-2 w-full border border-gray-300 rounded-md">
+      </div>
+
+      <!-- Added Department Select Field -->
+      <div>
+        <label for="edit-department" class="block text-sm font-medium text-gray-700">Department:</label>
+        <select id="edit-department" required class="p-2 w-full border border-gray-300 rounded-md bg-white">
+          <option value="" disabled selected>Select Department</option>
+          <option value="Bar">Bar</option>
+          <option value="Restaurant">Restaurant</option>
+          <option value="Kitchen">Kitchen</option>
+        </select>
       </div>
       
       <div>
@@ -4010,36 +3943,39 @@ Add Guest Details            </h2>
         <label for="edit-spoilage" class="block text-sm font-medium text-gray-700">Spoilage:</label>
         <input type="number" id="edit-spoilage" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
       </div>
-            <div>
-        <label for="edit-spoilage" class="block text-sm font-medium text-gray-700">Buying Price:</label>
+      
+      <div>
+        <label for="edit-buyingprice" class="block text-sm font-medium text-gray-700">Buying Price:</label>
         <input type="number" id="edit-buyingprice" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
       </div>
-            <div>
-        <label for="edit-spoilage" class="block text-sm font-medium text-gray-700">Selling Price:</label>
+      
+      <div>
+        <label for="edit-sellingprice" class="block text-sm font-medium text-gray-700">Selling Price:</label>
         <input type="number" id="edit-sellingprice" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
       </div>
+
       <div class="md:col-span-2 flex items-center space-x-3 p-2 bg-gray-50 rounded-md border border-gray-200">
-    <input type="checkbox" id="edit-trackInventory" class="h-5 w-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500">
-    <label for="edit-trackInventory" class="text-sm font-medium text-gray-700">
-        Track Stock Levels 
-        <span class="text-xs text-gray-400 font-normal block">(Uncheck for Kitchen/Restaurant items to allow sales regardless of stock)</span>
-    </label>
-</div>
+        <input type="checkbox" id="edit-trackInventory" class="h-5 w-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500">
+        <label for="edit-trackInventory" class="text-sm font-medium text-gray-700">
+            Track Stock Levels 
+            <span class="text-xs text-gray-400 font-normal block">(Uncheck for Kitchen/Restaurant items to allow sales regardless of stock)</span>
+        </label>
+      </div>
+
       <div class="md:col-span-2 flex justify-end space-x-3 mt-4">
         <button type="button" onclick="closeEditModal()" class="bg-gray-400 hover:bg-gray-500 text-white py-2 px-4 rounded-lg">Cancel</button>
-<button type="submit" id="edit-inventory-submit-btn"
-    class="relative bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg flex items-center justify-center min-w-[120px]">
-    
-    <span id="edit-inventory-btn-default" class="inline-flex items-center gap-2">
-        <span>Save Changes</span>
-    </span>
+        <button type="submit" id="edit-inventory-submit-btn"
+            class="relative bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg flex items-center justify-center min-w-[120px]">
+            
+            <span id="edit-inventory-btn-default" class="inline-flex items-center gap-2">
+                <span>Save Changes</span>
+            </span>
 
-    <span id="edit-inventory-btn-loading" class="hidden items-center gap-2"> 
-        <span>Saving...</span>
-        <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-    </span>
-</button>
-
+            <span id="edit-inventory-btn-loading" class="hidden items-center gap-2"> 
+                <span>Saving...</span>
+                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            </span>
+        </button>
       </div>
     </form>
   </div>

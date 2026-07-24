@@ -5456,6 +5456,12 @@ const Inventory = mongoose.model('Inventory', new mongoose.Schema({
   opening: { type: Number,min: [0, 'opening stock cannot be negative'],  default: 0 },
   purchases: { type: Number, default: 0 },
   sales: { type: Number, default: 0 },
+  department: { 
+        type: String, 
+        required: true,
+        enum: ['Bar', 'Restaurant', 'Kitchen'], 
+        trim: true
+    },
   spoilage: { type: Number, default: 0 },
     closing: {
     type: Number,
