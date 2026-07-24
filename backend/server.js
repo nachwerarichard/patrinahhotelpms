@@ -5966,13 +5966,12 @@ app.put('/api/inventory/:id', auth, async (req, res) => {
   }
 });
 
-// 3. GET ENDPOINT: Includes department in response payload & static fallback
+// GET /api/inventory
 app.get('/api/inventory', auth, async (req, res) => {
     try {
         const hotelId = req.user.hotelId;
         const { item, date, page = 1, limit = 50 } = req.query; 
 
-        // 1. Set Date Boundaries
         const searchDate = date ? new Date(date) : new Date();
         const startOfDay = new Date(searchDate).setUTCHours(0, 0, 0, 0);
         const endOfDay = new Date(searchDate).setUTCHours(23, 59, 59, 999);
@@ -5980,21 +5979,18 @@ app.get('/api/inventory', auth, async (req, res) => {
         const today = new Date();
         const isSelectedDateToday = searchDate.toDateString() === today.toDateString();
 
-        // 2. Get Master List of items
         const masterItems = await Inventory.distinct('item', { hotelId });
 
-        // 3. Get transaction records for the day
         const dailyRecords = await Inventory.find({
             hotelId,
             date: { $gte: startOfDay, $lte: endOfDay }
         }).lean();
 
-        // 4. Merge records
         let report = await Promise.all(masterItems.map(async (itemName) => {
             let record = dailyRecords.find(r => r.item === itemName);
 
+            // 📍 RIGHT HERE IS WHERE YOU PUT IT:
             if (!record) {
-                // Find most recent record for closing stock & department context
                 const lastRecord = await Inventory.findOne({
                     hotelId,
                     item: itemName,
@@ -6004,8 +6000,10 @@ app.get('/api/inventory', auth, async (req, res) => {
                 const previousClosing = lastRecord ? lastRecord.closing : 0;
 
                 record = {
+                    _id: lastRecord?._id || null, // 👈 Ensures backend sends an _id (or null)
+                    hotelId: hotelId,             // 👈 Ensures hotelId is present
                     item: itemName,
-                    department: lastRecord?.department || 'General', // 👈 Carries forward department
+                    department: lastRecord?.department || 'Bar', // 👈 Carries forward department
                     opening: previousClosing,
                     purchases: 0,
                     sales: 0,
@@ -6018,13 +6016,13 @@ app.get('/api/inventory', auth, async (req, res) => {
                 };
             } else {
                 record.status = (record.purchases > 0 || record.sales > 0 || record.spoilage > 0) ? 'Updated' : 'Static';
+                if (!record.department) record.department = 'Bar'; // Fallback for old records
             }
 
             record.isToday = isSelectedDateToday;
             return record;
         }));
 
-        // 5. Apply Frontend Search Filter
         if (item) {
             report = report.filter(r => r.item.toLowerCase().includes(item.toLowerCase()));
         }
@@ -6103,6 +6101,61 @@ app.post('/api/inventory', auth, async (req, res) => {
   } catch (err) {
     console.error("Inventory Save Error:", err);
     res.status(500).json({ error: "Failed to save inventory record: " + err.message });
+  }
+});
+
+
+// DELETE /api/inventory/:id
+// DELETE /api/inventory/:id
+app.delete('/api/inventory/:id', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { itemName } = req.query; // Optional query param: ?itemName=H2O
+
+    // Validation check for bad/missing IDs
+    if (!id || id === 'null' || id === 'undefined') {
+      return res.status(400).json({ error: "Invalid item ID provided." });
+    }
+
+    let deletedDoc;
+
+    // 1. If itemName is passed, delete ALL historical records for this item (Complete Purge)
+    if (itemName) {
+      deletedDoc = await Inventory.findOneAndDelete({
+        item: itemName,
+        hotelId: req.user.hotelId
+      });
+      // Delete remaining past records for this item name
+      await Inventory.deleteMany({ item: itemName, hotelId: req.user.hotelId });
+    } else {
+      // 2. Standard delete by MongoDB _id
+      deletedDoc = await Inventory.findOneAndDelete({ 
+        _id: id, 
+        hotelId: req.user.hotelId 
+      });
+    }
+    
+    if (!deletedDoc) {
+      return res.status(404).json({ error: 'Item not found in your hotel inventory.' });
+    }
+    
+    // 📝 Audit Log
+    await addAuditLog(
+      'Inventory Deleted', 
+      req.user.username || 'Unknown User', 
+      req.user.hotelId,   
+      {                   
+        itemId: deletedDoc._id,
+        itemName: deletedDoc.item,
+        department: deletedDoc.department || 'N/A',
+        finalClosingStock: deletedDoc.closing
+      }
+    );
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error("Delete Error:", err);
+    res.status(500).json({ error: "Internal Server Error", message: err.message });
   }
 });
                // GET Inventory endpoint
@@ -6630,36 +6683,7 @@ app.post('/api/cash-journal', auth, async (req, res) => {
   }
 });
 
-// DELETE /api/inventory/:id
-app.delete('/api/inventory/:id', auth, async (req, res) => {
-  try {
-    // SECURE: User can only delete if the item belongs to their hotel
-    const deletedDoc = await Inventory.findOneAndDelete({ 
-        _id: req.params.id, 
-        hotelId: req.user.hotelId 
-    });
-    
-    if (!deletedDoc) return res.status(404).json({ error: 'Item not found in your hotel' });
-    
-    // 📝 Audit Log: Department included for complete tracking
-    await addAuditLog(
-        'Inventory Deleted', 
-        req.user.username || 'Unknown User', 
-        req.user.hotelId,   
-        {                   
-            itemId: deletedDoc._id,
-            itemName: deletedDoc.item,
-            department: deletedDoc.department || 'N/A', // 👈 Added department to audit log
-            finalClosingStock: deletedDoc.closing
-        }
-    );
 
-    res.sendStatus(204);
-  } catch (err) {
-    console.error("Delete Error:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // GET /audit-logs (Scoped to Hotel)
 
