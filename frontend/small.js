@@ -6722,11 +6722,22 @@ function closeEditModal() {
     modal.style.display = 'none';
 
     // UNLOCK all fields for the next standard "Edit" operation
-    const allInputIds = ['edit-item', 'edit-opening', 'edit-purchases', 'edit-inventory-sales', 'edit-spoilage', 'edit-buyingprice', 'edit-sellingprice'];
+    const allInputIds = [
+        'edit-item', 
+        'edit-department', 
+        'edit-opening', 
+        'edit-purchases', 
+        'edit-inventory-sales', 
+        'edit-spoilage', 
+        'edit-buyingprice', 
+        'edit-sellingprice'
+    ];
+    
     allInputIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.readOnly = false;
+            el.disabled = false;
             el.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
         }
     });
@@ -6736,12 +6747,12 @@ function closeEditModal() {
 }
 
 async function handleUpdateSubmit(event) {
-    event.preventDefault(); // Block default reloading
+    event.preventDefault(); // Block default form submission
 
-    // 1️⃣ Integrated Security: Stop non-admins immediately on the frontend
+    // 1️⃣ Integrated Security Check
     const adminRoles = ['admin', 'super-admin'];
     if (typeof currentUserRole !== 'undefined' && !adminRoles.includes(currentUserRole)) {
-        return showMessage('Access Restricted', 'Only administrators can modify inventory records.', true);
+        return showMessage('Access Restricted: Only administrators can modify inventory records.', true);
     }
 
     const hotelId = getHotelId();
@@ -6750,25 +6761,32 @@ async function handleUpdateSubmit(event) {
         return;
     }
 
-    // --- CAPTURE DATA ONCE ---
+    // 2️⃣ Ensure Record ID Exists for PUT
     const idInput = document.getElementById('edit-inventory-id');
     const idValue = idInput ? idInput.value.trim() : ""; 
-    const selectedDate = document.getElementById('search-inventory-date')?.value || new Date().toISOString().split('T')[0];
 
+    if (!idValue) {
+        showMessage('Error: Missing inventory record ID for update.', true);
+        return;
+    }
+
+    const selectedDate = document.getElementById('search-inventory-date')?.value || new Date().toISOString().split('T')[0];
     const submitBtn = document.getElementById('edit-inventory-submit-btn');
     const defaultText = document.getElementById('edit-inventory-btn-default');
     const loadingText = document.getElementById('edit-inventory-btn-loading');
 
+    // 3️⃣ Construct Payload
     const inventoryData = {
         hotelId: hotelId,
-        item: document.getElementById('edit-item').value,
-        opening: parseInt(document.getElementById('edit-opening').value, 10) || 0,
-        purchases: parseInt(document.getElementById('edit-purchases').value, 10) || 0,
-        sales: parseInt(document.getElementById('edit-inventory-sales').value, 10) || 0,
-        spoilage: parseInt(document.getElementById('edit-spoilage').value, 10) || 0,
-        buyingprice: parseFloat(document.getElementById('edit-buyingprice').value) || 0,
-        sellingprice: parseFloat(document.getElementById('edit-sellingprice').value) || 0,
-        trackInventory: document.getElementById('edit-trackInventory').checked,
+        item: document.getElementById('edit-item')?.value || '',
+        department: document.getElementById('edit-department')?.value || '',
+        opening: parseInt(document.getElementById('edit-opening')?.value, 10) || 0,
+        purchases: parseInt(document.getElementById('edit-purchases')?.value, 10) || 0,
+        sales: parseInt(document.getElementById('edit-inventory-sales')?.value, 10) || 0,
+        spoilage: parseInt(document.getElementById('edit-spoilage')?.value, 10) || 0,
+        buyingprice: parseFloat(document.getElementById('edit-buyingprice')?.value) || 0,
+        sellingprice: parseFloat(document.getElementById('edit-sellingprice')?.value) || 0,
+        trackInventory: document.getElementById('edit-trackInventory')?.checked ?? true,
         date: selectedDate 
     };
 
@@ -6783,25 +6801,20 @@ async function handleUpdateSubmit(event) {
             loadingText.classList.add('flex');
         }
 
-        // --- CONSTRUCT URL & METHOD ---
-        const method = idValue ? 'PUT' : 'POST';
-        const url = idValue 
-            ? `${API_BASE_URL}/inventory/${idValue}` 
-            : `${API_BASE_URL}/inventory`; 
-
-        console.log(`[debug] Requesting: ${method} ${url}`);
+        // --- STRICT PUT REQUEST ---
+        const url = `${API_BASE_URL}/inventory/${idValue}`;
+        console.log(`[debug] Updating record: PUT ${url}`);
 
         const response = await authenticatedFetch(url, {
-            method: method,
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(inventoryData)
         });
 
         if (!response) throw new Error("No response from server");
 
-        // --- HANDLE RESPONSE ---
         if (response.ok) {
-            showMessage(idValue ? 'Stock updated! ✅' : 'New record created! ✅');
+            showMessage('Stock updated successfully! ✅');
             if (typeof closeEditModal === "function") closeEditModal();
             if (typeof fetchInventory === "function") fetchInventory(); 
         } else {
@@ -6814,7 +6827,7 @@ async function handleUpdateSubmit(event) {
             }
         }
     } catch (err) {
-        console.error("Submit Error:", err);
+        console.error("PUT Submit Error:", err);
         showMessage("Inventory Error: " + err.message, true);
     } finally {
         if (submitBtn) submitBtn.disabled = false;
