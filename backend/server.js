@@ -5456,11 +5456,7 @@ const Inventory = mongoose.model('Inventory', new mongoose.Schema({
   opening: { type: Number,min: [0, 'opening stock cannot be negative'],  default: 0 },
   purchases: { type: Number, default: 0 },
   sales: { type: Number, default: 0 },
-  department: { 
-        type: String, 
-        enum: ['Bar', 'Restaurant', 'Kitchen'], 
-        trim: true
-    },
+  department: { type: String, default: 'Bar' }, 
   spoilage: { type: Number, default: 0 },
     closing: {
     type: Number,
@@ -5888,6 +5884,7 @@ app.get('/api/kitchen/Pending', auth, async (req, res) => {
     }
 });
 
+// 1. LOOKUP ENDPOINT: Preserves department field
 app.get('/api/inventory/lookup', auth, async (req, res) => {
     try {
         const items = await Inventory.aggregate([
@@ -5896,6 +5893,7 @@ app.get('/api/inventory/lookup', auth, async (req, res) => {
             { $group: {
                 _id: "$item",
                 item: { $first: "$item" },
+                department: { $first: "$department" }, // 👈 Added department
                 buyingprice: { $first: "$buyingprice" },
                 sellingprice: { $first: "$sellingprice" }
             }},
@@ -5907,8 +5905,7 @@ app.get('/api/inventory/lookup', auth, async (req, res) => {
     }
 });
 
-// PUT /api/:id
-// PUT /api/inventory/:id
+// 2. PUT ENDPOINT: Updates department field
 app.put('/api/inventory/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -5918,25 +5915,30 @@ app.put('/api/inventory/:id', auth, async (req, res) => {
     }
 
     const { 
-      opening, purchases, sales, spoilage, 
+      item, department, opening, purchases, sales, spoilage, 
       buyingprice, sellingprice, trackInventory
-      // ❌ Removed username from req.body destructuring
     } = req.body;
 
     const closing = (Number(opening) + Number(purchases)) - (Number(sales) + Number(spoilage));
 
+    const updateData = {
+      opening: Number(opening),
+      purchases: Number(purchases),
+      sales: Number(sales),
+      spoilage: Number(spoilage),
+      closing: closing,
+      buyingprice: Number(buyingprice),
+      sellingprice: Number(sellingprice),
+      trackInventory: trackInventory
+    };
+
+    // Update item and department if provided
+    if (item) updateData.item = item;
+    if (department) updateData.department = department; // 👈 Added department
+
     const updatedItem = await Inventory.findOneAndUpdate(
       { _id: id, hotelId: req.user.hotelId }, 
-      {
-        opening: Number(opening),
-        purchases: Number(purchases),
-        sales: Number(sales),
-        spoilage: Number(spoilage),
-        closing: closing,
-        buyingprice: Number(buyingprice),
-        sellingprice: Number(sellingprice),
-        trackInventory: trackInventory
-      },
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -5944,7 +5946,6 @@ app.put('/api/inventory/:id', auth, async (req, res) => {
       return res.status(404).json({ error: "Inventory record not found or unauthorized." });
     }
 
-    // ✅ FIXED: Using req.user.username directly to avoid "System" fallbacks
     await addAuditLog(
         'Inventory Item Updated', 
         req.user.username || 'Unknown User', 
@@ -5952,8 +5953,9 @@ app.put('/api/inventory/:id', auth, async (req, res) => {
         {                 
             inventoryId: id,
             item: updatedItem.item,
+            department: updatedItem.department, // 👈 Added department to audit log
             newClosingStock: closing,
-            updatedFields: { opening, purchases, sales, spoilage }
+            updatedFields: { opening, purchases, sales, spoilage, department }
         }
     );
 
@@ -5963,11 +5965,12 @@ app.put('/api/inventory/:id', auth, async (req, res) => {
     res.status(500).json({ error: "Internal Server Error", message: error.message });
   }
 });
-// Specific endpoint for the sales form dropdown (Tenant Isolated)
+
+// 3. GET ENDPOINT: Includes department in response payload & static fallback
 app.get('/api/inventory', auth, async (req, res) => {
     try {
         const hotelId = req.user.hotelId;
-        const { item, date, page = 1, limit = 50 } = req.query; // Higher limit to show all items
+        const { item, date, page = 1, limit = 50 } = req.query; 
 
         // 1. Set Date Boundaries
         const searchDate = date ? new Date(date) : new Date();
@@ -5977,22 +5980,21 @@ app.get('/api/inventory', auth, async (req, res) => {
         const today = new Date();
         const isSelectedDateToday = searchDate.toDateString() === today.toDateString();
 
-        // 2. Get the Master List of all unique items for this hotel
-        // (Alternatively, query a 'Products' collection if you have one)
+        // 2. Get Master List of items
         const masterItems = await Inventory.distinct('item', { hotelId });
 
-        // 3. Get the actual transaction records for the selected day
+        // 3. Get transaction records for the day
         const dailyRecords = await Inventory.find({
             hotelId,
             date: { $gte: startOfDay, $lte: endOfDay }
         }).lean();
 
-        // 4. Merge: For every master item, find its record or create a "Static" placeholder
+        // 4. Merge records
         let report = await Promise.all(masterItems.map(async (itemName) => {
             let record = dailyRecords.find(r => r.item === itemName);
 
             if (!record) {
-                // Find the MOST RECENT closing stock before this date to act as Opening
+                // Find most recent record for closing stock & department context
                 const lastRecord = await Inventory.findOne({
                     hotelId,
                     item: itemName,
@@ -6003,6 +6005,7 @@ app.get('/api/inventory', auth, async (req, res) => {
 
                 record = {
                     item: itemName,
+                    department: lastRecord?.department || 'General', // 👈 Carries forward department
                     opening: previousClosing,
                     purchases: 0,
                     sales: 0,
@@ -6021,7 +6024,7 @@ app.get('/api/inventory', auth, async (req, res) => {
             return record;
         }));
 
-        // 5. Apply Frontend Filter (if searching for specific item name)
+        // 5. Apply Frontend Search Filter
         if (item) {
             report = report.filter(r => r.item.toLowerCase().includes(item.toLowerCase()));
         }
@@ -6035,14 +6038,14 @@ app.get('/api/inventory', auth, async (req, res) => {
         res.status(500).json({ error: 'Failed to generate daily inventory report' });
     }
 });
-// Create/Update Daily Inventory (Tenant Isolated)
+
+// 4. POST ENDPOINT: Saves department on new or daily initialized records
 app.post('/api/inventory', auth, async (req, res) => {
   try {
     const { 
-      item, opening, purchases, sales, spoilage, 
+      item, department, opening, purchases, sales, spoilage, 
       sellingprice, buyingprice, trackInventory, 
       date 
-      // ❌ Removed username from req.body destructuring
     } = req.body;
 
     const hotelId = req.user.hotelId;
@@ -6069,6 +6072,7 @@ app.post('/api/inventory', auth, async (req, res) => {
         });
     }
 
+    record.department = department || record.department || 'Bar'; // 👈 Added department
     record.opening = opening || 0;
     record.purchases = purchases || 0;
     record.sales = sales || 0;
@@ -6081,13 +6085,13 @@ app.post('/api/inventory', auth, async (req, res) => {
 
     await record.save();
 
-    // ✅ FIXED: Using req.user.username directly here as well
     await addAuditLog(
         'Inventory Updated', 
         req.user.username || 'Unknown User', 
         hotelId, 
         {        
             item: record.item,
+            department: record.department, // 👈 Added department to audit log
             date: record.date.toISOString().split('T')[0], 
             closingStock: record.closing,
             sales: record.sales,
@@ -6625,6 +6629,8 @@ app.post('/api/cash-journal', auth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// DELETE /api/inventory/:id
 app.delete('/api/inventory/:id', auth, async (req, res) => {
   try {
     // SECURE: User can only delete if the item belongs to their hotel
@@ -6635,20 +6641,22 @@ app.delete('/api/inventory/:id', auth, async (req, res) => {
     
     if (!deletedDoc) return res.status(404).json({ error: 'Item not found in your hotel' });
     
-    // 📝 Fixed: Explicitly trust req.user.username since auth middleware guarantees it
+    // 📝 Audit Log: Department included for complete tracking
     await addAuditLog(
         'Inventory Deleted', 
-        req.user.username, // ✅ Clean and direct (no more 'System' bugs here!)
-        req.user.hotelId,   // ✅ 3rd argument: hotelId
-        {                   // ✅ 4th argument: details object
+        req.user.username || 'Unknown User', 
+        req.user.hotelId,   
+        {                   
             itemId: deletedDoc._id,
             itemName: deletedDoc.item,
+            department: deletedDoc.department || 'N/A', // 👈 Added department to audit log
             finalClosingStock: deletedDoc.closing
         }
     );
 
     res.sendStatus(204);
   } catch (err) {
+    console.error("Delete Error:", err);
     res.status(500).json({ error: err.message });
   }
 });
