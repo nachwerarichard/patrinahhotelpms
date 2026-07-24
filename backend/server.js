@@ -5458,7 +5458,6 @@ const Inventory = mongoose.model('Inventory', new mongoose.Schema({
   sales: { type: Number, default: 0 },
   department: { 
         type: String, 
-        required: true,
         enum: ['Bar', 'Restaurant', 'Kitchen'], 
         trim: true
     },
