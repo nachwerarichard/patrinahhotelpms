@@ -2322,12 +2322,7 @@ body {
                 <!-- Source of Funds (Dropdown for standard accounting) -->
                 <div class="md:col-span-2">
                     <label for="expense-source" class="block text-xs font-bold text-gray-500 uppercase mb-1">Source of Funds</label>
-                    <select id="expense-source" required class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none bg-white font-semibold">
-                        <option value="Petty Cash" selected>Petty Cash Drawer</option>
-                        <option value="Daily Sales Cash">Till / Daily Sales Cash</option>
-                        <option value="Bank Transfer">Bank Account / Mobile Money</option>
-                        <option value="Director / Owner">Director / Personal Out of Pocket</option>
-                    </select>
+                    <input type="text" id="expense-source" required placeholder="e.g., Purchase of 5 crates of Soda" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
                 </div>
             </div>
 

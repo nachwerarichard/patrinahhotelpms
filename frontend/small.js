@@ -7654,12 +7654,20 @@ function renderExpensesPagination(current, totalPages) {
 function renderExpensesTable(expenses) {
     const tbody = document.querySelector('#expenses-table tbody');
     const mobileGrid = document.getElementById('expenses-mobile-grid');
+    const tableContainer = document.getElementById('expenses-table');
     
     // Safety purge of baseline DOM states
     if (tbody) tbody.innerHTML = '';
     if (mobileGrid) mobileGrid.innerHTML = '';
 
-    if (expenses.length === 0) {
+    // Remove any existing summary elements to prevent duplication on re-render
+    const existingSummary = document.getElementById('expenses-summary-container');
+    if (existingSummary) existingSummary.remove();
+
+    const existingTfoot = tableContainer ? tableContainer.querySelector('tfoot') : null;
+    if (existingTfoot) existingTfoot.remove();
+
+    if (!Array.isArray(expenses) || expenses.length === 0) {
         const noDataMsg = 'No expense records found for this date. Try adjusting the filter.';
         
         if (tbody) {
@@ -7674,11 +7682,28 @@ function renderExpensesTable(expenses) {
     const adminRoles = ['admin', 'super-admin'];
     const hasAdminAccess = adminRoles.includes(currentUserRole);
 
+    // --- ACCUMULATORS FOR TOTALS ---
+    let grandTotal = 0;
+    const departmentTotals = {};
+
     expenses.forEach(expense => {
         const dept = expense.department || 'General';
         const desc = expense.description || 'No description provided';
-        const amountDisplay = `${CURRENT_CURRENCY} ${Number(expense.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        const dateDisplay = new Date(expense.date).toLocaleDateString();
+        const numAmount = Number(expense.amount || 0);
+        
+        // Calculate Totals
+        grandTotal += numAmount;
+        departmentTotals[dept] = (departmentTotals[dept] || 0) + numAmount;
+
+        const amountDisplay = `${CURRENT_CURRENCY || 'UGX'} ${numAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        
+        // Safe Date Parsing
+        let dateDisplay = 'N/A';
+        if (expense.date) {
+            const parsedDate = new Date(expense.date);
+            dateDisplay = !isNaN(parsedDate) ? parsedDate.toLocaleDateString() : 'N/A';
+        }
+
         const receipt = expense.receiptId || '—';
         const source = expense.source || 'N/A';
 
@@ -7707,7 +7732,7 @@ function renderExpensesTable(expenses) {
             return container;
         };
 
-        // --- A. POPULATE VIEW 1: DESKTOP SYSTEM ROW ---
+        // --- A. DESKTOP ROW ---
         if (tbody) {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
@@ -7717,14 +7742,16 @@ function renderExpensesTable(expenses) {
                 <td class="px-6 py-4 font-mono font-bold text-slate-900">${amountDisplay}</td>
                 <td class="px-6 py-4 text-slate-500 whitespace-nowrap">${dateDisplay}</td>
                 <td class="px-6 py-4 font-mono text-xs text-slate-400">${receipt}</td>
-                <td class="px-6 py-4 text-slate-500">${source}</td>
+                <td class="px-6 py-4 text-slate-600 font-medium">
+                    <span class="inline-block px-2.5 py-1 bg-slate-100 text-slate-700 rounded-md text-xs border border-slate-200/60">${source}</span>
+                </td>
                 <td class="px-6 py-4 text-right actions-cell whitespace-nowrap"></td>
             `;
             tr.querySelector('.actions-cell').appendChild(createActionsElement(false));
             tbody.appendChild(tr);
         }
 
-        // --- B. POPULATE VIEW 2: SMARTPHONE LAYOUT CARD ---
+        // --- B. MOBILE CARD ---
         if (mobileGrid) {
             const card = document.createElement('div');
             card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3.5 hover:border-slate-300 transition-all";
@@ -7751,7 +7778,7 @@ function renderExpensesTable(expenses) {
                     </div>
                     <div class="border-l border-slate-200/60 pl-2">
                         <span class="text-[9px] text-slate-400 block uppercase font-bold mb-0.5">Source</span>
-                        <span class="text-slate-700 truncate block">${source}</span>
+                        <span class="text-slate-700 truncate block font-semibold">${source}</span>
                     </div>
                 </div>
 
@@ -7763,6 +7790,67 @@ function renderExpensesTable(expenses) {
             mobileGrid.appendChild(card);
         }
     });
+
+    // ==========================================
+    // 1. ADD GRAND TOTAL FOOTER TO DESKTOP TABLE
+    // ==========================================
+    if (tableContainer) {
+        const formattedGrandTotal = `${CURRENT_CURRENCY || 'UGX'} ${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        
+        const tfoot = document.createElement('tfoot');
+        tfoot.className = "bg-slate-100/80 border-t-2 border-slate-300 font-bold text-slate-800 text-sm";
+        tfoot.innerHTML = `
+            <tr>
+                <td class="px-6 py-4 uppercase tracking-wider text-xs font-black text-slate-600">Overall Total Expenses</td>
+                <td class="px-6 py-4 text-xs text-slate-400 font-normal italic">${expenses.length} transaction(s)</td>
+                <td class="px-6 py-4 font-mono text-base font-black text-rose-700">${formattedGrandTotal}</td>
+                <td colspan="4" class="px-6 py-4"></td>
+            </tr>
+        `;
+        tableContainer.appendChild(tfoot);
+    }
+
+    // ==========================================
+    // 2. BUILD DEPARTMENTAL & GRAND SUMMARY CARD
+    // ==========================================
+    const summaryWrapper = document.createElement('div');
+    summaryWrapper.id = 'expenses-summary-container';
+    summaryWrapper.className = 'mt-6 p-5 bg-slate-900 text-white rounded-xl shadow-md border border-slate-800';
+
+    const formattedGrandTotal = `${CURRENT_CURRENCY || 'UGX'} ${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    let deptChipsHTML = '';
+    for (const [deptName, deptTotal] of Object.entries(departmentTotals)) {
+        const formattedDeptTotal = `${CURRENT_CURRENCY || 'UGX'} ${deptTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        deptChipsHTML += `
+            <div class="bg-slate-800/90 border border-slate-700/80 p-3 rounded-lg flex flex-col justify-between">
+                <span class="text-[10px] uppercase tracking-wider font-bold text-slate-400">${deptName}</span>
+                <span class="font-mono text-sm font-bold text-slate-100 mt-1">${formattedDeptTotal}</span>
+            </div>
+        `;
+    }
+
+    summaryWrapper.innerHTML = `
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div>
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Financial Summary</h3>
+                <p class="text-xs text-slate-500">Departmental breakdown for loaded records</p>
+            </div>
+            <div class="text-left md:text-right">
+                <span class="text-[10px] uppercase font-extrabold tracking-widest text-rose-400 block">Overall Total Spent</span>
+                <span class="font-mono text-2xl font-black text-rose-500">${formattedGrandTotal}</span>
+            </div>
+        </div>
+        <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            ${deptChipsHTML}
+        </div>
+    `;
+
+    // Append the summary below the expense records wrapper
+    const recordsSection = document.getElementById('expenses-records');
+    if (recordsSection) {
+        recordsSection.appendChild(summaryWrapper);
+    }
 }
 
 /**
@@ -7779,21 +7867,35 @@ function populateEditExpenseModal(expense) {
     const departmentInput = document.getElementById('edit-expense-department');
     const descriptionInput = document.getElementById('edit-expense-description');
     const amountInput = document.getElementById('edit-expense-amount');
-    const dateInput = document.getElementById('edit-expense-date'); // Targets the new date input in the modal
+    const dateInput = document.getElementById('edit-expense-date');
     const receiptIdInput = document.getElementById('edit-expense-receiptId');
     const sourceInput = document.getElementById('edit-expense-source');
 
-    // 3. Populate the fields
-    if (idInput) idInput.value = expense._id; // Assuming your expense object has a unique identifier called _id
-    if (descriptionInput) descriptionInput.value = expense.description;
-    if (departmentInput) departmentInput.value = expense.department;
-    if (amountInput) amountInput.value = expense.amount;
-    if (receiptIdInput) receiptIdInput.value = expense.receiptId;
+    // 3. Populate the text and select fields
+    if (idInput) idInput.value = expense._id || '';
+    if (descriptionInput) descriptionInput.value = expense.description || '';
+    if (departmentInput) departmentInput.value = expense.department || '';
+    if (amountInput) amountInput.value = expense.amount || '';
+    if (receiptIdInput) receiptIdInput.value = expense.receiptId || '';
+    
+    // Custom text input for source of funds
     if (sourceInput) sourceInput.value = expense.source || '';
     
-    // Format the date for the HTML date input (YYYY-MM-DD)
+    // Safely format the date for the date input (YYYY-MM-DD)
     if (dateInput && expense.date) {
-        dateInput.value = new Date(expense.date).toISOString().split('T')[0];
+        try {
+            const parsedDate = new Date(expense.date);
+            if (!isNaN(parsedDate)) {
+                dateInput.value = parsedDate.toISOString().split('T')[0];
+            } else {
+                dateInput.value = '';
+            }
+        } catch (err) {
+            console.error('Error parsing expense date:', err);
+            dateInput.value = '';
+        }
+    } else if (dateInput) {
+        dateInput.value = '';
     }
     
     // 4. Show the modal
@@ -7908,18 +8010,17 @@ async function submitEditExpenseForm(event) {
     // 1. Get values from the EDIT modal form
     const id = document.getElementById('edit-expense-id').value;
     const department = document.getElementById('edit-expense-department').value;
-    const description = document.getElementById('edit-expense-description').value;
+    const description = document.getElementById('edit-expense-description').value.trim();
     const amount = parseFloat(document.getElementById('edit-expense-amount').value);
     const date = document.getElementById('edit-expense-date').value;
     const receiptId = document.getElementById('edit-expense-receiptId').value;
-    const source = document.getElementById('edit-expense-source').value;
+    const source = document.getElementById('edit-expense-source').value.trim();
 
-    if (!id || !description || isNaN(amount) || amount <= 0 || !receiptId || !date) {
+    if (!id || !description || isNaN(amount) || amount <= 0 || !receiptId || !date || !source) {
         showMessage('Please fill in all expense fields correctly.', true);
         return;
     }
 
-    // Inject hotelId and recordedBy for audit trails
     const expenseData = { 
         hotelId, 
         description, 
@@ -7936,6 +8037,7 @@ async function submitEditExpenseForm(event) {
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/expenses/${id}`, {
             method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(expenseData)
         });
 
@@ -8084,14 +8186,14 @@ function populateExpenseForm(expense) {
     const amountInput = document.getElementById('expense-amount');
     const receiptIdInput = document.getElementById('expense-receiptId');
     const sourceInput = document.getElementById('expense-source');
-    const expenseDateInput = document.getElementById('expenses-date-filter');
+    const expenseDateInput = document.getElementById('expense-date');
 
-    if (idInput) idInput.value = expense._id;
-    if (departmentInput) descriptionInput.value = expense.department;
-    if (descriptionInput) descriptionInput.value = expense.description;
-    if (amountInput) amountInput.value = expense.amount;
-    if (receiptIdInput) receiptIdInput.value = expense.receiptId;
-    if (sourceInput) sourceInput.value = expense.source;
+    if (idInput) idInput.value = expense._id || '';
+    if (departmentInput) departmentInput.value = expense.department || '';
+    if (descriptionInput) descriptionInput.value = expense.description || '';
+    if (amountInput) amountInput.value = expense.amount || '';
+    if (receiptIdInput) receiptIdInput.value = expense.receiptId || '';
+    if (sourceInput) sourceInput.value = expense.source || '';
     if (expenseDateInput && expense.date) {
         expenseDateInput.value = new Date(expense.date).toISOString().split('T')[0];
     }

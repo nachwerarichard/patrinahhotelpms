@@ -5496,22 +5496,63 @@ const Sale = mongoose.model('Sale', new mongoose.Schema({
     date: { type: Date, default: Date.now } // Keep just this one
 }));
 
-const Expense = mongoose.model('Expense', new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
- department: { 
+
+const ExpenseSchema = new mongoose.Schema({
+  hotelId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Hotel', 
+    required: true 
+  },
+  department: { 
     type: String, 
     required: true,
-    enum: ['Bar', 'Restaurant', 'Housekeeping','front office','Other'], // Strict list of allowed values
+    enum: ['Bar', 'Restaurant', 'Housekeeping', 'Front Office', 'Maintenance', 'Other'], // Matches frontend select options
     trim: true
   },
-    description: String,
-  amount: Number,
-  receiptId: String,
-  date: { type: Date, default: Date.now },
-  source: String,
-  recordedBy: String,
-  synced: { type: Boolean, default: false }
-}));
+  description: { 
+    type: String, 
+    required: true, 
+    trim: true 
+  },
+  amount: { 
+    type: Number, 
+    required: true, 
+    min: 0 
+  },
+  receiptId: { 
+    type: String, 
+    required: true, 
+    trim: true 
+  },
+  date: { 
+    type: Date, 
+    default: Date.now,
+    required: true 
+  },
+  // Custom text field for free-form source entries
+  source: { 
+    type: String, 
+    required: true, 
+    trim: true,
+    default: 'Petty Cash' 
+  },
+  recordedBy: { 
+    type: String, 
+    required: true, 
+    trim: true 
+  },
+  synced: { 
+    type: Boolean, 
+    default: false 
+  }
+}, {
+  timestamps: true // Automatically adds createdAt and updatedAt fields
+});
+
+// Optional index for faster search queries when filtering by date and hotel
+ExpenseSchema.index({ hotelId: 1, date: -1 });
+
+const Expense = mongoose.model('Expense', ExpenseSchema);
 
 
 
