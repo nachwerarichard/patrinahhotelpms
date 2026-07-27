@@ -5844,7 +5844,7 @@ const addCharge = async (description, number, department) => {
     try {
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> SAVING...`;
+            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ADDING...`;
         }
 
         // 1. Send Order to correct Endpoints
@@ -5879,19 +5879,23 @@ const addCharge = async (description, number, department) => {
         }
 
         // 3. Update the UI efficiently using the server response data
-        if (typeof updateActiveAccountUI === 'function') {
-            if (activeAccountId) {
-                // For existing registered guests, proceed with your standard refresh
-                const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
-                if (accountRes && accountRes.ok) {
-                    const freshAccountData = await accountRes.json();
-                    updateActiveAccountUI(freshAccountData);
-                }
-            } else if (serverResponse.updatedAccount) {
-                // For walk-ins, use the auto-created account straight from the response!
-                updateActiveAccountUI(serverResponse.updatedAccount);
-            }
+        // 3. Update the UI efficiently using the server response data
+if (typeof updateActiveAccountUI === 'function') {
+    if (activeAccountId) {
+        // For existing registered guests
+        const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
+        if (accountRes && accountRes.ok) {
+            const freshAccountData = await accountRes.json();
+            updateActiveAccountUI(freshAccountData);
         }
+    } else if (serverResponse.updatedAccount) {
+        // Fix: Save the newly created walk-in account ID globally!
+        activeAccountId = serverResponse.updatedAccount._id || serverResponse.updatedAccount.id;
+        
+        // Update UI with the auto-created account
+        updateActiveAccountUI(serverResponse.updatedAccount);
+    }
+}
 
         // --- SUCCESS CLEANUP ---
         document.getElementById('addChargeForm').reset();
@@ -6010,12 +6014,17 @@ const settleAccount = async (method, accountId, phone = '') => {
 };
 // --- UI UPDATES ---
 const updateActiveAccountUI = (account) => {
-    const charges = account.charges || [];
-    const liveTotal = charges.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    if (!account) return;
 
-    document.getElementById('currentGuestName').textContent = account.guestName;
+    // Keep activeAccountId in sync with current account object
+    activeAccountId = account._id || account.id || activeAccountId;
+
+    const charges = account.charges || [];
+    const liveTotal = charges.reduce((sum, item) => sum + (Number(item.amount) || Number(item.sp) || 0), 0);
+
+    document.getElementById('currentGuestName').textContent = account.guestName || 'Walk-In Guest';
     document.getElementById('currentRoomNumber').textContent = account.roomNumber ? `Room ${account.roomNumber}` : 'Walk-In Guest';
-    document.getElementById('totalCharges').textContent = liveTotal.toLocaleString();
+    document.getElementById('totalCharges').textContent = liveTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
 
     const chargesListContainer = document.getElementById('chargesList');
     if (chargesListContainer) {
@@ -6023,45 +6032,70 @@ const updateActiveAccountUI = (account) => {
             ? `<tr><td colspan="3" class="text-center py-4 text-gray-400">No charges yet</td></tr>`
             : charges.map(item => `
                 <tr class="border-b border-gray-100 text-sm">
-                    <td class="py-2 text-gray-400">${new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
-                    <td class="py-2 font-medium text-gray-700">${item.description}</td>
-                    <td class="py-2 text-right font-bold text-indigo-600">${Number(item.amount).toLocaleString()}</td>
+                    <td class="py-2 text-gray-400">${item.date ? new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}</td>
+                    <td class="py-2 font-medium text-gray-700">${item.item || item.description}</td>
+                    <td class="py-2 text-right font-bold text-indigo-600">${Number(item.amount || item.sp || 0).toLocaleString()}</td>
                 </tr>
             `).join('');
     }
-    document.getElementById('postToRoomBtn').classList.toggle('hidden', !account.roomNumber);
-    document.getElementById('activeAccountSection').classList.remove('hidden');
 
-    // --- ADD/UPDATE THIS BLOCK RIGHT HERE ---
-    // Every time the UI updates, re-bind the click explicitly to the live elements
-    // Inside updateActiveAccountUI(account)...
-     // Inside updateActiveAccountUI(account)...
-// Inside updateActiveAccountUI(account)...
-const issueBtn = document.getElementById('issueReceiptBtn');
-if (issueBtn) {
-    // Clear out any old listeners completely
-    issueBtn.onclick = null; 
-    
-    issueBtn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation(); // Stop event bubbling up the DOM tree
-        
-        const exactId = account._id || account.id || activeAccountId;
-        console.log("Setting form data attribute with Account ID:", exactId);
+    document.getElementById('postToRoomBtn')?.classList.toggle('hidden', !account.roomNumber);
+    document.getElementById('activeAccountSection')?.classList.remove('hidden');
 
-        const settleForm = document.getElementById('settleBillForm');
-        settleForm.setAttribute('data-account-id', exactId); 
+    // Attach listener for modal settlement
+    const issueBtn = document.getElementById('issueReceiptBtn');
+    if (issueBtn) {
+        issueBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const settleForm = document.getElementById('settleBillForm');
+            if (settleForm) settleForm.setAttribute('data-account-id', activeAccountId);
 
-        // Update display text values inside the modal view
-        document.getElementById('settleModalTotal').textContent = `${CURRENT_CURRENCY}${liveTotal.toLocaleString()}`;
-        document.getElementById('settleModalGuest').textContent = `${account.guestName} (${account.roomNumber ? 'Room ' + account.roomNumber : 'Walk-In Guest'})`;
+            document.getElementById('settleModalTotal').textContent = `${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : '$'}${liveTotal.toLocaleString()}`;
+            document.getElementById('settleModalGuest').textContent = `${account.guestName} (${account.roomNumber ? 'Room ' + account.roomNumber : 'Walk-In Guest'})`;
 
-        // Open the modal container layout safely
-        const settleModal = document.getElementById('settleBillModal');
-        settleModal.classList.remove('hidden');
-        settleModal.classList.add('flex');
-    };
-}
+            const settleModal = document.getElementById('settleBillModal');
+            settleModal?.classList.remove('hidden');
+            settleModal?.classList.add('flex');
+        };
+    }
+};
+
+const resetActiveFolio = () => {
+    // 1. Clear the global active account state variable
+    if (typeof activeAccountId !== 'undefined') {
+        activeAccountId = null;
+    }
+
+    // 2. Reset Header Card Display Values
+    const guestNameEl = document.getElementById('currentGuestName');
+    const roomNumEl = document.getElementById('currentRoomNumber');
+    const totalChargesEl = document.getElementById('totalCharges');
+
+    if (guestNameEl) guestNameEl.textContent = 'New Sale';
+    if (roomNumEl) roomNumEl.textContent = '';
+    if (totalChargesEl) totalChargesEl.textContent = '0.00';
+
+    // 3. Reset Charges List Table
+    const chargesListContainer = document.getElementById('chargesList');
+    if (chargesListContainer) {
+        chargesListContainer.innerHTML = `
+            <tr><td colspan="3" class="px-6 py-10 text-center text-slate-400 italic text-sm">No items posted yet</td></tr>
+        `;
+    }
+
+    // 4. Reset Form Inputs
+    const addChargeForm = document.getElementById('addChargeForm');
+    if (addChargeForm) addChargeForm.reset();
+
+    // 5. Hide Post to Room Button (since walk-in has no room)
+    const postToRoomBtn = document.getElementById('postToRoomBtn');
+    if (postToRoomBtn) postToRoomBtn.classList.add('hidden');
+
+    if (typeof showMessage === 'function') {
+        showMessage('Session Cleared', 'Ready for new walk-in sale.', false);
+    }
 };
 
 const resetUI = () => {
