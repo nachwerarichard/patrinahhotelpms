@@ -6486,7 +6486,7 @@ function exportTableToExcel(tableId, filename) { console.log(`Exporting table ${
     const salesExportBtn = document.querySelector('#sales-list .export-button');
     if (salesExportBtn) {
         salesExportBtn.addEventListener('click', () => {
-            exportTableToExcel('sales-table', 'Patrinah_Sales_Records');
+            exportTableToExcel('sales-table', 'Sales_Records');
         });
     }
 
@@ -6842,9 +6842,12 @@ async function handleUpdateSubmit(event) {
         spoilage: parseInt(document.getElementById('edit-spoilage')?.value, 10) || 0,
         buyingprice: parseFloat(document.getElementById('edit-buyingprice')?.value) || 0,
         sellingprice: parseFloat(document.getElementById('edit-sellingprice')?.value) || 0,
+        lowStock: parseInt(document.getElementById('edit-lowStock')?.value, 10) ?? 5, // <-- Added here
         trackInventory: document.getElementById('edit-trackInventory')?.checked ?? true,
         date: selectedDate 
     };
+
+
 
     // Calculate Closing Stock
     inventoryData.closing = inventoryData.opening + inventoryData.purchases - inventoryData.sales - inventoryData.spoilage;
@@ -7004,6 +7007,7 @@ function getInventoryFormData() {
         spoilage: Number(document.getElementById('spoilage')?.value) || 0,
         buyingprice: Number(document.getElementById('buyingprice')?.value) || 0,
         sellingprice: Number(document.getElementById('sellingprice')?.value) || 0,
+        lowStock: parseInt(document.getElementById('lowStock')?.value, 10) || 0,
         trackInventory: document.getElementById('trackInventory')?.checked ?? true
     };
 }
@@ -9488,6 +9492,8 @@ function openEditModal(item) {
     const deptField = document.getElementById('edit-department');
     if (deptField) deptField.value = item.department || '';
 
+    document.getElementById('edit-lowStock').value = item.lowStock ?? 5;
+
     // Numeric fields with 0 fallback
     const numericFields = {
         'edit-opening': item.opening,
@@ -9631,6 +9637,7 @@ async function fetchInventory() {
         
         // 5. Render Responsive Matrix Interfaces
         renderInventoryTable(inventoryData);
+        updateLowStockWidget(inventoryData); // <-- Call widget update here
 
         // 6. Handle Pagination Control Rendering
         if (typeof renderPagination === 'function') {
@@ -9717,96 +9724,110 @@ window.renderInventoryTable = function(inventory) {
     }
     const hasWriteAccess = ['admin', 'super-admin', 'manager'].includes(activeRole);
 
-    // Populate loop
     inventory.forEach((item, index) => {
-        item.viewingDate = selectedDate || todayStr;
+    item.viewingDate = selectedDate || todayStr;
 
-        const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
-        const badgeClasses = hasMovement ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100';
-        const badgeText = hasMovement ? 'Updated' : 'Static';
-        const statusBadge = `<span class="ml-1 px-1 py-0.5 text-[8px] font-black uppercase tracking-wider border rounded ${badgeClasses}">${badgeText}</span>`;
+    const calculatedCurrent = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
+    const stockValue = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
 
-        const deptBadge = `<span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-purple-50 text-purple-700 border border-purple-100">${item.department || 'N/A'}</span>`;
+    // --- LOW STOCK EVALUATION LOGIC ---
+    const threshold = item.lowStock ?? 5;
+    const isLowStock = item.trackInventory && stockValue <= threshold;
 
-        const calculatedCurrent = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
-        const stockValue = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
+    // Badges & Alert Styling
+    const lowStockBadge = isLowStock 
+        ? `<span class="ml-1 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 border border-rose-200 rounded animate-pulse">Low Stock</span>`
+        : '';
 
-        const bpStr = Number(item.buyingprice || 0).toLocaleString();
-        const spStr = Number(item.sellingprice || 0).toLocaleString();
-        
-        const generatedIdSuffix = item._id || `rand-${index}-${Math.random().toString(36).substring(2, 7)}`;
-        const desktopRowId = `actions-row-${generatedIdSuffix}`;
-        const mobileCardId = `actions-card-${generatedIdSuffix}`;
+    const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
+    const badgeClasses = hasMovement ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100';
+    const badgeText = hasMovement ? 'Updated' : 'Static';
+    const statusBadge = `<span class="ml-1 px-1 py-0.5 text-[8px] font-black uppercase tracking-wider border rounded ${badgeClasses}">${badgeText}</span>`;
 
-        // --- DESKTOP ROW VIEW ---
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50/60 transition-colors border-b border-slate-100 whitespace-nowrap";
-        tr.innerHTML = `
-            <td class="px-5 py-3.5 font-semibold text-slate-800">
-                <div class="flex flex-col items-start gap-1">
-                    <span class="text-sm leading-tight">${item.item || 'Unnamed Item'}</span>
+    const deptBadge = `<span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-purple-50 text-purple-700 border border-purple-100">${item.department || 'N/A'}</span>`;
+
+    const bpStr = Number(item.buyingprice || 0).toLocaleString();
+    const spStr = Number(item.sellingprice || 0).toLocaleString();
+    
+    const generatedIdSuffix = item._id || `rand-${index}-${Math.random().toString(36).substring(2, 7)}`;
+    const desktopRowId = `actions-row-${generatedIdSuffix}`;
+    const mobileCardId = `actions-card-${generatedIdSuffix}`;
+
+    // Apply red background styling if low stock
+    const stockCellClasses = isLowStock 
+        ? 'text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1 font-black' 
+        : (isToday ? 'text-indigo-600 bg-indigo-50/30 rounded px-1 font-black' : 'text-slate-900 font-black');
+
+    // --- DESKTOP ROW VIEW ---
+    const tr = document.createElement('tr');
+    tr.className = `hover:bg-slate-50/60 transition-colors border-b border-slate-100 whitespace-nowrap ${isLowStock ? 'bg-rose-50/30' : ''}`;
+    tr.innerHTML = `
+        <td class="px-5 py-3.5 font-semibold text-slate-800">
+            <div class="flex flex-col items-start gap-1">
+                <span class="text-sm leading-tight flex items-center gap-1">${item.item || 'Unnamed Item'} ${lowStockBadge}</span>
+                ${statusBadge}
+            </div>
+        </td>
+        <td class="px-4 py-3.5 text-center">${deptBadge}</td>
+        <td class="px-4 py-3.5 font-mono text-center text-slate-500">${item.opening || 0}</td>
+        <td class="px-4 py-3.5 font-mono text-center text-emerald-600 font-bold">+${item.purchases || 0}</td>
+        <td class="px-4 py-3.5 font-mono text-center text-blue-600 font-bold">-${item.sales || 0}</td>
+        <td class="px-4 py-3.5 font-mono text-center text-rose-500 font-bold">-${item.spoilage || 0}</td>
+        <td class="px-4 py-3.5 font-mono text-center"><span class="${stockCellClasses}">${stockValue}</span></td>
+        <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-500">${bpStr}</td>
+        <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-700 font-semibold">${spStr}</td>
+        <td class="px-5 py-3.5 text-right overflow-visible" id="${desktopRowId}"></td>
+    `;
+    tbody.appendChild(tr);
+
+    // --- MOBILE CARD VIEW ---
+    const card = document.createElement('div');
+    card.className = `bg-white p-4 rounded-xl border ${isLowStock ? 'border-rose-300 shadow-rose-100 bg-rose-50/20' : 'border-slate-200/80'} shadow-sm space-y-3 block`;
+    card.innerHTML = `
+        <div class="flex justify-between items-start">
+            <div>
+                <h3 class="text-base font-bold text-slate-800 leading-tight flex items-center gap-1.5">${item.item || 'Unnamed Item'} ${lowStockBadge}</h3>
+                <div class="mt-1 flex items-center gap-1.5">
+                    ${deptBadge}
                     ${statusBadge}
                 </div>
-            </td>
-            <td class="px-4 py-3.5 text-center">${deptBadge}</td>
-            <td class="px-4 py-3.5 font-mono text-center text-slate-500">${item.opening || 0}</td>
-            <td class="px-4 py-3.5 font-mono text-center text-emerald-600 font-bold">+${item.purchases || 0}</td>
-            <td class="px-4 py-3.5 font-mono text-center text-blue-600 font-bold">-${item.sales || 0}</td>
-            <td class="px-4 py-3.5 font-mono text-center text-rose-500 font-bold">-${item.spoilage || 0}</td>
-            <td class="px-4 py-3.5 font-mono text-center font-black ${isToday ? 'text-indigo-600 bg-indigo-50/30 rounded px-1' : 'text-slate-900'}">${stockValue}</td>
-            <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-500">${bpStr}</td>
-            <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-700 font-semibold">${spStr}</td>
-            <td class="px-5 py-3.5 text-right overflow-visible" id="${desktopRowId}"></td>
-        `;
-        tbody.appendChild(tr);
+            </div>
+            <div id="${mobileCardId}" class="overflow-visible relative"></div>
+        </div>
+        
+        <!-- Rest of mobile card content -->
+        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
+            <div class="bg-slate-50 p-2 rounded-lg">
+                <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wide">Opening</span>
+                <span class="font-mono font-semibold text-slate-600 text-sm">${item.opening || 0}</span>
+            </div>
+            <div class="bg-emerald-50/50 p-2 rounded-lg">
+                <span class="block text-[10px] font-bold uppercase text-emerald-600 tracking-wide">Purchases</span>
+                <span class="font-mono font-bold text-emerald-600 text-sm">+${item.purchases || 0}</span>
+            </div>
+            <div class="bg-blue-50/50 p-2 rounded-lg">
+                <span class="block text-[10px] font-bold uppercase text-blue-600 tracking-wide">Sales</span>
+                <span class="font-mono font-bold text-blue-600 text-sm">-${item.sales || 0}</span>
+            </div>
+        </div>
 
-        // --- MOBILE CARD VIEW ---
-        const card = document.createElement('div');
-        card.className = "bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-3 block";
-        card.innerHTML = `
-            <div class="flex justify-between items-start">
-                <div>
-                    <h3 class="text-base font-bold text-slate-800 leading-tight">${item.item || 'Unnamed Item'}</h3>
-                    <div class="mt-1 flex items-center gap-1.5">
-                        ${deptBadge}
-                        ${statusBadge}
-                    </div>
-                </div>
-                <div id="${mobileCardId}" class="overflow-visible relative"></div>
+        <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="bg-rose-50/50 p-2 rounded-lg">
+                <span class="block text-[10px] font-bold uppercase text-rose-500 tracking-wide">Spoilage</span>
+                <span class="font-mono font-bold text-rose-500 text-sm">-${item.spoilage || 0}</span>
             </div>
-            
-            <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
-                <div class="bg-slate-50 p-2 rounded-lg">
-                    <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wide">Opening</span>
-                    <span class="font-mono font-semibold text-slate-600 text-sm">${item.opening || 0}</span>
-                </div>
-                <div class="bg-emerald-50/50 p-2 rounded-lg">
-                    <span class="block text-[10px] font-bold uppercase text-emerald-600 tracking-wide">Purchases</span>
-                    <span class="font-mono font-bold text-emerald-600 text-sm">+${item.purchases || 0}</span>
-                </div>
-                <div class="bg-blue-50/50 p-2 rounded-lg">
-                    <span class="block text-[10px] font-bold uppercase text-blue-600 tracking-wide">Sales</span>
-                    <span class="font-mono font-bold text-blue-600 text-sm">-${item.sales || 0}</span>
-                </div>
+            <div class="${isLowStock ? 'bg-rose-100 border border-rose-300' : (isToday ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-100')} p-2 rounded-lg col-span-2 flex flex-col justify-center">
+                <span class="block text-[10px] font-bold uppercase ${isLowStock ? 'text-rose-700' : 'text-slate-500'} tracking-wide">${isToday ? 'Current Stock' : 'Closing Stock'}</span>
+                <span class="font-mono font-black text-base ${isLowStock ? 'text-rose-700' : (isToday ? 'text-indigo-600' : 'text-slate-800')}">${stockValue}</span>
             </div>
+        </div>
 
-            <div class="grid grid-cols-3 gap-2 text-center">
-                <div class="bg-rose-50/50 p-2 rounded-lg">
-                    <span class="block text-[10px] font-bold uppercase text-rose-500 tracking-wide">Spoilage</span>
-                    <span class="font-mono font-bold text-rose-500 text-sm">-${item.spoilage || 0}</span>
-                </div>
-                <div class="${isToday ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-100'} p-2 rounded-lg col-span-2 flex flex-col justify-center">
-                    <span class="block text-[10px] font-bold uppercase text-slate-500 tracking-wide">${isToday ? 'Current Stock' : 'Closing Stock'}</span>
-                    <span class="font-mono font-black text-base ${isToday ? 'text-indigo-600' : 'text-slate-800'}">${stockValue}</span>
-                </div>
-            </div>
-
-            <div class="flex justify-between items-center pt-2 px-1 text-xs text-slate-500 border-t border-slate-100">
-                <div>Buying Price: <span class="font-mono font-semibold text-slate-700">${bpStr}</span></div>
-                <div>Selling Price: <span class="font-mono font-bold text-slate-800">${spStr}</span></div>
-            </div>
-        `;
-        cardContainer.appendChild(card);
+        <div class="flex justify-between items-center pt-2 px-1 text-xs text-slate-500 border-t border-slate-100">
+            <div>Buying Price: <span class="font-mono font-semibold text-slate-700">${bpStr}</span></div>
+            <div>Selling Price: <span class="font-mono font-bold text-slate-800">${spStr}</span></div>
+        </div>
+    `;
+    cardContainer.appendChild(card);
 
         // --- ATTACH DROPDOWNS ---
         const appendDropdown = (targetCellElement) => {
@@ -11923,4 +11944,55 @@ function calculateExpenseTotal() {
     if (qty > 0 && unitPrice > 0) {
         amountInput.value = (qty * unitPrice).toFixed(2);
     }
+}
+
+function updateLowStockWidget(inventory) {
+    const container = document.getElementById('low-stock-container');
+    const countBadge = document.getElementById('low-stock-count');
+    
+    if (!container) return;
+
+    // Filter items that track inventory and have closing stock <= lowStock threshold
+    const lowStockItems = inventory.filter(item => {
+        if (!item.trackInventory) return false;
+        
+        const currentStock = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
+        const threshold = item.lowStock ?? 5; // Default threshold fallback
+        
+        return currentStock <= threshold;
+    });
+
+    // Update Counter Badge
+    if (countBadge) {
+        if (lowStockItems.length > 0) {
+            countBadge.textContent = lowStockItems.length;
+            countBadge.classList.remove('hidden');
+        } else {
+            countBadge.classList.add('hidden');
+        }
+    }
+
+    // Render Items or Empty State
+    if (lowStockItems.length === 0) {
+        container.innerHTML = `<p class="text-xs text-emerald-600 font-medium italic py-1">✓ All tracked items are adequately stocked.</p>`;
+        return;
+    }
+
+    container.innerHTML = lowStockItems.map(item => {
+        const currentStock = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
+        
+        return `
+            <div class="flex items-center justify-between p-2 bg-rose-50/60 border border-rose-100 rounded-lg text-xs">
+                <div class="flex flex-col min-w-0 pr-2">
+                    <span class="font-bold text-slate-800 truncate">${item.item || 'Unnamed Item'}</span>
+                    <span class="text-[10px] text-slate-400 uppercase font-semibold">${item.department || 'General'}</span>
+                </div>
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                    <span class="font-mono font-black text-rose-700 bg-white px-2 py-0.5 rounded border border-rose-200">
+                        ${currentStock} left
+                    </span>
+                </div>
+            </div>
+        `;
+    }).join('');
 }

@@ -789,26 +789,47 @@ body {
         </div>
 
         <!-- Point of Sale -->
-        <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-            <div class="flex items-center gap-2 mb-6">
-                <div class="h-1 w-8 bg-indigo-500 rounded-full"></div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Point of Sale</h3>
+        <div class="bg-white p-6 sm:p-8 rounded-3xl border border-gray-100 shadow-sm">
+    <div class="flex items-center gap-2 mb-6">
+        <div class="h-1 w-8 bg-indigo-500 rounded-full"></div>
+        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Point of Sale & Inventory Status</h3>
+    </div>
+    
+    <!-- Changed grid to 3 columns to fit POS stats and Low Stock list cleanly -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        
+        <!-- Total Revenue -->
+        <div class="relative pl-4">
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Revenue</p>
+            <p id="postoday-revenue" class="text-xl font-bold text-gray-900 mt-1">UGX 0</p>
+            <div class="absolute left-0 top-0 h-full w-1 bg-green-500 rounded-full"></div>
+        </div>
+
+        <!-- Gross Profit -->
+        <div class="relative pl-4">
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Gross Profit</p>
+            <p id="postoday-profit" class="text-xl font-bold text-gray-900 mt-1 text-green-600">UGX 0</p>
+            <div class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-full"></div>
+        </div>
+        
+        <!-- Low Stock Items Card -->
+        <div class="relative pl-4 sm:col-span-2 lg:col-span-1">
+            <div class="flex items-center justify-between mb-1">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Low Stock Items</p>
+                <span id="low-stock-count" class="text-[10px] font-extrabold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full hidden">0</span>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div class="relative pl-4">
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Revenue</p>
-                    <p id="postoday-revenue" class="text-xl font-bold text-gray-900 mt-1">UGX 0</p>
-                    <div class="absolute left-0 top-0 h-full w-1 bg-green-500 rounded-full"></div>
-                </div>
-                <div class="relative pl-4">
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Gross Profit</p>
-                    <p id="postoday-profit" class="text-xl font-bold text-gray-900 mt-1 text-green-600">UGX 0</p>
-                    <div class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-full"></div>
-                </div>
-                
-                
+            
+            <div class="absolute left-0 top-0 h-full w-1 bg-rose-500 rounded-full"></div>
+
+            <!-- Scrollable list wrapper with fixed max-height -->
+            <div id="low-stock-container" class="mt-2 max-h-36 overflow-y-auto pr-1 space-y-2 scrollbar-thin scrollbar-thumb-rose-200 scrollbar-track-gray-50">
+                <!-- Placeholder when no low stock items -->
+                <p class="text-xs text-gray-400 italic py-1">All tracked items are adequately stocked.</p>
             </div>
         </div>
+
+    </div>
+</div>
 
         <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
             <div class="flex items-center gap-2 mb-6">
@@ -1827,6 +1848,11 @@ body {
           <label for="sellingprice" class="block text-sm font-medium text-gray-700">Selling Price:</label>
           <input type="number" id="sellingprice" min="0" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500">
         </div>
+
+        <div>
+  <label for="lowStock" class="block text-sm font-medium text-gray-700">Low Stock Alert Threshold:</label>
+  <input type="number" id="lowStock" min="0" value="5" class="mt-1 p-2 block w-full border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500">
+</div>
 
         <div class="flex items-center space-x-3 pt-6 md:col-span-2">
           <input type="checkbox" id="trackInventory" checked class="h-5 w-5 text-emerald-600 border-gray-300 rounded">
@@ -3994,6 +4020,11 @@ Add Guest Details            </h2>
         <label for="edit-sellingprice" class="block text-sm font-medium text-gray-700">Selling Price:</label>
         <input type="number" id="edit-sellingprice" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
       </div>
+
+      <div>
+  <label for="edit-lowStock" class="block text-sm font-medium text-gray-700">Low Stock Threshold:</label>
+  <input type="number" id="edit-lowStock" min="0" required class="p-2 w-full border border-gray-300 rounded-md">
+</div>
 
       <div class="md:col-span-2 flex items-center space-x-3 p-2 bg-gray-50 rounded-md border border-gray-200">
         <input type="checkbox" id="edit-trackInventory" class="h-5 w-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500">

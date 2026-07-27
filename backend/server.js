@@ -5451,27 +5451,27 @@ const CashJournal = mongoose.model('CashJournal', new mongoose.Schema({
 }));
 
 const Inventory = mongoose.model('Inventory', new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
+  hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
   item: { type: String, required: true },
-  opening: { type: Number,min: [0, 'opening stock cannot be negative'],  default: 0 },
+  opening: { type: Number, min: [0, 'opening stock cannot be negative'], default: 0 },
   purchases: { type: Number, default: 0 },
   sales: { type: Number, default: 0 },
   department: { type: String, default: 'Bar' }, 
   spoilage: { type: Number, default: 0 },
-    closing: {
+  closing: {
     type: Number,
-    min: [0, 'Closing stock cannot be negative'], // This triggers a 400 error
+    min: [0, 'Closing stock cannot be negative'],
     default: 0
   },
   buyingprice: { type: Number, default: 0 },
   sellingprice: { type: Number, default: 0 },
   
-  // NEW FIELD: This controls the logic for Bar vs Restaurant
+  // Threshold to trigger low-stock alert
+  lowStock: { type: Number, min: 0, default: 5 }, 
+
   trackInventory: { type: Boolean, default: true }, 
-  
   date: { type: Date, default: Date.now }
 }));
-
 const Sale = mongoose.model('Sale', new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
     department: { 
