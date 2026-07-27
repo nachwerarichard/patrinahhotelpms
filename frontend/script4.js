@@ -5844,7 +5844,7 @@ const addCharge = async (description, number, department) => {
     try {
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> SAVING...`;
+            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ADDING...`;
         }
 
         // 1. Send Order to correct Endpoints
@@ -5879,19 +5879,23 @@ const addCharge = async (description, number, department) => {
         }
 
         // 3. Update the UI efficiently using the server response data
-        if (typeof updateActiveAccountUI === 'function') {
-            if (activeAccountId) {
-                // For existing registered guests, proceed with your standard refresh
-                const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
-                if (accountRes && accountRes.ok) {
-                    const freshAccountData = await accountRes.json();
-                    updateActiveAccountUI(freshAccountData);
-                }
-            } else if (serverResponse.updatedAccount) {
-                // For walk-ins, use the auto-created account straight from the response!
-                updateActiveAccountUI(serverResponse.updatedAccount);
-            }
+        // 3. Update the UI efficiently using the server response data
+if (typeof updateActiveAccountUI === 'function') {
+    if (activeAccountId) {
+        // For existing registered guests
+        const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
+        if (accountRes && accountRes.ok) {
+            const freshAccountData = await accountRes.json();
+            updateActiveAccountUI(freshAccountData);
         }
+    } else if (serverResponse.updatedAccount) {
+        // Fix: Save the newly created walk-in account ID globally!
+        activeAccountId = serverResponse.updatedAccount._id || serverResponse.updatedAccount.id;
+        
+        // Update UI with the auto-created account
+        updateActiveAccountUI(serverResponse.updatedAccount);
+    }
+}
 
         // --- SUCCESS CLEANUP ---
         document.getElementById('addChargeForm').reset();
@@ -6010,12 +6014,17 @@ const settleAccount = async (method, accountId, phone = '') => {
 };
 // --- UI UPDATES ---
 const updateActiveAccountUI = (account) => {
-    const charges = account.charges || [];
-    const liveTotal = charges.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    if (!account) return;
 
-    document.getElementById('currentGuestName').textContent = account.guestName;
+    // Keep activeAccountId in sync with current account object
+    activeAccountId = account._id || account.id || activeAccountId;
+
+    const charges = account.charges || [];
+    const liveTotal = charges.reduce((sum, item) => sum + (Number(item.amount) || Number(item.sp) || 0), 0);
+
+    document.getElementById('currentGuestName').textContent = account.guestName || 'Walk-In Guest';
     document.getElementById('currentRoomNumber').textContent = account.roomNumber ? `Room ${account.roomNumber}` : 'Walk-In Guest';
-    document.getElementById('totalCharges').textContent = liveTotal.toLocaleString();
+    document.getElementById('totalCharges').textContent = liveTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
 
     const chargesListContainer = document.getElementById('chargesList');
     if (chargesListContainer) {
@@ -6023,45 +6032,70 @@ const updateActiveAccountUI = (account) => {
             ? `<tr><td colspan="3" class="text-center py-4 text-gray-400">No charges yet</td></tr>`
             : charges.map(item => `
                 <tr class="border-b border-gray-100 text-sm">
-                    <td class="py-2 text-gray-400">${new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
-                    <td class="py-2 font-medium text-gray-700">${item.description}</td>
-                    <td class="py-2 text-right font-bold text-indigo-600">${Number(item.amount).toLocaleString()}</td>
+                    <td class="py-2 text-gray-400">${item.date ? new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}</td>
+                    <td class="py-2 font-medium text-gray-700">${item.item || item.description}</td>
+                    <td class="py-2 text-right font-bold text-indigo-600">${Number(item.amount || item.sp || 0).toLocaleString()}</td>
                 </tr>
             `).join('');
     }
-    document.getElementById('postToRoomBtn').classList.toggle('hidden', !account.roomNumber);
-    document.getElementById('activeAccountSection').classList.remove('hidden');
 
-    // --- ADD/UPDATE THIS BLOCK RIGHT HERE ---
-    // Every time the UI updates, re-bind the click explicitly to the live elements
-    // Inside updateActiveAccountUI(account)...
-     // Inside updateActiveAccountUI(account)...
-// Inside updateActiveAccountUI(account)...
-const issueBtn = document.getElementById('issueReceiptBtn');
-if (issueBtn) {
-    // Clear out any old listeners completely
-    issueBtn.onclick = null; 
-    
-    issueBtn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation(); // Stop event bubbling up the DOM tree
-        
-        const exactId = account._id || account.id || activeAccountId;
-        console.log("Setting form data attribute with Account ID:", exactId);
+    document.getElementById('postToRoomBtn')?.classList.toggle('hidden', !account.roomNumber);
+    document.getElementById('activeAccountSection')?.classList.remove('hidden');
 
-        const settleForm = document.getElementById('settleBillForm');
-        settleForm.setAttribute('data-account-id', exactId); 
+    // Attach listener for modal settlement
+    const issueBtn = document.getElementById('issueReceiptBtn');
+    if (issueBtn) {
+        issueBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const settleForm = document.getElementById('settleBillForm');
+            if (settleForm) settleForm.setAttribute('data-account-id', activeAccountId);
 
-        // Update display text values inside the modal view
-        document.getElementById('settleModalTotal').textContent = `${CURRENT_CURRENCY}${liveTotal.toLocaleString()}`;
-        document.getElementById('settleModalGuest').textContent = `${account.guestName} (${account.roomNumber ? 'Room ' + account.roomNumber : 'Walk-In Guest'})`;
+            document.getElementById('settleModalTotal').textContent = `${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : '$'}${liveTotal.toLocaleString()}`;
+            document.getElementById('settleModalGuest').textContent = `${account.guestName} (${account.roomNumber ? 'Room ' + account.roomNumber : 'Walk-In Guest'})`;
 
-        // Open the modal container layout safely
-        const settleModal = document.getElementById('settleBillModal');
-        settleModal.classList.remove('hidden');
-        settleModal.classList.add('flex');
-    };
-}
+            const settleModal = document.getElementById('settleBillModal');
+            settleModal?.classList.remove('hidden');
+            settleModal?.classList.add('flex');
+        };
+    }
+};
+
+const resetActiveFolio = () => {
+    // 1. Clear the global active account state variable
+    if (typeof activeAccountId !== 'undefined') {
+        activeAccountId = null;
+    }
+
+    // 2. Reset Header Card Display Values
+    const guestNameEl = document.getElementById('currentGuestName');
+    const roomNumEl = document.getElementById('currentRoomNumber');
+    const totalChargesEl = document.getElementById('totalCharges');
+
+    if (guestNameEl) guestNameEl.textContent = 'New Sale';
+    if (roomNumEl) roomNumEl.textContent = '';
+    if (totalChargesEl) totalChargesEl.textContent = '0.00';
+
+    // 3. Reset Charges List Table
+    const chargesListContainer = document.getElementById('chargesList');
+    if (chargesListContainer) {
+        chargesListContainer.innerHTML = `
+            <tr><td colspan="3" class="px-6 py-10 text-center text-slate-400 italic text-sm">No items posted yet</td></tr>
+        `;
+    }
+
+    // 4. Reset Form Inputs
+    const addChargeForm = document.getElementById('addChargeForm');
+    if (addChargeForm) addChargeForm.reset();
+
+    // 5. Hide Post to Room Button (since walk-in has no room)
+    const postToRoomBtn = document.getElementById('postToRoomBtn');
+    if (postToRoomBtn) postToRoomBtn.classList.add('hidden');
+
+    if (typeof showMessage === 'function') {
+        showMessage('Session Cleared', 'Ready for new walk-in sale.', false);
+    }
 };
 
 const resetUI = () => {
@@ -6115,11 +6149,52 @@ if (!res.ok) {
 }
 
 function autoFillPrices(selectedItemName) {
-    const item = inventoryData.find(i => i.item === selectedItemName);
+    if (!selectedItemName) return;
+
+    // 1. Sanitize search input
+    const cleanSearchName = selectedItemName.trim().toLowerCase();
+
+    // 2. Find matching item in inventory lookup array
+    const item = inventoryData.find(
+        i => i.item && i.item.trim().toLowerCase() === cleanSearchName
+    );
+
     if (item) {
-        document.getElementById('itemPrice').value = item.sellingprice;
-        document.getElementById('itemDesc').dataset.bp = item.buyingprice;
-        document.getElementById('itemDesc').dataset.sp = item.sellingprice;
+        console.log("🎯 Found item record:", item); // Debug log to check contents
+
+        const priceInput = document.getElementById('itemPrice');
+        const descInput = document.getElementById('itemDesc');
+        const deptSelect = document.getElementById('deptSelect');
+
+        // Populate prices
+        if (priceInput) priceInput.value = item.sellingprice || 0;
+        
+        if (descInput) {
+            descInput.dataset.bp = item.buyingprice || 0;
+            descInput.dataset.sp = item.sellingprice || 0;
+        }
+
+        // --- DEPARTMENT AUTO-SELECT ---
+        if (deptSelect && item.department) {
+            const targetDept = item.department.trim().toLowerCase();
+            let matched = false;
+
+            // Iterate over options to match case-insensitively
+            for (let i = 0; i < deptSelect.options.length; i++) {
+                const optVal = deptSelect.options[i].value.trim().toLowerCase();
+                if (optVal === targetDept) {
+                    deptSelect.selectedIndex = i;
+                    matched = true;
+                    break;
+                }
+            }
+
+            if (!matched) {
+                console.warn(`⚠️ Item department '${item.department}' is not an option in the #deptSelect dropdown.`);
+            }
+        } else if (!item.department) {
+            console.warn(`⚠️ Item '${item.item}' exists in lookup array but has no 'department' field attached.`);
+        }
     }
 }
 
@@ -6411,7 +6486,7 @@ function exportTableToExcel(tableId, filename) { console.log(`Exporting table ${
     const salesExportBtn = document.querySelector('#sales-list .export-button');
     if (salesExportBtn) {
         salesExportBtn.addEventListener('click', () => {
-            exportTableToExcel('sales-table', 'Patrinah_Sales_Records');
+            exportTableToExcel('sales-table', 'Sales_Records');
         });
     }
 
@@ -6546,6 +6621,7 @@ async function deleteInventoryItem(id) {
             // 3. Refresh the inventory table
             if (typeof fetchInventory === "function") {
                 fetchInventory();
+                loadInventory();
             }
         } else {
             const error = await response.json();
@@ -6634,51 +6710,68 @@ confirmDeleteBtn.addEventListener('click', () => {
 
 function openAdjustModal(item) {
     const modal = document.getElementById('edit-inventory-modal');
-    if (!modal) return;
+    if (!modal) return;    
 
-    // 1. Fill the data
-    document.getElementById('edit-inventory-id').value = item._id || '';
+    // 1. Populate all form data (including lowStock)
+    document.getElementById('edit-inventory-id').value = item._id || item.id || '';
     document.getElementById('edit-item').value = item.item || '';
+    
+    const deptField = document.getElementById('edit-department');
+    if (deptField) deptField.value = item.department || '';
+
     document.getElementById('edit-opening').value = item.opening || 0;
     document.getElementById('edit-purchases').value = item.purchases || 0;
     document.getElementById('edit-inventory-sales').value = item.sales || 0;
     document.getElementById('edit-spoilage').value = item.spoilage || 0;
     document.getElementById('edit-buyingprice').value = item.buyingprice || 0;
     document.getElementById('edit-sellingprice').value = item.sellingprice || 0;
+    
+    // Set Low Stock Threshold
+    const lowStockInput = document.getElementById('edit-lowStock');
+    if (lowStockInput) lowStockInput.value = item.lowStock ?? 5;
+
     document.getElementById('edit-trackInventory').checked = !!item.trackInventory;
 
-    // 2. Set Read-Only logic for Adjustment mode
+    // 2. Hide locked/read-only input containers (including edit-lowStock)
     const lockedIds = [
         'edit-item', 
+        'edit-department',
         'edit-opening', 
         'edit-inventory-sales', 
         'edit-buyingprice', 
-        'edit-sellingprice'
+        'edit-sellingprice',
+        'edit-lowStock',        // Hidden during quick adjustment
+        'edit-trackInventory'
     ];
     
     lockedIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            el.readOnly = true;
-            el.classList.add('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+            const container = el.closest('div');
+            if (container) container.classList.add('hidden');
         }
     });
 
-    const trackCheckbox = document.getElementById('edit-trackInventory');
-    if (trackCheckbox) trackCheckbox.disabled = true;
+    // 3. Keep Purchases and Spoilage VISIBLE & EDITABLE
+    const editableIds = ['edit-purchases', 'edit-spoilage'];
+    editableIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            const container = el.closest('div');
+            if (container) container.classList.remove('hidden');
+            el.readOnly = false;
+        }
+    });
 
-    // 3. Keep Purchases and Spoilage EDITABLE
+    // Focus on purchases field for fast entry
     const purchaseInput = document.getElementById('edit-purchases');
-    if (purchaseInput) {
-        purchaseInput.readOnly = false;
-        purchaseInput.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
-        purchaseInput.focus();
-    }
+    if (purchaseInput) purchaseInput.focus();
 
     // 4. Update UI Title
     const title = modal.querySelector('h2');
     if (title) title.textContent = `Adjust Stock: ${item.item}`;
     
+    // 5. Show Modal
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
 }
@@ -6690,27 +6783,77 @@ function closeEditModal() {
     modal.classList.add('hidden');
     modal.style.display = 'none';
 
-    // UNLOCK all fields for the next standard "Edit" operation
-    const allInputIds = ['edit-item', 'edit-opening', 'edit-purchases', 'edit-inventory-sales', 'edit-spoilage', 'edit-buyingprice', 'edit-sellingprice'];
+    // UNLOCK all inputs and restore visibility to all containers for full edits
+    const allInputIds = [
+        'edit-item', 
+        'edit-department', 
+        'edit-opening', 
+        'edit-purchases', 
+        'edit-inventory-sales', 
+        'edit-spoilage', 
+        'edit-buyingprice', 
+        'edit-sellingprice',
+        'edit-lowStock',
+        'edit-trackInventory'
+    ];
+    
     allInputIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.readOnly = false;
+            el.disabled = false;
             el.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+            
+            // Unhide parent container
+            const container = el.closest('div');
+            if (container) container.classList.remove('hidden');
         }
     });
+}
 
-    const trackCheckbox = document.getElementById('edit-trackInventory');
-    if (trackCheckbox) trackCheckbox.disabled = false;
+// Standard Edit Modal Opener (Call this when clicking "Edit" in table actions)
+function openEditModal(item) {
+    const modal = document.getElementById('edit-inventory-modal');
+    if (!modal) return;
+
+    // Reset visibility on all fields first
+    closeEditModal();
+
+    // Fill form fields
+    document.getElementById('edit-inventory-id').value = item._id || item.id || '';
+    document.getElementById('edit-item').value = item.item || '';
+    
+    const deptField = document.getElementById('edit-department');
+    if (deptField) deptField.value = item.department || '';
+
+    document.getElementById('edit-opening').value = item.opening || 0;
+    document.getElementById('edit-purchases').value = item.purchases || 0;
+    document.getElementById('edit-inventory-sales').value = item.sales || 0;
+    document.getElementById('edit-spoilage').value = item.spoilage || 0;
+    document.getElementById('edit-buyingprice').value = item.buyingprice || 0;
+    document.getElementById('edit-sellingprice').value = item.sellingprice || 0;
+    
+    const lowStockInput = document.getElementById('edit-lowStock');
+    if (lowStockInput) lowStockInput.value = item.lowStock ?? 5;
+
+    document.getElementById('edit-trackInventory').checked = !!item.trackInventory;
+
+    // Set UI Title
+    const title = modal.querySelector('h2');
+    if (title) title.textContent = `Edit Inventory Item: ${item.item}`;
+
+    // Display Modal
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
 }
 
 async function handleUpdateSubmit(event) {
-    event.preventDefault(); // Block default reloading
+    event.preventDefault(); // Block default form submission
 
-    // 1️⃣ Integrated Security: Stop non-admins immediately on the frontend
+    // 1️⃣ Integrated Security Check
     const adminRoles = ['admin', 'super-admin'];
     if (typeof currentUserRole !== 'undefined' && !adminRoles.includes(currentUserRole)) {
-        return showMessage('Access Restricted', 'Only administrators can modify inventory records.', true);
+        return showMessage('Access Restricted: Only administrators can modify inventory records.', true);
     }
 
     const hotelId = getHotelId();
@@ -6719,27 +6862,37 @@ async function handleUpdateSubmit(event) {
         return;
     }
 
-    // --- CAPTURE DATA ONCE ---
+    // 2️⃣ Ensure Record ID Exists for PUT
     const idInput = document.getElementById('edit-inventory-id');
     const idValue = idInput ? idInput.value.trim() : ""; 
-    const selectedDate = document.getElementById('search-inventory-date')?.value || new Date().toISOString().split('T')[0];
 
+    if (!idValue) {
+        showMessage('Error: Missing inventory record ID for update.', true);
+        return;
+    }
+
+    const selectedDate = document.getElementById('search-inventory-date')?.value || new Date().toISOString().split('T')[0];
     const submitBtn = document.getElementById('edit-inventory-submit-btn');
     const defaultText = document.getElementById('edit-inventory-btn-default');
     const loadingText = document.getElementById('edit-inventory-btn-loading');
 
+    // 3️⃣ Construct Payload
     const inventoryData = {
         hotelId: hotelId,
-        item: document.getElementById('edit-item').value,
-        opening: parseInt(document.getElementById('edit-opening').value, 10) || 0,
-        purchases: parseInt(document.getElementById('edit-purchases').value, 10) || 0,
-        sales: parseInt(document.getElementById('edit-inventory-sales').value, 10) || 0,
-        spoilage: parseInt(document.getElementById('edit-spoilage').value, 10) || 0,
-        buyingprice: parseFloat(document.getElementById('edit-buyingprice').value) || 0,
-        sellingprice: parseFloat(document.getElementById('edit-sellingprice').value) || 0,
-        trackInventory: document.getElementById('edit-trackInventory').checked,
+        item: document.getElementById('edit-item')?.value || '',
+        department: document.getElementById('edit-department')?.value || '',
+        opening: parseInt(document.getElementById('edit-opening')?.value, 10) || 0,
+        purchases: parseInt(document.getElementById('edit-purchases')?.value, 10) || 0,
+        sales: parseInt(document.getElementById('edit-inventory-sales')?.value, 10) || 0,
+        spoilage: parseInt(document.getElementById('edit-spoilage')?.value, 10) || 0,
+        buyingprice: parseFloat(document.getElementById('edit-buyingprice')?.value) || 0,
+        sellingprice: parseFloat(document.getElementById('edit-sellingprice')?.value) || 0,
+        lowStock: parseInt(document.getElementById('edit-lowStock')?.value, 10) ?? 5, // <-- Added here
+        trackInventory: document.getElementById('edit-trackInventory')?.checked ?? true,
         date: selectedDate 
     };
+
+
 
     // Calculate Closing Stock
     inventoryData.closing = inventoryData.opening + inventoryData.purchases - inventoryData.sales - inventoryData.spoilage;
@@ -6752,27 +6905,23 @@ async function handleUpdateSubmit(event) {
             loadingText.classList.add('flex');
         }
 
-        // --- CONSTRUCT URL & METHOD ---
-        const method = idValue ? 'PUT' : 'POST';
-        const url = idValue 
-            ? `${API_BASE_URL}/inventory/${idValue}` 
-            : `${API_BASE_URL}/inventory`; 
-
-        console.log(`[debug] Requesting: ${method} ${url}`);
+        // --- STRICT PUT REQUEST ---
+        const url = `${API_BASE_URL}/inventory/${idValue}`;
+        console.log(`[debug] Updating record: PUT ${url}`);
 
         const response = await authenticatedFetch(url, {
-            method: method,
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(inventoryData)
         });
 
         if (!response) throw new Error("No response from server");
 
-        // --- HANDLE RESPONSE ---
         if (response.ok) {
-            showMessage(idValue ? 'Stock updated! ✅' : 'New record created! ✅');
+            showMessage('Stock updated successfully! ✅');
             if (typeof closeEditModal === "function") closeEditModal();
             if (typeof fetchInventory === "function") fetchInventory(); 
+            loadInventory();
         } else {
             const contentType = response.headers.get("content-type");
             if (contentType && contentType.includes("application/json")) {
@@ -6783,7 +6932,7 @@ async function handleUpdateSubmit(event) {
             }
         }
     } catch (err) {
-        console.error("Submit Error:", err);
+        console.error("PUT Submit Error:", err);
         showMessage("Inventory Error: " + err.message, true);
     } finally {
         if (submitBtn) submitBtn.disabled = false;
@@ -6874,60 +7023,76 @@ function setLoadingState(isLoading) {
  * @returns {Object|null} The data object or null if validation fails
  */
 function getInventoryFormData() {
-    const hotelId = localStorage.getItem('hotelId');
-    
+    const hotelId = localStorage.getItem('hotelId'); // or wherever you store hotelId
     if (!hotelId) {
-        showMessage('Error', 'No hotel selected. Please log in again.', true);
+        showMessage('Error', 'Hotel ID missing. Please log in again.', true);
         return null;
     }
 
-    // Map your HTML IDs to the Backend Schema fields
+    const department = document.getElementById('department')?.value;
+    const item = document.getElementById('item')?.value.trim();
+
+    if (!department) {
+        showMessage('Error', 'Please select a department.', true);
+        return null;
+    }
+
+    if (!item) {
+        showMessage('Error', 'Please enter an item name.', true);
+        return null;
+    }
+
     return {
-        item: document.getElementById('item').value.trim(),
-        opening: parseFloat(document.getElementById('opening').value) || 0,
-        purchases: parseFloat(document.getElementById('purchases').value) || 0,
-        sales: parseFloat(document.getElementById('inventory-sales').value) || 0,
-        spoilage: parseFloat(document.getElementById('spoilage').value) || 0,
-        buyingprice: parseFloat(document.getElementById('buyingprice').value) || 0,
-        sellingprice: parseFloat(document.getElementById('sellingprice').value) || 0,
-        trackInventory: document.getElementById('trackInventory').checked
+        hotelId,
+        item,
+        department,
+        opening: Number(document.getElementById('opening')?.value) || 0,
+        purchases: Number(document.getElementById('purchases')?.value) || 0,
+        sales: Number(document.getElementById('inventory-sales')?.value) || 0,
+        spoilage: Number(document.getElementById('spoilage')?.value) || 0,
+        buyingprice: Number(document.getElementById('buyingprice')?.value) || 0,
+        sellingprice: Number(document.getElementById('sellingprice')?.value) || 0,
+        lowStock: parseInt(document.getElementById('lowStock')?.value, 10) || 0,
+        trackInventory: document.getElementById('trackInventory')?.checked ?? true
     };
 }
-/**
- * Sends the form data to the backend
- */
+
 async function submitInventory() {
     const data = getInventoryFormData();
-    if (!data) return; // Stop if data is invalid/missing hotelId
+    if (!data) return; // Stop if form validation fails
 
     const inventoryForm = document.getElementById('inventory-form');
 
     try {
         setLoadingState(true);
 
-        // Ensure the path matches your backend: /api/inventory
         const response = await authenticatedFetch(`${API_BASE_URL}/inventory`, {
             method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(data)
         });
 
-        if (!response) return; // authenticatedFetch handles the redirect on 401
+        if (!response) return; // authenticatedFetch handles redirects on 401
 
         const result = await response.json();
 
         if (response.ok) {
             if (inventoryForm) inventoryForm.reset();
             
-            // Clear hidden ID if you use this for updates too
-            const idField = document.getElementById('inventory-id');
-            if (idField) idField.value = '';
+            // Close modal after saving
+            if (typeof toggleInventoryModal === 'function') {
+                toggleInventoryModal(false);
+            }
 
-            showMessage('Success', `${data.item} saved successfully! ✅`);
+            showMessage('Success', `${data.item} added to ${data.department} inventory! ✅`);
             
-            // Refresh the list if the function exists
+            // Refresh list
             if (typeof fetchInventory === 'function') fetchInventory(); 
+            loadInventory();
         } else {
-            throw new Error(result.error || 'Failed to save item');
+            throw new Error(result.error || result.message || 'Failed to save item');
         }
     } catch (error) {
         console.error('Submission Error:', error);
@@ -6936,8 +7101,6 @@ async function submitInventory() {
         setLoadingState(false);
     }
 }
-
-
 
 
 // --- Sales Functions ---
@@ -7540,12 +7703,20 @@ function renderExpensesPagination(current, totalPages) {
 function renderExpensesTable(expenses) {
     const tbody = document.querySelector('#expenses-table tbody');
     const mobileGrid = document.getElementById('expenses-mobile-grid');
+    const tableContainer = document.getElementById('expenses-table');
     
     // Safety purge of baseline DOM states
     if (tbody) tbody.innerHTML = '';
     if (mobileGrid) mobileGrid.innerHTML = '';
 
-    if (expenses.length === 0) {
+    // Remove any existing summary elements to prevent duplication on re-render
+    const existingSummary = document.getElementById('expenses-summary-container');
+    if (existingSummary) existingSummary.remove();
+
+    const existingTfoot = tableContainer ? tableContainer.querySelector('tfoot') : null;
+    if (existingTfoot) existingTfoot.remove();
+
+    if (!Array.isArray(expenses) || expenses.length === 0) {
         const noDataMsg = 'No expense records found for this date. Try adjusting the filter.';
         
         if (tbody) {
@@ -7560,11 +7731,28 @@ function renderExpensesTable(expenses) {
     const adminRoles = ['admin', 'super-admin'];
     const hasAdminAccess = adminRoles.includes(currentUserRole);
 
+    // --- ACCUMULATORS FOR TOTALS ---
+    let grandTotal = 0;
+    const departmentTotals = {};
+
     expenses.forEach(expense => {
         const dept = expense.department || 'General';
         const desc = expense.description || 'No description provided';
-        const amountDisplay = `${CURRENT_CURRENCY} ${Number(expense.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        const dateDisplay = new Date(expense.date).toLocaleDateString();
+        const numAmount = Number(expense.amount || 0);
+        
+        // Calculate Totals
+        grandTotal += numAmount;
+        departmentTotals[dept] = (departmentTotals[dept] || 0) + numAmount;
+
+        const amountDisplay = `${CURRENT_CURRENCY || 'UGX'} ${numAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        
+        // Safe Date Parsing
+        let dateDisplay = 'N/A';
+        if (expense.date) {
+            const parsedDate = new Date(expense.date);
+            dateDisplay = !isNaN(parsedDate) ? parsedDate.toLocaleDateString() : 'N/A';
+        }
+
         const receipt = expense.receiptId || '—';
         const source = expense.source || 'N/A';
 
@@ -7593,7 +7781,7 @@ function renderExpensesTable(expenses) {
             return container;
         };
 
-        // --- A. POPULATE VIEW 1: DESKTOP SYSTEM ROW ---
+        // --- A. DESKTOP ROW ---
         if (tbody) {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
@@ -7603,14 +7791,16 @@ function renderExpensesTable(expenses) {
                 <td class="px-6 py-4 font-mono font-bold text-slate-900">${amountDisplay}</td>
                 <td class="px-6 py-4 text-slate-500 whitespace-nowrap">${dateDisplay}</td>
                 <td class="px-6 py-4 font-mono text-xs text-slate-400">${receipt}</td>
-                <td class="px-6 py-4 text-slate-500">${source}</td>
+                <td class="px-6 py-4 text-slate-600 font-medium">
+                    <span class="inline-block px-2.5 py-1 bg-slate-100 text-slate-700 rounded-md text-xs border border-slate-200/60">${source}</span>
+                </td>
                 <td class="px-6 py-4 text-right actions-cell whitespace-nowrap"></td>
             `;
             tr.querySelector('.actions-cell').appendChild(createActionsElement(false));
             tbody.appendChild(tr);
         }
 
-        // --- B. POPULATE VIEW 2: SMARTPHONE LAYOUT CARD ---
+        // --- B. MOBILE CARD ---
         if (mobileGrid) {
             const card = document.createElement('div');
             card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3.5 hover:border-slate-300 transition-all";
@@ -7637,7 +7827,7 @@ function renderExpensesTable(expenses) {
                     </div>
                     <div class="border-l border-slate-200/60 pl-2">
                         <span class="text-[9px] text-slate-400 block uppercase font-bold mb-0.5">Source</span>
-                        <span class="text-slate-700 truncate block">${source}</span>
+                        <span class="text-slate-700 truncate block font-semibold">${source}</span>
                     </div>
                 </div>
 
@@ -7649,6 +7839,67 @@ function renderExpensesTable(expenses) {
             mobileGrid.appendChild(card);
         }
     });
+
+    // ==========================================
+    // 1. ADD GRAND TOTAL FOOTER TO DESKTOP TABLE
+    // ==========================================
+    if (tableContainer) {
+        const formattedGrandTotal = `${CURRENT_CURRENCY || 'UGX'} ${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        
+        const tfoot = document.createElement('tfoot');
+        tfoot.className = "bg-slate-100/80 border-t-2 border-slate-300 font-bold text-slate-800 text-sm";
+        tfoot.innerHTML = `
+            <tr>
+                <td class="px-6 py-4 uppercase tracking-wider text-xs font-black text-slate-600">Overall Total Expenses</td>
+                <td class="px-6 py-4 text-xs text-slate-400 font-normal italic">${expenses.length} transaction(s)</td>
+                <td class="px-6 py-4 font-mono text-base font-black text-rose-700">${formattedGrandTotal}</td>
+                <td colspan="4" class="px-6 py-4"></td>
+            </tr>
+        `;
+        tableContainer.appendChild(tfoot);
+    }
+
+    // ==========================================
+    // 2. BUILD DEPARTMENTAL & GRAND SUMMARY CARD
+    // ==========================================
+    const summaryWrapper = document.createElement('div');
+    summaryWrapper.id = 'expenses-summary-container';
+    summaryWrapper.className = 'mt-6 p-5 bg-slate-900 text-white rounded-xl shadow-md border border-slate-800';
+
+    const formattedGrandTotal = `${CURRENT_CURRENCY || 'UGX'} ${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    let deptChipsHTML = '';
+    for (const [deptName, deptTotal] of Object.entries(departmentTotals)) {
+        const formattedDeptTotal = `${CURRENT_CURRENCY || 'UGX'} ${deptTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        deptChipsHTML += `
+            <div class="bg-slate-800/90 border border-slate-700/80 p-3 rounded-lg flex flex-col justify-between">
+                <span class="text-[10px] uppercase tracking-wider font-bold text-slate-400">${deptName}</span>
+                <span class="font-mono text-sm font-bold text-slate-100 mt-1">${formattedDeptTotal}</span>
+            </div>
+        `;
+    }
+
+    summaryWrapper.innerHTML = `
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div>
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Financial Summary</h3>
+                <p class="text-xs text-slate-500">Departmental breakdown for loaded records</p>
+            </div>
+            <div class="text-left md:text-right">
+                <span class="text-[10px] uppercase font-extrabold tracking-widest text-rose-400 block">Overall Total Spent</span>
+                <span class="font-mono text-2xl font-black text-rose-500">${formattedGrandTotal}</span>
+            </div>
+        </div>
+        <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            ${deptChipsHTML}
+        </div>
+    `;
+
+    // Append the summary below the expense records wrapper
+    const recordsSection = document.getElementById('expenses-records');
+    if (recordsSection) {
+        recordsSection.appendChild(summaryWrapper);
+    }
 }
 
 /**
@@ -7665,21 +7916,35 @@ function populateEditExpenseModal(expense) {
     const departmentInput = document.getElementById('edit-expense-department');
     const descriptionInput = document.getElementById('edit-expense-description');
     const amountInput = document.getElementById('edit-expense-amount');
-    const dateInput = document.getElementById('edit-expense-date'); // Targets the new date input in the modal
+    const dateInput = document.getElementById('edit-expense-date');
     const receiptIdInput = document.getElementById('edit-expense-receiptId');
     const sourceInput = document.getElementById('edit-expense-source');
 
-    // 3. Populate the fields
-    if (idInput) idInput.value = expense._id; // Assuming your expense object has a unique identifier called _id
-    if (descriptionInput) descriptionInput.value = expense.description;
-    if (departmentInput) departmentInput.value = expense.department;
-    if (amountInput) amountInput.value = expense.amount;
-    if (receiptIdInput) receiptIdInput.value = expense.receiptId;
+    // 3. Populate the text and select fields
+    if (idInput) idInput.value = expense._id || '';
+    if (descriptionInput) descriptionInput.value = expense.description || '';
+    if (departmentInput) departmentInput.value = expense.department || '';
+    if (amountInput) amountInput.value = expense.amount || '';
+    if (receiptIdInput) receiptIdInput.value = expense.receiptId || '';
+    
+    // Custom text input for source of funds
     if (sourceInput) sourceInput.value = expense.source || '';
     
-    // Format the date for the HTML date input (YYYY-MM-DD)
+    // Safely format the date for the date input (YYYY-MM-DD)
     if (dateInput && expense.date) {
-        dateInput.value = new Date(expense.date).toISOString().split('T')[0];
+        try {
+            const parsedDate = new Date(expense.date);
+            if (!isNaN(parsedDate)) {
+                dateInput.value = parsedDate.toISOString().split('T')[0];
+            } else {
+                dateInput.value = '';
+            }
+        } catch (err) {
+            console.error('Error parsing expense date:', err);
+            dateInput.value = '';
+        }
+    } else if (dateInput) {
+        dateInput.value = '';
     }
     
     // 4. Show the modal
@@ -7794,18 +8059,17 @@ async function submitEditExpenseForm(event) {
     // 1. Get values from the EDIT modal form
     const id = document.getElementById('edit-expense-id').value;
     const department = document.getElementById('edit-expense-department').value;
-    const description = document.getElementById('edit-expense-description').value;
+    const description = document.getElementById('edit-expense-description').value.trim();
     const amount = parseFloat(document.getElementById('edit-expense-amount').value);
     const date = document.getElementById('edit-expense-date').value;
     const receiptId = document.getElementById('edit-expense-receiptId').value;
-    const source = document.getElementById('edit-expense-source').value;
+    const source = document.getElementById('edit-expense-source').value.trim();
 
-    if (!id || !description || isNaN(amount) || amount <= 0 || !receiptId || !date) {
+    if (!id || !description || isNaN(amount) || amount <= 0 || !receiptId || !date || !source) {
         showMessage('Please fill in all expense fields correctly.', true);
         return;
     }
 
-    // Inject hotelId and recordedBy for audit trails
     const expenseData = { 
         hotelId, 
         description, 
@@ -7822,6 +8086,7 @@ async function submitEditExpenseForm(event) {
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/expenses/${id}`, {
             method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(expenseData)
         });
 
@@ -7970,14 +8235,14 @@ function populateExpenseForm(expense) {
     const amountInput = document.getElementById('expense-amount');
     const receiptIdInput = document.getElementById('expense-receiptId');
     const sourceInput = document.getElementById('expense-source');
-    const expenseDateInput = document.getElementById('expenses-date-filter');
+    const expenseDateInput = document.getElementById('expense-date');
 
-    if (idInput) idInput.value = expense._id;
-    if (departmentInput) descriptionInput.value = expense.department;
-    if (descriptionInput) descriptionInput.value = expense.description;
-    if (amountInput) amountInput.value = expense.amount;
-    if (receiptIdInput) receiptIdInput.value = expense.receiptId;
-    if (sourceInput) sourceInput.value = expense.source;
+    if (idInput) idInput.value = expense._id || '';
+    if (departmentInput) departmentInput.value = expense.department || '';
+    if (descriptionInput) descriptionInput.value = expense.description || '';
+    if (amountInput) amountInput.value = expense.amount || '';
+    if (receiptIdInput) receiptIdInput.value = expense.receiptId || '';
+    if (sourceInput) sourceInput.value = expense.source || '';
     if (expenseDateInput && expense.date) {
         expenseDateInput.value = new Date(expense.date).toISOString().split('T')[0];
     }
@@ -9243,7 +9508,7 @@ document.getElementById('exportposReportBtn').addEventListener('click', function
     // New function to handle the modal display and population
 // New function to handle the modal display and population
 function openEditModal(item) {
-    // 1. Permission check (Adjust this array to match your app's rules!)
+    // 1. Permission check
     const authorizedRoles = ['admin', 'super-admin', 'manager'];
     if (!authorizedRoles.includes(currentUserRole)) {
         if (typeof showMessage === 'function') showMessage('Permission Denied', true);
@@ -9261,12 +9526,18 @@ function openEditModal(item) {
     const modal = document.getElementById('edit-inventory-modal');
     if (!modal) return console.error("Modal 'edit-inventory-modal' missing from HTML");
 
-    // 3. Populate Form (Safely handling potentially missing DOM fields)
+    // 3. Populate Form
     const idField = document.getElementById('edit-inventory-id');
-    if (idField) idField.value = item._id || '';
+    if (idField) idField.value = item._id ||item.id || '';
 
     const nameField = document.getElementById('edit-item');
     if (nameField) nameField.value = item.item || '';
+
+    // Populate Department dropdown
+    const deptField = document.getElementById('edit-department');
+    if (deptField) deptField.value = item.department || '';
+
+    document.getElementById('edit-lowStock').value = item.lowStock ?? 5;
 
     // Numeric fields with 0 fallback
     const numericFields = {
@@ -9280,7 +9551,7 @@ function openEditModal(item) {
 
     for (let [id, val] of Object.entries(numericFields)) {
         const input = document.getElementById(id);
-        if (input) input.value = val || 0;
+        if (input) input.value = val !== undefined ? val : 0;
     }
 
     const trackInput = document.getElementById('edit-trackInventory');
@@ -9288,7 +9559,7 @@ function openEditModal(item) {
         trackInput.checked = item.trackInventory !== undefined ? item.trackInventory : true;
     }
 
-    // 4. Dynamic Modal Header (Great for UX)
+    // 4. Dynamic Modal Header
     const title = modal.querySelector('h2');
     if (title) {
         title.textContent = item._id ? `Edit ${item.item}` : `Initialize ${item.item} for ${item.viewingDate || 'Today'}`;
@@ -9411,6 +9682,7 @@ async function fetchInventory() {
         
         // 5. Render Responsive Matrix Interfaces
         renderInventoryTable(inventoryData);
+        updateLowStockWidget(inventoryData); // <-- Call widget update here
 
         // 6. Handle Pagination Control Rendering
         if (typeof renderPagination === 'function') {
@@ -9466,16 +9738,14 @@ window.renderInventoryTable = function(inventory) {
         desktopStockHeader.textContent = isToday ? 'Current Stock' : 'Closing Stock';
     }
 
-    // --- UPDATED EMPTY STATE & PRE-SEARCH CHECK ---
-    // --- UPDATED EMPTY STATE & PRE-SEARCH CHECK ---
+    // --- EMPTY STATE & PRE-SEARCH CHECK ---
     if (!inventory || inventory.length === 0) {
         console.warn("⚠️ Array is empty inside rendering execution context.");
         
-        // If the fields are genuinely completely untouched/empty
         if (!selectedDate && !selectedItem) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="9" class="text-center p-6 text-slate-400 font-medium">
+                    <td colspan="10" class="text-center p-6 text-slate-400 font-medium">
                         <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Type an item name or pick a date to start searching.
                     </td>
                 </tr>`;
@@ -9484,8 +9754,7 @@ window.renderInventoryTable = function(inventory) {
                     <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Type an item name or pick a date to start searching.
                 </div>`;
         } else {
-            // If they DID type or select a date but nothing matches
-            tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium italic"><i class="fas fa-exclamation-circle mr-2"></i> No matching stock records found.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="py-10 text-center text-slate-400 font-medium italic"><i class="fas fa-exclamation-circle mr-2"></i> No matching stock records found.</td></tr>`;
             cardContainer.innerHTML = `<div class="p-6 text-center text-slate-400 font-medium italic bg-white rounded-xl border border-slate-200 shadow-sm"><i class="fas fa-exclamation-circle mr-2"></i> No matching stock records found.</div>`;
         }
         return;
@@ -9500,90 +9769,110 @@ window.renderInventoryTable = function(inventory) {
     }
     const hasWriteAccess = ['admin', 'super-admin', 'manager'].includes(activeRole);
 
-    // Populate loop
     inventory.forEach((item, index) => {
-        item.viewingDate = selectedDate || todayStr;
+    item.viewingDate = selectedDate || todayStr;
 
-        const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
-        const badgeClasses = hasMovement ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100';
-        const badgeText = hasMovement ? 'Updated' : 'Static';
-        const statusBadge = `<span class="ml-1 px-1 py-0.5 text-[8px] font-black uppercase tracking-wider border rounded ${badgeClasses}">${badgeText}</span>`;
+    const calculatedCurrent = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
+    const stockValue = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
 
-        const calculatedCurrent = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
-        const stockValue = isToday ? calculatedCurrent : (item.closing ?? calculatedCurrent);
+    // --- LOW STOCK EVALUATION LOGIC ---
+    const threshold = item.lowStock ?? 5;
+    const isLowStock = item.trackInventory && stockValue <= threshold;
 
-        const bpStr = Number(item.buyingprice || 0).toLocaleString();
-        const spStr = Number(item.sellingprice || 0).toLocaleString();
-        
-        const generatedIdSuffix = item._id || `rand-${index}-${Math.random().toString(36).substring(2, 7)}`;
-        const desktopRowId = `actions-row-${generatedIdSuffix}`;
-        const mobileCardId = `actions-card-${generatedIdSuffix}`;
+    // Badges & Alert Styling
+    const lowStockBadge = isLowStock 
+        ? `<span class="ml-1 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 border border-rose-200 rounded animate-pulse">Low Stock</span>`
+        : '';
 
-        // --- DESKTOP ROW VIEW ---
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50/60 transition-colors border-b border-slate-100 whitespace-nowrap";
-        tr.innerHTML = `
-            <td class="px-5 py-3.5 font-semibold text-slate-800">
-                <div class="flex flex-col items-start gap-1">
-                    <span class="text-sm leading-tight">${item.item || 'Unnamed Item'}</span>
+    const hasMovement = (item.purchases > 0 || item.sales > 0 || item.spoilage > 0);
+    const badgeClasses = hasMovement ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100';
+    const badgeText = hasMovement ? 'Updated' : 'Static';
+    const statusBadge = `<span class="ml-1 px-1 py-0.5 text-[8px] font-black uppercase tracking-wider border rounded ${badgeClasses}">${badgeText}</span>`;
+
+    const deptBadge = `<span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-purple-50 text-purple-700 border border-purple-100">${item.department || 'N/A'}</span>`;
+
+    const bpStr = Number(item.buyingprice || 0).toLocaleString();
+    const spStr = Number(item.sellingprice || 0).toLocaleString();
+    
+    const generatedIdSuffix = item._id || `rand-${index}-${Math.random().toString(36).substring(2, 7)}`;
+    const desktopRowId = `actions-row-${generatedIdSuffix}`;
+    const mobileCardId = `actions-card-${generatedIdSuffix}`;
+
+    // Apply red background styling if low stock
+    const stockCellClasses = isLowStock 
+        ? 'text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1 font-black' 
+        : (isToday ? 'text-indigo-600 bg-indigo-50/30 rounded px-1 font-black' : 'text-slate-900 font-black');
+
+    // --- DESKTOP ROW VIEW ---
+    const tr = document.createElement('tr');
+    tr.className = `hover:bg-slate-50/60 transition-colors border-b border-slate-100 whitespace-nowrap ${isLowStock ? 'bg-rose-50/30' : ''}`;
+    tr.innerHTML = `
+        <td class="px-5 py-3.5 font-semibold text-slate-800">
+            <div class="flex flex-col items-start gap-1">
+                <span class="text-sm leading-tight flex items-center gap-1">${item.item || 'Unnamed Item'} ${lowStockBadge}</span>
+                ${statusBadge}
+            </div>
+        </td>
+        <td class="px-4 py-3.5 text-center">${deptBadge}</td>
+        <td class="px-4 py-3.5 font-mono text-center text-slate-500">${item.opening || 0}</td>
+        <td class="px-4 py-3.5 font-mono text-center text-emerald-600 font-bold">+${item.purchases || 0}</td>
+        <td class="px-4 py-3.5 font-mono text-center text-blue-600 font-bold">-${item.sales || 0}</td>
+        <td class="px-4 py-3.5 font-mono text-center text-rose-500 font-bold">-${item.spoilage || 0}</td>
+        <td class="px-4 py-3.5 font-mono text-center"><span class="${stockCellClasses}">${stockValue}</span></td>
+        <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-500">${bpStr}</td>
+        <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-700 font-semibold">${spStr}</td>
+        <td class="px-5 py-3.5 text-right overflow-visible" id="${desktopRowId}"></td>
+    `;
+    tbody.appendChild(tr);
+
+    // --- MOBILE CARD VIEW ---
+    const card = document.createElement('div');
+    card.className = `bg-white p-4 rounded-xl border ${isLowStock ? 'border-rose-300 shadow-rose-100 bg-rose-50/20' : 'border-slate-200/80'} shadow-sm space-y-3 block`;
+    card.innerHTML = `
+        <div class="flex justify-between items-start">
+            <div>
+                <h3 class="text-base font-bold text-slate-800 leading-tight flex items-center gap-1.5">${item.item || 'Unnamed Item'} ${lowStockBadge}</h3>
+                <div class="mt-1 flex items-center gap-1.5">
+                    ${deptBadge}
                     ${statusBadge}
                 </div>
-            </td>
-            <td class="px-4 py-3.5 font-mono text-center text-slate-500">${item.opening || 0}</td>
-            <td class="px-4 py-3.5 font-mono text-center text-emerald-600 font-bold">+${item.purchases || 0}</td>
-            <td class="px-4 py-3.5 font-mono text-center text-blue-600 font-bold">-${item.sales || 0}</td>
-            <td class="px-4 py-3.5 font-mono text-center text-rose-500 font-bold">-${item.spoilage || 0}</td>
-            <td class="px-4 py-3.5 font-mono text-center font-black ${isToday ? 'text-indigo-600 bg-indigo-50/30 rounded px-1' : 'text-slate-900'}">${stockValue}</td>
-            <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-500">${bpStr}</td>
-            <td class="px-4 py-3.5 font-mono text-center text-xs text-slate-700 font-semibold">${spStr}</td>
-            <td class="px-5 py-3.5 text-right overflow-visible" id="${desktopRowId}"></td>
-        `;
-        tbody.appendChild(tr);
+            </div>
+            <div id="${mobileCardId}" class="overflow-visible relative"></div>
+        </div>
+        
+        <!-- Rest of mobile card content -->
+        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
+            <div class="bg-slate-50 p-2 rounded-lg">
+                <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wide">Opening</span>
+                <span class="font-mono font-semibold text-slate-600 text-sm">${item.opening || 0}</span>
+            </div>
+            <div class="bg-emerald-50/50 p-2 rounded-lg">
+                <span class="block text-[10px] font-bold uppercase text-emerald-600 tracking-wide">Purchases</span>
+                <span class="font-mono font-bold text-emerald-600 text-sm">+${item.purchases || 0}</span>
+            </div>
+            <div class="bg-blue-50/50 p-2 rounded-lg">
+                <span class="block text-[10px] font-bold uppercase text-blue-600 tracking-wide">Sales</span>
+                <span class="font-mono font-bold text-blue-600 text-sm">-${item.sales || 0}</span>
+            </div>
+        </div>
 
-        // --- MOBILE CARD VIEW ---
-        const card = document.createElement('div');
-        card.className = "bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-3 block";
-        card.innerHTML = `
-            <div class="flex justify-between items-start">
-                <div>
-                    <h3 class="text-base font-bold text-slate-800 leading-tight">${item.item || 'Unnamed Item'}</h3>
-                    <div class="mt-1">${statusBadge}</div>
-                </div>
-                <div id="${mobileCardId}" class="overflow-visible relative"></div>
+        <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="bg-rose-50/50 p-2 rounded-lg">
+                <span class="block text-[10px] font-bold uppercase text-rose-500 tracking-wide">Spoilage</span>
+                <span class="font-mono font-bold text-rose-500 text-sm">-${item.spoilage || 0}</span>
             </div>
-            
-            <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
-                <div class="bg-slate-50 p-2 rounded-lg">
-                    <span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wide">Opening</span>
-                    <span class="font-mono font-semibold text-slate-600 text-sm">${item.opening || 0}</span>
-                </div>
-                <div class="bg-emerald-50/50 p-2 rounded-lg">
-                    <span class="block text-[10px] font-bold uppercase text-emerald-600 tracking-wide">Purchases</span>
-                    <span class="font-mono font-bold text-emerald-600 text-sm">+${item.purchases || 0}</span>
-                </div>
-                <div class="bg-blue-50/50 p-2 rounded-lg">
-                    <span class="block text-[10px] font-bold uppercase text-blue-600 tracking-wide">Sales</span>
-                    <span class="font-mono font-bold text-blue-600 text-sm">-${item.sales || 0}</span>
-                </div>
+            <div class="${isLowStock ? 'bg-rose-100 border border-rose-300' : (isToday ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-100')} p-2 rounded-lg col-span-2 flex flex-col justify-center">
+                <span class="block text-[10px] font-bold uppercase ${isLowStock ? 'text-rose-700' : 'text-slate-500'} tracking-wide">${isToday ? 'Current Stock' : 'Closing Stock'}</span>
+                <span class="font-mono font-black text-base ${isLowStock ? 'text-rose-700' : (isToday ? 'text-indigo-600' : 'text-slate-800')}">${stockValue}</span>
             </div>
+        </div>
 
-            <div class="grid grid-cols-3 gap-2 text-center">
-                <div class="bg-rose-50/50 p-2 rounded-lg">
-                    <span class="block text-[10px] font-bold uppercase text-rose-500 tracking-wide">Spoilage</span>
-                    <span class="font-mono font-bold text-rose-500 text-sm">-${item.spoilage || 0}</span>
-                </div>
-                <div class="${isToday ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-100'} p-2 rounded-lg col-span-2 flex flex-col justify-center">
-                    <span class="block text-[10px] font-bold uppercase text-slate-500 tracking-wide">${isToday ? 'Current Stock' : 'Closing Stock'}</span>
-                    <span class="font-mono font-black text-base ${isToday ? 'text-indigo-600' : 'text-slate-800'}">${stockValue}</span>
-                </div>
-            </div>
-
-            <div class="flex justify-between items-center pt-2 px-1 text-xs text-slate-500 border-t border-slate-100">
-                <div>Buying Price: <span class="font-mono font-semibold text-slate-700">${bpStr}</span></div>
-                <div>Selling Price: <span class="font-mono font-bold text-slate-800">${spStr}</span></div>
-            </div>
-        `;
-        cardContainer.appendChild(card);
+        <div class="flex justify-between items-center pt-2 px-1 text-xs text-slate-500 border-t border-slate-100">
+            <div>Buying Price: <span class="font-mono font-semibold text-slate-700">${bpStr}</span></div>
+            <div>Selling Price: <span class="font-mono font-bold text-slate-800">${spStr}</span></div>
+        </div>
+    `;
+    cardContainer.appendChild(card);
 
         // --- ATTACH DROPDOWNS ---
         const appendDropdown = (targetCellElement) => {
@@ -11690,4 +11979,65 @@ function toggleActionButtons(event, button) {
     if (menu) {
         menu.classList.toggle('hidden');
     }
+}
+
+function calculateExpenseTotal() {
+    const qty = parseFloat(document.getElementById('expense-qty').value) || 0;
+    const unitPrice = parseFloat(document.getElementById('expense-unit-price').value) || 0;
+    const amountInput = document.getElementById('expense-amount');
+
+    if (qty > 0 && unitPrice > 0) {
+        amountInput.value = (qty * unitPrice).toFixed(2);
+    }
+}
+
+function updateLowStockWidget(inventory) {
+    const container = document.getElementById('low-stock-container');
+    const countBadge = document.getElementById('low-stock-count');
+    
+    if (!container) return;
+
+    // Filter items that track inventory and have closing stock <= lowStock threshold
+    const lowStockItems = inventory.filter(item => {
+        if (!item.trackInventory) return false;
+        
+        const currentStock = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
+        const threshold = item.lowStock ?? 5; // Default threshold fallback
+        
+        return currentStock <= threshold;
+    });
+
+    // Update Counter Badge
+    if (countBadge) {
+        if (lowStockItems.length > 0) {
+            countBadge.textContent = lowStockItems.length;
+            countBadge.classList.remove('hidden');
+        } else {
+            countBadge.classList.add('hidden');
+        }
+    }
+
+    // Render Items or Empty State
+    if (lowStockItems.length === 0) {
+        container.innerHTML = `<p class="text-xs text-emerald-600 font-medium italic py-1">✓ All tracked items are adequately stocked.</p>`;
+        return;
+    }
+
+    container.innerHTML = lowStockItems.map(item => {
+        const currentStock = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
+        
+        return `
+            <div class="flex items-center justify-between p-2 bg-rose-50/60 border border-rose-100 rounded-lg text-xs">
+                <div class="flex flex-col min-w-0 pr-2">
+                    <span class="font-bold text-slate-800 truncate">${item.item || 'Unnamed Item'}</span>
+                    <span class="text-[10px] text-slate-400 uppercase font-semibold">${item.department || 'General'}</span>
+                </div>
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                    <span class="font-mono font-black text-rose-700 bg-white px-2 py-0.5 rounded border border-rose-200">
+                        ${currentStock} left
+                    </span>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
