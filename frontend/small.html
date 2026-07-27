@@ -1929,7 +1929,7 @@ body {
                             </div>
                         </div>
                            
-                        <button type="submit" id="submitBtn" class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg transition-all uppercase tracking-widest text-sm">Adds Item</button>
+                        <button type="submit" id="submitBtn" class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg transition-all uppercase tracking-widest text-sm">Add Item</button>
                     </form>
                 </div>
 
@@ -2264,45 +2264,70 @@ body {
             </div>
             <button onclick="toggleExpenseModal(false)" class="text-gray-400 hover:text-gray-600 text-2xl transition">&times;</button>
         </div>
+        
         <form id="expense-form" class="p-6" onsubmit="submitExpenseForm(event)">
             <input type="hidden" id="expense-id">
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <!-- Department -->
                 <div>
                     <label for="expense-department" class="block text-xs font-bold text-gray-500 uppercase mb-1">Department</label>
-                    <select id="expense-department" required class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none bg-white">
+                    <select id="expense-department" required class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none bg-white font-semibold">
                         <option value="" disabled selected>Select department...</option>
                         <option value="Bar">Bar</option>
                         <option value="Restaurant">Restaurant</option>
                         <option value="Housekeeping">Housekeeping</option>
-                        <option value="front office">Front Office</option>
+                        <option value="Front Office">Front Office</option>
+                        <option value="Maintenance">Maintenance</option>
                         <option value="Other">Other</option>
                     </select>
                 </div>
 
-                <div>
-                    <label for="expense-amount" class="block text-xs font-bold text-gray-500 uppercase mb-1">Amount (UGX)</label>
-                    <input type="number" id="expense-amount" step="0.01" min="0" required placeholder="0.00" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-bold">
-                </div>
-
-                <div class="md:col-span-2">
-                    <label for="expense-description" class="block text-xs font-bold text-gray-500 uppercase mb-1">Description / Purpose</label>
-                    <input type="text" id="expense-description" required placeholder="e.g., Purchase of cleaning supplies" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
-                </div>
-
+                <!-- Date (Auto-filled to Today) -->
                 <div>
                     <label for="expense-date" class="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
-                    <input type="date" id="expense-date" required class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
+                    <input type="date" id="expense-date" required class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-semibold">
                 </div>
 
+                <!-- Description / Purpose -->
+                <div class="md:col-span-2">
+                    <label for="expense-description" class="block text-xs font-bold text-gray-500 uppercase mb-1">Description / Item Name</label>
+                    <input type="text" id="expense-description" required placeholder="e.g., Purchase of 5 crates of Soda" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
+                </div>
+
+                <!-- Quantity & Unit Price Auto-Calculator -->
+                <div class="grid grid-cols-2 gap-3 md:col-span-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div>
+                        <label for="expense-qty" class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Quantity (Optional)</label>
+                        <input type="number" id="expense-qty" min="1" placeholder="1" oninput="calculateExpenseTotal()" class="w-full p-2 bg-white border border-gray-300 rounded-lg outline-none font-bold text-sm">
+                    </div>
+                    <div>
+                        <label for="expense-unit-price" class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Unit Price (UGX)</label>
+                        <input type="number" id="expense-unit-price" step="0.01" min="0" placeholder="0.00" oninput="calculateExpenseTotal()" class="w-full p-2 bg-white border border-gray-300 rounded-lg outline-none font-bold text-sm">
+                    </div>
+                </div>
+
+                <!-- Total Amount (Auto Calculated or Direct Entry) -->
+                <div>
+                    <label for="expense-amount" class="block text-xs font-bold text-gray-500 uppercase mb-1">Total Amount (UGX)</label>
+                    <input type="number" id="expense-amount" step="0.01" min="0" required placeholder="0.00" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-black text-red-600 bg-red-50/30">
+                </div>
+
+                <!-- Voucher / Receipt ID -->
                 <div>
                     <label for="expense-receiptId" class="block text-xs font-bold text-gray-500 uppercase mb-1">Receipt / Voucher ID</label>
-                    <input type="text" id="expense-receiptId" required placeholder="Enter ID number" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
+                    <input type="text" id="expense-receiptId" required placeholder="Voucher or Receipt #" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-mono text-sm">
                 </div>
 
+                <!-- Source of Funds (Dropdown for standard accounting) -->
                 <div class="md:col-span-2">
                     <label for="expense-source" class="block text-xs font-bold text-gray-500 uppercase mb-1">Source of Funds</label>
-                    <input type="text" id="expense-source" required placeholder="e.g., Petty Cash, Director, Sales" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
+                    <select id="expense-source" required class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none bg-white font-semibold">
+                        <option value="Petty Cash" selected>Petty Cash Drawer</option>
+                        <option value="Daily Sales Cash">Till / Daily Sales Cash</option>
+                        <option value="Bank Transfer">Bank Account / Mobile Money</option>
+                        <option value="Director / Owner">Director / Personal Out of Pocket</option>
+                    </select>
                 </div>
             </div>
 

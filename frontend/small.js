@@ -6621,6 +6621,7 @@ async function deleteInventoryItem(id) {
             // 3. Refresh the inventory table
             if (typeof fetchInventory === "function") {
                 fetchInventory();
+                loadInventory();
             }
         } else {
             const error = await response.json();
@@ -6872,6 +6873,7 @@ async function handleUpdateSubmit(event) {
             showMessage('Stock updated successfully! ✅');
             if (typeof closeEditModal === "function") closeEditModal();
             if (typeof fetchInventory === "function") fetchInventory(); 
+            loadInventory();
         } else {
             const contentType = response.headers.get("content-type");
             if (contentType && contentType.includes("application/json")) {
@@ -7039,6 +7041,7 @@ async function submitInventory() {
             
             // Refresh list
             if (typeof fetchInventory === 'function') fetchInventory(); 
+            loadInventory();
         } else {
             throw new Error(result.error || result.message || 'Failed to save item');
         }
@@ -11807,5 +11810,15 @@ function toggleActionButtons(event, button) {
     // 2. Toggle the current menu
     if (menu) {
         menu.classList.toggle('hidden');
+    }
+}
+
+function calculateExpenseTotal() {
+    const qty = parseFloat(document.getElementById('expense-qty').value) || 0;
+    const unitPrice = parseFloat(document.getElementById('expense-unit-price').value) || 0;
+    const amountInput = document.getElementById('expense-amount');
+
+    if (qty > 0 && unitPrice > 0) {
+        amountInput.value = (qty * unitPrice).toFixed(2);
     }
 }
