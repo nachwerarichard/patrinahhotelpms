@@ -6711,7 +6711,8 @@ confirmDeleteBtn.addEventListener('click', () => {
 function openAdjustModal(item) {
     const modal = document.getElementById('edit-inventory-modal');
     if (!modal) return;    
-    // 1. Fill the data (including department)
+
+    // 1. Populate all form data (including lowStock)
     document.getElementById('edit-inventory-id').value = item._id || item.id || '';
     document.getElementById('edit-item').value = item.item || '';
     
@@ -6724,9 +6725,14 @@ function openAdjustModal(item) {
     document.getElementById('edit-spoilage').value = item.spoilage || 0;
     document.getElementById('edit-buyingprice').value = item.buyingprice || 0;
     document.getElementById('edit-sellingprice').value = item.sellingprice || 0;
+    
+    // Set Low Stock Threshold
+    const lowStockInput = document.getElementById('edit-lowStock');
+    if (lowStockInput) lowStockInput.value = item.lowStock ?? 5;
+
     document.getElementById('edit-trackInventory').checked = !!item.trackInventory;
 
-    // 2. Hide locked/read-only input containers
+    // 2. Hide locked/read-only input containers (including edit-lowStock)
     const lockedIds = [
         'edit-item', 
         'edit-department',
@@ -6734,13 +6740,13 @@ function openAdjustModal(item) {
         'edit-inventory-sales', 
         'edit-buyingprice', 
         'edit-sellingprice',
+        'edit-lowStock',        // Hidden during quick adjustment
         'edit-trackInventory'
     ];
     
     lockedIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            // Find closest wrapper element (parent <div>) and hide it
             const container = el.closest('div');
             if (container) container.classList.add('hidden');
         }
@@ -6777,7 +6783,7 @@ function closeEditModal() {
     modal.classList.add('hidden');
     modal.style.display = 'none';
 
-    // UNLOCK all fields for the next standard "Edit" operation
+    // UNLOCK all inputs and restore visibility to all containers for full edits
     const allInputIds = [
         'edit-item', 
         'edit-department', 
@@ -6786,7 +6792,9 @@ function closeEditModal() {
         'edit-inventory-sales', 
         'edit-spoilage', 
         'edit-buyingprice', 
-        'edit-sellingprice'
+        'edit-sellingprice',
+        'edit-lowStock',
+        'edit-trackInventory'
     ];
     
     allInputIds.forEach(id => {
@@ -6795,11 +6803,48 @@ function closeEditModal() {
             el.readOnly = false;
             el.disabled = false;
             el.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+            
+            // Unhide parent container
+            const container = el.closest('div');
+            if (container) container.classList.remove('hidden');
         }
     });
+}
 
-    const trackCheckbox = document.getElementById('edit-trackInventory');
-    if (trackCheckbox) trackCheckbox.disabled = false;
+// Standard Edit Modal Opener (Call this when clicking "Edit" in table actions)
+function openEditModal(item) {
+    const modal = document.getElementById('edit-inventory-modal');
+    if (!modal) return;
+
+    // Reset visibility on all fields first
+    closeEditModal();
+
+    // Fill form fields
+    document.getElementById('edit-inventory-id').value = item._id || item.id || '';
+    document.getElementById('edit-item').value = item.item || '';
+    
+    const deptField = document.getElementById('edit-department');
+    if (deptField) deptField.value = item.department || '';
+
+    document.getElementById('edit-opening').value = item.opening || 0;
+    document.getElementById('edit-purchases').value = item.purchases || 0;
+    document.getElementById('edit-inventory-sales').value = item.sales || 0;
+    document.getElementById('edit-spoilage').value = item.spoilage || 0;
+    document.getElementById('edit-buyingprice').value = item.buyingprice || 0;
+    document.getElementById('edit-sellingprice').value = item.sellingprice || 0;
+    
+    const lowStockInput = document.getElementById('edit-lowStock');
+    if (lowStockInput) lowStockInput.value = item.lowStock ?? 5;
+
+    document.getElementById('edit-trackInventory').checked = !!item.trackInventory;
+
+    // Set UI Title
+    const title = modal.querySelector('h2');
+    if (title) title.textContent = `Edit Inventory Item: ${item.item}`;
+
+    // Display Modal
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
 }
 
 async function handleUpdateSubmit(event) {
