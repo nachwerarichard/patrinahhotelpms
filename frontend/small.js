@@ -8727,13 +8727,13 @@ async function generateSalesReports() {
                 totalSalesSum += sales;
                 totalProfitSum += profit;
 
-                tableRowsHTML.push(`
-                    <tr class="border-b border-slate-100 hover:bg-slate-50/80">
-                        <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
-                        <td class="px-6 py-4 text-right font-mono text-slate-800 font-semibold">${sales.toLocaleString()}</td>
-                        <td class="px-6 py-4 text-right font-mono text-emerald-600 font-semibold">${profit.toLocaleString()}</td>
-                    </tr>
-                `);
+              tableRowsHTML.push(`
+    <tr class="border-b border-slate-100 hover:bg-slate-50/80">
+        <td class="px-6 py-4 font-medium text-slate-700 truncate">${dept}</td>
+        <td class="px-6 py-4 text-right font-mono text-slate-800 font-semibold whitespace-nowrap">${sales.toLocaleString()}</td>
+        <td class="px-6 py-4 text-right font-mono text-emerald-600 font-semibold whitespace-nowrap">${profit.toLocaleString()}</td>
+    </tr>
+`);
 
                 mobileCardsHTML.push(`
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">

@@ -5493,6 +5493,11 @@ const Sale = mongoose.model('Sale', new mongoose.Schema({
     default: 'Cash',
     synced: { type: Boolean, default: false }
   },
+  recordedBy: { 
+    type: String, 
+    required: true, 
+    trim: true 
+  },
     date: { type: Date, default: Date.now } // Keep just this one
 }));
 
