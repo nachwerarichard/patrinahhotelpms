@@ -1074,7 +1074,7 @@ function applyRoleAccess(role) {
         'nav-booking', 'nav-dashboard', 'nav-housekeeping', 'nav-inventory', 
         'nav-sales', 'nav-payments','nav-posinventory', 'nav-kds', 
          'nav-expenses', 'nav-cash', , 'nav-checklistform', 'nav-checklisttable','nav-missingitems' ,
-        'nav-posreports', 'nav-salereport', 'nav-expensereport','nav-housekeepingreports', 
+        'nav-posreports', 'nav-salereport', 'nav-expensereport','nav-housekeepingreports', 'nav-receivables',
         'nav-staff', 'nav-reports', 'nav-calendar','nav-roominventory','nav-channelmanager','nav-integration','nav-audit-logs'
     ];
 
@@ -4640,6 +4640,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const navCash = document.getElementById('nav-cash');
       const navInventory = document.getElementById('nav-inventory');
         const navExpense = document.getElementById('nav-expenses');
+                const navReceivables = document.getElementById('nav-receivables');
         const navPayments = document.getElementById('nav-payments');
       const navSale = document.getElementById('nav-sales');
             const navChannelManager = document.getElementById('nav-channelmanager');
@@ -4649,7 +4650,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const navRoominventory = document.getElementById('nav-roominventory');
 
         const navExpReport = document.getElementById('nav-expensereport');
-
+if (navReceivables) {
+            navReceivables.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                showSection('receivables');
+            });
+        }
          if (navKitch) {
             navKitch.addEventListener('click', (e) => {
                 e.preventDefault(); // Prevent default link behavior

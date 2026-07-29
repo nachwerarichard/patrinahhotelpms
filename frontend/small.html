@@ -587,7 +587,8 @@ body {
                     <i id="financials-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
                 </button>
                 <ul id="financials-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
-                    <li id="nav-payments"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Guest Payments & Folios</a></li>
+                    <li id="nav-payments"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">POS Payments & Folios</a></li>
+                    <li id="nav-receivables"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"> POS Receivables & Collections</a></li>
                     <li id="nav-cash"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Cash Drawer & Reconciliation</a></li>
                     <li id="nav-expenses"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Expenses & Outflow</a></li>
                     <li id="nav-posreports"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Room Charge Posting Audit</a></li>
@@ -2078,38 +2079,6 @@ body {
         </form>
     </div>
 </div>
-
-<div id="activeAccountsSection" class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6">
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-lg font-bold text-slate-800">In-House Accounts</h2>
-        <button onclick="fetchActiveAccounts()" class="p-2 hover:bg-slate-100 rounded-full transition-colors" title="Refresh Accounts">
-            <i class="fas fa-sync-alt text-slate-400"></i>
-        </button>
-    </div>
-    
-    <div class="hidden md:block overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    <th class="pb-3">Guest / Room</th>
-                    <th class="pb-3">Total Charges</th>
-                    <th class="pb-3">Last Updated</th>
-                    <th class="pb-3 text-right">Action</th>
-                </tr>
-            </thead>
-            <tbody id="activeAccountsTableBody" class="divide-y divide-slate-100 text-sm">
-            </tbody>
-        </table>
-    </div>
-
-    <div id="activeAccountsMobileGrid" class="block md:hidden space-y-4">
-    </div>
-
-    <div id="noAccountsMessage" class="hidden py-10 text-center text-slate-400 text-sm font-medium italic">
-        No active in-house accounts found.
-    </div>
-</div>
-
     <div id="sales-records" class="mt-12 pt-8 border-t border-slate-200">
     <h3 class="text-xl font-bold mb-6 text-slate-800">Historical Sales Records</h3>
     
@@ -2775,7 +2744,38 @@ body {
     </div>
 </section>
 
+<section id="receivables" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+    <div id="activeAccountsSection" class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-lg font-bold text-slate-800">In-House Accounts</h2>
+        <button onclick="fetchActiveAccounts()" class="p-2 hover:bg-slate-100 rounded-full transition-colors" title="Refresh Accounts">
+            <i class="fas fa-sync-alt text-slate-400"></i>
+        </button>
+    </div>
+    
+    <div class="hidden md:block overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    <th class="pb-3">Guest / Room</th>
+                    <th class="pb-3">Total Charges</th>
+                    <th class="pb-3">Last Updated</th>
+                    <th class="pb-3 text-right">Action</th>
+                </tr>
+            </thead>
+            <tbody id="activeAccountsTableBody" class="divide-y divide-slate-100 text-sm">
+            </tbody>
+        </table>
+    </div>
 
+    <div id="activeAccountsMobileGrid" class="block md:hidden space-y-4">
+    </div>
+
+    <div id="noAccountsMessage" class="hidden py-10 text-center text-slate-400 text-sm font-medium italic">
+        No active in-house accounts found.
+    </div>
+</div>
+</section>
 <!-- ================= SALES REPORT SECTION ================= -->
 <section id="salereport" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
     <div class="flex justify-between items-center mb-6 border-b pb-4">
