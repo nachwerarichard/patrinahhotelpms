@@ -5490,7 +5490,6 @@ const Sale = mongoose.model('Sale', new mongoose.Schema({
     type: String, 
     required: true, 
     enum: ['Cash', 'Card', 'MobileMoney', 'Folio'], // Enforces standard values
-    default: 'Cash',
     synced: { type: Boolean, default: false }
   },
   recordedBy: { 
