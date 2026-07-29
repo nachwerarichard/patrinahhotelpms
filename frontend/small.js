@@ -5880,9 +5880,9 @@ const addCharge = async (description, number, department) => {
         if (department === 'Restaurant') {
             showMessage('Success', 'Kitchen order sent & added to ledger! 🍳💰', false);
         } else if (activeAccountId) {
-            showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
+            //showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
         } else {
-            showMessage('Success', 'Walk-in Sale Recorded to Ledger! 💰✅', false);
+            //showMessage('Success', 'Walk-in Sale Recorded to Ledger! 💰✅', false);
         }
 
         // 3. Update UI using server response
