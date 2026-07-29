@@ -7487,8 +7487,8 @@ function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfi
                         <span class="text-base font-mono font-black">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</span>
                     </div>
                     <div class="flex justify-between items-center pt-2 border-t border-indigo-500/50">
-                        <span class="text-[10px] uppercase tracking-widest font-black text-emerald-300">Grand Total Profit</span>
-                        <span class="text-base font-mono font-black text-emerald-300">${totalProfitText}</span>
+                        <span class="text-[10px] uppercase tracking-widest font-black text-300 ">Grand Total Profit</span>
+                        <span class="text-base font-mono font-black text-300">${totalProfitText}</span>
                     </div>
                 </div>
             </div>
