@@ -8643,7 +8643,8 @@ async function generateSalesReports() {
         const cardContainer = document.getElementById('sales-department-report-cards');
         if (tbody) tbody.innerHTML = ''; 
         if (cardContainer) cardContainer.innerHTML = ''; 
-        document.getElementById('overall-sales-card').textContent = '0';
+        document.getElementById('overall-sales-reportcard').textContent = '0';
+        document.getElementById('overall-profit-reportcard').textContent = '0';
         return; 
     }
 
@@ -8663,6 +8664,7 @@ async function generateSalesReports() {
         let allSales = [];
         let page = 1, totalPages = 1;
 
+        // Fetch all paginated pages for the date range
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/sales?${queryParams}&page=${page}&limit=100`);
             const res = await resp.json();
@@ -8673,31 +8675,45 @@ async function generateSalesReports() {
             } else { break; }
         } while (page <= totalPages);
 
-        const salesReport = {};
+        const salesReport = {}; // { Dept: { sales: X, profit: Y } }
         
         allSales.forEach(sale => {
-            // Trim whitespace to avoid missing categories
             let dept = (sale.department || 'Other').trim();
             if (!dept) dept = 'Other';
 
-            // Strip out non-numeric characters (like commas or currency letters) if any exist dynamically
             const rawNumber = String(sale.number || '0').replace(/[^0-9.-]/g, '');
             const rawSp = String(sale.sp || '0').replace(/[^0-9.-]/g, '');
+            const rawBp = String(sale.bp || '0').replace(/[^0-9.-]/g, '');
 
             const quantity = Number(rawNumber) || 0;
-            const unitPrice = Number(rawSp) || 0;
-            const lineTotal = quantity * unitPrice;
+            const unitSp = Number(rawSp) || 0;
+            const unitBp = Number(rawBp) || 0;
 
-            if (!salesReport[dept]) salesReport[dept] = 0;
-            salesReport[dept] += lineTotal;
+            const lineTotalSales = quantity * unitSp;
+            
+            // Calculate profit using pre-computed profit field or derive from SP - BP
+            let lineTotalProfit = 0;
+            if (typeof sale.profit === 'number') {
+                lineTotalProfit = sale.profit;
+            } else {
+                lineTotalProfit = quantity * (unitSp - unitBp);
+            }
+
+            if (!salesReport[dept]) {
+                salesReport[dept] = { sales: 0, profit: 0 };
+            }
+            
+            salesReport[dept].sales += lineTotalSales;
+            salesReport[dept].profit += lineTotalProfit;
         });
 
         let totalSalesSum = 0;
-        const sortedDepts = Object.keys(salesReport).filter(k => !isNaN(salesReport[k])).sort();
+        let totalProfitSum = 0;
+        const sortedDepts = Object.keys(salesReport).sort();
 
         if (sortedDepts.length === 0) {
             const emptyStateHtml = 'No sales activity found for this period.';
-            if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
+            if (tbody) tbody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
             if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
             showMessage('No sales records found for the selected date range.', false);
         } else {
@@ -8705,20 +8721,31 @@ async function generateSalesReports() {
             let mobileCardsHTML = [];
 
             sortedDepts.forEach(dept => {
-                const sales = salesReport[dept];
+                const sales = salesReport[dept].sales;
+                const profit = salesReport[dept].profit;
+
                 totalSalesSum += sales;
+                totalProfitSum += profit;
 
                 tableRowsHTML.push(`
                     <tr class="border-b border-slate-100 hover:bg-slate-50/80">
                         <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
-                        <td class="px-6 py-4 text-right font-mono text-emerald-600 font-semibold">${sales.toLocaleString()}</td>
+                        <td class="px-6 py-4 text-right font-mono text-slate-800 font-semibold">${sales.toLocaleString()}</td>
+                        <td class="px-6 py-4 text-right font-mono text-emerald-600 font-semibold">${profit.toLocaleString()}</td>
                     </tr>
                 `);
 
                 mobileCardsHTML.push(`
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
-                        <h4 class="font-bold text-slate-800 text-sm">${dept}</h4>
-                        <span class="font-mono font-black text-emerald-600">${sales.toLocaleString()} UGX</span>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                        <h4 class="font-bold text-slate-800 text-sm border-b border-slate-100 pb-2">${dept}</h4>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-500">Sales:</span>
+                            <span class="font-mono font-bold text-slate-800">${sales.toLocaleString()} ${CURRENT_CURRENCY}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-500">Profit:</span>
+                            <span class="font-mono font-bold text-emerald-600">${profit.toLocaleString()} ${CURRENT_CURRENCY}</span>
+                        </div>
                     </div>
                 `);
             });
@@ -8727,9 +8754,15 @@ async function generateSalesReports() {
             if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
         }
 
+        // Update KPI card text
         document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY}${totalSalesSum.toLocaleString()}`;
+        document.getElementById('overall-profit-reportcard').textContent = `${CURRENT_CURRENCY}${totalProfitSum.toLocaleString()}`;
+
+        // Update Excel Export elements
         const exportSalesElem = document.getElementById('overall-sales-export');
+        const exportProfitElem = document.getElementById('overall-profit-export');
         if (exportSalesElem) exportSalesElem.textContent = `${CURRENT_CURRENCY}${totalSalesSum.toLocaleString()}`;
+        if (exportProfitElem) exportProfitElem.textContent = `${CURRENT_CURRENCY}${totalProfitSum.toLocaleString()}`;
 
     } catch (error) {
         console.error('Sales Report Error:', error);
