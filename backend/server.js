@@ -6330,10 +6330,11 @@ app.get('/api/sales/by-date', auth,async (req, res) => {
 app.post('/api/sales', auth, async (req, res) => {
   try {
     const { item, department, number, bp, sp, date, accountId } = req.body;
-    const hotelId = req.user.hotelId; // Extract tenant ID
-    const username = req.user.username; // Extract username context
+    const hotelId = req.user.hotelId; 
+    const username = req.user.username || req.body.recordedBy || 'Guest'; // Extract username
+    const userRole = req.user.role || req.body.role || 'Staff';           // Extract role
 
-    // 1. Fetch the Inventory record (hotel-specific)
+    // 1. Fetch Inventory record
     const todayInventory = await getTodayInventory(item, 0, hotelId);
 
     // 2. Dynamic Inventory Logic (Stock Check)
@@ -6341,12 +6342,12 @@ app.post('/api/sales', auth, async (req, res) => {
     const shouldTrackStock = todayInventory.trackInventory && department !== 'Restaurant';
 
     if (shouldTrackStock && (todayInventory.sales + number) > currentAvailableStock) {
-      // 📝 AUDIT LOG: Track failed sale due to low inventory levels
       await addAuditLog('Sale Failed: Insufficient Stock', username, hotelId, {
         item,
         department,
         requestedQuantity: number,
-        availableStock: currentAvailableStock - todayInventory.sales
+        availableStock: currentAvailableStock - todayInventory.sales,
+        role: userRole
       });
 
       return res.status(400).json({ 
@@ -6363,18 +6364,15 @@ app.post('/api/sales', auth, async (req, res) => {
     // 4. Folio / Walk-in Charging Logic
     let appliedToAccount = false;
     let updatedAccount = null;
-    let finalAccountId = accountId; // Track which ID we are linking the Sale record to
+    let finalAccountId = accountId;
 
     const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');
-
-    // Safe type fallback to match your schema's enum validation rules
     const validChargeType = ['Bar', 'Restaurant'].includes(department) ? department : 'Other';
     const totalChargeAmount = sp * number;
 
     if (finalAccountId) {
-      // SCENARIO A: An existing account was provided by the frontend
       updatedAccount = await AccountModel.findOneAndUpdate(
-        { _id: finalAccountId, hotelId }, // Ensure account belongs to this hotel
+        { _id: finalAccountId, hotelId },
         {
           $push: { 
             charges: { 
@@ -6389,11 +6387,10 @@ app.post('/api/sales', auth, async (req, res) => {
         { new: true }
       );
     } else {
-      // SCENARIO B: No account was provided -> Freshly CREATE a new "Walk-in Guest" account document
       updatedAccount = await AccountModel.create({
         hotelId: hotelId,
         guestName: "Walk-in Guest",
-        roomNumber: "", // Explicitly blank/empty string to keep schema clean
+        roomNumber: "",
         isClosed: false,
         totalCharges: totalChargeAmount,
         charges: [{
@@ -6404,40 +6401,42 @@ app.post('/api/sales', auth, async (req, res) => {
         }]
       });
 
-      finalAccountId = updatedAccount._id; // Map the newly created document's ID to link below
+      finalAccountId = updatedAccount._id;
     }
 
     if (updatedAccount) {
       appliedToAccount = true;
-      // 📝 AUDIT LOG: Track payment/charge logging connection
       await addAuditLog('Folio Charged via Sale', username, hotelId, {
         accountId: finalAccountId,
         item,
         totalCharge: totalChargeAmount,
-        department
+        department,
+        role: userRole
       });
     }
 
-    // 5. Create Sale Record (Tagged with hotelId and final linked account target)
+    // 5. Create Sale Record (Pass recordedBy to satisfy Mongoose Schema)
     const sale = await Sale.create({
       ...req.body,
-      accountId: finalAccountId, // Links cleanly to either the guest profile or the fresh Walk-in account
+      recordedBy: username, 
+      accountId: finalAccountId,
       hotelId,
       profit: (sp - bp) * number,
       percentageprofit: bp !== 0 ? ((sp - bp) / bp) * 100 : 0
     });
 
-    // 📝 AUDIT LOG: Log final successful sale state configuration
+    // Audit Log
     await addAuditLog('Sale Created', username, hotelId, { 
       saleId: sale._id,
       item: sale.item,
       quantity: number,
       department,
       totalRevenue: totalChargeAmount,
-      folioCharged: appliedToAccount
+      folioCharged: appliedToAccount,
+      role: userRole
     });
 
-    // 6. Return response payload to frontend
+    // 6. Return response
     res.status(201).json({
       sale,
       updatedAccount

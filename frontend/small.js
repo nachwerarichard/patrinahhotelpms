@@ -5814,6 +5814,7 @@ if (!res) return; // in case redirect happened
     } catch (err) { showMessage(err.message, 'error'); }
 };
 
+
 const addCharge = async (description, number, department) => {
     const hotelId = localStorage.getItem('hotelId') || (typeof getHotelId === 'function' ? getHotelId() : null);
     const submitBtn = document.getElementById('submitBtn');
@@ -5844,7 +5845,9 @@ const addCharge = async (description, number, department) => {
         accountId: activeAccountId || null,
         tableNumber: tableNum,
         isQuickSale: isQuickSale,
-        date: new Date()
+        date: new Date(),
+        recordedBy: currentUsername, // Required by Sale schema
+        role: currentUserRole        // Included for context
     };
 
     try {
@@ -5854,7 +5857,6 @@ const addCharge = async (description, number, department) => {
         }
 
         // 1. Send Order to correct Endpoints
-        // If it's a Restaurant item, fire off the ticket to the kitchen asynchronously
         if (department === 'Restaurant') {
             authenticatedFetch(`${API_BASE_URL}/kitchen/order`, {
                 method: 'POST',
@@ -5862,7 +5864,7 @@ const addCharge = async (description, number, department) => {
             }).catch(err => console.error("Kitchen ticket routing failed:", err));
         }
 
-        // EVERY department item (including Restaurant) must hit the sales ledger endpoint
+        // EVERY department item hits sales ledger endpoint
         const endpoint = `${API_BASE_URL}/sales`;
         const res = await authenticatedFetch(endpoint, {
             method: 'POST',
@@ -5872,8 +5874,7 @@ const addCharge = async (description, number, department) => {
         if (!res) return;
         if (!res.ok) throw new Error("Failed to record sale to the ledger.");
 
-        // Grab the data returned directly from your backend route
-        const serverResponse = await res.json(); // contains { sale, updatedAccount }
+        const serverResponse = await res.json(); 
 
         // 2. Process Notifications
         if (department === 'Restaurant') {
@@ -5884,24 +5885,19 @@ const addCharge = async (description, number, department) => {
             showMessage('Success', 'Walk-in Sale Recorded to Ledger! 💰✅', false);
         }
 
-        // 3. Update the UI efficiently using the server response data
-        // 3. Update the UI efficiently using the server response data
-if (typeof updateActiveAccountUI === 'function') {
-    if (activeAccountId) {
-        // For existing registered guests
-        const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
-        if (accountRes && accountRes.ok) {
-            const freshAccountData = await accountRes.json();
-            updateActiveAccountUI(freshAccountData);
+        // 3. Update UI using server response
+        if (typeof updateActiveAccountUI === 'function') {
+            if (activeAccountId) {
+                const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
+                if (accountRes && accountRes.ok) {
+                    const freshAccountData = await accountRes.json();
+                    updateActiveAccountUI(freshAccountData);
+                }
+            } else if (serverResponse.updatedAccount) {
+                activeAccountId = serverResponse.updatedAccount._id || serverResponse.updatedAccount.id;
+                updateActiveAccountUI(serverResponse.updatedAccount);
+            }
         }
-    } else if (serverResponse.updatedAccount) {
-        // Fix: Save the newly created walk-in account ID globally!
-        activeAccountId = serverResponse.updatedAccount._id || serverResponse.updatedAccount.id;
-        
-        // Update UI with the auto-created account
-        updateActiveAccountUI(serverResponse.updatedAccount);
-    }
-}
 
         // --- SUCCESS CLEANUP ---
         document.getElementById('addChargeForm').reset();
