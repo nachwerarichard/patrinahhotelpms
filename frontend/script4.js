@@ -1074,7 +1074,7 @@ function applyRoleAccess(role) {
         'nav-booking', 'nav-dashboard', 'nav-housekeeping', 'nav-inventory', 
         'nav-sales', 'nav-payments','nav-posinventory', 'nav-kds', 
          'nav-expenses', 'nav-cash', , 'nav-checklistform', 'nav-checklisttable','nav-missingitems' ,
-        'nav-posreports', 'nav-salereport', 'nav-expensereport','nav-housekeepingreports', 
+        'nav-posreports', 'nav-salereport', 'nav-expensereport','nav-housekeepingreports', 'nav-receivables',
         'nav-staff', 'nav-reports', 'nav-calendar','nav-roominventory','nav-channelmanager','nav-integration','nav-audit-logs'
     ];
 
@@ -4640,6 +4640,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const navCash = document.getElementById('nav-cash');
       const navInventory = document.getElementById('nav-inventory');
         const navExpense = document.getElementById('nav-expenses');
+                const navReceivables = document.getElementById('nav-receivables');
         const navPayments = document.getElementById('nav-payments');
       const navSale = document.getElementById('nav-sales');
             const navChannelManager = document.getElementById('nav-channelmanager');
@@ -4649,7 +4650,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const navRoominventory = document.getElementById('nav-roominventory');
 
         const navExpReport = document.getElementById('nav-expensereport');
-
+if (navReceivables) {
+            navReceivables.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                showSection('receivables');
+            });
+        }
          if (navKitch) {
             navKitch.addEventListener('click', (e) => {
                 e.preventDefault(); // Prevent default link behavior
@@ -5808,6 +5814,7 @@ if (!res) return; // in case redirect happened
     } catch (err) { showMessage(err.message, 'error'); }
 };
 
+
 const addCharge = async (description, number, department) => {
     const hotelId = localStorage.getItem('hotelId') || (typeof getHotelId === 'function' ? getHotelId() : null);
     const submitBtn = document.getElementById('submitBtn');
@@ -5838,7 +5845,9 @@ const addCharge = async (description, number, department) => {
         accountId: activeAccountId || null,
         tableNumber: tableNum,
         isQuickSale: isQuickSale,
-        date: new Date()
+        date: new Date(),
+        recordedBy: currentUsername, // Required by Sale schema
+        role: currentUserRole        // Included for context
     };
 
     try {
@@ -5848,7 +5857,6 @@ const addCharge = async (description, number, department) => {
         }
 
         // 1. Send Order to correct Endpoints
-        // If it's a Restaurant item, fire off the ticket to the kitchen asynchronously
         if (department === 'Restaurant') {
             authenticatedFetch(`${API_BASE_URL}/kitchen/order`, {
                 method: 'POST',
@@ -5856,7 +5864,7 @@ const addCharge = async (description, number, department) => {
             }).catch(err => console.error("Kitchen ticket routing failed:", err));
         }
 
-        // EVERY department item (including Restaurant) must hit the sales ledger endpoint
+        // EVERY department item hits sales ledger endpoint
         const endpoint = `${API_BASE_URL}/sales`;
         const res = await authenticatedFetch(endpoint, {
             method: 'POST',
@@ -5866,36 +5874,30 @@ const addCharge = async (description, number, department) => {
         if (!res) return;
         if (!res.ok) throw new Error("Failed to record sale to the ledger.");
 
-        // Grab the data returned directly from your backend route
-        const serverResponse = await res.json(); // contains { sale, updatedAccount }
+        const serverResponse = await res.json(); 
 
         // 2. Process Notifications
         if (department === 'Restaurant') {
             showMessage('Success', 'Kitchen order sent & added to ledger! 🍳💰', false);
         } else if (activeAccountId) {
-            showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
+            //showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
         } else {
-            showMessage('Success', 'Walk-in Sale Recorded to Ledger! 💰✅', false);
+            //showMessage('Success', 'Walk-in Sale Recorded to Ledger! 💰✅', false);
         }
 
-        // 3. Update the UI efficiently using the server response data
-        // 3. Update the UI efficiently using the server response data
-if (typeof updateActiveAccountUI === 'function') {
-    if (activeAccountId) {
-        // For existing registered guests
-        const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
-        if (accountRes && accountRes.ok) {
-            const freshAccountData = await accountRes.json();
-            updateActiveAccountUI(freshAccountData);
+        // 3. Update UI using server response
+        if (typeof updateActiveAccountUI === 'function') {
+            if (activeAccountId) {
+                const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
+                if (accountRes && accountRes.ok) {
+                    const freshAccountData = await accountRes.json();
+                    updateActiveAccountUI(freshAccountData);
+                }
+            } else if (serverResponse.updatedAccount) {
+                activeAccountId = serverResponse.updatedAccount._id || serverResponse.updatedAccount.id;
+                updateActiveAccountUI(serverResponse.updatedAccount);
+            }
         }
-    } else if (serverResponse.updatedAccount) {
-        // Fix: Save the newly created walk-in account ID globally!
-        activeAccountId = serverResponse.updatedAccount._id || serverResponse.updatedAccount.id;
-        
-        // Update UI with the auto-created account
-        updateActiveAccountUI(serverResponse.updatedAccount);
-    }
-}
 
         // --- SUCCESS CLEANUP ---
         document.getElementById('addChargeForm').reset();
@@ -7261,6 +7263,9 @@ function renderSalesTable(sales) {
     const isAdmin = ['admin', 'super-admin'].includes(currentUserRole);
     
     let totalSellingPriceSum = 0;
+    let totalProfitSum = 0; // Track overall profit
+    
+    // Department object structure: { DeptName: { sales: X, profit: Y } }
     const departmentTotals = {}; 
 
     sales.forEach(sale => {
@@ -7269,10 +7274,18 @@ function renderSalesTable(sales) {
         const bp = sale.bp || 0;
         const totalSellingPrice = sp * qty;
         
+        // Calculate profit (use pre-calculated profit or derive)
+        const profit = (typeof sale.profit === 'number') ? sale.profit : (sp - bp) * qty;
+        
         totalSellingPriceSum += totalSellingPrice;
+        totalProfitSum += profit;
         
         const dept = sale.department || 'General';
-        departmentTotals[dept] = (departmentTotals[dept] || 0) + totalSellingPrice;
+        if (!departmentTotals[dept]) {
+            departmentTotals[dept] = { sales: 0, profit: 0 };
+        }
+        departmentTotals[dept].sales += totalSellingPrice;
+        departmentTotals[dept].profit += profit;
 
         // Structured formats for parsed financial outputs
         const bpDisplay = hideSensitiveInfo ? '***' : bp.toLocaleString();
@@ -7283,7 +7296,6 @@ function renderSalesTable(sales) {
         let profitClass = 'text-slate-600';
 
         if (!hideSensitiveInfo) {
-            const profit = sale.profit || 0;
             profitDisplay = Math.round(profit).toLocaleString();
             percentageDisplay = Math.round(sale.percentageprofit || 0) + '%';
             profitClass = (profit >= 0) ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold';
@@ -7296,7 +7308,6 @@ function renderSalesTable(sales) {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50/80 border-b border-slate-100 text-slate-600 text-sm transition-colors";
             
-            // Build cell payloads
             tr.innerHTML = `
                 <td class="px-6 py-4 font-medium text-slate-900">${dept}</td>
                 <td class="px-6 py-4 font-semibold text-slate-700">${sale.item}</td>
@@ -7359,9 +7370,9 @@ function renderSalesTable(sales) {
         }
     });
 
-    // Invoke baseline summary generation parameters downstream
+    // Pass total profit sum downstream along with sales
     if (typeof renderSalesSummary === 'function') {
-        renderSalesSummary(tbody, departmentTotals, totalSellingPriceSum);
+        renderSalesSummary(tbody, departmentTotals, totalSellingPriceSum, totalProfitSum, hideSensitiveInfo);
     }
 }
 
@@ -7397,10 +7408,9 @@ function injectActionElements(container, isAdmin, sale, isMobileVariant = false)
     }
 }
 
-function renderSalesSummary(tbody, departmentTotals, grandTotal) {
+function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfitTotal, hideSensitiveInfo = false) {
     // --- 1. DESKTOP VIEWPORT PROCESSING (TABLE ROWS) ---
     if (tbody) {
-        // Safe check: prevent duplicate summaries if called multiple times
         const existingSummaries = tbody.querySelectorAll('.summary-row');
         existingSummaries.forEach(el => el.remove());
 
@@ -7410,39 +7420,56 @@ function renderSalesSummary(tbody, departmentTotals, grandTotal) {
         spacer.innerHTML = `<td colspan="9" class="h-6 bg-white"></td>`;
 
         // Departmental Sub-totals Loop
-        for (const [dept, total] of Object.entries(departmentTotals)) {
+        for (const [dept, metrics] of Object.entries(departmentTotals)) {
             const row = tbody.insertRow();
             row.className = "summary-row bg-slate-50 text-slate-600 font-medium border-b border-slate-200/60";
+            
+            const profitDisplay = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(metrics.profit).toLocaleString()}`;
+
             row.innerHTML = `
                 <td colspan="4" class="text-right py-3 pr-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">${dept} Subtotal:</td>
-                <td class="px-6 py-3 font-mono font-bold text-slate-900">${CURRENT_CURRENCY} ${total.toLocaleString()}</td>
-                <td colspan="4"></td>
+                <td class="px-6 py-3 font-mono font-bold text-indigo-600">${CURRENT_CURRENCY} ${metrics.sales.toLocaleString()}</td>
+                <td class="px-6 py-3 font-mono font-bold text-emerald-600">${profitDisplay}</td>
+                <td colspan="3"></td>
             `;
         }
 
         // Grand Total Header Row Block
         const grandRow = tbody.insertRow();
         grandRow.className = "summary-row bg-indigo-600 text-white font-bold border-none shadow-sm";
+        
+        const grandProfitDisplay = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(grandProfitTotal).toLocaleString()}`;
+
         grandRow.innerHTML = `
             <td colspan="4" class="text-right py-3.5 pr-4 text-sm uppercase tracking-widest font-black">Grand Total:</td>
-            <td class="px-6 py-3.5 text-base font-mono font-black">${CURRENT_CURRENCY} ${grandTotal.toLocaleString()}</td>
-            <td colspan="4"></td>
+            <td class="px-6 py-3.5 text-base font-mono font-black">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</td>
+            <td class="px-6 py-3.5 text-base font-mono font-black text-emerald-300">${grandProfitDisplay}</td>
+            <td colspan="3"></td>
         `;
     }
 
     // --- 2. MOBILE VIEWPORT PROCESSING (CARD CONTAINER MODULE) ---
     const summaryContainer = document.getElementById('sales-summary');
     if (summaryContainer) {
-        // Generate departmental subtotal template pieces dynamically
         const mobileDeptRowsHtml = Object.entries(departmentTotals)
-            .map(([dept, total]) => `
-                <div class="flex justify-between items-center py-2 border-b border-amber-200/40 last:border-0 text-xs">
-                    <span class="text-slate-500 font-medium">${dept} Subtotal</span>
-                    <span class="font-mono font-bold text-slate-800">${CURRENT_CURRENCY} ${total.toLocaleString()}</span>
-                </div>
-            `).join('');
+            .map(([dept, metrics]) => {
+                const profitText = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(metrics.profit).toLocaleString()}`;
+                return `
+                    <div class="py-2 border-b border-slate-200/60 last:border-0 text-xs space-y-1">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500 font-medium">${dept} Sales</span>
+                            <span class="font-mono font-bold text-slate-800">${CURRENT_CURRENCY} ${metrics.sales.toLocaleString()}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-[11px]">
+                            <span class="text-slate-400 font-medium">${dept} Profit</span>
+                            <span class="font-mono font-bold text-emerald-600">${profitText}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
 
-        // Inject compiled responsive structural layout block
+        const totalProfitText = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(grandProfitTotal).toLocaleString()}`;
+
         summaryContainer.innerHTML = `
             <div class="space-y-3">
                 <div class="flex items-center gap-2 pb-2 border-b border-amber-200 text-amber-800">
@@ -7454,9 +7481,15 @@ function renderSalesSummary(tbody, departmentTotals, grandTotal) {
                     ${mobileDeptRowsHtml || '<div class="text-xs text-slate-400 italic py-1">No departmental records calculated.</div>'}
                 </div>
 
-                <div class="mt-3 p-3 bg-indigo-600 text-white rounded-xl flex justify-between items-center shadow-inner">
-                    <span class="text-[10px] uppercase tracking-widest font-black">Grand Total</span>
-                    <span class="text-base font-mono font-black">${CURRENT_CURRENCY} ${grandTotal.toLocaleString()}</span>
+                <div class="mt-3 p-3 bg-indigo-600 text-white rounded-xl space-y-2 shadow-inner">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] uppercase tracking-widest font-black">Grand Total Sales</span>
+                        <span class="text-base font-mono font-black">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t border-indigo-500/50">
+                        <span class="text-[10px] uppercase tracking-widest font-black text-300 ">Grand Total Profit</span>
+                        <span class="text-base font-mono font-black text-300">${totalProfitText}</span>
+                    </div>
                 </div>
             </div>
         `;
@@ -8637,7 +8670,8 @@ async function generateSalesReports() {
         const cardContainer = document.getElementById('sales-department-report-cards');
         if (tbody) tbody.innerHTML = ''; 
         if (cardContainer) cardContainer.innerHTML = ''; 
-        document.getElementById('overall-sales-card').textContent = '0';
+        document.getElementById('overall-sales-reportcard').textContent = '0';
+        document.getElementById('overall-profit-reportcard').textContent = '0';
         return; 
     }
 
@@ -8657,6 +8691,7 @@ async function generateSalesReports() {
         let allSales = [];
         let page = 1, totalPages = 1;
 
+        // Fetch all paginated pages for the date range
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/sales?${queryParams}&page=${page}&limit=100`);
             const res = await resp.json();
@@ -8667,31 +8702,45 @@ async function generateSalesReports() {
             } else { break; }
         } while (page <= totalPages);
 
-        const salesReport = {};
+        const salesReport = {}; // { Dept: { sales: X, profit: Y } }
         
         allSales.forEach(sale => {
-            // Trim whitespace to avoid missing categories
             let dept = (sale.department || 'Other').trim();
             if (!dept) dept = 'Other';
 
-            // Strip out non-numeric characters (like commas or currency letters) if any exist dynamically
             const rawNumber = String(sale.number || '0').replace(/[^0-9.-]/g, '');
             const rawSp = String(sale.sp || '0').replace(/[^0-9.-]/g, '');
+            const rawBp = String(sale.bp || '0').replace(/[^0-9.-]/g, '');
 
             const quantity = Number(rawNumber) || 0;
-            const unitPrice = Number(rawSp) || 0;
-            const lineTotal = quantity * unitPrice;
+            const unitSp = Number(rawSp) || 0;
+            const unitBp = Number(rawBp) || 0;
 
-            if (!salesReport[dept]) salesReport[dept] = 0;
-            salesReport[dept] += lineTotal;
+            const lineTotalSales = quantity * unitSp;
+            
+            // Calculate profit using pre-computed profit field or derive from SP - BP
+            let lineTotalProfit = 0;
+            if (typeof sale.profit === 'number') {
+                lineTotalProfit = sale.profit;
+            } else {
+                lineTotalProfit = quantity * (unitSp - unitBp);
+            }
+
+            if (!salesReport[dept]) {
+                salesReport[dept] = { sales: 0, profit: 0 };
+            }
+            
+            salesReport[dept].sales += lineTotalSales;
+            salesReport[dept].profit += lineTotalProfit;
         });
 
         let totalSalesSum = 0;
-        const sortedDepts = Object.keys(salesReport).filter(k => !isNaN(salesReport[k])).sort();
+        let totalProfitSum = 0;
+        const sortedDepts = Object.keys(salesReport).sort();
 
         if (sortedDepts.length === 0) {
             const emptyStateHtml = 'No sales activity found for this period.';
-            if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
+            if (tbody) tbody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
             if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
             showMessage('No sales records found for the selected date range.', false);
         } else {
@@ -8699,20 +8748,31 @@ async function generateSalesReports() {
             let mobileCardsHTML = [];
 
             sortedDepts.forEach(dept => {
-                const sales = salesReport[dept];
-                totalSalesSum += sales;
+                const sales = salesReport[dept].sales;
+                const profit = salesReport[dept].profit;
 
-                tableRowsHTML.push(`
-                    <tr class="border-b border-slate-100 hover:bg-slate-50/80">
-                        <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
-                        <td class="px-6 py-4 text-right font-mono text-emerald-600 font-semibold">${sales.toLocaleString()}</td>
-                    </tr>
-                `);
+                totalSalesSum += sales;
+                totalProfitSum += profit;
+
+              tableRowsHTML.push(`
+    <tr class="border-b border-slate-100 hover:bg-slate-50/80">
+        <td class="px-6 py-4 font-medium text-slate-700 truncate">${dept}</td>
+        <td class="px-6 py-4 text-right font-mono text-slate-800 font-semibold whitespace-nowrap">${sales.toLocaleString()}</td>
+        <td class="px-6 py-4 text-right font-mono text-emerald-600 font-semibold whitespace-nowrap">${profit.toLocaleString()}</td>
+    </tr>
+`);
 
                 mobileCardsHTML.push(`
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
-                        <h4 class="font-bold text-slate-800 text-sm">${dept}</h4>
-                        <span class="font-mono font-black text-emerald-600">${sales.toLocaleString()} UGX</span>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                        <h4 class="font-bold text-slate-800 text-sm border-b border-slate-100 pb-2">${dept}</h4>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-500">Sales:</span>
+                            <span class="font-mono font-bold text-slate-800">${sales.toLocaleString()} ${CURRENT_CURRENCY}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-500">Profit:</span>
+                            <span class="font-mono font-bold text-emerald-600">${profit.toLocaleString()} ${CURRENT_CURRENCY}</span>
+                        </div>
                     </div>
                 `);
             });
@@ -8721,9 +8781,15 @@ async function generateSalesReports() {
             if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
         }
 
+        // Update KPI card text
         document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY}${totalSalesSum.toLocaleString()}`;
+        document.getElementById('overall-profit-reportcard').textContent = `${CURRENT_CURRENCY}${totalProfitSum.toLocaleString()}`;
+
+        // Update Excel Export elements
         const exportSalesElem = document.getElementById('overall-sales-export');
+        const exportProfitElem = document.getElementById('overall-profit-export');
         if (exportSalesElem) exportSalesElem.textContent = `${CURRENT_CURRENCY}${totalSalesSum.toLocaleString()}`;
+        if (exportProfitElem) exportProfitElem.textContent = `${CURRENT_CURRENCY}${totalProfitSum.toLocaleString()}`;
 
     } catch (error) {
         console.error('Sales Report Error:', error);
