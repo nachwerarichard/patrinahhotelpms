@@ -7263,6 +7263,9 @@ function renderSalesTable(sales) {
     const isAdmin = ['admin', 'super-admin'].includes(currentUserRole);
     
     let totalSellingPriceSum = 0;
+    let totalProfitSum = 0; // Track overall profit
+    
+    // Department object structure: { DeptName: { sales: X, profit: Y } }
     const departmentTotals = {}; 
 
     sales.forEach(sale => {
@@ -7271,10 +7274,18 @@ function renderSalesTable(sales) {
         const bp = sale.bp || 0;
         const totalSellingPrice = sp * qty;
         
+        // Calculate profit (use pre-calculated profit or derive)
+        const profit = (typeof sale.profit === 'number') ? sale.profit : (sp - bp) * qty;
+        
         totalSellingPriceSum += totalSellingPrice;
+        totalProfitSum += profit;
         
         const dept = sale.department || 'General';
-        departmentTotals[dept] = (departmentTotals[dept] || 0) + totalSellingPrice;
+        if (!departmentTotals[dept]) {
+            departmentTotals[dept] = { sales: 0, profit: 0 };
+        }
+        departmentTotals[dept].sales += totalSellingPrice;
+        departmentTotals[dept].profit += profit;
 
         // Structured formats for parsed financial outputs
         const bpDisplay = hideSensitiveInfo ? '***' : bp.toLocaleString();
@@ -7285,7 +7296,6 @@ function renderSalesTable(sales) {
         let profitClass = 'text-slate-600';
 
         if (!hideSensitiveInfo) {
-            const profit = sale.profit || 0;
             profitDisplay = Math.round(profit).toLocaleString();
             percentageDisplay = Math.round(sale.percentageprofit || 0) + '%';
             profitClass = (profit >= 0) ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold';
@@ -7298,7 +7308,6 @@ function renderSalesTable(sales) {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50/80 border-b border-slate-100 text-slate-600 text-sm transition-colors";
             
-            // Build cell payloads
             tr.innerHTML = `
                 <td class="px-6 py-4 font-medium text-slate-900">${dept}</td>
                 <td class="px-6 py-4 font-semibold text-slate-700">${sale.item}</td>
@@ -7361,9 +7370,9 @@ function renderSalesTable(sales) {
         }
     });
 
-    // Invoke baseline summary generation parameters downstream
+    // Pass total profit sum downstream along with sales
     if (typeof renderSalesSummary === 'function') {
-        renderSalesSummary(tbody, departmentTotals, totalSellingPriceSum);
+        renderSalesSummary(tbody, departmentTotals, totalSellingPriceSum, totalProfitSum, hideSensitiveInfo);
     }
 }
 
@@ -7399,10 +7408,9 @@ function injectActionElements(container, isAdmin, sale, isMobileVariant = false)
     }
 }
 
-function renderSalesSummary(tbody, departmentTotals, grandTotal) {
+function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfitTotal, hideSensitiveInfo = false) {
     // --- 1. DESKTOP VIEWPORT PROCESSING (TABLE ROWS) ---
     if (tbody) {
-        // Safe check: prevent duplicate summaries if called multiple times
         const existingSummaries = tbody.querySelectorAll('.summary-row');
         existingSummaries.forEach(el => el.remove());
 
@@ -7412,39 +7420,56 @@ function renderSalesSummary(tbody, departmentTotals, grandTotal) {
         spacer.innerHTML = `<td colspan="9" class="h-6 bg-white"></td>`;
 
         // Departmental Sub-totals Loop
-        for (const [dept, total] of Object.entries(departmentTotals)) {
+        for (const [dept, metrics] of Object.entries(departmentTotals)) {
             const row = tbody.insertRow();
             row.className = "summary-row bg-slate-50 text-slate-600 font-medium border-b border-slate-200/60";
+            
+            const profitDisplay = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(metrics.profit).toLocaleString()}`;
+
             row.innerHTML = `
                 <td colspan="4" class="text-right py-3 pr-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">${dept} Subtotal:</td>
-                <td class="px-6 py-3 font-mono font-bold text-slate-900">${CURRENT_CURRENCY} ${total.toLocaleString()}</td>
-                <td colspan="4"></td>
+                <td class="px-6 py-3 font-mono font-bold text-indigo-600">${CURRENT_CURRENCY} ${metrics.sales.toLocaleString()}</td>
+                <td class="px-6 py-3 font-mono font-bold text-emerald-600">${profitDisplay}</td>
+                <td colspan="3"></td>
             `;
         }
 
         // Grand Total Header Row Block
         const grandRow = tbody.insertRow();
         grandRow.className = "summary-row bg-indigo-600 text-white font-bold border-none shadow-sm";
+        
+        const grandProfitDisplay = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(grandProfitTotal).toLocaleString()}`;
+
         grandRow.innerHTML = `
             <td colspan="4" class="text-right py-3.5 pr-4 text-sm uppercase tracking-widest font-black">Grand Total:</td>
-            <td class="px-6 py-3.5 text-base font-mono font-black">${CURRENT_CURRENCY} ${grandTotal.toLocaleString()}</td>
-            <td colspan="4"></td>
+            <td class="px-6 py-3.5 text-base font-mono font-black">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</td>
+            <td class="px-6 py-3.5 text-base font-mono font-black text-emerald-300">${grandProfitDisplay}</td>
+            <td colspan="3"></td>
         `;
     }
 
     // --- 2. MOBILE VIEWPORT PROCESSING (CARD CONTAINER MODULE) ---
     const summaryContainer = document.getElementById('sales-summary');
     if (summaryContainer) {
-        // Generate departmental subtotal template pieces dynamically
         const mobileDeptRowsHtml = Object.entries(departmentTotals)
-            .map(([dept, total]) => `
-                <div class="flex justify-between items-center py-2 border-b border-amber-200/40 last:border-0 text-xs">
-                    <span class="text-slate-500 font-medium">${dept} Subtotal</span>
-                    <span class="font-mono font-bold text-slate-800">${CURRENT_CURRENCY} ${total.toLocaleString()}</span>
-                </div>
-            `).join('');
+            .map(([dept, metrics]) => {
+                const profitText = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(metrics.profit).toLocaleString()}`;
+                return `
+                    <div class="py-2 border-b border-slate-200/60 last:border-0 text-xs space-y-1">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500 font-medium">${dept} Sales</span>
+                            <span class="font-mono font-bold text-slate-800">${CURRENT_CURRENCY} ${metrics.sales.toLocaleString()}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-[11px]">
+                            <span class="text-slate-400 font-medium">${dept} Profit</span>
+                            <span class="font-mono font-bold text-emerald-600">${profitText}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
 
-        // Inject compiled responsive structural layout block
+        const totalProfitText = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(grandProfitTotal).toLocaleString()}`;
+
         summaryContainer.innerHTML = `
             <div class="space-y-3">
                 <div class="flex items-center gap-2 pb-2 border-b border-amber-200 text-amber-800">
@@ -7456,9 +7481,15 @@ function renderSalesSummary(tbody, departmentTotals, grandTotal) {
                     ${mobileDeptRowsHtml || '<div class="text-xs text-slate-400 italic py-1">No departmental records calculated.</div>'}
                 </div>
 
-                <div class="mt-3 p-3 bg-indigo-600 text-white rounded-xl flex justify-between items-center shadow-inner">
-                    <span class="text-[10px] uppercase tracking-widest font-black">Grand Total</span>
-                    <span class="text-base font-mono font-black">${CURRENT_CURRENCY} ${grandTotal.toLocaleString()}</span>
+                <div class="mt-3 p-3 bg-indigo-600 text-white rounded-xl space-y-2 shadow-inner">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] uppercase tracking-widest font-black">Grand Total Sales</span>
+                        <span class="text-base font-mono font-black">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t border-indigo-500/50">
+                        <span class="text-[10px] uppercase tracking-widest font-black text-emerald-300">Grand Total Profit</span>
+                        <span class="text-base font-mono font-black text-emerald-300">${totalProfitText}</span>
+                    </div>
                 </div>
             </div>
         `;
