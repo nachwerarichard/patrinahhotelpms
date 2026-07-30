@@ -1303,8 +1303,8 @@ ${booking.amountPaid > 0 ? `
 // 1. Trigger function attached to the UI button
 async function generateInvoice(bookingId) {
     try {
-        // authenticatedFetch automatically injects Bearer token & multi-tenant headers
-        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/${bookingId}`);
+        // Updated route to match: /api/bookings/id/:customId
+        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/id/${bookingId}`);
 
         // If authenticatedFetch redirected to login, res will be null
         if (!res) return;
@@ -2915,85 +2915,111 @@ async function printGuestReceipt(bookingCustomId) {
         const booking = await bRes.json();
         const incidentalCharges = await cRes.json();
 
+        // Safely retrieve DOM elements to avoid null reference crashes
+        const getEl = (id) => document.getElementById(id);
+
         /* ---------- UI POPULATION: GUEST & STAY METADATA ---------- */
-        receiptGuestNameSpan.textContent = booking.name || 'Valued Guest';
-        receiptRoomNumberSpan.textContent = booking.room || 'Unassigned';
-        receiptBookingIdSpan.textContent = booking.id || bookingCustomId;
-        receiptCheckInSpan.textContent = booking.checkIn ? new Date(booking.checkIn).toLocaleDateString('en-US') : '-';
-        receiptCheckOutSpan.textContent = booking.checkOut ? new Date(booking.checkOut).toLocaleDateString('en-US') : '-';
-        receiptPrintDateSpan.textContent = new Date().toLocaleDateString('en-US', { 
-            year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-        });
+        if (getEl('receiptGuestName')) getEl('receiptGuestName').textContent = booking.name || 'Valued Guest';
+        if (getEl('receiptRoomNumber')) getEl('receiptRoomNumber').textContent = booking.room || 'Unassigned';
+        if (getEl('receiptBookingId')) getEl('receiptBookingId').textContent = booking.id || bookingCustomId;
+        
+        const checkInFormatted = booking.checkIn ? new Date(booking.checkIn).toLocaleDateString('en-US') : '-';
+        const checkOutFormatted = booking.checkOut ? new Date(booking.checkOut).toLocaleDateString('en-US') : '-';
 
-        receiptNightsSpan.textContent = booking.nights || 1;
-        receiptAmtPerNightSpan.textContent = Number(booking.amtPerNight || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
-        receiptRoomTotalDueSpan.textContent = Number(booking.totalDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
-
-        /* ---------- INCIDENTALS LEDGER ---------- */
-        receiptIncidentalChargesTableBody.innerHTML = '';
-        let totalIncidentalAmount = 0;
-        let paidAtPOSAmount = 0;
-
-        if (!incidentalCharges || incidentalCharges.length === 0) {
-            receiptIncidentalChargesTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">No incidental charges incurred.</td></tr>';
-        } else {
-            incidentalCharges.forEach(charge => {
-                const amount = Number(charge.amount) || 0;
-                totalIncidentalAmount += amount;
-
-                // Track if paid directly at point of sale vs posted to room ledger
-                if (charge.isPaid) {
-                    paidAtPOSAmount += amount;
-                }
-
-                const row = receiptIncidentalChargesTableBody.insertRow();
-                row.innerHTML = `
-                    <td>${charge.type || 'General'}</td>
-                    <td>${charge.description || '-'} ${charge.isPaid ? '<small>(Paid POS)</small>' : ''}</td>
-                    <td>${charge.date ? new Date(charge.date).toLocaleDateString('en-US') : '-'}</td>
-                    <td style="text-align:right; font-weight:600;">${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                `;
+        if (getEl('receiptCheckIn')) getEl('receiptCheckIn').textContent = checkInFormatted;
+        if (getEl('receiptCheckOut')) getEl('receiptCheckOut').textContent = checkOutFormatted;
+        if (getEl('receiptStayDateRange')) getEl('receiptStayDateRange').textContent = `${checkInFormatted} - ${checkOutFormatted}`;
+        
+        if (getEl('receiptPrintDate')) {
+            getEl('receiptPrintDate').textContent = new Date().toLocaleDateString('en-US', { 
+                year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
             });
         }
 
-        /* ---------- TOTALS CALCULATION (PMS COMPLIANT) ---------- */
-        const roomSubtotal = parseFloat(booking.totalDue) || 0;
+        if (getEl('receiptNights')) getEl('receiptNights').textContent = booking.nights || 1;
         
-        // Total Bill MUST include ALL charges (Room + ALL Incidentals)
-        const totalBill = roomSubtotal + totalIncidentalAmount;
-        
-        // Total Paid includes Direct Payments on Booking + POS Paid Incidentals
-        const rawPayments = parseFloat(booking.amountPaid) || 0;
-        const totalAmountPaid = rawPayments + paidAtPOSAmount;
-        
-        // Exact Balance Due (allows negative values for refunds/deposits)
-        const finalBalanceDue = totalBill - totalAmountPaid;
+        const roomTotalDue = Number(booking.totalDue || 0);
+        if (getEl('receiptRoomTotalDue')) getEl('receiptRoomTotalDue').textContent = roomTotalDue.toLocaleString(undefined, { minimumFractionDigits: 2 });
 
-        // Set status
-        if (finalBalanceDue <= 0) {
-            receiptPaymentStatusSpan.textContent = 'SETTLED / PAID';
-            receiptPaymentStatusSpan.className = 'status-badge paid';
-        } else {
-            receiptPaymentStatusSpan.textContent = `OPEN BALANCE (${finalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })})`;
-            receiptPaymentStatusSpan.className = 'status-badge pending';
+        /* ---------- INCIDENTALS & COMBINED TRANSACTIONS LEDGER ---------- */
+        const tableBody = getEl('receiptIncidentalChargesTableBody');
+        let totalIncidentalAmount = 0;
+        let paidAtPOSAmount = 0;
+
+        if (tableBody) {
+            // Re-insert base room accommodation row
+            tableBody.innerHTML = `
+                <tr>
+                    <td class="py-3 px-3">${checkInFormatted} - ${checkOutFormatted}</td>
+                    <td class="py-3 px-3">Room Stay Accommodation Charge (${booking.nights || 1} night/s)</td>
+                    <td class="py-3 px-3 text-right font-medium">${roomTotalDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td class="py-3 px-3 text-right text-emerald-600 font-medium">-</td>
+                </tr>
+            `;
+
+            if (incidentalCharges && incidentalCharges.length > 0) {
+                incidentalCharges.forEach(charge => {
+                    const amount = Number(charge.amount) || 0;
+                    totalIncidentalAmount += amount;
+
+                    if (charge.isPaid) {
+                        paidAtPOSAmount += amount;
+                    }
+
+                    const row = tableBody.insertRow();
+                    row.className = "hover:bg-slate-50 border-b border-slate-100";
+                    row.innerHTML = `
+                        <td class="py-2.5 px-3">${charge.date ? new Date(charge.date).toLocaleDateString('en-US') : '-'}</td>
+                        <td class="py-2.5 px-3">${charge.type || 'Incidental'} - ${charge.description || '-'} ${charge.isPaid ? '<small class="text-emerald-600 font-semibold">(Paid POS)</small>' : ''}</td>
+                        <td class="py-2.5 px-3 text-right font-medium">${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td class="py-2.5 px-3 text-right text-emerald-600 font-medium">${charge.isPaid ? amount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                    `;
+                });
+            }
         }
 
-        receiptSubtotalRoomSpan.textContent = roomSubtotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
-        receiptSubtotalIncidentalsSpan.textContent = totalIncidentalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 });
-        receiptTotalBillSpan.textContent = totalBill.toLocaleString(undefined, { minimumFractionDigits: 2 });
-        receiptAmountPaidSpan.textContent = totalAmountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 });
-        
-        // Format balance display
-        receiptBalanceDueSpan.textContent = finalBalanceDue < 0 
-            ? `REFUND DUE: ${Math.abs(finalBalanceDue).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-            : finalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        /* ---------- TOTALS & TAX CALCULATIONS ---------- */
+        const roomSubtotal = roomTotalDue;
+        const totalBill = roomSubtotal + totalIncidentalAmount;
+        const rawPayments = parseFloat(booking.amountPaid) || 0;
+        const totalAmountPaid = rawPayments + paidAtPOSAmount;
+        const finalBalanceDue = totalBill - totalAmountPaid;
 
-        /* ---------- PRINT DISPLAY ---------- */
-        receiptModal.style.display = 'flex';
+        // VAT / Net Calculations (Assumes 18% standard VAT)
+        const netSubtotal = totalBill / 1.18;
+        const vatAmount = totalBill - netSubtotal;
 
-        setTimeout(() => {
-            window.print();
-        }, 300);
+        if (getEl('receiptSubtotalExclTax')) getEl('receiptSubtotalExclTax').textContent = netSubtotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        if (getEl('receiptTaxAmount')) getEl('receiptTaxAmount').textContent = vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        if (getEl('receiptTotalBill')) getEl('receiptTotalBill').textContent = totalBill.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        if (getEl('receiptAmountPaid')) getEl('receiptAmountPaid').textContent = totalAmountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 });
+
+        // Format balance display & payment status badge
+        const statusEl = getEl('receiptPaymentStatus');
+        const balanceEl = getEl('receiptBalanceDue');
+
+        if (balanceEl) {
+            balanceEl.textContent = finalBalanceDue < 0 
+                ? `REFUND: ${Math.abs(finalBalanceDue).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                : finalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        }
+
+        if (statusEl) {
+            if (finalBalanceDue <= 0) {
+                statusEl.textContent = 'SETTLED / PAID';
+                statusEl.className = 'font-bold uppercase text-emerald-600';
+            } else {
+                statusEl.textContent = `OPEN BALANCE (${finalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })})`;
+                statusEl.className = 'font-bold uppercase text-rose-600';
+            }
+        }
+
+        /* ---------- DISPLAY MODAL ---------- */
+        const modal = getEl('receiptModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
 
     } catch (error) {
         console.error('Receipt Error:', error);
