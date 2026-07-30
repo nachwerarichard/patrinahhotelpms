@@ -1326,9 +1326,19 @@ async function generateInvoice(bookingId) {
 
 // 2. Comprehensive A4 Standard Guest Folio & Invoice Renderer
 const generateInvoiceFromAccount = (booking) => {
+    // 1. Create a hidden iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    // 2. Prepare HTML content...
     const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : '$';
     const invoiceDate = new Date().toLocaleDateString('en-GB');
-    
     const nightsCount = Number(booking.nights) || 1;
     const roomRatePerNight = Number(booking.amtPerNight) || 0;
     const roomTotalDue = Number(booking.totalDue) || (nightsCount * roomRatePerNight);
@@ -1353,45 +1363,20 @@ const generateInvoiceFromAccount = (booking) => {
         </tr>
     `).join('');
 
-    const invoiceWindow = window.open('', '_blank', 'width=800,height=900');
-    
-    invoiceWindow.document.write(`
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
         <!DOCTYPE html>
         <html>
         <head>
             <title>Guest Folio / Tax Invoice - #${booking.id}</title>
             <style>
-                @page {
-                    size: A4 portrait;
-                    margin: 10mm;
-                }
-                * {
-                    box-sizing: border-box;
-                }
-                body { 
-                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
-                    color: #1e293b; 
-                    margin: 0; 
-                    padding: 15px;
-                    -webkit-print-color-adjust: exact;
-                    print-color-adjust: exact;
-                }
-                .invoice-container {
-                    width: 100%;
-                    max-width: 800px;
-                    margin: 0 auto;
-                    page-break-inside: avoid;
-                    break-inside: avoid;
-                }
-                .header { 
-                    display: flex; 
-                    justify-content: space-between; 
-                    align-items: flex-start; 
-                    border-bottom: 2px solid #0f172a; 
-                    padding-bottom: 12px; 
-                    margin-bottom: 18px; 
-                }
-                .company-title { font-size: 20px; font-weight: 800; letter-spacing: 1px; color: #0f172a; }
+                @page { size: A4 portrait; margin: 10mm; }
+                * { box-sizing: border-box; }
+                body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 15px; }
+                .invoice-container { width: 100%; max-width: 800px; margin: 0 auto; }
+                .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 18px; }
+                .company-title { font-size: 20px; font-weight: 800; color: #0f172a; }
                 .invoice-title { font-size: 18px; font-weight: 700; color: #0284c7; text-align: right; }
                 .grid { display: flex; justify-content: space-between; margin-bottom: 18px; font-size: 12px; }
                 .box { width: 48%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; }
@@ -1409,78 +1394,47 @@ const generateInvoiceFromAccount = (booking) => {
                 <div class="header">
                     <div>
                         <div class="company-title">NOVUS CLOUD HOTELS</div>
-                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">123 Hospitality Blvd, Suite 100</div>
-                        <div style="font-size: 11px; color: #64748b;">TIN / TAX ID: 1002938481</div>
+                        <div style="font-size: 11px; color: #64748b;">123 Hospitality Blvd, Suite 100</div>
                     </div>
                     <div>
                         <div class="invoice-title">TAX INVOICE / FOLIO</div>
-                        <div style="font-size: 11px; color: #64748b; text-align: right; margin-top: 2px;"><strong>Folio #:</strong> ${booking.id || '-'}</div>
-                        <div style="font-size: 11px; color: #64748b; text-align: right;"><strong>Date:</strong> ${invoiceDate}</div>
+                        <div style="font-size: 11px; color: #64748b; text-align: right;"><strong>Folio #:</strong> ${booking.id || '-'}</div>
                     </div>
                 </div>
-
                 <div class="grid">
                     <div class="box">
                         <div class="box-title">Guest Details</div>
                         <div><strong>Name:</strong> ${booking.name || 'Valued Guest'}</div>
                         <div><strong>Room:</strong> ${booking.room ? 'Room ' + booking.room : 'Unassigned'}</div>
-                        <div><strong>Phone:</strong> ${booking.phoneNo || 'N/A'}</div>
-                        <div><strong>Email:</strong> ${booking.guestEmail || 'N/A'}</div>
                     </div>
                     <div class="box">
                         <div class="box-title">Stay Information</div>
-                        <div><strong>Check-In:</strong> ${booking.checkIn ? new Date(booking.checkIn).toLocaleDateString('en-GB') : 'N/A'}</div>
-                        <div><strong>Check-Out:</strong> ${booking.checkOut ? new Date(booking.checkOut).toLocaleDateString('en-GB') : 'N/A'}</div>
                         <div><strong>Nights:</strong> ${nightsCount}</div>
-                        <div><strong>Status:</strong> <span style="text-transform: uppercase; font-weight: bold;">${booking.gueststatus || 'Active'}</span></div>
+                        <div><strong>Status:</strong> ${booking.gueststatus || 'Active'}</div>
                     </div>
                 </div>
-
                 <table>
                     <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Description / Charge Item</th>
-                            <th style="text-align: right;">Amount</th>
-                        </tr>
+                        <tr><th>Date</th><th>Description</th><th style="text-align: right;">Amount</th></tr>
                     </thead>
-                    <tbody>
-                        ${itemsRows}
-                    </tbody>
+                    <tbody>${itemsRows}</tbody>
                 </table>
-
                 <div class="totals">
-                    <div class="totals-row">
-                        <span>Total Charges:</span>
-                        <span>${currency} ${totalCharges.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                    </div>
-                    <div class="totals-row" style="color: #059669;">
-                        <span>Payments Received (${booking.paymentMethod || 'Cash'}):</span>
-                        <span>- ${currency} ${amountPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                    </div>
-                    <div class="totals-row final">
-                        <span>BALANCE DUE:</span>
-                        <span>${currency} ${balanceDue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                    </div>
-                </div>
-
-                <div class="footer">
-                    <p style="margin: 2px 0;">Thank you for choosing Novus Cloud Hotels. We hope you enjoyed your stay!</p>
-                    <p style="margin: 2px 0;">Generated via Novus Cloud PMS Framework</p>
+                    <div class="totals-row"><span>Total:</span><span>${currency} ${totalCharges.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                    <div class="totals-row final"><span>BALANCE DUE:</span><span>${currency} ${balanceDue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
                 </div>
             </div>
-
-            <script>
-                window.onload = function() { 
-                    window.focus();
-                    window.print(); 
-                }
-            <\/script>
         </body>
         </html>
     `);
-    
-    invoiceWindow.document.close();
+    doc.close();
+
+    // 3. Print via the hidden frame, then clean up
+    setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, 250);
 };
 
 async function viewBooking(id) {
