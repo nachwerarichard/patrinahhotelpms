@@ -1169,7 +1169,7 @@ async function renderBookings(page = 1, searchTerm = '') {
 
     let currentBookings = [];
     let totalPages = 1;
-    let totalCount = 0;
+    let totalCount = 1;
     currentPage = page; 
     currentSearchTerm = searchTerm; 
 
