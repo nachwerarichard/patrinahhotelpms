@@ -1329,7 +1329,6 @@ const generateInvoiceFromAccount = (booking) => {
     const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : '$';
     const invoiceDate = new Date().toLocaleDateString('en-GB');
     
-    // Fallback room calculation using correct Schema keys: amtPerNight, nights, totalDue
     const nightsCount = Number(booking.nights) || 1;
     const roomRatePerNight = Number(booking.amtPerNight) || 0;
     const roomTotalDue = Number(booking.totalDue) || (nightsCount * roomRatePerNight);
@@ -1347,10 +1346,10 @@ const generateInvoiceFromAccount = (booking) => {
     const balanceDue = totalCharges - amountPaid;
 
     const itemsRows = charges.map((c) => `
-        <tr style="border-bottom: 1px solid #e2e8f0; font-size: 13px;">
-            <td style="padding: 10px 8px;">${c.date ? new Date(c.date).toLocaleDateString('en-GB') : invoiceDate}</td>
-            <td style="padding: 10px 8px;">${c.description || 'Accommodation Charge'}</td>
-            <td style="padding: 10px 8px; text-align: right; font-weight: 600;">${currency} ${Number(c.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+        <tr style="border-bottom: 1px solid #e2e8f0; font-size: 12px;">
+            <td style="padding: 6px 8px;">${c.date ? new Date(c.date).toLocaleDateString('en-GB') : invoiceDate}</td>
+            <td style="padding: 6px 8px;">${c.description || 'Accommodation Charge'}</td>
+            <td style="padding: 6px 8px; text-align: right; font-weight: 600;">${currency} ${Number(c.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
         </tr>
     `).join('');
 
@@ -1362,87 +1361,120 @@ const generateInvoiceFromAccount = (booking) => {
         <head>
             <title>Guest Folio / Tax Invoice - #${booking.id}</title>
             <style>
-                body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 40px; }
-                .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 30px; }
-                .company-title { font-size: 24px; font-weight: 800; letter-spacing: 1px; color: #0f172a; }
-                .invoice-title { font-size: 20px; font-weight: 700; color: #0284c7; text-align: right; }
-                .grid { display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 13px; }
-                .box { width: 48%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; }
-                .box-title { font-weight: 700; text-transform: uppercase; font-size: 11px; color: #64748b; margin-bottom: 8px; }
-                table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-                th { background: #f1f5f9; text-align: left; padding: 10px 8px; font-size: 11px; text-transform: uppercase; color: #475569; }
-                .totals { width: 300px; margin-left: auto; font-size: 13px; }
-                .totals-row { display: flex; justify-content: space-between; padding: 6px 0; }
-                .totals-row.final { font-size: 16px; font-weight: 800; border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a; padding: 10px 0; margin-top: 10px; }
-                .footer { margin-top: 50px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+                @page {
+                    size: A4 portrait;
+                    margin: 10mm;
+                }
+                * {
+                    box-sizing: border-box;
+                }
+                body { 
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
+                    color: #1e293b; 
+                    margin: 0; 
+                    padding: 15px;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+                .invoice-container {
+                    width: 100%;
+                    max-width: 800px;
+                    margin: 0 auto;
+                    page-break-inside: avoid;
+                    break-inside: avoid;
+                }
+                .header { 
+                    display: flex; 
+                    justify-content: space-between; 
+                    align-items: flex-start; 
+                    border-bottom: 2px solid #0f172a; 
+                    padding-bottom: 12px; 
+                    margin-bottom: 18px; 
+                }
+                .company-title { font-size: 20px; font-weight: 800; letter-spacing: 1px; color: #0f172a; }
+                .invoice-title { font-size: 18px; font-weight: 700; color: #0284c7; text-align: right; }
+                .grid { display: flex; justify-content: space-between; margin-bottom: 18px; font-size: 12px; }
+                .box { width: 48%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; }
+                .box-title { font-weight: 700; text-transform: uppercase; font-size: 10px; color: #64748b; margin-bottom: 6px; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                th { background: #f1f5f9; text-align: left; padding: 8px; font-size: 10px; text-transform: uppercase; color: #475569; }
+                .totals { width: 280px; margin-left: auto; font-size: 12px; }
+                .totals-row { display: flex; justify-content: space-between; padding: 4px 0; }
+                .totals-row.final { font-size: 14px; font-weight: 800; border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a; padding: 6px 0; margin-top: 6px; }
+                .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px; }
             </style>
         </head>
         <body>
-            <div class="header">
-                <div>
-                    <div class="company-title">NOVUS CLOUD HOTELS</div>
-                    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">123 Hospitality Blvd, Suite 100</div>
-                    <div style="font-size: 12px; color: #64748b;">TIN / TAX ID: 1002938481</div>
+            <div class="invoice-container">
+                <div class="header">
+                    <div>
+                        <div class="company-title">NOVUS CLOUD HOTELS</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">123 Hospitality Blvd, Suite 100</div>
+                        <div style="font-size: 11px; color: #64748b;">TIN / TAX ID: 1002938481</div>
+                    </div>
+                    <div>
+                        <div class="invoice-title">TAX INVOICE / FOLIO</div>
+                        <div style="font-size: 11px; color: #64748b; text-align: right; margin-top: 2px;"><strong>Folio #:</strong> ${booking.id || '-'}</div>
+                        <div style="font-size: 11px; color: #64748b; text-align: right;"><strong>Date:</strong> ${invoiceDate}</div>
+                    </div>
                 </div>
-                <div>
-                    <div class="invoice-title">TAX INVOICE / FOLIO</div>
-                    <div style="font-size: 12px; color: #64748b; text-align: right; margin-top: 4px;"><strong>Folio #:</strong> ${booking.id || '-'}</div>
-                    <div style="font-size: 12px; color: #64748b; text-align: right;"><strong>Date:</strong> ${invoiceDate}</div>
-                </div>
-            </div>
 
-            <div class="grid">
-                <div class="box">
-                    <div class="box-title">Guest Details</div>
-                    <div><strong>Name:</strong> ${booking.name || 'Valued Guest'}</div>
-                    <div><strong>Room:</strong> ${booking.room ? 'Room ' + booking.room : 'Unassigned'}</div>
-                    <div><strong>Phone:</strong> ${booking.phoneNo || 'N/A'}</div>
-                    <div><strong>Email:</strong> ${booking.guestEmail || 'N/A'}</div>
+                <div class="grid">
+                    <div class="box">
+                        <div class="box-title">Guest Details</div>
+                        <div><strong>Name:</strong> ${booking.name || 'Valued Guest'}</div>
+                        <div><strong>Room:</strong> ${booking.room ? 'Room ' + booking.room : 'Unassigned'}</div>
+                        <div><strong>Phone:</strong> ${booking.phoneNo || 'N/A'}</div>
+                        <div><strong>Email:</strong> ${booking.guestEmail || 'N/A'}</div>
+                    </div>
+                    <div class="box">
+                        <div class="box-title">Stay Information</div>
+                        <div><strong>Check-In:</strong> ${booking.checkIn ? new Date(booking.checkIn).toLocaleDateString('en-GB') : 'N/A'}</div>
+                        <div><strong>Check-Out:</strong> ${booking.checkOut ? new Date(booking.checkOut).toLocaleDateString('en-GB') : 'N/A'}</div>
+                        <div><strong>Nights:</strong> ${nightsCount}</div>
+                        <div><strong>Status:</strong> <span style="text-transform: uppercase; font-weight: bold;">${booking.gueststatus || 'Active'}</span></div>
+                    </div>
                 </div>
-                <div class="box">
-                    <div class="box-title">Stay Information</div>
-                    <div><strong>Check-In:</strong> ${booking.checkIn ? new Date(booking.checkIn).toLocaleDateString('en-GB') : 'N/A'}</div>
-                    <div><strong>Check-Out:</strong> ${booking.checkOut ? new Date(booking.checkOut).toLocaleDateString('en-GB') : 'N/A'}</div>
-                    <div><strong>Nights:</strong> ${nightsCount}</div>
-                    <div><strong>Status:</strong> <span style="text-transform: uppercase; font-weight: bold;">${booking.gueststatus || 'Active'}</span></div>
-                </div>
-            </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Description / Charge Item</th>
-                        <th style="text-align: right;">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${itemsRows}
-                </tbody>
-            </table>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description / Charge Item</th>
+                            <th style="text-align: right;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsRows}
+                    </tbody>
+                </table>
 
-            <div class="totals">
-                <div class="totals-row">
-                    <span>Total Charges:</span>
-                    <span>${currency} ${totalCharges.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                <div class="totals">
+                    <div class="totals-row">
+                        <span>Total Charges:</span>
+                        <span>${currency} ${totalCharges.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    </div>
+                    <div class="totals-row" style="color: #059669;">
+                        <span>Payments Received (${booking.paymentMethod || 'Cash'}):</span>
+                        <span>- ${currency} ${amountPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    </div>
+                    <div class="totals-row final">
+                        <span>BALANCE DUE:</span>
+                        <span>${currency} ${balanceDue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    </div>
                 </div>
-                <div class="totals-row" style="color: #059669;">
-                    <span>Payments Received (${booking.paymentMethod || 'Cash'}):</span>
-                    <span>- ${currency} ${amountPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                </div>
-                <div class="totals-row final">
-                    <span>BALANCE DUE:</span>
-                    <span>${currency} ${balanceDue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                </div>
-            </div>
 
-            <div class="footer">
-                <p>Thank you for choosing Novus Cloud Hotels. We hope you enjoyed your stay!</p>
-                <p>Generated via Novus Cloud PMS Framework</p>
+                <div class="footer">
+                    <p style="margin: 2px 0;">Thank you for choosing Novus Cloud Hotels. We hope you enjoyed your stay!</p>
+                    <p style="margin: 2px 0;">Generated via Novus Cloud PMS Framework</p>
+                </div>
             </div>
 
             <script>
-                window.onload = function() { window.print(); }
+                window.onload = function() { 
+                    window.focus();
+                    window.print(); 
+                }
             <\/script>
         </body>
         </html>
