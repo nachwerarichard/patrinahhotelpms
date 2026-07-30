@@ -282,46 +282,28 @@ const getHotelCurrency = () => {
     return localStorage.getItem('hotelCurrency') || 'UGX'; // Fallback default global currency code
 };
 
-async function authenticatedFetch(url, options = {}) {
-    let token = localStorage.getItem('token');
-    const params = new URLSearchParams(window.location.search);
-    
-    // 1. Wait for token logic
-    if (!token && params.get('autoLogin') === 'true') {
-        await new Promise((resolve) => {
-            let attempts = 0;
-            const interval = setInterval(() => {
-                token = localStorage.getItem('token');
-                attempts++;
-                if (token || attempts > 30) { 
-                    clearInterval(interval);
-                    resolve();
-                }
-            }, 100);
-        });
+async function generateInvoice(bookingId) {
+    try {
+        // authenticatedFetch automatically injects Bearer token & multi-tenant headers
+        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/${bookingId}`);
+
+        // If authenticatedFetch redirected to login, res will be null
+        if (!res) return;
+
+        if (!res.ok) throw new Error(`Failed to load invoice data: ${res.status}`);
+
+        const data = await res.json();
+        const booking = data.booking || data;
+        
+        generateInvoiceFromAccount(booking);
+    } catch (err) {
+        console.error("Error generating invoice:", err);
+        if (typeof showMessage === 'function') {
+            showMessage("Error", "Failed to fetch booking details for invoice generation.", true);
+        } else {
+            alert("Failed to fetch booking details for invoice generation.");
+        }
     }
-
-    if (!token) {
-        window.location.replace('https://elegant-pasca-cea136.netlify.app/frontend/login.html');
-        return null;
-    }
-
-    // 2. Start with standard headers + AUTOMATED MULTI-TENANT CURRENCY PASSTHROUGH
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'x-hotel-id': localStorage.getItem('hotelId') || 'global',
-        'x-hotel-currency': localStorage.getItem('hotelCurrency') || 'UGX', // ➔ INJECT CURRENCY HERE
-        ...options.headers 
-    };
-
-    // 3. Smart Content-Type Assignment
-    if (options.body instanceof FormData) {
-        delete headers['Content-Type']; 
-    } else if (options.body) { 
-        headers['Content-Type'] = 'application/json';
-    }
-
-    return fetch(url, { ...options, headers: headers });
 }
 
 function showMessage(title, message, isError = false) {
