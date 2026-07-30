@@ -1303,7 +1303,7 @@ async function renderBookings(page = 1, searchTerm = '') {
 
     prevPageBtn.disabled = currentPage <= 1;
     nextPageBtn.disabled = currentPage >= totalPages;
-    pageInfoSpan.textContent = `Page ${totalCount === 0 ? 0 : currentPage} of ${totalPages}`;
+    pageInfoSpan.textContent = `Page ${totalPages}`;
 }
 
 // 1. Trigger function attached to the UI button
