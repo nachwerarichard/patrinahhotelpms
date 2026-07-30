@@ -1215,14 +1215,15 @@ async function renderBookings(page = 1, searchTerm = '') {
             ${(booking.gueststatus === 'confirmed' || booking.gueststatus === 'reserved') ? `<button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">Check In</button>` : ''}
             ${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')"><i class="fa-solid ${booking.gueststatus === 'checkedin' ? 'fa-arrows-rotate' : 'fa-door-open'} mr-1"></i> ${booking.gueststatus === 'checkedin' ? 'Move Room' : 'Assign Room'}</button>` : ''}
             ${booking.balance > 0 && booking.gueststatus !== 'cancelled' ? `<button class="${baseBtn} bg-green-600 hover:bg-green-700 mt-1" onclick="openAddPaymentModal('${booking.id}', ${booking.balance})"><i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment</button>` : ''}
-${booking.amountPaid > 0 ? `
+            <button class="${baseBtn} bg-teal-600 hover:bg-teal-700 mt-1" onclick="generateInvoice('${booking.id}')"><i class="fas fa-file-invoice-dollar mr-1"></i> Folio / Invoice</button>
+
+            ${booking.amountPaid > 0 ? `
   <button class="${baseBtn} bg-orange-500 hover:bg-orange-600 mt-1" 
           onclick="printGuestReceipt('${booking.id}')">
     <i class="fas fa-print mr-1"></i> Print Receipt
   </button>
 ` : ''}            
             <!-- NEW: INVOICE / GUEST FOLIO BUTTON -->
-            <button class="${baseBtn} bg-teal-600 hover:bg-teal-700 mt-1" onclick="generateInvoice('${booking.id}')"><i class="fas fa-file-invoice-dollar mr-1"></i> Folio / Invoice</button>
             
             ${booking.gueststatus === 'checkedin' && booking.paymentStatus === 'Paid' && booking.balance === 0 ? `<button class="${baseBtn} bg-amber-500 hover:bg-amber-600 mt-1" onclick="checkoutBooking('${booking.id}')"><i class="fa-solid fa-right-from-bracket mr-1"></i> Check-out</button>` : ''}
             ${booking.gueststatus === 'reserved' ? `<button class="${baseBtn} bg-gray-500 hover:bg-gray-600" onclick="Confirm('${booking.id}')">Confirm</button>` : ''}
@@ -2914,7 +2915,7 @@ async function printGuestReceipt(bookingCustomId) {
     try {
         // 1. Parallel Fetching for performance
         const [bRes, cRes] = await Promise.all([
-            authenticatedFetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}`),
+            authenticatedFetch(`${API_BASE_URL}/booking/id/${bookingCustomId}`),
             authenticatedFetch(`${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`)
         ]);
 
@@ -2924,111 +2925,193 @@ async function printGuestReceipt(bookingCustomId) {
         const booking = await bRes.json();
         const incidentalCharges = await cRes.json();
 
-        // Safely retrieve DOM elements to avoid null reference crashes
-        const getEl = (id) => document.getElementById(id);
-
-        /* ---------- UI POPULATION: GUEST & STAY METADATA ---------- */
-        if (getEl('receiptGuestName')) getEl('receiptGuestName').textContent = booking.name || 'Valued Guest';
-        if (getEl('receiptRoomNumber')) getEl('receiptRoomNumber').textContent = booking.room || 'Unassigned';
-        if (getEl('receiptBookingId')) getEl('receiptBookingId').textContent = booking.id || bookingCustomId;
-        
+        /* ---------- DATA FORMATTING & CALCULATIONS ---------- */
         const checkInFormatted = booking.checkIn ? new Date(booking.checkIn).toLocaleDateString('en-US') : '-';
         const checkOutFormatted = booking.checkOut ? new Date(booking.checkOut).toLocaleDateString('en-US') : '-';
+        const printDateFormatted = new Date().toLocaleDateString('en-US', { 
+            year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+        });
 
-        if (getEl('receiptCheckIn')) getEl('receiptCheckIn').textContent = checkInFormatted;
-        if (getEl('receiptCheckOut')) getEl('receiptCheckOut').textContent = checkOutFormatted;
-        if (getEl('receiptStayDateRange')) getEl('receiptStayDateRange').textContent = `${checkInFormatted} - ${checkOutFormatted}`;
-        
-        if (getEl('receiptPrintDate')) {
-            getEl('receiptPrintDate').textContent = new Date().toLocaleDateString('en-US', { 
-                year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-            });
-        }
-
-        if (getEl('receiptNights')) getEl('receiptNights').textContent = booking.nights || 1;
-        
+        const nightsCount = booking.nights || 1;
         const roomTotalDue = Number(booking.totalDue || 0);
-        if (getEl('receiptRoomTotalDue')) getEl('receiptRoomTotalDue').textContent = roomTotalDue.toLocaleString(undefined, { minimumFractionDigits: 2 });
 
-        /* ---------- INCIDENTALS & COMBINED TRANSACTIONS LEDGER ---------- */
-        const tableBody = getEl('receiptIncidentalChargesTableBody');
         let totalIncidentalAmount = 0;
         let paidAtPOSAmount = 0;
 
-        if (tableBody) {
-            // Re-insert base room accommodation row
-            tableBody.innerHTML = `
-                <tr>
-                    <td class="py-3 px-3">${checkInFormatted} - ${checkOutFormatted}</td>
-                    <td class="py-3 px-3">Room Stay Accommodation Charge (${booking.nights || 1} night/s)</td>
-                    <td class="py-3 px-3 text-right font-medium">${roomTotalDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                    <td class="py-3 px-3 text-right text-emerald-600 font-medium">-</td>
-                </tr>
-            `;
+        let tableRowsHtml = `
+            <tr class="border-b border-slate-200 text-slate-700">
+                <td class="py-3 px-3">${checkInFormatted} - ${checkOutFormatted}</td>
+                <td class="py-3 px-3">Room Stay Accommodation Charge (${nightsCount} night/s)</td>
+                <td class="py-3 px-3 text-right font-medium">${roomTotalDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                <td class="py-3 px-3 text-right text-emerald-600 font-medium">-</td>
+            </tr>
+        `;
 
-            if (incidentalCharges && incidentalCharges.length > 0) {
-                incidentalCharges.forEach(charge => {
-                    const amount = Number(charge.amount) || 0;
-                    totalIncidentalAmount += amount;
+        if (incidentalCharges && incidentalCharges.length > 0) {
+            incidentalCharges.forEach(charge => {
+                const amount = Number(charge.amount) || 0;
+                totalIncidentalAmount += amount;
 
-                    if (charge.isPaid) {
-                        paidAtPOSAmount += amount;
-                    }
+                if (charge.isPaid) {
+                    paidAtPOSAmount += amount;
+                }
 
-                    const row = tableBody.insertRow();
-                    row.className = "hover:bg-slate-50 border-b border-slate-100";
-                    row.innerHTML = `
+                tableRowsHtml += `
+                    <tr class="border-b border-slate-100 text-slate-700">
                         <td class="py-2.5 px-3">${charge.date ? new Date(charge.date).toLocaleDateString('en-US') : '-'}</td>
                         <td class="py-2.5 px-3">${charge.type || 'Incidental'} - ${charge.description || '-'} ${charge.isPaid ? '<small class="text-emerald-600 font-semibold">(Paid POS)</small>' : ''}</td>
                         <td class="py-2.5 px-3 text-right font-medium">${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                         <td class="py-2.5 px-3 text-right text-emerald-600 font-medium">${charge.isPaid ? amount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                    `;
-                });
-            }
+                    </tr>
+                `;
+            });
         }
 
-        /* ---------- TOTALS & TAX CALCULATIONS ---------- */
         const roomSubtotal = roomTotalDue;
         const totalBill = roomSubtotal + totalIncidentalAmount;
         const rawPayments = parseFloat(booking.amountPaid) || 0;
         const totalAmountPaid = rawPayments + paidAtPOSAmount;
         const finalBalanceDue = totalBill - totalAmountPaid;
 
-        // VAT / Net Calculations (Assumes 18% standard VAT)
         const netSubtotal = totalBill / 1.18;
         const vatAmount = totalBill - netSubtotal;
 
-        if (getEl('receiptSubtotalExclTax')) getEl('receiptSubtotalExclTax').textContent = netSubtotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
-        if (getEl('receiptTaxAmount')) getEl('receiptTaxAmount').textContent = vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 });
-        if (getEl('receiptTotalBill')) getEl('receiptTotalBill').textContent = totalBill.toLocaleString(undefined, { minimumFractionDigits: 2 });
-        if (getEl('receiptAmountPaid')) getEl('receiptAmountPaid').textContent = totalAmountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        const balanceFormatted = finalBalanceDue < 0 
+            ? `REFUND: ${Math.abs(finalBalanceDue).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+            : finalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 });
 
-        // Format balance display & payment status badge
-        const statusEl = getEl('receiptPaymentStatus');
-        const balanceEl = getEl('receiptBalanceDue');
+        const statusText = finalBalanceDue <= 0 ? 'SETTLED / PAID' : `OPEN BALANCE (${balanceFormatted})`;
+        const statusClass = finalBalanceDue <= 0 ? 'font-bold uppercase text-emerald-600' : 'font-bold uppercase text-rose-600';
 
-        if (balanceEl) {
-            balanceEl.textContent = finalBalanceDue < 0 
-                ? `REFUND: ${Math.abs(finalBalanceDue).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-                : finalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 });
-        }
+        /* ---------- CREATE/REUSE INVISIBLE PRINT IFRAME ---------- */
+        let printFrame = document.getElementById('receiptPrintIframe');
+        if (printFrame) printFrame.remove();
 
-        if (statusEl) {
-            if (finalBalanceDue <= 0) {
-                statusEl.textContent = 'SETTLED / PAID';
-                statusEl.className = 'font-bold uppercase text-emerald-600';
-            } else {
-                statusEl.textContent = `OPEN BALANCE (${finalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })})`;
-                statusEl.className = 'font-bold uppercase text-rose-600';
-            }
-        }
+        printFrame = document.createElement('iframe');
+        printFrame.id = 'receiptPrintIframe';
+        printFrame.style.position = 'fixed';
+        printFrame.style.right = '0';
+        printFrame.style.bottom = '0';
+        printFrame.style.width = '0px';
+        printFrame.style.height = '0px';
+        printFrame.style.border = 'none';
+        document.body.appendChild(printFrame);
 
-        /* ---------- DISPLAY MODAL ---------- */
-        const modal = getEl('receiptModal');
-        if (modal) {
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
-        }
+        const frameDoc = printFrame.contentWindow.document;
+
+        /* ---------- INJECT EXACT HTML DESIGN + TAILWIND ---------- */
+        frameDoc.open();
+        frameDoc.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Print Receipt - ${booking.id || bookingCustomId}</title>
+                <script src="https://cdn.tailwindcss.com"><\/script>
+                <style>
+                    @page { margin: 15mm; size: auto; }
+                    body { background: #ffffff !important; }
+                </style>
+            </head>
+            <body class="p-4 bg-white">
+                <div class="bg-white p-4 w-full">
+                    
+                    <!-- 1. HOTEL BRANDING & INVOICE HEADER -->
+                    <div class="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-6">
+                        <div>
+                            <h2 class="text-2xl font-black tracking-tight text-slate-900 uppercase">NOVUS CLOUD HOTELS</h2>
+                            <p class="text-xs text-slate-500 mt-1">123 Hospitality Blvd, Suite 100</p>
+                            <p class="text-xs text-slate-500">TIN / Tax ID: <span>1002938481</span></p>
+                        </div>
+                        <div class="text-right">
+                            <h3 class="text-xl font-bold text-sky-600 uppercase tracking-wide">Tax Invoice / Folio</h3>
+                            <p class="text-xs text-slate-500 mt-1"><strong>Invoice #:</strong> <span>${booking.id || bookingCustomId}</span></p>
+                            <p class="text-xs text-slate-500"><strong>Issue Date:</strong> <span>${printDateFormatted}</span></p>
+                        </div>
+                    </div>
+
+                    <!-- 2. GUEST & RESERVATION METADATA GRID -->
+                    <div class="grid grid-cols-2 gap-4 mb-6 text-xs text-slate-700">
+                        <div class="p-4 rounded-md border border-slate-300">
+                            <h4 class="font-bold text-slate-400 uppercase text-[10px] mb-2 tracking-wider">Guest Information</h4>
+                            <p class="text-sm font-semibold text-slate-900">${booking.name || 'Valued Guest'}</p>
+                            <p><strong>Room / Unit:</strong> ${booking.room || 'Unassigned'}</p>
+                        </div>
+                        <div class="p-4 rounded-md border border-slate-300">
+                            <h4 class="font-bold text-slate-400 uppercase text-[10px] mb-2 tracking-wider">Stay Information</h4>
+                            <p><strong>Check-In:</strong> ${checkInFormatted}</p>
+                            <p><strong>Check-Out:</strong> ${checkOutFormatted}</p>
+                            <p><strong>Nights:</strong> ${nightsCount}</p>
+                        </div>
+                    </div>
+
+                    <!-- 3. COMPREHENSIVE FOLIO LEDGER TABLE -->
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Itemized Folio Transactions</h4>
+                    <table class="w-full text-left text-xs mb-6 border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-300 text-slate-600 uppercase text-[10px] tracking-wider">
+                                <th class="py-2.5 px-3">Date</th>
+                                <th class="py-2.5 px-3">Transaction Description</th>
+                                <th class="py-2.5 px-3 text-right">Charges (+)</th>
+                                <th class="py-2.5 px-3 text-right">Payments (-)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 text-slate-700">
+                            ${tableRowsHtml}
+                        </tbody>
+                    </table>
+
+                    <!-- 4. TOTALS & TAX BREAKDOWN BLOCK -->
+                    <div class="flex justify-end">
+                        <div class="w-72 space-y-1.5 text-xs text-slate-600 border-t border-slate-300 pt-3">
+                            
+                            <div class="flex justify-between">
+                                <span>Net Subtotal (Excl. Tax):</span>
+                                <span>${netSubtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            
+                            <div class="flex justify-between">
+                                <span>VAT / Sales Tax (18%):</span>
+                                <span>${vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            </div>
+
+                            <div class="flex justify-between font-bold text-slate-900 border-t border-slate-200 pt-2">
+                                <span>Total Folio Charges:</span>
+                                <span>${totalBill.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            </div>
+
+                            <div class="flex justify-between text-emerald-600 font-medium">
+                                <span>Total Payments Received:</span>
+                                <span>- <span>${totalAmountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></span>
+                            </div>
+
+                            <div class="flex justify-between text-sm font-extrabold text-slate-900 border-b-2 border-t-2 border-slate-900 py-2 mt-2">
+                                <span>BALANCE DUE:</span>
+                                <span>${balanceFormatted}</span>
+                            </div>
+
+                            <p class="text-right text-[10px] text-slate-400 pt-2">
+                                Status: <span class="${statusClass}">${statusText}</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 5. LEGAL FOOTER -->
+                    <div class="mt-12 pt-6 border-t border-slate-200 text-center text-[10px] text-slate-400">
+                        <p>Thank you for choosing Novus Cloud Hotels!</p>
+                        <p class="mt-1">Official Tax Document • System Generated via Novus PMS</p>
+                    </div>
+
+                </div>
+            </body>
+            </html>
+        `);
+        frameDoc.close();
+
+        // Give Tailwind dynamic CSS compiler ~300ms to build utility classes inside iframe
+        setTimeout(() => {
+            printFrame.contentWindow.focus();
+            printFrame.contentWindow.print();
+        }, 300);
 
     } catch (error) {
         console.error('Receipt Error:', error);
