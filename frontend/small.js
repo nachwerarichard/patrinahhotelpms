@@ -189,9 +189,11 @@ const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn
         const role = urlParams.get('r');
         const hotelId = urlParams.get('h');
         const hotelName = urlParams.get('n');
+        const hotelLocation = urlParams.get('l'); // 📍 EXTRACT LOCATION PARAMETER 'l'
         const hotelCurrency = urlParams.get('c'); 
 
-        // 🔍 HOOK DEBUG 1: Verify URL extraction before variables are used
+        // 🔍 HOOK DEBUG 1: Verify URL extraction
+        console.log("📥 Extracted location string ('l') directly from URL:", hotelLocation);
         console.log("📥 Extracted currency string ('c') directly from URL:", hotelCurrency);
 
         if (token && user) {
@@ -201,6 +203,7 @@ const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn
             localStorage.setItem('userRole', role);
             localStorage.setItem('hotelId', hotelId || 'global');
             localStorage.setItem('hotelName', hotelName || 'global');
+            localStorage.setItem('hotelLocation', hotelLocation || 'Main Campus'); // 📍 SAVE TO STORAGE
             localStorage.setItem('hotelCurrency', hotelCurrency || 'UGX'); 
 
             // Re-create the loggedInUser object if your other scripts need it
@@ -210,11 +213,13 @@ const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn
                 token: token,
                 hotelName: hotelName,
                 hotelId: hotelId || 'global',
+                hotelLocation: hotelLocation || 'Main Campus', // 📍 ADD TO USER OBJECT
                 hotelCurrency: hotelCurrency || 'UGX'
             };
             localStorage.setItem('loggedInUser', JSON.stringify(targetUserObject));
 
-            // 🔍 HOOK DEBUG 2: Verify exactly what was committed to browser storage
+            // 🔍 HOOK DEBUG 2: Verify storage commit
+            console.log("💾 Storage Key 'hotelLocation' value:", localStorage.getItem('hotelLocation'));
             console.log("💾 Storage Key 'hotelCurrency' value:", localStorage.getItem('hotelCurrency'));
             console.log("💾 Storage Key 'loggedInUser' complete parsed contents:", JSON.parse(localStorage.getItem('loggedInUser')));
 
@@ -2911,6 +2916,12 @@ async function printGuestReceipt(bookingCustomId) {
         const booking = await bRes.json();
         const incidentalCharges = await cRes.json();
 
+        /* ---------- DYNAMIC HOTEL METADATA ---------- */
+        // Fallback hierarchy: localStorage -> populated booking object -> default string
+        const userObj = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+        const hotelName = userObj.hotelName || localStorage.getItem('hotelName') || booking.hotelId?.name || 'Hotel Guest Receipt';
+        const hotelLocation = userObj.hotelLocation || localStorage.getItem('hotelLocation') || booking.hotelId?.location || 'Main Campus';
+
         /* ---------- DATA FORMATTING & CALCULATIONS ---------- */
         const checkInFormatted = booking.checkIn ? new Date(booking.checkIn).toLocaleDateString('en-US') : '-';
         const checkOutFormatted = booking.checkOut ? new Date(booking.checkOut).toLocaleDateString('en-US') : '-';
@@ -2959,9 +2970,6 @@ async function printGuestReceipt(bookingCustomId) {
         const totalAmountPaid = rawPayments + paidAtPOSAmount;
         const finalBalanceDue = totalBill - totalAmountPaid;
 
-        const netSubtotal = totalBill / 1.18;
-        const vatAmount = totalBill - netSubtotal;
-
         const balanceFormatted = finalBalanceDue < 0 
             ? `REFUND: ${Math.abs(finalBalanceDue).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
             : finalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 });
@@ -2985,31 +2993,37 @@ async function printGuestReceipt(bookingCustomId) {
 
         const frameDoc = printFrame.contentWindow.document;
 
-        /* ---------- INJECT EXACT HTML DESIGN + TAILWIND ---------- */
+        /* ---------- INJECT HTML DESIGN ---------- */
         frameDoc.open();
         frameDoc.write(`
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Print Receipt - ${booking.id || bookingCustomId}</title>
+                <title></title> <!-- Empty title prevents document title printing at top -->
                 <script src="https://cdn.tailwindcss.com"><\/script>
                 <style>
-                    @page { margin: 15mm; size: auto; }
-                    body { background: #ffffff !important; }
+                    /* Suppress default browser header (title) and footer (URL/date) */
+                    @page { 
+                        margin: 0; 
+                        size: auto; 
+                    }
+                    body { 
+                        background: #ffffff !important; 
+                        padding: 15mm; 
+                    }
                 </style>
             </head>
-            <body class="p-4 bg-white">
-                <div class="bg-white p-4 w-full">
+            <body class="bg-white">
+                <div class="bg-white w-full">
                     
                     <!-- 1. HOTEL BRANDING & INVOICE HEADER -->
                     <div class="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-6">
                         <div>
-                            <h2 class="text-2xl font-black tracking-tight text-slate-900 uppercase">NOVUS CLOUD HOTELS</h2>
-                            <p class="text-xs text-slate-500 mt-1">123 Hospitality Blvd, Suite 100</p>
-                            <p class="text-xs text-slate-500">TIN / Tax ID: <span>1002938481</span></p>
+                            <h2 class="text-2xl font-black tracking-tight text-slate-900 uppercase">${hotelName}</h2>
+                            <p class="text-xs text-slate-500 mt-1">${hotelLocation}</p>
                         </div>
                         <div class="text-right">
-                            <h3 class="text-xl font-bold text-sky-600 uppercase tracking-wide">Tax Invoice / Folio</h3>
+                            <h3 class="text-xl font-bold text-sky-600 uppercase tracking-wide">Guest Folio / Receipt</h3>
                             <p class="text-xs text-slate-500 mt-1"><strong>Invoice #:</strong> <span>${booking.id || bookingCustomId}</span></p>
                             <p class="text-xs text-slate-500"><strong>Issue Date:</strong> <span>${printDateFormatted}</span></p>
                         </div>
@@ -3046,22 +3060,12 @@ async function printGuestReceipt(bookingCustomId) {
                         </tbody>
                     </table>
 
-                    <!-- 4. TOTALS & TAX BREAKDOWN BLOCK -->
+                    <!-- 4. TOTALS BLOCK (NO TAX) -->
                     <div class="flex justify-end">
                         <div class="w-72 space-y-1.5 text-xs text-slate-600 border-t border-slate-300 pt-3">
                             
-                            <div class="flex justify-between">
-                                <span>Net Subtotal (Excl. Tax):</span>
-                                <span>${netSubtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                            </div>
-                            
-                            <div class="flex justify-between">
-                                <span>VAT / Sales Tax (18%):</span>
-                                <span>${vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                            </div>
-
                             <div class="flex justify-between font-bold text-slate-900 border-t border-slate-200 pt-2">
-                                <span>Total Folio Charges:</span>
+                                <span>Total Charges:</span>
                                 <span>${totalBill.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
 
@@ -3081,10 +3085,10 @@ async function printGuestReceipt(bookingCustomId) {
                         </div>
                     </div>
 
-                    <!-- 5. LEGAL FOOTER -->
+                    <!-- 5. FOOTER -->
                     <div class="mt-12 pt-6 border-t border-slate-200 text-center text-[10px] text-slate-400">
-                        <p>Thank you for choosing Novus Cloud Hotels!</p>
-                        <p class="mt-1">Official Tax Document • System Generated via Novus PMS</p>
+                        <p>Thank you for staying with us!</p>
+                        <p class="mt-1">Official Document • System Generated</p>
                     </div>
 
                 </div>
@@ -3093,7 +3097,7 @@ async function printGuestReceipt(bookingCustomId) {
         `);
         frameDoc.close();
 
-        // Give Tailwind dynamic CSS compiler ~300ms to build utility classes inside iframe
+        // Give Tailwind dynamic CSS compiler time to compute classes inside iframe
         setTimeout(() => {
             printFrame.contentWindow.focus();
             printFrame.contentWindow.print();
@@ -6296,7 +6300,7 @@ const settleAccount = async (method, accountId, phone = '') => {
         
             resetUI();
         } else {
-            showMessage('Success', 'Bill settled completely! 💵✅', false);
+            //showMessage('Success', 'Bill settled completely! 💵✅', false);
             printReceipt(currentActiveAccountData, method, data);
             resetUI();
             if (typeof activeAccountId !== 'undefined') { activeAccountId = null; }

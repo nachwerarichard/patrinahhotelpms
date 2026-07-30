@@ -1849,10 +1849,9 @@ app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        // 1. Find user (don't worry if populate fails for super-admin)
+        // 1. Find user (populated with hotelId details)
         const user = await User.findOne({ username }).populate('hotelId');
         
-        // 🔍 BACKEND DEBUG 1: Did we find a user? What does the raw hotelId object look like?
         console.log("==================== LOGIN DEBUG START ====================");
         console.log(`👤 User attempting login: ${username}`);
         if (!user) {
@@ -1862,7 +1861,7 @@ app.post('/api/login', async (req, res) => {
             console.log("🏢 Populated 'hotelId' document field contents:", JSON.stringify(user.hotelId, null, 2));
         }
 
-        // 2. Validate existence and password (Plain text as per your current setup)
+        // 2. Validate credentials
         if (!user || user.password !== password) {
             console.log("❌ LOGIN FAILURE: Invalid credentials provided.");
             console.log("===================== LOGIN DEBUG END =====================");
@@ -1872,26 +1871,20 @@ app.post('/api/login', async (req, res) => {
         // 3. Setup Identity Variables
         const isSuperAdmin = user.role === 'super-admin';
         
-        // Safely extract IDs (Super admin won't have a hotelId)
         const hotelId = user.hotelId?._id || user.hotelId || null;
         const hotelName = user.hotelId?.name || (isSuperAdmin ? 'Global Administration' : 'Unknown Hotel');
 
-        // 🌍 Extract currency directly from the populated hotel object data field
+        // 📍 Extract Location & 🌍 Currency
+        const hotelLocation = user.hotelId?.location || 'Main Campus';
         const hotelCurrency = user.hotelId?.hotelCurrency;
-
-        // 🔍 BACKEND DEBUG 2: Check the exact fallback behavior
-        console.log(`🔍 DEBUG: Raw user.hotelId?.hotelCurrency reads as: "${hotelCurrency}"`);
-        
         const finalCurrency = hotelCurrency || 'UGX';
-        console.log(`🌍 DEBUG: Final currency falling back to: "${finalCurrency}"`);
 
         // 4. Token Generation
         const authToken = Buffer.from(`${username}:${password}`).toString('base64');
 
-        // 5. Audit Logging (CRITICAL: Guard this to prevent 500 errors)
+        // 5. Audit Logging
         if (!isSuperAdmin) {
             try {
-                // Only attempt to log if the function exists and hotelId is present
                 if (typeof addAuditLog === 'function' && hotelId) {
                     await addAuditLog('User Logged In', user.username, hotelId, { role: user.role });
                 }
@@ -1900,7 +1893,7 @@ app.post('/api/login', async (req, res) => {
             }
         }
 
-        // 🔍 BACKEND DEBUG 3: Exactly what payload is being transmitted to the client?
+        // 6. Response Payload with hotelLocation included
         const responsePayload = { 
             token: authToken, 
             user: { 
@@ -1908,13 +1901,13 @@ app.post('/api/login', async (req, res) => {
                 role: user.role, 
                 hotelId: hotelId, 
                 hotelName: hotelName,
-                hotelCurrency: finalCurrency // 🌍 Sent directly to frontend
+                hotelLocation: hotelLocation, // 📍 Added location field
+                hotelCurrency: finalCurrency 
             } 
         };
         console.log("🚀 SENDING RESPONSE PAYLOAD TO FRONTEND:", JSON.stringify(responsePayload, null, 2));
         console.log("===================== LOGIN DEBUG END =====================");
 
-        // 6. Response (Matches what your frontend expects)
         res.status(200).json(responsePayload);
 
     } catch (error) {
