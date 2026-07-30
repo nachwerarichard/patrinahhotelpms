@@ -6363,6 +6363,7 @@ const updateActiveAccountUI = (account) => {
 const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
     if (!accountData) return;
 
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : '';
     const charges = accountData.charges || [];
     
     // Calculate total accounting for quantity if present
@@ -6372,7 +6373,7 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
         return sum + (price * qty);
     }, 0);
 
-    const receiptDate = new Date().toLocaleString();
+    const receiptDate = new Date().toLocaleString('en-GB');
     const receiptNumber = accountData.receiptNumber || accountData._id || accountData.id || `POS-${Date.now().toString().slice(-6)}`;
 
     // Generate POS item lines with quantity & unit price
@@ -6384,12 +6385,12 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
 
         return `
             <tr>
-                <td style="padding: 3px 0; text-align: left; vertical-align: top;">
+                <td style="width: 65%; padding: 4px 0; text-align: left; vertical-align: top; word-break: break-word;">
                     <div>${itemName}</div>
-                    ${qty > 1 ? `<div style="font-size: 10px; color: #444;">${qty} x ${unitPrice.toFixed(2)}</div>` : ''}
+                    ${qty > 1 ? `<div style="font-size: 10px; color: #555;">${qty} x ${unitPrice.toLocaleString(undefined, { minimumFractionDigits: 0 })}</div>` : ''}
                 </td>
-                <td style="padding: 3px 0; text-align: right; vertical-align: top; font-weight: bold;">
-                    ${itemTotal.toFixed(2)}
+                <td style="width: 35%; padding: 4px 0; text-align: right; vertical-align: top; font-weight: bold; white-space: nowrap;">
+                    ${itemTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                 </td>
             </tr>
         `;
@@ -6402,82 +6403,93 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
             <title>Receipt - ${receiptNumber}</title>
             <style>
                 @page {
-                    size: auto;
-                    margin: 0mm; /* Eliminates blank space header/footers on thermal paper */
+                    size: 80mm auto; /* Standard Thermal Roll Width */
+                    margin: 0;
+                }
+                * {
+                    box-sizing: border-box;
                 }
                 html, body {
                     width: 100%;
                     margin: 0;
-                    padding: 4px 6px;
+                    padding: 0;
+                    background: #fff;
                     font-family: 'Courier New', Courier, monospace;
                     font-size: 12px;
                     color: #000;
-                    background: #fff;
+                }
+                .receipt-container {
+                    width: 76mm; /* Keeps content strictly inside 80mm printable boundary */
+                    margin: 0 auto;
+                    padding: 8px 4px;
                 }
                 .text-center { text-align: center; }
                 .text-right { text-align: right; }
                 .bold { font-weight: bold; }
                 .divider { border-top: 1px dashed #000; margin: 6px 0; }
-                table { width: 100%; border-collapse: collapse; }
+                table { width: 100%; border-collapse: collapse; table-layout: fixed; }
                 th { border-bottom: 1px solid #000; padding-bottom: 4px; font-size: 11px; }
             </style>
         </head>
         <body>
-            <!-- BRAND HEADER -->
-            <div class="text-center bold" style="font-size: 15px;">NOVUS POS</div>
-            <div class="text-center" style="font-size: 10px;">RECEIPT #${receiptNumber}</div>
-            <div class="text-center" style="font-size: 10px; margin-bottom: 4px;">${receiptDate}</div>
-            
-            <div class="divider"></div>
-            
-            <!-- TRANSACTION DETAILS -->
-            <div style="font-size: 11px;">
-                <div><strong>Server/Op:</strong> ${settlementInfo.cashierName || 'POS Station 1'}</div>
-                <div><strong>Guest:</strong> ${accountData.guestName || 'Walk-In'}</div>
-                ${accountData.roomNumber ? `<div><strong>Room #:</strong> ${accountData.roomNumber}</div>` : ''}
-                <div><strong>Payment:</strong> ${paymentMethod || 'Cash'}</div>
-            </div>
-            
-            <div class="divider"></div>
-            
-            <!-- ITEMIZED ITEMS TABLE -->
-            <table>
-                <thead>
-                    <tr>
-                        <th style="text-align: left;">QTY / ITEM</th>
-                        <th style="text-align: right;">AMT</th>
+            <div class="receipt-container">
+                <!-- BRAND HEADER -->
+                <div class="text-center bold" style="font-size: 15px;">NOVUS POS</div>
+                <div class="text-center" style="font-size: 10px;">RECEIPT #${receiptNumber}</div>
+                <div class="text-center" style="font-size: 10px; margin-bottom: 4px;">${receiptDate}</div>
+                
+                <div class="divider"></div>
+                
+                <!-- TRANSACTION DETAILS -->
+                <div style="font-size: 11px;">
+                    <div><strong>Server/Op:</strong> ${settlementInfo.cashierName || 'POS Station 1'}</div>
+                    <div><strong>Guest:</strong> ${accountData.guestName || 'Walk-In'}</div>
+                    ${accountData.roomNumber ? `<div><strong>Room #:</strong> ${accountData.roomNumber}</div>` : ''}
+                    <div><strong>Payment:</strong> ${paymentMethod || 'Cash'}</div>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <!-- ITEMIZED ITEMS TABLE -->
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 65%; text-align: left;">QTY / ITEM</th>
+                            <th style="width: 35%; text-align: right;">AMT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsHtml || '<tr><td colspan="2" class="text-center">No charges</td></tr>'}
+                    </tbody>
+                </table>
+                
+                <div class="divider"></div>
+                
+                <!-- TOTALS -->
+                <table>
+                    <tr class="bold">
+                        <td style="width: 55%; font-size: 13px;">TOTAL DUE:</td>
+                        <td style="width: 45%; font-size: 13px; text-align: right; white-space: nowrap;">
+                            ${currency} ${total.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    ${itemsHtml || '<tr><td colspan="2" class="text-center">No charges</td></tr>'}
-                </tbody>
-            </table>
-            
-            <div class="divider"></div>
-            
-            <!-- TOTALS -->
-            <table>
-                <tr class="bold">
-                    <td style="font-size: 13px;">TOTAL DUE:</td>
-                    <td class="text-right" style="font-size: 13px;">${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                </tr>
-            </table>
-            
-            <div class="divider"></div>
-            
-            <!-- FOOTER & CUT PADDING -->
-            <div class="text-center" style="margin-top: 10px; font-size: 10px;">
-                Thank you for visiting!<br>
-                Please retain for your records.
+                </table>
+                
+                <div class="divider"></div>
+                
+                <!-- FOOTER -->
+                <div class="text-center" style="margin-top: 10px; font-size: 10px;">
+                    Thank you for visiting!<br>
+                    Please retain for your records.
+                </div>
+                
+                <div style="height: 25px;"></div>
             </div>
-            
-            <!-- Extra blank spacing for auto-cutter clearance on thermal printers -->
-            <div style="height: 30px;"></div>
         </body>
         </html>
     `;
 
-    // Print using an invisible iframe
+    // Print using invisible iframe
     const printFrame = document.createElement('iframe');
     printFrame.style.position = 'fixed';
     printFrame.style.right = '0';
@@ -6493,7 +6505,6 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
     frameDoc.write(receiptHtml);
     frameDoc.close();
 
-    // Trigger print safely once content is loaded
     printFrame.onload = () => {
         try {
             printFrame.contentWindow.focus();
@@ -6501,7 +6512,6 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
         } catch (e) {
             console.error('Printing error:', e);
         } finally {
-            // Clean up frame after print dialog finishes
             setTimeout(() => {
                 if (document.body.contains(printFrame)) {
                     document.body.removeChild(printFrame);
