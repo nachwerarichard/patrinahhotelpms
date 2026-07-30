@@ -1163,7 +1163,7 @@ async function renderBookings(page = 1, searchTerm = '') {
         if(mobileGrid) mobileGrid.innerHTML = errorMsg;
         prevPageBtn.disabled = true;
         nextPageBtn.disabled = true;
-        pageInfoSpan.textContent = 'Page  0';
+        pageInfoSpan.textContent = 'Page  1';
         return;
     }
 
