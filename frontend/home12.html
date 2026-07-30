@@ -101,76 +101,94 @@
     position: relative;
     overflow: visible !important;
 }
-    @media print {
-    /* 1. Hide everything you don't want on paper */
-    nav, .sidebar, .filter-section, button, .no-print {
+
+/* ===============================================================
+   UNIFIED PRINT STYLESHEET (Reports & Guest Receipt/Folio Modal)
+   =============================================================== */
+
+@media print {
+    /* 1. Page Margins (Use standard 1cm - 1.5cm margins for A4) */
+    @page {
+        size: A4 portrait;
+        margin: 1.2cm; /* Safe margin so no content gets clipped at page edges */
+    }
+
+    /* 2. Global Document Reset */
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Force background colors, badges, and borders on all printers */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* 3. Hide Unnecessary UI Components (Navigation, Sidebar, Controls) */
+    nav, 
+    header,
+    aside,
+    .sidebar, 
+    .filter-section, 
+    button, 
+    .no-print, 
+    #receiptModal button, 
+    #receiptModal .close-btn, 
+    .modal-footer {
         display: none !important;
     }
 
-    /* 2. Ensure the table takes up the full page width */
-    body {
-        background: white;
-        padding: 0;
-        margin: 0;
-    }
-
+    /* 4. Full Page Reports Styling */
     .report-container {
-        width: 100%;
-        box-shadow: none;
-        padding: 0;
+        width: 100% !important;
+        box-shadow: none !important;
+        padding: 0 !important;
     }
 
+    /* 5. General Table Layout & Page Break Protections */
     table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 10pt; /* Smaller font for printing */
+        width: 100% !important;
+        border-collapse: collapse !important;
+        break-inside: auto;
     }
 
-    th, td {
-        border: 1px solid #ddd !important; /* Force borders to show on print */
-        padding: 8px;
+    /* Preserve structural page breaks */
+    h4, .totals, tr {
+        break-inside: avoid;
     }
 
-    /* 3. Keep summary cards visible but style them for black & white printers */
-    .summary-card {
-        border: 1px solid #000;
-        margin-bottom: 20px;
-    }
-}
-    @media print {
-    /* Hide everything except the receipt modal */
-    body * {
-        visibility: hidden;
-    }
-    #receiptModal, #receiptModal * {
-        visibility: visible;
-    }
-    #receiptModal {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        background: white !important;
-        display: block !important;
-    }
-    /* Reset scrollable containers so all content shows */
-    .max-h-\[90vh\] {
+    /* Unlock scrollable Tailwind containers so content isn't truncated */
+    .max-h-\[90vh\], 
+    .overflow-y-auto {
         max-height: none !important;
         overflow: visible !important;
     }
-    .overflow-y-auto {
-        overflow: visible !important;
+
+    /* 6. Receipt Modal Isolation & Formatting */
+    #receiptModal {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        display: block !important;
+        box-shadow: none !important;
+        border: none !important;
+        /* Keep modern sans-serif fonts for professional A4 invoices */
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+        line-height: 1.4 !important;
     }
-    /* Avoid cutting text/tables in half */
-    h4, .flex.flex-col.items-end {
-        break-inside: avoid;
-    }
-    table {
-        break-inside: auto;
-    }
-    tr {
-        break-inside: avoid;
-        break-after: auto;
+
+    /* Clean border styling inside modal */
+    #receiptModal table {
+        width: 100% !important;
+        border-collapse: collapse !important;
     }
 }
 
@@ -3663,97 +3681,8 @@ Add Guest Details            </h2>
         </div>
     </div>
 
-    <div id="receiptModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden print:p-0 print:block print:static">
-    
-    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-3xl relative max-h-[90vh] overflow-y-auto print:max-w-none print:shadow-none print:rounded-none print:overflow-visible">
-        
-        <span class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800 print:hidden" onclick="closeReceiptModal()">&times;</span>
-        
-        <div class="receipt-content print:p-4">
-            <div class="flex flex-col items-center text-center mb-6">
-                <h2 class="text-2xl font-bold mb-2 text-blue-600" id="receipt-hotel-name">Hotel Name</h2>
-                <h3 class="text-2xl font-bold mb-2 text-blue-600"> Receipt</h3>
-                
-                <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-700 w-full border-b pb-4">
-                    <p class="text-left"><strong>Guest:</strong> <span id="receiptGuestName"></span></p>
-                    <p class="text-right"><strong>Room:</strong> <span id="receiptRoomNumber"></span></p>
-                    <p class="text-left"><strong>Booking ID:</strong> <span id="receiptBookingId"></span></p>
-                    <p class="text-right"><strong>Date:</strong> <span id="receiptPrintDate"></span></p>
-                    <p class="text-left col-span-2"><strong>Stay:</strong> <span id="receiptCheckIn"></span> to <span id="receiptCheckOut"></span></p>
-                </div>
-            </div>
+    <!-- Receipt Modal Container -->
 
-            <h4 class="text-lg font-bold mb-3 text-gray-800 border-l-4 border-blue-600 pl-2">Room Charges</h4>
-            <table class="w-full text-left text-sm mb-6 border-collapse">
-                <thead>
-                    <tr class="bg-gray-100 border-b-2 border-gray-200">
-                        <th class="py-2 px-2">Description</th>
-                        <th class="py-2 px-2 text-center">Nights</th>
-                        <th class="py-2 px-2 text-right">Rate</th>
-                        <th class="py-2 px-2 text-right">Amount</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <tr>
-                        <td class="py-3 px-2">Room Stay</td>
-                        <td id="receiptNights" class="py-3 px-2 text-center"></td>
-                        <td id="receiptAmtPerNight" class="py-3 px-2 text-right"></td>
-                        <td id="receiptRoomTotalDue" class="py-3 px-2 text-right font-semibold"></td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <h4 class="text-lg font-bold mb-3 text-gray-800 border-l-4 border-blue-600 pl-2">Incidental Charges</h4>
-            <table id="receiptIncidentalChargesTable" class="w-full text-left text-sm mb-8 border-collapse">
-                <thead>
-                    <tr class="bg-gray-100 border-b-2 border-gray-200">
-                        <th class="py-2 px-2">Type</th>
-                        <th class="py-2 px-2">Description</th>
-                        <th class="py-2 px-2 text-right">Date</th>
-                        <th class="py-2 px-2 text-right">Amount</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 text-gray-600">
-                    </tbody>
-            </table>
-
-            <div class="flex justify-end">
-                <div class="w-full md:w-64 space-y-2 border-t pt-4">
-                    <div class="flex justify-between text-gray-600">
-                        <span>Room Subtotal:</span>
-                        <span id="receiptSubtotalRoom">0.00</span>
-                    </div>
-                    <div class="flex justify-between text-gray-600">
-                        <span>Incidentals:</span>
-                        <span id="receiptSubtotalIncidentals">0.00</span>
-                    </div>
-                    <div class="flex justify-between text-xl font-bold text-black border-t pt-2">
-                        <span>Total Bill:</span>
-                        <span id="receiptTotalBill">0.00</span>
-                    </div>
-                    <div class="flex justify-between text-green-700 font-semibold">
-                        <span>Amount Paid:</span>
-                        <span id="receiptAmountPaid">0.00</span>
-                    </div>
-                    <div class="flex justify-between text-red-600 font-bold border-double border-t-4 mt-2">
-                        <span>Balance Due:</span>
-                        <span id="receiptBalanceDue">0.00</span>
-                    </div>
-                    <p class="text-right text-xs italic text-gray-500 pt-2">Status: <span id="receiptPaymentStatus"></span></p>
-                </div>
-            </div>
-
-            <div class="flex justify-center space-x-4 mt-12 print:hidden">
-                <button class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition" onclick="window.print()">
-                    <i class="fas fa-print"></i> Print Receipt
-                </button>
-                <button class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 transition" onclick="closeReceiptModal()">
-                    Close
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
     <div id="deletionReasonModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg relative">
