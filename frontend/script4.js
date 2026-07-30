@@ -1341,8 +1341,20 @@ const generateInvoiceFromAccount = (booking) => {
     iframe.style.border = '0';
     document.body.appendChild(iframe);
 
-    // 2. Prepare HTML content...
-    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : '$';
+    // 2. Extract Hotel Metadata & Currency
+    const userObj = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const hotelName = userObj.hotelName || localStorage.getItem('hotelName') || booking.hotelId?.name || 'Hotel Folio';
+    const hotelLocation = userObj.hotelLocation || localStorage.getItem('hotelLocation') || booking.hotelId?.location || 'Main Campus';
+    
+    // Currency resolution (Global variable -> user context -> localStorage -> booking data -> default)
+    const currency = (typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : null) 
+        || userObj.hotelCurrency 
+        || localStorage.getItem('hotelCurrency') 
+        || booking.currency 
+        || booking.hotelId?.currency 
+        || 'UGX';
+
+    // 3. Data Formatting & Calculations
     const invoiceDate = new Date().toLocaleDateString('en-GB');
     const nightsCount = Number(booking.nights) || 1;
     const roomRatePerNight = Number(booking.amtPerNight) || 0;
@@ -1368,21 +1380,28 @@ const generateInvoiceFromAccount = (booking) => {
         </tr>
     `).join('');
 
+    // 4. Render Document HTML
     const doc = iframe.contentWindow.document;
     doc.open();
     doc.write(`
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Guest Folio / Tax Invoice - #${booking.id}</title>
+            <title></title> <!-- Empty title prevents printing URL/page title at header -->
             <style>
-                @page { size: A4 portrait; margin: 10mm; }
+                @page { size: A4 portrait; margin: 0; }
                 * { box-sizing: border-box; }
-                body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 15px; }
+                body { 
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
+                    color: #1e293b; 
+                    margin: 0; 
+                    padding: 15mm; 
+                    background: #ffffff !important;
+                }
                 .invoice-container { width: 100%; max-width: 800px; margin: 0 auto; }
                 .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 18px; }
-                .company-title { font-size: 20px; font-weight: 800; color: #0f172a; }
-                .invoice-title { font-size: 18px; font-weight: 700; color: #0284c7; text-align: right; }
+                .company-title { font-size: 20px; font-weight: 800; color: #0f172a; text-transform: uppercase; }
+                .invoice-title { font-size: 18px; font-weight: 700; color: #0284c7; text-align: right; text-transform: uppercase; }
                 .grid { display: flex; justify-content: space-between; margin-bottom: 18px; font-size: 12px; }
                 .box { width: 48%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; }
                 .box-title { font-weight: 700; text-transform: uppercase; font-size: 10px; color: #64748b; margin-bottom: 6px; }
@@ -1398,12 +1417,13 @@ const generateInvoiceFromAccount = (booking) => {
             <div class="invoice-container">
                 <div class="header">
                     <div>
-                        <div class="company-title">NOVUS CLOUD HOTELS</div>
-                        <div style="font-size: 11px; color: #64748b;">123 Hospitality Blvd, Suite 100</div>
+                        <div class="company-title">${hotelName}</div>
+                        <div style="font-size: 11px; color: #64748b; mt-1">${hotelLocation}</div>
                     </div>
                     <div>
-                        <div class="invoice-title">TAX INVOICE / FOLIO</div>
+                        <div class="invoice-title">Guest Invoice</div>
                         <div style="font-size: 11px; color: #64748b; text-align: right;"><strong>Folio #:</strong> ${booking.id || '-'}</div>
+                        <div style="font-size: 11px; color: #64748b; text-align: right;"><strong>Date:</strong> ${invoiceDate}</div>
                     </div>
                 </div>
                 <div class="grid">
@@ -1425,8 +1445,13 @@ const generateInvoiceFromAccount = (booking) => {
                     <tbody>${itemsRows}</tbody>
                 </table>
                 <div class="totals">
-                    <div class="totals-row"><span>Total:</span><span>${currency} ${totalCharges.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                    <div class="totals-row"><span>Total Charges:</span><span>${currency} ${totalCharges.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                    <div class="totals-row"><span>Amount Paid:</span><span>${currency} ${amountPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
                     <div class="totals-row final"><span>BALANCE DUE:</span><span>${currency} ${balanceDue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                </div>
+                <div class="footer">
+                    <p>Thank you for staying with us!</p>
+                    <p style="margin-top: 4px;">Official Document • System Generated</p>
                 </div>
             </div>
         </body>
@@ -1434,7 +1459,7 @@ const generateInvoiceFromAccount = (booking) => {
     `);
     doc.close();
 
-    // 3. Print via the hidden frame, then clean up
+    // 5. Trigger native print dialog and clean frame
     setTimeout(() => {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
@@ -2916,11 +2941,13 @@ async function printGuestReceipt(bookingCustomId) {
         const booking = await bRes.json();
         const incidentalCharges = await cRes.json();
 
-        /* ---------- DYNAMIC HOTEL METADATA ---------- */
-        // Fallback hierarchy: localStorage -> populated booking object -> default string
+        /* ---------- DYNAMIC HOTEL METADATA & CURRENCY ---------- */
         const userObj = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
         const hotelName = userObj.hotelName || localStorage.getItem('hotelName') || booking.hotelId?.name || 'Hotel Guest Receipt';
         const hotelLocation = userObj.hotelLocation || localStorage.getItem('hotelLocation') || booking.hotelId?.location || 'Main Campus';
+        
+        // 💱 Currency Fallback Hierarchy: loggedInUser -> localStorage -> booking response -> default
+        const hotelCurrency = userObj.hotelCurrency || localStorage.getItem('hotelCurrency') || booking.currency || booking.hotelId?.currency || 'UGX';
 
         /* ---------- DATA FORMATTING & CALCULATIONS ---------- */
         const checkInFormatted = booking.checkIn ? new Date(booking.checkIn).toLocaleDateString('en-US') : '-';
@@ -2939,7 +2966,7 @@ async function printGuestReceipt(bookingCustomId) {
             <tr class="border-b border-slate-200 text-slate-700">
                 <td class="py-3 px-3">${checkInFormatted} - ${checkOutFormatted}</td>
                 <td class="py-3 px-3">Room Stay Accommodation Charge (${nightsCount} night/s)</td>
-                <td class="py-3 px-3 text-right font-medium">${roomTotalDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                <td class="py-3 px-3 text-right font-medium">${hotelCurrency} ${roomTotalDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                 <td class="py-3 px-3 text-right text-emerald-600 font-medium">-</td>
             </tr>
         `;
@@ -2957,8 +2984,8 @@ async function printGuestReceipt(bookingCustomId) {
                     <tr class="border-b border-slate-100 text-slate-700">
                         <td class="py-2.5 px-3">${charge.date ? new Date(charge.date).toLocaleDateString('en-US') : '-'}</td>
                         <td class="py-2.5 px-3">${charge.type || 'Incidental'} - ${charge.description || '-'} ${charge.isPaid ? '<small class="text-emerald-600 font-semibold">(Paid POS)</small>' : ''}</td>
-                        <td class="py-2.5 px-3 text-right font-medium">${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                        <td class="py-2.5 px-3 text-right text-emerald-600 font-medium">${charge.isPaid ? amount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                        <td class="py-2.5 px-3 text-right font-medium">${hotelCurrency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td class="py-2.5 px-3 text-right text-emerald-600 font-medium">${charge.isPaid ? `${hotelCurrency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '-'}</td>
                     </tr>
                 `;
             });
@@ -2971,8 +2998,8 @@ async function printGuestReceipt(bookingCustomId) {
         const finalBalanceDue = totalBill - totalAmountPaid;
 
         const balanceFormatted = finalBalanceDue < 0 
-            ? `REFUND: ${Math.abs(finalBalanceDue).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-            : finalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 });
+            ? `REFUND: ${hotelCurrency} ${Math.abs(finalBalanceDue).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+            : `${hotelCurrency} ${finalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
         const statusText = finalBalanceDue <= 0 ? 'SETTLED / PAID' : `OPEN BALANCE (${balanceFormatted})`;
         const statusClass = finalBalanceDue <= 0 ? 'font-bold uppercase text-emerald-600' : 'font-bold uppercase text-rose-600';
@@ -3023,7 +3050,7 @@ async function printGuestReceipt(bookingCustomId) {
                             <p class="text-xs text-slate-500 mt-1">${hotelLocation}</p>
                         </div>
                         <div class="text-right">
-                            <h3 class="text-xl font-bold text-sky-600 uppercase tracking-wide">Guest Folio / Receipt</h3>
+                            <h3 class="text-xl font-bold text-sky-600 uppercase tracking-wide">Guest Receipt</h3>
                             <p class="text-xs text-slate-500 mt-1"><strong>Invoice #:</strong> <span>${booking.id || bookingCustomId}</span></p>
                             <p class="text-xs text-slate-500"><strong>Issue Date:</strong> <span>${printDateFormatted}</span></p>
                         </div>
@@ -3060,18 +3087,18 @@ async function printGuestReceipt(bookingCustomId) {
                         </tbody>
                     </table>
 
-                    <!-- 4. TOTALS BLOCK (NO TAX) -->
+                    <!-- 4. TOTALS BLOCK (NO TAX, DYNAMIC CURRENCY) -->
                     <div class="flex justify-end">
-                        <div class="w-72 space-y-1.5 text-xs text-slate-600 border-t border-slate-300 pt-3">
+                        <div class="w-80 space-y-1.5 text-xs text-slate-600 border-t border-slate-300 pt-3">
                             
                             <div class="flex justify-between font-bold text-slate-900 border-t border-slate-200 pt-2">
                                 <span>Total Charges:</span>
-                                <span>${totalBill.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span>${hotelCurrency} ${totalBill.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
 
                             <div class="flex justify-between text-emerald-600 font-medium">
                                 <span>Total Payments Received:</span>
-                                <span>- <span>${totalAmountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></span>
+                                <span>- <span>${hotelCurrency} ${totalAmountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></span>
                             </div>
 
                             <div class="flex justify-between text-sm font-extrabold text-slate-900 border-b-2 border-t-2 border-slate-900 py-2 mt-2">
@@ -6367,7 +6394,19 @@ const updateActiveAccountUI = (account) => {
 const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
     if (!accountData) return;
 
-    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : '';
+    /* ---------- DYNAMIC HOTEL METADATA & CURRENCY ---------- */
+    const userObj = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const hotelName = userObj.hotelName || localStorage.getItem('hotelName') || accountData.hotelId?.name || 'NOVUS POS';
+    const hotelLocation = userObj.hotelLocation || localStorage.getItem('hotelLocation') || accountData.hotelId?.location || '';
+    
+    // Currency Resolution Hierarchy
+    const currency = (typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : null)
+        || userObj.hotelCurrency 
+        || localStorage.getItem('hotelCurrency') 
+        || accountData.currency 
+        || accountData.hotelId?.currency 
+        || 'UGX';
+
     const charges = accountData.charges || [];
     
     // Calculate total accounting for quantity if present
@@ -6404,7 +6443,7 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Receipt - ${receiptNumber}</title>
+            <title></title> <!-- Empty title suppresses auto browser headers -->
             <style>
                 @page {
                     size: 80mm auto; /* Standard Thermal Roll Width */
@@ -6438,7 +6477,8 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
         <body>
             <div class="receipt-container">
                 <!-- BRAND HEADER -->
-                <div class="text-center bold" style="font-size: 15px;">NOVUS POS</div>
+                <div class="text-center bold" style="font-size: 15px; text-transform: uppercase;">${hotelName}</div>
+                ${hotelLocation ? `<div class="text-center" style="font-size: 10px; margin-bottom: 2px;">${hotelLocation}</div>` : ''}
                 <div class="text-center" style="font-size: 10px;">RECEIPT #${receiptNumber}</div>
                 <div class="text-center" style="font-size: 10px; margin-bottom: 4px;">${receiptDate}</div>
                 
@@ -6459,7 +6499,7 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
                     <thead>
                         <tr>
                             <th style="width: 65%; text-align: left;">QTY / ITEM</th>
-                            <th style="width: 35%; text-align: right;">AMT</th>
+                            <th style="width: 35%; text-align: right;">AMT (${currency})</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -6472,8 +6512,8 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
                 <!-- TOTALS -->
                 <table>
                     <tr class="bold">
-                        <td style="width: 55%; font-size: 13px;">TOTAL DUE:</td>
-                        <td style="width: 45%; font-size: 13px; text-align: right; white-space: nowrap;">
+                        <td style="width: 50%; font-size: 13px;">TOTAL DUE:</td>
+                        <td style="width: 50%; font-size: 13px; text-align: right; white-space: nowrap;">
                             ${currency} ${total.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                         </td>
                     </tr>

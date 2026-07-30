@@ -1421,7 +1421,7 @@ const generateInvoiceFromAccount = (booking) => {
                         <div style="font-size: 11px; color: #64748b; mt-1">${hotelLocation}</div>
                     </div>
                     <div>
-                        <div class="invoice-title">Guest Folio / Invoice</div>
+                        <div class="invoice-title">Guest Folio Invoice</div>
                         <div style="font-size: 11px; color: #64748b; text-align: right;"><strong>Folio #:</strong> ${booking.id || '-'}</div>
                         <div style="font-size: 11px; color: #64748b; text-align: right;"><strong>Date:</strong> ${invoiceDate}</div>
                     </div>
@@ -3050,7 +3050,7 @@ async function printGuestReceipt(bookingCustomId) {
                             <p class="text-xs text-slate-500 mt-1">${hotelLocation}</p>
                         </div>
                         <div class="text-right">
-                            <h3 class="text-xl font-bold text-sky-600 uppercase tracking-wide">Guest Folio / Receipt</h3>
+                            <h3 class="text-xl font-bold text-sky-600 uppercase tracking-wide">Guest Receipt</h3>
                             <p class="text-xs text-slate-500 mt-1"><strong>Invoice #:</strong> <span>${booking.id || bookingCustomId}</span></p>
                             <p class="text-xs text-slate-500"><strong>Issue Date:</strong> <span>${printDateFormatted}</span></p>
                         </div>
