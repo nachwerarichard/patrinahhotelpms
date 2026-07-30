@@ -1303,12 +1303,10 @@ ${booking.amountPaid > 0 ? `
 // 1. Trigger function attached to the UI button
 async function generateInvoice(bookingId) {
     try {
-        // Updated route to match: /api/bookings/id/:customId
-        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/id/${bookingId}`);
+        // Corrected route path: /api/booking/id/:customId (singular 'booking')
+        const res = await authenticatedFetch(`${API_BASE_URL}/booking/id/${bookingId}`);
 
-        // If authenticatedFetch redirected to login, res will be null
         if (!res) return;
-
         if (!res.ok) throw new Error(`Failed to load invoice data: ${res.status}`);
 
         const data = await res.json();
@@ -1330,15 +1328,24 @@ const generateInvoiceFromAccount = (booking) => {
     const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : '$';
     const invoiceDate = new Date().toLocaleDateString('en-GB');
     
+    // Fallback room calculation using correct Schema keys: amtPerNight, nights, totalDue
+    const nightsCount = Number(booking.nights) || 1;
+    const roomRatePerNight = Number(booking.amtPerNight) || 0;
+    const roomTotalDue = Number(booking.totalDue) || (nightsCount * roomRatePerNight);
+
     const charges = booking.charges || [
-        { description: `Room Charge (${booking.roomType || 'Standard'})`, amount: booking.totalAmount || booking.rate || 0, date: booking.checkIn }
+        { 
+            description: `Room Accommodation Charge (${nightsCount} night/s @ ${currency} ${roomRatePerNight.toLocaleString(undefined, {minimumFractionDigits: 2})})`, 
+            amount: roomTotalDue, 
+            date: booking.checkIn 
+        }
     ];
 
     const totalCharges = charges.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
     const amountPaid = Number(booking.amountPaid) || 0;
     const balanceDue = totalCharges - amountPaid;
 
-    const itemsRows = charges.map((c, i) => `
+    const itemsRows = charges.map((c) => `
         <tr style="border-bottom: 1px solid #e2e8f0; font-size: 13px;">
             <td style="padding: 10px 8px;">${c.date ? new Date(c.date).toLocaleDateString('en-GB') : invoiceDate}</td>
             <td style="padding: 10px 8px;">${c.description || 'Accommodation Charge'}</td>
@@ -1352,7 +1359,7 @@ const generateInvoiceFromAccount = (booking) => {
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Guest Folio / Tax Invoice - #${booking.id || booking._id}</title>
+            <title>Guest Folio / Tax Invoice - #${booking.id}</title>
             <style>
                 body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 40px; }
                 .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 30px; }
@@ -1378,7 +1385,7 @@ const generateInvoiceFromAccount = (booking) => {
                 </div>
                 <div>
                     <div class="invoice-title">TAX INVOICE / FOLIO</div>
-                    <div style="font-size: 12px; color: #64748b; text-align: right; margin-top: 4px;"><strong>Folio #:</strong> ${booking.id || booking._id}</div>
+                    <div style="font-size: 12px; color: #64748b; text-align: right; margin-top: 4px;"><strong>Folio #:</strong> ${booking.id || '-'}</div>
                     <div style="font-size: 12px; color: #64748b; text-align: right;"><strong>Date:</strong> ${invoiceDate}</div>
                 </div>
             </div>
@@ -1386,14 +1393,16 @@ const generateInvoiceFromAccount = (booking) => {
             <div class="grid">
                 <div class="box">
                     <div class="box-title">Guest Details</div>
-                    <div><strong>Name:</strong> ${booking.guestName || 'Valued Guest'}</div>
-                    <div><strong>Room:</strong> ${booking.roomNumber ? 'Room ' + booking.roomNumber : 'Unassigned'}</div>
-                    <div><strong>Phone/Email:</strong> ${booking.phone || booking.email || 'N/A'}</div>
+                    <div><strong>Name:</strong> ${booking.name || 'Valued Guest'}</div>
+                    <div><strong>Room:</strong> ${booking.room ? 'Room ' + booking.room : 'Unassigned'}</div>
+                    <div><strong>Phone:</strong> ${booking.phoneNo || 'N/A'}</div>
+                    <div><strong>Email:</strong> ${booking.guestEmail || 'N/A'}</div>
                 </div>
                 <div class="box">
                     <div class="box-title">Stay Information</div>
                     <div><strong>Check-In:</strong> ${booking.checkIn ? new Date(booking.checkIn).toLocaleDateString('en-GB') : 'N/A'}</div>
                     <div><strong>Check-Out:</strong> ${booking.checkOut ? new Date(booking.checkOut).toLocaleDateString('en-GB') : 'N/A'}</div>
+                    <div><strong>Nights:</strong> ${nightsCount}</div>
                     <div><strong>Status:</strong> <span style="text-transform: uppercase; font-weight: bold;">${booking.gueststatus || 'Active'}</span></div>
                 </div>
             </div>
@@ -1417,7 +1426,7 @@ const generateInvoiceFromAccount = (booking) => {
                     <span>${currency} ${totalCharges.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                 </div>
                 <div class="totals-row" style="color: #059669;">
-                    <span>Payments Received:</span>
+                    <span>Payments Received (${booking.paymentMethod || 'Cash'}):</span>
                     <span>- ${currency} ${amountPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                 </div>
                 <div class="totals-row final">
