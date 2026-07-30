@@ -118,6 +118,9 @@ const auditLogEndDateFilter = document.getElementById('auditLogEndDateFilter');
 const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn');
   // Add this to the TOP of your scripts on the destination pages
 // At the top of script4.js
+
+
+
 (function autoLoginHook() {
     const urlParams = new URLSearchParams(window.location.search);
 
@@ -282,28 +285,46 @@ const getHotelCurrency = () => {
     return localStorage.getItem('hotelCurrency') || 'UGX'; // Fallback default global currency code
 };
 
-async function generateInvoice(bookingId) {
-    try {
-        // authenticatedFetch automatically injects Bearer token & multi-tenant headers
-        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/${bookingId}`);
+async function authenticatedFetch(url, options = {}) {
+    let token = localStorage.getItem('token');
+    const params = new URLSearchParams(window.location.search);
+    
+    // 1. Wait for token logic
+    if (!token && params.get('autoLogin') === 'true') {
+        await new Promise((resolve) => {
+            let attempts = 0;
+            const interval = setInterval(() => {
+                token = localStorage.getItem('token');
+                attempts++;
+                if (token || attempts > 30) { 
+                    clearInterval(interval);
+                    resolve();
+                }
+            }, 100);
+        });
+    }
 
-        // If authenticatedFetch redirected to login, res will be null
-        if (!res) return;
+    if (!token) {
+        window.location.replace('https://elegant-pasca-cea136.netlify.app/frontend/login.html');
+        return null;
+    }
 
-        if (!res.ok) throw new Error(`Failed to load invoice data: ${res.status}`);
+    // 2. Start with standard headers + AUTOMATED MULTI-TENANT CURRENCY PASSTHROUGH
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'x-hotel-id': localStorage.getItem('hotelId') || 'global',
+        'x-hotel-currency': localStorage.getItem('hotelCurrency') || 'UGX', // ➔ INJECT CURRENCY HERE
+        ...options.headers 
+    };
 
-        const data = await res.json();
-        const booking = data.booking || data;
-        
-        generateInvoiceFromAccount(booking);
-    } catch (err) {
-        console.error("Error generating invoice:", err);
-        if (typeof showMessage === 'function') {
-            showMessage("Error", "Failed to fetch booking details for invoice generation.", true);
-        } else {
-            alert("Failed to fetch booking details for invoice generation.");
-        }
-    }
+    // 3. Smart Content-Type Assignment
+    if (options.body instanceof FormData) {
+        delete headers['Content-Type']; 
+    } else if (options.body) { 
+        headers['Content-Type'] = 'application/json';
+    }
+
+    return fetch(url, { ...options, headers: headers });
 }
 
 function showMessage(title, message, isError = false) {
@@ -1282,15 +1303,13 @@ ${booking.amountPaid > 0 ? `
 // 1. Trigger function attached to the UI button
 async function generateInvoice(bookingId) {
     try {
-        const token = localStorage.getItem('token') || localStorage.getItem('jwt');
-        const res = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}`, {
-            headers: { 
-                'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            }
-        });
+        // authenticatedFetch automatically injects Bearer token & multi-tenant headers
+        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/${bookingId}`);
 
-        if (!res.ok) throw new Error("Failed to load invoice data");
+        // If authenticatedFetch redirected to login, res will be null
+        if (!res) return;
+
+        if (!res.ok) throw new Error(`Failed to load invoice data: ${res.status}`);
 
         const data = await res.json();
         const booking = data.booking || data;
@@ -1298,7 +1317,11 @@ async function generateInvoice(bookingId) {
         generateInvoiceFromAccount(booking);
     } catch (err) {
         console.error("Error generating invoice:", err);
-        alert("Failed to fetch booking details for invoice generation.");
+        if (typeof showMessage === 'function') {
+            showMessage("Error", "Failed to fetch booking details for invoice generation.", true);
+        } else {
+            alert("Failed to fetch booking details for invoice generation.");
+        }
     }
 }
 
