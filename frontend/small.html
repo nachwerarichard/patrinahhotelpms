@@ -101,76 +101,94 @@
     position: relative;
     overflow: visible !important;
 }
-    @media print {
-    /* 1. Hide everything you don't want on paper */
-    nav, .sidebar, .filter-section, button, .no-print {
+
+/* ===============================================================
+   UNIFIED PRINT STYLESHEET (Reports & Guest Receipt/Folio Modal)
+   =============================================================== */
+
+@media print {
+    /* 1. Page Margins (Use standard 1cm - 1.5cm margins for A4) */
+    @page {
+        size: A4 portrait;
+        margin: 1.2cm; /* Safe margin so no content gets clipped at page edges */
+    }
+
+    /* 2. Global Document Reset */
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Force background colors, badges, and borders on all printers */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* 3. Hide Unnecessary UI Components (Navigation, Sidebar, Controls) */
+    nav, 
+    header,
+    aside,
+    .sidebar, 
+    .filter-section, 
+    button, 
+    .no-print, 
+    #receiptModal button, 
+    #receiptModal .close-btn, 
+    .modal-footer {
         display: none !important;
     }
 
-    /* 2. Ensure the table takes up the full page width */
-    body {
-        background: white;
-        padding: 0;
-        margin: 0;
-    }
-
+    /* 4. Full Page Reports Styling */
     .report-container {
-        width: 100%;
-        box-shadow: none;
-        padding: 0;
+        width: 100% !important;
+        box-shadow: none !important;
+        padding: 0 !important;
     }
 
+    /* 5. General Table Layout & Page Break Protections */
     table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 10pt; /* Smaller font for printing */
+        width: 100% !important;
+        border-collapse: collapse !important;
+        break-inside: auto;
     }
 
-    th, td {
-        border: 1px solid #ddd !important; /* Force borders to show on print */
-        padding: 8px;
+    /* Preserve structural page breaks */
+    h4, .totals, tr {
+        break-inside: avoid;
     }
 
-    /* 3. Keep summary cards visible but style them for black & white printers */
-    .summary-card {
-        border: 1px solid #000;
-        margin-bottom: 20px;
-    }
-}
-    @media print {
-    /* Hide everything except the receipt modal */
-    body * {
-        visibility: hidden;
-    }
-    #receiptModal, #receiptModal * {
-        visibility: visible;
-    }
-    #receiptModal {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        background: white !important;
-        display: block !important;
-    }
-    /* Reset scrollable containers so all content shows */
-    .max-h-\[90vh\] {
+    /* Unlock scrollable Tailwind containers so content isn't truncated */
+    .max-h-\[90vh\], 
+    .overflow-y-auto {
         max-height: none !important;
         overflow: visible !important;
     }
-    .overflow-y-auto {
-        overflow: visible !important;
+
+    /* 6. Receipt Modal Isolation & Formatting */
+    #receiptModal {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        display: block !important;
+        box-shadow: none !important;
+        border: none !important;
+        /* Keep modern sans-serif fonts for professional A4 invoices */
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+        line-height: 1.4 !important;
     }
-    /* Avoid cutting text/tables in half */
-    h4, .flex.flex-col.items-end {
-        break-inside: avoid;
-    }
-    table {
-        break-inside: auto;
-    }
-    tr {
-        break-inside: avoid;
-        break-after: auto;
+
+    /* Clean border styling inside modal */
+    #receiptModal table {
+        width: 100% !important;
+        border-collapse: collapse !important;
     }
 }
 
@@ -3663,94 +3681,122 @@ Add Guest Details            </h2>
         </div>
     </div>
 
-    <div id="receiptModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden print:p-0 print:block print:static">
+    <!-- Receipt Modal Container -->
+<div id="receiptModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden print:p-0 print:static print:bg-white print:block">
     
-    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-3xl relative max-h-[90vh] overflow-y-auto print:max-w-none print:shadow-none print:rounded-none print:overflow-visible">
+    <!-- Printable Invoice Card -->
+    <div class="bg-white p-8 rounded-lg shadow-2xl w-full max-w-4xl relative max-h-[90vh] overflow-y-auto print:max-w-none print:shadow-none print:rounded-none print:overflow-visible print:p-0">
         
-        <span class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800 print:hidden" onclick="closeReceiptModal()">&times;</span>
+        <!-- Screen-only Close Button -->
+        <button type="button" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold p-2 print:hidden" onclick="closeReceiptModal()" aria-label="Close modal">&times;</button>
         
-        <div class="receipt-content print:p-4">
-            <div class="flex flex-col items-center text-center mb-6">
-                <h2 class="text-2xl font-bold mb-2 text-blue-600" id="receipt-hotel-name">Hotel Name</h2>
-                <h3 class="text-2xl font-bold mb-2 text-blue-600"> Receipt</h3>
-                
-                <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-700 w-full border-b pb-4">
-                    <p class="text-left"><strong>Guest:</strong> <span id="receiptGuestName"></span></p>
-                    <p class="text-right"><strong>Room:</strong> <span id="receiptRoomNumber"></span></p>
-                    <p class="text-left"><strong>Booking ID:</strong> <span id="receiptBookingId"></span></p>
-                    <p class="text-right"><strong>Date:</strong> <span id="receiptPrintDate"></span></p>
-                    <p class="text-left col-span-2"><strong>Stay:</strong> <span id="receiptCheckIn"></span> to <span id="receiptCheckOut"></span></p>
+        <!-- Printable Invoice Content Area -->
+        <div class="receipt-content">
+            
+            <!-- 1. HOTEL BRANDING & INVOICE HEADER -->
+            <div class="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-6">
+                <div>
+                    <h2 class="text-2xl font-black tracking-tight text-slate-900 uppercase" id="receipt-hotel-name">NOVUS CLOUD HOTELS</h2>
+                    <p class="text-xs text-slate-500 mt-1">123 Hospitality Blvd, Suite 100</p>
+                    <p class="text-xs text-slate-500">TIN / Tax ID: <span id="receiptTaxId">1002938481</span></p>
+                </div>
+                <div class="text-right">
+                    <h3 class="text-xl font-bold text-sky-600 uppercase tracking-wide">Tax Invoice / Folio</h3>
+                    <p class="text-xs text-slate-500 mt-1"><strong>Invoice #:</strong> <span id="receiptBookingId">INV-000000</span></p>
+                    <p class="text-xs text-slate-500"><strong>Issue Date:</strong> <span id="receiptPrintDate"></span></p>
                 </div>
             </div>
 
-            <h4 class="text-lg font-bold mb-3 text-gray-800 border-l-4 border-blue-600 pl-2">Room Charges</h4>
-            <table class="w-full text-left text-sm mb-6 border-collapse">
+            <!-- 2. GUEST & RESERVATION METADATA GRID -->
+            <div class="grid grid-cols-2 gap-4 mb-6 text-xs text-slate-700">
+                <div class="bg-slate-50 p-4 rounded-md border border-slate-200 print:bg-transparent print:p-2 print:border-slate-300">
+                    <h4 class="font-bold text-slate-400 uppercase text-[10px] mb-2 tracking-wider">Guest Information</h4>
+                    <p class="text-sm font-semibold text-slate-900" id="receiptGuestName">Valued Guest</p>
+                    <p><strong>Room / Unit:</strong> <span id="receiptRoomNumber">Unassigned</span></p>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-md border border-slate-200 print:bg-transparent print:p-2 print:border-slate-300">
+                    <h4 class="font-bold text-slate-400 uppercase text-[10px] mb-2 tracking-wider">Stay Information</h4>
+                    <p><strong>Check-In:</strong> <span id="receiptCheckIn">N/A</span></p>
+                    <p><strong>Check-Out:</strong> <span id="receiptCheckOut">N/A</span></p>
+                    <p><strong>Nights:</strong> <span id="receiptNights">1</span></p>
+                </div>
+            </div>
+
+            <!-- 3. COMPREHENSIVE FOLIO LEDGER TABLE -->
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Itemized Folio Transactions</h4>
+            <table class="w-full text-left text-xs mb-6 border-collapse">
                 <thead>
-                    <tr class="bg-gray-100 border-b-2 border-gray-200">
-                        <th class="py-2 px-2">Description</th>
-                        <th class="py-2 px-2 text-center">Nights</th>
-                        <th class="py-2 px-2 text-right">Rate</th>
-                        <th class="py-2 px-2 text-right">Amount</th>
+                    <tr class="bg-slate-100 border-b border-slate-300 text-slate-600 uppercase text-[10px] tracking-wider">
+                        <th class="py-2.5 px-3">Date</th>
+                        <th class="py-2.5 px-3">Transaction Description</th>
+                        <th class="py-2.5 px-3 text-right">Charges (+)</th>
+                        <th class="py-2.5 px-3 text-right">Payments (-)</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
+                <tbody id="receiptIncidentalChargesTableBody" class="divide-y divide-slate-200 text-slate-700">
+                    <!-- Standard room rate row -->
                     <tr>
-                        <td class="py-3 px-2">Room Stay</td>
-                        <td id="receiptNights" class="py-3 px-2 text-center"></td>
-                        <td id="receiptAmtPerNight" class="py-3 px-2 text-right"></td>
-                        <td id="receiptRoomTotalDue" class="py-3 px-2 text-right font-semibold"></td>
+                        <td class="py-3 px-3" id="receiptStayDateRange">-</td>
+                        <td class="py-3 px-3">Room Stay Accommodation Charge</td>
+                        <td class="py-3 px-3 text-right font-medium" id="receiptRoomTotalDue">0.00</td>
+                        <td class="py-3 px-3 text-right text-emerald-600 font-medium">-</td>
                     </tr>
+                    <!-- Incidental and Payment rows injected here dynamically via JS -->
                 </tbody>
             </table>
 
-            <h4 class="text-lg font-bold mb-3 text-gray-800 border-l-4 border-blue-600 pl-2">Incidental Charges</h4>
-            <table id="receiptIncidentalChargesTable" class="w-full text-left text-sm mb-8 border-collapse">
-                <thead>
-                    <tr class="bg-gray-100 border-b-2 border-gray-200">
-                        <th class="py-2 px-2">Type</th>
-                        <th class="py-2 px-2">Description</th>
-                        <th class="py-2 px-2 text-right">Date</th>
-                        <th class="py-2 px-2 text-right">Amount</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 text-gray-600">
-                    </tbody>
-            </table>
-
+            <!-- 4. TOTALS & TAX BREAKDOWN BLOCK (GLOBAL STANDARD) -->
             <div class="flex justify-end">
-                <div class="w-full md:w-64 space-y-2 border-t pt-4">
-                    <div class="flex justify-between text-gray-600">
-                        <span>Room Subtotal:</span>
-                        <span id="receiptSubtotalRoom">0.00</span>
+                <div class="w-full sm:w-72 space-y-1.5 text-xs text-slate-600 border-t border-slate-300 pt-3">
+                    
+                    <div class="flex justify-between">
+                        <span>Net Subtotal (Excl. Tax):</span>
+                        <span id="receiptSubtotalExclTax">0.00</span>
                     </div>
-                    <div class="flex justify-between text-gray-600">
-                        <span>Incidentals:</span>
-                        <span id="receiptSubtotalIncidentals">0.00</span>
+                    
+                    <div class="flex justify-between">
+                        <span>VAT / Sales Tax (18%):</span>
+                        <span id="receiptTaxAmount">0.00</span>
                     </div>
-                    <div class="flex justify-between text-xl font-bold text-black border-t pt-2">
-                        <span>Total Bill:</span>
+
+                    <div class="flex justify-between font-bold text-slate-900 border-t border-slate-200 pt-2">
+                        <span>Total Folio Charges:</span>
                         <span id="receiptTotalBill">0.00</span>
                     </div>
-                    <div class="flex justify-between text-green-700 font-semibold">
-                        <span>Amount Paid:</span>
-                        <span id="receiptAmountPaid">0.00</span>
+
+                    <div class="flex justify-between text-emerald-600 font-medium">
+                        <span>Total Payments Received:</span>
+                        <span>- <span id="receiptAmountPaid">0.00</span></span>
                     </div>
-                    <div class="flex justify-between text-red-600 font-bold border-double border-t-4 mt-2">
-                        <span>Balance Due:</span>
+
+                    <div class="flex justify-between text-sm font-extrabold text-slate-900 border-b-2 border-t-2 border-slate-900 py-2 mt-2">
+                        <span>BALANCE DUE:</span>
                         <span id="receiptBalanceDue">0.00</span>
                     </div>
-                    <p class="text-right text-xs italic text-gray-500 pt-2">Status: <span id="receiptPaymentStatus"></span></p>
+
+                    <p class="text-right text-[10px] text-slate-400 pt-2">
+                        Status: <span id="receiptPaymentStatus" class="font-bold uppercase text-slate-700">Settled</span>
+                    </p>
                 </div>
             </div>
 
-            <div class="flex justify-center space-x-4 mt-12 print:hidden">
-                <button class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition" onclick="window.print()">
-                    <i class="fas fa-print"></i> Print Receipt
+            <!-- 5. LEGAL FOOTER -->
+            <div class="mt-12 pt-6 border-t border-slate-200 text-center text-[10px] text-slate-400">
+                <p>Thank you for choosing Novus Cloud Hotels!</p>
+                <p class="mt-1">Official Tax Document • System Generated via Novus PMS</p>
+            </div>
+
+            <!-- 6. ACTION BUTTONS (SCREEN ONLY) -->
+            <div class="flex justify-center space-x-4 mt-8 print:hidden">
+                <button type="button" class="bg-sky-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-sky-700 transition flex items-center space-x-2" onclick="window.print()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    <span>Print Tax Invoice</span>
                 </button>
-                <button class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 transition" onclick="closeReceiptModal()">
+                <button type="button" class="bg-slate-200 text-slate-700 font-bold py-2 px-6 rounded-lg hover:bg-slate-300 transition" onclick="closeReceiptModal()">
                     Close
                 </button>
             </div>
+
         </div>
     </div>
 </div>

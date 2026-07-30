@@ -3987,10 +3987,16 @@ app.get('/api/payments/pesapal-callback', async (req, res) => {
         const transaction = statusResponse.data;
 
         // 4. Smart Routing based on actual card status payload
+         // 4. Smart Routing based on actual card status payload
         if (Number(transaction.status_code) === 1) {
             // Card was successful!
-            return res.redirect(`${FRONTEND_URL}/success.html?OrderTrackingId=${OrderTrackingId}&OrderMerchantReference=${OrderMerchantReference || ''}`);
-        } else {
+            
+            // Determine if this was a POS Account settlement or a Hotel Booking
+            const typeParam = accountPayment ? 'account' : 'booking';
+            const idParam = accountPayment ? accountPayment.accountId : '';
+
+            return res.redirect(`${FRONTEND_URL}/success.html?OrderTrackingId=${OrderTrackingId}&OrderMerchantReference=${OrderMerchantReference || ''}&type=${typeParam}&accountId=${idParam}`);
+        }else {
             // Card failed or was declined! Send to a failure or retry view
             return res.redirect(`${FRONTEND_URL}/failed.html?OrderTrackingId=${OrderTrackingId}&OrderMerchantReference=${OrderMerchantReference || ''}&reason=${encodeURIComponent(transaction.description || 'Declined')}`);
         }

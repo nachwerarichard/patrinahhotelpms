@@ -41,10 +41,10 @@
 
         <!-- Navigation Actions -->
         <div class="space-y-3">
-            <a href="https://elegant-pasca-cea136.netlify.app/frontend/home12.html"class="block w-full text-center bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 px-4 rounded-xl transition duration-200 shadow-sm text-sm">
+            <a href="https://elegant-pasca-cea136.netlify.app/frontend/home12.html" class="block w-full text-center bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 px-4 rounded-xl transition duration-200 shadow-sm text-sm">
                 Return to Management Panel
             </a>
-            <button onclick="window.print()" class="block w-full text-center bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-medium py-2.5 px-4 rounded-xl transition duration-200 text-xs">
+            <button id="printBtn" onclick="handleManualPrint()" class="block w-full text-center bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-medium py-2.5 px-4 rounded-xl transition duration-200 text-xs">
                 Print Confirmation Receipt
             </button>
         </div>
@@ -52,14 +52,153 @@
 
     <!-- Live Script Interface String Processor -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        // CONFIGURATION: Set your API base URL
+        const API_BASE_URL = window.location.origin.includes('localhost') 
+            ? 'http://localhost:5000' 
+            : 'https://patrinahhotelpms.onrender.com'; // Replace with actual backend API domain
+
+        let fetchedAccountData = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const trackingId = urlParams.get('OrderTrackingId');
             const merchantRef = urlParams.get('OrderMerchantReference');
+            const type = urlParams.get('type');
+            const accountId = urlParams.get('accountId');
 
             if (merchantRef) document.getElementById('merchantRef').textContent = merchantRef;
             if (trackingId) document.getElementById('trackingId').textContent = trackingId;
+
+            // If settlement is from POS Account, fetch items and auto-print receipt
+            if (type === 'account' && accountId) {
+                try {
+                    const token = localStorage.getItem('token') || localStorage.getItem('jwt');
+                    const res = await fetch(`${API_BASE_URL}/pos/client/account/${accountId}`, {
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                        }
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        fetchedAccountData = data.account || data;
+                        // Trigger thermal receipt print automatically
+                        printReceipt(fetchedAccountData, 'Pesapal Online', trackingId || merchantRef);
+                    }
+                } catch (err) {
+                    console.error("Could not fetch account details for thermal receipt:", err);
+                }
+            }
         });
+
+        function handleManualPrint() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const trackingId = urlParams.get('OrderTrackingId') || urlParams.get('OrderMerchantReference') || 'N/A';
+            
+            if (fetchedAccountData) {
+                printReceipt(fetchedAccountData, 'Pesapal Online', trackingId);
+            } else {
+                window.print();
+            }
+        }
+
+        // Standard Thermal Receipt Renderer (Invisible iFrame method)
+        function printReceipt(accountData, paymentMethod, reference) {
+            if (!accountData) return;
+
+            const charges = accountData.charges || [];
+            const total = charges.reduce((sum, item) => sum + (Number(item.amount) || Number(item.sp) || 0), 0);
+            const receiptDate = new Date().toLocaleString();
+
+            const itemsHtml = charges.map(item => `
+                <tr>
+                    <td style="padding: 4px 0; text-align: left;">${item.item || item.description || 'Charge'}</td>
+                    <td style="padding: 4px 0; text-align: right;">${Number(item.amount || item.sp || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                </tr>
+            `).join('');
+
+            const receiptHtml = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Receipt - Account #${accountData._id || accountData.id || ''}</title>
+                    <style>
+                        body {
+                            font-family: 'Courier New', Courier, monospace;
+                            width: 280px; 
+                            margin: 0 auto;
+                            padding: 10px;
+                            font-size: 12px;
+                            color: #000;
+                        }
+                        .text-center { text-align: center; }
+                        .text-right { text-align: right; }
+                        .bold { font-weight: bold; }
+                        .divider { border-top: 1px dashed #000; margin: 8px 0; }
+                        table { width: 100%; border-collapse: collapse; }
+                    </style>
+                </head>
+                <body>
+                    <div class="text-center bold" style="font-size: 16px;">POS RECEIPT</div>
+                    <div class="text-center">${receiptDate}</div>
+                    <div class="divider"></div>
+                    
+                    <div><strong>Guest:</strong> ${accountData.guestName || 'Walk-In Guest'}</div>
+                    ${accountData.roomNumber ? `<div><strong>Room:</strong> ${accountData.roomNumber}</div>` : ''}
+                    <div><strong>Method:</strong> ${paymentMethod}</div>
+                    <div style="font-size: 10px;"><strong>Ref:</strong> ${reference}</div>
+                    
+                    <div class="divider"></div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="text-align: left;">Item</th>
+                                <th style="text-align: right;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml || '<tr><td colspan="2" class="text-center">No charges</td></tr>'}
+                        </tbody>
+                    </table>
+                    
+                    <div class="divider"></div>
+                    
+                    <table>
+                        <tr class="bold">
+                            <td style="font-size: 14px;">TOTAL:</td>
+                            <td class="text-right" style="font-size: 14px;">${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                    </table>
+                    
+                    <div class="divider"></div>
+                    <div class="text-center" style="margin-top: 15px;">Thank you for your business!</div>
+                </body>
+                </html>
+            `;
+
+            const printFrame = document.createElement('iframe');
+            printFrame.style.position = 'fixed';
+            printFrame.style.right = '0';
+            printFrame.style.bottom = '0';
+            printFrame.style.width = '0';
+            printFrame.style.height = '0';
+            printFrame.style.border = '0';
+            
+            document.body.appendChild(printFrame);
+
+            const frameDoc = printFrame.contentWindow.document;
+            frameDoc.open();
+            frameDoc.write(receiptHtml);
+            frameDoc.close();
+
+            printFrame.contentWindow.focus();
+            setTimeout(() => {
+                printFrame.contentWindow.print();
+                document.body.removeChild(printFrame); 
+            }, 500);
+        }
     </script>
 </body>
 </html>

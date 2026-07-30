@@ -1199,30 +1199,38 @@ async function renderBookings(page = 1, searchTerm = '') {
             
             let actionButtonsHtml = '';
             if (['admin', 'super-admin', 'front office'].includes(currentUserRole)) {
-                if (isCancelled) {
-                    actionButtonsHtml = `
-                        <span class="text-xs text-red-600 font-bold block mb-2 text-center uppercase tracking-wide">Cancelled</span>
-                        <button class="${baseBtn} bg-red-600 hover:bg-red-700" onclick="confirmDeleteBooking('${booking.id}')">Delete Permanently</button>
-                    `;
-                } else {
-                    actionButtonsHtml = `
-                        <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="viewBooking('${booking.id}')">View</button>
-                        ${!['checkedout', 'cancelled','void'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">Edit</button>` : ''}
-                        ${!['checkedout', 'cancelled','void'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-blue-700 hover:bg-green-800" onclick="viewCharges('${booking.id}')">View Charges</button>` : ''}
-                        ${(booking.gueststatus === 'confirmed' || booking.gueststatus === 'reserved') ? `<button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">Check In</button>` : ''}
-                        ${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')"><i class="fa-solid ${booking.gueststatus === 'checkedin' ? 'fa-arrows-rotate' : 'fa-door-open'} mr-1"></i> ${booking.gueststatus === 'checkedin' ? 'Move Room' : 'Assign Room'}</button>` : ''}
-                        ${booking.balance > 0 && booking.gueststatus !== 'cancelled' ? `<button class="${baseBtn} bg-green-600 hover:bg-green-700 mt-1" onclick="openAddPaymentModal('${booking.id}', ${booking.balance})"><i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment</button>` : ''}
-                        ${booking.amountPaid > 0 ? `<button class="${baseBtn} bg-orange-500 hover:bg-orange-600 mt-1" onclick="printReceipt('${booking.id}')"><i class="fas fa-print mr-1"></i> Receipt</button>` : ''}
-                        ${booking.gueststatus === 'checkedin' && booking.paymentStatus === 'Paid' && booking.balance === 0 ? `<button class="${baseBtn} bg-amber-500 hover:bg-amber-600 mt-1" onclick="checkoutBooking('${booking.id}')"><i class="fa-solid fa-right-from-bracket mr-1"></i> Check-out</button>` : ''}
-                        ${booking.gueststatus === 'reserved' ? `<button class="${baseBtn} bg-gray-500 hover:bg-gray-600" onclick="Confirm('${booking.id}')">Confirm</button>` : ''}
-                        <div class="border-t border-gray-100 my-1"></div>
-                        ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-red-500 hover:bg-red-600" onclick="openCancelModal('${booking.id}')"><i class="fa-solid fa-xmark mr-1"></i> Cancel</button>` : ''}
-                        ${booking.gueststatus === 'checkedin' ? `<button class="${baseBtn} bg-orange-600 hover:bg-orange-700" onclick="openVoidModal('${booking.id}')"><i class="fa-solid fa-ban mr-1"></i> Void</button>` : ''}
-                        ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-yellow-500 hover:bg-yellow-600 mt-1" onclick="markNoShow('${booking.id}')"><i class="fa-solid fa-user-slash mr-1"></i> No Show</button>` : ''}
-                        ${['reserved', 'confirmed', 'cancelled'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-red-600 hover:bg-red-700 mt-1" onclick="confirmDeleteBooking('${booking.id}')"><i class="fa-solid fa-trash-can mr-1"></i> Delete</button>` : ''}
-                    `;
-                }
-            }
+    if (isCancelled) {
+        actionButtonsHtml = `
+            <span class="text-xs text-red-600 font-bold block mb-2 text-center uppercase tracking-wide">Cancelled</span>
+            <button class="${baseBtn} bg-red-600 hover:bg-red-700" onclick="confirmDeleteBooking('${booking.id}')">Delete Permanently</button>
+        `;
+    } else {
+        actionButtonsHtml = `
+            <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="viewBooking('${booking.id}')">View</button>
+            ${!['checkedout', 'cancelled','void'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">Edit</button>` : ''}
+            ${!['checkedout', 'cancelled','void'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-blue-700 hover:bg-green-800" onclick="viewCharges('${booking.id}')">View Charges</button>` : ''}
+            ${(booking.gueststatus === 'confirmed' || booking.gueststatus === 'reserved') ? `<button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">Check In</button>` : ''}
+            ${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')"><i class="fa-solid ${booking.gueststatus === 'checkedin' ? 'fa-arrows-rotate' : 'fa-door-open'} mr-1"></i> ${booking.gueststatus === 'checkedin' ? 'Move Room' : 'Assign Room'}</button>` : ''}
+            ${booking.balance > 0 && booking.gueststatus !== 'cancelled' ? `<button class="${baseBtn} bg-green-600 hover:bg-green-700 mt-1" onclick="openAddPaymentModal('${booking.id}', ${booking.balance})"><i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment</button>` : ''}
+${booking.amountPaid > 0 ? `
+  <button class="${baseBtn} bg-orange-500 hover:bg-orange-600 mt-1" 
+          onclick="printGuestReceipt('${booking.id}')">
+    <i class="fas fa-print mr-1"></i> Print Receipt
+  </button>
+` : ''}            
+            <!-- NEW: INVOICE / GUEST FOLIO BUTTON -->
+            <button class="${baseBtn} bg-teal-600 hover:bg-teal-700 mt-1" onclick="generateInvoice('${booking.id}')"><i class="fas fa-file-invoice-dollar mr-1"></i> Folio / Invoice</button>
+            
+            ${booking.gueststatus === 'checkedin' && booking.paymentStatus === 'Paid' && booking.balance === 0 ? `<button class="${baseBtn} bg-amber-500 hover:bg-amber-600 mt-1" onclick="checkoutBooking('${booking.id}')"><i class="fa-solid fa-right-from-bracket mr-1"></i> Check-out</button>` : ''}
+            ${booking.gueststatus === 'reserved' ? `<button class="${baseBtn} bg-gray-500 hover:bg-gray-600" onclick="Confirm('${booking.id}')">Confirm</button>` : ''}
+            <div class="border-t border-gray-100 my-1"></div>
+            ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-red-500 hover:bg-red-600" onclick="openCancelModal('${booking.id}')"><i class="fa-solid fa-xmark mr-1"></i> Cancel</button>` : ''}
+            ${booking.gueststatus === 'checkedin' ? `<button class="${baseBtn} bg-orange-600 hover:bg-orange-700" onclick="openVoidModal('${booking.id}')"><i class="fa-solid fa-ban mr-1"></i> Void</button>` : ''}
+            ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-yellow-500 hover:bg-yellow-600 mt-1" onclick="markNoShow('${booking.id}')"><i class="fa-solid fa-user-slash mr-1"></i> No Show</button>` : ''}
+            ${['reserved', 'confirmed', 'cancelled'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-red-600 hover:bg-red-700 mt-1" onclick="confirmDeleteBooking('${booking.id}')"><i class="fa-solid fa-trash-can mr-1"></i> Delete</button>` : ''}
+        `;
+    }
+}
 
             const cancellationReason = booking.cancellationReason || "No reason provided";
 
@@ -1288,6 +1296,145 @@ async function renderBookings(page = 1, searchTerm = '') {
     nextPageBtn.disabled = currentPage >= totalPages;
     pageInfoSpan.textContent = `Page ${totalCount === 0 ? 0 : currentPage} of ${totalPages}`;
 }
+
+// 1. Trigger function attached to the UI button
+async function generateInvoice(bookingId) {
+    try {
+        const token = localStorage.getItem('token') || localStorage.getItem('jwt');
+        const res = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}`, {
+            headers: { 
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            }
+        });
+
+        if (!res.ok) throw new Error("Failed to load invoice data");
+
+        const data = await res.json();
+        const booking = data.booking || data;
+        
+        generateInvoiceFromAccount(booking);
+    } catch (err) {
+        console.error("Error generating invoice:", err);
+        alert("Failed to fetch booking details for invoice generation.");
+    }
+}
+
+// 2. Comprehensive A4 Standard Guest Folio & Invoice Renderer
+const generateInvoiceFromAccount = (booking) => {
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : '$';
+    const invoiceDate = new Date().toLocaleDateString('en-GB');
+    
+    const charges = booking.charges || [
+        { description: `Room Charge (${booking.roomType || 'Standard'})`, amount: booking.totalAmount || booking.rate || 0, date: booking.checkIn }
+    ];
+
+    const totalCharges = charges.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const amountPaid = Number(booking.amountPaid) || 0;
+    const balanceDue = totalCharges - amountPaid;
+
+    const itemsRows = charges.map((c, i) => `
+        <tr style="border-bottom: 1px solid #e2e8f0; font-size: 13px;">
+            <td style="padding: 10px 8px;">${c.date ? new Date(c.date).toLocaleDateString('en-GB') : invoiceDate}</td>
+            <td style="padding: 10px 8px;">${c.description || 'Accommodation Charge'}</td>
+            <td style="padding: 10px 8px; text-align: right; font-weight: 600;">${currency} ${Number(c.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+        </tr>
+    `).join('');
+
+    const invoiceWindow = window.open('', '_blank', 'width=800,height=900');
+    
+    invoiceWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Guest Folio / Tax Invoice - #${booking.id || booking._id}</title>
+            <style>
+                body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 40px; }
+                .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 30px; }
+                .company-title { font-size: 24px; font-weight: 800; letter-spacing: 1px; color: #0f172a; }
+                .invoice-title { font-size: 20px; font-weight: 700; color: #0284c7; text-align: right; }
+                .grid { display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 13px; }
+                .box { width: 48%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; }
+                .box-title { font-weight: 700; text-transform: uppercase; font-size: 11px; color: #64748b; margin-bottom: 8px; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                th { background: #f1f5f9; text-align: left; padding: 10px 8px; font-size: 11px; text-transform: uppercase; color: #475569; }
+                .totals { width: 300px; margin-left: auto; font-size: 13px; }
+                .totals-row { display: flex; justify-content: space-between; padding: 6px 0; }
+                .totals-row.final { font-size: 16px; font-weight: 800; border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a; padding: 10px 0; margin-top: 10px; }
+                .footer { margin-top: 50px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div>
+                    <div class="company-title">NOVUS CLOUD HOTELS</div>
+                    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">123 Hospitality Blvd, Suite 100</div>
+                    <div style="font-size: 12px; color: #64748b;">TIN / TAX ID: 1002938481</div>
+                </div>
+                <div>
+                    <div class="invoice-title">TAX INVOICE / FOLIO</div>
+                    <div style="font-size: 12px; color: #64748b; text-align: right; margin-top: 4px;"><strong>Folio #:</strong> ${booking.id || booking._id}</div>
+                    <div style="font-size: 12px; color: #64748b; text-align: right;"><strong>Date:</strong> ${invoiceDate}</div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="box">
+                    <div class="box-title">Guest Details</div>
+                    <div><strong>Name:</strong> ${booking.guestName || 'Valued Guest'}</div>
+                    <div><strong>Room:</strong> ${booking.roomNumber ? 'Room ' + booking.roomNumber : 'Unassigned'}</div>
+                    <div><strong>Phone/Email:</strong> ${booking.phone || booking.email || 'N/A'}</div>
+                </div>
+                <div class="box">
+                    <div class="box-title">Stay Information</div>
+                    <div><strong>Check-In:</strong> ${booking.checkIn ? new Date(booking.checkIn).toLocaleDateString('en-GB') : 'N/A'}</div>
+                    <div><strong>Check-Out:</strong> ${booking.checkOut ? new Date(booking.checkOut).toLocaleDateString('en-GB') : 'N/A'}</div>
+                    <div><strong>Status:</strong> <span style="text-transform: uppercase; font-weight: bold;">${booking.gueststatus || 'Active'}</span></div>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description / Charge Item</th>
+                        <th style="text-align: right;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsRows}
+                </tbody>
+            </table>
+
+            <div class="totals">
+                <div class="totals-row">
+                    <span>Total Charges:</span>
+                    <span>${currency} ${totalCharges.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                </div>
+                <div class="totals-row" style="color: #059669;">
+                    <span>Payments Received:</span>
+                    <span>- ${currency} ${amountPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                </div>
+                <div class="totals-row final">
+                    <span>BALANCE DUE:</span>
+                    <span>${currency} ${balanceDue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                </div>
+            </div>
+
+            <div class="footer">
+                <p>Thank you for choosing Novus Cloud Hotels. We hope you enjoyed your stay!</p>
+                <p>Generated via Novus Cloud PMS Framework</p>
+            </div>
+
+            <script>
+                window.onload = function() { window.print(); }
+            <\/script>
+        </body>
+        </html>
+    `);
+    
+    invoiceWindow.document.close();
+};
 
 async function viewBooking(id) {
     try {
@@ -2745,77 +2892,111 @@ async function markAllChargesPaid() {
         showMessage('Error', error.message, true);
     }
 }
-async function printReceipt(bookingCustomId) {
-    // We can remove the manual sessionData/token/hotelId variables here 
-    // because authenticatedFetch handles them.
 
+/**
+ * Fetches booking details + incidentals and displays the guest folio modal.
+ */
+async function printGuestReceipt(bookingCustomId) {
     try {
-        // 1. Fetch Booking
-        // Note: authenticatedFetch already appends x-hotel-id header, 
-        // but keeping the query param is fine if your backend requires both.
-        const bRes = await authenticatedFetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}`);
-        if (!bRes.ok) throw new Error(`Booking fetch failed: ${bRes.status}`);
-        const booking = await bRes.json();
+        // 1. Parallel Fetching for performance
+        const [bRes, cRes] = await Promise.all([
+            authenticatedFetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}`),
+            authenticatedFetch(`${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`)
+        ]);
 
-        // 2. Fetch Incidentals
-        const cRes = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`);
+        if (!bRes.ok) throw new Error(`Booking fetch failed: ${bRes.status}`);
         if (!cRes.ok) throw new Error(`Charges fetch failed: ${cRes.status}`);
+
+        const booking = await bRes.json();
         const incidentalCharges = await cRes.json();
 
-        /* ---------- UI POPULATION ---------- */
-        receiptGuestNameSpan.textContent = booking.name;
-        receiptRoomNumberSpan.textContent = booking.room;
-        receiptBookingIdSpan.textContent = booking.id;
-        receiptCheckInSpan.textContent = booking.checkIn;
-        receiptCheckOutSpan.textContent = booking.checkOut;
+        /* ---------- UI POPULATION: GUEST & STAY METADATA ---------- */
+        receiptGuestNameSpan.textContent = booking.name || 'Valued Guest';
+        receiptRoomNumberSpan.textContent = booking.room || 'Unassigned';
+        receiptBookingIdSpan.textContent = booking.id || bookingCustomId;
+        receiptCheckInSpan.textContent = booking.checkIn ? new Date(booking.checkIn).toLocaleDateString('en-US') : '-';
+        receiptCheckOutSpan.textContent = booking.checkOut ? new Date(booking.checkOut).toLocaleDateString('en-US') : '-';
         receiptPrintDateSpan.textContent = new Date().toLocaleDateString('en-US', { 
-            year: 'numeric', month: 'long', day: 'numeric' 
+            year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
         });
 
-        receiptNightsSpan.textContent = booking.nights;
-        receiptAmtPerNightSpan.textContent = Number(booking.amtPerNight || 0).toLocaleString();
-        receiptRoomTotalDueSpan.textContent = Number(booking.totalDue || 0).toLocaleString();
+        receiptNightsSpan.textContent = booking.nights || 1;
+        receiptAmtPerNightSpan.textContent = Number(booking.amtPerNight || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
+        receiptRoomTotalDueSpan.textContent = Number(booking.totalDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
 
+        /* ---------- INCIDENTALS LEDGER ---------- */
         receiptIncidentalChargesTableBody.innerHTML = '';
         let totalIncidentalAmount = 0;
+        let paidAtPOSAmount = 0;
 
         if (!incidentalCharges || incidentalCharges.length === 0) {
-            receiptIncidentalChargesTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No incidental charges.</td></tr>';
+            receiptIncidentalChargesTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">No incidental charges incurred.</td></tr>';
         } else {
             incidentalCharges.forEach(charge => {
+                const amount = Number(charge.amount) || 0;
+                totalIncidentalAmount += amount;
+
+                // Track if paid directly at point of sale vs posted to room ledger
+                if (charge.isPaid) {
+                    paidAtPOSAmount += amount;
+                }
+
                 const row = receiptIncidentalChargesTableBody.insertRow();
                 row.innerHTML = `
-                    <td>${charge.type}</td>
-                    <td>${charge.description || '-'}</td>
-                    <td>${new Date(charge.date).toLocaleDateString()}</td>
-                    <td>${Number(charge.amount).toLocaleString()}</td>
+                    <td>${charge.type || 'General'}</td>
+                    <td>${charge.description || '-'} ${charge.isPaid ? '<small>(Paid POS)</small>' : ''}</td>
+                    <td>${charge.date ? new Date(charge.date).toLocaleDateString('en-US') : '-'}</td>
+                    <td style="text-align:right; font-weight:600;">${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                 `;
-                // Logic: Only add to "Balance Due" if the charge hasn't been paid yet
-                if (!charge.isPaid) totalIncidentalAmount += charge.amount;
             });
         }
 
-        /* ---------- TOTALS CALCULATION ---------- */
+        /* ---------- TOTALS CALCULATION (PMS COMPLIANT) ---------- */
         const roomSubtotal = parseFloat(booking.totalDue) || 0;
-        const totalAmountPaid = parseFloat(booking.amountPaid) || 0;
         
-        // The "Total Bill" usually reflects the Sum of everything (Room + All Incidentals)
-        // But the "Balance Due" should only show what is still outstanding.
+        // Total Bill MUST include ALL charges (Room + ALL Incidentals)
         const totalBill = roomSubtotal + totalIncidentalAmount;
-        let finalBalanceDue = Math.max(0, totalBill - totalAmountPaid);
+        
+        // Total Paid includes Direct Payments on Booking + POS Paid Incidentals
+        const rawPayments = parseFloat(booking.amountPaid) || 0;
+        const totalAmountPaid = rawPayments + paidAtPOSAmount;
+        
+        // Exact Balance Due (allows negative values for refunds/deposits)
+        const finalBalanceDue = totalBill - totalAmountPaid;
 
-        receiptPaymentStatusSpan.textContent = (finalBalanceDue <= 0) ? 'Paid' : (booking.paymentStatus || 'Pending');
-        receiptSubtotalRoomSpan.textContent = roomSubtotal.toLocaleString();
-        receiptSubtotalIncidentalsSpan.textContent = totalIncidentalAmount.toLocaleString();
-        receiptTotalBillSpan.textContent = totalBill.toLocaleString();
-        receiptAmountPaidSpan.textContent = totalAmountPaid.toLocaleString();
-        receiptBalanceDueSpan.textContent = finalBalanceDue.toLocaleString();
+        // Set status
+        if (finalBalanceDue <= 0) {
+            receiptPaymentStatusSpan.textContent = 'SETTLED / PAID';
+            receiptPaymentStatusSpan.className = 'status-badge paid';
+        } else {
+            receiptPaymentStatusSpan.textContent = `OPEN BALANCE (${finalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })})`;
+            receiptPaymentStatusSpan.className = 'status-badge pending';
+        }
 
+        receiptSubtotalRoomSpan.textContent = roomSubtotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        receiptSubtotalIncidentalsSpan.textContent = totalIncidentalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        receiptTotalBillSpan.textContent = totalBill.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        receiptAmountPaidSpan.textContent = totalAmountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        
+        // Format balance display
+        receiptBalanceDueSpan.textContent = finalBalanceDue < 0 
+            ? `REFUND DUE: ${Math.abs(finalBalanceDue).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+            : finalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 });
+
+        /* ---------- PRINT DISPLAY ---------- */
         receiptModal.style.display = 'flex';
+
+        setTimeout(() => {
+            window.print();
+        }, 300);
 
     } catch (error) {
         console.error('Receipt Error:', error);
-        showMessage('Error', `Receipt generation failed: ${error.message}`, true);
+        if (typeof showMessage === 'function') {
+            showMessage('Error', `Receipt generation failed: ${error.message}`, true);
+        } else {
+            alert(`Receipt generation failed: ${error.message}`);
+        }
     }
 }
 /**
@@ -6003,9 +6184,11 @@ const settleAccount = async (method, accountId, phone = '') => {
 
         if (method === 'room') {
             showMessage('Success', 'Posted to room successfully! 📄✅', false);
+        
             resetUI();
         } else {
             showMessage('Success', 'Bill settled completely! 💵✅', false);
+            printReceipt(currentActiveAccountData, method, data);
             resetUI();
             if (typeof activeAccountId !== 'undefined') { activeAccountId = null; }
         }
@@ -6014,9 +6197,13 @@ const settleAccount = async (method, accountId, phone = '') => {
         showMessage("Error", "Connection failure during settlement process.", true); 
     }
 };
+
+let currentActiveAccountData = null;
 // --- UI UPDATES ---
 const updateActiveAccountUI = (account) => {
     if (!account) return;
+
+    currentActiveAccountData = account;
 
     // Keep activeAccountId in sync with current account object
     activeAccountId = account._id || account.id || activeAccountId;
@@ -6063,6 +6250,158 @@ const updateActiveAccountUI = (account) => {
         };
     }
 };
+
+const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
+    if (!accountData) return;
+
+    const charges = accountData.charges || [];
+    
+    // Calculate total accounting for quantity if present
+    const total = charges.reduce((sum, item) => {
+        const qty = Number(item.qty) || Number(item.quantity) || 1;
+        const price = Number(item.amount) || Number(item.sp) || Number(item.price) || 0;
+        return sum + (price * qty);
+    }, 0);
+
+    const receiptDate = new Date().toLocaleString();
+    const receiptNumber = accountData.receiptNumber || accountData._id || accountData.id || `POS-${Date.now().toString().slice(-6)}`;
+
+    // Generate POS item lines with quantity & unit price
+    const itemsHtml = charges.map(item => {
+        const qty = Number(item.qty) || Number(item.quantity) || 1;
+        const unitPrice = Number(item.amount) || Number(item.sp) || Number(item.price) || 0;
+        const itemTotal = unitPrice * qty;
+        const itemName = item.item || item.description || 'Item Charge';
+
+        return `
+            <tr>
+                <td style="padding: 3px 0; text-align: left; vertical-align: top;">
+                    <div>${itemName}</div>
+                    ${qty > 1 ? `<div style="font-size: 10px; color: #444;">${qty} x ${unitPrice.toFixed(2)}</div>` : ''}
+                </td>
+                <td style="padding: 3px 0; text-align: right; vertical-align: top; font-weight: bold;">
+                    ${itemTotal.toFixed(2)}
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    const receiptHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Receipt - ${receiptNumber}</title>
+            <style>
+                @page {
+                    size: auto;
+                    margin: 0mm; /* Eliminates blank space header/footers on thermal paper */
+                }
+                html, body {
+                    width: 100%;
+                    margin: 0;
+                    padding: 4px 6px;
+                    font-family: 'Courier New', Courier, monospace;
+                    font-size: 12px;
+                    color: #000;
+                    background: #fff;
+                }
+                .text-center { text-align: center; }
+                .text-right { text-align: right; }
+                .bold { font-weight: bold; }
+                .divider { border-top: 1px dashed #000; margin: 6px 0; }
+                table { width: 100%; border-collapse: collapse; }
+                th { border-bottom: 1px solid #000; padding-bottom: 4px; font-size: 11px; }
+            </style>
+        </head>
+        <body>
+            <!-- BRAND HEADER -->
+            <div class="text-center bold" style="font-size: 15px;">NOVUS POS</div>
+            <div class="text-center" style="font-size: 10px;">RECEIPT #${receiptNumber}</div>
+            <div class="text-center" style="font-size: 10px; margin-bottom: 4px;">${receiptDate}</div>
+            
+            <div class="divider"></div>
+            
+            <!-- TRANSACTION DETAILS -->
+            <div style="font-size: 11px;">
+                <div><strong>Server/Op:</strong> ${settlementInfo.cashierName || 'POS Station 1'}</div>
+                <div><strong>Guest:</strong> ${accountData.guestName || 'Walk-In'}</div>
+                ${accountData.roomNumber ? `<div><strong>Room #:</strong> ${accountData.roomNumber}</div>` : ''}
+                <div><strong>Payment:</strong> ${paymentMethod || 'Cash'}</div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <!-- ITEMIZED ITEMS TABLE -->
+            <table>
+                <thead>
+                    <tr>
+                        <th style="text-align: left;">QTY / ITEM</th>
+                        <th style="text-align: right;">AMT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsHtml || '<tr><td colspan="2" class="text-center">No charges</td></tr>'}
+                </tbody>
+            </table>
+            
+            <div class="divider"></div>
+            
+            <!-- TOTALS -->
+            <table>
+                <tr class="bold">
+                    <td style="font-size: 13px;">TOTAL DUE:</td>
+                    <td class="text-right" style="font-size: 13px;">${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                </tr>
+            </table>
+            
+            <div class="divider"></div>
+            
+            <!-- FOOTER & CUT PADDING -->
+            <div class="text-center" style="margin-top: 10px; font-size: 10px;">
+                Thank you for visiting!<br>
+                Please retain for your records.
+            </div>
+            
+            <!-- Extra blank spacing for auto-cutter clearance on thermal printers -->
+            <div style="height: 30px;"></div>
+        </body>
+        </html>
+    `;
+
+    // Print using an invisible iframe
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'fixed';
+    printFrame.style.right = '0';
+    printFrame.style.bottom = '0';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
+    printFrame.style.border = '0';
+    
+    document.body.appendChild(printFrame);
+
+    const frameDoc = printFrame.contentWindow.document;
+    frameDoc.open();
+    frameDoc.write(receiptHtml);
+    frameDoc.close();
+
+    // Trigger print safely once content is loaded
+    printFrame.onload = () => {
+        try {
+            printFrame.contentWindow.focus();
+            printFrame.contentWindow.print();
+        } catch (e) {
+            console.error('Printing error:', e);
+        } finally {
+            // Clean up frame after print dialog finishes
+            setTimeout(() => {
+                if (document.body.contains(printFrame)) {
+                    document.body.removeChild(printFrame);
+                }
+            }, 1000);
+        }
+    };
+};
+
 
 const resetActiveFolio = () => {
     // 1. Clear the global active account state variable
@@ -6205,54 +6544,88 @@ const printReceiptFromAccount = (receipt) => {
     const details = document.getElementById('receipt-details');
     const dateSpan = document.getElementById('receipt-date');
     
-    // Set the receipt timestamp cleanly
-    dateSpan.innerText = new Date().toLocaleString('en-GB', { 
-        dateStyle: 'short', 
-        timeStyle: 'short' 
-    });
+    if (dateSpan) {
+        dateSpan.innerText = new Date().toLocaleString('en-GB', { 
+            dateStyle: 'medium', 
+            timeStyle: 'short' 
+        });
+    }
 
-    // Generate individual lines for items cleanly formatted
-    const itemsHtml = receipt.charges.map(c => `
-        <div class="flex justify-between items-start text-xs font-mono my-1">
-            <span class="max-w-[70%] text-left break-words">${c.description}</span>
-            <span class="font-bold">${CURRENT_CURRENCY} ${Number(c.amount).toLocaleString()}</span>
-        </div>
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : '$';
+    
+    // Calculate Tax Breakdown (Assumes 18% standard VAT or adjustable rate)
+    const taxRate = 0.18;
+    const totalAmount = Number(receipt.total) || 0;
+    const subtotal = totalAmount / (1 + taxRate);
+    const taxAmount = totalAmount - subtotal;
+
+    // Line items formatted to global PMS standard
+    const itemsHtml = (receipt.charges || []).map((c, index) => `
+        <tr class="text-[11px] font-mono border-b border-gray-100">
+            <td class="py-1.5 text-left pr-2 font-semibold text-gray-700">${index + 1}</td>
+            <td class="py-1.5 text-left break-words pr-2">
+                <div>${c.description || 'Room Charge'}</div>
+                <div class="text-[9px] text-gray-400">${c.date ? new Date(c.date).toLocaleDateString('en-GB') : ''}</div>
+            </td>
+            <td class="py-1.5 text-right font-bold whitespace-nowrap">${currency} ${Number(c.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+        </tr>
     `).join('');
 
-    // Inject beautifully structured semantic POS layout
     details.innerHTML = `
-        <div class="text-center border-b border-dashed pb-3 mb-3">
-            <h2 class="text-lg font-bold tracking-wider">NOVUS CLOUD PMS</h2>
-            <p class="text-[10px] text-gray-500 uppercase font-mono mt-0.5">Official Guest Receipt</p>
-        </div>
-
-        <div class="text-xs font-mono space-y-1 mb-3 pb-2 border-b border-dashed">
-            <div class="flex justify-between"><span class="text-gray-500">GUEST:</span> <span class="font-bold uppercase">${receipt.guestName}</span></div>
-            <div class="flex justify-between"><span class="text-gray-500">HOTEL REF:</span> <span class="font-bold">#${receipt.hotelId.toString().slice(-6).toUpperCase()}</span></div>
-        </div>
-
-        <div class="mb-4">
-            <div class="flex justify-between text-[11px] font-bold text-gray-500 uppercase border-b pb-1 font-mono mb-2">
-                <span>Description</span>
-                <span>Amount (${CURRENT_CURRENCY})</span>
+        <div class="p-2 bg-white font-mono text-slate-800">
+            <!-- Header section -->
+            <div class="text-center border-b border-dashed pb-3 mb-3">
+                <h2 class="text-base font-black tracking-widest text-slate-900 uppercase">NOVUS CLOUD HOTELS</h2>
+                <p class="text-[10px] text-gray-500 uppercase mt-0.5">Official Payment Receipt</p>
+                <p class="text-[9px] text-gray-400 font-mono">TAX ID / TIN: 1002938481</p>
             </div>
-            ${itemsHtml}
-        </div>
 
-        <div class="border-t-2 border-double pt-3 mt-2 font-mono">
-            <div class="flex justify-between items-center text-sm font-bold">
-                <span>NET TOTAL</span>
-                <span class="text-base">${CURRENT_CURRENCY} ${Number(receipt.total).toLocaleString()}</span>
+            <!-- PMS Spec Meta Info -->
+            <div class="text-[11px] space-y-1 mb-3 pb-2 border-b border-dashed">
+                <div class="flex justify-between"><span class="text-gray-500">GUEST NAME:</span> <span class="font-bold uppercase">${receipt.guestName || 'Walk-In Guest'}</span></div>
+                ${receipt.roomNumber ? `<div class="flex justify-between"><span class="text-gray-500">ROOM / UNIT:</span> <span class="font-bold">Room ${receipt.roomNumber}</span></div>` : ''}
+                <div class="flex justify-between"><span class="text-gray-500">FOLIO NO:</span> <span class="font-bold">#${(receipt.id || receipt._id || receipt.hotelId).toString().slice(-8).toUpperCase()}</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">PAYMENT METHOD:</span> <span class="font-bold">${receipt.paymentMethod || 'Cash / Card'}</span></div>
             </div>
-        </div>
 
-        <div class="text-center mt-6 pt-3 border-t border-dashed text-[10px] font-mono text-gray-500">
-            <p>Thank you for your visit!</p>
-            <p class="mt-1 font-bold">Powered by Novus Cloud</p>
+            <!-- Items table -->
+            <table class="w-full mb-3 text-left">
+                <thead>
+                    <tr class="text-[10px] font-bold text-gray-500 uppercase border-b pb-1">
+                        <th class="py-1 w-6">#</th>
+                        <th class="py-1">Description</th>
+                        <th class="py-1 text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsHtml || '<tr><td colspan="3" class="text-center py-2 text-gray-400">No charges listed</td></tr>'}
+                </tbody>
+            </table>
+
+            <!-- Totals & Tax summary -->
+            <div class="border-t border-dashed pt-2 space-y-1 text-[11px]">
+                <div class="flex justify-between text-gray-600">
+                    <span>SUBTOTAL (EXCL. TAX)</span>
+                    <span>${currency} ${subtotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
+                <div class="flex justify-between text-gray-600">
+                    <span>VAT / TAX (18%)</span>
+                    <span>${currency} ${taxAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
+                <div class="flex justify-between items-center text-sm font-black border-t-2 border-double pt-2 text-slate-900">
+                    <span>TOTAL PAID</span>
+                    <span>${currency} ${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-6 pt-3 border-t border-dashed text-[10px] text-gray-500">
+                <p class="font-semibold">Thank you for staying with us!</p>
+                <p class="text-[9px] text-gray-400 mt-1">System Generated • Novus Cloud PMS v2.4</p>
+            </div>
         </div>
     `;
 
-    // Trigger physical paper printer print dialog cleanly
     window.print();
 };
 
