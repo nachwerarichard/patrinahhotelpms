@@ -5486,17 +5486,20 @@ const Sale = mongoose.model('Sale', new mongoose.Schema({
     profit: Number,
     percentageprofit: Number,
     paymentMethod: { 
-    type: String, 
-    required: true, 
-    enum: ['Cash', 'Card', 'MobileMoney', 'Folio'], // Enforces standard values
-    synced: { type: Boolean, default: false }
-  },
-  recordedBy: { 
-    type: String, 
-    required: true, 
-    trim: true 
-  },
-    date: { type: Date, default: Date.now } // Keep just this one
+        type: String, 
+        required: true, 
+        enum: ['Cash', 'Card', 'MobileMoney', 'Folio']
+    },
+    synced: { 
+        type: Boolean, 
+        default: false 
+    },
+    recordedBy: { 
+        type: String, 
+        required: true, 
+        trim: true 
+    },
+    date: { type: Date, default: Date.now }
 }));
 
 
