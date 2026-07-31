@@ -109,29 +109,22 @@
 /* ==========================================
    NAMED PAGES FOR MULTI-FORMAT PRINTING
    ========================================== */
-@page report {
+/* 1. Global A4 Page Setup */
+@page {
     size: A4 portrait;
     margin: 1.2cm;
 }
 
-@page thermal {
-    size: 80mm auto; /* Continuous roll height cut */
-    margin: 0;       /* Zero margin prevents trailing paper waste */
-}
-
 @media print {
-    /* 1. Page Margins */
-    @page {
-        size: A4 portrait;
-        margin: 1.2cm;
-    }
-
     /* 2. Global Document Reset */
-    body {
+    html, body {
         background: #ffffff !important;
         color: #000000 !important;
         padding: 0 !important;
         margin: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
     }
 
     * {
@@ -139,10 +132,10 @@
         print-color-adjust: exact !important;
     }
 
-    /* 3. Hide Unnecessary UI Components */
+    /* 3. Hide Navigation, UI Controls & Modal Backdrop Overlays */
     nav, 
-    header,
-    aside,
+    header, 
+    aside, 
     .sidebar, 
     .filter-section, 
     button, 
@@ -153,35 +146,15 @@
         display: none !important;
     }
 
-    /* 4. Full Page Reports Styling */
-    .report-container {
-        width: 100% !important;
-        box-shadow: none !important;
-        padding: 0 !important;
+    /* 4. Hide Main App Body when Printing Modal (Prevents Content Overlap) */
+    body > *:not(#receiptModal) {
+        display: none !important;
     }
 
-    /* 5. General Table Layout & Page Break Protections */
-    table {
-        width: 100% !important;
-        border-collapse: collapse !important;
-        break-inside: auto;
-    }
-
-    /* Preserve structural page breaks */
-    h4, .totals, tr, .invoice-header, .invoice-footer {
-        break-inside: avoid;
-    }
-
-    /* Unlock scrollable Tailwind containers */
-    .max-h-\[90vh\], 
-    .overflow-y-auto {
-        max-height: none !important;
-        overflow: visible !important;
-    }
-
-    /* 6. Receipt & Invoice Modal Isolation (Full A4 Layout) */
+    /* 5. Isolated Receipt / Invoice Container for A4 */
     #receiptModal {
-        position: absolute !important;
+        display: block !important;
+        position: relative !important;
         left: 0 !important;
         top: 0 !important;
         width: 100% !important;
@@ -189,23 +162,36 @@
         margin: 0 !important;
         padding: 0 !important;
         background: #ffffff !important;
-        display: block !important;
         box-shadow: none !important;
         border: none !important;
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
         line-height: 1.4 !important;
     }
 
-    #receiptModal table {
+    /* 6. Unlock Scrollable Tailwind Containers */
+    .max-h-\[90vh\], 
+    .overflow-y-auto {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    /* 7. Clean Table Spacing for A4 Sheets */
+    #receiptModal table,
+    .report-container table {
         width: 100% !important;
         border-collapse: collapse !important;
     }
 
-    /* Adds subtle borders to table headers and rows for clean A4 alignment */
     #receiptModal th, 
     #receiptModal td {
         padding: 8px 10px !important;
         border-bottom: 1px solid #e5e7eb !important;
+    }
+
+    /* 8. Page Break Protection */
+    tr, h4, .totals, .invoice-header, .invoice-footer {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
     }
 }
 
