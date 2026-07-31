@@ -972,7 +972,7 @@ const bookingSchema = new mongoose.Schema({
     totalDue: { type: Number }, // This is ROOM total due
     amountPaid: { type: Number}, // This is ROOM amount paid
     balance: { type: Number, default: 0 }, // This is ROOM balance
-    paymentStatus: { type: String, enum: ['Pending','Failed', 'Partially Paid'], default: 'Pending' },
+    paymentStatus: { type: String, enum: ['Pending','Failed','Paid', 'Partially Paid'], default: 'Pending' },
 // Inside your BookingSchema definitions file:
 paymentMethod: {
     type: String,
