@@ -2958,6 +2958,7 @@ async function printGuestReceipt(bookingCustomId) {
 
         const nightsCount = booking.nights || 1;
         const roomTotalDue = Number(booking.totalDue || 0);
+        const roomAmountPaid = Number(booking.amountPaid || 0);
 
         let totalIncidentalAmount = 0;
         let paidAtPOSAmount = 0;
@@ -2967,7 +2968,7 @@ async function printGuestReceipt(bookingCustomId) {
                 <td class="py-3 px-3">${checkInFormatted} - ${checkOutFormatted}</td>
                 <td class="py-3 px-3">Room Stay Accommodation Charge (${nightsCount} night/s)</td>
                 <td class="py-3 px-3 text-right font-medium">${hotelCurrency} ${roomTotalDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                <td class="py-3 px-3 text-right text-emerald-600 font-medium">-</td>
+                <td class="py-3 px-3 text-right text-emerald-600 font-medium">${hotelCurrency} ${roomAmountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
             </tr>
         `;
 
