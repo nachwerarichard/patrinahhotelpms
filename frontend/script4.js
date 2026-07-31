@@ -3062,7 +3062,7 @@ async function printGuestReceipt(bookingCustomId) {
                         <div class="p-4 rounded-md border border-slate-300">
                             <h4 class="font-bold text-slate-400 uppercase text-[10px] mb-2 tracking-wider">Guest Information</h4>
                             <p class="text-sm font-semibold text-slate-900">${booking.name || 'Valued Guest'}</p>
-                            <p><strong>Room / Unit:</strong> ${booking.room || 'Unassigned'}</p>
+                            <p><strong>Room:</strong> ${booking.room || 'Unassigned'}</p>
                         </div>
                         <div class="p-4 rounded-md border border-slate-300">
                             <h4 class="font-bold text-slate-400 uppercase text-[10px] mb-2 tracking-wider">Stay Information</h4>

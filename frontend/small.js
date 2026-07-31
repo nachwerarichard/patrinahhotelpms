@@ -1309,7 +1309,6 @@ async function renderBookings(page = 1, searchTerm = '') {
 // 1. Trigger function attached to the UI button
 async function generateInvoice(bookingId) {
     try {
-        // Corrected route path: /api/booking/id/:customId (singular 'booking')
         const res = await authenticatedFetch(`${API_BASE_URL}/booking/id/${bookingId}`);
 
         if (!res) return;
@@ -1339,6 +1338,7 @@ const generateInvoiceFromAccount = (booking) => {
     iframe.style.width = '0';
     iframe.style.height = '0';
     iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
     document.body.appendChild(iframe);
 
     // 2. Extract Hotel Metadata & Currency
@@ -1346,7 +1346,7 @@ const generateInvoiceFromAccount = (booking) => {
     const hotelName = userObj.hotelName || localStorage.getItem('hotelName') || booking.hotelId?.name || 'Hotel Folio';
     const hotelLocation = userObj.hotelLocation || localStorage.getItem('hotelLocation') || booking.hotelId?.location || 'Main Campus';
     
-    // Currency resolution (Global variable -> user context -> localStorage -> booking data -> default)
+    // Currency resolution
     const currency = (typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : null) 
         || userObj.hotelCurrency 
         || localStorage.getItem('hotelCurrency') 
@@ -1373,10 +1373,10 @@ const generateInvoiceFromAccount = (booking) => {
     const balanceDue = totalCharges - amountPaid;
 
     const itemsRows = charges.map((c) => `
-        <tr style="border-bottom: 1px solid #e2e8f0; font-size: 12px;">
-            <td style="padding: 6px 8px;">${c.date ? new Date(c.date).toLocaleDateString('en-GB') : invoiceDate}</td>
-            <td style="padding: 6px 8px;">${c.description || 'Accommodation Charge'}</td>
-            <td style="padding: 6px 8px; text-align: right; font-weight: 600;">${currency} ${Number(c.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+        <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
+            <td style="padding: 10px 8px; font-size: 11px;">${c.date ? new Date(c.date).toLocaleDateString('en-GB') : invoiceDate}</td>
+            <td style="padding: 10px 8px; font-size: 11px;">${c.description || 'Accommodation Charge'}</td>
+            <td style="padding: 10px 8px; font-size: 11px; text-align: right; font-weight: 600;">${currency} ${Number(c.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
         </tr>
     `).join('');
 
@@ -1387,71 +1387,199 @@ const generateInvoiceFromAccount = (booking) => {
         <!DOCTYPE html>
         <html>
         <head>
-            <title></title> <!-- Empty title prevents printing URL/page title at header -->
+            <title></title>
             <style>
-                @page { size: A4 portrait; margin: 0; }
-                * { box-sizing: border-box; }
-                body { 
-                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
-                    color: #1e293b; 
-                    margin: 0; 
-                    padding: 15mm; 
-                    background: #ffffff !important;
+                @page { 
+                    size: A4 portrait; 
+                    margin: 15mm 15mm 15mm 15mm; 
                 }
-                .invoice-container { width: 100%; max-width: 800px; margin: 0 auto; }
-                .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 18px; }
-                .company-title { font-size: 20px; font-weight: 800; color: #0f172a; text-transform: uppercase; }
-                .invoice-title { font-size: 18px; font-weight: 700; color: #0284c7; text-align: right; text-transform: uppercase; }
-                .grid { display: flex; justify-content: space-between; margin-bottom: 18px; font-size: 12px; }
-                .box { width: 48%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; }
-                .box-title { font-weight: 700; text-transform: uppercase; font-size: 10px; color: #64748b; margin-bottom: 6px; }
-                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                th { background: #f1f5f9; text-align: left; padding: 8px; font-size: 10px; text-transform: uppercase; color: #475569; }
-                .totals { width: 280px; margin-left: auto; font-size: 12px; }
-                .totals-row { display: flex; justify-content: space-between; padding: 4px 0; }
-                .totals-row.final { font-size: 14px; font-weight: 800; border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a; padding: 6px 0; margin-top: 6px; }
-                .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+                * { 
+                    box-sizing: border-box; 
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                html, body { 
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
+                    color: #0f172a; 
+                    margin: 0; 
+                    padding: 0; 
+                    background: #ffffff !important;
+                    font-size: 12px;
+                }
+                .invoice-container { 
+                    width: 100%; 
+                    margin: 0 auto; 
+                }
+                
+                /* Header layout using print-safe table design */
+                .header-table {
+                    width: 100%;
+                    border-bottom: 2px solid #0f172a;
+                    padding-bottom: 12px;
+                    margin-bottom: 20px;
+                }
+                .company-title { 
+                    font-size: 22px; 
+                    font-weight: 800; 
+                    color: #0f172a; 
+                    text-transform: uppercase; 
+                    line-height: 1.1;
+                }
+                .invoice-title { 
+                    font-size: 20px; 
+                    font-weight: 800; 
+                    color: #0284c7; 
+                    text-align: right; 
+                    text-transform: uppercase; 
+                    line-height: 1.1;
+                }
+                
+                /* Guest info box layout using print-safe table design */
+                .info-table {
+                    width: 100%;
+                    margin-bottom: 24px;
+                    border-spacing: 12px 0;
+                    margin-left: -12px;
+                    margin-right: -12px;
+                }
+                .box { 
+                    background: #f8fafc; 
+                    border: 1px solid #e2e8f0; 
+                    border-radius: 6px; 
+                    padding: 12px 14px; 
+                    vertical-align: top;
+                }
+                .box-title { 
+                    font-weight: 700; 
+                    text-transform: uppercase; 
+                    font-size: 10px; 
+                    color: #64748b; 
+                    margin-bottom: 8px; 
+                    letter-spacing: 0.5px;
+                }
+                .box-row {
+                    margin-bottom: 4px;
+                }
+
+                /* Main Items Table */
+                .items-table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin-bottom: 24px; 
+                }
+                .items-table th { 
+                    background: #f1f5f9; 
+                    text-align: left; 
+                    padding: 10px 8px; 
+                    font-size: 10px; 
+                    text-transform: uppercase; 
+                    color: #475569; 
+                    border-bottom: 1px solid #cbd5e1;
+                    letter-spacing: 0.5px;
+                }
+
+                /* Totals Breakdown */
+                .totals-wrapper {
+                    width: 100%;
+                    margin-bottom: 40px;
+                    page-break-inside: avoid;
+                    break-inside: avoid;
+                }
+                .totals-table { 
+                    width: 300px; 
+                    margin-left: auto; 
+                    border-collapse: collapse;
+                }
+                .totals-table td {
+                    padding: 6px 0;
+                }
+                .totals-table .final-row td { 
+                    font-size: 14px; 
+                    font-weight: 800; 
+                    border-top: 2px solid #0f172a; 
+                    border-bottom: 2px solid #0f172a; 
+                    padding: 8px 0; 
+                }
+
+                .footer { 
+                    margin-top: 40px; 
+                    text-align: center; 
+                    font-size: 10px; 
+                    color: #94a3b8; 
+                    border-top: 1px solid #e2e8f0; 
+                    padding-top: 14px; 
+                    page-break-inside: avoid;
+                    break-inside: avoid;
+                }
             </style>
         </head>
         <body>
             <div class="invoice-container">
-                <div class="header">
-                    <div>
-                        <div class="company-title">${hotelName}</div>
-                        <div style="font-size: 11px; color: #64748b; mt-1">${hotelLocation}</div>
-                    </div>
-                    <div>
-                        <div class="invoice-title">Guest Invoice</div>
-                        <div style="font-size: 11px; color: #64748b; text-align: right;"><strong>Folio #:</strong> ${booking.id || '-'}</div>
-                        <div style="font-size: 11px; color: #64748b; text-align: right;"><strong>Date:</strong> ${invoiceDate}</div>
-                    </div>
-                </div>
-                <div class="grid">
-                    <div class="box">
-                        <div class="box-title">Guest Details</div>
-                        <div><strong>Name:</strong> ${booking.name || 'Valued Guest'}</div>
-                        <div><strong>Room:</strong> ${booking.room ? 'Room ' + booking.room : 'Unassigned'}</div>
-                    </div>
-                    <div class="box">
-                        <div class="box-title">Stay Information</div>
-                        <div><strong>Nights:</strong> ${nightsCount}</div>
-                        <div><strong>Status:</strong> ${booking.gueststatus || 'Active'}</div>
-                    </div>
-                </div>
-                <table>
+                <!-- Header Block -->
+                <table class="header-table">
+                    <tr>
+                        <td style="vertical-align: top;">
+                            <div class="company-title">${hotelName}</div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 4px;">${hotelLocation}</div>
+                        </td>
+                        <td style="vertical-align: top; text-align: right;">
+                            <div class="invoice-title">Guest Invoice</div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 4px;"><strong>Folio #:</strong> ${booking.id || '-'}</div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 2px;"><strong>Date:</strong> ${invoiceDate}</div>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Info Grid Block -->
+                <table class="info-table">
+                    <tr>
+                        <td class="box" style="width: 50%;">
+                            <div class="box-title">Guest Details</div>
+                            <div class="box-row"><strong>Name:</strong> ${booking.name || 'Valued Guest'}</div>
+                            <div class="box-row"><strong>Room:</strong> ${booking.room ? 'Room ' + booking.room : 'Unassigned'}</div>
+                        </td>
+                        <td class="box" style="width: 50%;">
+                            <div class="box-title">Stay Information</div>
+                            <div class="box-row"><strong>Nights:</strong> ${nightsCount}</div>
+                            <div class="box-row"><strong>Status:</strong> ${booking.gueststatus || 'Active'}</div>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Items Table -->
+                <table class="items-table">
                     <thead>
-                        <tr><th>Date</th><th>Description</th><th style="text-align: right;">Amount</th></tr>
+                        <tr>
+                            <th style="width: 20%;">Date</th>
+                            <th style="width: 55%;">Description</th>
+                            <th style="width: 25%; text-align: right;">Amount</th>
+                        </tr>
                     </thead>
                     <tbody>${itemsRows}</tbody>
                 </table>
-                <div class="totals">
-                    <div class="totals-row"><span>Total Charges:</span><span>${currency} ${totalCharges.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
-                    <div class="totals-row"><span>Amount Paid:</span><span>${currency} ${amountPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
-                    <div class="totals-row final"><span>BALANCE DUE:</span><span>${currency} ${balanceDue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+
+                <!-- Totals Section -->
+                <div class="totals-wrapper">
+                    <table class="totals-table">
+                        <tr>
+                            <td>Total Charges:</td>
+                            <td style="text-align: right; font-weight: 600;">${currency} ${totalCharges.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                        </tr>
+                        <tr>
+                            <td>Amount Paid:</td>
+                            <td style="text-align: right; font-weight: 600;">${currency} ${amountPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                        </tr>
+                        <tr class="final-row">
+                            <td>BALANCE DUE:</td>
+                            <td style="text-align: right;">${currency} ${balanceDue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                        </tr>
+                    </table>
                 </div>
+
+                <!-- Footer -->
                 <div class="footer">
-                    <p>Thank you for staying with us!</p>
-                    <p style="margin-top: 4px;">Official Document • System Generated</p>
+                    <p style="margin: 0;">Thank you for staying with us!</p>
+                    <p style="margin: 4px 0 0 0;">Official Document • System Generated</p>
                 </div>
             </div>
         </body>
@@ -1459,12 +1587,17 @@ const generateInvoiceFromAccount = (booking) => {
     `);
     doc.close();
 
-    // 5. Trigger native print dialog and clean frame
+    // 5. Safe Print Trigger & Self-Cleaning Event Listeners
+    iframe.contentWindow.addEventListener('afterprint', () => {
+        if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+        }
+    });
+
     setTimeout(() => {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
-        setTimeout(() => document.body.removeChild(iframe), 1000);
-    }, 250);
+    }, 100);
 };
 
 async function viewBooking(id) {
@@ -3062,7 +3195,7 @@ async function printGuestReceipt(bookingCustomId) {
                         <div class="p-4 rounded-md border border-slate-300">
                             <h4 class="font-bold text-slate-400 uppercase text-[10px] mb-2 tracking-wider">Guest Information</h4>
                             <p class="text-sm font-semibold text-slate-900">${booking.name || 'Valued Guest'}</p>
-                            <p><strong>Room / Unit:</strong> ${booking.room || 'Unassigned'}</p>
+                            <p><strong>Room:</strong> ${booking.room || 'Unassigned'}</p>
                         </div>
                         <div class="p-4 rounded-md border border-slate-300">
                             <h4 class="font-bold text-slate-400 uppercase text-[10px] mb-2 tracking-wider">Stay Information</h4>
