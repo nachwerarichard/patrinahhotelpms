@@ -107,10 +107,10 @@
    =============================================================== */
 
 @media print {
-    /* 1. Page Margins (Use standard 1cm - 1.5cm margins for A4) */
+    /* 1. Page Margins */
     @page {
         size: A4 portrait;
-        margin: 1.2cm; /* Safe margin so no content gets clipped at page edges */
+        margin: 1.2cm;
     }
 
     /* 2. Global Document Reset */
@@ -121,13 +121,12 @@
         margin: 0 !important;
     }
 
-    /* Force background colors, badges, and borders on all printers */
     * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
 
-    /* 3. Hide Unnecessary UI Components (Navigation, Sidebar, Controls) */
+    /* 3. Hide Unnecessary UI Components */
     nav, 
     header,
     aside,
@@ -156,18 +155,18 @@
     }
 
     /* Preserve structural page breaks */
-    h4, .totals, tr {
+    h4, .totals, tr, .invoice-header, .invoice-footer {
         break-inside: avoid;
     }
 
-    /* Unlock scrollable Tailwind containers so content isn't truncated */
+    /* Unlock scrollable Tailwind containers */
     .max-h-\[90vh\], 
     .overflow-y-auto {
         max-height: none !important;
         overflow: visible !important;
     }
 
-    /* 6. Receipt Modal Isolation & Formatting */
+    /* 6. Receipt & Invoice Modal Isolation (Full A4 Layout) */
     #receiptModal {
         position: absolute !important;
         left: 0 !important;
@@ -180,15 +179,20 @@
         display: block !important;
         box-shadow: none !important;
         border: none !important;
-        /* Keep modern sans-serif fonts for professional A4 invoices */
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
         line-height: 1.4 !important;
     }
 
-    /* Clean border styling inside modal */
     #receiptModal table {
         width: 100% !important;
         border-collapse: collapse !important;
+    }
+
+    /* Adds subtle borders to table headers and rows for clean A4 alignment */
+    #receiptModal th, 
+    #receiptModal td {
+        padding: 8px 10px !important;
+        border-bottom: 1px solid #e5e7eb !important;
     }
 }
 

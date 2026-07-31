@@ -1,0 +1,97 @@
+@media print {
+    /* 1. Global Document Reset    prints recipts on the thermal printers */
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* 2. Hide Non-Print UI Components */
+    nav, 
+    header, 
+    aside, 
+    .sidebar, 
+    .filter-section, 
+    button, 
+    .no-print, 
+    #receiptModal button, 
+    #receiptModal .close-btn, 
+    .modal-footer {
+        display: none !important;
+    }
+
+    /* Unlock scrollable containers */
+    .max-h-\[90vh\], 
+    .overflow-y-auto {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    /* ==========================================
+       3. FULL A4 REPORTS STYLING
+       ========================================== */
+    .report-container {
+        page: report; /* Binds A4 margins to reports */
+        width: 100% !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+    }
+
+    .report-container table,
+    table:not(#receiptModal table) {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        break-inside: auto;
+    }
+
+    /* Page break rules for reports */
+    h4, .totals, tr {
+        break-inside: avoid;
+    }
+
+    /* ==========================================
+       4. THERMAL RECEIPT MODAL (Cost-Saving Format)
+       ========================================== */
+    #receiptModal {
+        page: thermal; /* Binds 80mm auto-cut to receipts */
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 76mm !important; /* Printable area for 80mm roll */
+        height: auto !important;
+        margin: 0 auto !important;
+        padding: 2px 0 !important;
+        background: #ffffff !important;
+        display: block !important;
+        box-shadow: none !important;
+        border: none !important;
+        font-family: 'Courier New', Courier, monospace !important;
+        font-size: 10px !important; /* Tight font size */
+        line-height: 1.1 !important; /* Tight line spacing saves paper height */
+    }
+
+    #receiptModal table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        table-layout: fixed !important;
+        word-break: break-word !important;
+    }
+
+    #receiptModal td, 
+    #receiptModal th {
+        padding: 2px 0 !important; /* Minimal cell padding saves paper */
+    }
+
+    #receiptModal .divider {
+        border-top: 1px dashed #000000 !important;
+        margin: 3px 0 !important;
+        display: block !important;
+    }
+}
