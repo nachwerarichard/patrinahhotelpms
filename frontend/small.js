@@ -2882,13 +2882,15 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
     }
 });
 async function viewCharges(bookingCustomId) {
-
-    incidentalChargesTableBody.innerHTML =
-        '<tr><td colspan="6" style="text-align:center;">Loading charges...</td></tr>';
+    const payAllBtn = document.getElementById('payAllChargesBtn');
+    
+    // Reset initial state
+    incidentalChargesTableBody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-gray-500">Loading charges...</td></tr>';
     totalIncidentalChargesSpan.textContent = '0.00';
+    if (payAllBtn) payAllBtn.classList.add('hidden'); // Hide pay button by default while loading
 
     try {
-        // 1️⃣ Fetch booking (hotelId auto included)
+        // 1. Fetch booking details
         const bookingResponse = await authenticatedFetch(
             `${API_BASE_URL}/bookings/id/${bookingCustomId}`
         );
@@ -2904,10 +2906,10 @@ async function viewCharges(bookingCustomId) {
         const booking = await bookingResponse.json();
 
         currentBookingObjectId = booking._id;
-        viewChargesGuestNameSpan.textContent = booking.name;
-        viewChargesRoomNumberSpan.textContent = booking.room;
+        viewChargesGuestNameSpan.textContent = booking.name || 'Guest';
+        viewChargesRoomNumberSpan.textContent = booking.room || 'N/A';
 
-        // 2️⃣ Fetch incidental charges
+        // 2. Fetch incidental charges
         const response = await authenticatedFetch(
             `${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`
         );
@@ -2927,49 +2929,58 @@ async function viewCharges(bookingCustomId) {
         let totalChargesAmount = 0;
         let hasUnpaidCharges = false;
 
-        if (charges.length === 0) {
-            incidentalChargesTableBody.innerHTML =
-                '<tr><td colspan="6" style="text-align:center;">No incidental charges.</td></tr>';
+        if (!Array.isArray(charges) || charges.length === 0) {
+            incidentalChargesTableBody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-gray-500 italic">No incidental charges recorded.</td></tr>';
         } else {
             charges.forEach(charge => {
                 if (!charge.isPaid) hasUnpaidCharges = true;
 
                 const row = incidentalChargesTableBody.insertRow();
-const isPaid = charge.isPaid; // Assuming your schema has this field
+                const isPaid = charge.isPaid;
 
-row.innerHTML = `
-    <td class="px-4 py-2">${charge.type}</td>
-    <td class="px-4 py-2">${charge.description || '-'}</td>
-    <td class="px-4 py-2">${Number(charge.amount).toLocaleString()}</td>
-    <td class="px-4 py-2">${new Date(charge.date).toLocaleDateString()}</td>
-    <td class="px-4 py-2">
-        ${isPaid 
-            ? '<span class="text-green-600 font-bold">Paid</span>' 
-            : `<button onclick="confirmPayIncidentalCharge('${charge._id}', '${bookingCustomId}')" 
-                class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs transition">
-                Mark Paid
-               </button>`
-        }
-    </td>
-`;
+                row.className = "hover:bg-gray-50 transition";
+                row.innerHTML = `
+                    <td class="px-4 py-3 font-medium">${charge.type || 'Other'}</td>
+                    <td class="px-4 py-3 text-gray-600">${charge.description || '-'}</td>
+                    <td class="px-4 py-3 text-right font-semibold">${Number(charge.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td class="px-4 py-3 text-gray-500">${new Date(charge.date).toLocaleDateString()}</td>
+                    <td class="px-4 py-3 text-center">
+                        ${isPaid 
+                            ? '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800"><i class="fa-solid fa-check mr-1"></i> Paid</span>' 
+                            : `<button onclick="confirmPayIncidentalCharge('${charge._id}', '${bookingCustomId}')" 
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-xs font-semibold transition">
+                                Mark Paid
+                               </button>`
+                        }
+                    </td>
+                `;
 
                 totalChargesAmount += Number(charge.amount);
             });
         }
 
-        totalIncidentalChargesSpan.textContent =
-            totalChargesAmount.toLocaleString();
+        totalIncidentalChargesSpan.textContent = totalChargesAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
 
-        document.getElementById('payAllChargesBtn').disabled =
-            !hasUnpaidCharges;
+        // Show/Hide "Pay All" button based on presence of unpaid charges
+        if (payAllBtn) {
+            if (hasUnpaidCharges) {
+                payAllBtn.classList.remove('hidden');
+            } else {
+                payAllBtn.classList.add('hidden');
+            }
+        }
 
-        viewChargesModal.style.display = 'flex';
+        // Open Modal
+        viewChargesModal.classList.remove('hidden');
 
     } catch (error) {
         console.error("🔥 View charges error:", error);
-        showMessage('Error', error.message, true);
-        incidentalChargesTableBody.innerHTML =
-            '<tr><td colspan="6" style="text-align:center;color:red;">Error loading charges.</td></tr>';
+        if (typeof showMessage === 'function') {
+            showMessage('Error', error.message, true);
+        } else {
+            alert(error.message);
+        }
+        incidentalChargesTableBody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-red-500 font-medium">Error loading incidental charges.</td></tr>';
     }
 }
 

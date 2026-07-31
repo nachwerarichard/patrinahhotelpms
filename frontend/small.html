@@ -3678,41 +3678,55 @@ Add Guest Details            </h2>
     </div>
 
     <div id="viewChargesModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-3xl relative max-h-[90vh] overflow-y-auto">
-            <div class="mt-4 flex justify-right">
-        <button type="button" class="bg-gray-300 text-gray-700 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition duration-300" onclick="closeViewChargesModal()">
-          Close
-        </button>
-      </div>
-            <button class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800" onclick="closeViewChargesModal()">&times;</button>
-            <h2 class="text-2xl font-bold mb-6 text-blue-600"><i class="fas fa-file-invoice"></i> Incidental Charges for <span id="viewChargesGuestName" class="font-normal"></span> (Room <span id="viewChargesRoomNumber" class="font-normal"></span>)</h2>
-            <div class="overflow-x-auto">
-                <table id="incidentalChargesTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
-                    <thead>
-                        <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
-                            <th class="py-3 px-6 text-left">Type</th>
-                            <th class="py-3 px-6 text-left">Description</th>
-                            <th class="py-3 px-6 text-left">Amount</th>
-                            <th class="py-3 px-6 text-left">Date</th>
-                            <th class="py-3 px-6 text-center">Actions</th>
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl relative max-h-[90vh] flex flex-col overflow-hidden">
+        
+        <!-- Modal Header -->
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <i class="fas fa-file-invoice text-blue-600"></i>
+                <span>Incidental Charges — <span id="viewChargesGuestName" class="font-normal text-gray-600"></span> (Room <span id="viewChargesRoomNumber" class="font-semibold text-gray-800"></span>)</span>
+            </h2>
+            <button type="button" class="text-gray-400 hover:text-gray-600 text-2xl font-bold transition leading-none" onclick="closeViewChargesModal()">&times;</button>
+        </div>
+
+        <!-- Modal Body (Scrollable Table Area) -->
+        <div class="p-6 overflow-y-auto flex-grow">
+            <div class="overflow-x-auto border border-gray-200 rounded-lg">
+                <table id="incidentalChargesTable" class="min-w-full divide-y divide-gray-200 bg-white">
+                    <thead class="bg-gray-50">
+                        <tr class="text-gray-500 uppercase text-xs font-semibold tracking-wider">
+                            <th class="py-3 px-4 text-left">Type</th>
+                            <th class="py-3 px-4 text-left">Description</th>
+                            <th class="py-3 px-4 text-right">Amount</th>
+                            <th class="py-3 px-4 text-left">Date</th>
+                            <th class="py-3 px-4 text-center">Status / Action</th>
                         </tr>
                     </thead>
-                    <tbody class="text-gray-600 text-sm font-light"></tbody>
+                    <tbody class="divide-y divide-gray-100 text-gray-700 text-sm"></tbody>
                 </table>
             </div>
-            <div class="mt-6 text-lg font-bold text-right">
-                <p>Total Incidental Charges: <span id="totalIncidentalCharges" class="text-blue-600">0.00</span></p>
-            </div>
-            <button
-  id="payAllChargesBtn"
-  class="btn btn-success"
-  style="margin-top:10px;"
->
-  Pay All Incidental Charges
-</button>
 
+            <!-- Total Bar -->
+            <div class="mt-4 flex justify-end items-center gap-2 text-base font-bold text-gray-800">
+                <span>Total Charges:</span>
+                <span id="totalIncidentalCharges" class="text-blue-600 text-lg">0.00</span>
+            </div>
         </div>
+
+        <!-- Modal Footer -->
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3">
+            <button type="button" class="bg-gray-200 text-gray-700 font-semibold py-2 px-5 rounded-lg hover:bg-gray-300 transition" onclick="closeViewChargesModal()">
+                Close
+            </button>
+            
+            <button id="payAllChargesBtn" type="button" class="bg-emerald-600 text-white font-semibold py-2 px-5 rounded-lg hover:bg-emerald-700 transition flex items-center gap-2 hidden" onclick="payAllIncidentalCharges()">
+                <i class="fa-solid fa-credit-card"></i>
+                Pay All Incidental Charges
+            </button>
+        </div>
+
     </div>
+</div>
 
     <!-- Receipt Modal Container -->
 
