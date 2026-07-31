@@ -1421,7 +1421,7 @@ const generateInvoiceFromAccount = (booking) => {
                         <div style="font-size: 11px; color: #64748b; mt-1">${hotelLocation}</div>
                     </div>
                     <div>
-                        <div class="invoice-title">Guest Folio Invoice</div>
+                        <div class="invoice-title">Guest Invoice</div>
                         <div style="font-size: 11px; color: #64748b; text-align: right;"><strong>Folio #:</strong> ${booking.id || '-'}</div>
                         <div style="font-size: 11px; color: #64748b; text-align: right;"><strong>Date:</strong> ${invoiceDate}</div>
                     </div>
@@ -3001,7 +3001,7 @@ async function printGuestReceipt(bookingCustomId) {
             ? `REFUND: ${hotelCurrency} ${Math.abs(finalBalanceDue).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
             : `${hotelCurrency} ${finalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
-        const statusText = finalBalanceDue <= 0 ? 'SETTLED / PAID' : `OPEN BALANCE (${balanceFormatted})`;
+        const statusText = finalBalanceDue <= 0 ? 'PAID' : `OPEN BALANCE (${balanceFormatted})`;
         const statusClass = finalBalanceDue <= 0 ? 'font-bold uppercase text-emerald-600' : 'font-bold uppercase text-rose-600';
 
         /* ---------- CREATE/REUSE INVISIBLE PRINT IFRAME ---------- */

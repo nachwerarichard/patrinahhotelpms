@@ -1163,7 +1163,7 @@ async function renderBookings(page = 1, searchTerm = '') {
         if(mobileGrid) mobileGrid.innerHTML = errorMsg;
         prevPageBtn.disabled = true;
         nextPageBtn.disabled = true;
-        pageInfoSpan.textContent = 'Page  1';
+        pageInfoSpan.textContent = 'Page 1';
         return;
     }
 
@@ -3001,7 +3001,7 @@ async function printGuestReceipt(bookingCustomId) {
             ? `REFUND: ${hotelCurrency} ${Math.abs(finalBalanceDue).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
             : `${hotelCurrency} ${finalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
-        const statusText = finalBalanceDue <= 0 ? 'SETTLED / PAID' : `OPEN BALANCE (${balanceFormatted})`;
+        const statusText = finalBalanceDue <= 0 ? 'PAID' : `OPEN BALANCE (${balanceFormatted})`;
         const statusClass = finalBalanceDue <= 0 ? 'font-bold uppercase text-emerald-600' : 'font-bold uppercase text-rose-600';
 
         /* ---------- CREATE/REUSE INVISIBLE PRINT IFRAME ---------- */
