@@ -1307,17 +1307,26 @@ async function renderBookings(page = 1, searchTerm = '') {
 }
 
 // 1. Trigger function attached to the UI button
+// 1. Asynchronous Fetcher with Parallel API Requests
 async function generateInvoice(bookingId) {
     try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/booking/id/${bookingId}`);
+        // Parallel fetching for booking data and incidental charges
+        const [bRes, cRes] = await Promise.all([
+            authenticatedFetch(`${API_BASE_URL}/booking/id/${bookingId}`),
+            authenticatedFetch(`${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingId}`).catch(() => null)
+        ]);
 
-        if (!res) return;
-        if (!res.ok) throw new Error(`Failed to load invoice data: ${res.status}`);
+        if (!bRes || !bRes.ok) throw new Error(`Failed to load booking data: ${bRes ? bRes.status : 'No response'}`);
 
-        const data = await res.json();
+        const data = await bRes.json();
         const booking = data.booking || data;
         
-        generateInvoiceFromAccount(booking);
+        let incidentalCharges = [];
+        if (cRes && cRes.ok) {
+            incidentalCharges = await cRes.json();
+        }
+
+        generateInvoiceFromAccount(booking, incidentalCharges);
     } catch (err) {
         console.error("Error generating invoice:", err);
         if (typeof showMessage === 'function') {
@@ -1328,10 +1337,14 @@ async function generateInvoice(bookingId) {
     }
 }
 
-// 2. Comprehensive A4 Standard Guest Folio & Invoice Renderer
-const generateInvoiceFromAccount = (booking) => {
-    // 1. Create a hidden iframe
-    const iframe = document.createElement('iframe');
+// 2. Comprehensive A4 Guest Folio & Invoice Renderer
+const generateInvoiceFromAccount = (booking, incidentalCharges = []) => {
+    // 1. Create or clear invisible print iframe
+    let iframe = document.getElementById('invoicePrintIframe');
+    if (iframe) iframe.remove();
+
+    iframe = document.createElement('iframe');
+    iframe.id = 'invoicePrintIframe';
     iframe.style.position = 'fixed';
     iframe.style.right = '0';
     iframe.style.bottom = '0';
@@ -1341,12 +1354,11 @@ const generateInvoiceFromAccount = (booking) => {
     iframe.style.visibility = 'hidden';
     document.body.appendChild(iframe);
 
-    // 2. Extract Hotel Metadata & Currency
+    // 2. Dynamic Hotel Metadata & Currency
     const userObj = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
-    const hotelName = userObj.hotelName || localStorage.getItem('hotelName') || booking.hotelId?.name || 'Hotel Folio';
+    const hotelName = userObj.hotelName || localStorage.getItem('hotelName') || booking.hotelId?.name || 'Hotel Guest Folio';
     const hotelLocation = userObj.hotelLocation || localStorage.getItem('hotelLocation') || booking.hotelId?.location || 'Main Campus';
     
-    // Currency resolution
     const currency = (typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : null) 
         || userObj.hotelCurrency 
         || localStorage.getItem('hotelCurrency') 
@@ -1355,34 +1367,71 @@ const generateInvoiceFromAccount = (booking) => {
         || 'UGX';
 
     // 3. Data Formatting & Calculations
-    const invoiceDate = new Date().toLocaleDateString('en-GB');
+    const checkInFormatted = booking.checkIn ? new Date(booking.checkIn).toLocaleDateString('en-GB') : '-';
+    const checkOutFormatted = booking.checkOut ? new Date(booking.checkOut).toLocaleDateString('en-GB') : '-';
+    const invoiceDate = new Date().toLocaleDateString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
     const nightsCount = Number(booking.nights) || 1;
     const roomRatePerNight = Number(booking.amtPerNight) || 0;
     const roomTotalDue = Number(booking.totalDue) || (nightsCount * roomRatePerNight);
+    const roomAmountPaid = Number(booking.amountPaid) || 0;
 
-    const charges = booking.charges || [
-        { 
-            description: `Room Accommodation Charge (${nightsCount} night/s @ ${currency} ${roomRatePerNight.toLocaleString(undefined, {minimumFractionDigits: 2})})`, 
-            amount: roomTotalDue, 
-            date: booking.checkIn 
-        }
-    ];
+    let totalIncidentalAmount = 0;
+    let paidAtPOSAmount = 0;
 
-    const totalCharges = charges.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-    const amountPaid = Number(booking.amountPaid) || 0;
-    const balanceDue = totalCharges - amountPaid;
-
-    const itemsRows = charges.map((c) => `
-        <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
-            <td style="padding: 10px 8px; font-size: 11px;">${c.date ? new Date(c.date).toLocaleDateString('en-GB') : invoiceDate}</td>
-            <td style="padding: 10px 8px; font-size: 11px;">${c.description || 'Accommodation Charge'}</td>
-            <td style="padding: 10px 8px; font-size: 11px; text-align: right; font-weight: 600;">${currency} ${Number(c.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+    // Build accommodation row
+    let tableRowsHtml = `
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 8px; font-size: 11px;">${checkInFormatted} - ${checkOutFormatted}</td>
+            <td style="padding: 10px 8px; font-size: 11px;">Room Stay Accommodation Charge (${nightsCount} night/s @ ${currency} ${roomRatePerNight.toLocaleString(undefined, {minimumFractionDigits: 2})})</td>
+            <td style="padding: 10px 8px; font-size: 11px; text-align: right; font-weight: 600;">${currency} ${roomTotalDue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+            <td style="padding: 10px 8px; font-size: 11px; text-align: right; font-weight: 600; color: #059669;">${currency} ${roomAmountPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
         </tr>
-    `).join('');
+    `;
 
-    // 4. Render Document HTML
-    
-                const doc = iframe.contentWindow.document;
+    // Append incidental charges if available
+    if (Array.isArray(incidentalCharges) && incidentalCharges.length > 0) {
+        incidentalCharges.forEach(charge => {
+            const amount = Number(charge.amount) || 0;
+            totalIncidentalAmount += amount;
+
+            if (charge.isPaid) {
+                paidAtPOSAmount += amount;
+            }
+
+            const chargeDate = charge.date ? new Date(charge.date).toLocaleDateString('en-GB') : checkInFormatted;
+
+            tableRowsHtml += `
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 9px 8px; font-size: 11px;">${chargeDate}</td>
+                    <td style="padding: 9px 8px; font-size: 11px;">
+                        ${charge.type || 'Incidental'} - ${charge.description || '-'} 
+                        ${charge.isPaid ? '<small style="color: #059669; font-weight: 700;">(Paid POS)</small>' : ''}
+                    </td>
+                    <td style="padding: 9px 8px; font-size: 11px; text-align: right; font-weight: 600;">${currency} ${amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td style="padding: 9px 8px; font-size: 11px; text-align: right; font-weight: 600; color: #059669;">
+                        ${charge.isPaid ? `${currency} ${amount.toLocaleString(undefined, {minimumFractionDigits: 2})}` : '-'}
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    const totalBill = roomTotalDue + totalIncidentalAmount;
+    const totalPaymentsReceived = roomAmountPaid + paidAtPOSAmount;
+    const finalBalanceDue = totalBill - totalPaymentsReceived;
+
+    const balanceFormatted = finalBalanceDue < 0 
+        ? `REFUND: ${currency} ${Math.abs(finalBalanceDue).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+        : `${currency} ${finalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
+    const statusText = finalBalanceDue <= 0 ? 'PAID' : `OPEN BALANCE (${balanceFormatted})`;
+    const statusColor = finalBalanceDue <= 0 ? '#059669' : '#e11d48';
+
+    // 4. Render HTML Document
+    const doc = iframe.contentWindow.document;
     doc.open();
     doc.write(`
         <!DOCTYPE html>
@@ -1392,7 +1441,7 @@ const generateInvoiceFromAccount = (booking) => {
             <style>
                 @page { 
                     size: A4 portrait; 
-                    margin: 0; /* Removing page margin hides browser header/footer */
+                    margin: 0; 
                 }
                 * { 
                     box-sizing: border-box; 
@@ -1403,7 +1452,7 @@ const generateInvoiceFromAccount = (booking) => {
                     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
                     color: #0f172a; 
                     margin: 0; 
-                    padding: 15mm; /* Apply margin padding here instead */
+                    padding: 15mm; 
                     background: #ffffff !important;
                     font-size: 12px;
                 }
@@ -1412,7 +1461,6 @@ const generateInvoiceFromAccount = (booking) => {
                     margin: 0 auto; 
                 }
                 
-                /* Header layout using print-safe table design */
                 .header-table {
                     width: 100%;
                     border-bottom: 2px solid #0f172a;
@@ -1435,7 +1483,6 @@ const generateInvoiceFromAccount = (booking) => {
                     line-height: 1.1;
                 }
                 
-                /* Guest info box layout using print-safe table design */
                 .info-table {
                     width: 100%;
                     margin-bottom: 24px;
@@ -1462,7 +1509,6 @@ const generateInvoiceFromAccount = (booking) => {
                     margin-bottom: 4px;
                 }
 
-                /* Main Items Table */
                 .items-table { 
                     width: 100%; 
                     border-collapse: collapse; 
@@ -1479,23 +1525,22 @@ const generateInvoiceFromAccount = (booking) => {
                     letter-spacing: 0.5px;
                 }
 
-                /* Totals Breakdown */
                 .totals-wrapper {
                     width: 100%;
-                    margin-bottom: 40px;
+                    margin-bottom: 30px;
                     page-break-inside: avoid;
                     break-inside: avoid;
                 }
                 .totals-table { 
-                    width: 300px; 
+                    width: 320px; 
                     margin-left: auto; 
                     border-collapse: collapse;
                 }
                 .totals-table td {
-                    padding: 6px 0;
+                    padding: 5px 0;
                 }
                 .totals-table .final-row td { 
-                    font-size: 14px; 
+                    font-size: 13px; 
                     font-weight: 800; 
                     border-top: 2px solid #0f172a; 
                     border-bottom: 2px solid #0f172a; 
@@ -1526,7 +1571,7 @@ const generateInvoiceFromAccount = (booking) => {
                         <td style="vertical-align: top; text-align: right;">
                             <div class="invoice-title">Guest Invoice</div>
                             <div style="font-size: 11px; color: #64748b; margin-top: 4px;"><strong>Folio #:</strong> ${booking.id || '-'}</div>
-                            <div style="font-size: 11px; color: #64748b; margin-top: 2px;"><strong>Date:</strong> ${invoiceDate}</div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 2px;"><strong>Issue Date:</strong> ${invoiceDate}</div>
                         </td>
                     </tr>
                 </table>
@@ -1541,8 +1586,9 @@ const generateInvoiceFromAccount = (booking) => {
                         </td>
                         <td class="box" style="width: 50%;">
                             <div class="box-title">Stay Information</div>
+                            <div class="box-row"><strong>Check-In:</strong> ${checkInFormatted}</div>
+                            <div class="box-row"><strong>Check-Out:</strong> ${checkOutFormatted}</div>
                             <div class="box-row"><strong>Nights:</strong> ${nightsCount}</div>
-                            <div class="box-row"><strong>Status:</strong> ${booking.gueststatus || 'Active'}</div>
                         </td>
                     </tr>
                 </table>
@@ -1552,11 +1598,12 @@ const generateInvoiceFromAccount = (booking) => {
                     <thead>
                         <tr>
                             <th style="width: 20%;">Date</th>
-                            <th style="width: 55%;">Description</th>
-                            <th style="width: 25%; text-align: right;">Amount</th>
+                            <th style="width: 48%;">Transaction Description</th>
+                            <th style="width: 16%; text-align: right;">Charges (+)</th>
+                            <th style="width: 16%; text-align: right;">Payments (-)</th>
                         </tr>
                     </thead>
-                    <tbody>${itemsRows}</tbody>
+                    <tbody>${tableRowsHtml}</tbody>
                 </table>
 
                 <!-- Totals Section -->
@@ -1564,17 +1611,20 @@ const generateInvoiceFromAccount = (booking) => {
                     <table class="totals-table">
                         <tr>
                             <td>Total Charges:</td>
-                            <td style="text-align: right; font-weight: 600;">${currency} ${totalCharges.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                            <td style="text-align: right; font-weight: 700;">${currency} ${totalBill.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                         </tr>
                         <tr>
-                            <td>Amount Paid:</td>
-                            <td style="text-align: right; font-weight: 600;">${currency} ${amountPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                            <td style="color: #059669; font-weight: 500;">Total Payments Received:</td>
+                            <td style="text-align: right; font-weight: 700; color: #059669;">- ${currency} ${totalPaymentsReceived.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                         </tr>
                         <tr class="final-row">
                             <td>BALANCE DUE:</td>
-                            <td style="text-align: right;">${currency} ${balanceDue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                            <td style="text-align: right;">${balanceFormatted}</td>
                         </tr>
                     </table>
+                    <div style="text-align: right; font-size: 10px; margin-top: 6px; color: #64748b;">
+                        Status: <strong style="color: ${statusColor}; text-transform: uppercase;">${statusText}</strong>
+                    </div>
                 </div>
 
                 <!-- Footer -->
@@ -1588,7 +1638,7 @@ const generateInvoiceFromAccount = (booking) => {
     `);
     doc.close();
 
-    // 5. Safe Print Trigger & Self-Cleaning Event Listeners
+    // 5. Print Trigger & Cleanup
     iframe.contentWindow.addEventListener('afterprint', () => {
         if (document.body.contains(iframe)) {
             document.body.removeChild(iframe);
@@ -1598,7 +1648,7 @@ const generateInvoiceFromAccount = (booking) => {
     setTimeout(() => {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
-    }, 100);
+    }, 150);
 };
 
 async function viewBooking(id) {
