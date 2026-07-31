@@ -1308,6 +1308,7 @@ async function renderBookings(page = 1, searchTerm = '') {
 
 // 1. Trigger function attached to the UI button
 // 1. Asynchronous Fetcher with Parallel API Requests
+// 1. Asynchronous Fetcher with Parallel API Requests
 async function generateInvoice(bookingId) {
     try {
         // Parallel fetching for booking data and incidental charges
@@ -1381,11 +1382,14 @@ const generateInvoiceFromAccount = (booking, incidentalCharges = []) => {
     let totalIncidentalAmount = 0;
     let paidAtPOSAmount = 0;
 
-    // Build accommodation row
+    // Build accommodation row with explicit Check-In and Check-Out dates
     let tableRowsHtml = `
         <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 10px 8px; font-size: 11px;">${checkInFormatted} - ${checkOutFormatted}</td>
-            <td style="padding: 10px 8px; font-size: 11px;">Room Stay Accommodation Charge (${nightsCount} night/s @ ${currency} ${roomRatePerNight.toLocaleString(undefined, {minimumFractionDigits: 2})})</td>
+            <td style="padding: 10px 8px; font-size: 11px;">${checkInFormatted}</td>
+            <td style="padding: 10px 8px; font-size: 11px;">
+                Room Stay Accommodation Charge (${nightsCount} night/s @ ${currency} ${roomRatePerNight.toLocaleString(undefined, {minimumFractionDigits: 2})})
+                <br/><small style="color: #64748b;">Period: ${checkInFormatted} to ${checkOutFormatted}</small>
+            </td>
             <td style="padding: 10px 8px; font-size: 11px; text-align: right; font-weight: 600;">${currency} ${roomTotalDue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
             <td style="padding: 10px 8px; font-size: 11px; text-align: right; font-weight: 600; color: #059669;">${currency} ${roomAmountPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
         </tr>
@@ -1586,9 +1590,9 @@ const generateInvoiceFromAccount = (booking, incidentalCharges = []) => {
                         </td>
                         <td class="box" style="width: 50%;">
                             <div class="box-title">Stay Information</div>
-                            <div class="box-row"><strong>Check-In:</strong> ${checkInFormatted}</div>
-                            <div class="box-row"><strong>Check-Out:</strong> ${checkOutFormatted}</div>
-                            <div class="box-row"><strong>Nights:</strong> ${nightsCount}</div>
+                            <div class="box-row"><strong>Check-In Date:</strong> ${checkInFormatted}</div>
+                            <div class="box-row"><strong>Check-Out Date:</strong> ${checkOutFormatted}</div>
+                            <div class="box-row"><strong>Total Nights:</strong> ${nightsCount}</div>
                         </td>
                     </tr>
                 </table>
