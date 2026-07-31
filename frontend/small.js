@@ -3089,13 +3089,24 @@ document.addEventListener('click', async (e) => {
         showMessage('Error', 'Server error while processing payment', true);
     }
 });
+
+function openViewChargesModal() {
+    const modal = document.getElementById('viewChargesModal');
+    if (modal) {
+        modal.style.display = ''; // Clear inline styles
+        modal.classList.remove('hidden');
+    }
+}
 /**
  * Closes the view charges modal.
  */
 function closeViewChargesModal() {
-    viewChargesModal.style.display = 'none';
+    const modal = document.getElementById('viewChargesModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = ''; // Clear inline styles
+    }
 }
-
 /**
  * Initiates the deletion process for an incidental charge by opening the reason modal.
  * @param {string} chargeId - The MongoDB _id of the charge to delete.
