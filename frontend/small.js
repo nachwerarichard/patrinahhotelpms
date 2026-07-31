@@ -1381,7 +1381,8 @@ const generateInvoiceFromAccount = (booking) => {
     `).join('');
 
     // 4. Render Document HTML
-    const doc = iframe.contentWindow.document;
+    
+                const doc = iframe.contentWindow.document;
     doc.open();
     doc.write(`
         <!DOCTYPE html>
@@ -1391,7 +1392,7 @@ const generateInvoiceFromAccount = (booking) => {
             <style>
                 @page { 
                     size: A4 portrait; 
-                    margin: 15mm 15mm 15mm 15mm; 
+                    margin: 0; /* Removing page margin hides browser header/footer */
                 }
                 * { 
                     box-sizing: border-box; 
@@ -1402,7 +1403,7 @@ const generateInvoiceFromAccount = (booking) => {
                     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
                     color: #0f172a; 
                     margin: 0; 
-                    padding: 0; 
+                    padding: 15mm; /* Apply margin padding here instead */
                     background: #ffffff !important;
                     font-size: 12px;
                 }
