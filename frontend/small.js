@@ -1208,41 +1208,102 @@ async function renderBookings(page = 1, searchTerm = '') {
             let actionButtonsHtml = '';
             if (['admin', 'super-admin', 'front office'].includes(currentUserRole)) {
     if (isCancelled) {
-        actionButtonsHtml = `
-            <span class="text-xs text-red-600 font-bold block mb-2 text-center uppercase tracking-wide">Cancelled</span>
-            <button class="${baseBtn} bg-red-600 hover:bg-red-700" onclick="confirmDeleteBooking('${booking.id}')">Delete Permanently</button>
-        `;
-    } else {
-        actionButtonsHtml = `
-            <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="viewBooking('${booking.id}')">View</button>
-            ${!['checkedout', 'cancelled','void'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">Edit</button>` : ''}
-            ${!['checkedout', 'cancelled','void'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-blue-700 hover:bg-green-800" onclick="viewCharges('${booking.id}')">View Charges</button>` : ''}
-            ${(booking.gueststatus === 'confirmed' || booking.gueststatus === 'reserved') ? `<button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">Check In</button>` : ''}
-${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `
-    <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')">
-        <i class="fa-solid ${booking.gueststatus === 'checkedin' ? 'fa-right-left' : 'fa-door-open'} mr-1"></i>
-        ${booking.gueststatus === 'checkedin' ? 'Move' : 'Assign'}
-    </button>
-` : ''}            ${booking.balance > 0 && booking.gueststatus !== 'cancelled' ? `<button class="${baseBtn} bg-green-600 hover:bg-green-700 mt-1" onclick="openAddPaymentModal('${booking.id}', ${booking.balance})"><i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment</button>` : ''}
-            <button class="${baseBtn} bg-teal-600 hover:bg-teal-700 mt-1" onclick="generateInvoice('${booking.id}')"><i class="fas fa-file-invoice-dollar mr-1"></i> Invoice</button>
+    actionButtonsHtml = `
+        <span class="text-xs text-red-600 font-bold block mb-2 text-center uppercase tracking-wide">Cancelled</span>
+        <button class="${baseBtn} bg-red-600 hover:bg-red-700" onclick="confirmDeleteBooking('${booking.id}')">
+            <i class="fa-solid fa-trash-can mr-1"></i> Delete Permanently
+        </button>
+    `;
+} else {
+    actionButtonsHtml = `
+        <!-- 1. PRIMARY OPERATIONAL ACTIONS (Guest Lifecycle) -->
+        ${booking.gueststatus === 'reserved' ? `
+            <button class="${baseBtn} bg-gray-600 hover:bg-gray-700" onclick="Confirm('${booking.id}')">
+                <i class="fa-solid fa-circle-check mr-1"></i> Confirm
+            </button>
+        ` : ''}
 
-            ${booking.amountPaid > 0 ? `
-  <button class="${baseBtn} bg-orange-500 hover:bg-orange-600 mt-1" 
-          onclick="printGuestReceipt('${booking.id}')">
-    <i class="fas fa-print mr-1"></i> Print Receipt
-  </button>
-` : ''}            
-            <!-- NEW: INVOICE / GUEST FOLIO BUTTON -->
-            
-            ${booking.gueststatus === 'checkedin' && booking.paymentStatus === 'Paid' && booking.balance === 0 ? `<button class="${baseBtn} bg-amber-500 hover:bg-amber-600 mt-1" onclick="checkoutBooking('${booking.id}')"><i class="fa-solid fa-right-from-bracket mr-1"></i> Check-out</button>` : ''}
-            ${booking.gueststatus === 'reserved' ? `<button class="${baseBtn} bg-gray-500 hover:bg-gray-600" onclick="Confirm('${booking.id}')">Confirm</button>` : ''}
-            <div class="border-t border-gray-100 my-1"></div>
-            ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-red-500 hover:bg-red-600" onclick="openCancelModal('${booking.id}')"><i class="fa-solid fa-xmark mr-1"></i> Cancel</button>` : ''}
-            ${booking.gueststatus === 'checkedin' ? `<button class="${baseBtn} bg-orange-600 hover:bg-orange-700" onclick="openVoidModal('${booking.id}')"><i class="fa-solid fa-ban mr-1"></i> Void</button>` : ''}
-            ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-yellow-500 hover:bg-yellow-600 mt-1" onclick="markNoShow('${booking.id}')"><i class="fa-solid fa-user-slash mr-1"></i> No Show</button>` : ''}
-            ${['reserved', 'confirmed', 'cancelled'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-red-600 hover:bg-red-700 mt-1" onclick="confirmDeleteBooking('${booking.id}')"><i class="fa-solid fa-trash-can mr-1"></i> Delete</button>` : ''}
-        `;
-    }
+        ${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `
+            <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')">
+                <i class="fa-solid ${booking.gueststatus === 'checkedin' ? 'fa-right-left' : 'fa-door-open'} mr-1"></i>
+                ${booking.gueststatus === 'checkedin' ? 'Move' : 'Assign'}
+            </button>
+        ` : ''}
+
+        ${(booking.gueststatus === 'confirmed' || booking.gueststatus === 'reserved') ? `
+            <button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">
+                <i class="fa-solid fa-right-to-bracket mr-1"></i> Check In
+            </button>
+        ` : ''}
+
+        ${booking.gueststatus === 'checkedin' && booking.paymentStatus === 'Paid' && booking.balance === 0 ? `
+            <button class="${baseBtn} bg-amber-500 hover:bg-amber-600" onclick="checkoutBooking('${booking.id}')">
+                <i class="fa-solid fa-right-from-bracket mr-1"></i> Check-out
+            </button>
+        ` : ''}
+
+        <!-- 2. FINANCIAL & BILLING ACTIONS -->
+        ${booking.balance > 0 && booking.gueststatus !== 'cancelled' ? `
+            <button class="${baseBtn} bg-green-600 hover:bg-green-700" onclick="openAddPaymentModal('${booking.id}', ${booking.balance})">
+                <i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment
+            </button>
+        ` : ''}
+
+        ${!['checkedout', 'cancelled', 'void'].includes(booking.gueststatus) ? `
+            <button class="${baseBtn} bg-blue-700 hover:bg-blue-800" onclick="viewCharges('${booking.id}')">
+                <i class="fa-solid fa-receipt mr-1"></i> View Charges
+            </button>
+        ` : ''}
+
+        <button class="${baseBtn} bg-teal-600 hover:bg-teal-700" onclick="generateInvoice('${booking.id}')">
+            <i class="fas fa-file-invoice-dollar mr-1"></i> Invoice
+        </button>
+
+        ${booking.amountPaid > 0 ? `
+            <button class="${baseBtn} bg-orange-500 hover:bg-orange-600" onclick="printGuestReceipt('${booking.id}')">
+                <i class="fas fa-print mr-1"></i> Print Receipt
+            </button>
+        ` : ''}
+
+        <!-- 3. VIEW & EDIT CONTROLS -->
+        <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="viewBooking('${booking.id}')">
+            <i class="fa-solid fa-eye mr-1"></i> View
+        </button>
+
+        ${!['checkedout', 'cancelled', 'void'].includes(booking.gueststatus) ? `
+            <button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">
+                <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
+            </button>
+        ` : ''}
+
+        <!-- 4. DESTRUCTIVE / CANCELLATION ACTIONS (Isolated) -->
+        <div class="border-t border-gray-200 my-2"></div>
+
+        ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
+            <button class="${baseBtn} bg-red-500 hover:bg-red-600" onclick="openCancelModal('${booking.id}')">
+                <i class="fa-solid fa-xmark mr-1"></i> Cancel
+            </button>
+        ` : ''}
+
+        ${booking.gueststatus === 'checkedin' ? `
+            <button class="${baseBtn} bg-orange-600 hover:bg-orange-700" onclick="openVoidModal('${booking.id}')">
+                <i class="fa-solid fa-ban mr-1"></i> Void
+            </button>
+        ` : ''}
+
+        ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
+            <button class="${baseBtn} bg-yellow-500 hover:bg-yellow-600" onclick="markNoShow('${booking.id}')">
+                <i class="fa-solid fa-user-slash mr-1"></i> No Show
+            </button>
+        ` : ''}
+
+        ${['reserved', 'confirmed', 'cancelled'].includes(booking.gueststatus) ? `
+            <button class="${baseBtn} bg-red-700 hover:bg-red-800" onclick="confirmDeleteBooking('${booking.id}')">
+                <i class="fa-solid fa-trash-can mr-1"></i> Delete
+            </button>
+        ` : ''}
+    `;
+}
 }
 
             const cancellationReason = booking.cancellationReason || "No reason provided";
