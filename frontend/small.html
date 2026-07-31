@@ -106,14 +106,21 @@
    UNIFIED PRINT STYLESHEET (Reports & Guest Receipt/Folio Modal)
    =============================================================== */
 
-@media print {
-    /* 1. Page Margins (Use standard 1cm - 1.5cm margins for A4) */
-    @page {
-        size: A4 portrait;
-        margin: 1.2cm; /* Safe margin so no content gets clipped at page edges */
-    }
+/* ==========================================
+   NAMED PAGES FOR MULTI-FORMAT PRINTING
+   ========================================== */
+@page report {
+    size: A4 portrait;
+    margin: 1.2cm;
+}
 
-    /* 2. Global Document Reset */
+@page thermal {
+    size: 80mm auto; /* Continuous roll height cut */
+    margin: 0;       /* Zero margin prevents trailing paper waste */
+}
+
+@media print {
+    /* 1. Global Document Reset */
     body {
         background: #ffffff !important;
         color: #000000 !important;
@@ -121,16 +128,15 @@
         margin: 0 !important;
     }
 
-    /* Force background colors, badges, and borders on all printers */
     * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
 
-    /* 3. Hide Unnecessary UI Components (Navigation, Sidebar, Controls) */
+    /* 2. Hide Non-Print UI Components */
     nav, 
-    header,
-    aside,
+    header, 
+    aside, 
     .sidebar, 
     .filter-section, 
     button, 
@@ -141,54 +147,73 @@
         display: none !important;
     }
 
-    /* 4. Full Page Reports Styling */
-    .report-container {
-        width: 100% !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-    }
-
-    /* 5. General Table Layout & Page Break Protections */
-    table {
-        width: 100% !important;
-        border-collapse: collapse !important;
-        break-inside: auto;
-    }
-
-    /* Preserve structural page breaks */
-    h4, .totals, tr {
-        break-inside: avoid;
-    }
-
-    /* Unlock scrollable Tailwind containers so content isn't truncated */
+    /* Unlock scrollable containers */
     .max-h-\[90vh\], 
     .overflow-y-auto {
         max-height: none !important;
         overflow: visible !important;
     }
 
-    /* 6. Receipt Modal Isolation & Formatting */
+    /* ==========================================
+       3. FULL A4 REPORTS STYLING
+       ========================================== */
+    .report-container {
+        page: report; /* Binds A4 margins to reports */
+        width: 100% !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+    }
+
+    .report-container table,
+    table:not(#receiptModal table) {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        break-inside: auto;
+    }
+
+    /* Page break rules for reports */
+    h4, .totals, tr {
+        break-inside: avoid;
+    }
+
+    /* ==========================================
+       4. THERMAL RECEIPT MODAL (Cost-Saving Format)
+       ========================================== */
     #receiptModal {
+        page: thermal; /* Binds 80mm auto-cut to receipts */
         position: absolute !important;
         left: 0 !important;
         top: 0 !important;
-        width: 100% !important;
+        width: 76mm !important; /* Printable area for 80mm roll */
         height: auto !important;
-        margin: 0 !important;
-        padding: 0 !important;
+        margin: 0 auto !important;
+        padding: 2px 0 !important;
         background: #ffffff !important;
         display: block !important;
         box-shadow: none !important;
         border: none !important;
-        /* Keep modern sans-serif fonts for professional A4 invoices */
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
-        line-height: 1.4 !important;
+        font-family: 'Courier New', Courier, monospace !important;
+        font-size: 10px !important; /* Tight font size */
+        line-height: 1.1 !important; /* Tight line spacing saves paper height */
     }
 
-    /* Clean border styling inside modal */
     #receiptModal table {
         width: 100% !important;
         border-collapse: collapse !important;
+        table-layout: fixed !important;
+        word-break: break-word !important;
+    }
+
+    #receiptModal td, 
+    #receiptModal th {
+        padding: 2px 0 !important; /* Minimal cell padding saves paper */
+    }
+
+    #receiptModal .divider {
+        border-top: 1px dashed #000000 !important;
+        margin: 3px 0 !important;
+        display: block !important;
     }
 }
 
