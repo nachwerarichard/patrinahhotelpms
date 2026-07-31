@@ -1033,130 +1033,160 @@ body {
             </div>
 
             <!-- MODAL 1: Room Types Form -->
-            <div id="roomTypeModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center z-50 transition-opacity duration-300">
-                <div class="bg-white rounded-[2.5rem] shadow-2xl p-8 max-w-lg w-full mx-4 border border-white/20 relative max-h-[90vh] overflow-y-auto">
-                    <button onclick="closeInventoryModal('roomTypeModal')" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors">
-                        <i class="fa-solid fa-xmark text-xl"></i>
-                    </button>
-                    <div class="flex items-center gap-3 mb-6">
-                        <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                            <i class="fa-solid fa-bed text-lg"></i>
-                        </div>
-                        <div>
-                            <h2 class="text-xl font-bold text-slate-800">Add New Room Type</h2>
-                            <p class="text-xs text-slate-400 mt-0.5">Define your tier specifications and baselines</p>
-                        </div>
+            <!-- MODAL 1: Room Types Form -->
+<div id="roomTypeModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
+            <h3 id="roomTypeModalTitle" class="text-lg font-semibold">Add New Room Type</h3>
+            <button onclick="closeInventoryModal('roomTypeModal')" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        
+        <div class="p-6">
+            <form id="typeForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1" for="typeName">Room Type Name:</label>
+                        <input type="text" id="typeName" required placeholder="e.g. Presidential Suite" 
+                            class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>
-                    <form id="typeForm" class="space-y-4">
-                        <div class="grid grid-cols-1 gap-4">
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Type</label>
-                                <input type="text" id="typeName" placeholder="e.g. Presidential Suite" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all shadow-inner">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Standard Rate (UGX)</label>
-                                <input type="number" id="basePrice" placeholder="0.00" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all shadow-inner font-mono">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Amenities</label>
-                                <textarea id="typeAmenities" placeholder="e.g. Free Wi-Fi, AC, Flat Screen TV, Mini Bar (comma-separated)" rows="3" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all shadow-inner"></textarea>
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Category Image (Optional)</label>
-                                <input type="file" id="roomImage" multiple accept="image/*" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                            </div>
-                        </div>
-                        <div class="flex gap-4 mt-6">
-                            <button type="button" onclick="closeInventoryModal('roomTypeModal')" class="flex-1 py-4 text-slate-400 hover:text-slate-600 font-bold uppercase text-[10px] tracking-widest transition-colors">Cancel</button>
-                            <button type="submit" id="submitTypeBtn" class="flex-1 bg-slate-900 text-white font-bold py-4 px-4 rounded-2xl hover:bg-indigo-600 transition-all shadow-lg active:scale-95 uppercase text-xs tracking-widest flex items-center justify-center gap-2">
-                                <span id="btnText">Create Room Type</span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
 
-            <!-- MODAL 2: Seasonal Rules Form -->
-            <div id="seasonalModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center z-50 transition-opacity duration-300">
-                <div class="bg-white rounded-[2.5rem] shadow-2xl p-8 max-w-lg w-full mx-4 border border-white/20 relative max-h-[90vh] overflow-y-auto">
-                    <button onclick="closeInventoryModal('seasonalModal')" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors">
-                        <i class="fa-solid fa-xmark text-xl"></i>
-                    </button>
-                    <div class="flex items-center gap-3 mb-6">
-                        <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-                            <i class="fa-solid fa-calendar-day text-lg"></i>
-                        </div>
-                        <div>
-                            <h2 class="text-xl font-bold text-slate-800">Apply Seasonal Rule</h2>
-                            <p class="text-xs text-slate-400 mt-0.5">Override standard base rates dynamically</p>
-                        </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1" for="basePrice">Standard Rate (UGX):</label>
+                        <input type="number" id="basePrice" required placeholder="0.00" 
+                            class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none font-mono">
                     </div>
-                    <form id="seasonForm" class="grid grid-cols-2 gap-4">
-                        <div class="col-span-2 space-y-1">
-                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Type</label>
-                            <select id="targetType" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium"></select>
-                        </div>
-                        <div class="col-span-2 space-y-1">
-                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Season Label</label>
-                            <input type="text" id="seasonName" placeholder="e.g. Peak Summer" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none">
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">From</label>
-                            <input type="date" id="startDate" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">To</label>
-                            <input type="date" id="endDate" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                        <div class="col-span-2 space-y-1">
-                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Adjusted Price (UGX)</label>
-                            <input type="number" id="seasonRate" placeholder="0.00" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-mono focus:ring-2 focus:ring-indigo-500 outline-none">
-                        </div>
-                        <div class="col-span-2 flex gap-4 mt-4">
-                            <button type="button" onclick="closeInventoryModal('seasonalModal')" class="flex-1 py-4 text-slate-400 hover:text-slate-600 font-bold uppercase text-[10px] tracking-widest transition-colors">Cancel</button>
-                            <button type="submit" id="seasonBtn" class="flex-1 bg-amber-600 text-white font-bold py-4 px-4 rounded-2xl hover:bg-amber-700 transition-all shadow-lg active:scale-95 uppercase text-xs tracking-widest flex items-center justify-center gap-2">
-                                <span id="seasonBtnText">Apply Market Rate</span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
 
-            <!-- MODAL 3: Room Registry Form -->
-            <div id="roomRegistryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center z-50 transition-opacity duration-300">
-                <div class="bg-white rounded-[2.5rem] shadow-2xl p-8 max-w-lg w-full mx-4 border border-white/20 relative max-h-[90vh] overflow-y-auto">
-                    <button onclick="closeInventoryModal('roomRegistryModal')" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors">
-                        <i class="fa-solid fa-xmark text-xl"></i>
-                    </button>
-                    <div class="flex items-center gap-3 mb-6">
-                        <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                            <i class="fa-solid fa-bed text-lg"></i>
-                        </div>
-                        <div>
-                            <h2 class="text-xl font-bold text-slate-800">Room Registry</h2>
-                            <p class="text-xs text-slate-400 mt-0.5">Map physical physical units to defined categories</p>
-                        </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-1" for="typeAmenities">Amenities:</label>
+                        <textarea id="typeAmenities" rows="3" placeholder="e.g. Free Wi-Fi, AC, Flat Screen TV, Mini Bar (comma-separated)" 
+                            class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
                     </div>
-                    <form id="roomForm" class="space-y-4">
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Number</label>
-                            <input type="text" id="regRoomNumber" placeholder="e.g. 101" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Room Type</label>
-                            <select id="roomTypeSelect" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
-                                <option value="">Select Room Type...</option>
-                            </select>
-                        </div>
-                        <div class="flex gap-4 mt-6">
-                            <button type="button" onclick="closeInventoryModal('roomRegistryModal')" class="flex-1 py-4 text-slate-400 hover:text-slate-600 font-bold uppercase text-[10px] tracking-widest transition-colors">Cancel</button>
-                            <button type="submit" id="regRoomBtn" class="flex-1 bg-indigo-600 text-white font-bold py-4 px-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg active:scale-95 uppercase text-xs tracking-widest flex items-center justify-center gap-2">
-                                <span id="regRoomBtnText">Register Room</span>
-                            </button>
-                        </div>
-                    </form>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-1" for="roomImage">Room Category Image (Optional):</label>
+                        <input type="file" id="roomImage" multiple accept="image/*" 
+                            class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-sm text-slate-500 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    </div>
                 </div>
-            </div>
+
+                <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
+                    <button type="button" onclick="closeInventoryModal('roomTypeModal')" 
+                        class="px-4 py-2 bg-slate-200 rounded-lg hover:bg-slate-300">
+                        Close
+                    </button>
+                    <button type="submit" id="submitTypeBtn" 
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                        <i id="typeBtnIcon" class="fa-solid fa-save"></i>
+                        <span id="btnText">Create Room Type</span>
+                    </button>
+                </div>
+            </form>
+            <p id="roomTypeStatusMessage" class="text-center mt-4 font-bold text-blue-500"></p>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 2: Seasonal Rules Form -->
+<div id="seasonalModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
+            <h3 id="seasonalModalTitle" class="text-lg font-semibold">Apply Seasonal Rule</h3>
+            <button onclick="closeInventoryModal('seasonalModal')" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        
+        <div class="p-6">
+            <form id="seasonForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-1" for="targetType">Room Type:</label>
+                        <select id="targetType" required class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <option value="">-- Select Room Type --</option>
+                        </select>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-1" for="seasonName">Season Label:</label>
+                        <input type="text" id="seasonName" required placeholder="e.g. Peak Summer" 
+                            class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1" for="startDate">From Date:</label>
+                        <input type="date" id="startDate" required 
+                            class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1" for="endDate">To Date:</label>
+                        <input type="date" id="endDate" required 
+                            class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-1" for="seasonRate">Adjusted Price (UGX):</label>
+                        <input type="number" id="seasonRate" required placeholder="0.00" 
+                            class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none font-mono">
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
+                    <button type="button" onclick="closeInventoryModal('seasonalModal')" 
+                        class="px-4 py-2 bg-slate-200 rounded-lg hover:bg-slate-300">
+                        Close
+                    </button>
+                    <button type="submit" id="seasonBtn" 
+                        class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors flex items-center gap-2">
+                        <i id="seasonBtnIcon" class="fa-solid fa-calendar-check"></i>
+                        <span id="seasonBtnText">Apply Market Rate</span>
+                    </button>
+                </div>
+            </form>
+            <p id="seasonalStatusMessage" class="text-center mt-4 font-bold text-blue-500"></p>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 3: Room Registry Form -->
+<div id="roomRegistryModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
+            <h3 id="roomRegistryModalTitle" class="text-lg font-semibold">Room Registry</h3>
+            <button onclick="closeInventoryModal('roomRegistryModal')" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        
+        <div class="p-6">
+            <form id="roomForm" class="space-y-4">
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1" for="regRoomNumber">Room Number:</label>
+                        <input type="text" id="regRoomNumber" required placeholder="e.g. 101" 
+                            class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1" for="roomTypeSelect">Room Type:</label>
+                        <select id="roomTypeSelect" required class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <option value="">-- Select Room Type --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
+                    <button type="button" onclick="closeInventoryModal('roomRegistryModal')" 
+                        class="px-4 py-2 bg-slate-200 rounded-lg hover:bg-slate-300">
+                        Close
+                    </button>
+                    <button type="submit" id="regRoomBtn" 
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                        <i id="regRoomBtnIcon" class="fa-solid fa-door-open"></i>
+                        <span id="regRoomBtnText">Register Room</span>
+                    </button>
+                </div>
+            </form>
+            <p id="registryStatusMessage" class="text-center mt-4 font-bold text-blue-500"></p>
+        </div>
+    </div>
+</div>
 
             <!-- Table 1: Categories -->
             <div class="w-full bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
