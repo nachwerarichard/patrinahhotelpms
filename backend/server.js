@@ -5487,7 +5487,6 @@ const Sale = mongoose.model('Sale', new mongoose.Schema({
     percentageprofit: Number,
     paymentMethod: { 
         type: String, 
-        required: true, 
         enum: ['Cash', 'Card', 'MobileMoney', 'Folio']
     },
     synced: { 
