@@ -1218,9 +1218,13 @@ async function renderBookings(page = 1, searchTerm = '') {
             ${!['checkedout', 'cancelled','void'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">Edit</button>` : ''}
             ${!['checkedout', 'cancelled','void'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-blue-700 hover:bg-green-800" onclick="viewCharges('${booking.id}')">View Charges</button>` : ''}
             ${(booking.gueststatus === 'confirmed' || booking.gueststatus === 'reserved') ? `<button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">Check In</button>` : ''}
-            ${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `<button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')"><i class="fa-solid ${booking.gueststatus === 'checkedin' ? 'fa-arrows-rotate' : 'fa-door-open'} mr-1"></i> ${booking.gueststatus === 'checkedin' ? 'Move Room' : 'Assign Room'}</button>` : ''}
-            ${booking.balance > 0 && booking.gueststatus !== 'cancelled' ? `<button class="${baseBtn} bg-green-600 hover:bg-green-700 mt-1" onclick="openAddPaymentModal('${booking.id}', ${booking.balance})"><i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment</button>` : ''}
-            <button class="${baseBtn} bg-teal-600 hover:bg-teal-700 mt-1" onclick="generateInvoice('${booking.id}')"><i class="fas fa-file-invoice-dollar mr-1"></i> Folio / Invoice</button>
+${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `
+    <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')">
+        <i class="fa-solid ${booking.gueststatus === 'checkedin' ? 'fa-right-left' : 'fa-door-open'} mr-1"></i>
+        ${booking.gueststatus === 'checkedin' ? 'Move' : 'Assign'}
+    </button>
+` : ''}            ${booking.balance > 0 && booking.gueststatus !== 'cancelled' ? `<button class="${baseBtn} bg-green-600 hover:bg-green-700 mt-1" onclick="openAddPaymentModal('${booking.id}', ${booking.balance})"><i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment</button>` : ''}
+            <button class="${baseBtn} bg-teal-600 hover:bg-teal-700 mt-1" onclick="generateInvoice('${booking.id}')"><i class="fas fa-file-invoice-dollar mr-1"></i> Invoice</button>
 
             ${booking.amountPaid > 0 ? `
   <button class="${baseBtn} bg-orange-500 hover:bg-orange-600 mt-1" 
