@@ -2032,11 +2032,16 @@ async function moveBooking(id) {
         }
 
         // 3️⃣ Populate dropdown
-        select.innerHTML = availableRoomsForMove
-            .map(r => `<option value="${r.number}">
-                Room ${r.number} (${r.type || ''} - ${CURRENT_CURRENCY} ${r.basePrice || 0})
-            </option>`)
-            .join('');
+        // Inside moveBooking():
+select.innerHTML = availableRoomsForMove
+    .map(r => {
+        const typeName = r.roomTypeId?.name || 'Standard';
+        const price = r.roomTypeId?.basePrice || 0;
+        return `<option value="${r.number}">
+            Room ${r.number} (${typeName} - ${CURRENT_CURRENCY} ${price.toLocaleString()})
+        </option>`;
+    })
+    .join('');
 
         updateMovePricePreview();
 
@@ -2051,13 +2056,17 @@ async function moveBooking(id) {
 
 
 // Helper to update the price input when the dropdown changes
+// Inside updateMovePricePreview():
 function updateMovePricePreview() {
     const selectedNumber = document.getElementById('availableRoomsSelect').value;
     const room = availableRoomsForMove.find(r => r.number === selectedNumber);
     
     if (room) {
-        document.getElementById('moveRoomBasePriceDisplay').innerText = `${CURRENT_CURRENCY} ${room.basePrice}`;
-        document.getElementById('moveRoomNegotiatedPrice').value = room.basePrice; // Set default
+        // Extract basePrice from the populated roomTypeId object
+        const price = room.roomTypeId?.basePrice || 0;
+        
+        document.getElementById('moveRoomBasePriceDisplay').innerText = `${CURRENT_CURRENCY} ${price.toLocaleString()}`;
+        document.getElementById('moveRoomNegotiatedPrice').value = price; // Set default
     }
 }
 // Handle Modal Actions

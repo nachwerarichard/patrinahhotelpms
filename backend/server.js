@@ -1388,11 +1388,12 @@ app.get('/api/rooms/available', auth, async (req, res) => {
 
         const bookedRoomNumbers = conflictingBookings.map(b => b.room);
 
+        // Add .populate('roomTypeId') here 
         const availableRooms = await Room.find({
             hotelId,
             status: 'clean',
             number: { $nin: bookedRoomNumbers }
-        });
+        }).populate('roomTypeId'); 
 
         res.json(availableRooms);
 
