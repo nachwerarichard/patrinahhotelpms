@@ -5479,13 +5479,12 @@ const getSessionHotelId = () => {
     return user ? user.hotelId : null;
 };
 
-// --- A. LOAD ROOM TYPES (FOR DROPDOWNS) ---
-async function loadRoomTypes() {
+// --- A. LOAD ROOM TYPES (FOR DROPDOWNS) ---// Function 1: Populates select dropdowns
+async function loadRoomTypeDropdowns() {
     const hotelId = getSessionHotelId();
     if (!hotelId) return;
 
     try {
-        // Fetch types belonging only to this hotel
         const response = await authenticatedFetch(`${API_BASE_URL}/room-types?hotelId=${hotelId}`);
         if (!response || !response.ok) throw new Error('Failed to fetch types');
         
