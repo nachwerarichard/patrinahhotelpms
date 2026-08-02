@@ -5480,32 +5480,6 @@ const getSessionHotelId = () => {
 };
 
 // --- A. LOAD ROOM TYPES (FOR DROPDOWNS) ---// Function 1: Populates select dropdowns
-async function loadRoomTypeDropdowns() {
-    const hotelId = getSessionHotelId();
-    if (!hotelId) return;
-
-    try {
-        const response = await authenticatedFetch(`${API_BASE_URL}/room-types?hotelId=${hotelId}`);
-        if (!response || !response.ok) throw new Error('Failed to fetch types');
-        
-        const types = await response.json();
-        
-        const seasonSelect = document.getElementById('targetType');
-        const roomSelect = document.getElementById('roomTypeSelect');
-
-        const optionsHTML = types.map(t => 
-            `<option value="${t._id}">${t.name} (Base: ${t.basePrice.toLocaleString()})</option>`
-        ).join('');
-
-        const defaultOption = `<option value="">Select Room Type...</option>`;
-        
-        if (seasonSelect) seasonSelect.innerHTML = defaultOption + optionsHTML;
-        if (roomSelect) roomSelect.innerHTML = defaultOption + optionsHTML;
-        
-    } catch (error) {
-        console.error("Error loading dropdowns:", error);
-    }
-}
 
 // --- B. CREATE NEW ROOM TYPE ---
 document.getElementById('typeForm').addEventListener('submit', async (e) => {
@@ -12379,33 +12353,59 @@ let localEditState = {};
 /**
  * Fetch and render all room configurations
  */
+// Function 2: Populates the table
 async function loadRoomTypes() {
+    const hotelId = getSessionHotelId();
     const tbody = document.getElementById('roomTypesTableBody');
+    const seasonSelect = document.getElementById('targetType');
+    const roomSelect = document.getElementById('roomTypeSelect');
+
     try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/room-types`, { method: 'GET' });
-        if (!res.ok) throw new Error('Failed to download room categories.');
+        // Fetch once with hotelId
+        const endpoint = hotelId 
+            ? `${API_BASE_URL}/room-types?hotelId=${hotelId}` 
+            : `${API_BASE_URL}/room-types`;
+
+        const response = await authenticatedFetch(endpoint);
+        if (!response || !response.ok) throw new Error('Failed to fetch room types');
         
-        const roomTypes = await res.json();
-        
-        if (roomTypes.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" class="p-12 text-center text-xs text-slate-400">
-                        No room configurations found. Create one using the form above!
-                    </td>
-                </tr>`;
-            return;
+        const types = await response.json();
+
+        // 1. Update Dropdowns
+        if (seasonSelect || roomSelect) {
+            const optionsHTML = types.map(t => 
+                `<option value="${t._id}">${t.name} (Base: ${t.basePrice.toLocaleString()})</option>`
+            ).join('');
+            const defaultOption = `<option value="">Select Room Type...</option>`;
+            
+            if (seasonSelect) seasonSelect.innerHTML = defaultOption + optionsHTML;
+            if (roomSelect) roomSelect.innerHTML = defaultOption + optionsHTML;
         }
 
-        tbody.innerHTML = roomTypes.map(room => renderTableRow(room)).join('');
-    } catch (err) {
-        console.error("Fetch Error:", err);
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="p-8 text-center text-xs text-red-500 font-semibold">
-                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> Error syncronizing table data.
-                </td>
-            </tr>`;
+        // 2. Update Table
+        if (tbody) {
+            if (types.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="p-12 text-center text-xs text-slate-400">
+                            No room configurations found. Create one using the form above!
+                        </td>
+                    </tr>`;
+            } else {
+                tbody.innerHTML = types.map(room => renderTableRow(room)).join('');
+            }
+        }
+        
+    } catch (error) {
+        console.error("Error loading room types:", error);
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="p-8 text-center text-xs text-red-500 font-semibold">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Error synchronizing table data.
+                    </td>
+                </tr>`;
+        }
     }
 }
 
