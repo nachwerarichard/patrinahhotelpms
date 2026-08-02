@@ -2032,11 +2032,16 @@ async function moveBooking(id) {
         }
 
         // 3️⃣ Populate dropdown
-        select.innerHTML = availableRoomsForMove
-            .map(r => `<option value="${r.number}">
-                Room ${r.number} (${r.type || ''} - ${CURRENT_CURRENCY} ${r.basePrice || 0})
-            </option>`)
-            .join('');
+        // Inside moveBooking():
+select.innerHTML = availableRoomsForMove
+    .map(r => {
+        const typeName = r.roomTypeId?.name || 'Standard';
+        const price = r.roomTypeId?.basePrice || 0;
+        return `<option value="${r.number}">
+            Room ${r.number} (${typeName} - ${CURRENT_CURRENCY} ${price.toLocaleString()})
+        </option>`;
+    })
+    .join('');
 
         updateMovePricePreview();
 
@@ -2051,13 +2056,17 @@ async function moveBooking(id) {
 
 
 // Helper to update the price input when the dropdown changes
+// Inside updateMovePricePreview():
 function updateMovePricePreview() {
     const selectedNumber = document.getElementById('availableRoomsSelect').value;
     const room = availableRoomsForMove.find(r => r.number === selectedNumber);
     
     if (room) {
-        document.getElementById('moveRoomBasePriceDisplay').innerText = `${CURRENT_CURRENCY} ${room.basePrice}`;
-        document.getElementById('moveRoomNegotiatedPrice').value = room.basePrice; // Set default
+        // Extract basePrice from the populated roomTypeId object
+        const price = room.roomTypeId?.basePrice || 0;
+        
+        document.getElementById('moveRoomBasePriceDisplay').innerText = `${CURRENT_CURRENCY} ${price.toLocaleString()}`;
+        document.getElementById('moveRoomNegotiatedPrice').value = price; // Set default
     }
 }
 // Handle Modal Actions
@@ -2882,13 +2891,15 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
     }
 });
 async function viewCharges(bookingCustomId) {
-
-    incidentalChargesTableBody.innerHTML =
-        '<tr><td colspan="6" style="text-align:center;">Loading charges...</td></tr>';
+    const payAllBtn = document.getElementById('payAllChargesBtn');
+    
+    // Reset initial state
+    incidentalChargesTableBody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-gray-500">Loading charges...</td></tr>';
     totalIncidentalChargesSpan.textContent = '0.00';
+    if (payAllBtn) payAllBtn.classList.add('hidden'); // Hide pay button by default while loading
 
     try {
-        // 1️⃣ Fetch booking (hotelId auto included)
+        // 1. Fetch booking details
         const bookingResponse = await authenticatedFetch(
             `${API_BASE_URL}/bookings/id/${bookingCustomId}`
         );
@@ -2904,10 +2915,10 @@ async function viewCharges(bookingCustomId) {
         const booking = await bookingResponse.json();
 
         currentBookingObjectId = booking._id;
-        viewChargesGuestNameSpan.textContent = booking.name;
-        viewChargesRoomNumberSpan.textContent = booking.room;
+        viewChargesGuestNameSpan.textContent = booking.name || 'Guest';
+        viewChargesRoomNumberSpan.textContent = booking.room || 'N/A';
 
-        // 2️⃣ Fetch incidental charges
+        // 2. Fetch incidental charges
         const response = await authenticatedFetch(
             `${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`
         );
@@ -2927,49 +2938,58 @@ async function viewCharges(bookingCustomId) {
         let totalChargesAmount = 0;
         let hasUnpaidCharges = false;
 
-        if (charges.length === 0) {
-            incidentalChargesTableBody.innerHTML =
-                '<tr><td colspan="6" style="text-align:center;">No incidental charges.</td></tr>';
+        if (!Array.isArray(charges) || charges.length === 0) {
+            incidentalChargesTableBody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-gray-500 italic">No incidental charges recorded.</td></tr>';
         } else {
             charges.forEach(charge => {
                 if (!charge.isPaid) hasUnpaidCharges = true;
 
                 const row = incidentalChargesTableBody.insertRow();
-const isPaid = charge.isPaid; // Assuming your schema has this field
+                const isPaid = charge.isPaid;
 
-row.innerHTML = `
-    <td class="px-4 py-2">${charge.type}</td>
-    <td class="px-4 py-2">${charge.description || '-'}</td>
-    <td class="px-4 py-2">${Number(charge.amount).toLocaleString()}</td>
-    <td class="px-4 py-2">${new Date(charge.date).toLocaleDateString()}</td>
-    <td class="px-4 py-2">
-        ${isPaid 
-            ? '<span class="text-green-600 font-bold">Paid</span>' 
-            : `<button onclick="confirmPayIncidentalCharge('${charge._id}', '${bookingCustomId}')" 
-                class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs transition">
-                Mark Paid
-               </button>`
-        }
-    </td>
-`;
+                row.className = "hover:bg-gray-50 transition";
+                row.innerHTML = `
+                    <td class="px-4 py-3 font-medium">${charge.type || 'Other'}</td>
+                    <td class="px-4 py-3 text-gray-600">${charge.description || '-'}</td>
+                    <td class="px-4 py-3 text-right font-semibold">${Number(charge.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td class="px-4 py-3 text-gray-500">${new Date(charge.date).toLocaleDateString()}</td>
+                    <td class="px-4 py-3 text-center">
+                        ${isPaid 
+                            ? '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800"><i class="fa-solid fa-check mr-1"></i> Paid</span>' 
+                            : `<button onclick="confirmPayIncidentalCharge('${charge._id}', '${bookingCustomId}')" 
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-xs font-semibold transition">
+                                Mark Paid
+                               </button>`
+                        }
+                    </td>
+                `;
 
                 totalChargesAmount += Number(charge.amount);
             });
         }
 
-        totalIncidentalChargesSpan.textContent =
-            totalChargesAmount.toLocaleString();
+        totalIncidentalChargesSpan.textContent = totalChargesAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
 
-        document.getElementById('payAllChargesBtn').disabled =
-            !hasUnpaidCharges;
+        // Show/Hide "Pay All" button based on presence of unpaid charges
+        if (payAllBtn) {
+            if (hasUnpaidCharges) {
+                payAllBtn.classList.remove('hidden');
+            } else {
+                payAllBtn.classList.add('hidden');
+            }
+        }
 
-        viewChargesModal.style.display = 'flex';
+        // Open Modal
+        viewChargesModal.classList.remove('hidden');
 
     } catch (error) {
         console.error("🔥 View charges error:", error);
-        showMessage('Error', error.message, true);
-        incidentalChargesTableBody.innerHTML =
-            '<tr><td colspan="6" style="text-align:center;color:red;">Error loading charges.</td></tr>';
+        if (typeof showMessage === 'function') {
+            showMessage('Error', error.message, true);
+        } else {
+            alert(error.message);
+        }
+        incidentalChargesTableBody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-red-500 font-medium">Error loading incidental charges.</td></tr>';
     }
 }
 
@@ -3078,13 +3098,24 @@ document.addEventListener('click', async (e) => {
         showMessage('Error', 'Server error while processing payment', true);
     }
 });
+
+function openViewChargesModal() {
+    const modal = document.getElementById('viewChargesModal');
+    if (modal) {
+        modal.style.display = ''; // Clear inline styles
+        modal.classList.remove('hidden');
+    }
+}
 /**
  * Closes the view charges modal.
  */
 function closeViewChargesModal() {
-    viewChargesModal.style.display = 'none';
+    const modal = document.getElementById('viewChargesModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = ''; // Clear inline styles
+    }
 }
-
 /**
  * Initiates the deletion process for an incidental charge by opening the reason modal.
  * @param {string} chargeId - The MongoDB _id of the charge to delete.
@@ -5457,34 +5488,7 @@ const getSessionHotelId = () => {
     return user ? user.hotelId : null;
 };
 
-// --- A. LOAD ROOM TYPES (FOR DROPDOWNS) ---
-async function loadRoomTypes() {
-    const hotelId = getSessionHotelId();
-    if (!hotelId) return;
-
-    try {
-        // Fetch types belonging only to this hotel
-        const response = await authenticatedFetch(`${API_BASE_URL}/room-types?hotelId=${hotelId}`);
-        if (!response || !response.ok) throw new Error('Failed to fetch types');
-        
-        const types = await response.json();
-        
-        const seasonSelect = document.getElementById('targetType');
-        const roomSelect = document.getElementById('roomTypeSelect');
-
-        const optionsHTML = types.map(t => 
-            `<option value="${t._id}">${t.name} (Base: ${t.basePrice.toLocaleString()})</option>`
-        ).join('');
-
-        const defaultOption = `<option value="">Select Room Type...</option>`;
-        
-        if (seasonSelect) seasonSelect.innerHTML = defaultOption + optionsHTML;
-        if (roomSelect) roomSelect.innerHTML = defaultOption + optionsHTML;
-        
-    } catch (error) {
-        console.error("Error loading dropdowns:", error);
-    }
-}
+// --- A. LOAD ROOM TYPES (FOR DROPDOWNS) ---// Function 1: Populates select dropdowns
 
 // --- B. CREATE NEW ROOM TYPE ---
 document.getElementById('typeForm').addEventListener('submit', async (e) => {
@@ -12358,33 +12362,59 @@ let localEditState = {};
 /**
  * Fetch and render all room configurations
  */
+// Function 2: Populates the table
 async function loadRoomTypes() {
+    const hotelId = getSessionHotelId();
     const tbody = document.getElementById('roomTypesTableBody');
+    const seasonSelect = document.getElementById('targetType');
+    const roomSelect = document.getElementById('roomTypeSelect');
+
     try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/room-types`, { method: 'GET' });
-        if (!res.ok) throw new Error('Failed to download room categories.');
+        // Fetch once with hotelId
+        const endpoint = hotelId 
+            ? `${API_BASE_URL}/room-types?hotelId=${hotelId}` 
+            : `${API_BASE_URL}/room-types`;
+
+        const response = await authenticatedFetch(endpoint);
+        if (!response || !response.ok) throw new Error('Failed to fetch room types');
         
-        const roomTypes = await res.json();
-        
-        if (roomTypes.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" class="p-12 text-center text-xs text-slate-400">
-                        No room configurations found. Create one using the form above!
-                    </td>
-                </tr>`;
-            return;
+        const types = await response.json();
+
+        // 1. Update Dropdowns
+        if (seasonSelect || roomSelect) {
+            const optionsHTML = types.map(t => 
+                `<option value="${t._id}">${t.name} (Base: ${t.basePrice.toLocaleString()})</option>`
+            ).join('');
+            const defaultOption = `<option value="">Select Room Type...</option>`;
+            
+            if (seasonSelect) seasonSelect.innerHTML = defaultOption + optionsHTML;
+            if (roomSelect) roomSelect.innerHTML = defaultOption + optionsHTML;
         }
 
-        tbody.innerHTML = roomTypes.map(room => renderTableRow(room)).join('');
-    } catch (err) {
-        console.error("Fetch Error:", err);
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="p-8 text-center text-xs text-red-500 font-semibold">
-                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> Error syncronizing table data.
-                </td>
-            </tr>`;
+        // 2. Update Table
+        if (tbody) {
+            if (types.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="p-12 text-center text-xs text-slate-400">
+                            No room configurations found. Create one using the form above!
+                        </td>
+                    </tr>`;
+            } else {
+                tbody.innerHTML = types.map(room => renderTableRow(room)).join('');
+            }
+        }
+        
+    } catch (error) {
+        console.error("Error loading room types:", error);
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="p-8 text-center text-xs text-red-500 font-semibold">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Error synchronizing table data.
+                    </td>
+                </tr>`;
+        }
     }
 }
 
