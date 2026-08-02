@@ -6744,7 +6744,7 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
                 
                 <!-- TRANSACTION DETAILS -->
                 <div style="font-size: 11px;">
-                    <div><strong>Server/Op:</strong> ${settlementInfo.cashierName || 'POS Station 1'}</div>
+                    <div><strong>Server:</strong> ${settlementInfo.currentUsername || 'POS Station 1'}</div>
                     <div><strong>Guest:</strong> ${accountData.guestName || 'Walk-In'}</div>
                     ${accountData.roomNumber ? `<div><strong>Room #:</strong> ${accountData.roomNumber}</div>` : ''}
                     <div><strong>Payment:</strong> ${paymentMethod || 'Cash'}</div>
