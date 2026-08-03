@@ -510,46 +510,62 @@ app.put('/api/room-types/:id', auth, upload.array('images', 5), async (req, res)
         }
 
         const { id } = req.params;
-        // 1. Destructure maxOccupancy alongside existing fields
-        const { name, basePrice, maxOccupancy, username, amenities, existingImages } = req.body;
+        
+        // ✅ FIX 1: Accept both existingImages and existingImageUrls to match frontend payloads
+        const { name, basePrice, maxOccupancy, username, amenities, existingImages, existingImageUrls } = req.body;
+        const rawExisting = existingImages !== undefined ? existingImages : existingImageUrls;
 
         const roomType = await RoomType.findOne({ _id: id, hotelId: req.user.hotelId });
         if (!roomType) {
             return res.status(404).json({ error: "Room type not found or access denied." });
         }
 
-        // 2. Update scalar fields
+        // Update scalar fields safely
         if (name) roomType.name = name.trim();
-        if (basePrice) roomType.basePrice = parseFloat(basePrice);
-        if (maxOccupancy !== undefined) roomType.maxOccupancy = parseInt(maxOccupancy, 10); // ✅ Updated maxOccupancy
+        if (basePrice !== undefined && basePrice !== '') roomType.basePrice = parseFloat(basePrice);
+        if (maxOccupancy !== undefined && maxOccupancy !== '') roomType.maxOccupancy = parseInt(maxOccupancy, 10);
 
-        // Parse amenities
+        // Parse amenities safely
         if (amenities !== undefined) {
             try {
-                roomType.amenities = typeof amenities === 'string' && amenities.startsWith('[')
-                    ? JSON.parse(amenities)
-                    : amenities.split(',').map(a => a.trim()).filter(Boolean);
+                if (typeof amenities === 'string') {
+                    roomType.amenities = amenities.startsWith('[')
+                        ? JSON.parse(amenities)
+                        : amenities.split(',').map(a => a.trim()).filter(Boolean);
+                } else if (Array.isArray(amenities)) {
+                    roomType.amenities = amenities;
+                }
             } catch (pErr) {
-                roomType.amenities = [];
+                console.warn("⚠️ Could not parse amenities:", pErr);
+                // Keep previous amenities if parsing fails rather than blowing them away
             }
         }
 
-        // Retain surviving existing images sent from client
-        if (existingImages !== undefined) {
+        // ✅ FIX 2: Parse retained existing images correctly
+        let retainedUrls = roomType.imageUrls || [];
+        if (rawExisting !== undefined) {
             try {
-                roomType.imageUrls = typeof existingImages === 'string' && existingImages.startsWith('[')
-                    ? JSON.parse(existingImages)
-                    : (typeof existingImages === 'string' ? [existingImages] : []);
+                if (typeof rawExisting === 'string') {
+                    retainedUrls = rawExisting.startsWith('[')
+                        ? JSON.parse(rawExisting)
+                        : [rawExisting];
+                } else if (Array.isArray(rawExisting)) {
+                    retainedUrls = rawExisting;
+                }
             } catch (pErr) {
-                roomType.imageUrls = [];
+                console.warn("⚠️ Could not parse existing images JSON, retaining empty array.");
+                retainedUrls = [];
             }
         }
 
-        // Append new uploaded image URLs
+        // ✅ FIX 3: Append new uploaded image URLs
+        let newUrls = [];
         if (req.files && req.files.length > 0) {
-            const newUrls = req.files.map(file => formatFileUrl(file));
-            roomType.imageUrls = [...roomType.imageUrls, ...newUrls];
+            newUrls = req.files.map(file => formatFileUrl(file));
         }
+
+        // Combine retained old URLs + new file uploads
+        roomType.imageUrls = [...retainedUrls, ...newUrls];
 
         // Default image fallback logic
         if (roomType.imageUrls.length === 0) {
@@ -560,7 +576,7 @@ app.put('/api/room-types/:id', auth, upload.array('images', 5), async (req, res)
 
         await roomType.save();
 
-        // 3. Log event with maxOccupancy details
+        // Audit Log entry
         await addAuditLog(
             'Room Type Updated', 
             username || req.user.username || 'System', 
@@ -569,7 +585,7 @@ app.put('/api/room-types/:id', auth, upload.array('images', 5), async (req, res)
                 roomTypeId: roomType._id,
                 roomTypeName: roomType.name,
                 basePrice: roomType.basePrice,
-                maxOccupancy: roomType.maxOccupancy, // ✅ Added to Audit Log
+                maxOccupancy: roomType.maxOccupancy,
                 imageCount: roomType.imageUrls.length
             }
         );

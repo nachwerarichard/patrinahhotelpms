@@ -5975,22 +5975,32 @@ function handleRowImageSelect(event, id) {
 }
 
 // Remove existing server image from local edit state
-function removeExistingImageState(id, urlToRemove) {
+// Remove existing image URL from edit state
+function removeExistingImageState(id, urlToRemove, event) {
+    if (event) event.preventDefault();
+    
     if (localEditState[id]) {
-        localEditState[id].imageUrls = (localEditState[id].imageUrls || []).filter(url => url !== urlToRemove);
-        const room = roomTypesCache.find(r => r._id === id) || { _id: id };
-        const rowEl = document.getElementById(`row-${id}`);
-        if (rowEl) rowEl.outerHTML = renderTableRow(room, true);
+        localEditState[id].imageUrls = (localEditState[id].imageUrls || []).filter(u => u !== urlToRemove);
+        reRenderEditRow(id);
     }
 }
 
-// Remove newly added file preview before saving
-function removePendingImageState(id, indexToRemove) {
+// Remove pending upload file from edit state
+function removePendingImageState(id, indexToRemove, event) {
+    if (event) event.preventDefault();
+
     if (localEditState[id] && localEditState[id].newFiles) {
         localEditState[id].newFiles.splice(indexToRemove, 1);
-        const room = roomTypesCache.find(r => r._id === id) || { _id: id };
-        const rowEl = document.getElementById(`row-${id}`);
-        if (rowEl) rowEl.outerHTML = renderTableRow(room, true);
+        reRenderEditRow(id);
+    }
+}
+
+// Helper to re-render the edit row smoothly
+function reRenderEditRow(id) {
+    const room = roomTypesCache.find(r => r._id === id) || { _id: id };
+    const rowEl = document.getElementById(`row-${id}`);
+    if (rowEl) {
+        rowEl.outerHTML = renderTableRow(room, true);
     }
 }
 
@@ -6048,47 +6058,69 @@ async function saveInlineEdit(id) {
     const state = localEditState[id];
     if (!state) return;
 
-    captureCurrentInputValues(id);
+    // Grab values from inputs (or fallback to state)
+    const nameInput = document.getElementById(`inline-name-${id}`);
+    const occInput = document.getElementById(`inline-occ-${id}`);
+    const priceInput = document.getElementById(`inline-price-${id}`);
 
+    const updatedName = nameInput ? nameInput.value : state.name;
+    const updatedOcc = occInput ? parseInt(occInput.value, 10) : state.maxOccupancy;
+    const updatedPrice = priceInput ? parseFloat(priceInput.value) : state.basePrice;
+
+    // Prepare Multipart FormData for backend (handles string arrays + files)
     const formData = new FormData();
-    formData.append('name', state.name);
-    formData.append('basePrice', state.basePrice);
-    formData.append('maxOccupancy', state.maxOccupancy !== undefined ? state.maxOccupancy : 2);
+    formData.append('name', updatedName);
+    formData.append('maxOccupancy', updatedOcc);
+    formData.append('basePrice', updatedPrice);
+    
+    // Pass amenities array as JSON string (or append individually depending on backend schema)
     formData.append('amenities', JSON.stringify(state.amenities || []));
-    formData.append('existingImages', JSON.stringify(state.imageUrls || []));
 
+    // 1. Send remaining existing image URLs so deleted ones get removed on backend
+    formData.append('existingImageUrls', JSON.stringify(state.imageUrls || []));
+
+    // 2. Append new binary image files for Multer
     if (state.newFiles && state.newFiles.length > 0) {
         state.newFiles.forEach(file => {
-            formData.append('images', file);
+            formData.append('images', file); // Matches upload.array('images') in Express
         });
     }
 
     try {
-        // 🛑 PREVIOUS: authenticatedFetch(`/api/room-types/${id}`, ...)
-        // ✅ FIXED: Point explicitly to your Render backend URL
-        const response = await authenticatedFetch(`${API_BASE_URL}/room-types/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/api/room-types/${id}`, {
             method: 'PUT',
-            body: formData 
+            // DO NOT set 'Content-Type': 'application/json' - browser sets boundary automatically for FormData
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+            },
+            body: formData
         });
 
-        if (!response) return;
+        const result = await response.json();
 
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error || 'Failed to update room type');
+        if (response.ok) {
+            // Update local cache with newly saved backend document
+            const index = roomTypesCache.findIndex(r => r._id === id);
+            if (index !== -1) {
+                roomTypesCache[index] = result.data || result;
+            }
+
+            // Clean up state
+            delete localEditState[id];
+
+            // Re-render row in read-only view
+            const rowEl = document.getElementById(`row-${id}`);
+            if (rowEl) {
+                rowEl.outerHTML = renderTableRow(roomTypesCache[index], false);
+            }
+            
+            showToast('Room category updated successfully!', 'success');
+        } else {
+            showToast(result.message || 'Failed to update room category', 'error');
         }
-
-        const updatedRoom = await response.json();
-        
-        const index = roomTypesCache.findIndex(r => r._id === id);
-        if (index !== -1) roomTypesCache[index] = updatedRoom;
-
-        delete localEditState[id];
-        refreshSingleRow(updatedRoom);
-
     } catch (err) {
-        console.error("Save failed:", err);
-        alert(err.message || "Could not save changes. Please try again.");
+        console.error('Error saving room inline edit:', err);
+        showToast('Network error while saving changes', 'error');
     }
 }
 
