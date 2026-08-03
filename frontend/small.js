@@ -5677,6 +5677,9 @@ document.getElementById('roomForm').addEventListener('submit', async (e) => {
     }
 });
 
+// Global state store for inline updates
+let roomTypesCache = [];
+
 async function loadRoomTypes() {
     const hotelId = getSessionHotelId();
     const tbody = document.getElementById('roomTypesTableBody');
@@ -5692,64 +5695,30 @@ async function loadRoomTypes() {
         if (!response || !response.ok) throw new Error('Failed to fetch room types');
         
         const types = await response.json();
+        roomTypesCache = types; // Store in global cache for inline edits
 
-        // 1. Update Dropdowns across forms
+        // 1. Update Dropdowns
         if (seasonSelect || roomSelect) {
             const optionsHTML = types.map(t => 
-                `<option value="${t._id}">${t.name} (Base: ${t.basePrice ? t.basePrice.toLocaleString() : '0.00'})</option>`
+                `<option value="${t._id}">${t.name} (Base: ${(t.basePrice || 0).toLocaleString()})</option>`
             ).join('');
-            const defaultOption = `<option value="">Select Room Category...</option>`;
+            const defaultOption = `<option value="">Select Room Type...</option>`;
             
             if (seasonSelect) seasonSelect.innerHTML = defaultOption + optionsHTML;
             if (roomSelect) roomSelect.innerHTML = defaultOption + optionsHTML;
         }
 
-        // 2. Render Table Rows
+        // 2. Update Table via renderTableRow
         if (tbody) {
             if (types.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="6" class="p-10 text-center text-xs text-slate-400">
-                            No room categories configured yet. Click <strong>+ Room Class</strong> to create one.
+                        <td colspan="6" class="p-12 text-center text-xs text-slate-400">
+                            No room configurations found. Create one using the form above!
                         </td>
                     </tr>`;
             } else {
-                tbody.innerHTML = types.map(room => `
-                    <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
-                        <td class="py-3 px-6">
-                            <div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-slate-400">
-                                ${room.images && room.images[0] 
-                                    ? `<img src="${room.images[0]}" class="w-full h-full object-cover">`
-                                    : `<i class="fa-solid fa-bed text-sm"></i>`}
-                            </div>
-                        </td>
-                        <td class="py-3 px-4">
-                            <span class="font-bold text-slate-800 block text-xs">${room.name}</span>
-                            <span class="text-[10px] text-slate-400 block">${room.code || 'CAT-' + room._id.substring(0,4)}</span>
-                        </td>
-                        <td class="py-3 px-4 text-center">
-                            <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold">
-                                <i class="fa-solid fa-user text-[9px]"></i> ${room.maxOccupancy || 2}
-                            </span>
-                        </td>
-                        <td class="py-3 px-4">
-                            <span class="text-[11px] text-slate-500 line-clamp-1">${(room.amenities || []).join(', ') || 'Standard Amenities'}</span>
-                        </td>
-                        <td class="py-3 px-4 text-right">
-                            <span class="font-mono font-bold text-indigo-600 text-xs">${CURRENT_CURRENCY} ${(room.basePrice || 0).toLocaleString()}</span>
-                        </td>
-                        <td class="py-3 px-6 text-center">
-                            <div class="flex items-center justify-center gap-1.5">
-                                <button onclick="editRoomType('${room._id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded transition" title="Edit Category">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                </button>
-                                <button onclick="deleteRoomType('${room._id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded transition" title="Delete Category">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
+                tbody.innerHTML = types.map(room => renderTableRow(room)).join('');
             }
         }
         
@@ -5758,11 +5727,131 @@ async function loadRoomTypes() {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="p-8 text-center text-xs text-rose-500 font-semibold">
-                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Error synchronizing room categories.
+                    <td colspan="6" class="p-8 text-center text-xs text-red-500 font-semibold">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Error synchronizing table data.
                     </td>
                 </tr>`;
         }
+    }
+}
+
+// Inline Row Renderer (Keeps inline editing controls active)
+function renderTableRow(room, isEditing = false) {
+    if (isEditing) {
+        return `
+            <tr id="row-${room._id}" class="bg-amber-50/50 border-b border-amber-200">
+                <td class="py-3 px-6">
+                    <div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-slate-400">
+                        ${room.images && room.images[0] 
+                            ? `<img src="${room.images[0]}" class="w-full h-full object-cover">`
+                            : `<i class="fa-solid fa-bed text-sm"></i>`}
+                    </div>
+                </td>
+                <td class="py-3 px-4">
+                    <input type="text" id="inline-name-${room._id}" value="${room.name}" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </td>
+                <td class="py-3 px-4 text-center">
+                    <input type="number" id="inline-occ-${room._id}" value="${room.maxOccupancy || 2}" class="w-16 text-center py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </td>
+                <td class="py-3 px-4">
+                    <input type="text" id="inline-amenities-${room._id}" value="${(room.amenities || []).join(', ')}" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </td>
+                <td class="py-3 px-4 text-right">
+                    <input type="number" id="inline-price-${room._id}" value="${room.basePrice || 0}" class="w-24 text-right px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </td>
+                <td class="py-3 px-6 text-center">
+                    <div class="flex items-center justify-center gap-1">
+                        <button onclick="saveInlineEdit('${room._id}')" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold shadow-xs">
+                            <i class="fa-solid fa-check mr-1"></i>Save
+                        </button>
+                        <button onclick="cancelInlineEdit('${room._id}')" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[10px] font-bold">
+                            Cancel
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    return `
+        <tr id="row-${room._id}" class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
+            <td class="py-3 px-6">
+                <div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-slate-400">
+                    ${room.images && room.images[0] 
+                        ? `<img src="${room.images[0]}" class="w-full h-full object-cover">`
+                        : `<i class="fa-solid fa-bed text-sm"></i>`}
+                </div>
+            </td>
+            <td class="py-3 px-4">
+                <span class="font-bold text-slate-800 block text-xs">${room.name}</span>
+                <span class="text-[10px] text-slate-400 block">${room.code || 'CAT-' + room._id.substring(0,4)}</span>
+            </td>
+            <td class="py-3 px-4 text-center">
+                <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold">
+                    <i class="fa-solid fa-user text-[9px]"></i> ${room.maxOccupancy || 2}
+                </span>
+            </td>
+            <td class="py-3 px-4">
+                <span class="text-[11px] text-slate-500 line-clamp-1">${(room.amenities || []).join(', ') || 'Standard Amenities'}</span>
+            </td>
+            <td class="py-3 px-4 text-right">
+                <span class="font-mono font-bold text-indigo-600 text-xs">${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : '$'} ${(room.basePrice || 0).toLocaleString()}</span>
+            </td>
+            <td class="py-3 px-6 text-center">
+                <div class="flex items-center justify-center gap-1.5">
+                    <button onclick="enableInlineEdit('${room._id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded transition" title="Quick Edit Inline">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                    <button onclick="deleteRoomType('${room._id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded transition" title="Delete Category">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
+// Inline Trigger Actions
+function enableInlineEdit(id) {
+    const room = roomTypesCache.find(r => r._id === id);
+    if (!room) return;
+    const rowEl = document.getElementById(`row-${id}`);
+    if (rowEl) {
+        rowEl.outerHTML = renderTableRow(room, true);
+    }
+}
+
+function cancelInlineEdit(id) {
+    const room = roomTypesCache.find(r => r._id === id);
+    if (!room) return;
+    const rowEl = document.getElementById(`row-${id}`);
+    if (rowEl) {
+        rowEl.outerHTML = renderTableRow(room, false);
+    }
+}
+
+async function saveInlineEdit(id) {
+    const name = document.getElementById(`inline-name-${id}`).value;
+    const maxOccupancy = parseInt(document.getElementById(`inline-occ-${id}`).value, 10);
+    const amenitiesRaw = document.getElementById(`inline-amenities-${id}`).value;
+    const basePrice = parseFloat(document.getElementById(`inline-price-${id}`).value);
+
+    const amenities = amenitiesRaw ? amenitiesRaw.split(',').map(a => a.trim()) : [];
+
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/room-types/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, maxOccupancy, amenities, basePrice })
+        });
+
+        if (!response.ok) throw new Error('Failed to update room type');
+
+        // Refresh cache and table
+        await loadRoomTypes();
+    } catch (err) {
+        console.error("Inline save error:", err);
+        alert("Could not update room type. Please try again.");
     }
 }
 
@@ -12817,163 +12906,7 @@ let localEditState = {};
 /**
  * Generates HTML string for a specific row based on state
  */
-function renderTableRow(room) {
-    const isEditing = localEditState[room._id]?.isEditing || false;
-    
-    // Fallback data sources dependent on state
-    const currentName = isEditing ? localEditState[room._id].name : room.name;
-    const currentPrice = isEditing ? localEditState[room._id].basePrice : room.basePrice;
-    const currentAmenities = isEditing ? localEditState[room._id].amenities : (room.amenities || []);
-    const liveImages = isEditing ? localEditState[room._id].imageUrls : (room.imageUrls || []);
-    const newFiles = isEditing ? localEditState[room._id].newFiles : [];
 
-    // --- COLUMN 1: IMAGES COMPONENT ---
-    let imagesHtml = `<div class="flex items-center gap-2 flex-wrap max-w-[220px]">`;
-    if (liveImages.length === 0 && newFiles.length === 0) {
-        imagesHtml += `<div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-[10px] text-slate-400 border border-slate-200">No Image</div>`;
-    } else {
-        // Render Existing Server Images
-        // Inside renderTableRow(room) -> Replace the liveImages.forEach block with this:
-
-         liveImages.forEach((url) => {
-    imagesHtml += `
-        <div class="relative w-12 h-12 rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-slate-50 cursor-pointer" 
-             style="position: relative; display: inline-block;">
-            
-            <!-- Room Thumbnail Image -->
-            <img src="${url}" class="w-full h-full object-cover" style="display: block; width: 100%; height: 100%;">
-            
-            <!-- Plain CSS Hover Button Wrapper -->
-            <div class="image-delete-overlay" style="
-                position: absolute; 
-                top: 0; 
-                left: 0; 
-                width: 100%; 
-                height: 100%; 
-                background: rgba(220, 38, 38, 0.85); 
-                display: flex; 
-                align-items: center; 
-                justify-content: center; 
-                opacity: 0; 
-                transition: opacity 0.2s ease-in-out;
-                z-index: 20;
-            "
-            onmouseenter="this.style.opacity='1'"
-            onmouseleave="this.style.opacity='0'">
-                
-                ${isEditing ? `
-                    <button onclick="removeExistingImageState('${room._id}', '${url}')" 
-                            style="width: 100%; height: 100%; background: transparent; border: none; color: white; font-weight: bold; font-size: 11px; cursor: pointer;">
-                        Remove
-                    </button>
-                ` : `
-                    <button onclick="deleteSingleImageInstantly('${room._id}', '${url}', '${room.name.replace(/'/g, "\\'")}')" 
-                            style="width: 100%; height: 100%; background: transparent; border: none; color: white; font-weight: bold; font-size: 11px; cursor: pointer;" 
-                            title="Delete image instantly">
-                        Delete
-                    </button>
-                `}
-            </div>
-        </div>`;
-});
-        // Render Pending UI local additions
-        newFiles.forEach((file, index) => {
-            const previewUrl = URL.createObjectURL(file);
-            imagesHtml += `
-                <div class="relative group w-12 h-12 rounded-xl border-dashed border-2 border-indigo-400 overflow-hidden shadow-sm bg-indigo-50/30">
-                    <img src="${previewUrl}" class="w-full h-full object-cover opacity-60">
-                    <button onclick="removePendingImageState('${room._id}', ${index})" class="absolute inset-0 bg-slate-900/80 text-white text-[10px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>`;
-        });
-    }
-    if (isEditing) {
-        imagesHtml += `
-            <button onclick="triggerRowImagePicker('${room._id}')" class="w-12 h-12 rounded-xl border-2 border-dashed border-slate-300 hover:border-indigo-500 text-slate-400 hover:text-indigo-600 transition-colors flex flex-col items-center justify-center gap-0.5">
-                <i class="fa-solid fa-plus text-xs"></i>
-                <span class="text-[8px] font-bold uppercase tracking-tighter">Add</span>
-            </button>`;
-    }
-    imagesHtml += `</div>`;
-
-    // --- COLUMN 2: TEXT DETAILS ---
-    const detailsHtml = isEditing ? `
-        <div class="space-y-2 py-2">
-            <input type="text" id="edit-name-${room._id}" value="${currentName}" class="w-full px-2.5 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500">
-        </div>
-    ` : `
-        <div class="py-1">
-            <div class="font-bold text-slate-800">${currentName}</div>
-            <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider mt-0.5">ID: ${room._id}</div>
-        </div>`;
-
-    // --- COLUMN 3: AMENITIES DISPLAY ---
-    let amenitiesHtml = `<div class="flex flex-wrap gap-1 max-w-[300px]">`;
-    if (isEditing) {
-        amenitiesHtml += `
-            <div class="w-full space-y-1.5">
-                <div class="flex flex-wrap gap-1 mb-1">
-                    ${currentAmenities.map((am, i) => `
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 border border-indigo-100 text-indigo-700 text-[11px] font-medium rounded-md">
-                            ${am}
-                            <button onclick="removeAmenityState('${room._id}', ${i})" class="hover:text-red-600 transition-colors ml-0.5 font-bold">×</button>
-                        </span>
-                    `).join('')}
-                </div>
-                <div class="flex gap-1">
-                    <input type="text" id="new-amenity-${room._id}" placeholder="e.g. AC" class="px-2 py-1 text-xs border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 w-32">
-                    <button onclick="addAmenityState('${room._id}')" class="px-2 py-1 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-700">Add</button>
-                </div>
-            </div>`;
-    } else {
-        amenitiesHtml += currentAmenities.length > 0 
-            ? currentAmenities.map(am => `<span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-medium rounded-md">${am}</span>`).join('')
-            : `<span class="text-xs text-slate-400 italic">No amenities defined</span>`;
-    }
-    amenitiesHtml += `</div>`;
-
-    // --- COLUMN 4: PRICE CONFIGURATION ---
-    const priceHtml = isEditing ? `
-        <div class="flex justify-end items-center gap-1 font-mono">
-            <span class="text-xs text-slate-400 font-sans font-bold">${CURRENT_CURRENCY}</span>
-            <input type="number" id="edit-price-${room._id}" value="${currentPrice}" class="w-24 px-2 py-1 border border-slate-200 rounded-xl text-right text-xs outline-none focus:ring-2 focus:ring-indigo-500">
-        </div>
-    ` : `
-        <div class="text-right font-mono font-bold text-slate-900">
-            <span class="text-[10px] text-slate-400 font-sans font-medium mr-0.5">${CURRENT_CURRENCY}</span> 
-            ${Number(currentPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-        </div>`;
-
-    // --- COLUMN 5: CONTROLS ACTION COMPONENT ---
-    const actionsHtml = isEditing ? `
-        <div class="flex items-center justify-center gap-1.5">
-            <button onclick="saveRowEdits('${room._id}')" class="p-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl hover:bg-emerald-600 hover:text-white text-xs font-bold transition-all shadow-sm" title="Save Modifications">
-                <i class="fa-solid fa-check"></i> Save
-            </button>
-            <button onclick="toggleEditMode('${room._id}', false)" class="p-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-200 text-xs font-medium transition-all" title="Discard Changes">
-                Cancel
-            </button>
-        </div>
-    ` : `
-        <div class="flex items-center justify-center gap-1">
-            <button onclick="initiateRowEditMode('${room._id}', ${JSON.stringify(room).replace(/"/g, '&quot;')})" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all" title="Edit Configuration">
-                <i class="fa-solid fa-pen-to-square"></i>
-            </button>
-            <button onclick="deleteRoomType('${room._id}', '${room.name}')" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Delete Configuration">
-                <i class="fa-solid fa-trash-can"></i>
-            </button>
-        </div>`;
-
-    return `
-        <tr id="row-${room._id}" class="${isEditing ? 'bg-indigo-50/20 shadow-inner' : 'hover:bg-slate-50/40'} transition-colors">
-            <td class="p-4 pl-6 vertical-middle">${imagesHtml}</td>
-            <td class="p-4 vertical-middle">${detailsHtml}</td>
-            <td class="p-4 vertical-middle">${amenitiesHtml}</td>
-            <td class="p-4 vertical-middle text-right">${priceHtml}</td>
-            <td class="p-4 vertical-middle text-center">${actionsHtml}</td>
-        </tr>`;
-}
 
 /* ==========================================================================
    STATE MANAGEMENT MUTATORS
