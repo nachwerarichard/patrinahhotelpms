@@ -13187,32 +13187,7 @@ document.addEventListener('DOMContentLoaded', loadRoomTypes);
 /**
  * Deletes a single image instantly from the database without requiring an overall row save
  */
-async function deleteSingleImageInstantly(roomTypeId, imageUrl, roomName) {
-    if (!confirm(`Are you sure you want to remove this image from "${roomName}"?`)) return;
 
-    try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/room-types/${roomTypeId}/image`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ imageUrl: imageUrl })
-        });
-
-        if (!res.ok) {
-            const data = await res.json();
-            throw new Error(data.error || "Failed to drop image asset.");
-        }
-
-        showMessage("Image deleted successfully! 🗑️");
-        
-        // Refresh the table UI to visually remove the image
-        loadRoomTypes(); 
-    } catch (err) {
-        console.error(err);
-        showMessage(err.message || "Network transaction error.", true);
-    }
-}
 
 
 // 1. Get DOM references
