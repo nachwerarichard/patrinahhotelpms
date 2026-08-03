@@ -6012,27 +6012,47 @@ function cancelInlineEdit(id) {
 }
 
 async function saveInlineEdit(id) {
-    const name = document.getElementById(`inline-name-${id}`).value;
-    const maxOccupancy = parseInt(document.getElementById(`inline-occ-${id}`).value, 10);
-    const amenitiesRaw = document.getElementById(`inline-amenities-${id}`).value;
-    const basePrice = parseFloat(document.getElementById(`inline-price-${id}`).value);
+    const state = localEditState[id];
+    if (!state) return;
 
-    const amenities = amenitiesRaw ? amenitiesRaw.split(',').map(a => a.trim()) : [];
+    captureCurrentInputValues(id);
+
+    const formData = new FormData();
+    formData.append('name', state.name);
+    formData.append('basePrice', state.basePrice);
+    formData.append('amenities', JSON.stringify(state.amenities || []));
+    formData.append('existingImages', JSON.stringify(state.imageUrls || []));
+
+    // Append newly selected binary files for Multer
+    if (state.newFiles && state.newFiles.length > 0) {
+        state.newFiles.forEach(file => {
+            formData.append('images', file);
+        });
+    }
 
     try {
-        const response = await authenticatedFetch(`${API_BASE_URL}/room-types/${id}`, {
+        const response = await fetch(`/api/room-types/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, maxOccupancy, amenities, basePrice })
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}` // Adapt authentication header format as needed
+            },
+            body: formData // Note: Content-Type header must NOT be manually set when passing FormData
         });
 
         if (!response.ok) throw new Error('Failed to update room type');
 
-        // Refresh cache and table
-        await loadRoomTypes();
+        const updatedRoom = await response.json();
+        
+        // Update local cache & re-render view row
+        const index = roomTypesCache.findIndex(r => r._id === id);
+        if (index !== -1) roomTypesCache[index] = updatedRoom;
+
+        delete localEditState[id];
+        refreshSingleRow(updatedRoom);
+
     } catch (err) {
-        console.error("Inline save error:", err);
-        alert("Could not update room type. Please try again.");
+        console.error("Save failed:", err);
+        alert("Could not save changes. Please try again.");
     }
 }
 

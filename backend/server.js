@@ -53,6 +53,9 @@ app.use(cors({
   credentials: true
 }));
 
+// Expose the uploads directory to the browser
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // ==========================================
 // 2. PARSING MIDDLEWARE & WEBHOOK PROTECTION
 // ==========================================
@@ -68,6 +71,13 @@ app.use(express.json({
 
 app.use(express.urlencoded({ extended: true }));
 
+
+// Helper to transform multer disk path into a web-accessible URL path
+const formatFileUrl = (file) => {
+    // Replaces Windows backslashes '\' with standard web slashes '/'
+    const relativePath = file.path.replace(/\\/g, '/');
+    return `/${relativePath}`;
+};
 // ==========================================
 // 3. API ROUTES & ROUTER IMPORT
 // ==========================================
@@ -419,57 +429,52 @@ app.delete('/api/admin/hotel/:id', auth, authorize('super-admin'), async (req, r
 });
 
 // Add 'upload.array('images', 5)' as a second middleware after 'auth'
+// POST /api/room-types - Create Room Type
 app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) => {
     try {
-        // Double check that auth worked perfectly
         if (!req.user || !req.user.hotelId) {
             return res.status(401).json({ error: "Unauthorized. Missing hotel configuration." });
         }
 
-        // 1️⃣ Extract fields from req.body
         const { name, basePrice, username, amenities } = req.body;
 
-        // Basic validation
         if (!name || !basePrice) {
             return res.status(400).json({ error: "Name and Base Price are required." });
         }
 
-        // Safely parse the amenities string back into a JavaScript array
+        // Parse amenities safely
         let parsedAmenities = [];
         if (amenities) {
             try {
-                parsedAmenities = JSON.parse(amenities);
+                parsedAmenities = typeof amenities === 'string' && amenities.startsWith('[')
+                    ? JSON.parse(amenities)
+                    : amenities.split(',').map(a => a.trim()).filter(Boolean);
             } catch (pErr) {
-                // If it's already a regular string or comma-separated string fallback
-                parsedAmenities = typeof amenities === 'string' 
-                    ? amenities.split(',').map(a => a.trim()).filter(Boolean) 
-                    : [];
+                parsedAmenities = [];
             }
         }
 
-        // Safely handle if no files were uploaded
+        // ✅ Format upload file paths for browser access
         const uploadedUrls = (req.files && req.files.length > 0) 
-            ? req.files.map(file => file.path) 
+            ? req.files.map(file => formatFileUrl(file)) 
             : [];
 
         const newType = new RoomType({
             hotelId: req.user.hotelId, 
             name: name.trim(), 
             basePrice: parseFloat(basePrice),
-            amenities: parsedAmenities, // ✅ Added parsed amenities here
+            amenities: parsedAmenities,
             imageUrls: uploadedUrls,
-            // Fallback to default if no images provided
-            defaultImage: uploadedUrls.length > 0 ? uploadedUrls[0] : 'room_.webp'
+            defaultImage: uploadedUrls.length > 0 ? uploadedUrls[0] : '/uploads/room_.webp'
         });
 
         await newType.save();
 
-        // 2️⃣ Add the missing Audit Log with the correct parameter order
         await addAuditLog(
             'Room Type Created', 
             username || req.user.username || 'System', 
-            req.user.hotelId, // ✅ 3rd argument: hotelId
-            {                 // ✅ 4th argument: details object
+            req.user.hotelId,
+            { 
                 roomTypeId: newType._id,
                 roomTypeName: newType.name,
                 basePrice: newType.basePrice,
@@ -482,39 +487,14 @@ app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) =>
 
     } catch (err) {
         console.error("❌ RoomType creation failed:", err);
-        
-        // Check if it's a duplicate key error from MongoDB
         if (err.code === 11000) {
-            return res.status(400).json({ 
-                error: "A room category with this name already exists for your hotel." 
-            });
+            return res.status(400).json({ error: "A room category with this name already exists for your hotel." });
         }
-        
         return res.status(500).json({ error: err.message || "An internal server error occurred." });
     }
 });
 
-app.get('/api/room-types', auth, async (req, res) => {
-    try {
-        // Double check authentication context
-        if (!req.user || !req.user.hotelId) {
-            return res.status(401).json({ error: "Unauthorized. Missing hotel configuration." });
-        }
-
-        // Find all room types matching this specific hotel's ID
-        const roomTypes = await RoomType.find({ hotelId: req.user.hotelId })
-            .sort({ name: 1 }); // Sorts alphabetically A-Z
-
-        return res.status(200).json(roomTypes);
-
-    } catch (err) {
-        console.error("❌ Failed to fetch room types:", err);
-        return res.status(500).json({ 
-            error: err.message || "An internal server error occurred while retrieving room types." 
-        });
-    }
-});
-
+// PUT /api/room-types/:id - Update Room Type
 app.put('/api/room-types/:id', auth, upload.array('images', 5), async (req, res) => {
     try {
         if (!req.user || !req.user.hotelId) {
@@ -524,55 +504,51 @@ app.put('/api/room-types/:id', auth, upload.array('images', 5), async (req, res)
         const { id } = req.params;
         const { name, basePrice, username, amenities, existingImages } = req.body;
 
-        // 1. Find the room type and ensure it belongs to this hotel
         const roomType = await RoomType.findOne({ _id: id, hotelId: req.user.hotelId });
         if (!roomType) {
             return res.status(404).json({ error: "Room type not found or access denied." });
         }
 
-        // 2. Update basic fields if they are provided
         if (name) roomType.name = name.trim();
         if (basePrice) roomType.basePrice = parseFloat(basePrice);
 
-        // 3. Handle parsed amenities if updated
+        // Parse amenities
         if (amenities !== undefined) {
             try {
-                roomType.amenities = JSON.parse(amenities);
+                roomType.amenities = typeof amenities === 'string' && amenities.startsWith('[')
+                    ? JSON.parse(amenities)
+                    : amenities.split(',').map(a => a.trim()).filter(Boolean);
             } catch (pErr) {
-                roomType.amenities = typeof amenities === 'string'
-                    ? amenities.split(',').map(a => a.trim()).filter(Boolean)
-                    : [];
+                roomType.amenities = [];
             }
         }
 
-        // 4. Handle Deletions: Overwrite existing images with what the UI kept
+        // Retain surviving existing images sent from client
         if (existingImages !== undefined) {
             try {
-                roomType.imageUrls = JSON.parse(existingImages);
+                roomType.imageUrls = typeof existingImages === 'string' && existingImages.startsWith('[')
+                    ? JSON.parse(existingImages)
+                    : (typeof existingImages === 'string' ? [existingImages] : []);
             } catch (pErr) {
-                roomType.imageUrls = typeof existingImages === 'string' ? [existingImages] : [];
+                roomType.imageUrls = [];
             }
         }
 
-        // 5. Handle Additions: Append newly uploaded image paths to the array
+        // ✅ Append new uploaded image URLs
         if (req.files && req.files.length > 0) {
-            const newUrls = req.files.map(file => file.path);
+            const newUrls = req.files.map(file => formatFileUrl(file));
             roomType.imageUrls = [...roomType.imageUrls, ...newUrls];
         }
 
-        // 6. Safety Check: Clean up and validate defaultImage state tracking
+        // Default image fallback logic
         if (roomType.imageUrls.length === 0) {
-            // No images left? Fall back to placeholder asset safely
-            roomType.defaultImage = 'room_.webp';
-        } else if (!roomType.imageUrls.includes(roomType.defaultImage) || roomType.defaultImage === 'room_.webp') {
-            // If the old default image was deleted (or it was the placeholder), assign the first valid remaining image
+            roomType.defaultImage = '/uploads/room_.webp';
+        } else if (!roomType.imageUrls.includes(roomType.defaultImage) || roomType.defaultImage === '/uploads/room_.webp') {
             roomType.defaultImage = roomType.imageUrls[0];
         }
 
-        // Save changes to database
         await roomType.save();
 
-        // 7. Log the action
         await addAuditLog(
             'Room Type Updated', 
             username || req.user.username || 'System', 
@@ -596,6 +572,26 @@ app.put('/api/room-types/:id', auth, upload.array('images', 5), async (req, res)
     }
 });
 
+app.get('/api/room-types', auth, async (req, res) => {
+    try {
+        // Double check authentication context
+        if (!req.user || !req.user.hotelId) {
+            return res.status(401).json({ error: "Unauthorized. Missing hotel configuration." });
+        }
+
+        // Find all room types matching this specific hotel's ID
+        const roomTypes = await RoomType.find({ hotelId: req.user.hotelId })
+            .sort({ name: 1 }); // Sorts alphabetically A-Z
+
+        return res.status(200).json(roomTypes);
+
+    } catch (err) {
+        console.error("❌ Failed to fetch room types:", err);
+        return res.status(500).json({ 
+            error: err.message || "An internal server error occurred while retrieving room types." 
+        });
+    }
+});
 app.delete('/api/room-types/:id/image', auth, async (req, res) => {
     try {
         if (!req.user || !req.user.hotelId) {
