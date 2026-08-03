@@ -13336,15 +13336,26 @@ async function deleteRoomType(id, descriptiveName) {
     if (!confirm(`Are you sure you want to completely erase "${descriptiveName}"? This action cannot be undone.`)) return;
 
     try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/room-types/${id}`, { method: 'DELETE' });
+        // FIXED URL: added /api prefix
+        const res = await authenticatedFetch(`${API_BASE_URL}/api/room-types/${id}`, { 
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username: currentUser?.username || 'System' }) // Pass body safely if needed
+        });
+
+        const data = await res.json();
+
         if (!res.ok) {
-            const data = await res.json();
             throw new Error(data.error || "Execution constraint tracking failure.");
         }
+
         showMessage("Asset successfully purged.");
-        loadRoomTypes();
+        loadRoomTypes(); // Refresh list
+
     } catch (err) {
-        console.error(err);
+        console.error('Delete error:', err);
         showMessage(err.message || "Network transaction error.", true);
     }
 }

@@ -674,25 +674,34 @@ app.delete('/api/room-types/:id', auth, async (req, res) => {
         }
 
         const { id } = req.params;
-        const { username } = req.body; // Optional string passed from UI for logs
 
-        // Find and delete only if it belongs to this hotel
+        // 1. Validate Mongo ID format to prevent CastErrors
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: "Invalid Room Type ID format." });
+        }
+
+        // 2. Safe extraction of username from optional req.body
+        const username = (req.body && req.body.username) ? req.body.username : (req.user.username || 'System');
+
+        // 3. Find and delete only if it belongs to this hotel
         const deletedType = await RoomType.findOneAndDelete({ _id: id, hotelId: req.user.hotelId });
 
         if (!deletedType) {
             return res.status(404).json({ error: "Room type not found or access denied." });
         }
 
-        // Write to your audit log tracker
-        await addAuditLog(
-            'Room Type Deleted', 
-            username || req.user.username || 'System', 
-            req.user.hotelId,
-            {
-                roomTypeId: deletedType._id,
-                roomTypeName: deletedType.name
-            }
-        );
+        // 4. Audit Log
+        if (typeof addAuditLog === 'function') {
+            await addAuditLog(
+                'Room Type Deleted', 
+                username, 
+                req.user.hotelId,
+                {
+                    roomTypeId: deletedType._id,
+                    roomTypeName: deletedType.name
+                }
+            );
+        }
 
         return res.status(200).json({ message: "Room type successfully deleted.", id });
 
