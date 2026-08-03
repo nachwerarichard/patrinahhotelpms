@@ -1513,8 +1513,13 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
             return res.status(400).json({ message: 'Invalid or already closed account' });
         }
 
-        // Defensive fix: Ensure charges is always an array to prevent crashes
         const currentCharges = account.charges || [];
+
+        // --- Calculate exact total from charges array ---
+        const calculatedTotal = currentCharges.reduce((sum, charge) => {
+            const val = Number(charge.amount || charge.price || 0);
+            return sum + (isNaN(val) ? 0 : val);
+        }, 0);
 
         if (roomPost && account.roomNumber) {
             const booking = await Booking.findOne({
@@ -1534,8 +1539,8 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
 
             const newCharges = currentCharges.map(charge => ({
                 description: charge.description,
-                amount: charge.amount,
-                type: charge.type,
+                amount: Number(charge.amount || charge.price || 0),
+                type: charge.type || 'Other',
                 hotelId,
                 bookingId: booking._id,
                 bookingCustomId: booking.id, 
@@ -1552,13 +1557,15 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
 
             currentCharges.forEach(charge => {
                 const key = `${charge.description}-${charge.type || 'Other'}`;
+                const chargeAmt = Number(charge.amount || charge.price || 0);
+                
                 if (consolidatedChargesMap[key]) {
-                    consolidatedChargesMap[key].amount += charge.amount;
+                    consolidatedChargesMap[key].amount += chargeAmt;
                 } else {
                     consolidatedChargesMap[key] = {
                         description: charge.description,
                         type: charge.type || 'Other',
-                        amount: charge.amount
+                        amount: chargeAmt
                     };
                 }
             });
@@ -1580,13 +1587,14 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
             }
         }
 
-        // Close the folio account to complete the process
+        // Close the folio account and save settled totals
         account.isClosed = true;
         account.settledAt = new Date();
         account.settledByMethod = roomPost ? 'Room Charge' : paymentMethod;
         
-        // Calculated safely with a clear numerical fallback structure
-        account.finalAmountPaid = account.totalCharges || currentCharges.reduce((sum, c) => sum + (c.amount || 0), 0);
+        // Ensure finalAmountPaid is stored cleanly as a number
+        account.finalAmountPaid = calculatedTotal;
+        account.totalAmount = calculatedTotal; // Fallback field key sync
 
         await account.save();
 
@@ -1594,7 +1602,7 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
             guestName: account.guestName,
             hotelId: hotelId,
             charges: currentCharges,
-            total: account.finalAmountPaid 
+            total: calculatedTotal
         };
 
         res.status(200).json({ 

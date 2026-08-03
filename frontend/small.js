@@ -11491,14 +11491,56 @@ async function generatePaymentsReports() {
     grandTotal += paidAmount;
 
     // Safely sum up department totals
+    accounts.forEach(account => {
+    // 1. Calculate row total with multiple fallback properties
+    let paidAmount = Number(account.finalAmountPaid || account.totalAmount || account.totalCharges || 0);
+    
+    // 2. If paidAmount comes out as 0, calculate dynamically from charges array
+    if (!paidAmount && Array.isArray(account.charges)) {
+        paidAmount = account.charges.reduce((sum, item) => sum + Number(item.amount || item.price || 0), 0);
+    }
+
+    grandTotal += paidAmount;
+
+    // 3. Safely sum up department totals
     (account.charges || []).forEach(c => {
-        const chargeAmount = Number(c.amount || 0);
-        if (departmentSplits[c.type] !== undefined) {
-            departmentSplits[c.type] += chargeAmount;
+        const chargeAmount = Number(c.amount || c.price || 0);
+        const deptType = c.type || 'Other';
+
+        if (departmentSplits[deptType] !== undefined) {
+            departmentSplits[deptType] += chargeAmount;
         } else {
-            departmentSplits['Other'] += chargeAmount;
+            departmentSplits['Other'] = (departmentSplits['Other'] || 0) + chargeAmount;
         }
     });
+
+    const itemizedSummary = (account.charges || [])
+        .map(c => `${c.description}`)
+        .join(', ') || 'No line items recorded';
+
+    const settleDate = account.settledAt ? new Date(account.settledAt).toLocaleString() : 'N/A';
+    const roomDisplay = account.roomNumber ? `Room ${account.roomNumber}` : '<span class="text-gray-400 italic">Walk-In</span>';
+    
+    tableHTML += `
+        <tr class="hover:bg-slate-50/80 transition-colors">
+            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500">${settleDate}</td>
+            <td class="px-6 py-4 font-semibold text-slate-800">${account.guestName || 'Walk-In'}</td>
+            <td class="px-6 py-4 text-slate-600">${roomDisplay}</td>
+            <td class="px-6 py-4 text-xs text-slate-500 max-w-xs truncate" title="${itemizedSummary}">${itemizedSummary}</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2.5 py-1 text-xs font-semibold rounded-full 
+                    ${account.settledByMethod === 'Cash' ? 'bg-emerald-100 text-emerald-800' : ''}
+                    ${account.settledByMethod === 'Card' ? 'bg-blue-100 text-blue-800' : ''}
+                    ${account.settledByMethod === 'MobileMoney' ? 'bg-amber-100 text-amber-800' : ''}
+                    ${account.settledByMethod === 'Room Charge' ? 'bg-purple-100 text-purple-800' : ''}
+                ">
+                    ${account.settledByMethod || 'Cash'}
+                </span>
+            </td>
+            <td class="px-6 py-4 text-right font-bold text-slate-900">${paidAmount.toLocaleString()}</td>
+        </tr>
+    `;
+});
 
             const itemizedSummary = (account.charges || [])
                 .map(c => `${c.description}`)
