@@ -11491,160 +11491,178 @@ let paymentsSearchTimeout = null;
  * Debounce controller that captures text input fields, preventing 
  * an API fetch crash loop while someone is actively typing names.
  */
+
+
+// Debounce function to prevent API spamming while typing
+let debounceTimer;
 function debouncedPaymentsReports() {
-    clearTimeout(paymentsSearchTimeout);
-    paymentsSearchTimeout = setTimeout(() => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
         generatePaymentsReports();
-    }, 400); // 400ms pause configuration
+    }, 400);
 }
 
 async function generatePaymentsReports() {
-    // 1. Gather all HTML filter states
+    // 1. Gather filters
     const startDate = document.getElementById('payment-report-start-date').value;
     const endDate = document.getElementById('payment-report-end-date').value;
-    const search = document.getElementById('payment-report-search').value;
+    const search = document.getElementById('payment-report-search').value.trim();
     const method = document.getElementById('payment-report-method').value;
 
-    // 2. Build URLSearchParams dynamically
     const queryParams = new URLSearchParams();
     if (startDate) queryParams.append('startDate', startDate);
     if (endDate) queryParams.append('endDate', endDate);
     if (search) queryParams.append('search', search);
-    if (method) queryParams.append('method', method);
+    if (method && method !== 'All') queryParams.append('method', method);
 
     const tbody = document.getElementById('payments-report-tbody');
-    
-    // Smooth inline processing spinner indicator inside the table frame
-    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-blue-500"><i class="fas fa-spinner fa-spin mr-2"></i>Updating records matching criteria...</td></tr>`;
+    const cardContainer = document.getElementById('payments-report-cards');
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+
+    // Loading State Spinner
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-6 py-10 text-center text-indigo-600">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>Updating records matching criteria...
+                </td>
+            </tr>`;
+    }
+    if (cardContainer) cardContainer.innerHTML = '';
 
     try {
-        // 3. Make the API Call
+        // Fetch endpoint
         const response = await authenticatedFetch(`${API_BASE_URL}/pos/client/accounts/closed?${queryParams.toString()}`);
-        if (!response.ok) throw new Error('Could not pull report arrays.');
-        
+        if (!response.ok) throw new Error('Could not retrieve settled accounts.');
+
         const accounts = await response.json();
 
-        // Check if no accounts returned
+        // Empty state
         if (!accounts || accounts.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">No matching transaction history found for chosen metrics.</td></tr>`;
-            document.getElementById('overall-sales-card').textContent = "0";
+            const emptyStateHtml = 'No matching transaction history found for selected metrics.';
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">${emptyStateHtml}</td></tr>`;
+            }
+            if (cardContainer) {
+                cardContainer.innerHTML = `<div class="text-center py-6 text-slate-400 italic bg-white border border-slate-200 rounded-xl text-xs">${emptyStateHtml}</div>`;
+            }
+            
+            document.getElementById('overall-sales-card').textContent = `${currency} 0.00`;
             document.getElementById('overall-transactions-card').textContent = "0";
-            document.getElementById('sales-department-report-tbody').innerHTML = "";
             return;
         }
 
-        // 4. Initialize Data Matrices for Analytics Compute
         let grandTotal = 0;
-        let departmentSplits = { 'Bar': 0, 'Restaurant': 0, 'Other': 0 };
-        let tableHTML = '';
+        let departmentSplits = {};
+        let tableRowsHTML = [];
+        let mobileCardsHTML = [];
 
-        // 5. Build dynamic table layout rows
+        // Loop accounts once cleanly
         accounts.forEach(account => {
-            const paidAmount = Number(account.finalAmountPaid ?? account.totalCharges ?? 0);
-    grandTotal += paidAmount;
+            // Calculate Row Amounts safely
+            let paidAmount = Number(account.finalAmountPaid || account.totalAmount || account.totalCharges || 0);
+            if (!paidAmount && Array.isArray(account.charges)) {
+                paidAmount = account.charges.reduce((sum, item) => sum + Number(item.amount || item.price || 0), 0);
+            }
 
-    // Safely sum up department totals
-    accounts.forEach(account => {
-    // 1. Calculate row total with multiple fallback properties
-    let paidAmount = Number(account.finalAmountPaid || account.totalAmount || account.totalCharges || 0);
-    
-    // 2. If paidAmount comes out as 0, calculate dynamically from charges array
-    if (!paidAmount && Array.isArray(account.charges)) {
-        paidAmount = account.charges.reduce((sum, item) => sum + Number(item.amount || item.price || 0), 0);
-    }
+            grandTotal += paidAmount;
 
-    grandTotal += paidAmount;
-
-    // 3. Safely sum up department totals
-    (account.charges || []).forEach(c => {
-        const chargeAmount = Number(c.amount || c.price || 0);
-        const deptType = c.type || 'Other';
-
-        if (departmentSplits[deptType] !== undefined) {
-            departmentSplits[deptType] += chargeAmount;
-        } else {
-            departmentSplits['Other'] = (departmentSplits['Other'] || 0) + chargeAmount;
-        }
-    });
-
-    const itemizedSummary = (account.charges || [])
-        .map(c => `${c.description}`)
-        .join(', ') || 'No line items recorded';
-
-    const settleDate = account.settledAt ? new Date(account.settledAt).toLocaleString() : 'N/A';
-    const roomDisplay = account.roomNumber ? `Room ${account.roomNumber}` : '<span class="text-gray-400 italic">Walk-In</span>';
-    
-    tableHTML += `
-        <tr class="hover:bg-slate-50/80 transition-colors">
-            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500">${settleDate}</td>
-            <td class="px-6 py-4 font-semibold text-slate-800">${account.guestName || 'Walk-In'}</td>
-            <td class="px-6 py-4 text-slate-600">${roomDisplay}</td>
-            <td class="px-6 py-4 text-xs text-slate-500 max-w-xs truncate" title="${itemizedSummary}">${itemizedSummary}</td>
-            <td class="px-6 py-4 whitespace-nowrap">
-                <span class="px-2.5 py-1 text-xs font-semibold rounded-full 
-                    ${account.settledByMethod === 'Cash' ? 'bg-emerald-100 text-emerald-800' : ''}
-                    ${account.settledByMethod === 'Card' ? 'bg-blue-100 text-blue-800' : ''}
-                    ${account.settledByMethod === 'MobileMoney' ? 'bg-amber-100 text-amber-800' : ''}
-                    ${account.settledByMethod === 'Room Charge' ? 'bg-purple-100 text-purple-800' : ''}
-                ">
-                    ${account.settledByMethod || 'Cash'}
-                </span>
-            </td>
-            <td class="px-6 py-4 text-right font-bold text-slate-900">${paidAmount.toLocaleString()}</td>
-        </tr>
-    `;
-});
+            // Process Department Breakdowns dynamically
+            (account.charges || []).forEach(c => {
+                const chargeAmount = Number(c.amount || c.price || 0);
+                const deptType = (c.type || c.department || 'Other').trim() || 'Other';
+                departmentSplits[deptType] = (departmentSplits[deptType] || 0) + chargeAmount;
+            });
 
             const itemizedSummary = (account.charges || [])
-                .map(c => `${c.description}`)
+                .map(c => c.description || c.name || 'Item')
                 .join(', ') || 'No line items recorded';
 
-            // Clean formatted settlement date strings
             const settleDate = account.settledAt ? new Date(account.settledAt).toLocaleString() : 'N/A';
-            const roomDisplay = account.roomNumber ? `Room ${account.roomNumber}` : '<span class="text-gray-400 italic">Walk-In</span>';
-            
-            // Build Row HTML
-            tableHTML += `
-                <tr class="hover:bg-slate-50/80 transition-colors">
-                    <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500">${settleDate}</td>
-                    <td class="px-6 py-4 font-semibold text-slate-800">${account.guestName || 'Walk-In'}</td>
-                    <td class="px-6 py-4 text-slate-600">${roomDisplay}</td>
-                    <td class="px-6 py-4 text-xs text-slate-500 max-w-xs truncate" title="${itemizedSummary}">${itemizedSummary}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2.5 py-1 text-xs font-semibold rounded-full 
-                            ${account.settledByMethod === 'Cash' ? 'bg-emerald-100 text-emerald-800' : ''}
-                            ${account.settledByMethod === 'Card' ? 'bg-blue-100 text-blue-800' : ''}
-                            ${account.settledByMethod === 'MobileMoney' ? 'bg-amber-100 text-amber-800' : ''}
-                            ${account.settledByMethod === 'Room Charge' ? 'bg-purple-100 text-purple-800' : ''}
-                        ">
-                            ${account.settledByMethod || 'Cash'}
-                        </span>
+            const roomDisplay = account.roomNumber ? `Room ${account.roomNumber}` : 'Walk-In';
+            const methodDisplay = account.settledByMethod || 'Cash';
+
+            // Method Badge styling
+            let badgeStyle = 'bg-slate-100 text-slate-700';
+            if (methodDisplay === 'Cash') badgeStyle = 'bg-emerald-100 text-emerald-800';
+            if (methodDisplay === 'Card') badgeStyle = 'bg-blue-100 text-blue-800';
+            if (methodDisplay === 'MobileMoney') badgeStyle = 'bg-amber-100 text-amber-800';
+            if (methodDisplay === 'Room Charge') badgeStyle = 'bg-purple-100 text-purple-800';
+
+            // Desktop Row HTML
+            tableRowsHTML.push(`
+                <tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
+                    <td class="w-1/6 px-6 py-3.5 whitespace-nowrap text-slate-500">${settleDate}</td>
+                    <td class="w-1/6 px-6 py-3.5 font-semibold text-slate-800">${account.guestName || 'Walk-In'}</td>
+                    <td class="w-1/6 px-6 py-3.5 text-slate-600">${roomDisplay}</td>
+                    <td class="w-2/6 px-6 py-3.5 text-slate-500 truncate" title="${itemizedSummary}">${itemizedSummary}</td>
+                    <td class="w-1/6 px-6 py-3.5 whitespace-nowrap">
+                        <span class="px-2.5 py-1 text-[11px] font-bold rounded-full ${badgeStyle}">${methodDisplay}</span>
                     </td>
-                    <td class="px-6 py-4 text-right font-bold text-slate-900">${paidAmount.toLocaleString()}</td>
+                    <td class="w-1/6 px-6 py-3.5 text-right font-mono font-bold text-slate-900">${currency} ${paidAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                 </tr>
-            `;
+            `);
+
+            // Mobile Card HTML
+            mobileCardsHTML.push(`
+                <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-2">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-xs">${account.guestName || 'Walk-In'}</h4>
+                            <p class="text-[10px] text-slate-400">${settleDate}</p>
+                        </div>
+                        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${badgeStyle}">${methodDisplay}</span>
+                    </div>
+                    <div class="text-xs text-slate-600">
+                        <span class="font-semibold text-slate-500">Target:</span> ${roomDisplay}
+                    </div>
+                    <div class="text-xs text-slate-500 truncate" title="${itemizedSummary}">
+                        <span class="font-semibold text-slate-500">Items:</span> ${itemizedSummary}
+                    </div>
+                    <div class="flex justify-between items-center text-xs pt-1 border-t border-slate-100">
+                        <span class="text-slate-500 font-medium">Amount Paid:</span>
+                        <span class="font-mono font-bold text-slate-900">${currency} ${paidAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    </div>
+                </div>
+            `);
         });
 
-        // 6. Update KPIs & Table DOM layout blocks
-        tbody.innerHTML = tableHTML;
-        document.getElementById('overall-sales-card').textContent = `${CURRENT_CURRENCY}${grandTotal.toLocaleString()}`;
+        // Add High-Contrast Operational Grand Total Row
+        tableRowsHTML.push(`
+            <tr class="font-black border-t-2 border-slate-900 shadow-md" style="background-color: #0f172a !important;">
+                <td colspan="5" class="px-6 py-4 uppercase text-xs tracking-widest" style="color: #f8fafc !important; background-color: #0f172a !important;">Total Settled Revenue Summary</td>
+                <td class="px-6 py-4 text-right font-mono text-sm whitespace-nowrap" style="color: #34d399 !important; background-color: #0f172a !important;">${currency} ${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            </tr>
+        `);
+
+        // Render Tables & Cards
+        if (tbody) tbody.innerHTML = tableRowsHTML.join('');
+        if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
+
+        // Update KPIs
+        document.getElementById('overall-sales-card').textContent = `${currency} ${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         document.getElementById('overall-transactions-card').textContent = accounts.length.toString();
 
-        // 7. Populate Department Splitting sub-tables
-        let deptHTML = '';
-        Object.keys(departmentSplits).forEach(dept => {
-            deptHTML += `
-                <tr class="bg-white">
-                    <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
-                    <td class="px-6 py-4 text-right font-bold text-slate-900">${CURRENT_CURRENCY} ${departmentSplits[dept].toLocaleString()}</td>
-                </tr>
-            `;
-        });
-        document.getElementById('sales-department-report-tbody').innerHTML = deptHTML;
+        // Optional: Update Department Summary element if present
+        const deptTbody = document.getElementById('sales-department-report-tbody');
+        if (deptTbody) {
+            let deptHTML = '';
+            Object.keys(departmentSplits).forEach(dept => {
+                deptHTML += `
+                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-3 font-medium text-slate-700">${dept}</td>
+                        <td class="px-6 py-3 text-right font-mono font-bold text-slate-900">${currency} ${departmentSplits[dept].toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    </tr>
+                `;
+            });
+            deptTbody.innerHTML = deptHTML;
+        }
 
     } catch (err) {
         console.error("Failed executing payments generation routine:", err);
-        tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>Failed to fetch reporting information. Check connection.</td></tr>`;
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-rose-500 font-medium"><i class="fas fa-exclamation-triangle mr-2"></i>Failed to fetch reporting information. Check connection.</td></tr>`;
+        }
     }
 }
 
