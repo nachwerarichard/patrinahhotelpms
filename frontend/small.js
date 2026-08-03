@@ -6033,7 +6033,7 @@ async function saveInlineEdit(id) {
     try {
         // 🛑 PREVIOUS: authenticatedFetch(`/api/room-types/${id}`, ...)
         // ✅ FIXED: Point explicitly to your Render backend URL
-        const response = await authenticatedFetch(`${API_BASE_URL}/api/room-types/${id}`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/room-types/${id}`, {
             method: 'PUT',
             body: formData 
         });
