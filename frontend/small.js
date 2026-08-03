@@ -5903,12 +5903,17 @@ function enableInlineEdit(id) {
     const room = roomTypesCache.find(r => r._id === id);
     if (!room) return;
 
+    // Determine initial images properly from MongoDB response
+    const initialImages = (room.imageUrls && room.imageUrls.length > 0) 
+        ? room.imageUrls 
+        : (room.defaultImage ? [room.defaultImage] : []);
+
     // Initialize local edit state container
     localEditState[id] = {
         name: room.name,
         maxOccupancy: room.maxOccupancy || 2,
         basePrice: room.basePrice || 0,
-        imageUrls: [...(room.images || [])],
+        imageUrls: [...initialImages], // ✅ Fixed: reading imageUrls, not room.images
         newFiles: [],
         amenities: [...(room.amenities || [])]
     };
@@ -5928,52 +5933,65 @@ function refreshSingleRow(originalRoomReference) {
     }
 }
 
-function removeExistingImageState(id, targetUrl) {
-    if (!localEditState[id]) return;
-    
-    // Capture current input field values before re-rendering
-    captureCurrentInputValues(id);
 
-    localEditState[id].imageUrls = localEditState[id].imageUrls.filter(url => url !== targetUrl);
-    
-    const mergedRoom = getMergedRoomState(id);
-    document.getElementById(`row-${id}`).replaceWith(
-        document.createRange().createContextualFragment(renderTableRow(mergedRoom, true))
-    );
-}
 
+// Triggers hidden file input dynamically
 function triggerRowImagePicker(id) {
-    const globalInput = document.getElementById('globalRowImagePicker');
-    if (!globalInput) return;
-
-    globalInput.onchange = (e) => {
-        if (e.target.files.length > 0) {
-            if (!localEditState[id]) return;
-            
-            // Capture typed field inputs before re-rendering
-            captureCurrentInputValues(id);
-
-            localEditState[id].newFiles.push(...Array.from(e.target.files));
-            
-            const mergedRoom = getMergedRoomState(id);
-            document.getElementById(`row-${id}`).replaceWith(
-                document.createRange().createContextualFragment(renderTableRow(mergedRoom, true))
-            );
-        }
-    };
-    globalInput.click();
+    let fileInput = document.getElementById(`file-input-${id}`);
+    
+    // Create hidden file input on the fly if it doesn't exist
+    if (!fileInput) {
+        fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.id = `file-input-${id}`;
+        fileInput.multiple = true;
+        fileInput.accept = 'image/*';
+        fileInput.className = 'hidden';
+        fileInput.onchange = (e) => handleRowImageSelect(e, id);
+        document.body.appendChild(fileInput);
+    }
+    
+    fileInput.click();
 }
 
-function removePendingImageState(id, fileIndex) {
-    if (!localEditState[id]) return;
+// Handles selecting new files and triggers re-render
+function handleRowImageSelect(event, id) {
+    const files = Array.from(event.target.files);
+    if (!files.length) return;
 
-    captureCurrentInputValues(id);
-    localEditState[id].newFiles.splice(fileIndex, 1);
+    if (!localEditState[id]) {
+        localEditState[id] = { newFiles: [] };
+    }
 
-    const mergedRoom = getMergedRoomState(id);
-    document.getElementById(`row-${id}`).replaceWith(
-        document.createRange().createContextualFragment(renderTableRow(mergedRoom, true))
-    );
+    // Append newly selected files
+    localEditState[id].newFiles = [...(localEditState[id].newFiles || []), ...files];
+
+    // Re-render row to immediately display previews
+    const room = roomTypesCache.find(r => r._id === id) || { _id: id };
+    const rowEl = document.getElementById(`row-${id}`);
+    if (rowEl) {
+        rowEl.outerHTML = renderTableRow(room, true);
+    }
+}
+
+// Remove existing server image from local edit state
+function removeExistingImageState(id, urlToRemove) {
+    if (localEditState[id]) {
+        localEditState[id].imageUrls = (localEditState[id].imageUrls || []).filter(url => url !== urlToRemove);
+        const room = roomTypesCache.find(r => r._id === id) || { _id: id };
+        const rowEl = document.getElementById(`row-${id}`);
+        if (rowEl) rowEl.outerHTML = renderTableRow(room, true);
+    }
+}
+
+// Remove newly added file preview before saving
+function removePendingImageState(id, indexToRemove) {
+    if (localEditState[id] && localEditState[id].newFiles) {
+        localEditState[id].newFiles.splice(indexToRemove, 1);
+        const room = roomTypesCache.find(r => r._id === id) || { _id: id };
+        const rowEl = document.getElementById(`row-${id}`);
+        if (rowEl) rowEl.outerHTML = renderTableRow(room, true);
+    }
 }
 
 function addAmenityState(id) {
@@ -13157,10 +13175,6 @@ function refreshSingleRow(originalRoomReference) {
     }
 }
 
-function removeExistingImageState(id, targetUrl) {
-    localEditState[id].imageUrls = localEditState[id].imageUrls.filter(url => url !== targetUrl);
-    document.getElementById(`row-${id}`).replaceWith(document.createRange().createContextualFragment(renderTableRow({_id: id})));
-}
 
 function triggerRowImagePicker(id) {
     const globalInput = document.getElementById('globalRowImagePicker');
