@@ -1371,12 +1371,20 @@ app.get('/api/pos/reports/daily', auth, async (req, res) => {
             return res.status(400).json({ message: 'Start and end audit dates are required.' });
         }
 
-        // Construct exact Local Time boundary timestamps
-        const start = new Date(`${startDate}T00:00:00.000Z`);
-        const end = new Date(`${endDate}T23:59:59.999Z`);
+        // Construct exact boundary timestamps safely
+        const start = new Date(startDate);
+        start.setUTCHours(0, 0, 0, 0);
 
-        // Dynamic MongoDB Query Criteria
-        /room-typesqueryCriteria = { 
+        const end = new Date(endDate);
+        end.setUTCHours(23, 59, 59, 999);
+
+        // Check for invalid dates
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return res.status(400).json({ message: 'Invalid date format provided.' });
+        }
+
+        // Dynamic MongoDB Query Criteria (FIXED Variable Name)
+        const queryCriteria = { 
             hotelId, 
             date: { $gte: start, $lte: end } 
         };
