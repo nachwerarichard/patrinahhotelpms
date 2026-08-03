@@ -1064,41 +1064,32 @@ app.put('/api/rooms/status/:roomNumber', async (req, res) => {
 
 // Incidental Charge Schema
 const incidentalChargeSchema = new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
-    bookingId: { // This will store the MongoDB _id of the Booking document
+    hotelId: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Hotel', 
+        required: true,
+        index: true 
+    },
+    bookingId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Booking',
         required: true
     },
-    bookingCustomId: { type: String, required: true }, 
-    guestName: {
-        type: String,
-        required: true
-    },
-    roomNumber: { 
-        type: String,
-    },
+    bookingCustomId: { type: String, required: true },
+    guestName: { type: String, required: true },
+    roomNumber: { type: String, default: 'N/A' },
     type: { 
         type: String,
-        enum: ['Bar', 'Restaurant', 'Other'],
+        enum: ['Bar', 'Restaurant', 'Laundry', 'Spa', 'Other'],
+        default: 'Other',
         required: true
     },
-    description: {
-        type: String
-    },
-    amount: {
-        type: Number,
-        required: true
-    },
-    date: {
-        type: Date,
-        default: Date.now
-    },
-    isPaid: { // Moved inside the schema object
-        type: Boolean,
-        default: false
-    }
-}, { timestamps: true }); // Properly closed here
+    description: { type: String, required: true },
+    amount: { type: Number, required: true, min: 0 },
+    postedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Audit trail: cashier ID
+    date: { type: Date, default: Date.now, index: true },
+    isPaid: { type: Boolean, default: false }
+}, { timestamps: true });
 const IncidentalCharge = mongoose.model('IncidentalCharge', incidentalChargeSchema);
 
 // --- Define Mongoose Schemas and Models (cont.) ---
@@ -1329,45 +1320,56 @@ app.get('/api/rooms/report-daily', auth, async (req, res) => {
 });
 
 app.get('/api/pos/reports/daily', auth, async (req, res) => {
-    const { startDate, endDate } = req.query; 
-    
-    // SECURITY: Use the hotelId from the AUTH middleware
-    const hotelId = req.user.hotelId;
+    const { startDate, endDate, type } = req.query; 
+    const hotelId = req.user.hotelId; // Tenant Guard
     
     try {
         if (!startDate || !endDate) {
-            return res.status(400).json({ message: 'Start and end dates are required' });
+            return res.status(400).json({ message: 'Start and end audit dates are required.' });
         }
 
-        // Query the database directly without UTC shift functions. 
-        // We set the start to 00:00:00 and end to 23:59:59 of the local server time.
-        const start = new Date(`${startDate}T00:00:00.000`);
-        const end = new Date(`${endDate}T23:59:59.999`);
+        // Construct exact Local Time boundary timestamps
+        const start = new Date(`${startDate}T00:00:00.000Z`);
+        const end = new Date(`${endDate}T23:59:59.999Z`);
 
-        const roomCharges = await IncidentalCharge.find({ 
+        // Dynamic MongoDB Query Criteria
+        let queryCriteria = { 
             hotelId, 
             date: { $gte: start, $lte: end } 
-        });
+        };
 
-        const allTransactions = roomCharges.map(c => ({
+        if (type && type !== 'ALL') {
+            queryCriteria.type = type;
+        }
+
+        const roomCharges = await IncidentalCharge.find(queryCriteria)
+            .sort({ date: -1 })
+            .lean();
+
+        const transactions = roomCharges.map(c => ({
+            id: c._id,
+            bookingCustomId: c.bookingCustomId,
             guestName: c.guestName,
-            roomNumber: c.roomNumber || 'N/A',
-            description: c.description || 'Room Charge',
+            roomNumber: c.roomNumber || 'Walk-In',
+            description: c.description || 'Incidental Charge',
+            type: c.type || 'Other',
             amount: Number(c.amount) || 0,
-            source: 'Room Charge',
+            isPaid: Boolean(c.isPaid),
             time: c.date 
         }));
+
+        const totalRevenue = transactions.reduce((sum, t) => sum + t.amount, 0);
         
         res.status(200).json({
             reportRange: `${startDate} to ${endDate}`,
-            tenant: hotelId,
-            totalRevenue: allTransactions.reduce((sum, t) => sum + t.amount, 0),
-            transactions: allTransactions.sort((a, b) => new Date(b.time) - new Date(a.time))
+            totalRevenue,
+            count: transactions.length,
+            transactions
         });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error generating POS report' });
+        console.error('POS Report Generation Error:', error);
+        res.status(500).json({ message: 'Internal server error processing incidental audit log.' });
     }
 });
 

@@ -10321,64 +10321,151 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+let currentIncidentalReportData = [];
+
 async function generatePOSReport() {
     const startDate = document.getElementById('reportStartDate').value;
     const endDate = document.getElementById('reportEndDate').value;
+    const deptFilter = document.getElementById('reportDepartmentFilter')?.value || 'ALL';
     const tableBody = document.getElementById('posreportTableBody');
     const totalRevenueEl = document.getElementById('posreportTotalRevenue');
     const loadingEl = document.getElementById('loadingIndicator');
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
 
-    // Only fetch if both dates are selected
     if (!startDate || !endDate) return;
 
-    // Prevent fetching if end date is before start date
     if (new Date(endDate) < new Date(startDate)) {
-        // Optional: showMessage('End date cannot be before start date', true);
+        alert('Audit End Date cannot precede the Start Date.');
         return; 
     }
 
-    // Show loading text
     loadingEl.classList.remove('hidden');
 
     try {
-        const response = await authenticatedFetch(`${API_BASE_URL}/pos/reports/daily?startDate=${startDate}&endDate=${endDate}`);
+        const response = await authenticatedFetch(
+            `${API_BASE_URL}/pos/reports/daily?startDate=${startDate}&endDate=${endDate}&type=${deptFilter}`
+        );
         const data = await response.json();
 
-        if (!response.ok) throw new Error(data.message || 'Report failed');
+        if (!response.ok) throw new Error(data.message || 'Failed to fetch incidental revenue audit log.');
 
-        // Update Summary Card
-        totalRevenueEl.textContent = Number(data.totalRevenue).toLocaleString();
-        document.getElementById('posreportDateDisplay').textContent = data.reportRange;
+        currentIncidentalReportData = data.transactions || [];
 
-        // Populate Table
-        tableBody.innerHTML = data.transactions.length ? '' : '<tr><td colspan="4" class="text-center py-10">No records found for this date range.</td></tr>';
+        // Update Summary KPI Headings
+        totalRevenueEl.textContent = `${currency} ${Number(data.totalRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('posreportDateDisplay').textContent = data.reportRange || `${startDate} to ${endDate}`;
+        document.getElementById('posreportCountDisplay').textContent = `${currentIncidentalReportData.length} Postings Found`;
 
-        data.transactions.forEach(trx => {
-            const row = `
-                <tr class="border-b border-slate-50 hover:bg-indigo-50/30 transition-all">
-                    <td class="px-8 py-4">
-                        <span class="font-bold text-slate-700">${trx.guestName}</span>
-                        <div class="text-[10px] text-slate-400 uppercase">Room: ${trx.roomNumber}</div>
-                    </td>
-                    <td class="px-8 py-4 text-slate-600">${trx.description}</td>
-                    <td class="px-8 py-4 text-center">
-                        <span class="px-2 py-1 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
-                            ${trx.source}
-                        </span>
-                    </td>
-                    <td class="px-8 py-4 text-right font-black text-indigo-600">
-                        ${Number(trx.amount).toLocaleString()}
+        if (currentIncidentalReportData.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center py-12 text-slate-400 italic">
+                        No incidental postings recorded for this date range or outlet filter.
                     </td>
                 </tr>`;
-            tableBody.insertAdjacentHTML('beforeend', row);
+            return;
+        }
+
+        let rowsHTML = [];
+
+        currentIncidentalReportData.forEach(trx => {
+            const guestName = trx.guestName || 'Walk-In';
+            const roomDisplay = trx.roomNumber ? `Room ${trx.roomNumber}` : 'Non-Resident';
+            const folioCode = trx.bookingCustomId || (trx.id ? trx.id.slice(-6).toUpperCase() : 'N/A');
+            const description = trx.description || 'Auxiliary Charge';
+            const amountFormatted = `${currency} ${Number(trx.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const dateObj = trx.time ? new Date(trx.time) : new Date();
+            const timeString = dateObj.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+
+            // Department Badge Styles
+            let deptClass = 'bg-amber-100 text-amber-800';
+            if (trx.type === 'Bar') deptClass = 'bg-purple-100 text-purple-800';
+            if (trx.type === 'Laundry') deptClass = 'bg-blue-100 text-blue-800';
+            if (trx.type === 'Spa') deptClass = 'bg-teal-100 text-teal-800';
+
+            rowsHTML.push(`
+                <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
+                    <td class="py-3 px-4">
+                        <div class="font-bold text-slate-800">${guestName}</div>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <span class="text-[10px] font-bold text-indigo-600">${roomDisplay}</span>
+                            <span class="text-[10px] font-mono text-slate-400">Ref: #${folioCode}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="text-slate-800 font-medium">${description}</div>
+                        <div class="text-[10px] text-slate-400"><i class="far fa-clock mr-1"></i>${timeString}</div>
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${deptClass}">
+                            ${trx.type || 'Other'}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                        ${amountFormatted}
+                    </td>
+                </tr>
+            `);
         });
 
+        tableBody.innerHTML = rowsHTML.join('');
+
     } catch (err) {
-        showMessage(err.message, true);
+        console.error('Incidental Audit Error:', err);
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-rose-500 font-semibold">${err.message}</td></tr>`;
     } finally {
-        // Hide loading text
         loadingEl.classList.add('hidden');
     }
+}
+
+// Preset Filter Shortcut Helper
+function setIncidentalDateFilter(preset) {
+    const today = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    if (preset === 'yesterday') {
+        start.setDate(today.getDate() - 1);
+        end.setDate(today.getDate() - 1);
+    } else if (preset === 'mtd') {
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+    }
+
+    document.getElementById('reportStartDate').value = start.toISOString().split('T')[0];
+    document.getElementById('reportEndDate').value = end.toISOString().split('T')[0];
+    generatePOSReport();
+}
+
+// CSV Export Generator
+function exportIncidentalReportCSV() {
+    if (!currentIncidentalReportData || currentIncidentalReportData.length === 0) {
+        alert('No data available to export.');
+        return;
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Guest Name,Room Number,Reference ID,Description,Department,Amount,Posting Date\n";
+
+    currentIncidentalReportData.forEach(row => {
+        const line = [
+            `"${row.guestName || ''}"`,
+            `"${row.roomNumber || ''}"`,
+            `"${row.bookingCustomId || ''}"`,
+            `"${row.description || ''}"`,
+            `"${row.type || ''}"`,
+            row.amount || 0,
+            `"${row.time ? new Date(row.time).toISOString() : ''}"`
+        ].join(",");
+        csvContent += line + "\n";
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `incidental_audit_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 /**
