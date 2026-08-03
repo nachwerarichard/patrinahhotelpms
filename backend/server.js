@@ -371,9 +371,10 @@ const roomTypeSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
     name: { type: String, required: true },
     basePrice: { type: Number, required: true },
+    maxOccupancy: { type: Number, default: 2 }, // 👈 Make sure this line exists
     amenities: [{ type: String }], 
     imageUrls: [{ type: String }], 
-    defaultImage: { type: String, default: 'room_.webp' },
+    defaultImage: { type: String, default: '/uploads/room_.webp' },
     seasonalRates: [{
         seasonName: String,
         startDate: Date,
@@ -430,13 +431,15 @@ app.delete('/api/admin/hotel/:id', auth, authorize('super-admin'), async (req, r
 
 // Add 'upload.array('images', 5)' as a second middleware after 'auth'
 // POST /api/room-types - Create Room Type
+// POST /api/room-types - Create Room Type
 app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) => {
     try {
         if (!req.user || !req.user.hotelId) {
             return res.status(401).json({ error: "Unauthorized. Missing hotel configuration." });
         }
 
-        const { name, basePrice, username, amenities } = req.body;
+        // 1. Destructure fields (including maxOccupancy)
+        const { name, basePrice, maxOccupancy, username, amenities } = req.body;
 
         if (!name || !basePrice) {
             return res.status(400).json({ error: "Name and Base Price are required." });
@@ -454,15 +457,17 @@ app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) =>
             }
         }
 
-        // ✅ Format upload file paths for browser access
+        // Format upload file paths for browser access
         const uploadedUrls = (req.files && req.files.length > 0) 
             ? req.files.map(file => formatFileUrl(file)) 
             : [];
 
+        // 2. Instantiate RoomType with parsed maxOccupancy
         const newType = new RoomType({
             hotelId: req.user.hotelId, 
             name: name.trim(), 
             basePrice: parseFloat(basePrice),
+            maxOccupancy: maxOccupancy ? parseInt(maxOccupancy, 10) : 2, // ✅ Added maxOccupancy (default 2)
             amenities: parsedAmenities,
             imageUrls: uploadedUrls,
             defaultImage: uploadedUrls.length > 0 ? uploadedUrls[0] : '/uploads/room_.webp'
@@ -470,6 +475,7 @@ app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) =>
 
         await newType.save();
 
+        // 3. Log event including maxOccupancy details
         await addAuditLog(
             'Room Type Created', 
             username || req.user.username || 'System', 
@@ -478,6 +484,7 @@ app.post('/api/room-types', auth, upload.array('images', 5), async (req, res) =>
                 roomTypeId: newType._id,
                 roomTypeName: newType.name,
                 basePrice: newType.basePrice,
+                maxOccupancy: newType.maxOccupancy, // ✅ Added to Audit Log
                 amenitiesCount: parsedAmenities.length,
                 imageCount: uploadedUrls.length
             }
@@ -502,15 +509,18 @@ app.put('/api/room-types/:id', auth, upload.array('images', 5), async (req, res)
         }
 
         const { id } = req.params;
-        const { name, basePrice, username, amenities, existingImages } = req.body;
+        // 1. Destructure maxOccupancy alongside existing fields
+        const { name, basePrice, maxOccupancy, username, amenities, existingImages } = req.body;
 
         const roomType = await RoomType.findOne({ _id: id, hotelId: req.user.hotelId });
         if (!roomType) {
             return res.status(404).json({ error: "Room type not found or access denied." });
         }
 
+        // 2. Update scalar fields
         if (name) roomType.name = name.trim();
         if (basePrice) roomType.basePrice = parseFloat(basePrice);
+        if (maxOccupancy !== undefined) roomType.maxOccupancy = parseInt(maxOccupancy, 10); // ✅ Updated maxOccupancy
 
         // Parse amenities
         if (amenities !== undefined) {
@@ -534,7 +544,7 @@ app.put('/api/room-types/:id', auth, upload.array('images', 5), async (req, res)
             }
         }
 
-        // ✅ Append new uploaded image URLs
+        // Append new uploaded image URLs
         if (req.files && req.files.length > 0) {
             const newUrls = req.files.map(file => formatFileUrl(file));
             roomType.imageUrls = [...roomType.imageUrls, ...newUrls];
@@ -549,6 +559,7 @@ app.put('/api/room-types/:id', auth, upload.array('images', 5), async (req, res)
 
         await roomType.save();
 
+        // 3. Log event with maxOccupancy details
         await addAuditLog(
             'Room Type Updated', 
             username || req.user.username || 'System', 
@@ -557,6 +568,7 @@ app.put('/api/room-types/:id', auth, upload.array('images', 5), async (req, res)
                 roomTypeId: roomType._id,
                 roomTypeName: roomType.name,
                 basePrice: roomType.basePrice,
+                maxOccupancy: roomType.maxOccupancy, // ✅ Added to Audit Log
                 imageCount: roomType.imageUrls.length
             }
         );
