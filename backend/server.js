@@ -5524,7 +5524,6 @@ const Sale = mongoose.model('Sale', new mongoose.Schema({
     },
     recordedBy: { 
         type: String, 
-        required: true, 
         trim: true 
     },
     date: { type: Date, default: Date.now }
