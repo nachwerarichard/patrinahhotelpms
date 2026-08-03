@@ -6020,11 +6020,10 @@ async function saveInlineEdit(id) {
     const formData = new FormData();
     formData.append('name', state.name);
     formData.append('basePrice', state.basePrice);
-    formData.append('maxOccupancy', state.maxOccupancy !== undefined ? state.maxOccupancy : 2); // ✅ Included maxOccupancy
+    formData.append('maxOccupancy', state.maxOccupancy !== undefined ? state.maxOccupancy : 2);
     formData.append('amenities', JSON.stringify(state.amenities || []));
     formData.append('existingImages', JSON.stringify(state.imageUrls || []));
 
-    // Append newly selected binary files for Multer
     if (state.newFiles && state.newFiles.length > 0) {
         state.newFiles.forEach(file => {
             formData.append('images', file);
@@ -6032,13 +6031,13 @@ async function saveInlineEdit(id) {
     }
 
     try {
-        // ✅ Replaced fetch with authenticatedFetch (auth headers & multi-tenant headers handled automatically)
-        const response = await authenticatedFetch(`/api/room-types/${id}`, {
+        // 🛑 PREVIOUS: authenticatedFetch(`/api/room-types/${id}`, ...)
+        // ✅ FIXED: Point explicitly to your Render backend URL
+        const response = await authenticatedFetch(`${API_BASE_URL}/api/room-types/${id}`, {
             method: 'PUT',
             body: formData 
         });
 
-        // If authenticatedFetch redirects due to missing token, exit early
         if (!response) return;
 
         if (!response.ok) {
@@ -6048,7 +6047,6 @@ async function saveInlineEdit(id) {
 
         const updatedRoom = await response.json();
         
-        // Update local cache & re-render view row
         const index = roomTypesCache.findIndex(r => r._id === id);
         if (index !== -1) roomTypesCache[index] = updatedRoom;
 
