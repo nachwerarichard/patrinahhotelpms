@@ -10,6 +10,7 @@ const multer = require('multer');
 const { ical } = require('ical-generator');
 const { GoogleGenAI } = require("@google/genai");
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const path = require('path'); // 👈 Add this line
 cloudinary.config({
     cloud_name: 'dckvyguun',
     api_key: '986177637794957',
