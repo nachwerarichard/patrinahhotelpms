@@ -6038,75 +6038,58 @@ async function saveInlineEdit(id) {
     const state = localEditState[id];
     if (!state) return;
 
-    // Grab values from inputs
     const nameInput = document.getElementById(`inline-name-${id}`);
     const occInput = document.getElementById(`inline-occ-${id}`);
     const priceInput = document.getElementById(`inline-price-${id}`);
 
-    const updatedName = nameInput ? nameInput.value : state.name;
-    const updatedOcc = occInput ? parseInt(occInput.value, 10) : state.maxOccupancy;
-    const updatedPrice = priceInput ? parseFloat(priceInput.value) : state.basePrice;
-
-    // Unified notification helper fallback
-    const notify = typeof showMessage === 'function' 
-        ? showMessage 
-        : (typeof showToast === 'function' ? showToast : console.log);
-
-    // Prepare Multipart FormData
     const formData = new FormData();
-    formData.append('name', updatedName);
-    formData.append('maxOccupancy', updatedOcc);
-    formData.append('basePrice', updatedPrice);
+    formData.append('name', nameInput ? nameInput.value : state.name);
+    formData.append('maxOccupancy', occInput ? parseInt(occInput.value, 10) : state.maxOccupancy);
+    formData.append('basePrice', priceInput ? parseFloat(priceInput.value) : state.basePrice);
     formData.append('amenities', JSON.stringify(state.amenities || []));
     formData.append('existingImages', JSON.stringify(state.imageUrls || []));
 
     if (state.newFiles && state.newFiles.length > 0) {
-        state.newFiles.forEach(file => {
-            formData.append('images', file);
-        });
+        state.newFiles.forEach(file => formData.append('images', file));
     }
 
     try {
-        // FIXED: Using authenticatedFetch with explicit /api prefix & blank header object
-        const response = await authenticatedFetch(`${API_BASE_URL}/room-types/${id}`, {
+        // MUST pass headers: {} so authenticatedFetch doesn't force 'application/json'
+        const response = await authenticatedFetch(`${API_BASE_URL}/api/room-types/${id}`, {
             method: 'PUT',
-            headers: {}, // Prevents auto-setting Content-Type: application/json
+            headers: {}, 
             body: formData
         });
 
-        // Safely parse JSON or text response
-        let result;
         const contentType = response.headers.get("content-type");
+        let result;
+        
         if (contentType && contentType.includes("application/json")) {
             result = await response.json();
         } else {
             const rawText = await response.text();
-            throw new Error(`Server returned non-JSON response status ${response.status}.`);
+            console.error("🔥 Raw HTML Server Crash Response:", rawText);
+            throw new Error(`Server crash (500). Check browser console for raw backend logs.`);
         }
 
         if (response.ok) {
             const updatedRoom = result.data || result;
-
             const index = roomTypesCache.findIndex(r => (r._id || r.id) === id);
-            if (index !== -1) {
-                roomTypesCache[index] = updatedRoom;
-            }
+            if (index !== -1) roomTypesCache[index] = updatedRoom;
 
             delete localEditState[id];
 
             const rowEl = document.getElementById(`row-${id}`);
             if (rowEl) {
-                const targetRoom = index !== -1 ? roomTypesCache[index] : updatedRoom;
-                rowEl.outerHTML = renderTableRow(targetRoom, false);
+                rowEl.outerHTML = renderTableRow(index !== -1 ? roomTypesCache[index] : updatedRoom, false);
             }
-            
-            notify("Room category updated successfully!");
+            if (typeof showMessage === 'function') showMessage("Room updated successfully!");
         } else {
-            notify(result.error || result.message || "Failed to update room category", true);
+            if (typeof showMessage === 'function') showMessage(result.error || result.message || "Failed to update", true);
         }
     } catch (err) {
         console.error('Error saving room inline edit:', err);
-        notify(err.message || "Network error while saving changes", true);
+        if (typeof showMessage === 'function') showMessage(err.message || "Network error", true);
     }
 }
 

@@ -29,6 +29,15 @@ const storage = new CloudinaryStorage({
     },
 });
 
+const fs = require('fs');
+const path = require('path');
+
+// Guarantee upload directory exists before processing requests
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 const upload = multer({ storage: storage });
 //CLOUDINARY_URL=cloudinary://986177637794957:**********@dckvyguun
 //CLOUDINARY_URL=cloudinary://478483388418876:**********@dreiyg73q
@@ -60,7 +69,13 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // ==========================================
 // 2. PARSING MIDDLEWARE & WEBHOOK PROTECTION
 // ==========================================
-
+// Global Error Catching Middleware - Guarantees JSON responses instead of HTML 500s
+app.use((err, req, res, next) => {
+    console.error("🔥 Global Express Handler Caught Error:", err);
+    res.status(err.status || 500).json({
+        error: err.message || "An internal server error occurred."
+    });
+});
 // Parse JSON bodies, but preserve raw buffer specifically for the Stripe webhook
 app.use(express.json({
   verify: (req, res, buf) => {
@@ -69,6 +84,7 @@ app.use(express.json({
     }
   }
 }));
+
 
 app.use(express.urlencoded({ extended: true }));
 
