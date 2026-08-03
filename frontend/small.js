@@ -5784,7 +5784,7 @@ function enableInlineEdit(id) {
         basePrice: room.basePrice || 0
     };
 
-    reRenderRow(id);
+    loadRoomTypes();
 }
 
 
@@ -5803,7 +5803,7 @@ function triggerRowImagePicker(id) {
 
         if (!localEditState[id]) return;
         localEditState[id].newFiles = [...(localEditState[id].newFiles || []), ...files];
-        reRenderRow(id);
+        loadRoomTypes();
     };
 
     input.click();
@@ -5814,7 +5814,7 @@ function removeExistingImageState(id, url, event) {
     if (!localEditState[id]) return;
 
     localEditState[id].imageUrls = (localEditState[id].imageUrls || []).filter(u => u !== url);
-    reRenderRow(id);
+    loadRoomTypes();
 }
 
 function removePendingImageState(id, index, event) {
@@ -5822,7 +5822,7 @@ function removePendingImageState(id, index, event) {
     if (!localEditState[id]) return;
 
     localEditState[id].newFiles = (localEditState[id].newFiles || []).filter((_, idx) => idx !== index);
-    reRenderRow(id);
+    loadRoomTypes();
 }
 
 // --- AMENITY EDITING HANDLERS ---
@@ -5833,13 +5833,13 @@ function addAmenityState(id) {
 
     if (!localEditState[id]) return;
     localEditState[id].amenities.push(input.value.trim());
-    reRenderRow(id);
+    loadRoomTypes();
 }
 
 function removeAmenityState(id, index) {
     if (!localEditState[id]) return;
     localEditState[id].amenities.splice(index, 1);
-    reRenderRow(id);
+    loadRoomTypes();
 }
 
 // --- RENDER FUNCTION (6 COLUMNS) ---
@@ -6069,7 +6069,7 @@ async function saveInlineEdit(id) {
 
     try {
         // Using authenticatedFetch instead of raw fetch
-        const response = await authenticatedFetch(`${API_BASE_URL}/api/room-types/${id}`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/room-types/${id}`, {
             method: 'PUT',
             // DO NOT explicitly set 'Content-Type': 'multipart/form-data' 
             // The browser will automatically set it along with the proper multipart boundary
