@@ -5770,40 +5770,55 @@ function renderTableRow(room, isEditing = false) {
         return `
             <tr id="row-${id}" class="bg-amber-50/60 border-b border-amber-200">
                 <!-- Image Gallery Management Column -->
-                <td class="py-3 px-4 align-top">
-                    <div class="flex flex-col items-center gap-2">
-                        <div class="relative w-14 h-14 rounded-lg bg-slate-100 border border-slate-300 overflow-hidden group">
-                            ${primaryImage 
-                                ? `<img src="${primaryImage}" class="w-full h-full object-cover">`
-                                : `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 text-[10px]"><i class="fa-solid fa-image text-sm"></i>No Pic</div>`
-                            }
-                            <button type="button" onclick="triggerRowImagePicker('${id}')" class="absolute inset-0 bg-slate-900/60 text-white opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-[10px] font-bold transition-opacity">
-                                <i class="fa-solid fa-camera mb-0.5"></i> Change
-                            </button>
-                        </div>
-                        
-                        <!-- Mini Thumbnails List -->
-                        <div class="flex flex-wrap gap-1 max-w-[120px] justify-center">
-                            ${(state.imageUrls || []).map(url => `
-                                <div class="relative group/thumb w-6 h-6 rounded border border-slate-300 overflow-hidden">
-                                    <img src="${formatSrc(url)}" class="w-full h-full object-cover">
-                                    <button onclick="removeExistingImageState('${id}', '${url}')" class="absolute inset-0 bg-rose-600/80 text-white opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center text-[8px]" title="Remove Image">
-                                        <i class="fa-solid fa-xmark"></i>
-                                    </button>
-                                </div>
-                            `).join('')}
+                // Inside renderTableRow(room, isEditing = true) -> Preview Column:
 
-                            ${(state.newFiles || []).map((file, idx) => `
-                                <div class="relative group/thumb w-6 h-6 rounded border border-indigo-400 overflow-hidden">
-                                    <img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover">
-                                    <button onclick="removePendingImageState('${id}', ${idx})" class="absolute inset-0 bg-rose-600/80 text-white opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center text-[8px]" title="Remove Pending Upload">
-                                        <i class="fa-solid fa-xmark"></i>
-                                    </button>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </td>
+<td class="py-3 px-4 align-top">
+    <div class="flex flex-col items-center gap-2">
+        <!-- Main Preview Box -->
+        <div class="relative w-14 h-14 rounded-lg bg-slate-100 border border-slate-300 overflow-hidden group">
+            ${primaryImage 
+                ? `<img src="${primaryImage}" class="w-full h-full object-cover">`
+                : `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 text-[10px]"><i class="fa-solid fa-image text-sm"></i>No Pic</div>`
+            }
+        </div>
+
+        <!-- ➕ ADD / CHANGE BUTTON -->
+        <button type="button" 
+                onclick="triggerRowImagePicker('${id}')" 
+                class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded text-[10px] font-bold flex items-center gap-1 transition">
+            <i class="fa-solid fa-camera text-[10px]"></i> + Add / Change
+        </button>
+
+        <!-- 🖼️ MINI THUMBNAILS WITH DELETE (X) BUTTONS -->
+        <div class="flex flex-wrap gap-1 max-w-[120px] justify-center mt-1">
+            <!-- Existing Server Images -->
+            ${(state.imageUrls || []).map(url => `
+                <div class="relative group w-7 h-7 rounded border border-slate-300 overflow-hidden">
+                    <img src="${formatSrc(url)}" class="w-full h-full object-cover">
+                    <button type="button" 
+                            onclick="removeExistingImageState('${id}', '${url}', event)" 
+                            class="absolute top-0 right-0 bg-rose-600 text-white w-3.5 h-3.5 rounded-bl flex items-center justify-center text-[8px] font-bold shadow-sm hover:bg-rose-700" 
+                            title="Delete Image">
+                        ✕
+                    </button>
+                </div>
+            `).join('')}
+
+            <!-- Newly Selected Files (Pending Upload) -->
+            ${(state.newFiles || []).map((file, idx) => `
+                <div class="relative group w-7 h-7 rounded border border-indigo-400 overflow-hidden">
+                    <img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover">
+                    <button type="button" 
+                            onclick="removePendingImageState('${id}', ${idx}, event)" 
+                            class="absolute top-0 right-0 bg-rose-600 text-white w-3.5 h-3.5 rounded-bl flex items-center justify-center text-[8px] font-bold shadow-sm hover:bg-rose-700" 
+                            title="Remove Pending">
+                        ✕
+                    </button>
+                </div>
+            `).join('')}
+        </div>
+    </div>
+</td>
 
                 <!-- Room Name / Code -->
                 <td class="py-3 px-4 align-top">
