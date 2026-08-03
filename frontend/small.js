@@ -5677,11 +5677,99 @@ document.getElementById('roomForm').addEventListener('submit', async (e) => {
     }
 });
 
+async function loadRoomTypes() {
+    const hotelId = getSessionHotelId();
+    const tbody = document.getElementById('roomTypesTableBody');
+    const seasonSelect = document.getElementById('targetType');
+    const roomSelect = document.getElementById('roomTypeSelect');
+
+    try {
+        const endpoint = hotelId 
+            ? `${API_BASE_URL}/room-types?hotelId=${hotelId}` 
+            : `${API_BASE_URL}/room-types`;
+
+        const response = await authenticatedFetch(endpoint);
+        if (!response || !response.ok) throw new Error('Failed to fetch room types');
+        
+        const types = await response.json();
+
+        // 1. Update Dropdowns across forms
+        if (seasonSelect || roomSelect) {
+            const optionsHTML = types.map(t => 
+                `<option value="${t._id}">${t.name} (Base: ${t.basePrice ? t.basePrice.toLocaleString() : '0.00'})</option>`
+            ).join('');
+            const defaultOption = `<option value="">Select Room Category...</option>`;
+            
+            if (seasonSelect) seasonSelect.innerHTML = defaultOption + optionsHTML;
+            if (roomSelect) roomSelect.innerHTML = defaultOption + optionsHTML;
+        }
+
+        // 2. Render Table Rows
+        if (tbody) {
+            if (types.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="p-10 text-center text-xs text-slate-400">
+                            No room categories configured yet. Click <strong>+ Room Class</strong> to create one.
+                        </td>
+                    </tr>`;
+            } else {
+                tbody.innerHTML = types.map(room => `
+                    <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
+                        <td class="py-3 px-6">
+                            <div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-slate-400">
+                                ${room.images && room.images[0] 
+                                    ? `<img src="${room.images[0]}" class="w-full h-full object-cover">`
+                                    : `<i class="fa-solid fa-bed text-sm"></i>`}
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="font-bold text-slate-800 block text-xs">${room.name}</span>
+                            <span class="text-[10px] text-slate-400 block">${room.code || 'CAT-' + room._id.substring(0,4)}</span>
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold">
+                                <i class="fa-solid fa-user text-[9px]"></i> ${room.maxOccupancy || 2}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="text-[11px] text-slate-500 line-clamp-1">${(room.amenities || []).join(', ') || 'Standard Amenities'}</span>
+                        </td>
+                        <td class="py-3 px-4 text-right">
+                            <span class="font-mono font-bold text-indigo-600 text-xs">${CURRENT_CURRENCY} ${(room.basePrice || 0).toLocaleString()}</span>
+                        </td>
+                        <td class="py-3 px-6 text-center">
+                            <div class="flex items-center justify-center gap-1.5">
+                                <button onclick="editRoomType('${room._id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded transition" title="Edit Category">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button onclick="deleteRoomType('${room._id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded transition" title="Delete Category">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+        
+    } catch (error) {
+        console.error("Error loading room types:", error);
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="p-8 text-center text-xs text-rose-500 font-semibold">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Error synchronizing room categories.
+                    </td>
+                </tr>`;
+        }
+    }
+}
+
 async function fetchRoomsV2() {
     const tbody = document.getElementById('roomTableBody');
     const mobileGrid = document.getElementById('roomMobileGrid');
     
-    // Safety check: break execution out early if neither viewport target element exists
     if (!tbody && !mobileGrid) return;
 
     try {
@@ -5690,79 +5778,96 @@ async function fetchRoomsV2() {
 
         if (!res.ok) throw new Error(rooms.error || "Inventory endpoint communication error.");
 
-        // Graceful handling for empty array results across view variants
         if (!rooms || rooms.length === 0) {
-            const fallbackMsg = '<div class="p-10 text-center text-slate-400 font-medium text-sm">No rooms found in registry.</div>';
-            if (tbody) tbody.innerHTML = `<tr><td colspan="5">${fallbackMsg}</td></tr>`;
+            const fallbackMsg = '<div class="p-10 text-center text-slate-400 font-medium text-xs">No registered rooms found in property inventory.</div>';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="6">${fallbackMsg}</td></tr>`;
             if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
             return;
         }
 
-        // Clean out baseline raw HTML before applying string payload loops
         if (tbody) tbody.innerHTML = '';
         if (mobileGrid) mobileGrid.innerHTML = '';
 
         rooms.forEach(room => {
-            // Safety Check: Handle missing categories or prices
-            const categoryName = room.roomTypeId?.name || '<span class="text-rose-400 font-medium">Missing Category</span>';
-            const rate = room.roomTypeId?.basePrice ? room.roomTypeId.basePrice.toLocaleString() : '0.00';
+            const categoryName = room.roomTypeId?.name || '<span class="text-rose-400 font-medium">Unassigned</span>';
+            const rate = room.overridePrice 
+                ? room.overridePrice.toLocaleString() 
+                : (room.roomTypeId?.basePrice ? room.roomTypeId.basePrice.toLocaleString() : '0.00');
             
-            // Dynamic badge color configuration mapping parameters
-            const badgeClass = room.status === 'clean' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
+            // Housekeeping Badge
+            const hkStatus = (room.status || 'clean').toLowerCase();
+            const hkBadge = hkStatus === 'clean' 
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                : 'bg-amber-50 text-amber-700 border-amber-200';
 
-            // --- A. POPULATE VIEW 1: DESKTOP TABLE ROW APPEND LOOP ---
+            // Front Office Occupancy State Badge
+            const foStatus = room.isOccupied ? 'Occupied' : 'Vacant';
+            const foBadge = room.isOccupied 
+                ? 'bg-indigo-50 text-indigo-700 border-indigo-200' 
+                : 'bg-slate-100 text-slate-600 border-slate-200';
+
+            // DESKTOP TABLE ROW
             if (tbody) {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-100";
+                tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100 inventory-row";
                 tr.innerHTML = `
-                    <td class="px-8 py-5 font-bold text-slate-700">${room.number}</td>
-                    <td class="px-8 py-5 text-slate-500 font-medium">${categoryName}</td>
-                    <td class="px-8 py-5 font-mono text-sm text-indigo-600 font-bold">${CURRENT_CURRENCY} ${rate}</td>
-                    <td class="px-8 py-5">
-                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${badgeClass}">
-                            ${room.status || 'Unknown'}
+                    <td class="px-6 py-3.5">
+                        <span class="font-black text-slate-800 text-sm room-number">${room.number}</span>
+                    </td>
+                    <td class="px-6 py-3.5 text-slate-600 font-semibold room-category">${categoryName}</td>
+                    <td class="px-6 py-3.5 font-mono text-xs text-indigo-600 font-bold">${CURRENT_CURRENCY} ${rate}</td>
+                    <td class="px-6 py-3.5 text-center">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${hkBadge}">
+                            ${hkStatus}
                         </span>
                     </td>
-                    <td class="px-8 py-5 text-center">
-                        <button onclick="deleteRoom('${room._id}')" class="p-2 text-slate-400 hover:text-rose-600 transition-colors focus:outline-none" title="Remove Room">
-                            <i class="fas fa-trash-can"></i>
-                        </button>
+                    <td class="px-6 py-3.5 text-center">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${foBadge}">
+                            ${foStatus}
+                        </span>
+                    </td>
+                    <td class="px-6 py-3.5 text-right">
+                        <div class="flex items-center justify-end gap-1.5">
+                            <button onclick="openEditModal('${room._id}', '${room.number}', '${categoryName}', '${room.overridePrice || ''}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded transition" title="Modify Asset">
+                                <i class="fa-solid fa-gear text-xs"></i>
+                            </button>
+                            <button onclick="deleteRoom('${room._id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded transition" title="Remove Room">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
             }
 
-            // --- B. POPULATE VIEW 2: SMARTPHONE ADAPTIVE CARD MODULE LOOP ---
+            // SMARTPHONE CARD
             if (mobileGrid) {
                 const card = document.createElement('div');
-                card.className = "p-4 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-3 relative hover:border-slate-300 transition-all";
+                card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-xs space-y-3 inventory-card";
                 card.innerHTML = `
                     <div class="flex justify-between items-start">
                         <div>
-                            <span class="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 block mb-0.5">Room Number</span>
-                            <h4 class="text-lg font-black text-slate-800">${room.number}</h4>
+                            <span class="text-[9px] uppercase tracking-wider font-extrabold text-slate-400 block">Room Number</span>
+                            <h4 class="text-base font-black text-slate-800 room-number">${room.number}</h4>
                         </div>
-                        <button onclick="deleteRoom('${room._id}')" class="p-2 text-slate-300 hover:text-rose-600 transition-colors active:scale-95 focus:outline-none" title="Remove Room">
-                            <i class="fas fa-trash-can text-sm"></i>
-                        </button>
+                        <div class="flex items-center gap-1">
+                            <button onclick="openEditModal('${room._id}', '${room.number}', '${categoryName}', '${room.overridePrice || ''}')" class="p-1.5 text-slate-400 hover:text-indigo-600">
+                                <i class="fa-solid fa-gear text-xs"></i>
+                            </button>
+                            <button onclick="deleteRoom('${room._id}')" class="p-1.5 text-slate-400 hover:text-rose-600">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
                     </div>
                     
-                    <div class="pt-1 border-t border-slate-100 flex items-center justify-between gap-4">
-                        <div>
-                            <span class="text-[9px] uppercase font-bold tracking-tight text-slate-400 block">Classification</span>
-                            <span class="text-sm font-semibold text-slate-600">${categoryName}</span>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-[9px] uppercase font-bold tracking-tight text-slate-400 block">Nightly Price</span>
-                            <span class="text-sm font-black font-mono text-indigo-600">${CURRENT_CURRENCY} ${rate}</span>
-                        </div>
+                    <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                        <span class="text-slate-500 font-medium room-category">${categoryName}</span>
+                        <span class="font-mono font-bold text-indigo-600">${CURRENT_CURRENCY} ${rate}</span>
                     </div>
 
-                    <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-xs">
-                        <span class="text-[10px] uppercase font-bold tracking-tight text-slate-400">Housekeeping State</span>
-                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${badgeClass}">
-                            ${room.status || 'Unknown'}
-                        </span>
+                    <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-[10px]">
+                        <span class="px-2 py-0.5 rounded-full font-extrabold uppercase border ${hkBadge}">${hkStatus}</span>
+                        <span class="px-2 py-0.5 rounded-full font-extrabold uppercase border ${foBadge}">${foStatus}</span>
                     </div>
                 `;
                 mobileGrid.appendChild(card);
@@ -5771,10 +5876,27 @@ async function fetchRoomsV2() {
 
     } catch (err) {
         console.error("Table Refresh Error Catch Exception:", err);
-        const errorMsg = '<div class="p-10 text-center text-rose-500 font-semibold text-sm"><i class="fas fa-circle-exclamation mr-2"></i>Error loading inventory matrix records.</div>';
-        if (tbody) tbody.innerHTML = `<tr><td colspan="5">${errorMsg}</td></tr>`;
+        const errorMsg = '<div class="p-10 text-center text-rose-500 font-semibold text-xs"><i class="fa-solid fa-circle-exclamation mr-2"></i>Error loading physical inventory matrix records.</div>';
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6">${errorMsg}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = errorMsg;
     }
+}
+
+// Search helper for live physical inventory
+function filterInventoryTable() {
+    const query = document.getElementById('inventorySearchInput').value.toLowerCase();
+    
+    document.querySelectorAll('.inventory-row').forEach(row => {
+        const num = row.querySelector('.room-number')?.innerText.toLowerCase() || '';
+        const cat = row.querySelector('.room-category')?.innerText.toLowerCase() || '';
+        row.style.display = (num.includes(query) || cat.includes(query)) ? '' : 'none';
+    });
+
+    document.querySelectorAll('.inventory-card').forEach(card => {
+        const num = card.querySelector('.room-number')?.innerText.toLowerCase() || '';
+        const cat = card.querySelector('.room-category')?.innerText.toLowerCase() || '';
+        card.style.display = (num.includes(query) || cat.includes(query)) ? '' : 'none';
+    });
 }
 
 // Run on page load
@@ -12690,60 +12812,7 @@ let localEditState = {};
  * Fetch and render all room configurations
  */
 // Function 2: Populates the table
-async function loadRoomTypes() {
-    const hotelId = getSessionHotelId();
-    const tbody = document.getElementById('roomTypesTableBody');
-    const seasonSelect = document.getElementById('targetType');
-    const roomSelect = document.getElementById('roomTypeSelect');
 
-    try {
-        // Fetch once with hotelId
-        const endpoint = hotelId 
-            ? `${API_BASE_URL}/room-types?hotelId=${hotelId}` 
-            : `${API_BASE_URL}/room-types`;
-
-        const response = await authenticatedFetch(endpoint);
-        if (!response || !response.ok) throw new Error('Failed to fetch room types');
-        
-        const types = await response.json();
-
-        // 1. Update Dropdowns
-        if (seasonSelect || roomSelect) {
-            const optionsHTML = types.map(t => 
-                `<option value="${t._id}">${t.name} (Base: ${t.basePrice.toLocaleString()})</option>`
-            ).join('');
-            const defaultOption = `<option value="">Select Room Type...</option>`;
-            
-            if (seasonSelect) seasonSelect.innerHTML = defaultOption + optionsHTML;
-            if (roomSelect) roomSelect.innerHTML = defaultOption + optionsHTML;
-        }
-
-        // 2. Update Table
-        if (tbody) {
-            if (types.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="p-12 text-center text-xs text-slate-400">
-                            No room configurations found. Create one using the form above!
-                        </td>
-                    </tr>`;
-            } else {
-                tbody.innerHTML = types.map(room => renderTableRow(room)).join('');
-            }
-        }
-        
-    } catch (error) {
-        console.error("Error loading room types:", error);
-        if (tbody) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" class="p-8 text-center text-xs text-red-500 font-semibold">
-                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Error synchronizing table data.
-                    </td>
-                </tr>`;
-        }
-    }
-}
 
 /**
  * Generates HTML string for a specific row based on state
@@ -13253,4 +13322,25 @@ function updateLowStockWidget(inventory) {
             </div>
         `;
     }).join('');
+}
+
+function switchInventoryTab(tabName) {
+    const tabLive = document.getElementById('tabContentLive');
+    const tabCategories = document.getElementById('tabContentCategories');
+    const btnLive = document.getElementById('tabBtnLive');
+    const btnCategories = document.getElementById('tabBtnCategories');
+
+    if (tabName === 'liveGrid') {
+        tabLive.classList.remove('hidden');
+        tabCategories.classList.add('hidden');
+        
+        btnLive.className = 'px-4 py-2 rounded-lg text-xs font-bold bg-slate-900 text-white transition-all';
+        btnCategories.className = 'px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200/60 transition-all';
+    } else {
+        tabLive.classList.add('hidden');
+        tabCategories.classList.remove('hidden');
+
+        btnCategories.className = 'px-4 py-2 rounded-lg text-xs font-bold bg-slate-900 text-white transition-all';
+        btnLive.className = 'px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200/60 transition-all';
+    }
 }

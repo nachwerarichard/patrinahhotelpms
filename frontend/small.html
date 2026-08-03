@@ -931,7 +931,7 @@ body {
                 <h2 class="font-extrabold text-xl lg:text-2xl text-slate-800 tracking-tight">Staff & Identity Management</h2>
                 <p class="text-xs text-slate-500 hidden sm:block">Manage user credentials, operational roles, and security permissions</p>
             </div>
-            <div id="connectionStatus" class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 px-3 py-1.5 rounded-full border border-green-200">
+            <div id="connectionStatus" class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 px-3 py-1.5 rounded-full border border-green-200 hidden">
                 <span class="w-2 h-2 rounded-full bg-green-500"></span>
                 Server Online
             </div>
@@ -1029,125 +1029,163 @@ body {
         </div>
     </div>
 </section>
-      <section id="inventory" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-    <div class="p-4 md:p-12">
-        <div class="max-w-5xl mx-auto space-y-10">
-            
-            <!-- Header Area & Action Trigger Buttons -->
-            <div class="border-b border-slate-200 pb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 class="text-3xl font-light text-slate-800 tracking-tight">Rate & Inventory <span class="font-bold text-indigo-600">Control</span></h1>
-                    <p class="text-slate-500 text-sm mt-1">Configure room types, seasonal pricing, and physical assets.</p>
-                </div>
-                <!-- Action Buttons to Open Modals -->
-                <div class="flex flex-wrap gap-2.5">
-                    <button onclick="openInventoryModal('roomTypeModal')" class="bg-slate-900 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-slate-800 transition-all text-xs tracking-wider flex items-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-plus"></i> Room Type
-                    </button>
-                    <button onclick="openInventoryModal('seasonalModal')" class="bg-amber-600 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-amber-700 transition-all text-xs tracking-wider flex items-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-calendar-day"></i> Seasonal Rule
-                    </button>
-                    <button onclick="openInventoryModal('roomRegistryModal')" class="bg-indigo-600 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-indigo-700 transition-all text-xs tracking-wider flex items-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-bed"></i> Register Room
-                    </button>
-                </div>
-            </div>
-
-            <!-- MODAL 1: Room Types Form -->
-            <!-- MODAL 1: Room Types Form -->
-
-
-            <!-- Table 1: Categories -->
-            <div class="w-full bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <div>
-                        <h2 class="text-sm font-bold uppercase tracking-widest text-slate-800">Room Categories</h2>
-                        <p class="text-xs text-slate-400 mt-1">Manage configurations, images, pricing, and amenities.</p>
-                    </div>
-                    <button onclick="loadRoomTypes()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
-                        <i class="fa-solid fa-rotate-right"></i>
-                    </button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-100 bg-slate-50 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                <th class="p-4 pl-6">Images</th>
-                                <th class="p-4">Room Category Details</th>
-                                <th class="p-4">Amenities</th>
-                                <th class="p-4 text-right">Standard Rate</th>
-                                <th class="p-4 pr-6 text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="roomTypesTableBody" class="divide-y divide-slate-100 text-slate-700 text-sm">
-                            <tr>
-                                <td colspan="5" class="p-8 text-center text-xs text-slate-400">
-                                    <i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Loading room configurations...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Table 2: Room Inventory Live View -->
-            <section class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
-                <div class="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h2 class="text-xl font-bold text-slate-800">Room Inventory</h2>
-                    <div class="flex gap-2">
-                        <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wider">Live View</span>
-                    </div>
-                </div>
-                <div class="hidden md:block overflow-x-auto">
-                    <table class="min-w-full">
-                        <thead>
-                            <tr class="bg-slate-50 text-slate-400 uppercase text-[10px] font-bold tracking-[0.2em] border-b border-slate-100">
-                                <th class="px-8 py-5 text-left">Room Number</th>
-                                <th class="px-8 py-5 text-left">Room Type</th>
-                                <th class="px-8 py-5 text-left">Base Rate</th>
-                                <th class="px-8 py-5 text-left">Status</th>
-                                <th class="px-8 py-5 text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="roomTableBody" class="divide-y divide-slate-100"></tbody>
-                    </table>
-                </div>
-                <div id="roomMobileGrid" class="block md:hidden p-4 space-y-4 bg-slate-50/30"></div>
-            </section>
-
-            <!-- Pre-existing Edit Modal -->
-            <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center z-50">
-                <div class="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-md w-full mx-4 border border-white/20">
-                    <div class="mb-8">
-                        <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Modify Asset</h2>
-                        <p class="text-slate-400 text-xs uppercase tracking-widest font-bold mt-1">Room Records Department</p>
-                    </div>
-                    <form id="editRoomForm" class="space-y-6">
-                        <input type="hidden" id="editRoomId">
-                        <input type="hidden" id="editTypeId">
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Room Number</label>
-                            <input type="text" id="editRoomNumber" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner">
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Current Type (Immutable)</label>
-                            <input type="text" id="editTypeName" class="w-full p-4 bg-slate-100 border border-slate-100 rounded-2xl text-slate-400 outline-none cursor-not-allowed font-medium" readonly>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Override Base Price ($)</label>
-                            <input type="number" id="editBasePrice" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner font-mono">
-                        </div>
-                        <div class="flex gap-4 mt-10">
-                            <button type="button" onclick="closeModal()" class="flex-1 py-4 text-slate-400 hover:text-slate-600 font-bold uppercase text-[10px] tracking-widest transition-colors">Discard</button>
-                            <button type="submit" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all active:scale-95 uppercase text-[10px] tracking-widest">Update Record</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
+<section id="inventory" class="section bg-slate-50 min-h-screen rounded-xl shadow-inner mb-8 hidden">
+    
+    <!-- Top Bar Navigation Header -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 h-20 flex items-center justify-between px-6 lg:px-10 sticky top-0 z-10 shadow-xs">
+        <div>
+            <h1 class="text-xl lg:text-2xl font-extrabold text-slate-800 tracking-tight">Rate & Inventory Control</h1>
+            <p class="text-xs text-slate-500 hidden sm:block">Manage room categories, yield rate plans, and physical room assets</p>
         </div>
+
+        <!-- Quick Action Trigger Buttons -->
+        <div class="flex flex-wrap items-center gap-2">
+            <button onclick="openInventoryModal('roomTypeModal')" class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-3.5 rounded-xl transition-all text-xs flex items-center gap-2 shadow-xs active:scale-95">
+                <i class="fa-solid fa-plus text-[10px]"></i>
+                <span>Room Class</span>
+            </button>
+            <button onclick="openInventoryModal('seasonalModal')" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 px-3.5 rounded-xl transition-all text-xs flex items-center gap-2 shadow-xs active:scale-95">
+                <i class="fa-solid fa-calendar-days text-[10px]"></i>
+                <span>Yield Rule</span>
+            </button>
+            <button onclick="openInventoryModal('roomRegistryModal')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-3.5 rounded-xl transition-all text-xs flex items-center gap-2 shadow-xs active:scale-95">
+                <i class="fa-solid fa-bed text-[10px]"></i>
+                <span>Register Unit</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
+
+        <!-- SECTION 1: Room Categories / Yield Rate Cards -->
+        <div class="w-full bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-white">
+                <div>
+                    <h2 class="text-base font-bold text-slate-800 tracking-tight">Room Categories & Base Rate Plans</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Master configurations for room types, capacity limits, and baseline rates</p>
+                </div>
+                <button onclick="loadRoomTypes()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg border border-slate-200" title="Refresh Categories">
+                    <i class="fa-solid fa-rotate-right text-xs"></i>
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 bg-slate-50/80 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                            <th class="py-3.5 px-6">Preview</th>
+                            <th class="py-3.5 px-4">Category Details</th>
+                            <th class="py-3.5 px-4 text-center">Max Occupancy</th>
+                            <th class="py-3.5 px-4">Standard Amenities</th>
+                            <th class="py-3.5 px-4 text-right">Base Rack Rate</th>
+                            <th class="py-3.5 px-6 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roomTypesTableBody" class="divide-y divide-slate-100 text-slate-700 text-xs font-medium">
+                        <tr>
+                            <td colspan="6" class="p-10 text-center text-xs text-slate-400">
+                                <i class="fa-solid fa-circle-notch fa-spin mr-2 text-indigo-600"></i> Loading master category configurations...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SECTION 2: Physical Room Inventory Live Matrix -->
+        <section class="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
+            
+            <!-- Matrix Controls & Filter Header -->
+            <div class="p-5 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white">
+                <div class="flex items-center gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800 tracking-tight">Physical Room Registry</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Real-time status of physical room assets, occupancy, and housekeeping</p>
+                    </div>
+                    <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider hidden sm:inline-block">
+                        Live PMS Feed
+                    </span>
+                </div>
+
+                <!-- Filter Inputs -->
+                <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    <div class="relative flex-1 md:w-56">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="inventorySearchInput" onkeyup="filterInventoryTable()" placeholder="Search room # or class..." class="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                    </div>
+                    <button onclick="fetchRoomsV2()" class="p-2 text-slate-600 hover:bg-slate-50 transition border border-slate-200 rounded-lg" title="Sync Live Inventory">
+                        <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Desktop View Data Grid -->
+            <div class="hidden md:block overflow-x-auto">
+                <table class="min-w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/80 text-slate-500 uppercase text-[10px] font-black tracking-widest border-b border-slate-200">
+                            <th class="px-6 py-3.5">Room Unit</th>
+                            <th class="px-6 py-3.5">Assigned Category</th>
+                            <th class="px-6 py-3.5">Effective Nightly Rate</th>
+                            <th class="px-6 py-3.5 text-center">Housekeeping Status</th>
+                            <th class="px-6 py-3.5 text-center">Front Office State</th>
+                            <th class="px-6 py-3.5 text-right">Management</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roomTableBody" class="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+                        <!-- Dynamic Rows Injected Here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Smartphone View Grid -->
+            <div id="roomMobileGrid" class="block md:hidden p-4 space-y-4 bg-slate-50/50">
+                <!-- Mobile Cards Injected Here -->
+            </div>
+        </section>
+
+        <!-- Edit Room Asset Modal -->
+        <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-2xl p-6 lg:p-8 max-w-md w-full border border-slate-100">
+                <div class="mb-6 flex justify-between items-start">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800 tracking-tight">Modify Room Asset</h2>
+                        <p class="text-slate-400 text-xs mt-0.5">Physical Asset & Override Controls</p>
+                    </div>
+                    <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <form id="editRoomForm" class="space-y-4">
+                    <input type="hidden" id="editRoomId">
+                    <input type="hidden" id="editTypeId">
+
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Room Number / Identification</label>
+                        <input type="text" id="editRoomNumber" class="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none text-xs font-bold text-slate-800 transition">
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Room Category (Immutable Target)</label>
+                        <input type="text" id="editTypeName" class="w-full h-10 px-3 bg-slate-100 border border-slate-200 rounded-lg text-slate-400 outline-none cursor-not-allowed font-medium text-xs" readonly>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Custom Rate Override (Optional)</label>
+                        <input type="number" id="editBasePrice" placeholder="Leave blank for category default" class="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-xs font-bold text-slate-800 transition">
+                    </div>
+
+                    <div class="flex gap-3 pt-4 border-t border-slate-100">
+                        <button type="button" onclick="closeModal()" class="flex-1 h-10 text-slate-500 hover:bg-slate-100 font-bold uppercase text-[10px] tracking-wider rounded-lg transition">Cancel</button>
+                        <button type="submit" class="flex-1 h-10 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shadow-xs transition uppercase text-[10px] tracking-wider">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
     </div>
-</section>      
+</section>
 <section id="housekeepingreports" class="section bg-white p-4 md:p-6 rounded-lg shadow-md mb-8 hidden">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-blue-600">Housekeeping Reports</h2>
