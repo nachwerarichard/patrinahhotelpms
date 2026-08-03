@@ -5735,36 +5735,101 @@ async function loadRoomTypes() {
     }
 }
 
-// Inline Row Renderer (Keeps inline editing controls active)
+// Ensure localEditState object exists
+if (typeof localEditState === 'undefined') {
+    var localEditState = {};
+}
+
 function renderTableRow(room, isEditing = false) {
+    const id = room._id;
+    const state = localEditState[id] || { imageUrls: room.images || [], newFiles: [], amenities: room.amenities || [] };
+
+    // Combine existing server image URLs with temporary object URLs for newly picked local files
+    const newFilePreviews = (state.newFiles || []).map(file => URL.createObjectURL(file));
+    const allImages = [...(state.imageUrls || []), ...newFilePreviews];
+
+    // Determine primary display thumbnail
+    const primaryImage = allImages.length > 0 ? allImages[0] : (room.images && room.images[0] ? room.images[0] : null);
+
     if (isEditing) {
         return `
-            <tr id="row-${room._id}" class="bg-amber-50/50 border-b border-amber-200">
-                <td class="py-3 px-6">
-                    <div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-slate-400">
-                        ${room.images && room.images[0] 
-                            ? `<img src="${room.images[0]}" class="w-full h-full object-cover">`
-                            : `<i class="fa-solid fa-bed text-sm"></i>`}
+            <tr id="row-${id}" class="bg-amber-50/60 border-b border-amber-200">
+                <!-- Image Gallery Management Column -->
+                <td class="py-3 px-4 align-top">
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="relative w-14 h-14 rounded-lg bg-slate-100 border border-slate-300 overflow-hidden group">
+                            ${primaryImage 
+                                ? `<img src="${primaryImage}" class="w-full h-full object-cover">`
+                                : `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 text-[10px]"><i class="fa-solid fa-image text-sm"></i>No Pic</div>`
+                            }
+                            <button type="button" onclick="triggerRowImagePicker('${id}')" class="absolute inset-0 bg-slate-900/60 text-white opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-[10px] font-bold transition-opacity">
+                                <i class="fa-solid fa-camera mb-0.5"></i> Change
+                            </button>
+                        </div>
+                        
+                        <!-- Mini Thumbnails Carousel/List -->
+                        <div class="flex flex-wrap gap-1 max-w-[120px] justify-center">
+                            ${(state.imageUrls || []).map(url => `
+                                <div class="relative group/thumb w-6 h-6 rounded border border-slate-300 overflow-hidden">
+                                    <img src="${url}" class="w-full h-full object-cover">
+                                    <button onclick="removeExistingImageState('${id}', '${url}')" class="absolute inset-0 bg-rose-600/80 text-white opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center text-[8px]" title="Remove Image">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </div>
+                            `).join('')}
+
+                            ${(state.newFiles || []).map((file, idx) => `
+                                <div class="relative group/thumb w-6 h-6 rounded border border-indigo-400 overflow-hidden">
+                                    <img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover">
+                                    <button onclick="removePendingImageState('${id}', ${idx})" class="absolute inset-0 bg-rose-600/80 text-white opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center text-[8px]" title="Remove Pending Upload">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
                 </td>
-                <td class="py-3 px-4">
-                    <input type="text" id="inline-name-${room._id}" value="${room.name}" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+
+                <!-- Room Name / Code -->
+                <td class="py-3 px-4 align-top">
+                    <input type="text" id="inline-name-${id}" value="${state.name !== undefined ? state.name : (room.name || '')}" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </td>
-                <td class="py-3 px-4 text-center">
-                    <input type="number" id="inline-occ-${room._id}" value="${room.maxOccupancy || 2}" class="w-16 text-center py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+
+                <!-- Max Occupancy -->
+                <td class="py-3 px-4 align-top text-center">
+                    <input type="number" id="inline-occ-${id}" value="${state.maxOccupancy !== undefined ? state.maxOccupancy : (room.maxOccupancy || 2)}" class="w-16 text-center py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </td>
-                <td class="py-3 px-4">
-                    <input type="text" id="inline-amenities-${room._id}" value="${(room.amenities || []).join(', ')}" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+
+                <!-- Dynamic Amenities Management -->
+                <td class="py-3 px-4 align-top">
+                    <div class="space-y-1.5">
+                        <div class="flex flex-wrap gap-1">
+                            ${(state.amenities || []).map((amenity, idx) => `
+                                <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                    ${amenity}
+                                    <button type="button" onclick="removeAmenityState('${id}', ${idx})" class="hover:text-rose-600"><i class="fa-solid fa-xmark text-[9px]"></i></button>
+                                </span>
+                            `).join('')}
+                        </div>
+                        <div class="flex gap-1">
+                            <input type="text" id="new-amenity-${id}" placeholder="+ Tag" class="w-24 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[10px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                            <button type="button" onclick="addAmenityState('${id}')" class="px-2 py-0.5 bg-indigo-600 text-white rounded text-[10px] font-bold"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                    </div>
                 </td>
-                <td class="py-3 px-4 text-right">
-                    <input type="number" id="inline-price-${room._id}" value="${room.basePrice || 0}" class="w-24 text-right px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+
+                <!-- Base Price -->
+                <td class="py-3 px-4 align-top text-right">
+                    <input type="number" id="inline-price-${id}" value="${state.basePrice !== undefined ? state.basePrice : (room.basePrice || 0)}" class="w-24 text-right px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </td>
-                <td class="py-3 px-6 text-center">
-                    <div class="flex items-center justify-center gap-1">
-                        <button onclick="saveInlineEdit('${room._id}')" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold shadow-xs">
+
+                <!-- Actions -->
+                <td class="py-3 px-6 align-top text-center">
+                    <div class="flex flex-col gap-1 items-center">
+                        <button onclick="saveInlineEdit('${id}')" class="w-20 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold shadow-xs">
                             <i class="fa-solid fa-check mr-1"></i>Save
                         </button>
-                        <button onclick="cancelInlineEdit('${room._id}')" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[10px] font-bold">
+                        <button onclick="cancelInlineEdit('${id}')" class="w-20 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[10px] font-bold">
                             Cancel
                         </button>
                     </div>
@@ -5773,18 +5838,19 @@ function renderTableRow(room, isEditing = false) {
         `;
     }
 
+    // Standard Read-Only View Row
     return `
-        <tr id="row-${room._id}" class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
+        <tr id="row-${id}" class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
             <td class="py-3 px-6">
                 <div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-slate-400">
-                    ${room.images && room.images[0] 
-                        ? `<img src="${room.images[0]}" class="w-full h-full object-cover">`
+                    ${primaryImage 
+                        ? `<img src="${primaryImage}" class="w-full h-full object-cover">`
                         : `<i class="fa-solid fa-bed text-sm"></i>`}
                 </div>
             </td>
             <td class="py-3 px-4">
                 <span class="font-bold text-slate-800 block text-xs">${room.name}</span>
-                <span class="text-[10px] text-slate-400 block">${room.code || 'CAT-' + room._id.substring(0,4)}</span>
+                <span class="text-[10px] text-slate-400 block">${room.code || 'CAT-' + id.substring(0,4)}</span>
             </td>
             <td class="py-3 px-4 text-center">
                 <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold">
@@ -5799,10 +5865,10 @@ function renderTableRow(room, isEditing = false) {
             </td>
             <td class="py-3 px-6 text-center">
                 <div class="flex items-center justify-center gap-1.5">
-                    <button onclick="enableInlineEdit('${room._id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded transition" title="Quick Edit Inline">
+                    <button onclick="enableInlineEdit('${id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded transition" title="Quick Edit Inline">
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>
-                    <button onclick="deleteRoomType('${room._id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded transition" title="Delete Category">
+                    <button onclick="deleteRoomType('${id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded transition" title="Delete Category">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
                 </div>
@@ -5811,14 +5877,129 @@ function renderTableRow(room, isEditing = false) {
     `;
 }
 
-// Inline Trigger Actions
+// Helper to get full room object merged with current inline edits
+function getMergedRoomState(id) {
+    const cachedRoom = roomTypesCache.find(r => r._id === id) || { _id: id };
+    const editState = localEditState[id] || {};
+    return { ...cachedRoom, ...editState };
+}
+
 function enableInlineEdit(id) {
     const room = roomTypesCache.find(r => r._id === id);
     if (!room) return;
+
+    // Initialize local edit state container
+    localEditState[id] = {
+        name: room.name,
+        maxOccupancy: room.maxOccupancy || 2,
+        basePrice: room.basePrice || 0,
+        imageUrls: [...(room.images || [])],
+        newFiles: [],
+        amenities: [...(room.amenities || [])]
+    };
+
     const rowEl = document.getElementById(`row-${id}`);
     if (rowEl) {
         rowEl.outerHTML = renderTableRow(room, true);
     }
+}
+
+function refreshSingleRow(originalRoomReference) {
+    const targetRow = document.getElementById(`row-${originalRoomReference._id}`);
+    if (targetRow) {
+        const substituteContainer = document.createElement('tbody');
+        substituteContainer.innerHTML = renderTableRow(originalRoomReference, false);
+        targetRow.replaceWith(substituteContainer.firstElementChild);
+    }
+}
+
+function removeExistingImageState(id, targetUrl) {
+    if (!localEditState[id]) return;
+    
+    // Capture current input field values before re-rendering
+    captureCurrentInputValues(id);
+
+    localEditState[id].imageUrls = localEditState[id].imageUrls.filter(url => url !== targetUrl);
+    
+    const mergedRoom = getMergedRoomState(id);
+    document.getElementById(`row-${id}`).replaceWith(
+        document.createRange().createContextualFragment(renderTableRow(mergedRoom, true))
+    );
+}
+
+function triggerRowImagePicker(id) {
+    const globalInput = document.getElementById('globalRowImagePicker');
+    if (!globalInput) return;
+
+    globalInput.onchange = (e) => {
+        if (e.target.files.length > 0) {
+            if (!localEditState[id]) return;
+            
+            // Capture typed field inputs before re-rendering
+            captureCurrentInputValues(id);
+
+            localEditState[id].newFiles.push(...Array.from(e.target.files));
+            
+            const mergedRoom = getMergedRoomState(id);
+            document.getElementById(`row-${id}`).replaceWith(
+                document.createRange().createContextualFragment(renderTableRow(mergedRoom, true))
+            );
+        }
+    };
+    globalInput.click();
+}
+
+function removePendingImageState(id, fileIndex) {
+    if (!localEditState[id]) return;
+
+    captureCurrentInputValues(id);
+    localEditState[id].newFiles.splice(fileIndex, 1);
+
+    const mergedRoom = getMergedRoomState(id);
+    document.getElementById(`row-${id}`).replaceWith(
+        document.createRange().createContextualFragment(renderTableRow(mergedRoom, true))
+    );
+}
+
+function addAmenityState(id) {
+    const input = document.getElementById(`new-amenity-${id}`);
+    if (!input) return;
+    const val = input.value.trim();
+
+    if (val && localEditState[id]) {
+        captureCurrentInputValues(id);
+        localEditState[id].amenities.push(val);
+
+        const mergedRoom = getMergedRoomState(id);
+        document.getElementById(`row-${id}`).replaceWith(
+            document.createRange().createContextualFragment(renderTableRow(mergedRoom, true))
+        );
+    }
+}
+
+function removeAmenityState(id, index) {
+    if (!localEditState[id]) return;
+
+    captureCurrentInputValues(id);
+    localEditState[id].amenities.splice(index, 1);
+
+    const mergedRoom = getMergedRoomState(id);
+    document.getElementById(`row-${id}`).replaceWith(
+        document.createRange().createContextualFragment(renderTableRow(mergedRoom, true))
+    );
+}
+
+// Utility to ensure typed input field changes aren't lost when toggling images/amenities
+function captureCurrentInputValues(id) {
+    if (!localEditState[id]) return;
+    
+    const nameEl = document.getElementById(`inline-name-${id}`);
+    const occEl = document.getElementById(`inline-occ-${id}`);
+    const priceEl = document.getElementById(`inline-price-${id}`);
+
+    if (nameEl) localEditState[id].name = nameEl.value;
+    if (occEl) localEditState[id].maxOccupancy = parseInt(occEl.value, 10);
+    if (priceEl) localEditState[id].basePrice = parseFloat(priceEl.value);
 }
 
 function cancelInlineEdit(id) {
