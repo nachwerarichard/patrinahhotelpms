@@ -6020,6 +6020,7 @@ async function saveInlineEdit(id) {
     const formData = new FormData();
     formData.append('name', state.name);
     formData.append('basePrice', state.basePrice);
+    formData.append('maxOccupancy', state.maxOccupancy !== undefined ? state.maxOccupancy : 2); // ✅ Included maxOccupancy
     formData.append('amenities', JSON.stringify(state.amenities || []));
     formData.append('existingImages', JSON.stringify(state.imageUrls || []));
 
@@ -6031,15 +6032,19 @@ async function saveInlineEdit(id) {
     }
 
     try {
-        const response = await fetch(`/api/room-types/${id}`, {
+        // ✅ Replaced fetch with authenticatedFetch (auth headers & multi-tenant headers handled automatically)
+        const response = await authenticatedFetch(`/api/room-types/${id}`, {
             method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // Adapt authentication header format as needed
-            },
-            body: formData // Note: Content-Type header must NOT be manually set when passing FormData
+            body: formData 
         });
 
-        if (!response.ok) throw new Error('Failed to update room type');
+        // If authenticatedFetch redirects due to missing token, exit early
+        if (!response) return;
+
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || 'Failed to update room type');
+        }
 
         const updatedRoom = await response.json();
         
@@ -6052,7 +6057,7 @@ async function saveInlineEdit(id) {
 
     } catch (err) {
         console.error("Save failed:", err);
-        alert("Could not save changes. Please try again.");
+        alert(err.message || "Could not save changes. Please try again.");
     }
 }
 
