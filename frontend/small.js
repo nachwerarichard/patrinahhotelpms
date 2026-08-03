@@ -5677,8 +5677,24 @@ document.getElementById('roomForm').addEventListener('submit', async (e) => {
     }
 });
 
-// Global state store for inline updates
+
+
+function refreshSingleRow(originalRoomReference) {
+    const targetRow = document.getElementById(`row-${originalRoomReference._id}`);
+    if (targetRow) {
+        const substituteContainer = document.createElement('tbody');
+        substituteContainer.innerHTML = renderTableRow(originalRoomReference, false);
+        targetRow.replaceWith(substituteContainer.firstElementChild);
+    }
+}
+
+
 let roomTypesCache = [];
+
+// Ensure localEditState object exists
+if (typeof localEditState === 'undefined') {
+    var localEditState = {};
+}
 
 async function loadRoomTypes() {
     const hotelId = getSessionHotelId();
@@ -5695,7 +5711,7 @@ async function loadRoomTypes() {
         if (!response || !response.ok) throw new Error('Failed to fetch room types');
         
         const types = await response.json();
-        roomTypesCache = types; // Store in global cache for inline edits
+        roomTypesCache = types;
 
         // 1. Update Dropdowns
         if (seasonSelect || roomSelect) {
@@ -5708,7 +5724,7 @@ async function loadRoomTypes() {
             if (roomSelect) roomSelect.innerHTML = defaultOption + optionsHTML;
         }
 
-        // 2. Update Table via renderTableRow
+        // 2. Update Table
         if (tbody) {
             if (types.length === 0) {
                 tbody.innerHTML = `
@@ -5718,7 +5734,7 @@ async function loadRoomTypes() {
                         </td>
                     </tr>`;
             } else {
-                tbody.innerHTML = types.map(room => renderTableRow(room)).join('');
+                tbody.innerHTML = types.map(room => renderTableRow(room, localEditState[room._id]?.isEditing)).join('');
             }
         }
         
@@ -5735,27 +5751,112 @@ async function loadRoomTypes() {
     }
 }
 
-// Ensure localEditState object exists
-if (typeof localEditState === 'undefined') {
-    var localEditState = {};
+/**
+ * Re-renders only a single table row to avoid losing DOM state
+ */
+function reRenderRow(id) {
+    const rowEl = document.getElementById(`row-${id}`);
+    const room = roomTypesCache.find(r => (r._id || r.id) === id);
+    if (rowEl && room) {
+        const isEditing = localEditState[id]?.isEditing || false;
+        rowEl.outerHTML = renderTableRow(room, isEditing);
+    }
 }
+
+/**
+ * Enable inline editing state for a given room
+ */
+function enableInlineEdit(id) {
+    const room = roomTypesCache.find(r => (r._id || r.id) === id);
+    if (!room) return;
+
+    const dbImages = (room.imageUrls && Array.isArray(room.imageUrls) && room.imageUrls.length > 0) 
+        ? [...room.imageUrls] 
+        : (room.defaultImage ? [room.defaultImage] : []);
+
+    localEditState[id] = {
+        isEditing: true,
+        imageUrls: dbImages,
+        newFiles: [],
+        amenities: Array.isArray(room.amenities) ? [...room.amenities] : [],
+        name: room.name || '',
+        maxOccupancy: room.maxOccupancy || 2,
+        basePrice: room.basePrice || 0
+    };
+
+    reRenderRow(id);
+}
+
+
+
+// --- IMAGE EDITING HANDLERS ---
+
+function triggerRowImagePicker(id) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+
+    input.onchange = (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        if (!localEditState[id]) return;
+        localEditState[id].newFiles = [...(localEditState[id].newFiles || []), ...files];
+        reRenderRow(id);
+    };
+
+    input.click();
+}
+
+function removeExistingImageState(id, url, event) {
+    if (event) event.stopPropagation();
+    if (!localEditState[id]) return;
+
+    localEditState[id].imageUrls = (localEditState[id].imageUrls || []).filter(u => u !== url);
+    reRenderRow(id);
+}
+
+function removePendingImageState(id, index, event) {
+    if (event) event.stopPropagation();
+    if (!localEditState[id]) return;
+
+    localEditState[id].newFiles = (localEditState[id].newFiles || []).filter((_, idx) => idx !== index);
+    reRenderRow(id);
+}
+
+// --- AMENITY EDITING HANDLERS ---
+
+function addAmenityState(id) {
+    const input = document.getElementById(`new-amenity-${id}`);
+    if (!input || !input.value.trim()) return;
+
+    if (!localEditState[id]) return;
+    localEditState[id].amenities.push(input.value.trim());
+    reRenderRow(id);
+}
+
+function removeAmenityState(id, index) {
+    if (!localEditState[id]) return;
+    localEditState[id].amenities.splice(index, 1);
+    reRenderRow(id);
+}
+
+// --- RENDER FUNCTION (6 COLUMNS) ---
 
 function renderTableRow(room, isEditing = false) {
     const id = room._id || room.id;
     
-    // Fallback safeguards for properties
     const roomName = room.name || 'Unnamed Category';
     const roomCode = room.code || 'CAT-' + (id ? id.substring(0, 4) : '0000');
     const roomPrice = room.basePrice !== undefined ? room.basePrice : 0;
     const roomOcc = room.maxOccupancy || 2;
     const roomAmenities = Array.isArray(room.amenities) ? room.amenities : [];
 
-    // Extract image URLs safely
     const dbImages = (room.imageUrls && Array.isArray(room.imageUrls) && room.imageUrls.length > 0) 
         ? room.imageUrls 
         : (room.defaultImage ? [room.defaultImage] : []);
 
-    // Local edit state lookup
     const state = localEditState[id] || { 
         imageUrls: dbImages, 
         newFiles: [], 
@@ -5765,7 +5866,6 @@ function renderTableRow(room, isEditing = false) {
         basePrice: roomPrice
     };
 
-    // Helper to format absolute/relative URLs
     const formatSrc = (src) => {
         if (!src) return '';
         if (src.startsWith('blob:') || src.startsWith('http://') || src.startsWith('https://')) {
@@ -5781,91 +5881,90 @@ function renderTableRow(room, isEditing = false) {
 
     // --- INLINE EDIT MODE ---
     if (isEditing) {
-    return `
-        <tr id="row-${id}" class="bg-amber-50/60 border-b border-amber-200">
-            <!-- 1. PREVIEW & IMAGE MANAGEMENT -->
-            <td class="py-3 px-4 align-top">
-                <div class="flex flex-col items-center gap-2">
-                    <div class="relative w-14 h-14 rounded-lg bg-slate-100 border border-slate-300 overflow-hidden">
-                        ${primaryImage 
-                            ? `<img src="${primaryImage}" class="w-full h-full object-cover">`
-                            : `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 text-[10px]"><i class="fa-solid fa-image text-sm"></i>No Pic</div>`
-                        }
+        return `
+            <tr id="row-${id}" class="bg-amber-50/60 border-b border-amber-200">
+                <!-- 1. PREVIEW & IMAGE MANAGEMENT -->
+                <td class="py-3 px-4 align-top">
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="relative w-14 h-14 rounded-lg bg-slate-100 border border-slate-300 overflow-hidden">
+                            ${primaryImage 
+                                ? `<img src="${primaryImage}" class="w-full h-full object-cover">`
+                                : `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 text-[10px]"><i class="fa-solid fa-image text-sm"></i>No Pic</div>`
+                            }
+                        </div>
+
+                        <button type="button" onclick="triggerRowImagePicker('${id}')" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded text-[10px] font-bold flex items-center gap-1 transition">
+                            <i class="fa-solid fa-camera text-[10px]"></i> + Add / Change
+                        </button>
+
+                        <div class="flex flex-wrap gap-1 max-w-[120px] justify-center mt-1">
+                            <!-- Server-hosted images -->
+                            ${(state.imageUrls || []).map(url => `
+                                <div class="relative group w-7 h-7 rounded border border-slate-300 overflow-hidden">
+                                    <img src="${formatSrc(url)}" class="w-full h-full object-cover">
+                                    <button type="button" onclick="removeExistingImageState('${id}', '${url}', event)" class="absolute top-0 right-0 bg-rose-600 text-white w-3.5 h-3.5 rounded-bl flex items-center justify-center text-[8px] font-bold shadow-sm hover:bg-rose-700" title="Delete Image">✕</button>
+                                </div>
+                            `).join('')}
+
+                            <!-- Newly attached files -->
+                            ${(state.newFiles || []).map((file, idx) => `
+                                <div class="relative group w-7 h-7 rounded border border-indigo-400 overflow-hidden">
+                                    <img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover">
+                                    <button type="button" onclick="removePendingImageState('${id}', ${idx}, event)" class="absolute top-0 right-0 bg-rose-600 text-white w-3.5 h-3.5 rounded-bl flex items-center justify-center text-[8px] font-bold shadow-sm hover:bg-rose-700" title="Remove Pending">✕</button>
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
+                </td>
 
-                    <button type="button" onclick="triggerRowImagePicker('${id}')" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded text-[10px] font-bold flex items-center gap-1 transition">
-                        <i class="fa-solid fa-camera text-[10px]"></i> + Add / Change
-                    </button>
+                <!-- 2. CATEGORY DETAILS -->
+                <td class="py-3 px-4 align-top">
+                    <input type="text" id="inline-name-${id}" value="${state.name !== undefined ? state.name : roomName}" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </td>
 
-                    <div class="flex flex-wrap gap-1 max-w-[120px] justify-center mt-1">
-                        <!-- Server-hosted images -->
-                        ${(state.imageUrls || []).map(url => `
-                            <div class="relative group w-7 h-7 rounded border border-slate-300 overflow-hidden">
-                                <img src="${formatSrc(url)}" class="w-full h-full object-cover">
-                                <button type="button" onclick="removeExistingImageState('${id}', decodeURIComponent('${encodeURIComponent(url)}'), event)" class="absolute top-0 right-0 bg-rose-600 text-white w-3.5 h-3.5 rounded-bl flex items-center justify-center text-[8px] font-bold shadow-sm hover:bg-rose-700" title="Delete Image">✕</button>
-                            </div>
-                        `).join('')}
+                <!-- 3. MAX OCCUPANCY -->
+                <td class="py-3 px-4 align-top text-center">
+                    <input type="number" id="inline-occ-${id}" value="${state.maxOccupancy !== undefined ? state.maxOccupancy : roomOcc}" class="w-16 text-center py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </td>
 
-                        <!-- Newly attached files -->
-                        ${(state.newFiles || []).map((file, idx) => `
-                            <div class="relative group w-7 h-7 rounded border border-indigo-400 overflow-hidden">
-                                <img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover">
-                                <button type="button" onclick="removePendingImageState('${id}', ${idx}, event)" class="absolute top-0 right-0 bg-rose-600 text-white w-3.5 h-3.5 rounded-bl flex items-center justify-center text-[8px] font-bold shadow-sm hover:bg-rose-700" title="Remove Pending">✕</button>
-                            </div>
-                        `).join('')}
+                <!-- 4. STANDARD AMENITIES -->
+                <td class="py-3 px-4 align-top">
+                    <div class="space-y-1.5">
+                        <div class="flex flex-wrap gap-1">
+                            ${(state.amenities || []).map((amenity, idx) => `
+                                <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                    ${amenity}
+                                    <button type="button" onclick="removeAmenityState('${id}', ${idx})" class="hover:text-rose-600"><i class="fa-solid fa-xmark text-[9px]"></i></button>
+                                </span>
+                            `).join('')}
+                        </div>
+                        <div class="flex gap-1">
+                            <input type="text" id="new-amenity-${id}" placeholder="+ Tag" class="w-24 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[10px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                            <button type="button" onclick="addAmenityState('${id}')" class="px-2 py-0.5 bg-indigo-600 text-white rounded text-[10px] font-bold"><i class="fa-solid fa-plus"></i></button>
+                        </div>
                     </div>
-                </div>
-            </td>
+                </td>
 
-            <!-- 2. CATEGORY DETAILS -->
-            <td class="py-3 px-4 align-top">
-                <input type="text" id="inline-name-${id}" value="${state.name !== undefined ? state.name : roomName}" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </td>
+                <!-- 5. BASE RACK RATE -->
+                <td class="py-3 px-4 align-top text-right">
+                    <input type="number" id="inline-price-${id}" value="${state.basePrice !== undefined ? state.basePrice : roomPrice}" class="w-24 text-right px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </td>
 
-            <!-- 3. MAX OCCUPANCY -->
-            <td class="py-3 px-4 align-top text-center">
-                <input type="number" id="inline-occ-${id}" value="${state.maxOccupancy !== undefined ? state.maxOccupancy : roomOcc}" class="w-16 text-center py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </td>
-
-            <!-- 4. STANDARD AMENITIES -->
-            <td class="py-3 px-4 align-top">
-                <div class="space-y-1.5">
-                    <div class="flex flex-wrap gap-1">
-                        ${(state.amenities || []).map((amenity, idx) => `
-                            <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded text-[10px] font-semibold">
-                                ${amenity}
-                                <button type="button" onclick="removeAmenityState('${id}', ${idx})" class="hover:text-rose-600"><i class="fa-solid fa-xmark text-[9px]"></i></button>
-                            </span>
-                        `).join('')}
+                <!-- 6. ACTIONS -->
+                <td class="py-3 px-6 align-top text-center">
+                    <div class="flex flex-col gap-1 items-center">
+                        <button onclick="saveInlineEdit('${id}')" class="w-20 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold shadow-xs">
+                            <i class="fa-solid fa-check mr-1"></i>Save
+                        </button>
+                        <button onclick="cancelInlineEdit('${id}')" class="w-20 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[10px] font-bold">
+                            Cancel
+                        </button>
                     </div>
-                    <div class="flex gap-1">
-                        <input type="text" id="new-amenity-${id}" placeholder="+ Tag" class="w-24 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[10px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                        <button type="button" onclick="addAmenityState('${id}')" class="px-2 py-0.5 bg-indigo-600 text-white rounded text-[10px] font-bold"><i class="fa-solid fa-plus"></i></button>
-                    </div>
-                </div>
-            </td>
+                </td>
+            </tr>`;
+    }
 
-            <!-- 5. BASE RACK RATE -->
-            <td class="py-3 px-4 align-top text-right">
-                <input type="number" id="inline-price-${id}" value="${state.basePrice !== undefined ? state.basePrice : roomPrice}" class="w-24 text-right px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </td>
-
-            <!-- 6. ACTIONS -->
-            <td class="py-3 px-6 align-top text-center">
-                <div class="flex flex-col gap-1 items-center">
-                    <button onclick="saveInlineEdit('${id}')" class="w-20 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold shadow-xs">
-                        <i class="fa-solid fa-check mr-1"></i>Save
-                    </button>
-                    <button onclick="cancelInlineEdit('${id}')" class="w-20 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[10px] font-bold">
-                        Cancel
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `;
-}
-
-    // --- STANDARD READ-ONLY VIEW MODE (6 distinct <td> columns) ---
+    // --- STANDARD READ-ONLY VIEW MODE ---
     return `
         <tr id="row-${id}" class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
             <!-- 1. PREVIEW -->
@@ -5911,164 +6010,8 @@ function renderTableRow(room, isEditing = false) {
                     </button>
                 </div>
             </td>
-        </tr>
-    `;
+        </tr>`;
 }
-
-// Helper to get full room object merged with current inline edits
-function getMergedRoomState(id) {
-    const cachedRoom = roomTypesCache.find(r => r._id === id) || { _id: id };
-    const editState = localEditState[id] || {};
-    return { ...cachedRoom, ...editState };
-}
-
-function enableInlineEdit(id) {
-    const room = roomTypesCache.find(r => r._id === id);
-    if (!room) return;
-
-    // Determine initial images properly from MongoDB response
-    const initialImages = (room.imageUrls && room.imageUrls.length > 0) 
-        ? room.imageUrls 
-        : (room.defaultImage ? [room.defaultImage] : []);
-
-    // Initialize local edit state container
-    localEditState[id] = {
-        name: room.name,
-        maxOccupancy: room.maxOccupancy || 2,
-        basePrice: room.basePrice || 0,
-        imageUrls: [...initialImages], // ✅ Fixed: reading imageUrls, not room.images
-        newFiles: [],
-        amenities: [...(room.amenities || [])]
-    };
-
-    const rowEl = document.getElementById(`row-${id}`);
-    if (rowEl) {
-        rowEl.outerHTML = renderTableRow(room, true);
-    }
-}
-
-function refreshSingleRow(originalRoomReference) {
-    const targetRow = document.getElementById(`row-${originalRoomReference._id}`);
-    if (targetRow) {
-        const substituteContainer = document.createElement('tbody');
-        substituteContainer.innerHTML = renderTableRow(originalRoomReference, false);
-        targetRow.replaceWith(substituteContainer.firstElementChild);
-    }
-}
-
-
-
-// Triggers hidden file input dynamically
-function triggerRowImagePicker(id) {
-    let fileInput = document.getElementById(`file-input-${id}`);
-    
-    // Create hidden file input on the fly if it doesn't exist
-    if (!fileInput) {
-        fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.id = `file-input-${id}`;
-        fileInput.multiple = true;
-        fileInput.accept = 'image/*';
-        fileInput.className = 'hidden';
-        fileInput.onchange = (e) => handleRowImageSelect(e, id);
-        document.body.appendChild(fileInput);
-    }
-    
-    fileInput.click();
-}
-
-// Handles selecting new files and triggers re-render
-function handleRowImageSelect(event, id) {
-    const files = Array.from(event.target.files);
-    if (!files.length) return;
-
-    if (!localEditState[id]) {
-        localEditState[id] = { newFiles: [] };
-    }
-
-    // Append newly selected files
-    localEditState[id].newFiles = [...(localEditState[id].newFiles || []), ...files];
-
-    // Re-render row to immediately display previews
-    const room = roomTypesCache.find(r => r._id === id) || { _id: id };
-    const rowEl = document.getElementById(`row-${id}`);
-    if (rowEl) {
-        rowEl.outerHTML = renderTableRow(room, true);
-    }
-}
-
-// Remove existing server image from local edit state
-// Remove existing image URL from edit state
-function removeExistingImageState(id, urlToRemove, event) {
-    if (event) event.preventDefault();
-    
-    if (localEditState[id]) {
-        localEditState[id].imageUrls = (localEditState[id].imageUrls || []).filter(u => u !== urlToRemove);
-        reRenderEditRow(id);
-    }
-}
-
-// Remove pending upload file from edit state
-function removePendingImageState(id, indexToRemove, event) {
-    if (event) event.preventDefault();
-
-    if (localEditState[id] && localEditState[id].newFiles) {
-        localEditState[id].newFiles.splice(indexToRemove, 1);
-        reRenderEditRow(id);
-    }
-}
-
-// Helper to re-render the edit row smoothly
-function reRenderEditRow(id) {
-    // 1. Find the target room in cache safely checking both _id and id
-    const room = roomTypesCache.find(r => r._id === id || r.id === id) || { _id: id };
-
-    // 2. Sync live text inputs into localEditState before re-rendering
-    if (!localEditState[id]) localEditState[id] = {};
-
-    const nameInput = document.getElementById(`inline-name-${id}`);
-    const occInput = document.getElementById(`inline-occ-${id}`);
-    const priceInput = document.getElementById(`inline-price-${id}`);
-
-    if (nameInput) localEditState[id].name = nameInput.value;
-    if (occInput) localEditState[id].maxOccupancy = parseInt(occInput.value, 10) || 0;
-    if (priceInput) localEditState[id].basePrice = parseFloat(priceInput.value) || 0;
-
-    // 3. Swap DOM element
-    const rowEl = document.getElementById(`row-${id}`);
-    if (rowEl) {
-        rowEl.outerHTML = renderTableRow(room, true);
-    }
-}
-
-function addAmenityState(id) {
-    const input = document.getElementById(`new-amenity-${id}`);
-    if (!input) return;
-    const val = input.value.trim();
-
-    if (val && localEditState[id]) {
-        captureCurrentInputValues(id);
-        localEditState[id].amenities.push(val);
-
-        const mergedRoom = getMergedRoomState(id);
-        document.getElementById(`row-${id}`).replaceWith(
-            document.createRange().createContextualFragment(renderTableRow(mergedRoom, true))
-        );
-    }
-}
-
-function removeAmenityState(id, index) {
-    if (!localEditState[id]) return;
-
-    captureCurrentInputValues(id);
-    localEditState[id].amenities.splice(index, 1);
-
-    const mergedRoom = getMergedRoomState(id);
-    document.getElementById(`row-${id}`).replaceWith(
-        document.createRange().createContextualFragment(renderTableRow(mergedRoom, true))
-    );
-}
-
 // Utility to ensure typed input field changes aren't lost when toggling images/amenities
 function captureCurrentInputValues(id) {
     if (!localEditState[id]) return;
@@ -13239,14 +13182,7 @@ function toggleEditMode(id, state) {
     loadRoomTypes(); // Simple full synchronized redraw
 }
 
-function refreshSingleRow(originalRoomReference) {
-    const targetRow = document.getElementById(`row-${originalRoomReference._id}`);
-    if (targetRow) {
-        const substituteContainer = document.createElement('tbody');
-        substituteContainer.innerHTML = renderTableRow(originalRoomReference);
-        targetRow.replaceWith(substituteContainer.firstElementChild);
-    }
-}
+
 
 
 function triggerRowImagePicker(id) {
@@ -13335,7 +13271,7 @@ async function saveRowEdits(id) {
 async function deleteRoomType(id) {
     if (!confirm("Are you sure you want to completely erase this room category? This action cannot be undone.")) return;
 
-    // Resolve username using your application's current user context
+    // Resolve username using your appli  cation's current user context
     const currentUsername = typeof userData !== 'undefined' && userData ? userData.username : 'Guest';
 
     try {
