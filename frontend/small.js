@@ -9460,25 +9460,26 @@ async function generateSalesReports() {
     const startDate = document.getElementById('sales-report-start-date').value;
     const endDate = document.getElementById('sales-report-end-date').value;
 
+    const tbody = document.getElementById('sales-department-report-tbody');
+    const cardContainer = document.getElementById('sales-department-report-cards');
+
     if (!startDate || !endDate) { 
-        const tbody = document.getElementById('sales-department-report-tbody');
-        const cardContainer = document.getElementById('sales-department-report-cards');
-        if (tbody) tbody.innerHTML = ''; 
-        if (cardContainer) cardContainer.innerHTML = ''; 
-        document.getElementById('overall-sales-reportcard').textContent = '0';
-        document.getElementById('overall-profit-reportcard').textContent = '0';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-6 text-slate-400 italic">Select a valid start and end date to generate report.</td></tr>'; 
+        if (cardContainer) cardContainer.innerHTML = '<div class="text-center py-4 text-slate-400 italic text-xs">Select dates above.</div>'; 
+        
+        document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY} 0.00`;
+        document.getElementById('overall-profit-reportcard').textContent = `${CURRENT_CURRENCY} 0.00`;
+        const marginElem = document.getElementById('overall-margin-reportcard');
+        if (marginElem) marginElem.textContent = '-- %';
         return; 
     }
 
     if (generateButton) {
-        generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        generateButton.innerHTML = '<i class="fas fa-circle-notch fa-spin text-xs"></i> Fetching...';
         generateButton.disabled = true;
     }
 
-    const tbody = document.getElementById('sales-department-report-tbody');
-    const cardContainer = document.getElementById('sales-department-report-cards');
-    
-    if (tbody) tbody.innerHTML = ''; 
+    if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-indigo-600"><i class="fas fa-spinner fa-spin mr-2"></i>Loading department figures...</td></tr>'; 
     if (cardContainer) cardContainer.innerHTML = ''; 
 
     try {
@@ -9513,7 +9514,6 @@ async function generateSalesReports() {
 
             const lineTotalSales = quantity * unitSp;
             
-            // Calculate profit using pre-computed profit field or derive from SP - BP
             let lineTotalProfit = 0;
             if (typeof sale.profit === 'number') {
                 lineTotalProfit = sale.profit;
@@ -9534,10 +9534,14 @@ async function generateSalesReports() {
         const sortedDepts = Object.keys(salesReport).sort();
 
         if (sortedDepts.length === 0) {
-            const emptyStateHtml = 'No sales activity found for this period.';
-            if (tbody) tbody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
-            if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
-            showMessage('No sales records found for the selected date range.', false);
+            const emptyStateHtml = 'No sales activity recorded for this period.';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-slate-400 italic">${emptyStateHtml}</td></tr>`;
+            if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-slate-400 italic bg-white border border-slate-200 rounded-xl text-xs">${emptyStateHtml}</div>`;
+            
+            document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY} 0.00`;
+            document.getElementById('overall-profit-reportcard').textContent = `${CURRENT_CURRENCY} 0.00`;
+            const marginElem = document.getElementById('overall-margin-reportcard');
+            if (marginElem) marginElem.textContent = '0.0%';
         } else {
             let tableRowsHTML = [];
             let mobileCardsHTML = [];
@@ -9549,42 +9553,60 @@ async function generateSalesReports() {
                 totalSalesSum += sales;
                 totalProfitSum += profit;
 
-              tableRowsHTML.push(`
-    <tr class="border-b border-slate-100 hover:bg-slate-50/80">
-        <td class="px-6 py-4 font-medium text-slate-700 truncate">${dept}</td>
-        <td class="px-6 py-4 text-right font-mono text-slate-800 font-semibold whitespace-nowrap">${sales.toLocaleString()}</td>
-        <td class="px-6 py-4 text-right font-mono text-emerald-600 font-semibold whitespace-nowrap">${profit.toLocaleString()}</td>
-    </tr>
-`);
+                // Desktop Table Row
+                tableRowsHTML.push(`
+                    <tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
+                        <td class="px-6 py-3.5 font-semibold text-slate-800">${dept}</td>
+                        <td class="px-6 py-3.5 text-right font-mono text-slate-900 font-bold whitespace-nowrap">${CURRENT_CURRENCY} ${sales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="px-6 py-3.5 text-right font-mono text-emerald-600 font-bold whitespace-nowrap">${CURRENT_CURRENCY} ${profit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    </tr>
+                `);
 
+                // Mobile Card View
                 mobileCardsHTML.push(`
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
-                        <h4 class="font-bold text-slate-800 text-sm border-b border-slate-100 pb-2">${dept}</h4>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-2">
+                        <h4 class="font-bold text-slate-800 text-xs border-b border-slate-100 pb-1.5 uppercase tracking-wider">${dept}</h4>
                         <div class="flex justify-between items-center text-xs">
-                            <span class="text-slate-500">Sales:</span>
-                            <span class="font-mono font-bold text-slate-800">${sales.toLocaleString()} ${CURRENT_CURRENCY}</span>
+                            <span class="text-slate-500 font-medium">Revenue:</span>
+                            <span class="font-mono font-bold text-slate-900">${CURRENT_CURRENCY} ${sales.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                         </div>
                         <div class="flex justify-between items-center text-xs">
-                            <span class="text-slate-500">Profit:</span>
-                            <span class="font-mono font-bold text-emerald-600">${profit.toLocaleString()} ${CURRENT_CURRENCY}</span>
+                            <span class="text-slate-500 font-medium">Profit:</span>
+                            <span class="font-mono font-bold text-emerald-600">${CURRENT_CURRENCY} ${profit.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                         </div>
                     </div>
                 `);
             });
 
+            // Add Grand Total Summary Row to Bottom of Desktop Table
+            tableRowsHTML.push(`
+                <tr class="bg-slate-900 text-white font-black border-t-2 border-slate-900">
+                    <td class="px-6 py-4 uppercase text-xs tracking-widest text-slate-200">Total Operational Summary</td>
+                    <td class="px-6 py-4 text-right font-mono text-indigo-300 text-sm whitespace-nowrap">${CURRENT_CURRENCY} ${totalSalesSum.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td class="px-6 py-4 text-right font-mono text-emerald-400 text-sm whitespace-nowrap">${CURRENT_CURRENCY} ${totalProfitSum.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                </tr>
+            `);
+
             if (tbody) tbody.innerHTML = tableRowsHTML.join('');
             if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
         }
 
-        // Update KPI card text
-        document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY}${totalSalesSum.toLocaleString()}`;
-        document.getElementById('overall-profit-reportcard').textContent = `${CURRENT_CURRENCY}${totalProfitSum.toLocaleString()}`;
+        // --- UPDATE KPI CARDS ---
+        document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY} ${totalSalesSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        document.getElementById('overall-profit-reportcard').textContent = `${CURRENT_CURRENCY} ${totalProfitSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 
-        // Update Excel Export elements
+        // Calculate and update Profit Margin Percentage
+        const profitMargin = totalSalesSum > 0 ? ((totalProfitSum / totalSalesSum) * 100).toFixed(1) : "0.0";
+        const marginElem = document.getElementById('overall-margin-reportcard');
+        if (marginElem) {
+            marginElem.textContent = `${profitMargin}%`;
+        }
+
+        // --- UPDATE HIDDEN EXCEL EXPORT TABLE ---
         const exportSalesElem = document.getElementById('overall-sales-export');
         const exportProfitElem = document.getElementById('overall-profit-export');
-        if (exportSalesElem) exportSalesElem.textContent = `${CURRENT_CURRENCY}${totalSalesSum.toLocaleString()}`;
-        if (exportProfitElem) exportProfitElem.textContent = `${CURRENT_CURRENCY}${totalProfitSum.toLocaleString()}`;
+        if (exportSalesElem) exportSalesElem.textContent = `${CURRENT_CURRENCY} ${totalSalesSum.toFixed(2)}`;
+        if (exportProfitElem) exportProfitElem.textContent = `${CURRENT_CURRENCY} ${totalProfitSum.toFixed(2)}`;
 
     } catch (error) {
         console.error('Sales Report Error:', error);
