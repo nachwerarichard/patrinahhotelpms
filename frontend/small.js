@@ -9587,13 +9587,7 @@ async function generateSalesReports() {
                 totalProfitSum += profit;
 
                 // Desktop Table Row (Aligned perfectly to headers w-1/2, w-1/4, w-1/4)
-                tableRowsHTML.push(`
-                    <tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
-                        <td class="w-1/2 px-6 py-3.5 font-semibold text-slate-800">${dept}</td>
-                        <td class="w-1/4 px-6 py-3.5 text-right font-mono text-slate-900 font-bold whitespace-nowrap">${CURRENT_CURRENCY} ${sales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                        <td class="w-1/4 px-6 py-3.5 text-right font-mono text-emerald-600 font-bold whitespace-nowrap">${CURRENT_CURRENCY} ${profit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    </tr>
-                `);
+                
 
                 // Mobile Card View
                 mobileCardsHTML.push(`
