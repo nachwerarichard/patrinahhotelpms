@@ -9546,6 +9546,7 @@ async function generateSalesReports() {
             let tableRowsHTML = [];
             let mobileCardsHTML = [];
 
+            // SINGLE LOOP: Accumulate totals and build HTML
             sortedDepts.forEach(dept => {
                 const sales = salesReport[dept].sales;
                 const profit = salesReport[dept].profit;
@@ -9553,41 +9554,14 @@ async function generateSalesReports() {
                 totalSalesSum += sales;
                 totalProfitSum += profit;
 
-                // Desktop Table Row
+                // Desktop Table Row (Explicit w-1/2, w-1/4, w-1/4 matching headers)
                 tableRowsHTML.push(`
                     <tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
-                        <td class="px-6 py-3.5 font-semibold text-slate-800">${dept}</td>
-                        <td class="px-6 py-3.5 text-right font-mono text-slate-900 font-bold whitespace-nowrap">${CURRENT_CURRENCY} ${sales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                        <td class="px-6 py-3.5 text-right font-mono text-emerald-600 font-bold whitespace-nowrap">${CURRENT_CURRENCY} ${profit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="w-1/2 px-6 py-3.5 font-semibold text-slate-800">${dept}</td>
+                        <td class="w-1/4 px-6 py-3.5 text-right font-mono text-slate-900 font-bold whitespace-nowrap">${CURRENT_CURRENCY} ${sales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="w-1/4 px-6 py-3.5 text-right font-mono text-emerald-600 font-bold whitespace-nowrap">${CURRENT_CURRENCY} ${profit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     </tr>
                 `);
-
-                // Mobile Card View
-                mobileCardsHTML.push(`
-                    <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-2">
-                        <h4 class="font-bold text-slate-800 text-xs border-b border-slate-100 pb-1.5 uppercase tracking-wider">${dept}</h4>
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="text-slate-500 font-medium">Revenue:</span>
-                            <span class="font-mono font-bold text-slate-900">${CURRENT_CURRENCY} ${sales.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                        </div>
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="text-slate-500 font-medium">Profit:</span>
-                            <span class="font-mono font-bold text-emerald-600">${CURRENT_CURRENCY} ${profit.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                        </div>
-                    </div>
-                `);
-            });
-
-            // Add Grand Total Summary Row to Bottom of Desktop Table
-            sortedDepts.forEach(dept => {
-                const sales = salesReport[dept].sales;
-                const profit = salesReport[dept].profit;
-
-                totalSalesSum += sales;
-                totalProfitSum += profit;
-
-                // Desktop Table Row (Aligned perfectly to headers w-1/2, w-1/4, w-1/4)
-                
 
                 // Mobile Card View
                 mobileCardsHTML.push(`
