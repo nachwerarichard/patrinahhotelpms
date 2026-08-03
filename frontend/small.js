@@ -13339,7 +13339,7 @@ async function deleteRoomType(id) {
     const currentUsername = typeof userData !== 'undefined' && userData ? userData.username : 'Guest';
 
     try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/api/room-types/${id}`, { 
+        const res = await authenticatedFetch(`${API_BASE_URL}/room-types/${id}`, { 
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json'
