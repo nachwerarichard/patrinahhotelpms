@@ -5742,14 +5742,29 @@ if (typeof localEditState === 'undefined') {
 
 function renderTableRow(room, isEditing = false) {
     const id = room._id;
-    const state = localEditState[id] || { imageUrls: room.images || [], newFiles: [], amenities: room.amenities || [] };
+    
+    // ✅ Fix 1: Read room.imageUrls (matching MongoDB schema)
+    const dbImages = (room.imageUrls && room.imageUrls.length > 0) 
+        ? room.imageUrls 
+        : (room.defaultImage ? [room.defaultImage] : []);
 
-    // Combine existing server image URLs with temporary object URLs for newly picked local files
+    const state = localEditState[id] || { imageUrls: dbImages, newFiles: [], amenities: room.amenities || [] };
+
+    // Combine existing server URLs with blob URLs for new files
     const newFilePreviews = (state.newFiles || []).map(file => URL.createObjectURL(file));
-    const allImages = [...(state.imageUrls || []), ...newFilePreviews];
+    const rawImages = [...(state.imageUrls || []), ...newFilePreviews];
 
-    // Determine primary display thumbnail
-    const primaryImage = allImages.length > 0 ? allImages[0] : (room.images && room.images[0] ? room.images[0] : null);
+    // ✅ Fix 2: Helper to automatically prefix relative server paths (/uploads/...) with API_BASE_URL
+    const formatSrc = (src) => {
+        if (!src) return '';
+        if (src.startsWith('blob:') || src.startsWith('http://') || src.startsWith('https://')) {
+            return src;
+        }
+        return `${API_BASE_URL}${src.startsWith('/') ? '' : '/'}${src}`;
+    };
+
+    const allImages = rawImages.map(formatSrc);
+    const primaryImage = allImages.length > 0 ? allImages[0] : null;
 
     if (isEditing) {
         return `
@@ -5767,11 +5782,11 @@ function renderTableRow(room, isEditing = false) {
                             </button>
                         </div>
                         
-                        <!-- Mini Thumbnails Carousel/List -->
+                        <!-- Mini Thumbnails List -->
                         <div class="flex flex-wrap gap-1 max-w-[120px] justify-center">
                             ${(state.imageUrls || []).map(url => `
                                 <div class="relative group/thumb w-6 h-6 rounded border border-slate-300 overflow-hidden">
-                                    <img src="${url}" class="w-full h-full object-cover">
+                                    <img src="${formatSrc(url)}" class="w-full h-full object-cover">
                                     <button onclick="removeExistingImageState('${id}', '${url}')" class="absolute inset-0 bg-rose-600/80 text-white opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center text-[8px]" title="Remove Image">
                                         <i class="fa-solid fa-xmark"></i>
                                     </button>
@@ -5861,7 +5876,7 @@ function renderTableRow(room, isEditing = false) {
                 <span class="text-[11px] text-slate-500 line-clamp-1">${(room.amenities || []).join(', ') || 'Standard Amenities'}</span>
             </td>
             <td class="py-3 px-4 text-right">
-                <span class="font-mono font-bold text-indigo-600 text-xs">${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : '$'} ${(room.basePrice || 0).toLocaleString()}</span>
+                <span class="font-mono font-bold text-indigo-600 text-xs">${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX'} ${(room.basePrice || 0).toLocaleString()}</span>
             </td>
             <td class="py-3 px-6 text-center">
                 <div class="flex items-center justify-center gap-1.5">
