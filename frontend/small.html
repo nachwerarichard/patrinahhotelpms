@@ -2682,37 +2682,82 @@ body {
     </div>
 </section>
 
-<section id="receivables" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-    <div id="activeAccountsSection" class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6">
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-lg font-bold text-slate-800">In-House Accounts</h2>
-        <button onclick="fetchActiveAccounts()" class="p-2 hover:bg-slate-100 rounded-full transition-colors" title="Refresh Accounts">
-            <i class="fas fa-sync-alt text-slate-400"></i>
-        </button>
-    </div>
-    
-    <div class="hidden md:block overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    <th class="pb-3">Guest / Room</th>
-                    <th class="pb-3">Total Charges</th>
-                    <th class="pb-3">Last Updated</th>
-                    <th class="pb-3 text-right">Action</th>
-                </tr>
-            </thead>
-            <tbody id="activeAccountsTableBody" class="divide-y divide-slate-100 text-sm">
-            </tbody>
-        </table>
-    </div>
+<section id="receivables" class="section bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8">
+    <div id="activeAccountsSection" class="bg-white rounded-xl border border-slate-200 p-4 md:p-6 shadow-xs">
+        
+        <!-- Header & Operational KPI Ribbon -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-200">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <h2 class="text-lg font-bold text-slate-900 tracking-tight">Active Guest Folios & Ledgers</h2>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5">Real-time open balances, posting controls, and active city ledger accounts</p>
+            </div>
 
-    <div id="activeAccountsMobileGrid" class="block md:hidden space-y-4">
-    </div>
+            <!-- Quick Summary KPI Badges -->
+            <div class="flex items-center gap-3">
+                <div class="bg-slate-50 border border-slate-200/80 px-3.5 py-1.5 rounded-lg text-right">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Open Folios</span>
+                    <span id="active-folios-count" class="font-mono text-xs font-bold text-slate-800">0</span>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-200/60 px-3.5 py-1.5 rounded-lg text-right">
+                    <span class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">Total Open Receivables</span>
+                    <span id="active-folios-total" class="font-mono text-xs font-black text-emerald-700">0.00</span>
+                </div>
+                <button onclick="fetchActiveAccounts()" class="h-9 w-9 flex items-center justify-center hover:bg-slate-100 text-slate-600 rounded-lg border border-slate-200 transition-colors focus:ring-2 focus:ring-slate-300" title="Sync Ledger Data">
+                    <i class="fas fa-sync-alt text-slate-400 text-xs"></i>
+                </button>
+            </div>
+        </div>
 
-    <div id="noAccountsMessage" class="hidden py-10 text-center text-slate-400 text-sm font-medium italic">
-        No active in-house accounts found.
+        <!-- PMS Filter Bar -->
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/80 mb-5 flex flex-col sm:flex-row items-center gap-3">
+            <div class="relative w-full sm:w-72">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="active-accounts-search" oninput="filterActiveAccounts()" placeholder="Search Guest, Room, or Folio #..." class="w-full h-8 pl-8 pr-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <select id="active-accounts-type-filter" onchange="filterActiveAccounts()" class="h-8 px-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="ALL">All Account Types</option>
+                    <option value="GUEST">In-House Guest</option>
+                    <option value="POS_TAB">Walk-In / POS Tab</option>
+                    <option value="CITY_LEDGER">Corporate / City Ledger</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Desktop Folio Ledger Table -->
+        <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-left border-collapse table-fixed">
+                <thead>
+                    <tr class="border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider bg-slate-100/70">
+                        <th class="w-2/6 py-3 px-3">Folio Target / Guest Name</th>
+                        <th class="w-1/6 py-3 px-3">Account Type</th>
+                        <th class="w-1/6 py-3 px-3">Current Balance</th>
+                        <th class="w-1/6 py-3 px-3">Last Posting Time</th>
+                        <th class="w-1/6 py-3 px-3 text-right">Folio Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="activeAccountsTableBody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700 bg-white">
+                    <!-- Dynamic rendering via fetchActiveAccounts() -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div id="activeAccountsMobileGrid" class="block md:hidden space-y-3">
+            <!-- Dynamic mobile rendering -->
+        </div>
+
+        <!-- Empty State Component -->
+        <div id="noAccountsMessage" class="hidden py-12 text-center text-slate-400 text-xs font-medium bg-slate-50/50 rounded-xl border border-dashed border-slate-200 mt-2">
+            <i class="fas fa-file-invoice text-slate-300 text-3xl mb-2 block"></i>
+            <span>No active open guest folios or unbilled accounts found.</span>
+        </div>
+
     </div>
-</div>
 </section>
 <!-- ================= SALES REPORT SECTION ================= -->
 <section id="salereport" class="section bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8 hidden">

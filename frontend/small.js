@@ -11666,98 +11666,208 @@ async function generatePaymentsReports() {
     }
 }
 
+// In-memory cache for ultra-fast UI filtering without re-fetching
+let cachedActiveAccounts = [];
+
 async function fetchActiveAccounts() {
     const tableBody = document.getElementById('activeAccountsTableBody');
     const mobileGrid = document.getElementById('activeAccountsMobileGrid');
     const emptyMessage = document.getElementById('noAccountsMessage');
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+
+    // 1. Loading UI Feedback
+    if (tableBody) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="py-10 text-center text-indigo-600 font-medium">
+                    <i class="fas fa-circle-notch fa-spin mr-2"></i>Synchronizing active guest folios...
+                </td>
+            </tr>`;
+    }
+    if (mobileGrid) {
+        mobileGrid.innerHTML = `
+            <div class="py-8 text-center text-indigo-600 font-medium text-xs">
+                <i class="fas fa-circle-notch fa-spin mr-2"></i>Synchronizing active folios...
+            </div>`;
+    }
+    if (emptyMessage) emptyMessage.classList.add('hidden');
 
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/pos/accounts/active`);
-        const accounts = await response.json();
+        if (!response.ok) throw new Error(`Server returned HTTP ${response.status}`);
 
-        // Clear out baseline raw markup containers before assessing conditions
-        if (tableBody) tableBody.innerHTML = '';
-        if (mobileGrid) mobileGrid.innerHTML = '';
-
-        // Check if there are active accounts to display
-        if (!accounts || accounts.length === 0) {
-            if (emptyMessage) emptyMessage.classList.remove('hidden');
-            return;
-        }
-
-        // Hide empty message fallback if array features content payloads
-        if (emptyMessage) emptyMessage.classList.add('hidden');
-
-        // Loop through accounts and populate both viewport versions
-        accounts.forEach(acc => {
-            const guestName = acc.guestName || 'Unknown Guest';
-            const roomDisplay = acc.roomNumber ? `Room ${acc.roomNumber}` : 'N/A';
-            const chargesDisplay = `${CURRENT_CURRENCY} ${Number(acc.totalCharges || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            const dateDisplay = acc.lastUpdated ? new Date(acc.lastUpdated).toLocaleDateString() : 'No Date';
-
-            // --- A. POPULATE VIEW 1: DESKTOP TABLE ROW INTERFACE ---
-            if (tableBody) {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition-colors text-slate-600";
-                tr.innerHTML = `
-                    <td class="py-4">
-                        <div class="font-semibold text-slate-800">${guestName}</div>
-                        <div class="text-xs text-indigo-500 font-medium">${roomDisplay}</div>
-                    </td>
-                    <td class="py-4 font-mono text-sm text-slate-700 font-medium">${chargesDisplay}</td>
-                    <td class="py-4 text-xs text-slate-400">
-                        <div class="font-medium text-slate-500">${dateDisplay}</div>
-                    </td>
-                    <td class="py-4 text-right">
-                        <button onclick="viewAccountDetails('${acc._id}')" 
-                            class="text-xs bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-700 font-bold px-3 py-1.5 rounded-lg transition-all tracking-wider uppercase active:scale-95 focus:outline-none">
-                            MANAGE
-                        </button>
-                    </td>
-                `;
-                tableBody.appendChild(tr);
-            }
-
-            // --- B. POPULATE VIEW 2: SMARTPHONE GRID LEDGER CARD ---
-            if (mobileGrid) {
-                const card = document.createElement('div');
-                card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3.5 hover:border-slate-300 transition-all";
-                card.innerHTML = `
-                    <div class="flex justify-between items-start gap-2">
-                        <div>
-                            <h4 class="text-sm font-bold text-slate-900">${guestName}</h4>
-                            <span class="inline-block mt-1 px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px] font-bold uppercase tracking-wider">${roomDisplay}</span>
-                        </div>
-                        <p class="text-[10px] text-slate-400 font-medium whitespace-nowrap text-right">
-                            <span class="text-slate-300 block text-[9px] uppercase font-bold tracking-tight mb-0.5">Updated</span>
-                            <i class="far fa-clock mr-0.5"></i> ${dateDisplay}
-                        </p>
-                    </div>
-                    
-                    <div class="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-4">
-                        <div>
-                            <span class="text-[9px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">Total Balance Due</span>
-                            <span class="font-mono text-sm font-bold text-slate-800">${chargesDisplay}</span>
-                        </div>
-                        <button onclick="viewAccountDetails('${acc._id}')" 
-                            class="text-xs bg-slate-100 active:bg-indigo-600 active:text-white text-slate-700 font-bold px-4 py-2 rounded-lg transition-all tracking-wider uppercase focus:outline-none shadow-sm">
-                            MANAGE
-                        </button>
-                    </div>
-                `;
-                mobileGrid.appendChild(card);
-            }
-        });
+        cachedActiveAccounts = await response.json();
+        
+        // Render cached data
+        renderActiveAccounts(cachedActiveAccounts);
 
     } catch (err) {
-        console.error('Failed to fetch active accounts from service layer:', err);
+        console.error('PMS Ledger Sync Error:', err);
+        const errorHTML = `
+            <div class="py-8 text-center text-rose-600 text-xs font-semibold">
+                <i class="fas fa-exclamation-triangle mr-1.5"></i> Unable to connect to Ledger Service. Check network connectivity.
+            </div>`;
+        if (tableBody) tableBody.innerHTML = `<tr><td colspan="5">${errorHTML}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = errorHTML;
     }
+}
+
+function renderActiveAccounts(accounts) {
+    const tableBody = document.getElementById('activeAccountsTableBody');
+    const mobileGrid = document.getElementById('activeAccountsMobileGrid');
+    const emptyMessage = document.getElementById('noAccountsMessage');
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+
+    // 1. Evaluate Empty State
+    if (!accounts || accounts.length === 0) {
+        if (tableBody) tableBody.innerHTML = '';
+        if (mobileGrid) mobileGrid.innerHTML = '';
+        if (emptyMessage) emptyMessage.classList.remove('hidden');
+        
+        document.getElementById('active-folios-count').textContent = '0';
+        document.getElementById('active-folios-total').textContent = `${currency} 0.00`;
+        return;
+    }
+
+    if (emptyMessage) emptyMessage.classList.add('hidden');
+
+    let totalReceivablesSum = 0;
+    let tableRowsHTML = [];
+    let mobileCardsHTML = [];
+
+    // 2. Iterate and Build Component Nodes
+    accounts.forEach(acc => {
+        const guestName = acc.guestName || 'Walk-In Customer';
+        const roomDisplay = acc.roomNumber ? `Room ${acc.roomNumber}` : 'Non-Resident';
+        const folioId = acc.folioNumber || acc._id?.substring(acc._id.length - 6)?.toUpperCase() || 'FOLIO';
+        
+        // Calculate Total Balance
+        const rawAmount = Number(acc.totalCharges || acc.balance || 0);
+        totalReceivablesSum += rawAmount;
+
+        const chargesDisplay = `${currency} ${rawAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        
+        // Format Timestamps
+        const timeDisplay = acc.lastUpdated 
+            ? new Date(acc.lastUpdated).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) 
+            : 'No Posting';
+
+        // Detect Account Category (PMS Classification)
+        let accountTypeBadge = 'bg-slate-100 text-slate-700';
+        let accountTypeName = 'POS Tab';
+        
+        if (acc.accountType === 'CITY_LEDGER' || acc.isCorporate) {
+            accountTypeBadge = 'bg-purple-100 text-purple-800';
+            accountTypeName = 'City Ledger';
+        } else if (acc.roomNumber) {
+            accountTypeBadge = 'bg-indigo-100 text-indigo-800';
+            accountTypeName = 'In-House Guest';
+        }
+
+        // Highlight High-Balance Risk (e.g., > 1,000,000 threshold or high balance)
+        const isHighBalance = rawAmount > 1000000;
+        const balanceClass = isHighBalance ? 'text-amber-600 font-black' : 'text-slate-900 font-bold';
+
+        // --- DESKTOP COMPONENT ---
+        tableRowsHTML.push(`
+            <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
+                <td class="py-3 px-3">
+                    <div class="font-bold text-slate-900 text-xs">${guestName}</div>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <span class="text-[10px] font-bold text-indigo-600">${roomDisplay}</span>
+                        <span class="text-[10px] text-slate-400 font-mono">#${folioId}</span>
+                    </div>
+                </td>
+                <td class="py-3 px-3">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${accountTypeBadge}">
+                        ${accountTypeName}
+                    </span>
+                </td>
+                <td class="py-3 px-3 font-mono text-xs ${balanceClass}">
+                    ${chargesDisplay}
+                    ${isHighBalance ? '<i class="fas fa-exclamation-circle text-amber-500 ml-1" title="High Balance Limit Alert"></i>' : ''}
+                </td>
+                <td class="py-3 px-3 text-[11px] text-slate-500 whitespace-nowrap">
+                    <i class="far fa-clock text-slate-400 mr-1"></i>${timeDisplay}
+                </td>
+                <td class="py-3 px-3 text-right">
+                    <div class="inline-flex items-center gap-1.5">
+                        <button onclick="viewAccountDetails('${acc._id}')" 
+                            class="px-2.5 py-1.5 bg-slate-900 hover:bg-indigo-600 text-white font-semibold text-[11px] rounded-lg transition-all shadow-xs flex items-center gap-1">
+                            <i class="fas fa-folder-open text-[10px]"></i> Folio
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `);
+
+        // --- MOBILE COMPONENT ---
+        mobileCardsHTML.push(`
+            <div class="p-4 bg-white border border-slate-200/80 rounded-xl shadow-xs space-y-3">
+                <div class="flex justify-between items-start gap-2 border-b border-slate-100 pb-2.5">
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <h4 class="text-xs font-bold text-slate-900">${guestName}</h4>
+                            <span class="text-[9px] text-slate-400 font-mono">#${folioId}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 mt-1">
+                            <span class="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[9px] font-bold">${roomDisplay}</span>
+                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${accountTypeBadge}">${accountTypeName}</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[9px] text-slate-400 block font-bold uppercase">Updated</span>
+                        <span class="text-[10px] text-slate-500 font-medium">${timeDisplay}</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center pt-1">
+                    <div>
+                        <span class="text-[9px] uppercase font-bold text-slate-400 block">Current Outstanding</span>
+                        <span class="font-mono text-xs ${balanceClass}">${chargesDisplay}</span>
+                    </div>
+                    <button onclick="viewAccountDetails('${acc._id}')" 
+                        class="px-3 py-1.5 bg-slate-900 active:bg-indigo-600 text-white font-bold text-xs rounded-lg transition-all shadow-xs">
+                        Manage Folio
+                    </button>
+                </div>
+            </div>
+        `);
+    });
+
+    // 3. Batch Update Containers & Summaries
+    if (tableBody) tableBody.innerHTML = tableRowsHTML.join('');
+    if (mobileGrid) mobileGrid.innerHTML = mobileCardsHTML.join('');
+
+    document.getElementById('active-folios-count').textContent = accounts.length.toString();
+    document.getElementById('active-folios-total').textContent = `${currency} ${totalReceivablesSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+// Client-Side Search & Filter Control
+function filterActiveAccounts() {
+    const searchTerm = (document.getElementById('active-accounts-search')?.value || '').toLowerCase();
+    const typeFilter = document.getElementById('active-accounts-type-filter')?.value || 'ALL';
+
+    const filtered = cachedActiveAccounts.filter(acc => {
+        const matchesSearch = 
+            (acc.guestName || '').toLowerCase().includes(searchTerm) ||
+            (acc.roomNumber || '').toString().toLowerCase().includes(searchTerm) ||
+            (acc._id || '').toLowerCase().includes(searchTerm);
+
+        let matchesType = true;
+        if (typeFilter === 'GUEST') matchesType = Boolean(acc.roomNumber) && !acc.isCorporate;
+        if (typeFilter === 'POS_TAB') matchesType = !acc.roomNumber && !acc.isCorporate;
+        if (typeFilter === 'CITY_LEDGER') matchesType = acc.accountType === 'CITY_LEDGER' || Boolean(acc.isCorporate);
+
+        return matchesSearch && matchesType;
+    });
+
+    renderActiveAccounts(filtered);
 }
 
 // Load accounts when the page opens
 document.addEventListener('DOMContentLoaded', fetchActiveAccounts);
 
-let debounceTimer;
 const searchInput = document.getElementById('searchQuery'); // Change to your ID
 
 searchInput.addEventListener('input', (e) => {
