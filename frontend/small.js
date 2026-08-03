@@ -6047,8 +6047,10 @@ async function saveInlineEdit(id) {
     const updatedOcc = occInput ? parseInt(occInput.value, 10) : state.maxOccupancy;
     const updatedPrice = priceInput ? parseFloat(priceInput.value) : state.basePrice;
 
-    // Safe toast/message fallback
-    const notify = typeof showToast === 'function' ? showToast : (typeof showMessage === 'function' ? showMessage : console.log);
+    // Unified notification helper fallback
+    const notify = typeof showMessage === 'function' 
+        ? showMessage 
+        : (typeof showToast === 'function' ? showToast : console.log);
 
     // Prepare Multipart FormData
     const formData = new FormData();
@@ -6065,27 +6067,21 @@ async function saveInlineEdit(id) {
     }
 
     try {
-        // Option A: If authenticatedFetch automatically strips 'Content-Type' for FormData:
-        // Option B: Pass body directly. If authenticatedFetch sets application/json by default, standard fetch with token is safer below:
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        
-        const response = await fetch(`${API_BASE_URL}/room-types/${id}`, {
+        // FIXED: Using authenticatedFetch with explicit /api prefix & blank header object
+        const response = await authenticatedFetch(`${API_BASE_URL}/room-types/${id}`, {
             method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`
-                // DO NOT set 'Content-Type' here, let the browser set boundary
-            },
+            headers: {}, // Prevents auto-setting Content-Type: application/json
             body: formData
         });
 
-        // Safely inspect response before parsing JSON
-        const contentType = response.headers.get("content-type");
+        // Safely parse JSON or text response
         let result;
+        const contentType = response.headers.get("content-type");
         if (contentType && contentType.includes("application/json")) {
             result = await response.json();
         } else {
             const rawText = await response.text();
-            throw new Error(`Server returned non-JSON response (${response.status}). Check server logs.`);
+            throw new Error(`Server returned non-JSON response status ${response.status}.`);
         }
 
         if (response.ok) {
@@ -6104,13 +6100,13 @@ async function saveInlineEdit(id) {
                 rowEl.outerHTML = renderTableRow(targetRoom, false);
             }
             
-            notify('Room category updated successfully!', 'success');
+            notify("Room category updated successfully!");
         } else {
-            notify(result.error || result.message || 'Failed to update room category', true);
+            notify(result.error || result.message || "Failed to update room category", true);
         }
     } catch (err) {
         console.error('Error saving room inline edit:', err);
-        notify(err.message || 'Network error while saving changes', true);
+        notify(err.message || "Network error while saving changes", true);
     }
 }
 
