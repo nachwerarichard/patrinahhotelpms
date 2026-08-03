@@ -1982,21 +1982,21 @@ body {
     <h3 class="text-xl font-bold mb-6 text-slate-800">Historical Sales Records</h3>
     
     <div class="filter-controls flex flex-col sm:flex-row flex-wrap gap-4 mb-6 items-stretch sm:items-end bg-slate-50 p-4 rounded-2xl border border-slate-100">
-    <div class="flex-1 min-w-[200px]">
-        <label for="sales-date-filter" class="block text-xs font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Search by Date:</label>
-        <!-- ADDED onchange HERE -->
-        <input type="date" id="sales-date-filter" onchange="fetchSales()" class="w-full p-2.5 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm shadow-sm">
+        <div class="flex-1 min-w-[200px]">
+            <label for="sales-date-filter" class="block text-xs font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Search by Date:</label>
+            <input type="date" id="sales-date-filter" onchange="fetchSales()" class="w-full p-2.5 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm shadow-sm">
+        </div>
+        <div class="flex gap-3">
+            <button id="sales-search-button" onclick="fetchSales()" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm focus:outline-none">
+                <i class="fas fa-search"></i> Search
+            </button>
+            <button class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm focus:outline-none" onclick="exportTableToExcel('sales-table', 'Sales_Report')">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </button>
+        </div>
     </div>
-    <div class="flex gap-3">
-        <button id="sales-search-button" onclick="fetchSales()" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm focus:outline-none">
-            <i class="fas fa-search"></i> Search
-        </button>
-        <button class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm focus:outline-none" onclick="exportTableToExcel('sales-table', 'Sales_Report')">
-            <i class="fas fa-file-excel"></i> Export Excel
-        </button>
-    </div>
-</div>
     
+    <!-- DESKTOP TABLE VIEW -->
     <div class="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
         <table id="sales-table" class="w-full text-left border-collapse">
             <thead>
@@ -2013,15 +2013,21 @@ body {
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
-                </tbody>
+            </tbody>
         </table>
     </div>
 
+    <!-- MOBILE CARD GRID VIEW -->
     <div id="sales-mobile-grid" class="block md:hidden space-y-4">
-        </div>
+    </div>
 
-    <div id="sales-summary" class="mt-6 p-5 bg-amber-50/60 rounded-xl border border-amber-200 text-sm text-slate-700 shadow-sm leading-relaxed">
-        </div>
+    <!-- MOBILE ONLY SUMMARY CARDS CONTAINER -->
+    <div id="sales-summary" class="block md:hidden mt-6 p-5 bg-amber-50/60 rounded-xl border border-amber-200 text-sm text-slate-700 shadow-sm leading-relaxed">
+    </div>
+
+    <!-- PAGINATION CONTAINER -->
+    <div id="sales-pagination" class="mt-6 flex justify-center gap-2">
+    </div>
 </div>
 </section>
 
@@ -2700,7 +2706,7 @@ body {
             <input type="date" id="sales-report-end-date" oninput="generateSalesReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
         <button id="generate-sales-report-btn" onclick="generateSalesReports()" class="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-            <i class="fas fa-sync-alt"></i> Generate & Refresh Sales
+            <i class="fas fa-sync-alt"></i> Search
         </button>
     </div>
 
@@ -2789,7 +2795,7 @@ body {
             <input type="date" id="expenses-report-end-date" oninput="generateExpensesReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
         <button id="generate-expenses-report-btn" onclick="generateExpensesReports()" class="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-            <i class="fas fa-sync-alt"></i> Generate & Refresh Expenses
+            <i class="fas fa-sync-alt"></i> <Search></Search>
         </button>
     </div>
 
@@ -2988,7 +2994,12 @@ body {
 <section id="reports" class="section bg-white p-4 md:p-6 rounded-lg shadow-md mb-8 hidden">
     <div class="bg-gray-50 rounded-xl p-3 sm:p-6 min-h-screen">
         
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <!-- Updated to 3 columns grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div class="bg-blue-100 p-4 rounded-lg shadow border-l-4 border-blue-500">
+                <h3 class="text-xs font-bold text-blue-700 uppercase tracking-wider">Total Bookings</h3>
+                <p id="sumBookings" class="text-xl sm:text-2xl font-black text-gray-800 mt-1">0</p>
+            </div>
             <div class="bg-green-100 p-4 rounded-lg shadow border-l-4 border-green-500">
                 <h3 class="text-xs font-bold text-green-700 uppercase tracking-wider">Total Amount Paid</h3>
                 <p id="sumPaid" class="text-xl sm:text-2xl font-black text-gray-800 mt-1">UGX 0.00</p>
@@ -3049,31 +3060,23 @@ body {
             </div>
 
             <div class="flex flex-col">
-    <label class="text-[11px] font-bold text-gray-500 uppercase mb-1">Payment Method</label>
-    <select id="filterPaymentMethod" class="border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-        <option value="">All Payment Methods</option>
-           <!-- Offline / Traditional options -->
-        <option value="Cash">Cash</option>
-        <option value="Bank">Bank</option>
-        <!-- Gateways / Aggregators -->
-        <option value="Pesapal">Pesapal</option>
-        <option value="Online">Online</option>
-        <option value="Stripe">Stripe</option>
-        
-        <!-- Cards -->
-        <option value="Visa">Visa</option>
-        <option value="MasterCard">MasterCard</option>
-        <option value="Stripe Card">Stripe Card</option>
-        
-        <!-- Mobile Money channels -->
-        <option value="Mobile Money">Mobile Money</option>
-        <option value="M-Pesa">M-Pesa</option>
-        <option value="MTN Momo">MTN Momo</option>
-        <option value="Airtel Pay">Airtel Pay</option>
-        
-     
-    </select>
-</div>
+                <label class="text-[11px] font-bold text-gray-500 uppercase mb-1">Payment Method</label>
+                <select id="filterPaymentMethod" class="border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="">All Payment Methods</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Bank">Bank</option>
+                    <option value="Pesapal">Pesapal</option>
+                    <option value="Online">Online</option>
+                    <option value="Stripe">Stripe</option>
+                    <option value="Visa">Visa</option>
+                    <option value="MasterCard">MasterCard</option>
+                    <option value="Stripe Card">Stripe Card</option>
+                    <option value="Mobile Money">Mobile Money</option>
+                    <option value="M-Pesa">M-Pesa</option>
+                    <option value="MTN Momo">MTN Momo</option>
+                    <option value="Airtel Pay">Airtel Pay</option>
+                </select>
+            </div>
 
             <div class="flex flex-col">
                 <label for="filterDate" class="text-[11px] font-bold text-gray-500 uppercase mb-1">Check-In Date</label>
@@ -3111,12 +3114,12 @@ body {
                     </tr>
                 </thead>
                 <tbody id="tableBody" class="text-gray-600 text-sm font-medium divide-y divide-gray-100">
-                    </tbody>
+                </tbody>
             </table>
         </div>
 
         <div id="reportsMobileGrid" class="block md:hidden space-y-4">
-            </div>
+        </div>
 
     </div>
 </section>

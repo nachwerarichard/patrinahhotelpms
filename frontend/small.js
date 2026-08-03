@@ -4650,11 +4650,12 @@ function debounce(func, timeout = 300) {
  * Filters bookings based on UI inputs and scoped by Hotel ID.
  */
 async function fetchReport() {
-    // 1. Get DOM Elements for both display pipelines
+    // 1. Get DOM Elements for display pipelines
     const tableBody = document.getElementById('tableBody');
     const mobileGrid = document.getElementById('reportsMobileGrid');
     const sumPaid = document.getElementById('sumPaid');
     const sumBalance = document.getElementById('sumBalance');
+    const sumBookings = document.getElementById('sumBookings');
 
     // 2. Capture Filter Values
     const search = document.getElementById('filterSearch').value.trim();
@@ -4674,13 +4675,14 @@ async function fetchReport() {
         return;
     }
 
-    // 4. Logic Validation Checks: Wipe table contexts if parameters remain baseline clear
+    // 4. Reset counters if no filters are active
     const hasActiveFilter = search || paymentStatus || gueststatus || 
                             paymentMethod || guestsource || startDate || endDate;
 
     if (!hasActiveFilter) {
         if (tableBody) tableBody.innerHTML = '';
         if (mobileGrid) mobileGrid.innerHTML = '';
+        if (sumBookings) sumBookings.textContent = '0';
         if (sumPaid) sumPaid.textContent = `${CURRENT_CURRENCY} 0.00`;
         if (sumBalance) sumBalance.textContent = `${CURRENT_CURRENCY} 0.00`;
         return;
@@ -4699,7 +4701,6 @@ async function fetchReport() {
     });
 
     try {
-        // Render identical animated loader bars into both target elements
         const loadingIndicator = `
             <div class="flex flex-col items-center justify-center p-12 gap-2 w-full text-center">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
@@ -4735,32 +4736,35 @@ function renderTable(bookings) {
     const mobileGrid = document.getElementById('reportsMobileGrid');
     const sumPaidDisplay = document.getElementById('sumPaid');
     const sumBalanceDisplay = document.getElementById('sumBalance');
+    const sumBookingsDisplay = document.getElementById('sumBookings');
 
     // Wipe down containers completely before running updates
     if (tbody) tbody.innerHTML = '';
     if (mobileGrid) mobileGrid.innerHTML = '';
 
-    // Handle empty dataset scenarios gracefully across targets
+    // Handle empty dataset scenarios gracefully
     if (!bookings || bookings.length === 0) {
         const fallbackMsg = '<div class="p-8 text-center text-gray-400 font-medium italic">No match logs mapped for active criteria.</div>';
         if (tbody) tbody.innerHTML = `<tr><td colspan="9">${fallbackMsg}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
+        if (sumBookingsDisplay) sumBookingsDisplay.textContent = '0';
         if (sumPaidDisplay) sumPaidDisplay.textContent = `${CURRENT_CURRENCY} 0.00`;
         if (sumBalanceDisplay) sumBalanceDisplay.textContent = `${CURRENT_CURRENCY} 0.00`;
         return;
     }
 
-    // A. Calculate Dynamic Financial Summaries
+    // A. Calculate Dynamic Financial & Booking Summaries
+    const totalBookings = bookings.length;
     const totalPaid = bookings.reduce((sum, b) => sum + Number(b.amountPaid || 0), 0);
     const totalBalance = bookings.reduce((sum, b) => sum + Number(b.balance || 0), 0);
 
-    // B. Reformat Financial String Representations
+    // B. Reformat & Update Top Display Cards
+    if (sumBookingsDisplay) sumBookingsDisplay.textContent = totalBookings.toLocaleString();
     if (sumPaidDisplay) sumPaidDisplay.textContent = `${CURRENT_CURRENCY} ${totalPaid.toLocaleString()}`;
     if (sumBalanceDisplay) sumBalanceDisplay.textContent = `${CURRENT_CURRENCY}  ${totalBalance.toLocaleString()}`;
 
     // C. Process Collections and Run Render Loops
     bookings.forEach(b => {
-        // Map aesthetic colors 
         const payColor = b.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700';
         const statusColor = b.gueststatus === 'confirmed' || b.gueststatus === 'checkedin' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700';
         const methodColor = b.paymentMethod === 'Cash' ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700';
@@ -4789,7 +4793,7 @@ function renderTable(bookings) {
             tbody.appendChild(tr);
         }
 
-        // 2. POPULATE VIEW 2: Render out clean card template for mobile ledger screens
+        // 2. POPULATE VIEW 2: Render out card template for mobile ledger screens
         if (mobileGrid) {
             const card = document.createElement('div');
             card.className = "p-4 bg-white border border-gray-200 rounded-xl shadow-sm space-y-3";
@@ -4833,7 +4837,7 @@ function renderTable(bookings) {
         const totalRow = document.createElement('tr');
         totalRow.className = "bg-slate-50 font-black border-t-2 border-gray-300 text-gray-900";
         totalRow.innerHTML = `
-            <td colspan="3" class="p-4 text-right text-gray-500 uppercase tracking-widest text-xs font-bold">Grand Total:</td>
+            <td colspan="3" class="p-4 text-right text-gray-500 uppercase tracking-widest text-xs font-bold">Grand Total (${totalBookings} Bookings):</td>
             <td class="p-4 text-green-700 text-right font-mono text-base">${totalPaid.toLocaleString()}</td>
             <td class="p-4 text-red-700 text-right font-mono text-base">${totalBalance.toLocaleString()}</td>
             <td colspan="4" class="p-4"></td>
@@ -8199,10 +8203,11 @@ function injectActionElements(container, isAdmin, sale, isMobileVariant = false)
 function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfitTotal, hideSensitiveInfo = false) {
     // --- 1. DESKTOP VIEWPORT PROCESSING (TABLE ROWS) ---
     if (tbody) {
+        // Clean up previously appended summary rows
         const existingSummaries = tbody.querySelectorAll('.summary-row');
         existingSummaries.forEach(el => el.remove());
 
-        // Spacer Row
+        // Spacer Row across all 9 columns
         const spacer = tbody.insertRow();
         spacer.className = "summary-row border-none";
         spacer.innerHTML = `<td colspan="9" class="h-6 bg-white"></td>`;
@@ -8210,10 +8215,15 @@ function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfi
         // Departmental Sub-totals Loop
         for (const [dept, metrics] of Object.entries(departmentTotals)) {
             const row = tbody.insertRow();
-            row.className = "summary-row bg-slate-50 text-slate-600 font-medium border-b border-slate-200/60";
+            row.className = "summary-row bg-slate-50/80 text-slate-700 font-medium border-b border-slate-200/60";
             
             const profitDisplay = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(metrics.profit).toLocaleString()}`;
 
+            // Column Mapping (Matches 9-column layout):
+            // 1-4 (Dept, Item, Qty, BP) -> colspan="4"
+            // 5 (SP)                   -> Sales total
+            // 6 (Profit)               -> Profit total
+            // 7-9 (%, Date, Actions)   -> colspan="3"
             row.innerHTML = `
                 <td colspan="4" class="text-right py-3 pr-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">${dept} Subtotal:</td>
                 <td class="px-6 py-3 font-mono font-bold text-indigo-600">${CURRENT_CURRENCY} ${metrics.sales.toLocaleString()}</td>
@@ -8222,7 +8232,7 @@ function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfi
             `;
         }
 
-        // Grand Total Header Row Block
+        // Grand Total Row Block
         const grandRow = tbody.insertRow();
         grandRow.className = "summary-row bg-indigo-600 text-white font-bold border-none shadow-sm";
         
@@ -8243,13 +8253,13 @@ function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfi
             .map(([dept, metrics]) => {
                 const profitText = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(metrics.profit).toLocaleString()}`;
                 return `
-                    <div class="py-2 border-b border-slate-200/60 last:border-0 text-xs space-y-1">
+                    <div class="py-2 border-b border-amber-200/60 last:border-0 text-xs space-y-1">
                         <div class="flex justify-between items-center">
-                            <span class="text-slate-500 font-medium">${dept} Sales</span>
+                            <span class="text-slate-600 font-medium">${dept} Sales</span>
                             <span class="font-mono font-bold text-slate-800">${CURRENT_CURRENCY} ${metrics.sales.toLocaleString()}</span>
                         </div>
                         <div class="flex justify-between items-center text-[11px]">
-                            <span class="text-slate-400 font-medium">${dept} Profit</span>
+                            <span class="text-slate-500 font-medium">${dept} Profit</span>
                             <span class="font-mono font-bold text-emerald-600">${profitText}</span>
                         </div>
                     </div>
@@ -8275,8 +8285,8 @@ function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfi
                         <span class="text-base font-mono font-black">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</span>
                     </div>
                     <div class="flex justify-between items-center pt-2 border-t border-indigo-500/50">
-                        <span class="text-[10px] uppercase tracking-widest font-black text-300 ">Grand Total Profit</span>
-                        <span class="text-base font-mono font-black text-300">${totalProfitText}</span>
+                        <span class="text-[10px] uppercase tracking-widest font-black text-indigo-200">Grand Total Profit</span>
+                        <span class="text-base font-mono font-black text-emerald-300">${totalProfitText}</span>
                     </div>
                 </div>
             </div>
