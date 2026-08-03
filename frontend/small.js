@@ -9634,26 +9634,30 @@ async function generateExpensesReports() {
     const startDate = document.getElementById('expenses-report-start-date').value;
     const endDate = document.getElementById('expenses-report-end-date').value;
 
-    // Silent clear on incomplete dates so typing isn't interrupted by alerts
+    const tbody = document.getElementById('expenses-department-report-tbody');
+    const cardContainer = document.getElementById('expenses-department-report-cards');
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+
+    // Silent reset if date range is incomplete
     if (!startDate || !endDate) { 
-        const tbody = document.getElementById('expenses-department-report-tbody');
-        const cardContainer = document.getElementById('expenses-department-report-cards');
-        if (tbody) tbody.innerHTML = ''; 
-        if (cardContainer) cardContainer.innerHTML = ''; 
-        document.getElementById('overall-expenses-card').textContent = '0';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="2" class="text-center py-6 text-slate-400 italic">Select a valid start and end date to generate expense analysis.</td></tr>'; 
+        if (cardContainer) cardContainer.innerHTML = '<div class="text-center py-4 text-slate-400 italic text-xs">Select dates above.</div>'; 
+        
+        document.getElementById('overall-expenses-card').textContent = `${currency} 0.00`;
+        const deptsCard = document.getElementById('overall-expense-depts-card');
+        if (deptsCard) deptsCard.textContent = '0';
+
         const exportExpensesElem = document.getElementById('overall-expenses-export');
-        if (exportExpensesElem) exportExpensesElem.textContent = '0';
+        if (exportExpensesElem) exportExpensesElem.textContent = `${currency} 0.00`;
         return; 
     }
 
     if (generateButton) {
-        generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        generateButton.innerHTML = '<i class="fas fa-circle-notch fa-spin text-xs"></i> Fetching...';
         generateButton.disabled = true;
     }
 
-    const tbody = document.getElementById('expenses-department-report-tbody');
-    const cardContainer = document.getElementById('expenses-department-report-cards');
-    if (tbody) tbody.innerHTML = ''; 
+    if (tbody) tbody.innerHTML = '<tr><td colspan="2" class="text-center py-8 text-indigo-600"><i class="fas fa-spinner fa-spin mr-2"></i>Loading department expense figures...</td></tr>'; 
     if (cardContainer) cardContainer.innerHTML = ''; 
 
     try {
@@ -9661,6 +9665,7 @@ async function generateExpensesReports() {
         let allExpenses = [];
         let page = 1, totalPages = 1;
 
+        // Fetch all paginated pages for the date range
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/expenses?${queryParams}&page=${page}&limit=100`);
             const res = await resp.json();
@@ -9672,21 +9677,28 @@ async function generateExpensesReports() {
         } while (page <= totalPages);
 
         const expensesReport = {};
+        let totalExpensesSum = 0;
+
         allExpenses.forEach(exp => {
-            const dept = exp.department || 'Other';
+            const dept = (exp.department || 'Other').trim() || 'Other';
+            const amt = Number(exp.amount) || 0;
+            
             if (!expensesReport[dept]) expensesReport[dept] = 0;
-            expensesReport[dept] += (Number(exp.amount) || 0);
+            expensesReport[dept] += amt;
+            totalExpensesSum += amt;
         });
 
-        let totalExpensesSum = 0;
         const sortedDepts = Object.keys(expensesReport).sort();
 
         if (sortedDepts.length === 0) {
-            const emptyStateHtml = 'No expenditure found for this period.';
-            if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
-            if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
+            const emptyStateHtml = 'No expenditure recorded for this period.';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-8 text-slate-400 italic">${emptyStateHtml}</td></tr>`;
+            if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-slate-400 italic bg-white border border-slate-200 rounded-xl text-xs">${emptyStateHtml}</div>`;
             
-            // Fires message popup for zero records found
+            document.getElementById('overall-expenses-card').textContent = `${currency} 0.00`;
+            const deptsCard = document.getElementById('overall-expense-depts-card');
+            if (deptsCard) deptsCard.textContent = '0';
+
             showMessage('No expense records found for the selected date range.', false);
         } else {
             let tableRowsHTML = [];
@@ -9694,33 +9706,51 @@ async function generateExpensesReports() {
 
             sortedDepts.forEach(dept => {
                 const expenses = expensesReport[dept];
-                totalExpensesSum += expenses;
+                const sharePercent = totalExpensesSum > 0 ? ((expenses / totalExpensesSum) * 100).toFixed(1) : "0.0";
 
+                // Desktop Table Row (Aligned w-2/3, w-1/3)
                 tableRowsHTML.push(`
-                    <tr class="border-b border-gray-100 hover:bg-gray-50">
-                        <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
-                        <td class="px-6 py-4 text-right font-mono text-red-600 font-semibold">${expenses.toLocaleString()}</td>
+                    <tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
+                        <td class="w-2/3 px-6 py-3.5 font-semibold text-slate-800">${dept}</td>
+                        <td class="w-1/3 px-6 py-3.5 text-right font-mono text-rose-600 font-bold whitespace-nowrap">${currency} ${expenses.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     </tr>
                 `);
 
+                // Mobile Card View
                 mobileCardsHTML.push(`
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                        <div class="flex justify-between items-center">
-                            <h4 class="font-bold text-slate-800 text-base">${dept}</h4>
-                            <span class="font-mono font-black text-red-600">${expenses.toLocaleString()} ${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX'}</span>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-2">
+                        <div class="flex justify-between items-center border-b border-slate-100 pb-1.5">
+                            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider">${dept}</h4>
+                            <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-semibold">${sharePercent}% of total</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs pt-1">
+                            <span class="text-slate-500 font-medium">Department Cost:</span>
+                            <span class="font-mono font-bold text-rose-600">${currency} ${expenses.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                         </div>
                     </div>
                 `);
             });
 
+            // --- HIGH-CONTRAST & PERFECTLY ALIGNED GRAND TOTAL ROW ---
+            tableRowsHTML.push(`
+                <tr class="font-black border-t-2 border-slate-900 shadow-md" style="background-color: #0f172a !important;">
+                    <td class="w-2/3 px-6 py-4 uppercase text-xs tracking-widest" style="color: #f8fafc !important; background-color: #0f172a !important;">Total Operational Expenditure</td>
+                    <td class="w-1/3 px-6 py-4 text-right font-mono text-sm whitespace-nowrap" style="color: #f43f5e !important; background-color: #0f172a !important;">${currency} ${totalExpensesSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                </tr>
+            `);
+
             if (tbody) tbody.innerHTML = tableRowsHTML.join('');
             if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
         }
 
-        document.getElementById('overall-expenses-card').textContent = `${CURRENT_CURRENCY}${totalExpensesSum.toLocaleString()}`
-        
+        // --- UPDATE KPI CARDS ---
+        document.getElementById('overall-expenses-card').textContent = `${currency} ${totalExpensesSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        const deptsCard = document.getElementById('overall-expense-depts-card');
+        if (deptsCard) deptsCard.textContent = sortedDepts.length.toString();
+
+        // --- UPDATE HIDDEN EXCEL EXPORT TABLE ---
         const exportExpensesElem = document.getElementById('overall-expenses-export');
-        if (exportExpensesElem) exportExpensesElem.textContent = `${CURRENT_CURRENCY}${totalExpensesSum.toLocaleString()}`;
+        if (exportExpensesElem) exportExpensesElem.textContent = `${currency} ${totalExpensesSum.toFixed(2)}`;
 
     } catch (error) {
         console.error('Expenses Report Error:', error);
