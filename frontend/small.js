@@ -5741,96 +5741,92 @@ if (typeof localEditState === 'undefined') {
 }
 
 function renderTableRow(room, isEditing = false) {
-    const id = room._id;
+    const id = room._id || room.id;
     
-    // ✅ Fix 1: Read room.imageUrls (matching MongoDB schema)
-    const dbImages = (room.imageUrls && room.imageUrls.length > 0) 
+    // Normalize room properties safely
+    const roomName = room.name || 'Unnamed Category';
+    const roomCode = room.code || 'CAT-' + (id ? id.substring(0, 4) : '0000');
+    const roomPrice = room.basePrice !== undefined ? room.basePrice : 0;
+    const roomOcc = room.maxOccupancy || 2;
+    const roomAmenities = Array.isArray(room.amenities) ? room.amenities : [];
+
+    // Safely extract image URLs from MongoDB response
+    const dbImages = (room.imageUrls && Array.isArray(room.imageUrls) && room.imageUrls.length > 0) 
         ? room.imageUrls 
         : (room.defaultImage ? [room.defaultImage] : []);
 
-    const state = localEditState[id] || { imageUrls: dbImages, newFiles: [], amenities: room.amenities || [] };
+    // Get current edit state or initialize default
+    const state = localEditState[id] || { 
+        imageUrls: dbImages, 
+        newFiles: [], 
+        amenities: roomAmenities,
+        name: roomName,
+        maxOccupancy: roomOcc,
+        basePrice: roomPrice
+    };
 
-    // Combine existing server URLs with blob URLs for new files
-    const newFilePreviews = (state.newFiles || []).map(file => URL.createObjectURL(file));
-    const rawImages = [...(state.imageUrls || []), ...newFilePreviews];
-
-    // ✅ Fix 2: Helper to automatically prefix relative server paths (/uploads/...) with API_BASE_URL
+    // Helper to format absolute/relative URLs
     const formatSrc = (src) => {
         if (!src) return '';
         if (src.startsWith('blob:') || src.startsWith('http://') || src.startsWith('https://')) {
             return src;
         }
-        return `${API_BASE_URL}${src.startsWith('/') ? '' : '/'}${src}`;
+        const base = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '';
+        return `${base}${src.startsWith('/') ? '' : '/'}${src}`;
     };
 
-    const allImages = rawImages.map(formatSrc);
-    const primaryImage = allImages.length > 0 ? allImages[0] : null;
+    // Combine existing server URLs with blob preview URLs for pending files
+    const newFilePreviews = (state.newFiles || []).map(file => URL.createObjectURL(file));
+    const rawImages = [...(state.imageUrls || []), ...newFilePreviews];
+    const primaryImage = rawImages.length > 0 ? formatSrc(rawImages[0]) : null;
 
+    // --- INLINE EDIT MODE ---
     if (isEditing) {
         return `
             <tr id="row-${id}" class="bg-amber-50/60 border-b border-amber-200">
-                <!-- Image Gallery Management Column -->
-                // Inside renderTableRow(room, isEditing = true) -> Preview Column:
-
-<td class="py-3 px-4 align-top">
-    <div class="flex flex-col items-center gap-2">
-        <!-- Main Preview Box -->
-        <div class="relative w-14 h-14 rounded-lg bg-slate-100 border border-slate-300 overflow-hidden group">
-            ${primaryImage 
-                ? `<img src="${primaryImage}" class="w-full h-full object-cover">`
-                : `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 text-[10px]"><i class="fa-solid fa-image text-sm"></i>No Pic</div>`
-            }
-        </div>
-
-        <!-- ➕ ADD / CHANGE BUTTON -->
-        <button type="button" 
-                onclick="triggerRowImagePicker('${id}')" 
-                class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded text-[10px] font-bold flex items-center gap-1 transition">
-            <i class="fa-solid fa-camera text-[10px]"></i> + Add / Change
-        </button>
-
-        <!-- 🖼️ MINI THUMBNAILS WITH DELETE (X) BUTTONS -->
-        <div class="flex flex-wrap gap-1 max-w-[120px] justify-center mt-1">
-            <!-- Existing Server Images -->
-            ${(state.imageUrls || []).map(url => `
-                <div class="relative group w-7 h-7 rounded border border-slate-300 overflow-hidden">
-                    <img src="${formatSrc(url)}" class="w-full h-full object-cover">
-                    <button type="button" 
-                            onclick="removeExistingImageState('${id}', '${url}', event)" 
-                            class="absolute top-0 right-0 bg-rose-600 text-white w-3.5 h-3.5 rounded-bl flex items-center justify-center text-[8px] font-bold shadow-sm hover:bg-rose-700" 
-                            title="Delete Image">
-                        ✕
-                    </button>
-                </div>
-            `).join('')}
-
-            <!-- Newly Selected Files (Pending Upload) -->
-            ${(state.newFiles || []).map((file, idx) => `
-                <div class="relative group w-7 h-7 rounded border border-indigo-400 overflow-hidden">
-                    <img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover">
-                    <button type="button" 
-                            onclick="removePendingImageState('${id}', ${idx}, event)" 
-                            class="absolute top-0 right-0 bg-rose-600 text-white w-3.5 h-3.5 rounded-bl flex items-center justify-center text-[8px] font-bold shadow-sm hover:bg-rose-700" 
-                            title="Remove Pending">
-                        ✕
-                    </button>
-                </div>
-            `).join('')}
-        </div>
-    </div>
-</td>
-
-                <!-- Room Name / Code -->
+                <!-- Preview & Image Management -->
                 <td class="py-3 px-4 align-top">
-                    <input type="text" id="inline-name-${id}" value="${state.name !== undefined ? state.name : (room.name || '')}" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="relative w-14 h-14 rounded-lg bg-slate-100 border border-slate-300 overflow-hidden">
+                            ${primaryImage 
+                                ? `<img src="${primaryImage}" class="w-full h-full object-cover">`
+                                : `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 text-[10px]"><i class="fa-solid fa-image text-sm"></i>No Pic</div>`
+                            }
+                        </div>
+
+                        <button type="button" onclick="triggerRowImagePicker('${id}')" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded text-[10px] font-bold flex items-center gap-1 transition">
+                            <i class="fa-solid fa-camera text-[10px]"></i> + Add / Change
+                        </button>
+
+                        <div class="flex flex-wrap gap-1 max-w-[120px] justify-center mt-1">
+                            ${(state.imageUrls || []).map(url => `
+                                <div class="relative group w-7 h-7 rounded border border-slate-300 overflow-hidden">
+                                    <img src="${formatSrc(url)}" class="w-full h-full object-cover">
+                                    <button type="button" onclick="removeExistingImageState('${id}', '${url}', event)" class="absolute top-0 right-0 bg-rose-600 text-white w-3.5 h-3.5 rounded-bl flex items-center justify-center text-[8px] font-bold shadow-sm hover:bg-rose-700" title="Delete Image">✕</button>
+                                </div>
+                            `).join('')}
+
+                            ${(state.newFiles || []).map((file, idx) => `
+                                <div class="relative group w-7 h-7 rounded border border-indigo-400 overflow-hidden">
+                                    <img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover">
+                                    <button type="button" onclick="removePendingImageState('${id}', ${idx}, event)" class="absolute top-0 right-0 bg-rose-600 text-white w-3.5 h-3.5 rounded-bl flex items-center justify-center text-[8px] font-bold shadow-sm hover:bg-rose-700" title="Remove Pending">✕</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </td>
+
+                <!-- Category Name -->
+                <td class="py-3 px-4 align-top">
+                    <input type="text" id="inline-name-${id}" value="${state.name !== undefined ? state.name : roomName}" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </td>
 
                 <!-- Max Occupancy -->
                 <td class="py-3 px-4 align-top text-center">
-                    <input type="number" id="inline-occ-${id}" value="${state.maxOccupancy !== undefined ? state.maxOccupancy : (room.maxOccupancy || 2)}" class="w-16 text-center py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="number" id="inline-occ-${id}" value="${state.maxOccupancy !== undefined ? state.maxOccupancy : roomOcc}" class="w-16 text-center py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </td>
 
-                <!-- Dynamic Amenities Management -->
+                <!-- Amenities Management -->
                 <td class="py-3 px-4 align-top">
                     <div class="space-y-1.5">
                         <div class="flex flex-wrap gap-1">
@@ -5850,7 +5846,7 @@ function renderTableRow(room, isEditing = false) {
 
                 <!-- Base Price -->
                 <td class="py-3 px-4 align-top text-right">
-                    <input type="number" id="inline-price-${id}" value="${state.basePrice !== undefined ? state.basePrice : (room.basePrice || 0)}" class="w-24 text-right px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="number" id="inline-price-${id}" value="${state.basePrice !== undefined ? state.basePrice : roomPrice}" class="w-24 text-right px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </td>
 
                 <!-- Actions -->
@@ -5868,7 +5864,7 @@ function renderTableRow(room, isEditing = false) {
         `;
     }
 
-    // Standard Read-Only View Row
+    // --- STANDARD READ-ONLY VIEW MODE ---
     return `
         <tr id="row-${id}" class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
             <td class="py-3 px-6">
@@ -5879,19 +5875,19 @@ function renderTableRow(room, isEditing = false) {
                 </div>
             </td>
             <td class="py-3 px-4">
-                <span class="font-bold text-slate-800 block text-xs">${room.name}</span>
-                <span class="text-[10px] text-slate-400 block">${room.code || 'CAT-' + id.substring(0,4)}</span>
+                <span class="font-bold text-slate-800 block text-xs">${roomName}</span>
+                <span class="text-[10px] text-slate-400 block">${roomCode}</span>
             </td>
             <td class="py-3 px-4 text-center">
                 <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold">
-                    <i class="fa-solid fa-user text-[9px]"></i> ${room.maxOccupancy || 2}
+                    <i class="fa-solid fa-user text-[9px]"></i> ${roomOcc}
                 </span>
             </td>
             <td class="py-3 px-4">
-                <span class="text-[11px] text-slate-500 line-clamp-1">${(room.amenities || []).join(', ') || 'Standard Amenities'}</span>
+                <span class="text-[11px] text-slate-500 line-clamp-1">${roomAmenities.length > 0 ? roomAmenities.join(', ') : 'Standard Amenities'}</span>
             </td>
             <td class="py-3 px-4 text-right">
-                <span class="font-mono font-bold text-indigo-600 text-xs">${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX'} ${(room.basePrice || 0).toLocaleString()}</span>
+                <span class="font-mono font-bold text-indigo-600 text-xs">${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX'} ${Number(roomPrice).toLocaleString()}</span>
             </td>
             <td class="py-3 px-6 text-center">
                 <div class="flex items-center justify-center gap-1.5">
@@ -6082,17 +6078,18 @@ async function saveInlineEdit(id) {
     const updatedOcc = occInput ? parseInt(occInput.value, 10) : state.maxOccupancy;
     const updatedPrice = priceInput ? parseFloat(priceInput.value) : state.basePrice;
 
-    // Prepare Multipart FormData for backend (handles string arrays + files)
+    // Prepare Multipart FormData for backend (handles string arrays + binary files)
     const formData = new FormData();
     formData.append('name', updatedName);
     formData.append('maxOccupancy', updatedOcc);
     formData.append('basePrice', updatedPrice);
     
-    // Pass amenities array as JSON string (or append individually depending on backend schema)
+    // Pass amenities array as JSON string
     formData.append('amenities', JSON.stringify(state.amenities || []));
 
     // 1. Send remaining existing image URLs so deleted ones get removed on backend
-    formData.append('existingImageUrls', JSON.stringify(state.imageUrls || []));
+    // Matches 'existingImages' destructured in your Express route
+    formData.append('existingImages', JSON.stringify(state.imageUrls || []));
 
     // 2. Append new binary image files for Multer
     if (state.newFiles && state.newFiles.length > 0) {
@@ -6102,36 +6099,39 @@ async function saveInlineEdit(id) {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/room-types/${id}`, {
+        // Using authenticatedFetch instead of raw fetch
+        const response = await authenticatedFetch(`${API_BASE_URL}/api/room-types/${id}`, {
             method: 'PUT',
-            // DO NOT set 'Content-Type': 'application/json' - browser sets boundary automatically for FormData
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-            },
+            // DO NOT explicitly set 'Content-Type': 'multipart/form-data' 
+            // The browser will automatically set it along with the proper multipart boundary
             body: formData
         });
 
         const result = await response.json();
 
         if (response.ok) {
+            // Extract updated room document from backend response
+            const updatedRoom = result.data || result;
+
             // Update local cache with newly saved backend document
-            const index = roomTypesCache.findIndex(r => r._id === id);
+            const index = roomTypesCache.findIndex(r => r._id === id || r.id === id);
             if (index !== -1) {
-                roomTypesCache[index] = result.data || result;
+                roomTypesCache[index] = updatedRoom;
             }
 
-            // Clean up state
+            // Clean up temporary edit state
             delete localEditState[id];
 
             // Re-render row in read-only view
             const rowEl = document.getElementById(`row-${id}`);
             if (rowEl) {
-                rowEl.outerHTML = renderTableRow(roomTypesCache[index], false);
+                const targetRoom = index !== -1 ? roomTypesCache[index] : updatedRoom;
+                rowEl.outerHTML = renderTableRow(targetRoom, false);
             }
             
             showToast('Room category updated successfully!', 'success');
         } else {
-            showToast(result.message || 'Failed to update room category', 'error');
+            showToast(result.error || result.message || 'Failed to update room category', 'error');
         }
     } catch (err) {
         console.error('Error saving room inline edit:', err);
