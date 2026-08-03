@@ -13332,17 +13332,19 @@ async function saveRowEdits(id) {
 /**
  * Triggers DELETE transaction request processing 
  */
-async function deleteRoomType(id, descriptiveName) {
-    if (!confirm(`Are you sure you want to completely erase "${descriptiveName}"? This action cannot be undone.`)) return;
+async function deleteRoomType(id) {
+    if (!confirm("Are you sure you want to completely erase this room category? This action cannot be undone.")) return;
+
+    // Resolve username using your application's current user context
+    const currentUsername = typeof userData !== 'undefined' && userData ? userData.username : 'Guest';
 
     try {
-        // FIXED URL: added /api prefix
         const res = await authenticatedFetch(`${API_BASE_URL}/api/room-types/${id}`, { 
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ username: currentUser?.username || 'System' }) // Pass body safely if needed
+            body: JSON.stringify({ username: currentUsername })
         });
 
         const data = await res.json();
