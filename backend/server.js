@@ -810,35 +810,118 @@ app.get('/api/room-types', auth, async (req, res) => {
     }
 });
 
-// Update Room Type Price (Secure by hotelId)
-app.put('/api/room-types/:id', auth, async (req, res) => {
+// PUT /api/room-types/:id - Update Room Type
+app.put('/api/room-types/:id', auth, upload.array('images', 5), async (req, res) => {
     try {
-        // 1️⃣ Extract username along with the other update values
-        const { name, basePrice, username } = req.body;
-        
-        const updatedType = await RoomType.findOneAndUpdate(
-            { _id: req.params.id, hotelId: req.user.hotelId }, // Secure check
-            { name, basePrice }, 
-            { new: true, runValidators: true }
-        );
-        
-        if (!updatedType) return res.status(404).json({ error: "Room type not found" });
+        if (!req.user || !req.user.hotelId) {
+            return res.status(401).json({ error: "Unauthorized. Missing hotel configuration." });
+        }
 
-        // 2️⃣ Add the missing Audit Log with the correct parameter order
-        await addAuditLog(
-            'Room Type Updated', 
-            username || req.user.username || 'System', 
-            req.user.hotelId, // ✅ 3rd argument: hotelId
-            {                 // ✅ 4th argument: details object
-                roomTypeId: req.params.id,
-                newName: updatedType.name,
-                newPrice: updatedType.basePrice
+        const { id } = req.params;
+        const { name, basePrice, maxOccupancy, username, amenities, existingImages, existingImageUrls } = req.body;
+        const rawExisting = existingImages !== undefined ? existingImages : existingImageUrls;
+
+        // 1. Find Room Type cleanly
+        const roomType = await RoomType.findOne({ _id: id, hotelId: req.user.hotelId });
+        if (!roomType) {
+            return res.status(404).json({ error: "Room type not found or access denied." });
+        }
+
+        // 2. Update scalar fields
+        if (name) roomType.name = name.trim();
+        if (basePrice !== undefined && basePrice !== '') roomType.basePrice = parseFloat(basePrice);
+        if (maxOccupancy !== undefined && maxOccupancy !== '') roomType.maxOccupancy = parseInt(maxOccupancy, 10);
+
+        // 3. Parse amenities safely
+        if (amenities !== undefined) {
+            try {
+                if (typeof amenities === 'string') {
+                    roomType.amenities = amenities.startsWith('[')
+                        ? JSON.parse(amenities)
+                        : amenities.split(',').map(a => a.trim()).filter(Boolean);
+                } else if (Array.isArray(amenities)) {
+                    roomType.amenities = amenities;
+                }
+            } catch (pErr) {
+                console.warn("⚠️ Could not parse amenities:", pErr);
             }
-        );
+        }
 
-        res.json(updatedType);
+        // 4. Parse retained existing images
+        let retainedUrls = roomType.imageUrls || [];
+        if (rawExisting !== undefined) {
+            try {
+                if (typeof rawExisting === 'string') {
+                    retainedUrls = rawExisting.startsWith('[')
+                        ? JSON.parse(rawExisting)
+                        : [rawExisting];
+                } else if (Array.isArray(rawExisting)) {
+                    retainedUrls = rawExisting;
+                }
+            } catch (pErr) {
+                console.warn("⚠️ Could not parse existing images JSON:", pErr);
+                retainedUrls = [];
+            }
+        }
+
+        // 5. Safe file URL formatting (Prevents crash if formatFileUrl is missing)
+        let newUrls = [];
+        if (req.files && req.files.length > 0) {
+            newUrls = req.files.map(file => {
+                if (typeof formatFileUrl === 'function') {
+                    return formatFileUrl(file);
+                }
+                // Default fallback path for Multer files
+                return file.path ? `/uploads/${file.filename || file.originalname}` : `/uploads/${file.originalname}`;
+            });
+        }
+
+        // Combine retained + newly uploaded
+        roomType.imageUrls = [...retainedUrls, ...newUrls];
+
+        // 6. Default image fallback logic
+        if (roomType.imageUrls.length === 0) {
+            roomType.defaultImage = '/uploads/room_.webp';
+        } else if (!roomType.imageUrls.includes(roomType.defaultImage) || roomType.defaultImage === '/uploads/room_.webp') {
+            roomType.defaultImage = roomType.imageUrls[0];
+        }
+
+        await roomType.save();
+
+        // 7. Audit Log with try/catch safeguard (Prevents crash if AuditLog fails)
+        try {
+            if (typeof addAuditLog === 'function') {
+                await addAuditLog(
+                    'Room Type Updated', 
+                    username || req.user.username || 'System', 
+                    req.user.hotelId,
+                    {
+                        roomTypeId: roomType._id,
+                        roomTypeName: roomType.name,
+                        basePrice: roomType.basePrice,
+                        maxOccupancy: roomType.maxOccupancy,
+                        imageCount: roomType.imageUrls.length
+                    }
+                );
+            }
+        } catch (auditErr) {
+            console.error("Non-critical AuditLog error:", auditErr);
+        }
+
+        return res.status(200).json(roomType);
+
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error("❌ RoomType update failed:", err);
+        
+        // Handle Mongoose duplicate key or cast errors explicitly
+        if (err.code === 11000) {
+            return res.status(400).json({ error: "A room category with this name already exists." });
+        }
+        if (err.name === 'CastError') {
+            return res.status(400).json({ error: "Invalid Room Type ID format." });
+        }
+
+        return res.status(500).json({ error: err.message || "Internal server error." });
     }
 });
 
