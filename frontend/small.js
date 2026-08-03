@@ -8207,46 +8207,45 @@ function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfi
         const existingSummaries = tbody.querySelectorAll('.summary-row');
         existingSummaries.forEach(el => el.remove());
 
-        // Spacer Row across all 9 columns
+        // Clean spacer row across all 9 columns
         const spacer = tbody.insertRow();
         spacer.className = "summary-row border-none";
-        spacer.innerHTML = `<td colspan="9" class="h-6 bg-white"></td>`;
+        spacer.innerHTML = `<td colspan="9" class="h-4 bg-white"></td>`;
 
         // Departmental Sub-totals Loop
         for (const [dept, metrics] of Object.entries(departmentTotals)) {
             const row = tbody.insertRow();
-            row.className = "summary-row bg-slate-50/80 text-slate-700 font-medium border-b border-slate-200/60";
+            row.className = "summary-row bg-slate-50 text-slate-700 font-semibold border-t border-b border-slate-200";
             
             const profitDisplay = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(metrics.profit).toLocaleString()}`;
 
-            // Column Mapping (Matches 9-column layout):
-            // 1-4 (Dept, Item, Qty, BP) -> colspan="4"
-            // 5 (SP)                   -> Sales total
-            // 6 (Profit)               -> Profit total
-            // 7-9 (%, Date, Actions)   -> colspan="3"
+            // Col 1-4: Dept, Item, Qty, BP (Right-aligned label)
+            // Col 5: SP Total
+            // Col 6: Profit Total
+            // Col 7-9: Empty spacer
             row.innerHTML = `
-                <td colspan="4" class="text-right py-3 pr-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">${dept} Subtotal:</td>
-                <td class="px-6 py-3 font-mono font-bold text-indigo-600">${CURRENT_CURRENCY} ${metrics.sales.toLocaleString()}</td>
-                <td class="px-6 py-3 font-mono font-bold text-emerald-600">${profitDisplay}</td>
+                <td colspan="4" class="text-right py-3 px-6 text-xs uppercase tracking-wider font-bold text-slate-500">${dept} Subtotal:</td>
+                <td class="px-6 py-3 font-mono font-bold text-indigo-600 whitespace-nowrap">${CURRENT_CURRENCY} ${metrics.sales.toLocaleString()}</td>
+                <td class="px-6 py-3 font-mono font-bold text-emerald-600 whitespace-nowrap">${profitDisplay}</td>
                 <td colspan="3"></td>
             `;
         }
 
-        // Grand Total Row Block
+        // Grand Total Row Block (High-Contrast Slate Theme)
         const grandRow = tbody.insertRow();
-        grandRow.className = "summary-row bg-indigo-600 text-white font-bold border-none shadow-sm";
+        grandRow.className = "summary-row bg-slate-800 text-white font-bold border-t-2 border-slate-900 shadow-md";
         
         const grandProfitDisplay = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(grandProfitTotal).toLocaleString()}`;
 
         grandRow.innerHTML = `
-            <td colspan="4" class="text-right py-3.5 pr-4 text-sm uppercase tracking-widest font-black">Grand Total:</td>
-            <td class="px-6 py-3.5 text-base font-mono font-black">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</td>
-            <td class="px-6 py-3.5 text-base font-mono font-black text-emerald-300">${grandProfitDisplay}</td>
+            <td colspan="4" class="text-right py-3.5 px-6 text-xs uppercase tracking-widest font-black text-slate-300">Grand Total:</td>
+            <td class="px-6 py-3.5 text-sm font-mono font-black text-indigo-300 whitespace-nowrap">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</td>
+            <td class="px-6 py-3.5 text-sm font-mono font-black text-emerald-400 whitespace-nowrap">${grandProfitDisplay}</td>
             <td colspan="3"></td>
         `;
     }
 
-    // --- 2. MOBILE VIEWPORT PROCESSING (CARD CONTAINER MODULE) ---
+    // --- 2. MOBILE VIEWPORT PROCESSING ---
     const summaryContainer = document.getElementById('sales-summary');
     if (summaryContainer) {
         const mobileDeptRowsHtml = Object.entries(departmentTotals)
@@ -8279,14 +8278,14 @@ function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfi
                     ${mobileDeptRowsHtml || '<div class="text-xs text-slate-400 italic py-1">No departmental records calculated.</div>'}
                 </div>
 
-                <div class="mt-3 p-3 bg-indigo-600 text-white rounded-xl space-y-2 shadow-inner">
+                <div class="mt-3 p-3 bg-slate-800 text-white rounded-xl space-y-2 shadow-inner">
                     <div class="flex justify-between items-center">
-                        <span class="text-[10px] uppercase tracking-widest font-black">Grand Total Sales</span>
-                        <span class="text-base font-mono font-black">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</span>
+                        <span class="text-[10px] uppercase tracking-widest font-black text-slate-300">Grand Total Sales</span>
+                        <span class="text-base font-mono font-black text-indigo-300">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</span>
                     </div>
-                    <div class="flex justify-between items-center pt-2 border-t border-indigo-500/50">
-                        <span class="text-[10px] uppercase tracking-widest font-black text-indigo-200">Grand Total Profit</span>
-                        <span class="text-base font-mono font-black text-emerald-300">${totalProfitText}</span>
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-700">
+                        <span class="text-[10px] uppercase tracking-widest font-black text-slate-300">Grand Total Profit</span>
+                        <span class="text-base font-mono font-black text-emerald-400">${totalProfitText}</span>
                     </div>
                 </div>
             </div>
