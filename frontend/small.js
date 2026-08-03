@@ -5743,19 +5743,19 @@ if (typeof localEditState === 'undefined') {
 function renderTableRow(room, isEditing = false) {
     const id = room._id || room.id;
     
-    // Normalize room properties safely
+    // Fallback safeguards for properties
     const roomName = room.name || 'Unnamed Category';
     const roomCode = room.code || 'CAT-' + (id ? id.substring(0, 4) : '0000');
     const roomPrice = room.basePrice !== undefined ? room.basePrice : 0;
     const roomOcc = room.maxOccupancy || 2;
     const roomAmenities = Array.isArray(room.amenities) ? room.amenities : [];
 
-    // Safely extract image URLs from MongoDB response
+    // Extract image URLs safely
     const dbImages = (room.imageUrls && Array.isArray(room.imageUrls) && room.imageUrls.length > 0) 
         ? room.imageUrls 
         : (room.defaultImage ? [room.defaultImage] : []);
 
-    // Get current edit state or initialize default
+    // Local edit state lookup
     const state = localEditState[id] || { 
         imageUrls: dbImages, 
         newFiles: [], 
@@ -5775,7 +5775,6 @@ function renderTableRow(room, isEditing = false) {
         return `${base}${src.startsWith('/') ? '' : '/'}${src}`;
     };
 
-    // Combine existing server URLs with blob preview URLs for pending files
     const newFilePreviews = (state.newFiles || []).map(file => URL.createObjectURL(file));
     const rawImages = [...(state.imageUrls || []), ...newFilePreviews];
     const primaryImage = rawImages.length > 0 ? formatSrc(rawImages[0]) : null;
@@ -5784,7 +5783,6 @@ function renderTableRow(room, isEditing = false) {
     if (isEditing) {
         return `
             <tr id="row-${id}" class="bg-amber-50/60 border-b border-amber-200">
-                <!-- Preview & Image Management -->
                 <td class="py-3 px-4 align-top">
                     <div class="flex flex-col items-center gap-2">
                         <div class="relative w-14 h-14 rounded-lg bg-slate-100 border border-slate-300 overflow-hidden">
@@ -5816,17 +5814,14 @@ function renderTableRow(room, isEditing = false) {
                     </div>
                 </td>
 
-                <!-- Category Name -->
                 <td class="py-3 px-4 align-top">
                     <input type="text" id="inline-name-${id}" value="${state.name !== undefined ? state.name : roomName}" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </td>
 
-                <!-- Max Occupancy -->
                 <td class="py-3 px-4 align-top text-center">
                     <input type="number" id="inline-occ-${id}" value="${state.maxOccupancy !== undefined ? state.maxOccupancy : roomOcc}" class="w-16 text-center py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </td>
 
-                <!-- Amenities Management -->
                 <td class="py-3 px-4 align-top">
                     <div class="space-y-1.5">
                         <div class="flex flex-wrap gap-1">
@@ -5844,12 +5839,10 @@ function renderTableRow(room, isEditing = false) {
                     </div>
                 </td>
 
-                <!-- Base Price -->
                 <td class="py-3 px-4 align-top text-right">
                     <input type="number" id="inline-price-${id}" value="${state.basePrice !== undefined ? state.basePrice : roomPrice}" class="w-24 text-right px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </td>
 
-                <!-- Actions -->
                 <td class="py-3 px-6 align-top text-center">
                     <div class="flex flex-col gap-1 items-center">
                         <button onclick="saveInlineEdit('${id}')" class="w-20 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold shadow-xs">
@@ -5864,9 +5857,10 @@ function renderTableRow(room, isEditing = false) {
         `;
     }
 
-    // --- STANDARD READ-ONLY VIEW MODE ---
+    // --- STANDARD READ-ONLY VIEW MODE (6 distinct <td> columns) ---
     return `
         <tr id="row-${id}" class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
+            <!-- 1. PREVIEW -->
             <td class="py-3 px-6">
                 <div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-slate-400">
                     ${primaryImage 
@@ -5874,21 +5868,31 @@ function renderTableRow(room, isEditing = false) {
                         : `<i class="fa-solid fa-bed text-sm"></i>`}
                 </div>
             </td>
+
+            <!-- 2. CATEGORY DETAILS -->
             <td class="py-3 px-4">
                 <span class="font-bold text-slate-800 block text-xs">${roomName}</span>
                 <span class="text-[10px] text-slate-400 block">${roomCode}</span>
             </td>
+
+            <!-- 3. MAX OCCUPANCY -->
             <td class="py-3 px-4 text-center">
                 <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold">
                     <i class="fa-solid fa-user text-[9px]"></i> ${roomOcc}
                 </span>
             </td>
+
+            <!-- 4. STANDARD AMENITIES -->
             <td class="py-3 px-4">
                 <span class="text-[11px] text-slate-500 line-clamp-1">${roomAmenities.length > 0 ? roomAmenities.join(', ') : 'Standard Amenities'}</span>
             </td>
+
+            <!-- 5. BASE RACK RATE -->
             <td class="py-3 px-4 text-right">
                 <span class="font-mono font-bold text-indigo-600 text-xs">${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX'} ${Number(roomPrice).toLocaleString()}</span>
             </td>
+
+            <!-- 6. ACTIONS -->
             <td class="py-3 px-6 text-center">
                 <div class="flex items-center justify-center gap-1.5">
                     <button onclick="enableInlineEdit('${id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded transition" title="Quick Edit Inline">
