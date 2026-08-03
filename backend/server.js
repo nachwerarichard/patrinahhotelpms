@@ -1117,6 +1117,7 @@ const clientAccountSchema = new mongoose.Schema({
         date: { type: Date, default: Date.now }
     }],
     totalCharges: { type: Number, default: 0 },
+    finalAmountPaid: { type: Number, default: 0 },
     
     // Audit reporting trackers
     settledAt: { type: Date },
@@ -2097,26 +2098,43 @@ app.post('/api/bookings/:id/move', auth, async (req, res) => {
             { $set: { status: 'clean' } }
         );
 
-        // 4️⃣ Update new room → occupied or blocked
+        // 4️⃣ Update new room → blocked
         newRoom.status = 'blocked';
         await newRoom.save();
 
-        // 5️⃣ Update booking (Capture old room first!)
+        // 5️⃣ Update booking (Recalculate financials if price changed)
         const oldRoomNumber = booking.room; 
-        
         booking.room = newRoomNumber;
-        if (overridePrice) booking.amtPerNight = overridePrice;
+        
+        if (overridePrice !== undefined && overridePrice !== null && overridePrice !== '') {
+            const newPrice = Number(overridePrice);
+            const nights = Number(booking.nights) || 1;
+            const paid = Number(booking.amountPaid) || 0;
+
+            booking.amtPerNight = newPrice;
+            booking.totalDue = newPrice * nights;
+            booking.balance = booking.totalDue - paid;
+            
+            // Optionally update paymentStatus if balance changes
+            if (booking.balance <= 0 && paid > 0) {
+                booking.paymentStatus = 'Paid';
+            } else if (paid > 0) {
+                booking.paymentStatus = 'Partially Paid';
+            }
+        }
+        
         await booking.save();
 
-        // 6️⃣ Audit (Pass req.user.hotelId as the 3rd argument)
+        // 6️⃣ Audit Log
         await addAuditLog(
             'Room Moved', 
             username || 'System', 
-            req.user.hotelId, // ✅ 3rd argument: hotelId
-            {                 // ✅ 4th argument: details object
+            req.user.hotelId, 
+            {                 
                 bookingId: booking.id,
-                oldRoom: oldRoomNumber, // ✅ Correctly tracks the original room
+                oldRoom: oldRoomNumber, 
                 newRoom: newRoomNumber,
+                newPrice: overridePrice || booking.amtPerNight,
                 reason
             }
         );

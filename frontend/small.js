@@ -2075,15 +2075,13 @@ document.getElementById('cancelMoveBtn').addEventListener('click', () => {
 });
 
 document.getElementById('confirmMoveBtn').addEventListener('click', async () => {
-    // 1. Get session data
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
-    const currentUsername = sessionData?.username;
+    // 1. Get session data for payload
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const currentUsername = sessionData?.username || 'System';
 
-    const newRoomNumber = document.getElementById('availableRoomsSelect').value;
-    const negotiatedPrice = document.getElementById('moveRoomNegotiatedPrice').value;
-    const moveReason = document.getElementById('moveRoomReason').value.trim(); 
+    const newRoomNumber = document.getElementById('availableRoomsSelect')?.value;
+    const negotiatedPrice = document.getElementById('moveRoomNegotiatedPrice')?.value;
+    const moveReason = document.getElementById('moveRoomReason')?.value.trim(); 
     const modal = document.getElementById('moveRoomModal');
 
     try {
@@ -2095,23 +2093,19 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
             return showMessage('Error', 'Please provide a reason for the room move.', true);
         }
 
-        // 2. Add Authorization and include hotelId in the payload
-        const response = await fetch(`${API_BASE_URL}/bookings/${selectedBookingId}/move`, {
+        // 2. Use authenticatedFetch instead of standard fetch
+        const response = await authenticatedFetch(`${API_BASE_URL}/bookings/${selectedBookingId}/move`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`, // Pass security token
-                    'x-hotel-id': sessionData?.hotelId
-
-            },
             body: JSON.stringify({ 
                 newRoomNumber, 
                 overridePrice: negotiatedPrice, 
                 reason: moveReason,
-                username: currentUsername,
-                hotelId: hotelId // Validate that this room move stays within the correct hotel
+                username: currentUsername
             })
         });
+
+        // Safety check if user was unauthenticated and redirected
+        if (!response) return;
 
         const data = await response.json();
 
@@ -2121,7 +2115,7 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
         document.getElementById('moveRoomReason').value = '';
         
         modal.classList.add('hidden');
-        modal.classList.remove('flex'); // Ensure flex is removed if you use it for centering
+        modal.classList.remove('flex');
         showMessage('Success', data.message);
 
         // Refresh UI
@@ -11486,17 +11480,18 @@ async function generatePaymentsReports() {
 
         // 5. Build dynamic table layout rows
         accounts.forEach(account => {
-            const paidAmount = account.finalAmountPaid || 0;
-            grandTotal += paidAmount;
+            const paidAmount = Number(account.finalAmountPaid ?? account.totalCharges ?? 0);
+    grandTotal += paidAmount;
 
-            // Formulate item breakdown descriptive string lists
-            (account.charges || []).forEach(c => {
-                if (departmentSplits[c.type] !== undefined) {
-                    departmentSplits[c.type] += (c.amount || 0);
-                } else {
-                    departmentSplits['Other'] += (c.amount || 0);
-                }
-            });
+    // Safely sum up department totals
+    (account.charges || []).forEach(c => {
+        const chargeAmount = Number(c.amount || 0);
+        if (departmentSplits[c.type] !== undefined) {
+            departmentSplits[c.type] += chargeAmount;
+        } else {
+            departmentSplits['Other'] += chargeAmount;
+        }
+    });
 
             const itemizedSummary = (account.charges || [])
                 .map(c => `${c.description}`)
