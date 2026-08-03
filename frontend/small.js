@@ -5915,147 +5915,162 @@ function openUserModal(editData = null) {
 
 async function fetchUsers() {
     try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/admin/users`, {
-            method: 'GET'
-        });
+        const res = await authenticatedFetch(`${API_BASE_URL}/admin/users`, { method: 'GET' });
 
-        if (!res) return;
-        if (!res.ok) throw new Error("Connection Failed");
+        if (!res || !res.ok) throw new Error("Connection Failed");
 
         const users = await res.json();
         
-        // Update Global Stats Counts
+        // Update Industry KPI Counters
         const staffCountEl = document.getElementById('totalStaffCount');
+        const activeStaffCountEl = document.getElementById('activeStaffCount');
+        const adminStaffCountEl = document.getElementById('adminStaffCount');
+
         if (staffCountEl) staffCountEl.innerText = users.length;
+        if (activeStaffCountEl) activeStaffCountEl.innerText = users.filter(u => u.status !== 'inactive').length;
+        if (adminStaffCountEl) adminStaffCountEl.innerText = users.filter(u => u.role === 'admin').length;
         
-        // Update Server Status Indicators
+        // Update Connection Indicator
         const statusEl = document.getElementById('connectionStatus');
         if (statusEl) {
-            statusEl.innerText = "Server Online";
+            statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-green-500"></span> Server Online`;
             statusEl.className = "flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 px-3 py-1.5 rounded-full border border-green-200";
-            const dot = statusEl.querySelector('span');
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-green-500";
         }
 
         const tbody = document.getElementById('userTableBody');
         const mobileGrid = document.getElementById('userMobileGrid');
         
-        // Purge raw DOM contents before rendering loops
         if (tbody) tbody.innerHTML = '';
         if (mobileGrid) mobileGrid.innerHTML = '';
 
         users.forEach(user => {
             const firstLetter = user.username ? user.username.charAt(0).toUpperCase() : '?';
             const roleClass = typeof getRoleClass === 'function' ? getRoleClass(user.role) : 'bg-slate-100 text-slate-700 border-slate-200';
-            const upperRole = user.role ? user.role.toUpperCase() : 'UNKNOWN';
+            const upperRole = user.role ? user.role.toUpperCase() : 'UNASSIGNED';
+            const isInactive = user.status === 'inactive';
 
-            // Shared modular dropdown element template string
+            // Select Dropdown Template
             const selectOptionsHtml = `
                 <select onchange="updateRole('${user._id}', this.value, '${user.username}')" 
-                  class="w-full sm:w-auto text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition shadow-sm text-slate-700">
+                  class="text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition text-slate-700">
                     <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
                     <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
                     <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
                     <option value="front office" ${user.role === 'front office' ? 'selected' : ''}>Front Office</option>
                     <option value="chef" ${user.role === 'chef' ? 'selected' : ''}>Chef</option>
-                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>System Administrator</option>
                 </select>
             `;
 
-            // Shared modular action utility button group template string
+            // Action Buttons Template
             const actionButtonsHtml = `
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 justify-end">
                     <button data-id="${user._id}" 
                             data-username="${user.username}" 
                             data-role="${user.role}"
                             onclick="handleEditClick(this)" 
-                            class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-lg transition-all border border-indigo-100/70 active:scale-95">
+                            class="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-lg transition border border-indigo-100"
+                            title="Edit Account Details">
                         <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
-                        <span>Edit</span>
                     </button>
 
                     <button onclick="deleteUser('${user._id}')" 
-                            class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100/70 active:scale-95">
+                            class="p-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition border border-red-100"
+                            title="Revoke / Deactivate Access">
                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                        <span>Delete</span>
                     </button>
                 </div>
             `;
 
-            // --- A. POPULATE VIEW 1: DESKTOP TABLE ROW LAYOUT ---
+            // DESKTOP ROW
             if (tbody) {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
+                tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100 staff-row";
                 tr.innerHTML = `
-                    <td class="px-8 py-4">
+                    <td class="px-6 py-3.5">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 text-sm">
+                            <div class="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 text-xs">
                                 ${firstLetter}
                             </div>
-                            <span class="font-semibold text-slate-700">${user.username}</span>
+                            <div>
+                                <span class="font-bold text-slate-800 block leading-tight staff-name">${user.username}</span>
+                                <span class="text-[10px] font-mono text-slate-400">ID: ${user._id.substring(0, 8)}</span>
+                            </div>
                         </div>
                     </td>
-                    <td class="px-8 py-4">
-                        <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-wider border ${roleClass}">
+                    <td class="px-6 py-3.5">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider border ${roleClass}">
                             ${upperRole}
                         </span>
                     </td>
-                    <td class="px-8 py-4">${selectOptionsHtml}</td>
-                    <td class="px-8 py-4 text-right">
-                        <div class="flex justify-end">${actionButtonsHtml}</div>
+                    <td class="px-6 py-3.5">${selectOptionsHtml}</td>
+                    <td class="px-6 py-3.5 text-center">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${isInactive ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}">
+                            <span class="w-1.5 h-1.5 rounded-full ${isInactive ? 'bg-red-500' : 'bg-emerald-500'}"></span>
+                            ${isInactive ? 'Inactive' : 'Active'}
+                        </span>
                     </td>
+                    <td class="px-6 py-3.5 text-right">${actionButtonsHtml}</td>
                 `;
                 tbody.appendChild(tr);
             }
 
-            // --- B. POPULATE VIEW 2: SMARTPHONE RESPONSIVE LEDGER CARD ---
+            // MOBILE CARD
             if (mobileGrid) {
                 const card = document.createElement('div');
-                card.className = "p-4 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 hover:border-slate-300 transition-all";
+                card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-xs space-y-3 staff-card";
                 card.innerHTML = `
-                    <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2.5">
-                            <div class="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 text-xs">
+                            <div class="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 text-xs">
                                 ${firstLetter}
                             </div>
                             <div>
-                                <h4 class="text-sm font-bold text-slate-800">${user.username}</h4>
-                                <span class="text-[9px] uppercase tracking-wider font-extrabold text-slate-400 block mt-0.5">Personnel ID Target</span>
+                                <h4 class="text-sm font-bold text-slate-800 staff-name">${user.username}</h4>
+                                <span class="text-[10px] font-mono text-slate-400">ID: ${user._id.substring(0, 8)}</span>
                             </div>
                         </div>
-                        <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-wider border ${roleClass}">
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold tracking-wider border ${roleClass}">
                             ${upperRole}
                         </span>
                     </div>
 
-                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[10px] uppercase font-bold tracking-tight text-slate-400">Modify Access Tier Permissions</label>
-                            ${selectOptionsHtml}
-                        </div>
+                    <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                        ${selectOptionsHtml}
+                        ${actionButtonsHtml}
                     </div>
-
-                    <div class="pt-1">${actionButtonsHtml}</div>
                 `;
                 mobileGrid.appendChild(card);
             }
         });
 
-        // Re-initialize vector icons to prevent visual clipping
-        if (window.lucide) {
-            window.lucide.createIcons();
-        } else {
-            console.error("Lucide library asset reference error.");
-        }
+        if (window.lucide) window.lucide.createIcons();
 
     } catch (err) {
         console.error("Fetch Operational System Fault Error:", err);
         const statusEl = document.getElementById('connectionStatus');
         if (statusEl) {
-            statusEl.innerText = "Offline";
+            statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500"></span> Offline`;
             statusEl.className = "flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-700 px-3 py-1.5 rounded-full border border-red-200";
         }
     }
+}
+
+// Client-side search helper function
+function filterStaffTable() {
+    const query = document.getElementById('staffSearchInput').value.toLowerCase();
+    
+    // Desktop Search
+    document.querySelectorAll('.staff-row').forEach(row => {
+        const name = row.querySelector('.staff-name')?.innerText.toLowerCase() || '';
+        row.style.display = name.includes(query) ? '' : 'none';
+    });
+
+    // Mobile Search
+    document.querySelectorAll('.staff-card').forEach(card => {
+        const name = card.querySelector('.staff-name')?.innerText.toLowerCase() || '';
+        card.style.display = name.includes(query) ? '' : 'none';
+    });
 }
 
 async function handleSaveUser() {
