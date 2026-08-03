@@ -6038,7 +6038,7 @@ async function saveInlineEdit(id) {
     const state = localEditState[id];
     if (!state) return;
 
-    // Grab values from inputs (or fallback to state)
+    // Grab values from inputs
     const nameInput = document.getElementById(`inline-name-${id}`);
     const occInput = document.getElementById(`inline-occ-${id}`);
     const priceInput = document.getElementById(`inline-price-${id}`);
@@ -6047,64 +6047,70 @@ async function saveInlineEdit(id) {
     const updatedOcc = occInput ? parseInt(occInput.value, 10) : state.maxOccupancy;
     const updatedPrice = priceInput ? parseFloat(priceInput.value) : state.basePrice;
 
-    // Prepare Multipart FormData for backend (handles string arrays + binary files)
+    // Safe toast/message fallback
+    const notify = typeof showToast === 'function' ? showToast : (typeof showMessage === 'function' ? showMessage : console.log);
+
+    // Prepare Multipart FormData
     const formData = new FormData();
     formData.append('name', updatedName);
     formData.append('maxOccupancy', updatedOcc);
     formData.append('basePrice', updatedPrice);
-    
-    // Pass amenities array as JSON string
     formData.append('amenities', JSON.stringify(state.amenities || []));
-
-    // 1. Send remaining existing image URLs so deleted ones get removed on backend
-    // Matches 'existingImages' destructured in your Express route
     formData.append('existingImages', JSON.stringify(state.imageUrls || []));
 
-    // 2. Append new binary image files for Multer
     if (state.newFiles && state.newFiles.length > 0) {
         state.newFiles.forEach(file => {
-            formData.append('images', file); // Matches upload.array('images') in Express
+            formData.append('images', file);
         });
     }
 
     try {
-        // Using authenticatedFetch instead of raw fetch
-        const response = await authenticatedFetch(`${API_BASE_URL}/room-types/${id}`, {
+        // Option A: If authenticatedFetch automatically strips 'Content-Type' for FormData:
+        // Option B: Pass body directly. If authenticatedFetch sets application/json by default, standard fetch with token is safer below:
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        
+        const response = await fetch(`${API_BASE_URL}/room-types/${id}`, {
             method: 'PUT',
-            // DO NOT explicitly set 'Content-Type': 'multipart/form-data' 
-            // The browser will automatically set it along with the proper multipart boundary
+            headers: {
+                'Authorization': `Bearer ${token}`
+                // DO NOT set 'Content-Type' here, let the browser set boundary
+            },
             body: formData
         });
 
-        const result = await response.json();
+        // Safely inspect response before parsing JSON
+        const contentType = response.headers.get("content-type");
+        let result;
+        if (contentType && contentType.includes("application/json")) {
+            result = await response.json();
+        } else {
+            const rawText = await response.text();
+            throw new Error(`Server returned non-JSON response (${response.status}). Check server logs.`);
+        }
 
         if (response.ok) {
-            // Extract updated room document from backend response
             const updatedRoom = result.data || result;
 
-            // Update local cache with newly saved backend document
-            const index = roomTypesCache.findIndex(r => r._id === id || r.id === id);
+            const index = roomTypesCache.findIndex(r => (r._id || r.id) === id);
             if (index !== -1) {
                 roomTypesCache[index] = updatedRoom;
             }
 
-            // Clean up temporary edit state
             delete localEditState[id];
 
-            // Re-render row in read-only view
             const rowEl = document.getElementById(`row-${id}`);
             if (rowEl) {
                 const targetRoom = index !== -1 ? roomTypesCache[index] : updatedRoom;
                 rowEl.outerHTML = renderTableRow(targetRoom, false);
             }
             
-            showToast('Room category updated successfully!', 'success');
+            notify('Room category updated successfully!', 'success');
         } else {
-            showToast(result.error || result.message || 'Failed to update room category', 'error');
+            notify(result.error || result.message || 'Failed to update room category', true);
         }
     } catch (err) {
         console.error('Error saving room inline edit:', err);
-        showToast('Network error while saving changes', 'error');
+        notify(err.message || 'Network error while saving changes', true);
     }
 }
 

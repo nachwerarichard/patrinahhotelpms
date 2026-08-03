@@ -510,8 +510,6 @@ app.put('/api/room-types/:id', auth, upload.array('images', 5), async (req, res)
         }
 
         const { id } = req.params;
-        
-        // ✅ FIX 1: Accept both existingImages and existingImageUrls to match frontend payloads
         const { name, basePrice, maxOccupancy, username, amenities, existingImages, existingImageUrls } = req.body;
         const rawExisting = existingImages !== undefined ? existingImages : existingImageUrls;
 
@@ -537,11 +535,10 @@ app.put('/api/room-types/:id', auth, upload.array('images', 5), async (req, res)
                 }
             } catch (pErr) {
                 console.warn("⚠️ Could not parse amenities:", pErr);
-                // Keep previous amenities if parsing fails rather than blowing them away
             }
         }
 
-        // ✅ FIX 2: Parse retained existing images correctly
+        // Parse retained existing images correctly
         let retainedUrls = roomType.imageUrls || [];
         if (rawExisting !== undefined) {
             try {
@@ -553,15 +550,21 @@ app.put('/api/room-types/:id', auth, upload.array('images', 5), async (req, res)
                     retainedUrls = rawExisting;
                 }
             } catch (pErr) {
-                console.warn("⚠️ Could not parse existing images JSON, retaining empty array.");
+                console.warn("⚠️ Could not parse existing images JSON:", pErr);
                 retainedUrls = [];
             }
         }
 
-        // ✅ FIX 3: Append new uploaded image URLs
+        // Append new uploaded image URLs safely
         let newUrls = [];
         if (req.files && req.files.length > 0) {
-            newUrls = req.files.map(file => formatFileUrl(file));
+            newUrls = req.files.map(file => {
+                // Defensive fallback if formatFileUrl helper isn't defined globally
+                if (typeof formatFileUrl === 'function') {
+                    return formatFileUrl(file);
+                }
+                return `/uploads/${file.filename || file.originalname}`;
+            });
         }
 
         // Combine retained old URLs + new file uploads
@@ -576,19 +579,25 @@ app.put('/api/room-types/:id', auth, upload.array('images', 5), async (req, res)
 
         await roomType.save();
 
-        // Audit Log entry
-        await addAuditLog(
-            'Room Type Updated', 
-            username || req.user.username || 'System', 
-            req.user.hotelId,
-            {
-                roomTypeId: roomType._id,
-                roomTypeName: roomType.name,
-                basePrice: roomType.basePrice,
-                maxOccupancy: roomType.maxOccupancy,
-                imageCount: roomType.imageUrls.length
+        // Audit Log entry with failsafe wrapper
+        try {
+            if (typeof addAuditLog === 'function') {
+                await addAuditLog(
+                    'Room Type Updated', 
+                    username || req.user.username || 'System', 
+                    req.user.hotelId,
+                    {
+                        roomTypeId: roomType._id,
+                        roomTypeName: roomType.name,
+                        basePrice: roomType.basePrice,
+                        maxOccupancy: roomType.maxOccupancy,
+                        imageCount: roomType.imageUrls.length
+                    }
+                );
             }
-        );
+        } catch (auditErr) {
+            console.error("Non-critical AuditLog error:", auditErr);
+        }
 
         return res.status(200).json(roomType);
 
@@ -1367,7 +1376,7 @@ app.get('/api/pos/reports/daily', auth, async (req, res) => {
         const end = new Date(`${endDate}T23:59:59.999Z`);
 
         // Dynamic MongoDB Query Criteria
-        let queryCriteria = { 
+        /room-typesqueryCriteria = { 
             hotelId, 
             date: { $gte: start, $lte: end } 
         };
