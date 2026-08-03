@@ -5781,81 +5781,89 @@ function renderTableRow(room, isEditing = false) {
 
     // --- INLINE EDIT MODE ---
     if (isEditing) {
-        return `
-            <tr id="row-${id}" class="bg-amber-50/60 border-b border-amber-200">
-                <td class="py-3 px-4 align-top">
-                    <div class="flex flex-col items-center gap-2">
-                        <div class="relative w-14 h-14 rounded-lg bg-slate-100 border border-slate-300 overflow-hidden">
-                            ${primaryImage 
-                                ? `<img src="${primaryImage}" class="w-full h-full object-cover">`
-                                : `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 text-[10px]"><i class="fa-solid fa-image text-sm"></i>No Pic</div>`
-                            }
-                        </div>
-
-                        <button type="button" onclick="triggerRowImagePicker('${id}')" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded text-[10px] font-bold flex items-center gap-1 transition">
-                            <i class="fa-solid fa-camera text-[10px]"></i> + Add / Change
-                        </button>
-
-                        <div class="flex flex-wrap gap-1 max-w-[120px] justify-center mt-1">
-                            ${(state.imageUrls || []).map(url => `
-                                <div class="relative group w-7 h-7 rounded border border-slate-300 overflow-hidden">
-                                    <img src="${formatSrc(url)}" class="w-full h-full object-cover">
-                                    <button type="button" onclick="removeExistingImageState('${id}', '${url}', event)" class="absolute top-0 right-0 bg-rose-600 text-white w-3.5 h-3.5 rounded-bl flex items-center justify-center text-[8px] font-bold shadow-sm hover:bg-rose-700" title="Delete Image">✕</button>
-                                </div>
-                            `).join('')}
-
-                            ${(state.newFiles || []).map((file, idx) => `
-                                <div class="relative group w-7 h-7 rounded border border-indigo-400 overflow-hidden">
-                                    <img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover">
-                                    <button type="button" onclick="removePendingImageState('${id}', ${idx}, event)" class="absolute top-0 right-0 bg-rose-600 text-white w-3.5 h-3.5 rounded-bl flex items-center justify-center text-[8px] font-bold shadow-sm hover:bg-rose-700" title="Remove Pending">✕</button>
-                                </div>
-                            `).join('')}
-                        </div>
+    return `
+        <tr id="row-${id}" class="bg-amber-50/60 border-b border-amber-200">
+            <!-- 1. PREVIEW & IMAGE MANAGEMENT -->
+            <td class="py-3 px-4 align-top">
+                <div class="flex flex-col items-center gap-2">
+                    <div class="relative w-14 h-14 rounded-lg bg-slate-100 border border-slate-300 overflow-hidden">
+                        ${primaryImage 
+                            ? `<img src="${primaryImage}" class="w-full h-full object-cover">`
+                            : `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 text-[10px]"><i class="fa-solid fa-image text-sm"></i>No Pic</div>`
+                        }
                     </div>
-                </td>
 
-                <td class="py-3 px-4 align-top">
-                    <input type="text" id="inline-name-${id}" value="${state.name !== undefined ? state.name : roomName}" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </td>
+                    <button type="button" onclick="triggerRowImagePicker('${id}')" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded text-[10px] font-bold flex items-center gap-1 transition">
+                        <i class="fa-solid fa-camera text-[10px]"></i> + Add / Change
+                    </button>
 
-                <td class="py-3 px-4 align-top text-center">
-                    <input type="number" id="inline-occ-${id}" value="${state.maxOccupancy !== undefined ? state.maxOccupancy : roomOcc}" class="w-16 text-center py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </td>
+                    <div class="flex flex-wrap gap-1 max-w-[120px] justify-center mt-1">
+                        <!-- Server-hosted images -->
+                        ${(state.imageUrls || []).map(url => `
+                            <div class="relative group w-7 h-7 rounded border border-slate-300 overflow-hidden">
+                                <img src="${formatSrc(url)}" class="w-full h-full object-cover">
+                                <button type="button" onclick="removeExistingImageState('${id}', decodeURIComponent('${encodeURIComponent(url)}'), event)" class="absolute top-0 right-0 bg-rose-600 text-white w-3.5 h-3.5 rounded-bl flex items-center justify-center text-[8px] font-bold shadow-sm hover:bg-rose-700" title="Delete Image">✕</button>
+                            </div>
+                        `).join('')}
 
-                <td class="py-3 px-4 align-top">
-                    <div class="space-y-1.5">
-                        <div class="flex flex-wrap gap-1">
-                            ${(state.amenities || []).map((amenity, idx) => `
-                                <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded text-[10px] font-semibold">
-                                    ${amenity}
-                                    <button type="button" onclick="removeAmenityState('${id}', ${idx})" class="hover:text-rose-600"><i class="fa-solid fa-xmark text-[9px]"></i></button>
-                                </span>
-                            `).join('')}
-                        </div>
-                        <div class="flex gap-1">
-                            <input type="text" id="new-amenity-${id}" placeholder="+ Tag" class="w-24 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[10px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                            <button type="button" onclick="addAmenityState('${id}')" class="px-2 py-0.5 bg-indigo-600 text-white rounded text-[10px] font-bold"><i class="fa-solid fa-plus"></i></button>
-                        </div>
+                        <!-- Newly attached files -->
+                        ${(state.newFiles || []).map((file, idx) => `
+                            <div class="relative group w-7 h-7 rounded border border-indigo-400 overflow-hidden">
+                                <img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover">
+                                <button type="button" onclick="removePendingImageState('${id}', ${idx}, event)" class="absolute top-0 right-0 bg-rose-600 text-white w-3.5 h-3.5 rounded-bl flex items-center justify-center text-[8px] font-bold shadow-sm hover:bg-rose-700" title="Remove Pending">✕</button>
+                            </div>
+                        `).join('')}
                     </div>
-                </td>
+                </div>
+            </td>
 
-                <td class="py-3 px-4 align-top text-right">
-                    <input type="number" id="inline-price-${id}" value="${state.basePrice !== undefined ? state.basePrice : roomPrice}" class="w-24 text-right px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </td>
+            <!-- 2. CATEGORY DETAILS -->
+            <td class="py-3 px-4 align-top">
+                <input type="text" id="inline-name-${id}" value="${state.name !== undefined ? state.name : roomName}" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </td>
 
-                <td class="py-3 px-6 align-top text-center">
-                    <div class="flex flex-col gap-1 items-center">
-                        <button onclick="saveInlineEdit('${id}')" class="w-20 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold shadow-xs">
-                            <i class="fa-solid fa-check mr-1"></i>Save
-                        </button>
-                        <button onclick="cancelInlineEdit('${id}')" class="w-20 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[10px] font-bold">
-                            Cancel
-                        </button>
+            <!-- 3. MAX OCCUPANCY -->
+            <td class="py-3 px-4 align-top text-center">
+                <input type="number" id="inline-occ-${id}" value="${state.maxOccupancy !== undefined ? state.maxOccupancy : roomOcc}" class="w-16 text-center py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </td>
+
+            <!-- 4. STANDARD AMENITIES -->
+            <td class="py-3 px-4 align-top">
+                <div class="space-y-1.5">
+                    <div class="flex flex-wrap gap-1">
+                        ${(state.amenities || []).map((amenity, idx) => `
+                            <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                ${amenity}
+                                <button type="button" onclick="removeAmenityState('${id}', ${idx})" class="hover:text-rose-600"><i class="fa-solid fa-xmark text-[9px]"></i></button>
+                            </span>
+                        `).join('')}
                     </div>
-                </td>
-            </tr>
-        `;
-    }
+                    <div class="flex gap-1">
+                        <input type="text" id="new-amenity-${id}" placeholder="+ Tag" class="w-24 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[10px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        <button type="button" onclick="addAmenityState('${id}')" class="px-2 py-0.5 bg-indigo-600 text-white rounded text-[10px] font-bold"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                </div>
+            </td>
+
+            <!-- 5. BASE RACK RATE -->
+            <td class="py-3 px-4 align-top text-right">
+                <input type="number" id="inline-price-${id}" value="${state.basePrice !== undefined ? state.basePrice : roomPrice}" class="w-24 text-right px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </td>
+
+            <!-- 6. ACTIONS -->
+            <td class="py-3 px-6 align-top text-center">
+                <div class="flex flex-col gap-1 items-center">
+                    <button onclick="saveInlineEdit('${id}')" class="w-20 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold shadow-xs">
+                        <i class="fa-solid fa-check mr-1"></i>Save
+                    </button>
+                    <button onclick="cancelInlineEdit('${id}')" class="w-20 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[10px] font-bold">
+                        Cancel
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
+}
 
     // --- STANDARD READ-ONLY VIEW MODE (6 distinct <td> columns) ---
     return `
@@ -6012,7 +6020,21 @@ function removePendingImageState(id, indexToRemove, event) {
 
 // Helper to re-render the edit row smoothly
 function reRenderEditRow(id) {
-    const room = roomTypesCache.find(r => r._id === id) || { _id: id };
+    // 1. Find the target room in cache safely checking both _id and id
+    const room = roomTypesCache.find(r => r._id === id || r.id === id) || { _id: id };
+
+    // 2. Sync live text inputs into localEditState before re-rendering
+    if (!localEditState[id]) localEditState[id] = {};
+
+    const nameInput = document.getElementById(`inline-name-${id}`);
+    const occInput = document.getElementById(`inline-occ-${id}`);
+    const priceInput = document.getElementById(`inline-price-${id}`);
+
+    if (nameInput) localEditState[id].name = nameInput.value;
+    if (occInput) localEditState[id].maxOccupancy = parseInt(occInput.value, 10) || 0;
+    if (priceInput) localEditState[id].basePrice = parseFloat(priceInput.value) || 0;
+
+    // 3. Swap DOM element
     const rowEl = document.getElementById(`row-${id}`);
     if (rowEl) {
         rowEl.outerHTML = renderTableRow(room, true);
