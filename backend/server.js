@@ -44,7 +44,6 @@ const storage = new CloudinaryStorage({
 });
 
 const fs = require('fs');
-const path = require('path');
 
 // Guarantee upload directory exists before processing requests
 const uploadDir = path.join(__dirname, 'uploads');
