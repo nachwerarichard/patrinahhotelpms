@@ -6151,9 +6151,7 @@ async function fetchRoomsV2() {
                     
                     <td class="px-6 py-3.5 text-right">
                         <div class="flex items-center justify-end gap-1.5">
-                            <button onclick="openEditModal('${room._id}', '${room.number}', '${categoryName}', '${room.overridePrice || ''}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded transition" title="Modify Asset">
-                                <i class="fa-solid fa-gear text-xs"></i>
-                            </button>
+                            
                             <button onclick="deleteRoom('${room._id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded transition" title="Remove Room">
                                 <i class="fa-solid fa-trash-can text-xs"></i>
                             </button>
@@ -6174,9 +6172,7 @@ async function fetchRoomsV2() {
                             <h4 class="text-base font-black text-slate-800 room-number">${room.number}</h4>
                         </div>
                         <div class="flex items-center gap-1">
-                            <button onclick="openEditModal('${room._id}', '${room.number}', '${categoryName}', '${room.overridePrice || ''}')" class="p-1.5 text-slate-400 hover:text-indigo-600">
-                                <i class="fa-solid fa-gear text-xs"></i>
-                            </button>
+                            
                             <button onclick="deleteRoom('${room._id}')" class="p-1.5 text-slate-400 hover:text-rose-600">
                                 <i class="fa-solid fa-trash-can text-xs"></i>
                             </button>
@@ -6190,7 +6186,6 @@ async function fetchRoomsV2() {
 
                     <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-[10px]">
                         <span class="px-2 py-0.5 rounded-full font-extrabold uppercase border ${hkBadge}">${hkStatus}</span>
-                        <span class="px-2 py-0.5 rounded-full font-extrabold uppercase border ${foBadge}">${foStatus}</span>
                     </div>
                 `;
                 mobileGrid.appendChild(card);
@@ -6917,8 +6912,10 @@ const addCharge = async (description, number, department) => {
         if (department === 'Restaurant') {
             showMessage('Success', 'Kitchen order sent & added to ledger! 🍳💰', false);
         } else if (activeAccountId) {
+            fetchActiveAccounts();
             //showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
         } else {
+            fetchActiveAccounts();
             //showMessage('Success', 'Walk-in Sale Recorded to Ledger! 💰✅', false);
         }
 
@@ -10727,6 +10724,7 @@ async function completeOrder(id) {
     { method: 'PATCH' }
 );
 if (res.ok) loadOrders();
+fetchActiveAccounts();
 if (!res) return; // Redirect handled if token missing
 if (!res.ok) {
     const error = await res.json();

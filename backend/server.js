@@ -2175,7 +2175,7 @@ app.get('/api/pos/search/in-house', auth, async (req, res) => {
                 { guestName: new RegExp(query, 'i') },
                 { roomNumber: new RegExp(query, 'i') }
             ]
-        }).limit(5);
+        }); // <-- .limit(5) removed here
 
         res.json(accounts);
     } catch (error) {
