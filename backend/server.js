@@ -1055,9 +1055,14 @@ app.post('/api/rooms', auth, async (req, res) => {
 
 app.get('/api/housekeepers', auth, async (req, res) => {
     try {
+        // --- TEMP DEBUG LINE ---
+        const allHks = await User.find({ role: 'housekeeper' });
+        console.log("All housekeepers in DB:", allHks);
+        // -----------------------
+
         const rawHotelId = req.user.hotelId;
         
-        // Build array of valid forms for matching
+        // Match both string and ObjectId representations
         const hotelIdQuery = [rawHotelId];
         if (mongoose.Types.ObjectId.isValid(rawHotelId)) {
             hotelIdQuery.push(new mongoose.Types.ObjectId(rawHotelId));
@@ -1066,9 +1071,10 @@ app.get('/api/housekeepers', auth, async (req, res) => {
         const housekeepers = await User.find({ 
             hotelId: { $in: hotelIdQuery }, 
             role: { $regex: /^housekeeper$/i }
-        }).select('_id username role name');
+        }).select('_id username role hotelId');
+
+        console.log(`Matched ${housekeepers.length} housekeepers for hotelId: ${rawHotelId}`);
         
-        console.log(`[DEBUG] Found ${housekeepers.length} housekeepers for hotelId:`, rawHotelId);
         res.json(housekeepers);
     } catch (err) {
         console.error("Error fetching housekeepers:", err);
@@ -8602,8 +8608,7 @@ app.post('/ical/sync-imports', auth, async (req, res) => {
 });
 
 
-const allHks = await User.find({ role: 'housekeeper' });
-console.log("All housekeepers in DB:", allHks);
+
 
 
 
