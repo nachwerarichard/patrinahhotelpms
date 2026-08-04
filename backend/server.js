@@ -419,23 +419,32 @@ const roomSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
     number: { type: String, required: true }, 
     roomTypeId: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType', required: true },
-    status: { type: String, enum: ['clean', 'dirty', 'In progress', 'under-maintenance', 'blocked'], default: 'clean' },
+    status: { 
+        type: String, 
+        enum: ['clean', 'dirty', 'In progress', 'under-maintenance', 'blocked'], 
+        default: 'clean' 
+    },
     
+    // NEW: Housekeeping Assignment Field
+    assignedTo: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'User', 
+        default: null 
+    },
+
     // ical configurations
     icalExportToken: { 
         type: String, 
         default: () => require('crypto').randomBytes(16).toString('hex') 
     },
     icalImportUrls: [{
-        source: { type: String, placeholder: 'Airbnb, Booking.com, etc.' },
+        source: { type: String },
         url: { type: String }
     }]
-});
+}, { timestamps: true });
 
-// This ensures Room 101 is unique ONLY within the same hotel
 roomSchema.index({ hotelId: 1, number: 1 }, { unique: true });
 const Room = mongoose.model('Room', roomSchema);
-// Create a Room Type (Tied to the hotel)
 
 
 
@@ -1055,27 +1064,29 @@ app.get('/api/rooms', auth, async (req, res) => {
     }
 });
 
-app.get('/api/rooms/search', auth, async (req, res) => {
+// GET active housekeepers for the user's hotel
+app.get('/api/housekeepers', auth, async (req, res) => {
     try {
-        const { number } = req.query;
+        const housekeepers = await User.find({ 
+            hotelId: req.user.hotelId, 
+            role: 'housekeeper' 
+        }).select('_id username role');
         
-        // Dynamic fallback checking for token auth properties
-        const hotelId = req.user ? req.user.hotelId : req.hotelId; 
+        res.json(housekeepers);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
-        if (!number) return res.json([]);
-
-        // Perform partial case-insensitive query match
-        const rooms = await Room.find({
-            hotelId: hotelId,
-            number: { $regex: number, $options: 'i' }
-        })
-        .populate('roomTypeId') // Pulls in the linked RoomType data schema
-        .limit(10);             // Caps output size to optimize performance
-
+// GET all rooms (Populate roomTypeId and assignedTo)
+app.get('/api/rooms', auth, async (req, res) => {
+    try {
+        const rooms = await Room.find({ hotelId: req.user.hotelId })
+            .populate('roomTypeId')
+            .populate('assignedTo', 'username');
         res.json(rooms);
-    } catch (error) {
-        console.error("Room search endpoint error:", error);
-        res.status(500).json({ error: 'Internal Server Error' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 // DELETE a room (Secure)
@@ -1108,6 +1119,10 @@ app.put('/api/rooms/:id', auth, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+// 1. Fetch all housekeepers for the hotel (for populating dropdowns)
+
+
 // Booking Schema
 const bookingSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
