@@ -1053,16 +1053,7 @@ app.post('/api/rooms', auth, async (req, res) => {
     }
 });
 
-app.get('/api/rooms', auth, async (req, res) => {
-    try {
-        const rooms = await Room.find({ hotelId: req.user.hotelId })
-                                .populate('roomTypeId') // Removed semicolon here
-                                .sort({ number: 1 });   // Semicolon goes here at the end
-        res.json(rooms);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+
 
 // GET active housekeepers for the user's hotel
 app.get('/api/housekeepers', auth, async (req, res) => {
