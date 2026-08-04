@@ -6148,11 +6148,7 @@ async function fetchRoomsV2() {
                             ${hkStatus}
                         </span>
                     </td>
-                    <td class="px-6 py-3.5 text-center">
-                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${foBadge}">
-                            ${foStatus}
-                        </span>
-                    </td>
+                    
                     <td class="px-6 py-3.5 text-right">
                         <div class="flex items-center justify-end gap-1.5">
                             <button onclick="openEditModal('${room._id}', '${room.number}', '${categoryName}', '${room.overridePrice || ''}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded transition" title="Modify Asset">

@@ -6520,7 +6520,7 @@ app.get('/api/sales/by-date', auth,async (req, res) => {
 
 app.post('/api/sales', auth, async (req, res) => {
   try {
-    const { item, department, number, bp, sp, date, accountId } = req.body;
+    const { item, department, number, bp, sp, date, accountId, guestName, roomNumber } = req.body;
     const hotelId = req.user.hotelId; 
     const username = req.user.username || req.body.recordedBy || 'Guest'; // Extract username
     const userRole = req.user.role || req.body.role || 'Staff';           // Extract role
@@ -6578,10 +6578,15 @@ app.post('/api/sales', auth, async (req, res) => {
         { new: true }
       );
     } else {
+      // Dynamic fallback: Uses custom name if sent from frontend, otherwise generates a unique Walk-in ID
+      const resolvedGuestName = guestName && guestName.trim() !== '' 
+        ? guestName.trim() 
+        : `Walk-in #${Math.floor(1000 + Math.random() * 9000)}`;
+
       updatedAccount = await AccountModel.create({
         hotelId: hotelId,
-        guestName: "Walk-in Guest",
-        roomNumber: "",
+        guestName: resolvedGuestName,
+        roomNumber: roomNumber || "",
         isClosed: false,
         totalCharges: totalChargeAmount,
         charges: [{
