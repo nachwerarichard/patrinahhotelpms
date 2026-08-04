@@ -3694,8 +3694,7 @@ async function renderHousekeepingRooms() {
         globalRoomsData = await roomsRes.json();
         const roomTypesData = await typesRes.json();
 
-        // --- PLACED HERE ---
-        // Ensure globalHousekeepers is assigned reliably with debug logs
+        // Assign globalHousekeepers reliably
         if (hkRes.ok) {
             globalHousekeepers = await hkRes.json();
             console.log("Fetched housekeepers array:", globalHousekeepers);
@@ -3704,7 +3703,23 @@ async function renderHousekeepingRooms() {
             globalHousekeepers = [];
         }
 
-        // 1. Build Room Types Lookup & Dropdown
+        // 1. Populate Housekeeper Filter Dropdown
+        const hkFilterSelect = document.getElementById('housekeeperFilter');
+        if (hkFilterSelect) {
+            hkFilterSelect.innerHTML = `
+                <option value="all">ALL HOUSEKEEPERS</option>
+                <option value="unassigned">UNASSIGNED ROOMS</option>
+            `;
+
+            globalHousekeepers.forEach(hk => {
+                const opt = document.createElement('option');
+                opt.value = hk._id.toString();
+                opt.textContent = (hk.username || hk.name || 'Unnamed').toUpperCase();
+                hkFilterSelect.appendChild(opt);
+            });
+        }
+
+        // 2. Build Room Types Lookup & Dropdown
         globalTypeLookup = {};
         const typeFilterSelect = document.getElementById('roomTypeFilter');
         if (typeFilterSelect) {
@@ -3746,6 +3761,7 @@ function applyFiltersAndRender() {
     const searchQuery = document.getElementById('roomSearchInput')?.value.trim().toLowerCase() || '';
     const selectedStatus = document.getElementById('roomStatusFilter')?.value || 'all';
     const selectedType = document.getElementById('roomTypeFilter')?.value || 'all';
+    const selectedHk = document.getElementById('housekeeperFilter')?.value || 'all';
 
     // Filter Rooms
     const filteredRooms = globalRoomsData.filter(room => {
@@ -3756,8 +3772,25 @@ function applyFiltersAndRender() {
             ? room.roomTypeId._id 
             : room.roomTypeId;
         const matchesType = (selectedType === 'all') || (currentRoomTypeId === selectedType);
-        
-        return matchesSearch && matchesStatus && matchesType;
+
+        // Housekeeper Filtering Logic
+        let currentAssignedId = '';
+        if (room.assignedTo) {
+            currentAssignedId = (typeof room.assignedTo === 'object' && room.assignedTo._id) 
+                ? room.assignedTo._id.toString() 
+                : room.assignedTo.toString();
+        }
+
+        let matchesHk = false;
+        if (selectedHk === 'all') {
+            matchesHk = true;
+        } else if (selectedHk === 'unassigned') {
+            matchesHk = !currentAssignedId;
+        } else {
+            matchesHk = currentAssignedId === selectedHk;
+        }
+
+        return matchesSearch && matchesStatus && matchesType && matchesHk;
     });
 
     if (filteredRooms.length === 0) {
@@ -3819,22 +3852,21 @@ function applyFiltersAndRender() {
                 const isDirty = room.status === 'dirty';
                 const isOccupied = room.status === 'blocked';
                 
-               // Safely extract the ID string regardless of whether assignedTo is populated or raw ID string
-let currentAssignedId = '';
-if (room.assignedTo) {
-    currentAssignedId = (typeof room.assignedTo === 'object' && room.assignedTo._id) 
-        ? room.assignedTo._id.toString() 
-        : room.assignedTo.toString();
-}
+                let currentAssignedId = '';
+                if (room.assignedTo) {
+                    currentAssignedId = (typeof room.assignedTo === 'object' && room.assignedTo._id) 
+                        ? room.assignedTo._id.toString() 
+                        : room.assignedTo.toString();
+                }
 
-let hkOptionsHTML = `<option value="">-- UNASSIGNED --</option>`;
-globalHousekeepers.forEach(hk => {
-    const hkIdStr = hk._id ? hk._id.toString() : '';
-    const isSelected = hkIdStr === currentAssignedId && currentAssignedId !== '';
-    const displayName = (hk.username || hk.name || 'Unnamed').toUpperCase();
-    
-    hkOptionsHTML += `<option value="${hkIdStr}" ${isSelected ? 'selected' : ''}>${displayName}</option>`;
-});
+                let hkOptionsHTML = `<option value="">-- UNASSIGNED --</option>`;
+                globalHousekeepers.forEach(hk => {
+                    const hkIdStr = hk._id ? hk._id.toString() : '';
+                    const isSelected = hkIdStr === currentAssignedId && currentAssignedId !== '';
+                    const displayName = (hk.username || hk.name || 'Unnamed').toUpperCase();
+                    
+                    hkOptionsHTML += `<option value="${hkIdStr}" ${isSelected ? 'selected' : ''}>${displayName}</option>`;
+                });
 
                 const card = document.createElement('div');
                 card.className = "bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden";
@@ -3970,6 +4002,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('roomSearchInput')?.addEventListener('input', applyFiltersAndRender);
     document.getElementById('roomStatusFilter')?.addEventListener('change', applyFiltersAndRender);
     document.getElementById('roomTypeFilter')?.addEventListener('change', applyFiltersAndRender);
+    document.getElementById('housekeeperFilter')?.addEventListener('change', applyFiltersAndRender); // <-- NEW
 });
 
 async function renderCalendar() {
