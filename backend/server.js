@@ -22,7 +22,21 @@ const storage = new CloudinaryStorage({
     params: async (req, file) => {
         return {
             folder: `novouspms/hotels/${req.user.hotelId}/room-categories`,
-            allowed_formats: ['jpg', 'png', 'webp'],
+            // Added jfif, jpeg, and common web/mobile image formats (gif, avif, svg, etc.)
+            allowed_formats: [
+                'jpg', 
+                'jpeg', 
+                'jfif', 
+                'png', 
+                'webp', 
+                'gif', 
+                'avif', 
+                'heic',  // Common on iPhones (iOS)
+                'heif',  // High efficiency image format
+                'bmp', 
+                'tiff', 
+                'svg'
+            ],
             // Dynamic transformation to keep your database "light"
             transformation: [{ width: 1000, height: 600, crop: 'fill' }] 
         };
