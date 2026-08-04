@@ -3810,17 +3810,22 @@ function applyFiltersAndRender() {
                 const isDirty = room.status === 'dirty';
                 const isOccupied = room.status === 'blocked';
                 
-                // Get active housekeeper ID
-                const currentAssignedId = (room.assignedTo && typeof room.assignedTo === 'object')
-                    ? room.assignedTo._id
-                    : room.assignedTo || '';
+               // Safely extract the ID string regardless of whether assignedTo is populated or raw ID string
+let currentAssignedId = '';
+if (room.assignedTo) {
+    currentAssignedId = (typeof room.assignedTo === 'object' && room.assignedTo._id) 
+        ? room.assignedTo._id.toString() 
+        : room.assignedTo.toString();
+}
 
-                // Generate Housekeeper Options
-                let hkOptionsHTML = `<option value="">-- UNASSIGNED --</option>`;
-                globalHousekeepers.forEach(hk => {
-                    const isSelected = String(hk._id) === String(currentAssignedId);
-                    hkOptionsHTML += `<option value="${hk._id}" ${isSelected ? 'selected' : ''}>${hk.username.toUpperCase()}</option>`;
-                });
+// Generate Housekeeper Options with safe string comparison
+let hkOptionsHTML = `<option value="">-- UNASSIGNED --</option>`;
+globalHousekeepers.forEach(hk => {
+    const hkIdStr = hk._id ? hk._id.toString() : '';
+    const isSelected = hkIdStr === currentAssignedId && currentAssignedId !== '';
+    
+    hkOptionsHTML += `<option value="${hkIdStr}" ${isSelected ? 'selected' : ''}>${hk.username.toUpperCase()}</option>`;
+});
 
                 const card = document.createElement('div');
                 card.className = "bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden";
@@ -3889,7 +3894,7 @@ async function assignHousekeeper(roomId, housekeeperId) {
                 'x-hotel-id': hotelId
             },
             body: JSON.stringify({ 
-                assignedTo: housekeeperId || null,
+                assignedTo: housekeeperId ? housekeeperId : null,
                 assignedAt: housekeeperId ? new Date() : null,
                 hotelId: hotelId
             })
@@ -3898,6 +3903,8 @@ async function assignHousekeeper(roomId, housekeeperId) {
         if (!response.ok) throw new Error("Assignment failed");
 
         showMessage('Success', housekeeperId ? 'Housekeeper assigned.' : 'Assignment cleared.');
+        
+        // Re-fetch and re-render rooms
         renderHousekeepingRooms();
     } catch (error) {
         console.error("Assignment error:", error);

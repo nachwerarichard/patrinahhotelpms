@@ -1089,6 +1089,8 @@ app.get('/api/rooms', auth, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// GET all rooms
+
 // DELETE a room (Secure)
 app.delete('/api/rooms/:id', auth, async (req, res) => {
     try {
@@ -1105,14 +1107,18 @@ app.delete('/api/rooms/:id', auth, async (req, res) => {
     }
 });
 
-// UPDATE a room (Secure)
+
+// UPDATE a room (Secure & Populated)
 app.put('/api/rooms/:id', auth, async (req, res) => {
     try {
         const updatedRoom = await Room.findOneAndUpdate(
             { _id: req.params.id, hotelId: req.user.hotelId },
             req.body, 
             { new: true }
-        );
+        )
+        .populate('roomTypeId')
+        .populate('assignedTo', 'username'); // Ensures frontend receives the updated housekeeper name immediately
+
         if (!updatedRoom) return res.status(404).json({ error: "Room not found" });
         res.json(updatedRoom);
     } catch (err) {
