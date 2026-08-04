@@ -1055,13 +1055,23 @@ app.post('/api/rooms', auth, async (req, res) => {
 
 app.get('/api/housekeepers', auth, async (req, res) => {
     try {
-        const housekeepers = await User.find({ 
-            hotelId: new mongoose.Types.ObjectId(req.user.hotelId), 
-            role: { $regex: /^housekeeper$/i } // Case-insensitive exact match
-        }).select('_id username role');
+        const rawHotelId = req.user.hotelId;
         
+        // Build array of valid forms for matching
+        const hotelIdQuery = [rawHotelId];
+        if (mongoose.Types.ObjectId.isValid(rawHotelId)) {
+            hotelIdQuery.push(new mongoose.Types.ObjectId(rawHotelId));
+        }
+
+        const housekeepers = await User.find({ 
+            hotelId: { $in: hotelIdQuery }, 
+            role: { $regex: /^housekeeper$/i }
+        }).select('_id username role name');
+        
+        console.log(`[DEBUG] Found ${housekeepers.length} housekeepers for hotelId:`, rawHotelId);
         res.json(housekeepers);
     } catch (err) {
+        console.error("Error fetching housekeepers:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -8591,6 +8601,9 @@ app.post('/ical/sync-imports', auth, async (req, res) => {
     }
 });
 
+
+const allHks = await User.find({ role: 'housekeeper' });
+console.log("All housekeepers in DB:", allHks);
 
 
 

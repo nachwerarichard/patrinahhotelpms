@@ -3693,7 +3693,16 @@ async function renderHousekeepingRooms() {
 
         globalRoomsData = await roomsRes.json();
         const roomTypesData = await typesRes.json();
-        globalHousekeepers = hkRes.ok ? await hkRes.json() : [];
+
+        // --- PLACED HERE ---
+        // Ensure globalHousekeepers is assigned reliably with debug logs
+        if (hkRes.ok) {
+            globalHousekeepers = await hkRes.json();
+            console.log("Fetched housekeepers array:", globalHousekeepers);
+        } else {
+            console.warn("Housekeeper endpoint returned non-200 status:", hkRes.status);
+            globalHousekeepers = [];
+        }
 
         // 1. Build Room Types Lookup & Dropdown
         globalTypeLookup = {};
