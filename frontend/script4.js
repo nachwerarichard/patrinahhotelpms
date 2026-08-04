@@ -2075,15 +2075,13 @@ document.getElementById('cancelMoveBtn').addEventListener('click', () => {
 });
 
 document.getElementById('confirmMoveBtn').addEventListener('click', async () => {
-    // 1. Get session data
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
-    const currentUsername = sessionData?.username;
+    // 1. Get session data for payload
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const currentUsername = sessionData?.username || 'System';
 
-    const newRoomNumber = document.getElementById('availableRoomsSelect').value;
-    const negotiatedPrice = document.getElementById('moveRoomNegotiatedPrice').value;
-    const moveReason = document.getElementById('moveRoomReason').value.trim(); 
+    const newRoomNumber = document.getElementById('availableRoomsSelect')?.value;
+    const negotiatedPrice = document.getElementById('moveRoomNegotiatedPrice')?.value;
+    const moveReason = document.getElementById('moveRoomReason')?.value.trim(); 
     const modal = document.getElementById('moveRoomModal');
 
     try {
@@ -2095,23 +2093,19 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
             return showMessage('Error', 'Please provide a reason for the room move.', true);
         }
 
-        // 2. Add Authorization and include hotelId in the payload
-        const response = await fetch(`${API_BASE_URL}/bookings/${selectedBookingId}/move`, {
+        // 2. Use authenticatedFetch instead of standard fetch
+        const response = await authenticatedFetch(`${API_BASE_URL}/bookings/${selectedBookingId}/move`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`, // Pass security token
-                    'x-hotel-id': sessionData?.hotelId
-
-            },
             body: JSON.stringify({ 
                 newRoomNumber, 
                 overridePrice: negotiatedPrice, 
                 reason: moveReason,
-                username: currentUsername,
-                hotelId: hotelId // Validate that this room move stays within the correct hotel
+                username: currentUsername
             })
         });
+
+        // Safety check if user was unauthenticated and redirected
+        if (!response) return;
 
         const data = await response.json();
 
@@ -2121,7 +2115,7 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
         document.getElementById('moveRoomReason').value = '';
         
         modal.classList.add('hidden');
-        modal.classList.remove('flex'); // Ensure flex is removed if you use it for centering
+        modal.classList.remove('flex');
         showMessage('Success', data.message);
 
         // Refresh UI
@@ -4656,11 +4650,12 @@ function debounce(func, timeout = 300) {
  * Filters bookings based on UI inputs and scoped by Hotel ID.
  */
 async function fetchReport() {
-    // 1. Get DOM Elements for both display pipelines
+    // 1. Get DOM Elements for display pipelines
     const tableBody = document.getElementById('tableBody');
     const mobileGrid = document.getElementById('reportsMobileGrid');
     const sumPaid = document.getElementById('sumPaid');
     const sumBalance = document.getElementById('sumBalance');
+    const sumBookings = document.getElementById('sumBookings');
 
     // 2. Capture Filter Values
     const search = document.getElementById('filterSearch').value.trim();
@@ -4680,13 +4675,14 @@ async function fetchReport() {
         return;
     }
 
-    // 4. Logic Validation Checks: Wipe table contexts if parameters remain baseline clear
+    // 4. Reset counters if no filters are active
     const hasActiveFilter = search || paymentStatus || gueststatus || 
                             paymentMethod || guestsource || startDate || endDate;
 
     if (!hasActiveFilter) {
         if (tableBody) tableBody.innerHTML = '';
         if (mobileGrid) mobileGrid.innerHTML = '';
+        if (sumBookings) sumBookings.textContent = '0';
         if (sumPaid) sumPaid.textContent = `${CURRENT_CURRENCY} 0.00`;
         if (sumBalance) sumBalance.textContent = `${CURRENT_CURRENCY} 0.00`;
         return;
@@ -4705,7 +4701,6 @@ async function fetchReport() {
     });
 
     try {
-        // Render identical animated loader bars into both target elements
         const loadingIndicator = `
             <div class="flex flex-col items-center justify-center p-12 gap-2 w-full text-center">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
@@ -4741,32 +4736,35 @@ function renderTable(bookings) {
     const mobileGrid = document.getElementById('reportsMobileGrid');
     const sumPaidDisplay = document.getElementById('sumPaid');
     const sumBalanceDisplay = document.getElementById('sumBalance');
+    const sumBookingsDisplay = document.getElementById('sumBookings');
 
     // Wipe down containers completely before running updates
     if (tbody) tbody.innerHTML = '';
     if (mobileGrid) mobileGrid.innerHTML = '';
 
-    // Handle empty dataset scenarios gracefully across targets
+    // Handle empty dataset scenarios gracefully
     if (!bookings || bookings.length === 0) {
         const fallbackMsg = '<div class="p-8 text-center text-gray-400 font-medium italic">No match logs mapped for active criteria.</div>';
         if (tbody) tbody.innerHTML = `<tr><td colspan="9">${fallbackMsg}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
+        if (sumBookingsDisplay) sumBookingsDisplay.textContent = '0';
         if (sumPaidDisplay) sumPaidDisplay.textContent = `${CURRENT_CURRENCY} 0.00`;
         if (sumBalanceDisplay) sumBalanceDisplay.textContent = `${CURRENT_CURRENCY} 0.00`;
         return;
     }
 
-    // A. Calculate Dynamic Financial Summaries
+    // A. Calculate Dynamic Financial & Booking Summaries
+    const totalBookings = bookings.length;
     const totalPaid = bookings.reduce((sum, b) => sum + Number(b.amountPaid || 0), 0);
     const totalBalance = bookings.reduce((sum, b) => sum + Number(b.balance || 0), 0);
 
-    // B. Reformat Financial String Representations
+    // B. Reformat & Update Top Display Cards
+    if (sumBookingsDisplay) sumBookingsDisplay.textContent = totalBookings.toLocaleString();
     if (sumPaidDisplay) sumPaidDisplay.textContent = `${CURRENT_CURRENCY} ${totalPaid.toLocaleString()}`;
     if (sumBalanceDisplay) sumBalanceDisplay.textContent = `${CURRENT_CURRENCY}  ${totalBalance.toLocaleString()}`;
 
     // C. Process Collections and Run Render Loops
     bookings.forEach(b => {
-        // Map aesthetic colors 
         const payColor = b.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700';
         const statusColor = b.gueststatus === 'confirmed' || b.gueststatus === 'checkedin' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700';
         const methodColor = b.paymentMethod === 'Cash' ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700';
@@ -4795,7 +4793,7 @@ function renderTable(bookings) {
             tbody.appendChild(tr);
         }
 
-        // 2. POPULATE VIEW 2: Render out clean card template for mobile ledger screens
+        // 2. POPULATE VIEW 2: Render out card template for mobile ledger screens
         if (mobileGrid) {
             const card = document.createElement('div');
             card.className = "p-4 bg-white border border-gray-200 rounded-xl shadow-sm space-y-3";
@@ -4839,7 +4837,7 @@ function renderTable(bookings) {
         const totalRow = document.createElement('tr');
         totalRow.className = "bg-slate-50 font-black border-t-2 border-gray-300 text-gray-900";
         totalRow.innerHTML = `
-            <td colspan="3" class="p-4 text-right text-gray-500 uppercase tracking-widest text-xs font-bold">Grand Total:</td>
+            <td colspan="3" class="p-4 text-right text-gray-500 uppercase tracking-widest text-xs font-bold">Grand Total (${totalBookings} Bookings):</td>
             <td class="p-4 text-green-700 text-right font-mono text-base">${totalPaid.toLocaleString()}</td>
             <td class="p-4 text-red-700 text-right font-mono text-base">${totalBalance.toLocaleString()}</td>
             <td colspan="4" class="p-4"></td>
@@ -5679,11 +5677,426 @@ document.getElementById('roomForm').addEventListener('submit', async (e) => {
     }
 });
 
+
+
+function refreshSingleRow(originalRoomReference) {
+    const targetRow = document.getElementById(`row-${originalRoomReference._id}`);
+    if (targetRow) {
+        const substituteContainer = document.createElement('tbody');
+        substituteContainer.innerHTML = renderTableRow(originalRoomReference, false);
+        targetRow.replaceWith(substituteContainer.firstElementChild);
+    }
+}
+
+
+let roomTypesCache = [];
+
+// Ensure localEditState object exists
+if (typeof localEditState === 'undefined') {
+    var localEditState = {};
+}
+
+async function loadRoomTypes() {
+    const hotelId = getSessionHotelId();
+    const tbody = document.getElementById('roomTypesTableBody');
+    const seasonSelect = document.getElementById('targetType');
+    const roomSelect = document.getElementById('roomTypeSelect');
+
+    try {
+        const endpoint = hotelId 
+            ? `${API_BASE_URL}/room-types?hotelId=${hotelId}` 
+            : `${API_BASE_URL}/room-types`;
+
+        const response = await authenticatedFetch(endpoint);
+        if (!response || !response.ok) throw new Error('Failed to fetch room types');
+        
+        const types = await response.json();
+        roomTypesCache = types;
+
+        // 1. Update Dropdowns
+        if (seasonSelect || roomSelect) {
+            const optionsHTML = types.map(t => 
+                `<option value="${t._id}">${t.name} (Base: ${(t.basePrice || 0).toLocaleString()})</option>`
+            ).join('');
+            const defaultOption = `<option value="">Select Room Type...</option>`;
+            
+            if (seasonSelect) seasonSelect.innerHTML = defaultOption + optionsHTML;
+            if (roomSelect) roomSelect.innerHTML = defaultOption + optionsHTML;
+        }
+
+        // 2. Update Table
+        if (tbody) {
+            if (types.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="p-12 text-center text-xs text-slate-400">
+                            No room configurations found. Create one using the form above!
+                        </td>
+                    </tr>`;
+            } else {
+                tbody.innerHTML = types.map(room => renderTableRow(room, localEditState[room._id]?.isEditing)).join('');
+            }
+        }
+        
+    } catch (error) {
+        console.error("Error loading room types:", error);
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="p-8 text-center text-xs text-red-500 font-semibold">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Error synchronizing table data.
+                    </td>
+                </tr>`;
+        }
+    }
+}
+
+/**
+ * Re-renders only a single table row to avoid losing DOM state
+ */
+function reRenderRow(id) {
+    const rowEl = document.getElementById(`row-${id}`);
+    const room = roomTypesCache.find(r => (r._id || r.id) === id);
+    if (rowEl && room) {
+        const isEditing = localEditState[id]?.isEditing || false;
+        rowEl.outerHTML = renderTableRow(room, isEditing);
+    }
+}
+
+/**
+ * Enable inline editing state for a given room
+ */
+function enableInlineEdit(id) {
+    const room = roomTypesCache.find(r => (r._id || r.id) === id);
+    if (!room) return;
+
+    const dbImages = (room.imageUrls && Array.isArray(room.imageUrls) && room.imageUrls.length > 0) 
+        ? [...room.imageUrls] 
+        : (room.defaultImage ? [room.defaultImage] : []);
+
+    localEditState[id] = {
+        isEditing: true,
+        imageUrls: dbImages,
+        newFiles: [],
+        amenities: Array.isArray(room.amenities) ? [...room.amenities] : [],
+        name: room.name || '',
+        maxOccupancy: room.maxOccupancy || 2,
+        basePrice: room.basePrice || 0
+    };
+
+    loadRoomTypes();
+}
+
+
+
+// --- IMAGE EDITING HANDLERS ---
+
+function triggerRowImagePicker(id) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+
+    input.onchange = (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        if (!localEditState[id]) return;
+        localEditState[id].newFiles = [...(localEditState[id].newFiles || []), ...files];
+        loadRoomTypes();
+    };
+
+    input.click();
+}
+
+function removeExistingImageState(id, url, event) {
+    if (event) event.stopPropagation();
+    if (!localEditState[id]) return;
+
+    localEditState[id].imageUrls = (localEditState[id].imageUrls || []).filter(u => u !== url);
+    loadRoomTypes();
+}
+
+function removePendingImageState(id, index, event) {
+    if (event) event.stopPropagation();
+    if (!localEditState[id]) return;
+
+    localEditState[id].newFiles = (localEditState[id].newFiles || []).filter((_, idx) => idx !== index);
+    loadRoomTypes();
+}
+
+// --- AMENITY EDITING HANDLERS ---
+
+function addAmenityState(id) {
+    const input = document.getElementById(`new-amenity-${id}`);
+    if (!input || !input.value.trim()) return;
+
+    if (!localEditState[id]) return;
+    localEditState[id].amenities.push(input.value.trim());
+    loadRoomTypes();
+}
+
+function removeAmenityState(id, index) {
+    if (!localEditState[id]) return;
+    localEditState[id].amenities.splice(index, 1);
+    loadRoomTypes();
+}
+
+// --- RENDER FUNCTION (6 COLUMNS) ---
+
+function renderTableRow(room, isEditing = false) {
+    const id = room._id || room.id;
+    
+    const roomName = room.name || 'Unnamed Category';
+    const roomCode = room.code || 'CAT-' + (id ? id.substring(0, 4) : '0000');
+    const roomPrice = room.basePrice !== undefined ? room.basePrice : 0;
+    const roomOcc = room.maxOccupancy || 2;
+    const roomAmenities = Array.isArray(room.amenities) ? room.amenities : [];
+
+    const dbImages = (room.imageUrls && Array.isArray(room.imageUrls) && room.imageUrls.length > 0) 
+        ? room.imageUrls 
+        : (room.defaultImage ? [room.defaultImage] : []);
+
+    const state = localEditState[id] || { 
+        imageUrls: dbImages, 
+        newFiles: [], 
+        amenities: roomAmenities,
+        name: roomName,
+        maxOccupancy: roomOcc,
+        basePrice: roomPrice
+    };
+
+    const formatSrc = (src) => {
+        if (!src) return '';
+        if (src.startsWith('blob:') || src.startsWith('http://') || src.startsWith('https://')) {
+            return src;
+        }
+        const base = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '';
+        return `${base}${src.startsWith('/') ? '' : '/'}${src}`;
+    };
+
+    const newFilePreviews = (state.newFiles || []).map(file => URL.createObjectURL(file));
+    const rawImages = [...(state.imageUrls || []), ...newFilePreviews];
+    const primaryImage = rawImages.length > 0 ? formatSrc(rawImages[0]) : null;
+
+    // --- INLINE EDIT MODE ---
+    if (isEditing) {
+        return `
+            <tr id="row-${id}" class="bg-amber-50/60 border-b border-amber-200">
+                <!-- 1. PREVIEW & IMAGE MANAGEMENT -->
+                <td class="py-3 px-4 align-top">
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="relative w-14 h-14 rounded-lg bg-slate-100 border border-slate-300 overflow-hidden">
+                            ${primaryImage 
+                                ? `<img src="${primaryImage}" class="w-full h-full object-cover">`
+                                : `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 text-[10px]"><i class="fa-solid fa-image text-sm"></i>No Pic</div>`
+                            }
+                        </div>
+
+                        <button type="button" onclick="triggerRowImagePicker('${id}')" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded text-[10px] font-bold flex items-center gap-1 transition">
+                            <i class="fa-solid fa-camera text-[10px]"></i> + Add / Change
+                        </button>
+
+                        <div class="flex flex-wrap gap-1 max-w-[120px] justify-center mt-1">
+                            <!-- Server-hosted images -->
+                            ${(state.imageUrls || []).map(url => `
+                                <div class="relative group w-7 h-7 rounded border border-slate-300 overflow-hidden">
+                                    <img src="${formatSrc(url)}" class="w-full h-full object-cover">
+                                    <button type="button" onclick="removeExistingImageState('${id}', '${url}', event)" class="absolute top-0 right-0 bg-rose-600 text-white w-3.5 h-3.5 rounded-bl flex items-center justify-center text-[8px] font-bold shadow-sm hover:bg-rose-700" title="Delete Image">✕</button>
+                                </div>
+                            `).join('')}
+
+                            <!-- Newly attached files -->
+                            ${(state.newFiles || []).map((file, idx) => `
+                                <div class="relative group w-7 h-7 rounded border border-indigo-400 overflow-hidden">
+                                    <img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover">
+                                    <button type="button" onclick="removePendingImageState('${id}', ${idx}, event)" class="absolute top-0 right-0 bg-rose-600 text-white w-3.5 h-3.5 rounded-bl flex items-center justify-center text-[8px] font-bold shadow-sm hover:bg-rose-700" title="Remove Pending">✕</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </td>
+
+                <!-- 2. CATEGORY DETAILS -->
+                <td class="py-3 px-4 align-top">
+                    <input type="text" id="inline-name-${id}" value="${state.name !== undefined ? state.name : roomName}" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </td>
+
+                <!-- 3. MAX OCCUPANCY -->
+                <td class="py-3 px-4 align-top text-center">
+                    <input type="number" id="inline-occ-${id}" value="${state.maxOccupancy !== undefined ? state.maxOccupancy : roomOcc}" class="w-16 text-center py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </td>
+
+                <!-- 4. STANDARD AMENITIES -->
+                <td class="py-3 px-4 align-top">
+                    <div class="space-y-1.5">
+                        <div class="flex flex-wrap gap-1">
+                            ${(state.amenities || []).map((amenity, idx) => `
+                                <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                    ${amenity}
+                                    <button type="button" onclick="removeAmenityState('${id}', ${idx})" class="hover:text-rose-600"><i class="fa-solid fa-xmark text-[9px]"></i></button>
+                                </span>
+                            `).join('')}
+                        </div>
+                        <div class="flex gap-1">
+                            <input type="text" id="new-amenity-${id}" placeholder="+ Tag" class="w-24 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[10px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                            <button type="button" onclick="addAmenityState('${id}')" class="px-2 py-0.5 bg-indigo-600 text-white rounded text-[10px] font-bold"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                    </div>
+                </td>
+
+                <!-- 5. BASE RACK RATE -->
+                <td class="py-3 px-4 align-top text-right">
+                    <input type="number" id="inline-price-${id}" value="${state.basePrice !== undefined ? state.basePrice : roomPrice}" class="w-24 text-right px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </td>
+
+                <!-- 6. ACTIONS -->
+                <td class="py-3 px-6 align-top text-center">
+                    <div class="flex flex-col gap-1 items-center">
+                        <button onclick="saveInlineEdit('${id}')" class="w-20 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold shadow-xs">
+                            <i class="fa-solid fa-check mr-1"></i>Save
+                        </button>
+                        <button onclick="cancelInlineEdit('${id}')" class="w-20 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[10px] font-bold">
+                            Cancel
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+    }
+
+    // --- STANDARD READ-ONLY VIEW MODE ---
+    return `
+        <tr id="row-${id}" class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
+            <!-- 1. PREVIEW -->
+            <td class="py-3 px-6">
+                <div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-slate-400">
+                    ${primaryImage 
+                        ? `<img src="${primaryImage}" class="w-full h-full object-cover">`
+                        : `<i class="fa-solid fa-bed text-sm"></i>`}
+                </div>
+            </td>
+
+            <!-- 2. CATEGORY DETAILS -->
+            <td class="py-3 px-4">
+                <span class="font-bold text-slate-800 block text-xs">${roomName}</span>
+                <span class="text-[10px] text-slate-400 block">${roomCode}</span>
+            </td>
+
+            <!-- 3. MAX OCCUPANCY -->
+            <td class="py-3 px-4 text-center">
+                <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold">
+                    <i class="fa-solid fa-user text-[9px]"></i> ${roomOcc}
+                </span>
+            </td>
+
+            <!-- 4. STANDARD AMENITIES -->
+            <td class="py-3 px-4">
+                <span class="text-[11px] text-slate-500 line-clamp-1">${roomAmenities.length > 0 ? roomAmenities.join(', ') : 'Standard Amenities'}</span>
+            </td>
+
+            <!-- 5. BASE RACK RATE -->
+            <td class="py-3 px-4 text-right">
+                <span class="font-mono font-bold text-indigo-600 text-xs">${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX'} ${Number(roomPrice).toLocaleString()}</span>
+            </td>
+
+            <!-- 6. ACTIONS -->
+            <td class="py-3 px-6 text-center">
+                <div class="flex items-center justify-center gap-1.5">
+                    <button onclick="enableInlineEdit('${id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded transition" title="Quick Edit Inline">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                    <button onclick="deleteRoomType('${id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded transition" title="Delete Category">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+}
+// Utility to ensure typed input field changes aren't lost when toggling images/amenities
+function captureCurrentInputValues(id) {
+    if (!localEditState[id]) return;
+    
+    const nameEl = document.getElementById(`inline-name-${id}`);
+    const occEl = document.getElementById(`inline-occ-${id}`);
+    const priceEl = document.getElementById(`inline-price-${id}`);
+
+    if (nameEl) localEditState[id].name = nameEl.value;
+    if (occEl) localEditState[id].maxOccupancy = parseInt(occEl.value, 10);
+    if (priceEl) localEditState[id].basePrice = parseFloat(priceEl.value);
+}
+
+function cancelInlineEdit(id) {
+    const room = roomTypesCache.find(r => r._id === id);
+    if (!room) return;
+    const rowEl = document.getElementById(`row-${id}`);
+    if (rowEl) {
+        rowEl.outerHTML = renderTableRow(room, false);
+    }
+}
+
+async function saveInlineEdit(id) {
+    const state = localEditState[id];
+    if (!state) return;
+
+    const nameInput = document.getElementById(`inline-name-${id}`);
+    const occInput = document.getElementById(`inline-occ-${id}`);
+    const priceInput = document.getElementById(`inline-price-${id}`);
+
+    const formData = new FormData();
+    formData.append('name', nameInput ? nameInput.value : state.name);
+    formData.append('maxOccupancy', occInput ? parseInt(occInput.value, 10) : state.maxOccupancy);
+    formData.append('basePrice', priceInput ? parseFloat(priceInput.value) : state.basePrice);
+    formData.append('amenities', JSON.stringify(state.amenities || []));
+    formData.append('existingImages', JSON.stringify(state.imageUrls || []));
+
+    if (state.newFiles && state.newFiles.length > 0) {
+        state.newFiles.forEach(file => formData.append('images', file));
+    }
+
+    try {
+        // MUST pass headers: {} so authenticatedFetch doesn't force 'application/json'
+        const response = await authenticatedFetch(`${API_BASE_URL}/api/room-types/${id}`, {
+            method: 'PUT',
+            headers: {}, 
+            body: formData
+        });
+
+        const contentType = response.headers.get("content-type");
+        let result;
+        
+        if (contentType && contentType.includes("application/json")) {
+            result = await response.json();
+        } else {
+            const rawText = await response.text();
+            console.error("🔥 Raw HTML Server Crash Response:", rawText);
+            throw new Error(`Server crash (500). Check browser console for raw backend logs.`);
+        }
+
+        if (response.ok) {
+            const updatedRoom = result.data || result;
+            const index = roomTypesCache.findIndex(r => (r._id || r.id) === id);
+            if (index !== -1) roomTypesCache[index] = updatedRoom;
+
+            delete localEditState[id];
+
+            const rowEl = document.getElementById(`row-${id}`);
+            if (rowEl) {
+                rowEl.outerHTML = renderTableRow(index !== -1 ? roomTypesCache[index] : updatedRoom, false);
+            }
+            if (typeof showMessage === 'function') showMessage("Room updated successfully!");
+        } else {
+            if (typeof showMessage === 'function') showMessage(result.error || result.message || "Failed to update", true);
+        }
+    } catch (err) {
+        console.error('Error saving room inline edit:', err);
+        if (typeof showMessage === 'function') showMessage(err.message || "Network error", true);
+    }
+}
+
 async function fetchRoomsV2() {
     const tbody = document.getElementById('roomTableBody');
     const mobileGrid = document.getElementById('roomMobileGrid');
     
-    // Safety check: break execution out early if neither viewport target element exists
     if (!tbody && !mobileGrid) return;
 
     try {
@@ -5692,79 +6105,96 @@ async function fetchRoomsV2() {
 
         if (!res.ok) throw new Error(rooms.error || "Inventory endpoint communication error.");
 
-        // Graceful handling for empty array results across view variants
         if (!rooms || rooms.length === 0) {
-            const fallbackMsg = '<div class="p-10 text-center text-slate-400 font-medium text-sm">No rooms found in registry.</div>';
-            if (tbody) tbody.innerHTML = `<tr><td colspan="5">${fallbackMsg}</td></tr>`;
+            const fallbackMsg = '<div class="p-10 text-center text-slate-400 font-medium text-xs">No registered rooms found in property inventory.</div>';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="6">${fallbackMsg}</td></tr>`;
             if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
             return;
         }
 
-        // Clean out baseline raw HTML before applying string payload loops
         if (tbody) tbody.innerHTML = '';
         if (mobileGrid) mobileGrid.innerHTML = '';
 
         rooms.forEach(room => {
-            // Safety Check: Handle missing categories or prices
-            const categoryName = room.roomTypeId?.name || '<span class="text-rose-400 font-medium">Missing Category</span>';
-            const rate = room.roomTypeId?.basePrice ? room.roomTypeId.basePrice.toLocaleString() : '0.00';
+            const categoryName = room.roomTypeId?.name || '<span class="text-rose-400 font-medium">Unassigned</span>';
+            const rate = room.overridePrice 
+                ? room.overridePrice.toLocaleString() 
+                : (room.roomTypeId?.basePrice ? room.roomTypeId.basePrice.toLocaleString() : '0.00');
             
-            // Dynamic badge color configuration mapping parameters
-            const badgeClass = room.status === 'clean' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
+            // Housekeeping Badge
+            const hkStatus = (room.status || 'clean').toLowerCase();
+            const hkBadge = hkStatus === 'clean' 
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                : 'bg-amber-50 text-amber-700 border-amber-200';
 
-            // --- A. POPULATE VIEW 1: DESKTOP TABLE ROW APPEND LOOP ---
+            // Front Office Occupancy State Badge
+            const foStatus = room.isOccupied ? 'Occupied' : 'Vacant';
+            const foBadge = room.isOccupied 
+                ? 'bg-indigo-50 text-indigo-700 border-indigo-200' 
+                : 'bg-slate-100 text-slate-600 border-slate-200';
+
+            // DESKTOP TABLE ROW
             if (tbody) {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-100";
+                tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100 inventory-row";
                 tr.innerHTML = `
-                    <td class="px-8 py-5 font-bold text-slate-700">${room.number}</td>
-                    <td class="px-8 py-5 text-slate-500 font-medium">${categoryName}</td>
-                    <td class="px-8 py-5 font-mono text-sm text-indigo-600 font-bold">${CURRENT_CURRENCY} ${rate}</td>
-                    <td class="px-8 py-5">
-                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${badgeClass}">
-                            ${room.status || 'Unknown'}
+                    <td class="px-6 py-3.5">
+                        <span class="font-black text-slate-800 text-sm room-number">${room.number}</span>
+                    </td>
+                    <td class="px-6 py-3.5 text-slate-600 font-semibold room-category">${categoryName}</td>
+                    <td class="px-6 py-3.5 font-mono text-xs text-indigo-600 font-bold">${CURRENT_CURRENCY} ${rate}</td>
+                    <td class="px-6 py-3.5 text-center">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${hkBadge}">
+                            ${hkStatus}
                         </span>
                     </td>
-                    <td class="px-8 py-5 text-center">
-                        <button onclick="deleteRoom('${room._id}')" class="p-2 text-slate-400 hover:text-rose-600 transition-colors focus:outline-none" title="Remove Room">
-                            <i class="fas fa-trash-can"></i>
-                        </button>
+                    <td class="px-6 py-3.5 text-center">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${foBadge}">
+                            ${foStatus}
+                        </span>
+                    </td>
+                    <td class="px-6 py-3.5 text-right">
+                        <div class="flex items-center justify-end gap-1.5">
+                            <button onclick="openEditModal('${room._id}', '${room.number}', '${categoryName}', '${room.overridePrice || ''}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded transition" title="Modify Asset">
+                                <i class="fa-solid fa-gear text-xs"></i>
+                            </button>
+                            <button onclick="deleteRoom('${room._id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded transition" title="Remove Room">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
             }
 
-            // --- B. POPULATE VIEW 2: SMARTPHONE ADAPTIVE CARD MODULE LOOP ---
+            // SMARTPHONE CARD
             if (mobileGrid) {
                 const card = document.createElement('div');
-                card.className = "p-4 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-3 relative hover:border-slate-300 transition-all";
+                card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-xs space-y-3 inventory-card";
                 card.innerHTML = `
                     <div class="flex justify-between items-start">
                         <div>
-                            <span class="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 block mb-0.5">Room Number</span>
-                            <h4 class="text-lg font-black text-slate-800">${room.number}</h4>
+                            <span class="text-[9px] uppercase tracking-wider font-extrabold text-slate-400 block">Room Number</span>
+                            <h4 class="text-base font-black text-slate-800 room-number">${room.number}</h4>
                         </div>
-                        <button onclick="deleteRoom('${room._id}')" class="p-2 text-slate-300 hover:text-rose-600 transition-colors active:scale-95 focus:outline-none" title="Remove Room">
-                            <i class="fas fa-trash-can text-sm"></i>
-                        </button>
+                        <div class="flex items-center gap-1">
+                            <button onclick="openEditModal('${room._id}', '${room.number}', '${categoryName}', '${room.overridePrice || ''}')" class="p-1.5 text-slate-400 hover:text-indigo-600">
+                                <i class="fa-solid fa-gear text-xs"></i>
+                            </button>
+                            <button onclick="deleteRoom('${room._id}')" class="p-1.5 text-slate-400 hover:text-rose-600">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
                     </div>
                     
-                    <div class="pt-1 border-t border-slate-100 flex items-center justify-between gap-4">
-                        <div>
-                            <span class="text-[9px] uppercase font-bold tracking-tight text-slate-400 block">Classification</span>
-                            <span class="text-sm font-semibold text-slate-600">${categoryName}</span>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-[9px] uppercase font-bold tracking-tight text-slate-400 block">Nightly Price</span>
-                            <span class="text-sm font-black font-mono text-indigo-600">${CURRENT_CURRENCY} ${rate}</span>
-                        </div>
+                    <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                        <span class="text-slate-500 font-medium room-category">${categoryName}</span>
+                        <span class="font-mono font-bold text-indigo-600">${CURRENT_CURRENCY} ${rate}</span>
                     </div>
 
-                    <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-xs">
-                        <span class="text-[10px] uppercase font-bold tracking-tight text-slate-400">Housekeeping State</span>
-                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${badgeClass}">
-                            ${room.status || 'Unknown'}
-                        </span>
+                    <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-[10px]">
+                        <span class="px-2 py-0.5 rounded-full font-extrabold uppercase border ${hkBadge}">${hkStatus}</span>
+                        <span class="px-2 py-0.5 rounded-full font-extrabold uppercase border ${foBadge}">${foStatus}</span>
                     </div>
                 `;
                 mobileGrid.appendChild(card);
@@ -5773,10 +6203,27 @@ async function fetchRoomsV2() {
 
     } catch (err) {
         console.error("Table Refresh Error Catch Exception:", err);
-        const errorMsg = '<div class="p-10 text-center text-rose-500 font-semibold text-sm"><i class="fas fa-circle-exclamation mr-2"></i>Error loading inventory matrix records.</div>';
-        if (tbody) tbody.innerHTML = `<tr><td colspan="5">${errorMsg}</td></tr>`;
+        const errorMsg = '<div class="p-10 text-center text-rose-500 font-semibold text-xs"><i class="fa-solid fa-circle-exclamation mr-2"></i>Error loading physical inventory matrix records.</div>';
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6">${errorMsg}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = errorMsg;
     }
+}
+
+// Search helper for live physical inventory
+function filterInventoryTable() {
+    const query = document.getElementById('inventorySearchInput').value.toLowerCase();
+    
+    document.querySelectorAll('.inventory-row').forEach(row => {
+        const num = row.querySelector('.room-number')?.innerText.toLowerCase() || '';
+        const cat = row.querySelector('.room-category')?.innerText.toLowerCase() || '';
+        row.style.display = (num.includes(query) || cat.includes(query)) ? '' : 'none';
+    });
+
+    document.querySelectorAll('.inventory-card').forEach(card => {
+        const num = card.querySelector('.room-number')?.innerText.toLowerCase() || '';
+        const cat = card.querySelector('.room-category')?.innerText.toLowerCase() || '';
+        card.style.display = (num.includes(query) || cat.includes(query)) ? '' : 'none';
+    });
 }
 
 // Run on page load
@@ -5917,147 +6364,162 @@ function openUserModal(editData = null) {
 
 async function fetchUsers() {
     try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/admin/users`, {
-            method: 'GET'
-        });
+        const res = await authenticatedFetch(`${API_BASE_URL}/admin/users`, { method: 'GET' });
 
-        if (!res) return;
-        if (!res.ok) throw new Error("Connection Failed");
+        if (!res || !res.ok) throw new Error("Connection Failed");
 
         const users = await res.json();
         
-        // Update Global Stats Counts
+        // Update Industry KPI Counters
         const staffCountEl = document.getElementById('totalStaffCount');
+        const activeStaffCountEl = document.getElementById('activeStaffCount');
+        const adminStaffCountEl = document.getElementById('adminStaffCount');
+
         if (staffCountEl) staffCountEl.innerText = users.length;
+        if (activeStaffCountEl) activeStaffCountEl.innerText = users.filter(u => u.status !== 'inactive').length;
+        if (adminStaffCountEl) adminStaffCountEl.innerText = users.filter(u => u.role === 'admin').length;
         
-        // Update Server Status Indicators
+        // Update Connection Indicator
         const statusEl = document.getElementById('connectionStatus');
         if (statusEl) {
-            statusEl.innerText = "Server Online";
+            statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-green-500"></span> Server Online`;
             statusEl.className = "flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 px-3 py-1.5 rounded-full border border-green-200";
-            const dot = statusEl.querySelector('span');
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-green-500";
         }
 
         const tbody = document.getElementById('userTableBody');
         const mobileGrid = document.getElementById('userMobileGrid');
         
-        // Purge raw DOM contents before rendering loops
         if (tbody) tbody.innerHTML = '';
         if (mobileGrid) mobileGrid.innerHTML = '';
 
         users.forEach(user => {
             const firstLetter = user.username ? user.username.charAt(0).toUpperCase() : '?';
             const roleClass = typeof getRoleClass === 'function' ? getRoleClass(user.role) : 'bg-slate-100 text-slate-700 border-slate-200';
-            const upperRole = user.role ? user.role.toUpperCase() : 'UNKNOWN';
+            const upperRole = user.role ? user.role.toUpperCase() : 'UNASSIGNED';
+            const isInactive = user.status === 'inactive';
 
-            // Shared modular dropdown element template string
+            // Select Dropdown Template
             const selectOptionsHtml = `
                 <select onchange="updateRole('${user._id}', this.value, '${user.username}')" 
-                  class="w-full sm:w-auto text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition shadow-sm text-slate-700">
+                  class="text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition text-slate-700">
                     <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
                     <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
                     <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
                     <option value="front office" ${user.role === 'front office' ? 'selected' : ''}>Front Office</option>
                     <option value="chef" ${user.role === 'chef' ? 'selected' : ''}>Chef</option>
-                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>System Administrator</option>
                 </select>
             `;
 
-            // Shared modular action utility button group template string
+            // Action Buttons Template
             const actionButtonsHtml = `
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 justify-end">
                     <button data-id="${user._id}" 
                             data-username="${user.username}" 
                             data-role="${user.role}"
                             onclick="handleEditClick(this)" 
-                            class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-lg transition-all border border-indigo-100/70 active:scale-95">
+                            class="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-lg transition border border-indigo-100"
+                            title="Edit Account Details">
                         <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
-                        <span>Edit</span>
                     </button>
 
                     <button onclick="deleteUser('${user._id}')" 
-                            class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100/70 active:scale-95">
+                            class="p-1.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition border border-red-100"
+                            title="Revoke / Deactivate Access">
                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                        <span>Delete</span>
                     </button>
                 </div>
             `;
 
-            // --- A. POPULATE VIEW 1: DESKTOP TABLE ROW LAYOUT ---
+            // DESKTOP ROW
             if (tbody) {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
+                tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100 staff-row";
                 tr.innerHTML = `
-                    <td class="px-8 py-4">
+                    <td class="px-6 py-3.5">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 text-sm">
+                            <div class="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 text-xs">
                                 ${firstLetter}
                             </div>
-                            <span class="font-semibold text-slate-700">${user.username}</span>
+                            <div>
+                                <span class="font-bold text-slate-800 block leading-tight staff-name">${user.username}</span>
+                                <span class="text-[10px] font-mono text-slate-400">ID: ${user._id.substring(0, 8)}</span>
+                            </div>
                         </div>
                     </td>
-                    <td class="px-8 py-4">
-                        <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-wider border ${roleClass}">
+                    <td class="px-6 py-3.5">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider border ${roleClass}">
                             ${upperRole}
                         </span>
                     </td>
-                    <td class="px-8 py-4">${selectOptionsHtml}</td>
-                    <td class="px-8 py-4 text-right">
-                        <div class="flex justify-end">${actionButtonsHtml}</div>
+                    <td class="px-6 py-3.5">${selectOptionsHtml}</td>
+                    <td class="px-6 py-3.5 text-center">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${isInactive ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}">
+                            <span class="w-1.5 h-1.5 rounded-full ${isInactive ? 'bg-red-500' : 'bg-emerald-500'}"></span>
+                            ${isInactive ? 'Inactive' : 'Active'}
+                        </span>
                     </td>
+                    <td class="px-6 py-3.5 text-right">${actionButtonsHtml}</td>
                 `;
                 tbody.appendChild(tr);
             }
 
-            // --- B. POPULATE VIEW 2: SMARTPHONE RESPONSIVE LEDGER CARD ---
+            // MOBILE CARD
             if (mobileGrid) {
                 const card = document.createElement('div');
-                card.className = "p-4 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 hover:border-slate-300 transition-all";
+                card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-xs space-y-3 staff-card";
                 card.innerHTML = `
-                    <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2.5">
-                            <div class="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 text-xs">
+                            <div class="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 text-xs">
                                 ${firstLetter}
                             </div>
                             <div>
-                                <h4 class="text-sm font-bold text-slate-800">${user.username}</h4>
-                                <span class="text-[9px] uppercase tracking-wider font-extrabold text-slate-400 block mt-0.5">Personnel ID Target</span>
+                                <h4 class="text-sm font-bold text-slate-800 staff-name">${user.username}</h4>
+                                <span class="text-[10px] font-mono text-slate-400">ID: ${user._id.substring(0, 8)}</span>
                             </div>
                         </div>
-                        <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-wider border ${roleClass}">
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold tracking-wider border ${roleClass}">
                             ${upperRole}
                         </span>
                     </div>
 
-                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[10px] uppercase font-bold tracking-tight text-slate-400">Modify Access Tier Permissions</label>
-                            ${selectOptionsHtml}
-                        </div>
+                    <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                        ${selectOptionsHtml}
+                        ${actionButtonsHtml}
                     </div>
-
-                    <div class="pt-1">${actionButtonsHtml}</div>
                 `;
                 mobileGrid.appendChild(card);
             }
         });
 
-        // Re-initialize vector icons to prevent visual clipping
-        if (window.lucide) {
-            window.lucide.createIcons();
-        } else {
-            console.error("Lucide library asset reference error.");
-        }
+        if (window.lucide) window.lucide.createIcons();
 
     } catch (err) {
         console.error("Fetch Operational System Fault Error:", err);
         const statusEl = document.getElementById('connectionStatus');
         if (statusEl) {
-            statusEl.innerText = "Offline";
+            statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500"></span> Offline`;
             statusEl.className = "flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-700 px-3 py-1.5 rounded-full border border-red-200";
         }
     }
+}
+
+// Client-side search helper function
+function filterStaffTable() {
+    const query = document.getElementById('staffSearchInput').value.toLowerCase();
+    
+    // Desktop Search
+    document.querySelectorAll('.staff-row').forEach(row => {
+        const name = row.querySelector('.staff-name')?.innerText.toLowerCase() || '';
+        row.style.display = name.includes(query) ? '' : 'none';
+    });
+
+    // Mobile Search
+    document.querySelectorAll('.staff-card').forEach(card => {
+        const name = card.querySelector('.staff-name')?.innerText.toLowerCase() || '';
+        card.style.display = name.includes(query) ? '' : 'none';
+    });
 }
 
 async function handleSaveUser() {
@@ -6744,7 +7206,7 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
                 
                 <!-- TRANSACTION DETAILS -->
                 <div style="font-size: 11px;">
-                    <div><strong>Server/Op:</strong> ${settlementInfo.cashierName || 'POS Station 1'}</div>
+                    <div><strong>Server:</strong> ${settlementInfo.currentUsername || 'POS Station 1'}</div>
                     <div><strong>Guest:</strong> ${accountData.guestName || 'Walk-In'}</div>
                     ${accountData.roomNumber ? `<div><strong>Room #:</strong> ${accountData.roomNumber}</div>` : ''}
                     <div><strong>Payment:</strong> ${paymentMethod || 'Cash'}</div>
@@ -8205,58 +8667,61 @@ function injectActionElements(container, isAdmin, sale, isMobileVariant = false)
 function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfitTotal, hideSensitiveInfo = false) {
     // --- 1. DESKTOP VIEWPORT PROCESSING (TABLE ROWS) ---
     if (tbody) {
+        // Clean up previously appended summary rows
         const existingSummaries = tbody.querySelectorAll('.summary-row');
         existingSummaries.forEach(el => el.remove());
 
-        // Spacer Row
+        // Spacer Row across all 9 columns
         const spacer = tbody.insertRow();
         spacer.className = "summary-row border-none";
-        spacer.innerHTML = `<td colspan="9" class="h-6 bg-white"></td>`;
+        spacer.innerHTML = `<td colspan="9" class="h-4 bg-white"></td>`;
 
         // Departmental Sub-totals Loop
         for (const [dept, metrics] of Object.entries(departmentTotals)) {
             const row = tbody.insertRow();
-            row.className = "summary-row bg-slate-50 text-slate-600 font-medium border-b border-slate-200/60";
+            row.className = "summary-row bg-slate-100/90 text-slate-800 font-bold border-t border-b border-slate-300";
             
             const profitDisplay = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(metrics.profit).toLocaleString()}`;
 
             row.innerHTML = `
-                <td colspan="4" class="text-right py-3 pr-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">${dept} Subtotal:</td>
-                <td class="px-6 py-3 font-mono font-bold text-indigo-600">${CURRENT_CURRENCY} ${metrics.sales.toLocaleString()}</td>
-                <td class="px-6 py-3 font-mono font-bold text-emerald-600">${profitDisplay}</td>
+                <td colspan="4" class="text-right py-3 px-6 text-xs uppercase tracking-wider font-extrabold text-slate-700">${dept} Subtotal:</td>
+                <td class="px-6 py-3 font-mono font-bold text-indigo-700 whitespace-nowrap">${CURRENT_CURRENCY} ${metrics.sales.toLocaleString()}</td>
+                <td class="px-6 py-3 font-mono font-bold text-emerald-700 whitespace-nowrap">${profitDisplay}</td>
                 <td colspan="3"></td>
             `;
         }
 
-        // Grand Total Header Row Block
+        // --- HIGH-CONTRAST GRAND TOTAL ROW ---
         const grandRow = tbody.insertRow();
-        grandRow.className = "summary-row bg-indigo-600 text-white font-bold border-none shadow-sm";
-        
+        grandRow.className = "summary-row text-white font-extrabold shadow-md";
+        // Applying inline style to guarantee background priority over parent CSS overrides
+        grandRow.style.backgroundColor = "#1e293b"; // Solid Slate 800
+
         const grandProfitDisplay = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(grandProfitTotal).toLocaleString()}`;
 
         grandRow.innerHTML = `
-            <td colspan="4" class="text-right py-3.5 pr-4 text-sm uppercase tracking-widest font-black">Grand Total:</td>
-            <td class="px-6 py-3.5 text-base font-mono font-black">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</td>
-            <td class="px-6 py-3.5 text-base font-mono font-black text-emerald-300">${grandProfitDisplay}</td>
-            <td colspan="3"></td>
+            <td colspan="4" class="text-right py-3.5 px-6 text-xs uppercase tracking-widest font-black text-slate-100" style="color: #f8fafc !important;">GRAND TOTAL:</td>
+            <td class="px-6 py-3.5 text-sm font-mono font-black whitespace-nowrap" style="color: #818cf8 !important;">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</td>
+            <td class="px-6 py-3.5 text-sm font-mono font-black whitespace-nowrap" style="color: #34d399 !important;">${grandProfitDisplay}</td>
+            <td colspan="3" style="background-color: #1e293b;"></td>
         `;
     }
 
-    // --- 2. MOBILE VIEWPORT PROCESSING (CARD CONTAINER MODULE) ---
+    // --- 2. MOBILE VIEWPORT PROCESSING ---
     const summaryContainer = document.getElementById('sales-summary');
     if (summaryContainer) {
         const mobileDeptRowsHtml = Object.entries(departmentTotals)
             .map(([dept, metrics]) => {
                 const profitText = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(metrics.profit).toLocaleString()}`;
                 return `
-                    <div class="py-2 border-b border-slate-200/60 last:border-0 text-xs space-y-1">
+                    <div class="py-2 border-b border-amber-200/60 last:border-0 text-xs space-y-1">
                         <div class="flex justify-between items-center">
-                            <span class="text-slate-500 font-medium">${dept} Sales</span>
-                            <span class="font-mono font-bold text-slate-800">${CURRENT_CURRENCY} ${metrics.sales.toLocaleString()}</span>
+                            <span class="text-slate-700 font-semibold">${dept} Sales</span>
+                            <span class="font-mono font-bold text-slate-900">${CURRENT_CURRENCY} ${metrics.sales.toLocaleString()}</span>
                         </div>
                         <div class="flex justify-between items-center text-[11px]">
-                            <span class="text-slate-400 font-medium">${dept} Profit</span>
-                            <span class="font-mono font-bold text-emerald-600">${profitText}</span>
+                            <span class="text-slate-600 font-semibold">${dept} Profit</span>
+                            <span class="font-mono font-bold text-emerald-700">${profitText}</span>
                         </div>
                     </div>
                 `;
@@ -8266,23 +8731,23 @@ function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfi
 
         summaryContainer.innerHTML = `
             <div class="space-y-3">
-                <div class="flex items-center gap-2 pb-2 border-b border-amber-200 text-amber-800">
+                <div class="flex items-center gap-2 pb-2 border-b border-amber-200 text-amber-900">
                     <i class="fa-solid fa-calculator text-base"></i>
                     <h4 class="font-bold uppercase tracking-wider text-xs">Financial Overview Summary</h4>
                 </div>
                 
                 <div class="divide-y divide-amber-200/30">
-                    ${mobileDeptRowsHtml || '<div class="text-xs text-slate-400 italic py-1">No departmental records calculated.</div>'}
+                    ${mobileDeptRowsHtml || '<div class="text-xs text-slate-500 italic py-1">No departmental records calculated.</div>'}
                 </div>
 
-                <div class="mt-3 p-3 bg-indigo-600 text-white rounded-xl space-y-2 shadow-inner">
+                <div class="mt-3 p-3 bg-slate-900 text-white rounded-xl space-y-2 shadow-md">
                     <div class="flex justify-between items-center">
-                        <span class="text-[10px] uppercase tracking-widest font-black">Grand Total Sales</span>
-                        <span class="text-base font-mono font-black">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</span>
+                        <span class="text-[10px] uppercase tracking-widest font-black text-slate-200">Grand Total Sales</span>
+                        <span class="text-base font-mono font-black text-indigo-300">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</span>
                     </div>
-                    <div class="flex justify-between items-center pt-2 border-t border-indigo-500/50">
-                        <span class="text-[10px] uppercase tracking-widest font-black text-300 ">Grand Total Profit</span>
-                        <span class="text-base font-mono font-black text-300">${totalProfitText}</span>
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-700">
+                        <span class="text-[10px] uppercase tracking-widest font-black text-slate-200">Grand Total Profit</span>
+                        <span class="text-base font-mono font-black text-emerald-400">${totalProfitText}</span>
                     </div>
                 </div>
             </div>
@@ -9459,25 +9924,26 @@ async function generateSalesReports() {
     const startDate = document.getElementById('sales-report-start-date').value;
     const endDate = document.getElementById('sales-report-end-date').value;
 
+    const tbody = document.getElementById('sales-department-report-tbody');
+    const cardContainer = document.getElementById('sales-department-report-cards');
+
     if (!startDate || !endDate) { 
-        const tbody = document.getElementById('sales-department-report-tbody');
-        const cardContainer = document.getElementById('sales-department-report-cards');
-        if (tbody) tbody.innerHTML = ''; 
-        if (cardContainer) cardContainer.innerHTML = ''; 
-        document.getElementById('overall-sales-reportcard').textContent = '0';
-        document.getElementById('overall-profit-reportcard').textContent = '0';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-6 text-slate-400 italic">Select a valid start and end date to generate report.</td></tr>'; 
+        if (cardContainer) cardContainer.innerHTML = '<div class="text-center py-4 text-slate-400 italic text-xs">Select dates above.</div>'; 
+        
+        document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY} 0.00`;
+        document.getElementById('overall-profit-reportcard').textContent = `${CURRENT_CURRENCY} 0.00`;
+        const marginElem = document.getElementById('overall-margin-reportcard');
+        if (marginElem) marginElem.textContent = '-- %';
         return; 
     }
 
     if (generateButton) {
-        generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        generateButton.innerHTML = '<i class="fas fa-circle-notch fa-spin text-xs"></i> Fetching...';
         generateButton.disabled = true;
     }
 
-    const tbody = document.getElementById('sales-department-report-tbody');
-    const cardContainer = document.getElementById('sales-department-report-cards');
-    
-    if (tbody) tbody.innerHTML = ''; 
+    if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-indigo-600"><i class="fas fa-spinner fa-spin mr-2"></i>Loading department figures...</td></tr>'; 
     if (cardContainer) cardContainer.innerHTML = ''; 
 
     try {
@@ -9512,7 +9978,6 @@ async function generateSalesReports() {
 
             const lineTotalSales = quantity * unitSp;
             
-            // Calculate profit using pre-computed profit field or derive from SP - BP
             let lineTotalProfit = 0;
             if (typeof sale.profit === 'number') {
                 lineTotalProfit = sale.profit;
@@ -9533,14 +9998,19 @@ async function generateSalesReports() {
         const sortedDepts = Object.keys(salesReport).sort();
 
         if (sortedDepts.length === 0) {
-            const emptyStateHtml = 'No sales activity found for this period.';
-            if (tbody) tbody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
-            if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
-            showMessage('No sales records found for the selected date range.', false);
+            const emptyStateHtml = 'No sales activity recorded for this period.';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-slate-400 italic">${emptyStateHtml}</td></tr>`;
+            if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-slate-400 italic bg-white border border-slate-200 rounded-xl text-xs">${emptyStateHtml}</div>`;
+            
+            document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY} 0.00`;
+            document.getElementById('overall-profit-reportcard').textContent = `${CURRENT_CURRENCY} 0.00`;
+            const marginElem = document.getElementById('overall-margin-reportcard');
+            if (marginElem) marginElem.textContent = '0.0%';
         } else {
             let tableRowsHTML = [];
             let mobileCardsHTML = [];
 
+            // SINGLE LOOP: Accumulate totals and build HTML
             sortedDepts.forEach(dept => {
                 const sales = salesReport[dept].sales;
                 const profit = salesReport[dept].profit;
@@ -9548,42 +10018,60 @@ async function generateSalesReports() {
                 totalSalesSum += sales;
                 totalProfitSum += profit;
 
-              tableRowsHTML.push(`
-    <tr class="border-b border-slate-100 hover:bg-slate-50/80">
-        <td class="px-6 py-4 font-medium text-slate-700 truncate">${dept}</td>
-        <td class="px-6 py-4 text-right font-mono text-slate-800 font-semibold whitespace-nowrap">${sales.toLocaleString()}</td>
-        <td class="px-6 py-4 text-right font-mono text-emerald-600 font-semibold whitespace-nowrap">${profit.toLocaleString()}</td>
-    </tr>
-`);
+                // Desktop Table Row (Explicit w-1/2, w-1/4, w-1/4 matching headers)
+                tableRowsHTML.push(`
+                    <tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
+                        <td class="w-1/2 px-6 py-3.5 font-semibold text-slate-800">${dept}</td>
+                        <td class="w-1/4 px-6 py-3.5 text-right font-mono text-slate-900 font-bold whitespace-nowrap">${CURRENT_CURRENCY} ${sales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="w-1/4 px-6 py-3.5 text-right font-mono text-emerald-600 font-bold whitespace-nowrap">${CURRENT_CURRENCY} ${profit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    </tr>
+                `);
 
+                // Mobile Card View
                 mobileCardsHTML.push(`
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
-                        <h4 class="font-bold text-slate-800 text-sm border-b border-slate-100 pb-2">${dept}</h4>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-2">
+                        <h4 class="font-bold text-slate-800 text-xs border-b border-slate-100 pb-1.5 uppercase tracking-wider">${dept}</h4>
                         <div class="flex justify-between items-center text-xs">
-                            <span class="text-slate-500">Sales:</span>
-                            <span class="font-mono font-bold text-slate-800">${sales.toLocaleString()} ${CURRENT_CURRENCY}</span>
+                            <span class="text-slate-500 font-medium">Revenue:</span>
+                            <span class="font-mono font-bold text-slate-900">${CURRENT_CURRENCY} ${sales.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                         </div>
                         <div class="flex justify-between items-center text-xs">
-                            <span class="text-slate-500">Profit:</span>
-                            <span class="font-mono font-bold text-emerald-600">${profit.toLocaleString()} ${CURRENT_CURRENCY}</span>
+                            <span class="text-slate-500 font-medium">Profit:</span>
+                            <span class="font-mono font-bold text-emerald-600">${CURRENT_CURRENCY} ${profit.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                         </div>
                     </div>
                 `);
             });
 
+            // --- HIGH-CONTRAST & PERFECTLY ALIGNED GRAND TOTAL ROW ---
+            tableRowsHTML.push(`
+                <tr class="font-black border-t-2 border-slate-900 shadow-md" style="background-color: #0f172a !important;">
+                    <td class="w-1/2 px-6 py-4 uppercase text-xs tracking-widest" style="color: #f8fafc !important; background-color: #0f172a !important;">Total Operational Summary</td>
+                    <td class="w-1/4 px-6 py-4 text-right font-mono text-sm whitespace-nowrap" style="color: #a5b4fc !important; background-color: #0f172a !important;">${CURRENT_CURRENCY} ${totalSalesSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="w-1/4 px-6 py-4 text-right font-mono text-sm whitespace-nowrap" style="color: #34d399 !important; background-color: #0f172a !important;">${CURRENT_CURRENCY} ${totalProfitSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                </tr>
+            `);
+
             if (tbody) tbody.innerHTML = tableRowsHTML.join('');
             if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
         }
 
-        // Update KPI card text
-        document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY}${totalSalesSum.toLocaleString()}`;
-        document.getElementById('overall-profit-reportcard').textContent = `${CURRENT_CURRENCY}${totalProfitSum.toLocaleString()}`;
+        // --- UPDATE KPI CARDS ---
+        document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY} ${totalSalesSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        document.getElementById('overall-profit-reportcard').textContent = `${CURRENT_CURRENCY} ${totalProfitSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 
-        // Update Excel Export elements
+        // Calculate and update Profit Margin Percentage
+        const profitMargin = totalSalesSum > 0 ? ((totalProfitSum / totalSalesSum) * 100).toFixed(1) : "0.0";
+        const marginElem = document.getElementById('overall-margin-reportcard');
+        if (marginElem) {
+            marginElem.textContent = `${profitMargin}%`;
+        }
+
+        // --- UPDATE HIDDEN EXCEL EXPORT TABLE ---
         const exportSalesElem = document.getElementById('overall-sales-export');
         const exportProfitElem = document.getElementById('overall-profit-export');
-        if (exportSalesElem) exportSalesElem.textContent = `${CURRENT_CURRENCY}${totalSalesSum.toLocaleString()}`;
-        if (exportProfitElem) exportProfitElem.textContent = `${CURRENT_CURRENCY}${totalProfitSum.toLocaleString()}`;
+        if (exportSalesElem) exportSalesElem.textContent = `${CURRENT_CURRENCY} ${totalSalesSum.toFixed(2)}`;
+        if (exportProfitElem) exportProfitElem.textContent = `${CURRENT_CURRENCY} ${totalProfitSum.toFixed(2)}`;
 
     } catch (error) {
         console.error('Sales Report Error:', error);
@@ -9610,26 +10098,30 @@ async function generateExpensesReports() {
     const startDate = document.getElementById('expenses-report-start-date').value;
     const endDate = document.getElementById('expenses-report-end-date').value;
 
-    // Silent clear on incomplete dates so typing isn't interrupted by alerts
+    const tbody = document.getElementById('expenses-department-report-tbody');
+    const cardContainer = document.getElementById('expenses-department-report-cards');
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+
+    // Silent reset if date range is incomplete
     if (!startDate || !endDate) { 
-        const tbody = document.getElementById('expenses-department-report-tbody');
-        const cardContainer = document.getElementById('expenses-department-report-cards');
-        if (tbody) tbody.innerHTML = ''; 
-        if (cardContainer) cardContainer.innerHTML = ''; 
-        document.getElementById('overall-expenses-card').textContent = '0';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="2" class="text-center py-6 text-slate-400 italic">Select a valid start and end date to generate expense analysis.</td></tr>'; 
+        if (cardContainer) cardContainer.innerHTML = '<div class="text-center py-4 text-slate-400 italic text-xs">Select dates above.</div>'; 
+        
+        document.getElementById('overall-expenses-card').textContent = `${currency} 0.00`;
+        const deptsCard = document.getElementById('overall-expense-depts-card');
+        if (deptsCard) deptsCard.textContent = '0';
+
         const exportExpensesElem = document.getElementById('overall-expenses-export');
-        if (exportExpensesElem) exportExpensesElem.textContent = '0';
+        if (exportExpensesElem) exportExpensesElem.textContent = `${currency} 0.00`;
         return; 
     }
 
     if (generateButton) {
-        generateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        generateButton.innerHTML = '<i class="fas fa-circle-notch fa-spin text-xs"></i> Fetching...';
         generateButton.disabled = true;
     }
 
-    const tbody = document.getElementById('expenses-department-report-tbody');
-    const cardContainer = document.getElementById('expenses-department-report-cards');
-    if (tbody) tbody.innerHTML = ''; 
+    if (tbody) tbody.innerHTML = '<tr><td colspan="2" class="text-center py-8 text-indigo-600"><i class="fas fa-spinner fa-spin mr-2"></i>Loading department expense figures...</td></tr>'; 
     if (cardContainer) cardContainer.innerHTML = ''; 
 
     try {
@@ -9637,6 +10129,7 @@ async function generateExpensesReports() {
         let allExpenses = [];
         let page = 1, totalPages = 1;
 
+        // Fetch all paginated pages for the date range
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/expenses?${queryParams}&page=${page}&limit=100`);
             const res = await resp.json();
@@ -9648,21 +10141,28 @@ async function generateExpensesReports() {
         } while (page <= totalPages);
 
         const expensesReport = {};
+        let totalExpensesSum = 0;
+
         allExpenses.forEach(exp => {
-            const dept = exp.department || 'Other';
+            const dept = (exp.department || 'Other').trim() || 'Other';
+            const amt = Number(exp.amount) || 0;
+            
             if (!expensesReport[dept]) expensesReport[dept] = 0;
-            expensesReport[dept] += (Number(exp.amount) || 0);
+            expensesReport[dept] += amt;
+            totalExpensesSum += amt;
         });
 
-        let totalExpensesSum = 0;
         const sortedDepts = Object.keys(expensesReport).sort();
 
         if (sortedDepts.length === 0) {
-            const emptyStateHtml = 'No expenditure found for this period.';
-            if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-8 text-gray-500 italic">${emptyStateHtml}</td></tr>`;
-            if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-gray-500 italic bg-white border border-slate-200 rounded-xl shadow-sm text-sm">${emptyStateHtml}</div>`;
+            const emptyStateHtml = 'No expenditure recorded for this period.';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-8 text-slate-400 italic">${emptyStateHtml}</td></tr>`;
+            if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-slate-400 italic bg-white border border-slate-200 rounded-xl text-xs">${emptyStateHtml}</div>`;
             
-            // Fires message popup for zero records found
+            document.getElementById('overall-expenses-card').textContent = `${currency} 0.00`;
+            const deptsCard = document.getElementById('overall-expense-depts-card');
+            if (deptsCard) deptsCard.textContent = '0';
+
             showMessage('No expense records found for the selected date range.', false);
         } else {
             let tableRowsHTML = [];
@@ -9670,33 +10170,51 @@ async function generateExpensesReports() {
 
             sortedDepts.forEach(dept => {
                 const expenses = expensesReport[dept];
-                totalExpensesSum += expenses;
+                const sharePercent = totalExpensesSum > 0 ? ((expenses / totalExpensesSum) * 100).toFixed(1) : "0.0";
 
+                // Desktop Table Row (Aligned w-2/3, w-1/3)
                 tableRowsHTML.push(`
-                    <tr class="border-b border-gray-100 hover:bg-gray-50">
-                        <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
-                        <td class="px-6 py-4 text-right font-mono text-red-600 font-semibold">${expenses.toLocaleString()}</td>
+                    <tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
+                        <td class="w-2/3 px-6 py-3.5 font-semibold text-slate-800">${dept}</td>
+                        <td class="w-1/3 px-6 py-3.5 text-right font-mono text-rose-600 font-bold whitespace-nowrap">${currency} ${expenses.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     </tr>
                 `);
 
+                // Mobile Card View
                 mobileCardsHTML.push(`
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                        <div class="flex justify-between items-center">
-                            <h4 class="font-bold text-slate-800 text-base">${dept}</h4>
-                            <span class="font-mono font-black text-red-600">${expenses.toLocaleString()} ${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX'}</span>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-2">
+                        <div class="flex justify-between items-center border-b border-slate-100 pb-1.5">
+                            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider">${dept}</h4>
+                            <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-semibold">${sharePercent}% of total</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs pt-1">
+                            <span class="text-slate-500 font-medium">Department Cost:</span>
+                            <span class="font-mono font-bold text-rose-600">${currency} ${expenses.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                         </div>
                     </div>
                 `);
             });
 
+            // --- HIGH-CONTRAST & PERFECTLY ALIGNED GRAND TOTAL ROW ---
+            tableRowsHTML.push(`
+                <tr class="font-black border-t-2 border-slate-900 shadow-md" style="background-color: #0f172a !important;">
+                    <td class="w-2/3 px-6 py-4 uppercase text-xs tracking-widest" style="color: #f8fafc !important; background-color: #0f172a !important;">Total Operational Expenditure</td>
+                    <td class="w-1/3 px-6 py-4 text-right font-mono text-sm whitespace-nowrap" style="color: #f43f5e !important; background-color: #0f172a !important;">${currency} ${totalExpensesSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                </tr>
+            `);
+
             if (tbody) tbody.innerHTML = tableRowsHTML.join('');
             if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
         }
 
-        document.getElementById('overall-expenses-card').textContent = `${CURRENT_CURRENCY}${totalExpensesSum.toLocaleString()}`
-        
+        // --- UPDATE KPI CARDS ---
+        document.getElementById('overall-expenses-card').textContent = `${currency} ${totalExpensesSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        const deptsCard = document.getElementById('overall-expense-depts-card');
+        if (deptsCard) deptsCard.textContent = sortedDepts.length.toString();
+
+        // --- UPDATE HIDDEN EXCEL EXPORT TABLE ---
         const exportExpensesElem = document.getElementById('overall-expenses-export');
-        if (exportExpensesElem) exportExpensesElem.textContent = `${CURRENT_CURRENCY}${totalExpensesSum.toLocaleString()}`;
+        if (exportExpensesElem) exportExpensesElem.textContent = `${currency} ${totalExpensesSum.toFixed(2)}`;
 
     } catch (error) {
         console.error('Expenses Report Error:', error);
@@ -10267,64 +10785,151 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+let currentIncidentalReportData = [];
+
 async function generatePOSReport() {
     const startDate = document.getElementById('reportStartDate').value;
     const endDate = document.getElementById('reportEndDate').value;
+    const deptFilter = document.getElementById('reportDepartmentFilter')?.value || 'ALL';
     const tableBody = document.getElementById('posreportTableBody');
     const totalRevenueEl = document.getElementById('posreportTotalRevenue');
     const loadingEl = document.getElementById('loadingIndicator');
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
 
-    // Only fetch if both dates are selected
     if (!startDate || !endDate) return;
 
-    // Prevent fetching if end date is before start date
     if (new Date(endDate) < new Date(startDate)) {
-        // Optional: showMessage('End date cannot be before start date', true);
+        alert('Audit End Date cannot precede the Start Date.');
         return; 
     }
 
-    // Show loading text
     loadingEl.classList.remove('hidden');
 
     try {
-        const response = await authenticatedFetch(`${API_BASE_URL}/pos/reports/daily?startDate=${startDate}&endDate=${endDate}`);
+        const response = await authenticatedFetch(
+            `${API_BASE_URL}/pos/reports/daily?startDate=${startDate}&endDate=${endDate}&type=${deptFilter}`
+        );
         const data = await response.json();
 
-        if (!response.ok) throw new Error(data.message || 'Report failed');
+        if (!response.ok) throw new Error(data.message || 'Failed to fetch incidental revenue audit log.');
 
-        // Update Summary Card
-        totalRevenueEl.textContent = Number(data.totalRevenue).toLocaleString();
-        document.getElementById('posreportDateDisplay').textContent = data.reportRange;
+        currentIncidentalReportData = data.transactions || [];
 
-        // Populate Table
-        tableBody.innerHTML = data.transactions.length ? '' : '<tr><td colspan="4" class="text-center py-10">No records found for this date range.</td></tr>';
+        // Update Summary KPI Headings
+        totalRevenueEl.textContent = `${currency} ${Number(data.totalRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('posreportDateDisplay').textContent = data.reportRange || `${startDate} to ${endDate}`;
+        document.getElementById('posreportCountDisplay').textContent = `${currentIncidentalReportData.length} Postings Found`;
 
-        data.transactions.forEach(trx => {
-            const row = `
-                <tr class="border-b border-slate-50 hover:bg-indigo-50/30 transition-all">
-                    <td class="px-8 py-4">
-                        <span class="font-bold text-slate-700">${trx.guestName}</span>
-                        <div class="text-[10px] text-slate-400 uppercase">Room: ${trx.roomNumber}</div>
-                    </td>
-                    <td class="px-8 py-4 text-slate-600">${trx.description}</td>
-                    <td class="px-8 py-4 text-center">
-                        <span class="px-2 py-1 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
-                            ${trx.source}
-                        </span>
-                    </td>
-                    <td class="px-8 py-4 text-right font-black text-indigo-600">
-                        ${Number(trx.amount).toLocaleString()}
+        if (currentIncidentalReportData.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center py-12 text-slate-400 italic">
+                        No incidental postings recorded for this date range or outlet filter.
                     </td>
                 </tr>`;
-            tableBody.insertAdjacentHTML('beforeend', row);
+            return;
+        }
+
+        let rowsHTML = [];
+
+        currentIncidentalReportData.forEach(trx => {
+            const guestName = trx.guestName || 'Walk-In';
+            const roomDisplay = trx.roomNumber ? `Room ${trx.roomNumber}` : 'Non-Resident';
+            const folioCode = trx.bookingCustomId || (trx.id ? trx.id.slice(-6).toUpperCase() : 'N/A');
+            const description = trx.description || 'Auxiliary Charge';
+            const amountFormatted = `${currency} ${Number(trx.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const dateObj = trx.time ? new Date(trx.time) : new Date();
+            const timeString = dateObj.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+
+            // Department Badge Styles
+            let deptClass = 'bg-amber-100 text-amber-800';
+            if (trx.type === 'Bar') deptClass = 'bg-purple-100 text-purple-800';
+            if (trx.type === 'Laundry') deptClass = 'bg-blue-100 text-blue-800';
+            if (trx.type === 'Spa') deptClass = 'bg-teal-100 text-teal-800';
+
+            rowsHTML.push(`
+                <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
+                    <td class="py-3 px-4">
+                        <div class="font-bold text-slate-800">${guestName}</div>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <span class="text-[10px] font-bold text-indigo-600">${roomDisplay}</span>
+                            <span class="text-[10px] font-mono text-slate-400">Ref: #${folioCode}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="text-slate-800 font-medium">${description}</div>
+                        <div class="text-[10px] text-slate-400"><i class="far fa-clock mr-1"></i>${timeString}</div>
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${deptClass}">
+                            ${trx.type || 'Other'}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                        ${amountFormatted}
+                    </td>
+                </tr>
+            `);
         });
 
+        tableBody.innerHTML = rowsHTML.join('');
+
     } catch (err) {
-        showMessage(err.message, true);
+        console.error('Incidental Audit Error:', err);
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-rose-500 font-semibold">${err.message}</td></tr>`;
     } finally {
-        // Hide loading text
         loadingEl.classList.add('hidden');
     }
+}
+
+// Preset Filter Shortcut Helper
+function setIncidentalDateFilter(preset) {
+    const today = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    if (preset === 'yesterday') {
+        start.setDate(today.getDate() - 1);
+        end.setDate(today.getDate() - 1);
+    } else if (preset === 'mtd') {
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+    }
+
+    document.getElementById('reportStartDate').value = start.toISOString().split('T')[0];
+    document.getElementById('reportEndDate').value = end.toISOString().split('T')[0];
+    generatePOSReport();
+}
+
+// CSV Export Generator
+function exportIncidentalReportCSV() {
+    if (!currentIncidentalReportData || currentIncidentalReportData.length === 0) {
+        alert('No data available to export.');
+        return;
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Guest Name,Room Number,Reference ID,Description,Department,Amount,Posting Date\n";
+
+    currentIncidentalReportData.forEach(row => {
+        const line = [
+            `"${row.guestName || ''}"`,
+            `"${row.roomNumber || ''}"`,
+            `"${row.bookingCustomId || ''}"`,
+            `"${row.description || ''}"`,
+            `"${row.type || ''}"`,
+            row.amount || 0,
+            `"${row.time ? new Date(row.time).toISOString() : ''}"`
+        ].join(",");
+        csvContent += line + "\n";
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `incidental_audit_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 /**
@@ -11437,212 +12042,383 @@ let paymentsSearchTimeout = null;
  * Debounce controller that captures text input fields, preventing 
  * an API fetch crash loop while someone is actively typing names.
  */
+
+
+// Debounce function to prevent API spamming while typing
+let debounceTimer;
 function debouncedPaymentsReports() {
-    clearTimeout(paymentsSearchTimeout);
-    paymentsSearchTimeout = setTimeout(() => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
         generatePaymentsReports();
-    }, 400); // 400ms pause configuration
+    }, 400);
 }
 
 async function generatePaymentsReports() {
-    // 1. Gather all HTML filter states
+    // 1. Gather filters
     const startDate = document.getElementById('payment-report-start-date').value;
     const endDate = document.getElementById('payment-report-end-date').value;
-    const search = document.getElementById('payment-report-search').value;
+    const search = document.getElementById('payment-report-search').value.trim();
     const method = document.getElementById('payment-report-method').value;
 
-    // 2. Build URLSearchParams dynamically
     const queryParams = new URLSearchParams();
     if (startDate) queryParams.append('startDate', startDate);
     if (endDate) queryParams.append('endDate', endDate);
     if (search) queryParams.append('search', search);
-    if (method) queryParams.append('method', method);
+    if (method && method !== 'All') queryParams.append('method', method);
 
     const tbody = document.getElementById('payments-report-tbody');
-    
-    // Smooth inline processing spinner indicator inside the table frame
-    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-blue-500"><i class="fas fa-spinner fa-spin mr-2"></i>Updating records matching criteria...</td></tr>`;
+    const cardContainer = document.getElementById('payments-report-cards');
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+
+    // Loading State Spinner
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-6 py-10 text-center text-indigo-600">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>Updating records matching criteria...
+                </td>
+            </tr>`;
+    }
+    if (cardContainer) cardContainer.innerHTML = '';
 
     try {
-        // 3. Make the API Call
+        // Fetch endpoint
         const response = await authenticatedFetch(`${API_BASE_URL}/pos/client/accounts/closed?${queryParams.toString()}`);
-        if (!response.ok) throw new Error('Could not pull report arrays.');
-        
+        if (!response.ok) throw new Error('Could not retrieve settled accounts.');
+
         const accounts = await response.json();
 
-        // Check if no accounts returned
+        // Empty state
         if (!accounts || accounts.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">No matching transaction history found for chosen metrics.</td></tr>`;
-            document.getElementById('overall-sales-card').textContent = "0";
+            const emptyStateHtml = 'No matching transaction history found for selected metrics.';
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">${emptyStateHtml}</td></tr>`;
+            }
+            if (cardContainer) {
+                cardContainer.innerHTML = `<div class="text-center py-6 text-slate-400 italic bg-white border border-slate-200 rounded-xl text-xs">${emptyStateHtml}</div>`;
+            }
+            
+            document.getElementById('overall-sales-card').textContent = `${currency} 0.00`;
             document.getElementById('overall-transactions-card').textContent = "0";
-            document.getElementById('sales-department-report-tbody').innerHTML = "";
             return;
         }
 
-        // 4. Initialize Data Matrices for Analytics Compute
         let grandTotal = 0;
-        let departmentSplits = { 'Bar': 0, 'Restaurant': 0, 'Other': 0 };
-        let tableHTML = '';
+        let departmentSplits = {};
+        let tableRowsHTML = [];
+        let mobileCardsHTML = [];
 
-        // 5. Build dynamic table layout rows
+        // Loop accounts once cleanly
         accounts.forEach(account => {
-            const paidAmount = account.finalAmountPaid || 0;
+            // Calculate Row Amounts safely
+            let paidAmount = Number(account.finalAmountPaid || account.totalAmount || account.totalCharges || 0);
+            if (!paidAmount && Array.isArray(account.charges)) {
+                paidAmount = account.charges.reduce((sum, item) => sum + Number(item.amount || item.price || 0), 0);
+            }
+
             grandTotal += paidAmount;
 
-            // Formulate item breakdown descriptive string lists
+            // Process Department Breakdowns dynamically
             (account.charges || []).forEach(c => {
-                if (departmentSplits[c.type] !== undefined) {
-                    departmentSplits[c.type] += (c.amount || 0);
-                } else {
-                    departmentSplits['Other'] += (c.amount || 0);
-                }
+                const chargeAmount = Number(c.amount || c.price || 0);
+                const deptType = (c.type || c.department || 'Other').trim() || 'Other';
+                departmentSplits[deptType] = (departmentSplits[deptType] || 0) + chargeAmount;
             });
 
             const itemizedSummary = (account.charges || [])
-                .map(c => `${c.description}`)
+                .map(c => c.description || c.name || 'Item')
                 .join(', ') || 'No line items recorded';
 
-            // Clean formatted settlement date strings
             const settleDate = account.settledAt ? new Date(account.settledAt).toLocaleString() : 'N/A';
-            const roomDisplay = account.roomNumber ? `Room ${account.roomNumber}` : '<span class="text-gray-400 italic">Walk-In</span>';
-            
-            // Build Row HTML
-            tableHTML += `
-                <tr class="hover:bg-slate-50/80 transition-colors">
-                    <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500">${settleDate}</td>
-                    <td class="px-6 py-4 font-semibold text-slate-800">${account.guestName || 'Walk-In'}</td>
-                    <td class="px-6 py-4 text-slate-600">${roomDisplay}</td>
-                    <td class="px-6 py-4 text-xs text-slate-500 max-w-xs truncate" title="${itemizedSummary}">${itemizedSummary}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2.5 py-1 text-xs font-semibold rounded-full 
-                            ${account.settledByMethod === 'Cash' ? 'bg-emerald-100 text-emerald-800' : ''}
-                            ${account.settledByMethod === 'Card' ? 'bg-blue-100 text-blue-800' : ''}
-                            ${account.settledByMethod === 'MobileMoney' ? 'bg-amber-100 text-amber-800' : ''}
-                            ${account.settledByMethod === 'Room Charge' ? 'bg-purple-100 text-purple-800' : ''}
-                        ">
-                            ${account.settledByMethod || 'Cash'}
-                        </span>
+            const roomDisplay = account.roomNumber ? `Room ${account.roomNumber}` : 'Walk-In';
+            const methodDisplay = account.settledByMethod || 'Cash';
+
+            // Method Badge styling
+            let badgeStyle = 'bg-slate-100 text-slate-700';
+            if (methodDisplay === 'Cash') badgeStyle = 'bg-emerald-100 text-emerald-800';
+            if (methodDisplay === 'Card') badgeStyle = 'bg-blue-100 text-blue-800';
+            if (methodDisplay === 'MobileMoney') badgeStyle = 'bg-amber-100 text-amber-800';
+            if (methodDisplay === 'Room Charge') badgeStyle = 'bg-purple-100 text-purple-800';
+
+            // Desktop Row HTML
+            tableRowsHTML.push(`
+                <tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
+                    <td class="w-1/6 px-6 py-3.5 whitespace-nowrap text-slate-500">${settleDate}</td>
+                    <td class="w-1/6 px-6 py-3.5 font-semibold text-slate-800">${account.guestName || 'Walk-In'}</td>
+                    <td class="w-1/6 px-6 py-3.5 text-slate-600">${roomDisplay}</td>
+                    <td class="w-2/6 px-6 py-3.5 text-slate-500 truncate" title="${itemizedSummary}">${itemizedSummary}</td>
+                    <td class="w-1/6 px-6 py-3.5 whitespace-nowrap">
+                        <span class="px-2.5 py-1 text-[11px] font-bold rounded-full ${badgeStyle}">${methodDisplay}</span>
                     </td>
-                    <td class="px-6 py-4 text-right font-bold text-slate-900">${paidAmount.toLocaleString()}</td>
+                    <td class="w-1/6 px-6 py-3.5 text-right font-mono font-bold text-slate-900">${currency} ${paidAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                 </tr>
-            `;
+            `);
+
+            // Mobile Card HTML
+            mobileCardsHTML.push(`
+                <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-2">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-xs">${account.guestName || 'Walk-In'}</h4>
+                            <p class="text-[10px] text-slate-400">${settleDate}</p>
+                        </div>
+                        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${badgeStyle}">${methodDisplay}</span>
+                    </div>
+                    <div class="text-xs text-slate-600">
+                        <span class="font-semibold text-slate-500">Target:</span> ${roomDisplay}
+                    </div>
+                    <div class="text-xs text-slate-500 truncate" title="${itemizedSummary}">
+                        <span class="font-semibold text-slate-500">Items:</span> ${itemizedSummary}
+                    </div>
+                    <div class="flex justify-between items-center text-xs pt-1 border-t border-slate-100">
+                        <span class="text-slate-500 font-medium">Amount Paid:</span>
+                        <span class="font-mono font-bold text-slate-900">${currency} ${paidAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    </div>
+                </div>
+            `);
         });
 
-        // 6. Update KPIs & Table DOM layout blocks
-        tbody.innerHTML = tableHTML;
-        document.getElementById('overall-sales-card').textContent = `${CURRENT_CURRENCY}${grandTotal.toLocaleString()}`;
+        // Add High-Contrast Operational Grand Total Row
+        tableRowsHTML.push(`
+            <tr class="font-black border-t-2 border-slate-900 shadow-md" style="background-color: #0f172a !important;">
+                <td colspan="5" class="px-6 py-4 uppercase text-xs tracking-widest" style="color: #f8fafc !important; background-color: #0f172a !important;">Total Settled Revenue Summary</td>
+                <td class="px-6 py-4 text-right font-mono text-sm whitespace-nowrap" style="color: #34d399 !important; background-color: #0f172a !important;">${currency} ${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            </tr>
+        `);
+
+        // Render Tables & Cards
+        if (tbody) tbody.innerHTML = tableRowsHTML.join('');
+        if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
+
+        // Update KPIs
+        document.getElementById('overall-sales-card').textContent = `${currency} ${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         document.getElementById('overall-transactions-card').textContent = accounts.length.toString();
 
-        // 7. Populate Department Splitting sub-tables
-        let deptHTML = '';
-        Object.keys(departmentSplits).forEach(dept => {
-            deptHTML += `
-                <tr class="bg-white">
-                    <td class="px-6 py-4 font-medium text-slate-700">${dept}</td>
-                    <td class="px-6 py-4 text-right font-bold text-slate-900">${CURRENT_CURRENCY} ${departmentSplits[dept].toLocaleString()}</td>
-                </tr>
-            `;
-        });
-        document.getElementById('sales-department-report-tbody').innerHTML = deptHTML;
+        // Optional: Update Department Summary element if present
+        const deptTbody = document.getElementById('sales-department-report-tbody');
+        if (deptTbody) {
+            let deptHTML = '';
+            Object.keys(departmentSplits).forEach(dept => {
+                deptHTML += `
+                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-3 font-medium text-slate-700">${dept}</td>
+                        <td class="px-6 py-3 text-right font-mono font-bold text-slate-900">${currency} ${departmentSplits[dept].toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    </tr>
+                `;
+            });
+            deptTbody.innerHTML = deptHTML;
+        }
 
     } catch (err) {
         console.error("Failed executing payments generation routine:", err);
-        tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>Failed to fetch reporting information. Check connection.</td></tr>`;
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-rose-500 font-medium"><i class="fas fa-exclamation-triangle mr-2"></i>Failed to fetch reporting information. Check connection.</td></tr>`;
+        }
     }
 }
+
+// In-memory cache for ultra-fast UI filtering without re-fetching
+let cachedActiveAccounts = [];
 
 async function fetchActiveAccounts() {
     const tableBody = document.getElementById('activeAccountsTableBody');
     const mobileGrid = document.getElementById('activeAccountsMobileGrid');
     const emptyMessage = document.getElementById('noAccountsMessage');
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+
+    // 1. Loading UI Feedback
+    if (tableBody) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="py-10 text-center text-indigo-600 font-medium">
+                    <i class="fas fa-circle-notch fa-spin mr-2"></i>Synchronizing active guest folios...
+                </td>
+            </tr>`;
+    }
+    if (mobileGrid) {
+        mobileGrid.innerHTML = `
+            <div class="py-8 text-center text-indigo-600 font-medium text-xs">
+                <i class="fas fa-circle-notch fa-spin mr-2"></i>Synchronizing active folios...
+            </div>`;
+    }
+    if (emptyMessage) emptyMessage.classList.add('hidden');
 
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/pos/accounts/active`);
-        const accounts = await response.json();
+        if (!response.ok) throw new Error(`Server returned HTTP ${response.status}`);
 
-        // Clear out baseline raw markup containers before assessing conditions
-        if (tableBody) tableBody.innerHTML = '';
-        if (mobileGrid) mobileGrid.innerHTML = '';
-
-        // Check if there are active accounts to display
-        if (!accounts || accounts.length === 0) {
-            if (emptyMessage) emptyMessage.classList.remove('hidden');
-            return;
-        }
-
-        // Hide empty message fallback if array features content payloads
-        if (emptyMessage) emptyMessage.classList.add('hidden');
-
-        // Loop through accounts and populate both viewport versions
-        accounts.forEach(acc => {
-            const guestName = acc.guestName || 'Unknown Guest';
-            const roomDisplay = acc.roomNumber ? `Room ${acc.roomNumber}` : 'N/A';
-            const chargesDisplay = `${CURRENT_CURRENCY} ${Number(acc.totalCharges || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            const dateDisplay = acc.lastUpdated ? new Date(acc.lastUpdated).toLocaleDateString() : 'No Date';
-
-            // --- A. POPULATE VIEW 1: DESKTOP TABLE ROW INTERFACE ---
-            if (tableBody) {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition-colors text-slate-600";
-                tr.innerHTML = `
-                    <td class="py-4">
-                        <div class="font-semibold text-slate-800">${guestName}</div>
-                        <div class="text-xs text-indigo-500 font-medium">${roomDisplay}</div>
-                    </td>
-                    <td class="py-4 font-mono text-sm text-slate-700 font-medium">${chargesDisplay}</td>
-                    <td class="py-4 text-xs text-slate-400">
-                        <div class="font-medium text-slate-500">${dateDisplay}</div>
-                    </td>
-                    <td class="py-4 text-right">
-                        <button onclick="viewAccountDetails('${acc._id}')" 
-                            class="text-xs bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-700 font-bold px-3 py-1.5 rounded-lg transition-all tracking-wider uppercase active:scale-95 focus:outline-none">
-                            MANAGE
-                        </button>
-                    </td>
-                `;
-                tableBody.appendChild(tr);
-            }
-
-            // --- B. POPULATE VIEW 2: SMARTPHONE GRID LEDGER CARD ---
-            if (mobileGrid) {
-                const card = document.createElement('div');
-                card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3.5 hover:border-slate-300 transition-all";
-                card.innerHTML = `
-                    <div class="flex justify-between items-start gap-2">
-                        <div>
-                            <h4 class="text-sm font-bold text-slate-900">${guestName}</h4>
-                            <span class="inline-block mt-1 px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px] font-bold uppercase tracking-wider">${roomDisplay}</span>
-                        </div>
-                        <p class="text-[10px] text-slate-400 font-medium whitespace-nowrap text-right">
-                            <span class="text-slate-300 block text-[9px] uppercase font-bold tracking-tight mb-0.5">Updated</span>
-                            <i class="far fa-clock mr-0.5"></i> ${dateDisplay}
-                        </p>
-                    </div>
-                    
-                    <div class="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-4">
-                        <div>
-                            <span class="text-[9px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">Total Balance Due</span>
-                            <span class="font-mono text-sm font-bold text-slate-800">${chargesDisplay}</span>
-                        </div>
-                        <button onclick="viewAccountDetails('${acc._id}')" 
-                            class="text-xs bg-slate-100 active:bg-indigo-600 active:text-white text-slate-700 font-bold px-4 py-2 rounded-lg transition-all tracking-wider uppercase focus:outline-none shadow-sm">
-                            MANAGE
-                        </button>
-                    </div>
-                `;
-                mobileGrid.appendChild(card);
-            }
-        });
+        cachedActiveAccounts = await response.json();
+        
+        // Render cached data
+        renderActiveAccounts(cachedActiveAccounts);
 
     } catch (err) {
-        console.error('Failed to fetch active accounts from service layer:', err);
+        console.error('PMS Ledger Sync Error:', err);
+        const errorHTML = `
+            <div class="py-8 text-center text-rose-600 text-xs font-semibold">
+                <i class="fas fa-exclamation-triangle mr-1.5"></i> Unable to connect to Ledger Service. Check network connectivity.
+            </div>`;
+        if (tableBody) tableBody.innerHTML = `<tr><td colspan="5">${errorHTML}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = errorHTML;
     }
+}
+
+function renderActiveAccounts(accounts) {
+    const tableBody = document.getElementById('activeAccountsTableBody');
+    const mobileGrid = document.getElementById('activeAccountsMobileGrid');
+    const emptyMessage = document.getElementById('noAccountsMessage');
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+
+    // 1. Evaluate Empty State
+    if (!accounts || accounts.length === 0) {
+        if (tableBody) tableBody.innerHTML = '';
+        if (mobileGrid) mobileGrid.innerHTML = '';
+        if (emptyMessage) emptyMessage.classList.remove('hidden');
+        
+        document.getElementById('active-folios-count').textContent = '0';
+        document.getElementById('active-folios-total').textContent = `${currency} 0.00`;
+        return;
+    }
+
+    if (emptyMessage) emptyMessage.classList.add('hidden');
+
+    let totalReceivablesSum = 0;
+    let tableRowsHTML = [];
+    let mobileCardsHTML = [];
+
+    // 2. Iterate and Build Component Nodes
+    accounts.forEach(acc => {
+        const guestName = acc.guestName || 'Walk-In Customer';
+        const roomDisplay = acc.roomNumber ? `Room ${acc.roomNumber}` : 'Non-Resident';
+        const folioId = acc.folioNumber || acc._id?.substring(acc._id.length - 6)?.toUpperCase() || 'FOLIO';
+        
+        // Calculate Total Balance
+        const rawAmount = Number(acc.totalCharges || acc.balance || 0);
+        totalReceivablesSum += rawAmount;
+
+        const chargesDisplay = `${currency} ${rawAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        
+        // Format Timestamps
+        const timeDisplay = acc.lastUpdated 
+            ? new Date(acc.lastUpdated).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) 
+            : 'No Posting';
+
+        // Detect Account Category (PMS Classification)
+        let accountTypeBadge = 'bg-slate-100 text-slate-700';
+        let accountTypeName = 'POS Tab';
+        
+        if (acc.accountType === 'CITY_LEDGER' || acc.isCorporate) {
+            accountTypeBadge = 'bg-purple-100 text-purple-800';
+            accountTypeName = 'City Ledger';
+        } else if (acc.roomNumber) {
+            accountTypeBadge = 'bg-indigo-100 text-indigo-800';
+            accountTypeName = 'In-House Guest';
+        }
+
+        // Highlight High-Balance Risk (e.g., > 1,000,000 threshold or high balance)
+        const isHighBalance = rawAmount > 1000000;
+        const balanceClass = isHighBalance ? 'text-amber-600 font-black' : 'text-slate-900 font-bold';
+
+        // --- DESKTOP COMPONENT ---
+        tableRowsHTML.push(`
+            <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
+                <td class="py-3 px-3">
+                    <div class="font-bold text-slate-900 text-xs">${guestName}</div>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <span class="text-[10px] font-bold text-indigo-600">${roomDisplay}</span>
+                        <span class="text-[10px] text-slate-400 font-mono">#${folioId}</span>
+                    </div>
+                </td>
+                <td class="py-3 px-3">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${accountTypeBadge}">
+                        ${accountTypeName}
+                    </span>
+                </td>
+                <td class="py-3 px-3 font-mono text-xs ${balanceClass}">
+                    ${chargesDisplay}
+                    ${isHighBalance ? '<i class="fas fa-exclamation-circle text-amber-500 ml-1" title="High Balance Limit Alert"></i>' : ''}
+                </td>
+                <td class="py-3 px-3 text-[11px] text-slate-500 whitespace-nowrap">
+                    <i class="far fa-clock text-slate-400 mr-1"></i>${timeDisplay}
+                </td>
+                <td class="py-3 px-3 text-right">
+                    <div class="inline-flex items-center gap-1.5">
+                        <button onclick="viewAccountDetails('${acc._id}')" 
+                            class="px-2.5 py-1.5 bg-slate-900 hover:bg-indigo-600 text-white font-semibold text-[11px] rounded-lg transition-all shadow-xs flex items-center gap-1">
+                            <i class="fas fa-folder-open text-[10px]"></i> Folio
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `);
+
+        // --- MOBILE COMPONENT ---
+        mobileCardsHTML.push(`
+            <div class="p-4 bg-white border border-slate-200/80 rounded-xl shadow-xs space-y-3">
+                <div class="flex justify-between items-start gap-2 border-b border-slate-100 pb-2.5">
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <h4 class="text-xs font-bold text-slate-900">${guestName}</h4>
+                            <span class="text-[9px] text-slate-400 font-mono">#${folioId}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 mt-1">
+                            <span class="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[9px] font-bold">${roomDisplay}</span>
+                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${accountTypeBadge}">${accountTypeName}</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[9px] text-slate-400 block font-bold uppercase">Updated</span>
+                        <span class="text-[10px] text-slate-500 font-medium">${timeDisplay}</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center pt-1">
+                    <div>
+                        <span class="text-[9px] uppercase font-bold text-slate-400 block">Current Outstanding</span>
+                        <span class="font-mono text-xs ${balanceClass}">${chargesDisplay}</span>
+                    </div>
+                    <button onclick="viewAccountDetails('${acc._id}')" 
+                        class="px-3 py-1.5 bg-slate-900 active:bg-indigo-600 text-white font-bold text-xs rounded-lg transition-all shadow-xs">
+                        Manage Folio
+                    </button>
+                </div>
+            </div>
+        `);
+    });
+
+    // 3. Batch Update Containers & Summaries
+    if (tableBody) tableBody.innerHTML = tableRowsHTML.join('');
+    if (mobileGrid) mobileGrid.innerHTML = mobileCardsHTML.join('');
+
+    document.getElementById('active-folios-count').textContent = accounts.length.toString();
+    document.getElementById('active-folios-total').textContent = `${currency} ${totalReceivablesSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+// Client-Side Search & Filter Control
+function filterActiveAccounts() {
+    const searchTerm = (document.getElementById('active-accounts-search')?.value || '').toLowerCase();
+    const typeFilter = document.getElementById('active-accounts-type-filter')?.value || 'ALL';
+
+    const filtered = cachedActiveAccounts.filter(acc => {
+        const matchesSearch = 
+            (acc.guestName || '').toLowerCase().includes(searchTerm) ||
+            (acc.roomNumber || '').toString().toLowerCase().includes(searchTerm) ||
+            (acc._id || '').toLowerCase().includes(searchTerm);
+
+        let matchesType = true;
+        if (typeFilter === 'GUEST') matchesType = Boolean(acc.roomNumber) && !acc.isCorporate;
+        if (typeFilter === 'POS_TAB') matchesType = !acc.roomNumber && !acc.isCorporate;
+        if (typeFilter === 'CITY_LEDGER') matchesType = acc.accountType === 'CITY_LEDGER' || Boolean(acc.isCorporate);
+
+        return matchesSearch && matchesType;
+    });
+
+    renderActiveAccounts(filtered);
 }
 
 // Load accounts when the page opens
 document.addEventListener('DOMContentLoaded', fetchActiveAccounts);
 
-let debounceTimer;
 const searchInput = document.getElementById('searchQuery'); // Change to your ID
 
 searchInput.addEventListener('input', (e) => {
@@ -12356,360 +13132,35 @@ function printStatusReports() {
 }
 
 
-// State tracker to preserve localized edits per row before hitting save
-let localEditState = {}; 
-
-/**
- * Fetch and render all room configurations
- */
-// Function 2: Populates the table
-async function loadRoomTypes() {
-    const hotelId = getSessionHotelId();
-    const tbody = document.getElementById('roomTypesTableBody');
-    const seasonSelect = document.getElementById('targetType');
-    const roomSelect = document.getElementById('roomTypeSelect');
-
-    try {
-        // Fetch once with hotelId
-        const endpoint = hotelId 
-            ? `${API_BASE_URL}/room-types?hotelId=${hotelId}` 
-            : `${API_BASE_URL}/room-types`;
-
-        const response = await authenticatedFetch(endpoint);
-        if (!response || !response.ok) throw new Error('Failed to fetch room types');
-        
-        const types = await response.json();
-
-        // 1. Update Dropdowns
-        if (seasonSelect || roomSelect) {
-            const optionsHTML = types.map(t => 
-                `<option value="${t._id}">${t.name} (Base: ${t.basePrice.toLocaleString()})</option>`
-            ).join('');
-            const defaultOption = `<option value="">Select Room Type...</option>`;
-            
-            if (seasonSelect) seasonSelect.innerHTML = defaultOption + optionsHTML;
-            if (roomSelect) roomSelect.innerHTML = defaultOption + optionsHTML;
-        }
-
-        // 2. Update Table
-        if (tbody) {
-            if (types.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="p-12 text-center text-xs text-slate-400">
-                            No room configurations found. Create one using the form above!
-                        </td>
-                    </tr>`;
-            } else {
-                tbody.innerHTML = types.map(room => renderTableRow(room)).join('');
-            }
-        }
-        
-    } catch (error) {
-        console.error("Error loading room types:", error);
-        if (tbody) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" class="p-8 text-center text-xs text-red-500 font-semibold">
-                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Error synchronizing table data.
-                    </td>
-                </tr>`;
-        }
-    }
-}
-
-/**
- * Generates HTML string for a specific row based on state
- */
-function renderTableRow(room) {
-    const isEditing = localEditState[room._id]?.isEditing || false;
-    
-    // Fallback data sources dependent on state
-    const currentName = isEditing ? localEditState[room._id].name : room.name;
-    const currentPrice = isEditing ? localEditState[room._id].basePrice : room.basePrice;
-    const currentAmenities = isEditing ? localEditState[room._id].amenities : (room.amenities || []);
-    const liveImages = isEditing ? localEditState[room._id].imageUrls : (room.imageUrls || []);
-    const newFiles = isEditing ? localEditState[room._id].newFiles : [];
-
-    // --- COLUMN 1: IMAGES COMPONENT ---
-    let imagesHtml = `<div class="flex items-center gap-2 flex-wrap max-w-[220px]">`;
-    if (liveImages.length === 0 && newFiles.length === 0) {
-        imagesHtml += `<div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-[10px] text-slate-400 border border-slate-200">No Image</div>`;
-    } else {
-        // Render Existing Server Images
-        // Inside renderTableRow(room) -> Replace the liveImages.forEach block with this:
-
-         liveImages.forEach((url) => {
-    imagesHtml += `
-        <div class="relative w-12 h-12 rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-slate-50 cursor-pointer" 
-             style="position: relative; display: inline-block;">
-            
-            <!-- Room Thumbnail Image -->
-            <img src="${url}" class="w-full h-full object-cover" style="display: block; width: 100%; height: 100%;">
-            
-            <!-- Plain CSS Hover Button Wrapper -->
-            <div class="image-delete-overlay" style="
-                position: absolute; 
-                top: 0; 
-                left: 0; 
-                width: 100%; 
-                height: 100%; 
-                background: rgba(220, 38, 38, 0.85); 
-                display: flex; 
-                align-items: center; 
-                justify-content: center; 
-                opacity: 0; 
-                transition: opacity 0.2s ease-in-out;
-                z-index: 20;
-            "
-            onmouseenter="this.style.opacity='1'"
-            onmouseleave="this.style.opacity='0'">
-                
-                ${isEditing ? `
-                    <button onclick="removeExistingImageState('${room._id}', '${url}')" 
-                            style="width: 100%; height: 100%; background: transparent; border: none; color: white; font-weight: bold; font-size: 11px; cursor: pointer;">
-                        Remove
-                    </button>
-                ` : `
-                    <button onclick="deleteSingleImageInstantly('${room._id}', '${url}', '${room.name.replace(/'/g, "\\'")}')" 
-                            style="width: 100%; height: 100%; background: transparent; border: none; color: white; font-weight: bold; font-size: 11px; cursor: pointer;" 
-                            title="Delete image instantly">
-                        Delete
-                    </button>
-                `}
-            </div>
-        </div>`;
-});
-        // Render Pending UI local additions
-        newFiles.forEach((file, index) => {
-            const previewUrl = URL.createObjectURL(file);
-            imagesHtml += `
-                <div class="relative group w-12 h-12 rounded-xl border-dashed border-2 border-indigo-400 overflow-hidden shadow-sm bg-indigo-50/30">
-                    <img src="${previewUrl}" class="w-full h-full object-cover opacity-60">
-                    <button onclick="removePendingImageState('${room._id}', ${index})" class="absolute inset-0 bg-slate-900/80 text-white text-[10px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>`;
-        });
-    }
-    if (isEditing) {
-        imagesHtml += `
-            <button onclick="triggerRowImagePicker('${room._id}')" class="w-12 h-12 rounded-xl border-2 border-dashed border-slate-300 hover:border-indigo-500 text-slate-400 hover:text-indigo-600 transition-colors flex flex-col items-center justify-center gap-0.5">
-                <i class="fa-solid fa-plus text-xs"></i>
-                <span class="text-[8px] font-bold uppercase tracking-tighter">Add</span>
-            </button>`;
-    }
-    imagesHtml += `</div>`;
-
-    // --- COLUMN 2: TEXT DETAILS ---
-    const detailsHtml = isEditing ? `
-        <div class="space-y-2 py-2">
-            <input type="text" id="edit-name-${room._id}" value="${currentName}" class="w-full px-2.5 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500">
-        </div>
-    ` : `
-        <div class="py-1">
-            <div class="font-bold text-slate-800">${currentName}</div>
-            <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider mt-0.5">ID: ${room._id}</div>
-        </div>`;
-
-    // --- COLUMN 3: AMENITIES DISPLAY ---
-    let amenitiesHtml = `<div class="flex flex-wrap gap-1 max-w-[300px]">`;
-    if (isEditing) {
-        amenitiesHtml += `
-            <div class="w-full space-y-1.5">
-                <div class="flex flex-wrap gap-1 mb-1">
-                    ${currentAmenities.map((am, i) => `
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 border border-indigo-100 text-indigo-700 text-[11px] font-medium rounded-md">
-                            ${am}
-                            <button onclick="removeAmenityState('${room._id}', ${i})" class="hover:text-red-600 transition-colors ml-0.5 font-bold">×</button>
-                        </span>
-                    `).join('')}
-                </div>
-                <div class="flex gap-1">
-                    <input type="text" id="new-amenity-${room._id}" placeholder="e.g. AC" class="px-2 py-1 text-xs border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 w-32">
-                    <button onclick="addAmenityState('${room._id}')" class="px-2 py-1 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-700">Add</button>
-                </div>
-            </div>`;
-    } else {
-        amenitiesHtml += currentAmenities.length > 0 
-            ? currentAmenities.map(am => `<span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-medium rounded-md">${am}</span>`).join('')
-            : `<span class="text-xs text-slate-400 italic">No amenities defined</span>`;
-    }
-    amenitiesHtml += `</div>`;
-
-    // --- COLUMN 4: PRICE CONFIGURATION ---
-    const priceHtml = isEditing ? `
-        <div class="flex justify-end items-center gap-1 font-mono">
-            <span class="text-xs text-slate-400 font-sans font-bold">${CURRENT_CURRENCY}</span>
-            <input type="number" id="edit-price-${room._id}" value="${currentPrice}" class="w-24 px-2 py-1 border border-slate-200 rounded-xl text-right text-xs outline-none focus:ring-2 focus:ring-indigo-500">
-        </div>
-    ` : `
-        <div class="text-right font-mono font-bold text-slate-900">
-            <span class="text-[10px] text-slate-400 font-sans font-medium mr-0.5">${CURRENT_CURRENCY}</span> 
-            ${Number(currentPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-        </div>`;
-
-    // --- COLUMN 5: CONTROLS ACTION COMPONENT ---
-    const actionsHtml = isEditing ? `
-        <div class="flex items-center justify-center gap-1.5">
-            <button onclick="saveRowEdits('${room._id}')" class="p-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl hover:bg-emerald-600 hover:text-white text-xs font-bold transition-all shadow-sm" title="Save Modifications">
-                <i class="fa-solid fa-check"></i> Save
-            </button>
-            <button onclick="toggleEditMode('${room._id}', false)" class="p-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-200 text-xs font-medium transition-all" title="Discard Changes">
-                Cancel
-            </button>
-        </div>
-    ` : `
-        <div class="flex items-center justify-center gap-1">
-            <button onclick="initiateRowEditMode('${room._id}', ${JSON.stringify(room).replace(/"/g, '&quot;')})" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all" title="Edit Configuration">
-                <i class="fa-solid fa-pen-to-square"></i>
-            </button>
-            <button onclick="deleteRoomType('${room._id}', '${room.name}')" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Delete Configuration">
-                <i class="fa-solid fa-trash-can"></i>
-            </button>
-        </div>`;
-
-    return `
-        <tr id="row-${room._id}" class="${isEditing ? 'bg-indigo-50/20 shadow-inner' : 'hover:bg-slate-50/40'} transition-colors">
-            <td class="p-4 pl-6 vertical-middle">${imagesHtml}</td>
-            <td class="p-4 vertical-middle">${detailsHtml}</td>
-            <td class="p-4 vertical-middle">${amenitiesHtml}</td>
-            <td class="p-4 vertical-middle text-right">${priceHtml}</td>
-            <td class="p-4 vertical-middle text-center">${actionsHtml}</td>
-        </tr>`;
-}
-
-/* ==========================================================================
-   STATE MANAGEMENT MUTATORS
-   ========================================================================== */
-
-function initiateRowEditMode(id, rawRoomObject) {
-    localEditState[id] = {
-        isEditing: true,
-        name: rawRoomObject.name,
-        basePrice: rawRoomObject.basePrice,
-        amenities: [...(rawRoomObject.amenities || [])],
-        imageUrls: [...(rawRoomObject.imageUrls || [])], 
-        newFiles: [] 
-    };
-    refreshSingleRow(rawRoomObject);
-}
-
-function toggleEditMode(id, state) {
-    if (!state) delete localEditState[id]; // Discards object
-    loadRoomTypes(); // Simple full synchronized redraw
-}
-
-function refreshSingleRow(originalRoomReference) {
-    const targetRow = document.getElementById(`row-${originalRoomReference._id}`);
-    if (targetRow) {
-        const substituteContainer = document.createElement('tbody');
-        substituteContainer.innerHTML = renderTableRow(originalRoomReference);
-        targetRow.replaceWith(substituteContainer.firstElementChild);
-    }
-}
-
-function removeExistingImageState(id, targetUrl) {
-    localEditState[id].imageUrls = localEditState[id].imageUrls.filter(url => url !== targetUrl);
-    document.getElementById(`row-${id}`).replaceWith(document.createRange().createContextualFragment(renderTableRow({_id: id})));
-}
-
-function triggerRowImagePicker(id) {
-    const globalInput = document.getElementById('globalRowImagePicker');
-    globalInput.onchange = (e) => {
-        if (e.target.files.length > 0) {
-            localEditState[id].newFiles.push(...Array.from(e.target.files));
-            document.getElementById(`row-${id}`).replaceWith(document.createRange().createContextualFragment(renderTableRow({_id: id})));
-        }
-    };
-    globalInput.click();
-}
-
-function removePendingImageState(id, fileIndex) {
-    localEditState[id].newFiles.splice(fileIndex, 1);
-    document.getElementById(`row-${id}`).replaceWith(document.createRange().createContextualFragment(renderTableRow({_id: id})));
-}
-
-function addAmenityState(id) {
-    const input = document.getElementById(`new-amenity-${id}`);
-    const val = input.value.trim();
-    if (val) {
-        localEditState[id].amenities.push(val);
-        document.getElementById(`row-${id}`).replaceWith(document.createRange().createContextualFragment(renderTableRow({_id: id})));
-    }
-}
-
-function removeAmenityState(id, itemIndex) {
-    localEditState[id].amenities.splice(itemIndex, 1);
-    document.getElementById(`row-${id}`).replaceWith(document.createRange().createContextualFragment(renderTableRow({_id: id})));
-}
-
-/* ==========================================================================
-   API HTTP PERSISTENCE TRANSACTIONS
-   ========================================================================== */
-
-/**
- * Packaging data mutators and executing PUT request
- */
-async function saveRowEdits(id) {
-    const state = localEditState[id];
-    const updatedName = document.getElementById(`edit-name-${id}`).value.trim();
-    const updatedPrice = document.getElementById(`edit-price-${id}`).value;
-
-    if (!updatedName || !updatedPrice) {
-        showMessage("Configuration Name & Base Price fields are mandatory.", true);
-        return;
-    }
-
-    const payload = new FormData();
-    payload.append('name', updatedName);
-    payload.append('basePrice', updatedPrice);
-    payload.append('amenities', JSON.stringify(state.amenities));
-    
-    // Explicitly note remaining server images so backend can synchronize deletions
-    payload.append('existingImages', JSON.stringify(state.imageUrls));
-
-    // Append newly captured image binary files
-    state.newFiles.forEach(file => {
-        payload.append('images', file);
-    });
-
-    try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/room-types/${id}`, {
-            method: 'PUT',
-            body: payload
-        });
-
-        if (!res.ok) {
-            const data = await res.json();
-            throw new Error(data.error || "Update cycle failed execution.");
-        }
-
-        showMessage("Room Configuration synchronized updates successfully! ✨");
-        delete localEditState[id];
-        loadRoomTypes();
-    } catch (err) {
-        console.error(err);
-        showMessage(err.message || "Connection transaction fault.", true);
-    }
-}
-
 /**
  * Triggers DELETE transaction request processing 
  */
-async function deleteRoomType(id, descriptiveName) {
-    if (!confirm(`Are you sure you want to completely erase "${descriptiveName}"? This action cannot be undone.`)) return;
+async function deleteRoomType(id) {
+    if (!confirm("Are you sure you want to completely erase this room category? This action cannot be undone.")) return;
+
+    // Resolve username using your appli  cation's current user context
+    const currentUsername = typeof userData !== 'undefined' && userData ? userData.username : 'Guest';
 
     try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/room-types/${id}`, { method: 'DELETE' });
+        const res = await authenticatedFetch(`${API_BASE_URL}/room-types/${id}`, { 
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username: currentUsername })
+        });
+
+        const data = await res.json();
+
         if (!res.ok) {
-            const data = await res.json();
             throw new Error(data.error || "Execution constraint tracking failure.");
         }
+
         showMessage("Asset successfully purged.");
-        loadRoomTypes();
+        loadRoomTypes(); // Refresh list
+
     } catch (err) {
-        console.error(err);
+        console.error('Delete error:', err);
         showMessage(err.message || "Network transaction error.", true);
     }
 }
@@ -12721,32 +13172,7 @@ document.addEventListener('DOMContentLoaded', loadRoomTypes);
 /**
  * Deletes a single image instantly from the database without requiring an overall row save
  */
-async function deleteSingleImageInstantly(roomTypeId, imageUrl, roomName) {
-    if (!confirm(`Are you sure you want to remove this image from "${roomName}"?`)) return;
 
-    try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/room-types/${roomTypeId}/image`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ imageUrl: imageUrl })
-        });
-
-        if (!res.ok) {
-            const data = await res.json();
-            throw new Error(data.error || "Failed to drop image asset.");
-        }
-
-        showMessage("Image deleted successfully! 🗑️");
-        
-        // Refresh the table UI to visually remove the image
-        loadRoomTypes(); 
-    } catch (err) {
-        console.error(err);
-        showMessage(err.message || "Network transaction error.", true);
-    }
-}
 
 
 // 1. Get DOM references
@@ -12926,4 +13352,25 @@ function updateLowStockWidget(inventory) {
             </div>
         `;
     }).join('');
+}
+
+function switchInventoryTab(tabName) {
+    const tabLive = document.getElementById('tabContentLive');
+    const tabCategories = document.getElementById('tabContentCategories');
+    const btnLive = document.getElementById('tabBtnLive');
+    const btnCategories = document.getElementById('tabBtnCategories');
+
+    if (tabName === 'liveGrid') {
+        tabLive.classList.remove('hidden');
+        tabCategories.classList.add('hidden');
+        
+        btnLive.className = 'px-4 py-2 rounded-lg text-xs font-bold bg-slate-900 text-white transition-all';
+        btnCategories.className = 'px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200/60 transition-all';
+    } else {
+        tabLive.classList.add('hidden');
+        tabCategories.classList.remove('hidden');
+
+        btnCategories.className = 'px-4 py-2 rounded-lg text-xs font-bold bg-slate-900 text-white transition-all';
+        btnLive.className = 'px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200/60 transition-all';
+    }
 }

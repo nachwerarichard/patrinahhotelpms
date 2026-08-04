@@ -564,12 +564,12 @@ body {
                         <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
                             <i class="fas fa-shopping-bag text-slate-400 group-hover:text-white"></i>
                         </div>
-                        <span class="ml-4 font-medium text-[15px]">Point of Sale</span>
+                        <span class="ml-4 font-medium text-[15px]">Food & Beverage</span>
                     </div>
                     <i id="pos-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
                 </button>
                 <ul id="pos-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
-                    <li id="nav-sales"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">POS Terminal</a></li>
+                    <li id="nav-sales"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Sales</a></li>
                     <li id="nav-posinventory"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Menu & Stock Items</a></li>
                     <li id="nav-kds"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Kitchen Display (KDS)</a></li>
                     <li id="nav-prep-list-section"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Active Prep List</a></li>
@@ -612,8 +612,8 @@ body {
                     <li id="nav-receivables"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"> POS Receivables</a></li>
                     <li id="nav-cash"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Cash Drawer & Reconciliation</a></li>
                     <li id="nav-expenses"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Expenses</a></li>
-                    <li id="nav-posreports"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Room Charge Posting Audit</a></li>
-                    <li id="nav-salereport"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Sales & Profit Reports</a></li>
+                    <li id="nav-posreports"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Room Service Reports</a></li>
+                    <li id="nav-salereport"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Sales & Profit Reports </a></li>
                     <li id="nav-expensereport"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Expense Breakdown Reports</a></li>
                 </ul>
             </li>
@@ -805,7 +805,7 @@ body {
         <!-- Total Revenue -->
         <div class="relative pl-4">
             <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Revenue</p>
-            <p id="postoday-revenue" class="text-xl font-bold text-gray-900 mt-1">UGX 0</p>
+            <p id="postoday-revenue" class="text-xl font-bold text-gray-900 mt-1"> 0</p>
             <div class="absolute left-0 top-0 h-full w-1 bg-green-500 rounded-full"></div>
         </div>
 
@@ -921,198 +921,271 @@ body {
         
     </div>
 </section>
-
+<!-- Hidden File Input for Inline Table Image Picker -->
 <input type="file" id="globalRowImagePicker" multiple accept="image/*" class="hidden">
-
-                  <section id="staff" class="section bg-slate-50 min-h-screen rounded-lg shadow-inner mb-8 hidden">
-    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 h-20 flex items-center justify-between px-10 sticky top-0 z-10 shadow-sm">
-        <div class="flex items-center gap-6">
-            <h2 class="font-extrabold text-2xl text-slate-800 tracking-tight">Staff Control Panel</h2>
-           <!-- <div id="connectionStatus" class="flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full border border-slate-200">
-                <span class="relative flex h-2 w-2">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
-                </span>
-                Checking Connection
-            </div>-->
+<section id="staff" class="section bg-slate-50 min-h-screen rounded-lg shadow-inner mb-8 hidden">
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 h-20 flex items-center justify-between px-6 lg:px-10 sticky top-0 z-10 shadow-xs">
+        <div class="flex items-center gap-4">
+            <div>
+                <h2 class="font-extrabold text-xl lg:text-2xl text-slate-800 tracking-tight">Staff & Identity Management</h2>
+                <p class="text-xs text-slate-500 hidden sm:block">Manage user credentials, operational roles, and security permissions</p>
+            </div>
+            <div id="connectionStatus" class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 px-3 py-1.5 rounded-full border border-green-200 hidden">
+                <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                Server Online
+            </div>
         </div>
         
-        <div class="flex items-center gap-4">
-            <button onclick="openUserModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-indigo-200">
-                <i data-lucide="plus-circle" class="w-5 h-5"></i>
-                Add New Staff
+        <div class="flex items-center gap-3">
+            <button onclick="openUserModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all active:scale-95 shadow-md shadow-indigo-100">
+                <i data-lucide="user-plus" class="w-4 h-4"></i>
+                Add Staff Account
             </button>
         </div>
     </header>
 
-    <div class="p-8 max-w-7xl mx-auto">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all hover:border-indigo-300 group">
-                <div class="flex items-center justify-between mb-4">
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Active Staff</p>
-                    <div class="p-2.5 bg-indigo-50 rounded-xl text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                         <i data-lucide="users-2" class="w-5 h-5"></i>
-                    </div>
+    <div class="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+        
+        <!-- KPI Metrics Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+                <div>
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total System Users</p>
+                    <h3 id="totalStaffCount" class="text-3xl font-black text-slate-900 mt-1">0</h3>
                 </div>
-                <h3 id="totalStaffCount" class="text-4xl font-black text-slate-900">0</h3>
-            </div>
+                <div class="p-3 bg-indigo-50 rounded-xl text-indigo-600">
+                    <i data-lucide="users-2" class="w-6 h-6"></i>
+                </div>
             </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="p-6 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4 bg-white">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
                 <div>
-                    <h3 class="font-bold text-slate-900 text-xl tracking-tight">Active Personnel</h3>
-                    <p class="text-sm text-slate-400 mt-0.5">Manage credentials and system permissions</p>
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Active Credentials</p>
+                    <h3 id="activeStaffCount" class="text-3xl font-black text-emerald-600 mt-1">0</h3>
                 </div>
-                <button onclick="fetchUsers()" class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 rounded-lg transition text-slate-600 font-bold text-xs border border-slate-200 uppercase tracking-wider" title="Refresh">
-                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-                    Sync Data
-                </button>
+                <div class="p-3 bg-emerald-50 rounded-xl text-emerald-600">
+                    <i data-lucide="user-check" class="w-6 h-6"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+                <div>
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Administrative Accounts</p>
+                    <h3 id="adminStaffCount" class="text-3xl font-black text-indigo-600 mt-1">0</h3>
+                </div>
+                <div class="p-3 bg-slate-100 rounded-xl text-slate-600">
+                    <i data-lucide="shield-check" class="w-6 h-6"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main User Roster Card -->
+        <div class="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
+            
+            <!-- Table Header & Controls Bar -->
+            <div class="p-5 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white">
+                <div>
+                    <h3 class="font-bold text-slate-900 text-lg tracking-tight">Personnel Directory</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Real-time listing of active staff members and assigned access tiers</p>
+                </div>
+
+                <!-- Filter & Search Controls -->
+                <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    <div class="relative flex-1 md:w-64">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+                        <input type="text" id="staffSearchInput" onkeyup="filterStaffTable()" placeholder="Search staff or username..." class="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                    </div>
+                    <button onclick="fetchUsers()" class="flex items-center gap-1.5 px-3 py-1.5 hover:bg-slate-50 rounded-lg transition text-slate-600 font-bold text-xs border border-slate-200 uppercase tracking-wider" title="Sync Roster">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                        Sync
+                    </button>
+                </div>
             </div>
             
-            <div class="w-full bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-    
-    <div class="hidden md:block overflow-x-auto">
-        <table class="w-full text-left border-separate border-spacing-0">
-            <thead>
-                <tr class="bg-slate-50/50 text-slate-500 uppercase text-[11px] font-black tracking-widest border-b border-slate-100">
-                    <th class="px-8 py-4 border-b border-slate-100">Personnel Name</th>
-                    <th class="px-8 py-4 border-b border-slate-100">Designated Role</th>
-                    <th class="px-8 py-4 border-b border-slate-100">Access Tier</th>
-                    <th class="px-8 py-4 border-b border-slate-100 text-right">Administrative Actions</th>
-                </tr>
-            </thead>
-            <tbody id="userTableBody" class="divide-y divide-slate-100">
-                </tbody>
-        </table>
-    </div>
+            <!-- Desktop Table View -->
+            <div class="hidden md:block overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/80 text-slate-500 uppercase text-[10px] font-black tracking-widest border-b border-slate-200">
+                            <th class="px-6 py-3.5">Staff Member</th>
+                            <th class="px-6 py-3.5">Department / Role</th>
+                            <th class="px-6 py-3.5">System Access Level</th>
+                            <th class="px-6 py-3.5 text-center">Account Status</th>
+                            <th class="px-6 py-3.5 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody" class="divide-y divide-slate-100 text-xs font-medium">
+                        <!-- Dynamic Rows Injected Here -->
+                    </tbody>
+                </table>
+            </div>
 
-    <div id="userMobileGrid" class="block md:hidden p-4 space-y-4 bg-slate-50/30">
-        </div>
-    
-</div>
+            <!-- Mobile View Grid -->
+            <div id="userMobileGrid" class="block md:hidden p-4 space-y-4 bg-slate-50/50">
+                <!-- Mobile Cards Injected Here -->
+            </div>
+            
         </div>
     </div>
 </section>
-      <section id="inventory" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-    <div class="p-4 md:p-12">
-        <div class="max-w-5xl mx-auto space-y-10">
-            
-            <!-- Header Area & Action Trigger Buttons -->
-            <div class="border-b border-slate-200 pb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 class="text-3xl font-light text-slate-800 tracking-tight">Rate & Inventory <span class="font-bold text-indigo-600">Control</span></h1>
-                    <p class="text-slate-500 text-sm mt-1">Configure room types, seasonal pricing, and physical assets.</p>
-                </div>
-                <!-- Action Buttons to Open Modals -->
-                <div class="flex flex-wrap gap-2.5">
-                    <button onclick="openInventoryModal('roomTypeModal')" class="bg-slate-900 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-slate-800 transition-all text-xs tracking-wider flex items-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-plus"></i> Room Type
-                    </button>
-                    <button onclick="openInventoryModal('seasonalModal')" class="bg-amber-600 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-amber-700 transition-all text-xs tracking-wider flex items-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-calendar-day"></i> Seasonal Rule
-                    </button>
-                    <button onclick="openInventoryModal('roomRegistryModal')" class="bg-indigo-600 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-indigo-700 transition-all text-xs tracking-wider flex items-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-bed"></i> Register Room
-                    </button>
-                </div>
-            </div>
-
-            <!-- MODAL 1: Room Types Form -->
-            <!-- MODAL 1: Room Types Form -->
-
-
-            <!-- Table 1: Categories -->
-            <div class="w-full bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <div>
-                        <h2 class="text-sm font-bold uppercase tracking-widest text-slate-800">Room Categories</h2>
-                        <p class="text-xs text-slate-400 mt-1">Manage configurations, images, pricing, and amenities.</p>
-                    </div>
-                    <button onclick="loadRoomTypes()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
-                        <i class="fa-solid fa-rotate-right"></i>
-                    </button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-100 bg-slate-50 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                <th class="p-4 pl-6">Images</th>
-                                <th class="p-4">Room Category Details</th>
-                                <th class="p-4">Amenities</th>
-                                <th class="p-4 text-right">Standard Rate</th>
-                                <th class="p-4 pr-6 text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="roomTypesTableBody" class="divide-y divide-slate-100 text-slate-700 text-sm">
-                            <tr>
-                                <td colspan="5" class="p-8 text-center text-xs text-slate-400">
-                                    <i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Loading room configurations...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Table 2: Room Inventory Live View -->
-            <section class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
-                <div class="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h2 class="text-xl font-bold text-slate-800">Room Inventory</h2>
-                    <div class="flex gap-2">
-                        <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wider">Live View</span>
-                    </div>
-                </div>
-                <div class="hidden md:block overflow-x-auto">
-                    <table class="min-w-full">
-                        <thead>
-                            <tr class="bg-slate-50 text-slate-400 uppercase text-[10px] font-bold tracking-[0.2em] border-b border-slate-100">
-                                <th class="px-8 py-5 text-left">Room Number</th>
-                                <th class="px-8 py-5 text-left">Room Type</th>
-                                <th class="px-8 py-5 text-left">Base Rate</th>
-                                <th class="px-8 py-5 text-left">Status</th>
-                                <th class="px-8 py-5 text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="roomTableBody" class="divide-y divide-slate-100"></tbody>
-                    </table>
-                </div>
-                <div id="roomMobileGrid" class="block md:hidden p-4 space-y-4 bg-slate-50/30"></div>
-            </section>
-
-            <!-- Pre-existing Edit Modal -->
-            <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center z-50">
-                <div class="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-md w-full mx-4 border border-white/20">
-                    <div class="mb-8">
-                        <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Modify Asset</h2>
-                        <p class="text-slate-400 text-xs uppercase tracking-widest font-bold mt-1">Room Records Department</p>
-                    </div>
-                    <form id="editRoomForm" class="space-y-6">
-                        <input type="hidden" id="editRoomId">
-                        <input type="hidden" id="editTypeId">
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Room Number</label>
-                            <input type="text" id="editRoomNumber" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner">
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Current Type (Immutable)</label>
-                            <input type="text" id="editTypeName" class="w-full p-4 bg-slate-100 border border-slate-100 rounded-2xl text-slate-400 outline-none cursor-not-allowed font-medium" readonly>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Override Base Price ($)</label>
-                            <input type="number" id="editBasePrice" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner font-mono">
-                        </div>
-                        <div class="flex gap-4 mt-10">
-                            <button type="button" onclick="closeModal()" class="flex-1 py-4 text-slate-400 hover:text-slate-600 font-bold uppercase text-[10px] tracking-widest transition-colors">Discard</button>
-                            <button type="submit" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all active:scale-95 uppercase text-[10px] tracking-widest">Update Record</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
+<section id="inventory" class="section bg-slate-50 min-h-screen rounded-xl shadow-inner mb-8 hidden">
+    
+    <!-- Top Bar Navigation Header -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 h-20 flex items-center justify-between px-6 lg:px-10 sticky top-0 z-10 shadow-xs">
+        <div>
+            <h1 class="text-xl lg:text-2xl font-extrabold text-slate-800 tracking-tight">Rate & Inventory Control</h1>
+            <p class="text-xs text-slate-500 hidden sm:block">Manage room categories, yield rate plans, and physical room assets</p>
         </div>
+
+        <!-- Quick Action Trigger Buttons -->
+        <div class="flex flex-wrap items-center gap-2">
+            <button onclick="openInventoryModal('roomTypeModal')" class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-3.5 rounded-xl transition-all text-xs flex items-center gap-2 shadow-xs active:scale-95">
+                <i class="fa-solid fa-plus text-[10px]"></i>
+                <span>Room Class</span>
+            </button>
+            <button onclick="openInventoryModal('seasonalModal')" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 px-3.5 rounded-xl transition-all text-xs flex items-center gap-2 shadow-xs active:scale-95">
+                <i class="fa-solid fa-calendar-days text-[10px]"></i>
+                <span>Yield Rule</span>
+            </button>
+            <button onclick="openInventoryModal('roomRegistryModal')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-3.5 rounded-xl transition-all text-xs flex items-center gap-2 shadow-xs active:scale-95">
+                <i class="fa-solid fa-bed text-[10px]"></i>
+                <span>Register Unit</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
+
+        <!-- SECTION 1: Room Categories / Yield Rate Cards -->
+        <div class="w-full bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-white">
+                <div>
+                    <h2 class="text-base font-bold text-slate-800 tracking-tight">Room Categories & Base Rate Plans</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Master configurations for room types, capacity limits, and baseline rates</p>
+                </div>
+                <button onclick="loadRoomTypes()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg border border-slate-200" title="Refresh Categories">
+                    <i class="fa-solid fa-rotate-right text-xs"></i>
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 bg-slate-50/80 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                            <th class="py-3.5 px-6">Preview</th>
+                            <th class="py-3.5 px-4">Category Details</th>
+                            <th class="py-3.5 px-4 text-center">Max Occupancy</th>
+                            <th class="py-3.5 px-4">Standard Amenities</th>
+                            <th class="py-3.5 px-4 text-right">Base Rack Rate</th>
+                            <th class="py-3.5 px-6 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roomTypesTableBody" class="divide-y divide-slate-100 text-slate-700 text-xs font-medium">
+                        <tr>
+                            <td colspan="6" class="p-10 text-center text-xs text-slate-400">
+                                <i class="fa-solid fa-circle-notch fa-spin mr-2 text-indigo-600"></i> Loading master category configurations...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SECTION 2: Physical Room Inventory Live Matrix -->
+        <section class="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
+            
+            <!-- Matrix Controls & Filter Header -->
+            <div class="p-5 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white">
+                <div class="flex items-center gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800 tracking-tight">Physical Room Registry</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Real-time status of physical room assets, occupancy, and housekeeping</p>
+                    </div>
+                    <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider hidden sm:inline-block">
+                        Live PMS Feed
+                    </span>
+                </div>
+
+                <!-- Filter Inputs -->
+                <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    <div class="relative flex-1 md:w-56">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="inventorySearchInput" onkeyup="filterInventoryTable()" placeholder="Search room # or class..." class="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                    </div>
+                    <button onclick="fetchRoomsV2()" class="p-2 text-slate-600 hover:bg-slate-50 transition border border-slate-200 rounded-lg" title="Sync Live Inventory">
+                        <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Desktop View Data Grid -->
+            <div class="hidden md:block overflow-x-auto">
+                <table class="min-w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/80 text-slate-500 uppercase text-[10px] font-black tracking-widest border-b border-slate-200">
+                            <th class="px-6 py-3.5">Room Unit</th>
+                            <th class="px-6 py-3.5">Assigned Category</th>
+                            <th class="px-6 py-3.5">Effective Nightly Rate</th>
+                            <th class="px-6 py-3.5 text-center">Housekeeping Status</th>
+                            <th class="px-6 py-3.5 text-center">Front Office State</th>
+                            <th class="px-6 py-3.5 text-right">Management</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roomTableBody" class="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+                        <!-- Dynamic Rows Injected Here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Smartphone View Grid -->
+            <div id="roomMobileGrid" class="block md:hidden p-4 space-y-4 bg-slate-50/50">
+                <!-- Mobile Cards Injected Here -->
+            </div>
+        </section>
+
+        <!-- Edit Room Asset Modal -->
+        <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-2xl p-6 lg:p-8 max-w-md w-full border border-slate-100">
+                <div class="mb-6 flex justify-between items-start">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800 tracking-tight">Modify Room Asset</h2>
+                        <p class="text-slate-400 text-xs mt-0.5">Physical Asset & Override Controls</p>
+                    </div>
+                    <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <form id="editRoomForm" class="space-y-4">
+                    <input type="hidden" id="editRoomId">
+                    <input type="hidden" id="editTypeId">
+
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Room Number / Identification</label>
+                        <input type="text" id="editRoomNumber" class="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none text-xs font-bold text-slate-800 transition">
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Room Category (Immutable Target)</label>
+                        <input type="text" id="editTypeName" class="w-full h-10 px-3 bg-slate-100 border border-slate-200 rounded-lg text-slate-400 outline-none cursor-not-allowed font-medium text-xs" readonly>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Custom Rate Override (Optional)</label>
+                        <input type="number" id="editBasePrice" placeholder="Leave blank for category default" class="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-xs font-bold text-slate-800 transition">
+                    </div>
+
+                    <div class="flex gap-3 pt-4 border-t border-slate-100">
+                        <button type="button" onclick="closeModal()" class="flex-1 h-10 text-slate-500 hover:bg-slate-100 font-bold uppercase text-[10px] tracking-wider rounded-lg transition">Cancel</button>
+                        <button type="submit" class="flex-1 h-10 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shadow-xs transition uppercase text-[10px] tracking-wider">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
     </div>
-</section>      
+</section>
 <section id="housekeepingreports" class="section bg-white p-4 md:p-6 rounded-lg shadow-md mb-8 hidden">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-blue-600">Housekeeping Reports</h2>
@@ -1982,21 +2055,21 @@ body {
     <h3 class="text-xl font-bold mb-6 text-slate-800">Historical Sales Records</h3>
     
     <div class="filter-controls flex flex-col sm:flex-row flex-wrap gap-4 mb-6 items-stretch sm:items-end bg-slate-50 p-4 rounded-2xl border border-slate-100">
-    <div class="flex-1 min-w-[200px]">
-        <label for="sales-date-filter" class="block text-xs font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Search by Date:</label>
-        <!-- ADDED onchange HERE -->
-        <input type="date" id="sales-date-filter" onchange="fetchSales()" class="w-full p-2.5 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm shadow-sm">
+        <div class="flex-1 min-w-[200px]">
+            <label for="sales-date-filter" class="block text-xs font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Search by Date:</label>
+            <input type="date" id="sales-date-filter" onchange="fetchSales()" class="w-full p-2.5 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm shadow-sm">
+        </div>
+        <div class="flex gap-3">
+            <button id="sales-search-button" onclick="fetchSales()" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm focus:outline-none">
+                <i class="fas fa-search"></i> Search
+            </button>
+            <button class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm focus:outline-none" onclick="exportTableToExcel('sales-table', 'Sales_Report')">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </button>
+        </div>
     </div>
-    <div class="flex gap-3">
-        <button id="sales-search-button" onclick="fetchSales()" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm focus:outline-none">
-            <i class="fas fa-search"></i> Search
-        </button>
-        <button class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm focus:outline-none" onclick="exportTableToExcel('sales-table', 'Sales_Report')">
-            <i class="fas fa-file-excel"></i> Export Excel
-        </button>
-    </div>
-</div>
     
+    <!-- DESKTOP TABLE VIEW -->
     <div class="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
         <table id="sales-table" class="w-full text-left border-collapse">
             <thead>
@@ -2013,15 +2086,21 @@ body {
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
-                </tbody>
+            </tbody>
         </table>
     </div>
 
+    <!-- MOBILE CARD GRID VIEW -->
     <div id="sales-mobile-grid" class="block md:hidden space-y-4">
-        </div>
+    </div>
 
-    <div id="sales-summary" class="mt-6 p-5 bg-amber-50/60 rounded-xl border border-amber-200 text-sm text-slate-700 shadow-sm leading-relaxed">
-        </div>
+    <!-- MOBILE ONLY SUMMARY CARDS CONTAINER -->
+    <div id="sales-summary" class="block md:hidden mt-6 p-5 bg-amber-50/60 rounded-xl border border-amber-200 text-sm text-slate-700 shadow-sm leading-relaxed">
+    </div>
+
+    <!-- PAGINATION CONTAINER -->
+    <div id="sales-pagination" class="mt-6 flex justify-center gap-2">
+    </div>
 </div>
 </section>
 
@@ -2216,96 +2295,129 @@ body {
 </div>
 
 <!-- ================= PAYMENTS & SETTLEMENTS REPORTS ================= -->
-<section id="payments" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-    <div class="flex justify-between items-center mb-6 border-b pb-4">
+<section id="payments" class="section bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8 hidden">
+    
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-slate-200 pb-5">
         <div>
-            <h2 class="text-2xl font-bold text-blue-600">Payments & Settlements</h2>
-            <p class="text-sm text-gray-500">Analyze and manage historically closed accounts and settled revenue</p>
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+                <h2 class="text-xl font-bold text-slate-900 tracking-tight">Payments & Settlements Ledger</h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Audit, trace, and manage historically closed accounts and settled revenues</p>
         </div>
-        <div class="flex gap-2">
-            <button onclick="exportTableToExcel('overall-payments-reports-table', 'Settled_Payments_Report')" class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition shadow-sm flex items-center gap-2">
-                <i class="fas fa-file-export"></i> Export to Excel
+        
+        <!-- Action Toolbar -->
+        <div class="flex items-center gap-2">
+            <button onclick="exportTableToExcel('overall-payments-reports-table', 'Settled_Payments_Report')" class="inline-flex items-center gap-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-slate-400">
+                <i class="fas fa-file-excel text-emerald-400"></i> Export Excel
+            </button>
+            <button onclick="window.print()" class="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg shadow-sm transition-all">
+                <i class="fas fa-print text-slate-500"></i> Print
             </button>
         </div>
     </div>
 
-    <!-- Enhanced Live-Filtering Group -->
-    <div class="filter-controls grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-8 items-end p-5 bg-slate-50 rounded-2xl border border-slate-100">
-        <div class="flex flex-col">
-            <label for="payment-report-start-date" class="text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
-            <input type="date" id="payment-report-start-date" onchange="generatePaymentsReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+    <!-- Enterprise Filter Controls -->
+    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 items-end">
+            
+            <div class="md:col-span-3 flex flex-col">
+                <label for="payment-report-start-date" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <i class="far fa-calendar text-slate-400"></i> Start Date
+                </label>
+                <input type="date" id="payment-report-start-date" onchange="generatePaymentsReports()" class="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            </div>
+
+            <div class="md:col-span-3 flex flex-col">
+                <label for="payment-report-end-date" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <i class="far fa-calendar-check text-slate-400"></i> End Date
+                </label>
+                <input type="date" id="payment-report-end-date" onchange="generatePaymentsReports()" class="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            </div>
+
+            <div class="md:col-span-3 flex flex-col">
+                <label for="payment-report-search" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <i class="fas fa-search text-slate-400"></i> Guest / Room
+                </label>
+                <input type="text" id="payment-report-search" oninput="debouncedPaymentsReports()" placeholder="e.g. John Doe or 104" class="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            </div>
+
+            <div class="md:col-span-3 flex flex-col">
+                <label for="payment-report-method" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <i class="fas fa-wallet text-slate-400"></i> Payment Method
+                </label>
+                <select id="payment-report-method" onchange="generatePaymentsReports()" class="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                    <option value="All">All Methods</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Card">Card</option>
+                    <option value="MobileMoney">Mobile Money</option>
+                    <option value="Room Charge">Room Charge</option>
+                </select>
+            </div>
+
         </div>
-        <div class="flex flex-col">
-            <label for="payment-report-end-date" class="text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
-            <input type="date" id="payment-report-end-date" onchange="generatePaymentsReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-        </div>
-        <div class="flex flex-col">
-            <label for="payment-report-search" class="text-xs font-bold text-slate-500 uppercase mb-1">Search Guest / Room</label>
-            <!-- Triggers the smart typing delay function -->
-            <input type="text" id="payment-report-search" oninput="debouncedPaymentsReports()" placeholder="e.g. John Doe or 104" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-        </div>
-        <div class="flex flex-col">
-            <label for="payment-report-method" class="text-xs font-bold text-slate-500 uppercase mb-1">Payment Method</label>
-            <select id="payment-report-method" onchange="generatePaymentsReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                <option value="All">All Methods</option>
-                <option value="Cash">Cash</option>
-                <option value="Card">Card</option>
-                <option value="MobileMoney">MobileMoney</option>
-                <option value="Room Charge">Room Charge</option>
-            </select>
-        </div>
-        <button id="generate-payments-report-btn" onclick="generatePaymentsReports()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-            <i class="fas fa-sync-alt"></i> Search
-        </button>
     </div>
 
-    <!-- Summary KPI Card Metrics -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm relative overflow-hidden">
-            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Settled Sales</p>
-            <div class="flex items-baseline gap-2">
-                <span id="overall-sales-card" class="text-3xl font-black text-slate-800">0</span>
+    <!-- KPI Analytics Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        
+        <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Settled Revenue</span>
+                    <span class="p-2 bg-emerald-50 text-emerald-600 rounded-lg text-sm"><i class="fas fa-cash-register"></i></span>
+                </div>
+                <div class="text-2xl font-black font-mono text-slate-900" id="overall-sales-card">0.00</div>
             </div>
-            <div class="absolute -right-4 -bottom-4 opacity-5">
-                <i class="fas fa-cash-register text-7xl text-emerald-600"></i>
-            </div>
+            <p class="text-[11px] text-slate-400 mt-2 font-medium">Net aggregated value of closed folios</p>
         </div> 
-        <div class="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm relative overflow-hidden">
-            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Transactions</p>
-            <div class="flex items-baseline gap-2">
-                <span id="overall-transactions-card" class="text-3xl font-black text-blue-600">0</span>
-                <span class="text-slate-400 font-medium ml-1">Closed Accounts</span>
+
+        <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Closed Accounts Count</span>
+                    <span class="p-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm"><i class="fas fa-receipt"></i></span>
+                </div>
+                <div class="text-2xl font-black font-mono text-indigo-600" id="overall-transactions-card">0</div>
             </div>
-            <div class="absolute -right-4 -bottom-4 opacity-5">
-                <i class="fas fa-receipt text-7xl text-blue-600"></i>
-            </div>
+            <p class="text-[11px] text-slate-400 mt-2 font-medium">Total settled transactions in date range</p>
         </div>   
+
     </div>
 
     <!-- Main Account Ledger History Table -->
-    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm mb-8">
-        <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
-            <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Settled Accounts Log</h3>
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs mb-8">
+        <div class="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                <i class="fas fa-history text-slate-400"></i> Settled Accounts Audit Log
+            </h3>
+            <span class="text-[11px] text-slate-500 font-medium">Real-time ledger view</span>
         </div>
-        <div class="table-responsive overflow-x-auto">
-            <table id="overall-payments-reports-table" class="min-w-full text-left border-collapse">
+
+        <!-- Desktop View Table -->
+        <div class="hidden md:block overflow-x-auto">
+            <table id="overall-payments-reports-table" class="w-full text-left border-collapse table-fixed">
                 <thead>
-                    <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                        <th class="px-6 py-3">Settled Date</th>
-                        <th class="px-6 py-3">Guest Name</th>
-                        <th class="px-6 py-3">Room / Target</th>
-                        <th class="px-6 py-3">Items / Details</th>
-                        <th class="px-6 py-3">Method</th>
-                        <th class="px-6 py-3 text-right">Amount Paid</th>
+                    <tr class="bg-slate-100/70 text-[11px] font-bold text-slate-600 uppercase border-b border-slate-200">
+                        <th class="w-1/6 px-6 py-3 tracking-wider">Settled Date</th>
+                        <th class="w-1/6 px-6 py-3 tracking-wider">Guest Name</th>
+                        <th class="w-1/6 px-6 py-3 tracking-wider">Room / Target</th>
+                        <th class="w-2/6 px-6 py-3 tracking-wider">Items / Details</th>
+                        <th class="w-1/6 px-6 py-3 tracking-wider">Method</th>
+                        <th class="w-1/6 px-6 py-3 text-right tracking-wider">Amount Paid</th>
                     </tr>
                 </thead>
-                <tbody id="payments-report-tbody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                <tbody id="payments-report-tbody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700 bg-white">
                     <tr>
-                        <td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">No configurations selected. Adjust filters above to pull records.</td>
+                        <td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">Adjust filter metrics above to populate report entries.</td>
                     </tr>
                 </tbody>
             </table>
         </div>
+
+        <!-- Mobile View Cards -->
+        <div id="payments-report-cards" class="block md:hidden p-4 space-y-3 bg-slate-50/50"></div>
     </div>
   
 </section>
@@ -2643,274 +2755,442 @@ body {
     </div>
 </section>
 
-<section id="receivables" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-    <div id="activeAccountsSection" class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6">
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-lg font-bold text-slate-800">In-House Accounts</h2>
-        <button onclick="fetchActiveAccounts()" class="p-2 hover:bg-slate-100 rounded-full transition-colors" title="Refresh Accounts">
-            <i class="fas fa-sync-alt text-slate-400"></i>
-        </button>
-    </div>
-    
-    <div class="hidden md:block overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    <th class="pb-3">Guest / Room</th>
-                    <th class="pb-3">Total Charges</th>
-                    <th class="pb-3">Last Updated</th>
-                    <th class="pb-3 text-right">Action</th>
-                </tr>
-            </thead>
-            <tbody id="activeAccountsTableBody" class="divide-y divide-slate-100 text-sm">
-            </tbody>
-        </table>
-    </div>
+<section id="receivables" class="section bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8 hidden">
+    <div id="activeAccountsSection" class="bg-white rounded-xl border border-slate-200 p-4 md:p-6 shadow-xs">
+        
+        <!-- Header & Operational KPI Ribbon -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-200">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <h2 class="text-lg font-bold text-slate-900 tracking-tight">Active Guest Folios & Ledgers</h2>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5">Real-time open balances, posting controls, and active city ledger accounts</p>
+            </div>
 
-    <div id="activeAccountsMobileGrid" class="block md:hidden space-y-4">
-    </div>
+            <!-- Quick Summary KPI Badges -->
+            <div class="flex items-center gap-3">
+                <div class="bg-slate-50 border border-slate-200/80 px-3.5 py-1.5 rounded-lg text-right">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Open Folios</span>
+                    <span id="active-folios-count" class="font-mono text-xs font-bold text-slate-800">0</span>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-200/60 px-3.5 py-1.5 rounded-lg text-right">
+                    <span class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">Total Open Receivables</span>
+                    <span id="active-folios-total" class="font-mono text-xs font-black text-emerald-700">0.00</span>
+                </div>
+                <button onclick="fetchActiveAccounts()" class="h-9 w-9 flex items-center justify-center hover:bg-slate-100 text-slate-600 rounded-lg border border-slate-200 transition-colors focus:ring-2 focus:ring-slate-300" title="Sync Ledger Data">
+                    <i class="fas fa-sync-alt text-slate-400 text-xs"></i>
+                </button>
+            </div>
+        </div>
 
-    <div id="noAccountsMessage" class="hidden py-10 text-center text-slate-400 text-sm font-medium italic">
-        No active in-house accounts found.
+        <!-- PMS Filter Bar -->
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/80 mb-5 flex flex-col sm:flex-row items-center gap-3">
+            <div class="relative w-full sm:w-72">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="active-accounts-search" oninput="filterActiveAccounts()" placeholder="Search Guest, Room, or Folio #..." class="w-full h-8 pl-8 pr-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <select id="active-accounts-type-filter" onchange="filterActiveAccounts()" class="h-8 px-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="ALL">All Account Types</option>
+                    <option value="GUEST">In-House Guest</option>
+                    <option value="POS_TAB">Walk-In / POS Tab</option>
+                    <option value="CITY_LEDGER">Corporate / City Ledger</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Desktop Folio Ledger Table -->
+        <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-left border-collapse table-fixed">
+                <thead>
+                    <tr class="border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider bg-slate-100/70">
+                        <th class="w-2/6 py-3 px-3">Folio Target / Guest Name</th>
+                        <th class="w-1/6 py-3 px-3">Account Type</th>
+                        <th class="w-1/6 py-3 px-3">Current Balance</th>
+                        <th class="w-1/6 py-3 px-3">Last Posting Time</th>
+                        <th class="w-1/6 py-3 px-3 text-right">Folio Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="activeAccountsTableBody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700 bg-white">
+                    <!-- Dynamic rendering via fetchActiveAccounts() -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div id="activeAccountsMobileGrid" class="block md:hidden space-y-3">
+            <!-- Dynamic mobile rendering -->
+        </div>
+
+        <!-- Empty State Component -->
+        <div id="noAccountsMessage" class="hidden py-12 text-center text-slate-400 text-xs font-medium bg-slate-50/50 rounded-xl border border-dashed border-slate-200 mt-2">
+            <i class="fas fa-file-invoice text-slate-300 text-3xl mb-2 block"></i>
+            <span>No active open guest folios or unbilled accounts found.</span>
+        </div>
+
     </div>
-</div>
 </section>
 <!-- ================= SALES REPORT SECTION ================= -->
-<section id="salereport" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-    <div class="flex justify-between items-center mb-6 border-b pb-4">
+<section id="salereport" class="section bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8 hidden">
+    
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-slate-200 pb-5">
         <div>
-            <h2 class="text-2xl font-bold text-blue-600">Sales Reports</h2>
-            <p class="text-sm text-gray-500">Analyze departmental performance and net profitability</p>
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+                <h2 class="text-xl font-bold text-slate-900 tracking-tight">Departmental Sales & P&L Analysis</h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Real-time breakdown of gross operational revenues, cost splits, and profit margins</p>
         </div>
-        <div class="flex gap-2">
-            <button onclick="exportTableToExcel('overall-sales-reports-table', 'Sales_Summary')" class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition shadow-sm flex items-center gap-2">
-                <i class="fas fa-file-export"></i> Export Report
+        
+        <!-- Action Toolbar -->
+        <div class="flex items-center gap-2">
+            <button onclick="exportTableToExcel('overall-sales-reports-table', 'Sales_Summary')" class="inline-flex items-center gap-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-slate-400">
+                <i class="fas fa-file-excel text-emerald-400"></i> Export Excel
+            </button>
+            <button onclick="window.print()" class="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg shadow-sm transition-all">
+                <i class="fas fa-print text-slate-500"></i> Print
             </button>
         </div>
     </div>
 
-    <!-- Filter Controls -->
-    <div class="filter-controls grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 items-end p-5 bg-slate-50 rounded-2xl border border-slate-100">
-        <div class="flex flex-col">
-            <label for="sales-report-start-date" class="text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
-            <input type="date" id="sales-report-start-date" oninput="generateSalesReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+    <!-- Enterprise Filter Toolbar -->
+    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 items-end">
+            
+            <div class="md:col-span-4 flex flex-col">
+                <label for="sales-report-start-date" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <i class="far fa-calendar text-slate-400"></i> Start Date
+                </label>
+                <input type="date" id="sales-report-start-date" onchange="generateSalesReports()" class="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            </div>
+
+            <div class="md:col-span-4 flex flex-col">
+                <label for="sales-report-end-date" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <i class="far fa-calendar-check text-slate-400"></i> End Date
+                </label>
+                <input type="date" id="sales-report-end-date" onchange="generateSalesReports()" class="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            </div>
+
+            <div class="md:col-span-4 flex items-center gap-2">
+                <button id="generate-sales-report-btn" onclick="generateSalesReports()" class="w-full h-9 px-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2">
+                     Search
+                </button>
+            </div>
+
         </div>
-        <div class="flex flex-col">
-            <label for="sales-report-end-date" class="text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
-            <input type="date" id="sales-report-end-date" oninput="generateSalesReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
-        </div>
-        <button id="generate-sales-report-btn" onclick="generateSalesReports()" class="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-            <i class="fas fa-sync-alt"></i> Generate & Refresh Sales
-        </button>
     </div>
 
-    <!-- KPI Cards: Total Sales & Total Profit -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <!-- Total Sales Card -->
-        <div class="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm relative overflow-hidden">
-            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Sales</p>
-            <div class="flex items-baseline gap-2">
-                <span id="overall-sales-reportcard" class="text-3xl font-black text-slate-800">0</span>
+    <!-- Financial KPI Summary Ribbon -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        
+        <!-- Total Sales KPI Card -->
+        <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Gross Revenue</span>
+                    <span class="p-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm"><i class="fas fa-file-invoice-dollar"></i></span>
+                </div>
+                <div class="text-2xl font-black font-mono text-slate-900" id="overall-sales-reportcard">0.00</div>
             </div>
-            <div class="absolute -right-4 -bottom-4 opacity-5">
-                <i class="fas fa-cash-register text-7xl text-emerald-600"></i>
-            </div>
+            <p class="text-[11px] text-slate-400 mt-2 font-medium">Total sales recorded across all outlets</p>
         </div>    
 
-        <!-- Total Profit Card -->
-        <div class="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm relative overflow-hidden">
-            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Profit</p>
-            <div class="flex items-baseline gap-2">
-                <span id="overall-profit-reportcard" class="text-3xl font-black text-emerald-600">0</span>
+        <!-- Net Profit KPI Card -->
+        <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Net Operating Profit</span>
+                    <span class="p-2 bg-emerald-50 text-emerald-600 rounded-lg text-sm"><i class="fas fa-chart-line"></i></span>
+                </div>
+                <div class="text-2xl font-black font-mono text-emerald-600" id="overall-profit-reportcard">0.00</div>
             </div>
-            <div class="absolute -right-4 -bottom-4 opacity-5">
-                <i class="fas fa-chart-line text-7xl text-emerald-600"></i>
+            <p class="text-[11px] text-slate-400 mt-2 font-medium">Net profit margin generated after cost subtractions</p>
+        </div> 
+
+        <!-- Profit Margin % Indicator (Add-on for Enterprise Standard) -->
+        <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-xs relative overflow-hidden flex flex-col justify-between hidden lg:flex">
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Profitability Ratio</span>
+                    <span class="p-2 bg-amber-50 text-amber-600 rounded-lg text-sm"><i class="fas fa-percentage"></i></span>
+                </div>
+                <div class="text-2xl font-black font-mono text-slate-800" id="overall-margin-reportcard">-- %</div>
             </div>
-        </div>    
+            <p class="text-[11px] text-slate-400 mt-2 font-medium">Average net operational performance metric</p>
+        </div>
+
     </div>
 
-    <!-- Departmental Breakdown Table -->
-    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm mb-8">
-        <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
-            <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Departmental Sales & Profit Breakdown</h3>
+    <!-- Financial Breakdown Table -->
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+        <div class="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                <i class="fas fa-sitemap text-slate-400"></i> Department Performance Breakdown
+            </h3>
+            <span class="text-[11px] text-slate-500 font-medium">Values in local currency</span>
         </div>
         
-        <!-- Desktop Table -->
-        <div class="hidden md:block table-responsive">
-    <table id="sales-department-table" class="min-w-full table-fixed text-left">
+        <!-- Desktop Table View -->
+        <!-- Desktop Table View -->
+<div class="hidden md:block overflow-x-auto">
+    <table id="sales-department-table" class="w-full text-left border-collapse table-fixed">
         <thead>
-            <tr class="bg-white text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
-                <th class="w-1/2 px-6 py-4">Department</th>
-                <th class="w-1/4 px-6 py-4 text-right">Revenue (Sales)</th>
-                <th class="w-1/4 px-6 py-4 text-right">Estimated Profit</th>
+            <tr class="bg-slate-100/80 text-[11px] font-bold text-slate-600 uppercase border-b border-slate-200">
+                <th class="w-1/2 px-6 py-3 tracking-wider">Department</th>
+                <th class="w-1/4 px-6 py-3 text-right tracking-wider">Gross Revenue</th>
+                <th class="w-1/4 px-6 py-3 text-right tracking-wider">Estimated Profit</th>
             </tr>
         </thead>
-        <tbody id="sales-department-report-tbody" class="divide-y divide-slate-50"></tbody>
+        <tbody id="sales-department-report-tbody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700 bg-white">
+            <!-- Dynamic standard rows populated here -->
+        </tbody>
     </table>
 </div>
         
         <!-- Mobile View Cards -->
-        <div id="sales-department-report-cards" class="block md:hidden p-4 space-y-4 bg-slate-50/40"></div>
+        <div id="sales-department-report-cards" class="block md:hidden p-4 space-y-3 bg-slate-50/50"></div>
     </div>
 
-    <!-- Hidden Table for Excel Export -->
+    <!-- Hidden Export Sheet Schema -->
     <table id="overall-sales-reports-table" class="hidden">
-        <thead><tr><th>Metric</th><th>Amount</th></tr></thead>
+        <thead>
+            <tr><th>Metric</th><th>Amount</th></tr>
+        </thead>
         <tbody>
             <tr><td>Total Sales</td><td id="overall-sales-export">0</td></tr>
             <tr><td>Total Profit</td><td id="overall-profit-export">0</td></tr>
         </tbody>
     </table>
+
 </section>
 
 <!-- ================= EXPENSES REPORT SECTION ================= -->
-<section id="expensereport" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-    <div class="flex justify-between items-center mb-6 border-b pb-4">
+<section id="expensereport" class="section bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8 hidden">
+    
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-slate-200 pb-5">
         <div>
-            <h2 class="text-2xl font-bold text-blue-600">Expenses Reports</h2>
-            <p class="text-sm text-gray-500">Analyze departmental costs and expenses patterns</p>
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-rose-600"></span>
+                <h2 class="text-xl font-bold text-slate-900 tracking-tight">Departmental Expenses Analysis</h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Monitor operational cost structures, overheads, and departmental expenditure patterns</p>
         </div>
-        <div class="flex gap-2">
-            <button onclick="exportTableToExcel('overall-expenses-reports-table', 'Expenses_Summary')" class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition shadow-sm flex items-center gap-2">
-                <i class="fas fa-file-export"></i> Export Report
+        
+        <!-- Action Toolbar -->
+        <div class="flex items-center gap-2">
+            <button onclick="exportTableToExcel('overall-expenses-reports-table', 'Expenses_Summary')" class="inline-flex items-center gap-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-slate-400">
+                <i class="fas fa-file-excel text-emerald-400"></i> Export Excel
+            </button>
+            <button onclick="window.print()" class="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg shadow-sm transition-all">
+                <i class="fas fa-print text-slate-500"></i> Print
             </button>
         </div>
     </div>
 
-    <div class="filter-controls grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 items-end p-5 bg-slate-50 rounded-2xl border border-slate-100">
-        <div class="flex flex-col">
-            <label for="expenses-report-start-date" class="text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
-            <!-- Added oninput here -->
-            <input type="date" id="expenses-report-start-date" oninput="generateExpensesReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+    <!-- Enterprise Filter Toolbar -->
+    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 items-end">
+            
+            <div class="md:col-span-4 flex flex-col">
+                <label for="expenses-report-start-date" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <i class="far fa-calendar text-slate-400"></i> Start Date
+                </label>
+                <input type="date" id="expenses-report-start-date" onchange="generateExpensesReports()" class="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            </div>
+
+            <div class="md:col-span-4 flex flex-col">
+                <label for="expenses-report-end-date" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <i class="far fa-calendar-check text-slate-400"></i> End Date
+                </label>
+                <input type="date" id="expenses-report-end-date" onchange="generateExpensesReports()" class="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            </div>
+
+            <div class="md:col-span-4 flex items-center gap-2">
+                <button id="generate-expenses-report-btn" onclick="generateExpensesReports()" class="w-full h-9 px-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2">
+                     Search
+                </button>
+            </div>
+
         </div>
-        <div class="flex flex-col">
-            <label for="expenses-report-end-date" class="text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
-            <!-- Added oninput here -->
-            <input type="date" id="expenses-report-end-date" oninput="generateExpensesReports()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
-        </div>
-        <button id="generate-expenses-report-btn" onclick="generateExpensesReports()" class="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-            <i class="fas fa-sync-alt"></i> Generate & Refresh Expenses
-        </button>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"> 
-        <div class="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm relative overflow-hidden">
-            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Expenses</p>
-            <div class="flex items-baseline gap-2">
-                <span class="text-slate-400 font-medium">UGX</span>
-                <span id="overall-expenses-card" class="text-3xl font-black text-red-600">0</span>
+    <!-- Financial KPI Summary Ribbon -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        
+        <!-- Total Expenses Card -->
+        <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Gross Operating Expenses</span>
+                    <span class="p-2 bg-rose-50 text-rose-600 rounded-lg text-sm"><i class="fas fa-file-invoice-dollar"></i></span>
+                </div>
+                <div class="text-2xl font-black font-mono text-rose-600" id="overall-expenses-card">0.00</div>
             </div>
-            <div class="absolute -right-4 -bottom-4 opacity-5">
-                <i class="fas fa-file-invoice-dollar text-7xl text-red-600"></i>
-            </div>
+            <p class="text-[11px] text-slate-400 mt-2 font-medium">Total operating expenses across all departments</p>
         </div>    
+
+        <!-- Active Categories Card -->
+        <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Cost Outlets</span>
+                    <span class="p-2 bg-slate-100 text-slate-600 rounded-lg text-sm"><i class="fas fa-sitemap"></i></span>
+                </div>
+                <div class="text-2xl font-black font-mono text-slate-800" id="overall-expense-depts-card">0</div>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-2 font-medium">Departments reporting operational costs during this period</p>
+        </div> 
+
     </div>
 
-    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm mb-8">
-        <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
-            <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Departmental Expenses Breakdown</h3>
+    <!-- Departmental Breakdown Table -->
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+        <div class="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                <i class="fas fa-tags text-slate-400"></i> Cost Distribution by Department
+            </h3>
+            <span class="text-[11px] text-slate-500 font-medium">Values in local currency</span>
         </div>
         
-        <div class="hidden md:block table-responsive">
-            <table id="expenses-department-table" class="min-w-full text-left">
+        <!-- Desktop Table View -->
+        <div class="hidden md:block overflow-x-auto">
+            <table id="expenses-department-table" class="w-full text-left border-collapse table-fixed">
                 <thead>
-                    <tr class="bg-white text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
-                        <th class="px-6 py-4">Department</th>
-                        <th class="px-6 py-4 text-right">Costs (Expenses)</th>
+                    <tr class="bg-slate-100/70 text-[11px] font-bold text-slate-600 uppercase border-b border-slate-200">
+                        <th class="w-2/3 px-6 py-3 tracking-wider">Department</th>
+                        <th class="w-1/3 px-6 py-3 text-right tracking-wider">Total Costs (Expenses)</th>
                     </tr>
                 </thead>
-                <tbody id="expenses-department-report-tbody" class="divide-y divide-slate-50"></tbody>
+                <tbody id="expenses-department-report-tbody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700 bg-white">
+                    <!-- Dynamic standard rows populated here -->
+                </tbody>
             </table>
         </div>
-
-        <div id="expenses-department-report-cards" class="block md:hidden p-4 space-y-4 bg-slate-50/40"></div>
+        
+        <!-- Mobile View Cards -->
+        <div id="expenses-department-report-cards" class="block md:hidden p-4 space-y-3 bg-slate-50/50"></div>
     </div>
 
+    <!-- Hidden Export Sheet Schema -->
     <table id="overall-expenses-reports-table" class="hidden">
-        <thead><tr><th>Metric</th><th>Amount (UGX)</th></tr></thead>
+        <thead>
+            <tr><th>Metric</th><th>Amount</th></tr>
+        </thead>
         <tbody>
             <tr><td>Total Expenses</td><td id="overall-expenses-export">0</td></tr>
         </tbody>
     </table>
+
 </section>
  
-<section id="posreport" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-    <div class="flex justify-between items-center mb-6 border-b pb-4">
-        <div>
-            <h2 class="text-2xl font-bold text-blue-600">Incidental Charges</h2>
-            <p class="text-sm text-gray-500">View detailed room charge revenue breakdowns</p>
+<section id="posreport" class="section bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8 hidden">
+    <!-- Section Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-slate-200 gap-4">
+        <div class="flex items-center gap-3">
+            <span class="p-2.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold flex items-center justify-center">
+                <i class="fas fa-file-invoice-dollar"></i>
+            </span>
+            <div>
+                <h2 class="text-lg font-bold text-slate-900 leading-tight">Incidental Charges</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Audit log for department postings, room folios, and auxiliary revenue transactions</p>
+            </div>
+        </div>
+        
+        <!-- Quick Preset Date Filters -->
+        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs font-semibold text-slate-600 self-stretch sm:self-auto justify-center">
+            <button onclick="setIncidentalDateFilter('today')" class="px-3 py-1 hover:bg-white hover:text-slate-900 rounded-md transition-all">Today</button>
+            <button onclick="setIncidentalDateFilter('yesterday')" class="px-3 py-1 hover:bg-white hover:text-slate-900 rounded-md transition-all">Yesterday</button>
+            <button onclick="setIncidentalDateFilter('mtd')" class="px-3 py-1 hover:bg-white hover:text-slate-900 rounded-md transition-all">MTD</button>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div id="posreportsPanel" class="lg:col-span-1 space-y-6">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-                <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Report Filters</h2>
-                
-                <!-- Replaced Form with Auto-Filtering Date Range -->
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Start Date</label>
-                        <input type="date" id="reportStartDate" class="w-full mt-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">End Date</label>
-                        <input type="date" id="reportEndDate" class="w-full mt-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
-                    </div>
-                    
-                    <!-- Loading text for when the query runs -->
-                    <div id="loadingIndicator" class="hidden text-center text-indigo-600 font-bold text-sm mt-2">
-                        <i class="fas fa-circle-notch fa-spin mr-2"></i> Fetching data...
-                    </div>
+    <!-- Top Horizontal Filters Bar -->
+    <div id="posreportsPanel" class="bg-slate-50/80 rounded-xl border border-slate-200/80 p-4 mb-6 shadow-xs">
+        <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Audit Parameters</h3>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+            <div>
+                <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Start Date</label>
+                <input type="date" id="reportStartDate" onchange="generatePOSReport()" class="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            </div>
+
+            <div>
+                <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">End Date</label>
+                <input type="date" id="reportEndDate" onchange="generatePOSReport()" class="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            </div>
+
+            <div>
+                <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Revenue Department</label>
+                <select id="reportDepartmentFilter" onchange="generatePOSReport()" class="w-full h-9 px-2.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                    <option value="ALL">All Outlets / Departments</option>
+                    <option value="Restaurant">F&B - Restaurant</option>
+                    <option value="Bar">F&B - Bar</option>
+                    <option value="Laundry">Laundry & Dry Cleaning</option>
+                    <option value="Spa">Spa & Wellness</option>
+                    <option value="Other">Other Ancillary Charges</option>
+                </select>
+            </div>
+
+            <div>
+                <button onclick="generatePOSReport()" class="w-full h-9 bg-slate-900 hover:bg-indigo-600 text-white text-xs font-bold rounded-lg transition-all shadow-xs flex items-center justify-center gap-2">
+                    <i class="fas fa-filter text-[10px]"></i> Apply Audit Filters
+                </button>
+            </div>
+        </div>
+
+        <div id="loadingIndicator" class="hidden text-center text-indigo-600 font-bold text-xs pt-3">
+            <i class="fas fa-circle-notch fa-spin mr-1.5"></i> Querying Ledger Database...
+        </div>
+    </div>
+
+    <!-- Full-Width Ledger Audit Results Table (Positioned Below) -->
+    <div id="posreportResults">
+        <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+            
+            <!-- KPI Revenue Summary Header Ribbon -->
+            <div class="px-6 py-4 bg-slate-900 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-indigo-400 block">Audited Revenue Window</span>
+                    <h3 id="posreportDateDisplay" class="text-sm font-bold text-white mt-0.5">Select Date Range</h3>
+                </div>
+                <div class="text-left sm:text-right bg-slate-800/90 px-4 py-2 rounded-lg border border-slate-700 w-full sm:w-auto">
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Total Incidental Postings</span>
+                    <p class="text-base font-mono font-black text-emerald-400"><span id="posreportTotalRevenue">0.00</span></p>
                 </div>
             </div>
 
-        </div>
+            <!-- Incidentals Ledger Data Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100/80 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                            <th class="py-3 px-4">Guest / Target Folio</th>
+                            <th class="py-3 px-4">Charge Description</th>
+                            <th class="py-3 px-4 text-center w-40">Outlet / Dept</th>
+                            <th class="py-3 px-4 text-right w-40">Gross Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="posreportTableBody" class="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+                        <tr>
+                            <td colspan="4" class="px-6 py-12 text-center text-slate-400 italic">
+                                <i class="fas fa-calendar-alt text-2xl text-slate-300 block mb-2"></i>
+                                Please select audit start and end dates to generate the report.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-        <div id="posreportResults" class="lg:col-span-3 animate-in fade-in slide-in-from-right-4 duration-500">
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-8 py-8 bg-indigo-50 border-b border-indigo-100 flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div>
-                        <h2 class="text-indigo-900 font-black text-xl">Summary: <span id="posreportDateDisplay" class="text-indigo-600 font-normal ml-2">---</span></h2>
-                        <p class="text-indigo-600 text-sm flex items-center gap-2">
-                            <span class="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></span>
-                            <span>Revenue generated through incidental charges</span>
-                        </p>
-                    </div>
-                    <div class="text-center md:text-right bg-white px-6 py-3 rounded-2xl shadow-inner border border-indigo-100">
-                        <p class="text-[10px] font-bold text-indigo-400 uppercase">Total Revenue</p>
-                        <p class="text-3xl font-black text-indigo-600">UGX <span id="posreportTotalRevenue">0</span></p>
-                    </div>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-slate-100">
-                        <thead class="bg-slate-50">
-                            <tr>
-                                <th class="px-8 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Guest / Room</th>
-                                <th class="px-8 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Description</th>
-                                <th class="px-8 py-4 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">Source</th>
-                                <th class="px-8 py-4 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody id="posreportTableBody" class="divide-y divide-slate-100 text-sm text-slate-600">
-                            <tr>
-                                <td colspan="4" class="px-8 py-10 text-center text-slate-400 italic">
-                                    Please select a start and end date to view records.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="p-6 bg-slate-50 border-t border-slate-100">
-                    <button id="exportposReportBtn" class="flex items-center justify-center space-x-2 w-full md:w-max px-8 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-lg ml-auto">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                        <span>Export CSV Sheet</span>
-                    </button>
-                </div>
+            <!-- Export Bar -->
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <span id="posreportCountDisplay" class="text-xs font-semibold text-slate-500">0 Postings Found</span>
+                <button id="exportposReportBtn" onclick="exportIncidentalReportCSV()" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-all shadow-xs flex items-center justify-center gap-2">
+                    <i class="fas fa-file-csv"></i> Export Audit Sheet (CSV)
+                </button>
             </div>
         </div>
     </div>
@@ -2988,7 +3268,12 @@ body {
 <section id="reports" class="section bg-white p-4 md:p-6 rounded-lg shadow-md mb-8 hidden">
     <div class="bg-gray-50 rounded-xl p-3 sm:p-6 min-h-screen">
         
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <!-- Updated to 3 columns grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div class="bg-blue-100 p-4 rounded-lg shadow border-l-4 border-blue-500">
+                <h3 class="text-xs font-bold text-blue-700 uppercase tracking-wider">Total Bookings</h3>
+                <p id="sumBookings" class="text-xl sm:text-2xl font-black text-gray-800 mt-1">0</p>
+            </div>
             <div class="bg-green-100 p-4 rounded-lg shadow border-l-4 border-green-500">
                 <h3 class="text-xs font-bold text-green-700 uppercase tracking-wider">Total Amount Paid</h3>
                 <p id="sumPaid" class="text-xl sm:text-2xl font-black text-gray-800 mt-1">UGX 0.00</p>
@@ -3049,31 +3334,23 @@ body {
             </div>
 
             <div class="flex flex-col">
-    <label class="text-[11px] font-bold text-gray-500 uppercase mb-1">Payment Method</label>
-    <select id="filterPaymentMethod" class="border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-        <option value="">All Payment Methods</option>
-           <!-- Offline / Traditional options -->
-        <option value="Cash">Cash</option>
-        <option value="Bank">Bank</option>
-        <!-- Gateways / Aggregators -->
-        <option value="Pesapal">Pesapal</option>
-        <option value="Online">Online</option>
-        <option value="Stripe">Stripe</option>
-        
-        <!-- Cards -->
-        <option value="Visa">Visa</option>
-        <option value="MasterCard">MasterCard</option>
-        <option value="Stripe Card">Stripe Card</option>
-        
-        <!-- Mobile Money channels -->
-        <option value="Mobile Money">Mobile Money</option>
-        <option value="M-Pesa">M-Pesa</option>
-        <option value="MTN Momo">MTN Momo</option>
-        <option value="Airtel Pay">Airtel Pay</option>
-        
-     
-    </select>
-</div>
+                <label class="text-[11px] font-bold text-gray-500 uppercase mb-1">Payment Method</label>
+                <select id="filterPaymentMethod" class="border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="">All Payment Methods</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Bank">Bank</option>
+                    <option value="Pesapal">Pesapal</option>
+                    <option value="Online">Online</option>
+                    <option value="Stripe">Stripe</option>
+                    <option value="Visa">Visa</option>
+                    <option value="MasterCard">MasterCard</option>
+                    <option value="Stripe Card">Stripe Card</option>
+                    <option value="Mobile Money">Mobile Money</option>
+                    <option value="M-Pesa">M-Pesa</option>
+                    <option value="MTN Momo">MTN Momo</option>
+                    <option value="Airtel Pay">Airtel Pay</option>
+                </select>
+            </div>
 
             <div class="flex flex-col">
                 <label for="filterDate" class="text-[11px] font-bold text-gray-500 uppercase mb-1">Check-In Date</label>
@@ -3111,12 +3388,12 @@ body {
                     </tr>
                 </thead>
                 <tbody id="tableBody" class="text-gray-600 text-sm font-medium divide-y divide-gray-100">
-                    </tbody>
+                </tbody>
             </table>
         </div>
 
         <div id="reportsMobileGrid" class="block md:hidden space-y-4">
-            </div>
+        </div>
 
     </div>
 </section>
@@ -4396,6 +4673,7 @@ Add Guest Details            </h2>
         </button>
     </form>
 </div>
+    
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="script4.js"></script>
