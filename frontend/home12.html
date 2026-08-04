@@ -3193,44 +3193,61 @@ body {
     </div>
 </section>
 
-  <section id="housekeeping" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-                <h2 class="text-2xl font-bold mb-4 text-blue-600">Room Management</h2>
+  <section id="housekeeping" class="section hidden bg-slate-50/50 p-4 sm:p-6 rounded-2xl mb-8">
+    <!-- Header Title -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">Housekeeping & Room Operations</h2>
+            <p class="text-xs text-slate-500 font-medium">Manage room cleanliness and attendant staff assignments</p>
+        </div>
+    </div>
              
-<div class="flex flex-col md:flex-row gap-4 mb-6">
-    <!-- Search Input -->
-    <div class="relative flex-1">
-        <input type="text" id="roomSearchInput" placeholder="Search room number..." 
-            class="w-full bg-white border border-slate-200 p-3 pl-10 rounded-xl text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-    </div>
+    <!-- Filters Bar (Responsive 4-Column Grid) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <!-- Search Input -->
+        <div class="relative">
+            <input type="text" id="roomSearchInput" placeholder="Search room number..." 
+                class="w-full bg-white border border-slate-200 p-3 pl-10 rounded-xl text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+        </div>
 
-    <!-- Room Type Dropdown Filter -->
-    <div class="relative w-full md:w-56">
-        <select id="roomTypeFilter" 
-            class="w-full bg-white border border-slate-200 p-3 pr-10 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer transition-all">
-            <option value="all">ALL CATEGORIES</option>
-            <!-- Room types will be rendered here dynamically -->
-        </select>
-        <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
+        <!-- Room Type Dropdown -->
+        <div class="relative">
+            <select id="roomTypeFilter" 
+                class="w-full bg-white border border-slate-200 p-3 pr-10 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer transition-all shadow-sm">
+                <option value="all">ALL CATEGORIES</option>
+            </select>
+            <i class="fa-solid fa-chevron-down absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
+        </div>
+        
+        <!-- Status Dropdown -->
+        <div class="relative">
+            <select id="roomStatusFilter" 
+                class="w-full bg-white border border-slate-200 p-3 pr-10 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer transition-all shadow-sm">
+                <option value="all">ALL STATUSES</option>
+                <option value="clean">CLEAN</option>
+                <option value="dirty">DIRTY</option>
+                <option value="In progress">IN PROGRESS</option>
+                <option value="under-maintenance">MAINTENANCE</option>
+                <option value="blocked">OCCUPIED</option>
+            </select>
+            <i class="fa-solid fa-chevron-down absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
+        </div>
+
+        <!-- Housekeeper Filter Dropdown -->
+        <div class="relative">
+            <select id="housekeeperFilter" 
+                class="w-full bg-white border border-slate-200 p-3 pr-10 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer transition-all shadow-sm">
+                <option value="all">ALL HOUSEKEEPERS</option>
+                <option value="unassigned">UNASSIGNED ROOMS</option>
+            </select>
+            <i class="fa-solid fa-chevron-down absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
+        </div>
     </div>
-    
-    <!-- Status Filter Dropdown -->
-    <div class="relative w-full md:w-56">
-        <select id="roomStatusFilter" 
-            class="w-full bg-white border border-slate-200 p-3 pr-10 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer transition-all">
-            <option value="all">ALL STATUSES</option>
-            <option value="clean">CLEAN</option>
-            <option value="dirty">DIRTY</option>
-            <option value="In progress">IN PROGRESS</option>
-            <option value="under-maintenance">MAINTENANCE</option>
-            <option value="blocked">OCCUPIED / BLOCKED</option>
-        </select>
-        <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
-    </div>
-</div>
-                
-                <div id="housekeepingRoomGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
-            </section>
+        
+    <!-- Dynamic Room Grid -->
+    <div id="housekeepingRoomGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+</section>
 
             <div id="reportModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
                 <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl relative">

@@ -3673,39 +3673,61 @@ function exportReport() {
 // Global memory caches to hold fetched data for instant filtering
 let globalRoomsData = [];
 let globalTypeLookup = {};
+let globalHousekeepers = [];
 
 async function renderHousekeepingRooms() {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
+    if (!sessionData?.token) return;
 
     if (typeof updateBookingStats === 'function') updateBookingStats();
     
     try {
-        const [roomsRes, typesRes] = await Promise.all([
+        // Fetch Rooms, Room Types, and Housekeepers in parallel
+        const [roomsRes, typesRes, hkRes] = await Promise.all([
             authenticatedFetch(`${API_BASE_URL}/rooms`, { method: 'GET' }),
-            authenticatedFetch(`${API_BASE_URL}/room-types`, { method: 'GET' })
+            authenticatedFetch(`${API_BASE_URL}/room-types`, { method: 'GET' }),
+            authenticatedFetch(`${API_BASE_URL}/housekeepers`, { method: 'GET' })
         ]);
 
-        if (!roomsRes.ok || !typesRes.ok) throw new Error("Failed to fetch data");
+        if (!roomsRes.ok || !typesRes.ok) throw new Error("Failed to fetch hotel data");
 
         globalRoomsData = await roomsRes.json();
         const roomTypesData = await typesRes.json();
-        
-        rooms = globalRoomsData; 
 
-        // 1. Build lookup dictionary & populate Room Type Selector Dropdown dynamically
+        // Assign globalHousekeepers reliably
+        if (hkRes.ok) {
+            globalHousekeepers = await hkRes.json();
+            console.log("Fetched housekeepers array:", globalHousekeepers);
+        } else {
+            console.warn("Housekeeper endpoint returned non-200 status:", hkRes.status);
+            globalHousekeepers = [];
+        }
+
+        // 1. Populate Housekeeper Filter Dropdown
+        const hkFilterSelect = document.getElementById('housekeeperFilter');
+        if (hkFilterSelect) {
+            hkFilterSelect.innerHTML = `
+                <option value="all">ALL HOUSEKEEPERS</option>
+                <option value="unassigned">UNASSIGNED ROOMS</option>
+            `;
+
+            globalHousekeepers.forEach(hk => {
+                const opt = document.createElement('option');
+                opt.value = hk._id.toString();
+                opt.textContent = (hk.username || hk.name || 'Unnamed').toUpperCase();
+                hkFilterSelect.appendChild(opt);
+            });
+        }
+
+        // 2. Build Room Types Lookup & Dropdown
         globalTypeLookup = {};
         const typeFilterSelect = document.getElementById('roomTypeFilter');
-        
-        // Reset option list while preserving the default "All Categories" option
         if (typeFilterSelect) {
             typeFilterSelect.innerHTML = '<option value="all">ALL CATEGORIES</option>';
         }
 
         roomTypesData.forEach(type => { 
             globalTypeLookup[type._id] = type.name; 
-            
             if (typeFilterSelect) {
                 const opt = document.createElement('option');
                 opt.value = type._id;
@@ -3716,10 +3738,13 @@ async function renderHousekeepingRooms() {
 
     } catch (error) {
         console.error('Housekeeping Load Error:', error);
-        housekeepingRoomGrid.innerHTML = `
-            <div class="col-span-full text-center py-10 bg-red-50 rounded-2xl border border-red-100">
-                <p class="text-red-600 font-bold">Failed to synchronize room data.</p>
-            </div>`;
+        const grid = document.getElementById('housekeepingRoomGrid');
+        if (grid) {
+            grid.innerHTML = `
+                <div class="col-span-full text-center py-10 bg-red-50 rounded-2xl border border-red-100">
+                    <p class="text-red-600 font-bold">Failed to synchronize room data.</p>
+                </div>`;
+        }
         return;
     }
 
@@ -3728,22 +3753,44 @@ async function renderHousekeepingRooms() {
 }
 
 function applyFiltersAndRender() {
+    const housekeepingRoomGrid = document.getElementById('housekeepingRoomGrid');
+    if (!housekeepingRoomGrid) return;
+
     housekeepingRoomGrid.innerHTML = ''; 
 
     const searchQuery = document.getElementById('roomSearchInput')?.value.trim().toLowerCase() || '';
     const selectedStatus = document.getElementById('roomStatusFilter')?.value || 'all';
     const selectedType = document.getElementById('roomTypeFilter')?.value || 'all';
+    const selectedHk = document.getElementById('housekeeperFilter')?.value || 'all';
 
-    // 1. Process 3-Way Active Filters Stack
+    // Filter Rooms
     const filteredRooms = globalRoomsData.filter(room => {
         const matchesSearch = room.number.toLowerCase().includes(searchQuery);
         const matchesStatus = (selectedStatus === 'all') || (room.status === selectedStatus);
         
-        // Handle variations where roomTypeId could be an object populate payload or a plain string ID
-        const currentRoomTypeId = (room.roomTypeId && typeof room.roomTypeId === 'object') ? room.roomTypeId._id : room.roomTypeId;
+        const currentRoomTypeId = (room.roomTypeId && typeof room.roomTypeId === 'object') 
+            ? room.roomTypeId._id 
+            : room.roomTypeId;
         const matchesType = (selectedType === 'all') || (currentRoomTypeId === selectedType);
-        
-        return matchesSearch && matchesStatus && matchesType;
+
+        // Housekeeper Filtering Logic
+        let currentAssignedId = '';
+        if (room.assignedTo) {
+            currentAssignedId = (typeof room.assignedTo === 'object' && room.assignedTo._id) 
+                ? room.assignedTo._id.toString() 
+                : room.assignedTo.toString();
+        }
+
+        let matchesHk = false;
+        if (selectedHk === 'all') {
+            matchesHk = true;
+        } else if (selectedHk === 'unassigned') {
+            matchesHk = !currentAssignedId;
+        } else {
+            matchesHk = currentAssignedId === selectedHk;
+        }
+
+        return matchesSearch && matchesStatus && matchesType && matchesHk;
     });
 
     if (filteredRooms.length === 0) {
@@ -3754,9 +3801,8 @@ function applyFiltersAndRender() {
         return;
     }
 
-    // 2. Structuring Groups & Context Metrics Counters
+    // Group Rooms by Category
     const groupedRooms = {};
-    
     filteredRooms.forEach(room => {
         let typeName = (room.roomTypeId && typeof room.roomTypeId === 'object') 
             ? room.roomTypeId.name 
@@ -3770,13 +3816,12 @@ function applyFiltersAndRender() {
         }
 
         groupedRooms[typeName].rooms.push(room);
-        
         if (groupedRooms[typeName].statusCounts.hasOwnProperty(room.status)) {
             groupedRooms[typeName].statusCounts[room.status]++;
         }
     });
     
-    // 3. Render HTML Grid Generation Loop
+    // Render Groups & Room Cards
     for (const typeName in groupedRooms) {
         const group = groupedRooms[typeName];
         const counts = group.statusCounts;
@@ -3789,10 +3834,10 @@ function applyFiltersAndRender() {
         if (counts.blocked > 0) statusMetricsHTML += `<span class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-bold border border-indigo-100">${counts.blocked} Occ/Blk</span>`;
 
         const sectionHeader = document.createElement('div');
-        sectionHeader.className = "col-span-full mt-10 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4";
+        sectionHeader.className = "col-span-full mt-8 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-3";
         sectionHeader.innerHTML = `
             <div class="flex items-center gap-3">
-                <h3 class="text-sm font-black uppercase tracking-[0.3em] text-slate-800 whitespace-nowrap">${typeName}</h3>
+                <h3 class="text-xs font-black uppercase tracking-[0.2em] text-slate-800">${typeName}</h3>
                 <span class="bg-slate-800 text-white px-2.5 py-0.5 rounded-full text-[10px] font-black">${group.rooms.length} TOTAL</span>
             </div>
             <div class="flex flex-wrap gap-2 items-center">
@@ -3802,39 +3847,71 @@ function applyFiltersAndRender() {
         housekeepingRoomGrid.appendChild(sectionHeader);
 
         group.rooms
-            .sort((a, b) => a.number.localeCompare(b.number, undefined, {numeric: true}))
+            .sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }))
             .forEach(room => {
                 const isDirty = room.status === 'dirty';
                 const isOccupied = room.status === 'blocked';
+                
+                let currentAssignedId = '';
+                if (room.assignedTo) {
+                    currentAssignedId = (typeof room.assignedTo === 'object' && room.assignedTo._id) 
+                        ? room.assignedTo._id.toString() 
+                        : room.assignedTo.toString();
+                }
+
+                let hkOptionsHTML = `<option value="">-- UNASSIGNED --</option>`;
+                globalHousekeepers.forEach(hk => {
+                    const hkIdStr = hk._id ? hk._id.toString() : '';
+                    const isSelected = hkIdStr === currentAssignedId && currentAssignedId !== '';
+                    const displayName = (hk.username || hk.name || 'Unnamed').toUpperCase();
+                    
+                    hkOptionsHTML += `<option value="${hkIdStr}" ${isSelected ? 'selected' : ''}>${displayName}</option>`;
+                });
+
                 const card = document.createElement('div');
-                card.className = "bg-white rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group";
+                card.className = "bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden";
                 
                 card.innerHTML = `
-                    <div class="p-6">
+                    <div class="p-5">
                         <div class="flex justify-between items-start mb-4">
                             <div>
-                                <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-1">Room</p>
-                                <h4 class="text-3xl font-black text-slate-800">${room.number}</h4>
+                                <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-0.5">Room</p>
+                                <h4 class="text-2xl font-black text-slate-800">${room.number}</h4>
                             </div>
-                            <div class="h-10 w-10 rounded-xl ${isDirty ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-500'} flex items-center justify-center">
-                                <i class="fa-solid ${isDirty ? 'fa-broom' : 'fa-check-circle'}"></i>
+                            <div class="h-9 w-9 rounded-xl ${isDirty ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-500'} flex items-center justify-center">
+                                <i class="fa-solid ${isDirty ? 'fa-broom' : 'fa-check-circle'} text-sm"></i>
                             </div>
                         </div>
+
                         <div class="space-y-3">
-                            <div class="flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full ${isDirty ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}"></span>
-                                <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">${room.status.replace('-', ' ')}</span>
+                            <!-- Status Dropdown -->
+                            <div>
+                                <label class="block text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">Room Status</label>
+                                <div class="relative">
+                                    <select onchange="updateRoomStatus('${room._id}', this.value)" 
+                                        class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer">
+                                        <option value="clean" ${room.status === 'clean' ? 'selected' : ''}>CLEAN</option>
+                                        <option value="dirty" ${room.status === 'dirty' ? 'selected' : ''}>DIRTY</option>
+                                        <option value="In progress" ${room.status === 'In progress' ? 'selected' : ''}>IN PROGRESS</option>
+                                        <option value="under-maintenance" ${room.status === 'under-maintenance' ? 'selected' : ''}>MAINTENANCE</option>
+                                        <option value="blocked" ${room.status === 'blocked' ? 'selected' : ''}>${isOccupied ? 'OCCUPIED' : 'BLOCKED'}</option>
+                                    </select>
+                                    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
+                                </div>
                             </div>
-                            <div class="relative group/select">
-                                <select onchange="updateRoomStatus('${room._id}', this.value)" 
-                                    class="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer transition-all">
-                                    <option value="clean" ${room.status === 'clean' ? 'selected' : ''}>SET AS CLEAN</option>
-                                    <option value="dirty" ${room.status === 'dirty' ? 'selected' : ''}>SET AS DIRTY</option>
-                                    <option value="In progress" ${room.status === 'In progress' ? 'selected' : ''}>IN PROGRESS</option>
-                                    <option value="under-maintenance" ${room.status === 'under-maintenance' ? 'selected' : ''}>MAINTENANCE</option>
-                                    <option value="blocked" ${room.status === 'blocked' ? 'selected' : ''}>${isOccupied ? 'OCCUPIED' : 'BLOCKED'}</option>
-                                </select>
-                                <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
+
+                            <!-- Housekeeper Assignment Dropdown -->
+                            <div>
+                                <label class="block text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                                    <i class="fa-solid fa-user-gear mr-1"></i>Assigned Housekeeper
+                                </label>
+                                <div class="relative">
+                                    <select onchange="assignHousekeeper('${room._id}', this.value)" 
+                                        class="w-full ${currentAssignedId ? 'bg-indigo-50/50 border-indigo-200 text-indigo-900' : 'bg-slate-50 border-slate-200 text-slate-500'} border p-2.5 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer">
+                                        ${hkOptionsHTML}
+                                    </select>
+                                    <i class="fa-solid fa-user-check absolute right-3 top-1/2 -translate-y-1/2 text-[10px] ${currentAssignedId ? 'text-indigo-500' : 'text-slate-400'} pointer-events-none"></i>
+                                </div>
                             </div>
                         </div>
                     </div>`;
@@ -3843,36 +3920,44 @@ function applyFiltersAndRender() {
     }
 }
 
-function updateStatusCounters(roomsArray) {
-    const counts = { clean: 0, dirty: 0, maintenance: 0, blocked: 0 };
-    roomsArray.forEach(room => {
-        if (room.status === 'clean') counts.clean++;
-        else if (room.status === 'dirty') counts.dirty++;
-        else if (room.status === 'under-maintenance') counts.maintenance++;
-        else if (room.status === 'blocked') counts.blocked++;
-    });
+// Assign Housekeeper Handler
+async function assignHousekeeper(roomId, housekeeperId) {
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
+    const token = sessionData?.token;
+    const hotelId = sessionData?.hotelId;
 
-    if (document.getElementById('stat-clean')) {
-        document.getElementById('stat-clean').textContent = counts.clean;
-        document.getElementById('stat-dirty').textContent = counts.dirty;
-        document.getElementById('stat-maintenance').textContent = counts.maintenance;
-        document.getElementById('stat-occupied').textContent = counts.blocked;
+    try {
+        const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'x-hotel-id': hotelId
+            },
+            body: JSON.stringify({ 
+                assignedTo: housekeeperId ? housekeeperId : null,
+                assignedAt: housekeeperId ? new Date() : null,
+                hotelId: hotelId
+            })
+        });
+
+        if (!response.ok) throw new Error("Assignment failed");
+
+        showMessage('Success', housekeeperId ? 'Housekeeper assigned.' : 'Assignment cleared.');
+        
+        // Re-fetch and re-render rooms
+        renderHousekeepingRooms();
+    } catch (error) {
+        console.error("Assignment error:", error);
+        showMessage('Error', error.message, true);
     }
 }
 
-// Event bindings configuration setup
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('roomSearchInput')?.addEventListener('input', applyFiltersAndRender);
-    document.getElementById('roomStatusFilter')?.addEventListener('change', applyFiltersAndRender);
-    document.getElementById('roomTypeFilter')?.addEventListener('change', applyFiltersAndRender);
-});
-
-
+// Update Room Status Handler
 async function updateRoomStatus(roomMongoId, newStatus) {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const token = sessionData?.token;
     const hotelId = sessionData?.hotelId;
-    const currentUsername = sessionData?.username;
 
     try {
         const response = await fetch(`${API_BASE_URL}/rooms/${roomMongoId}`, {
@@ -3880,13 +3965,11 @@ async function updateRoomStatus(roomMongoId, newStatus) {
             headers: { 
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
-                    'x-hotel-id': sessionData?.hotelId
-
+                'x-hotel-id': hotelId
             },
             body: JSON.stringify({ 
                 status: newStatus, 
-                hotelId: hotelId,
-                username: currentUsername 
+                hotelId: hotelId 
             })
         });
 
@@ -3899,6 +3982,28 @@ async function updateRoomStatus(roomMongoId, newStatus) {
         showMessage('Error', error.message, true);
     }
 }
+
+function updateStatusCounters(roomsArray) {
+    const counts = { clean: 0, dirty: 0, maintenance: 0, blocked: 0 };
+    roomsArray.forEach(room => {
+        if (room.status === 'clean') counts.clean++;
+        else if (room.status === 'dirty') counts.dirty++;
+        else if (room.status === 'under-maintenance') counts.maintenance++;
+        else if (room.status === 'blocked') counts.blocked++;
+    });
+
+    if (document.getElementById('stat-clean')) document.getElementById('stat-clean').textContent = counts.clean;
+    if (document.getElementById('stat-dirty')) document.getElementById('stat-dirty').textContent = counts.dirty;
+    if (document.getElementById('stat-maintenance')) document.getElementById('stat-maintenance').textContent = counts.maintenance;
+    if (document.getElementById('stat-occupied')) document.getElementById('stat-occupied').textContent = counts.blocked;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('roomSearchInput')?.addEventListener('input', applyFiltersAndRender);
+    document.getElementById('roomStatusFilter')?.addEventListener('change', applyFiltersAndRender);
+    document.getElementById('roomTypeFilter')?.addEventListener('change', applyFiltersAndRender);
+    document.getElementById('housekeeperFilter')?.addEventListener('change', applyFiltersAndRender); // <-- NEW
+});
 
 async function renderCalendar() {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
