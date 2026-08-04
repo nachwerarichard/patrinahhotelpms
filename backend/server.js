@@ -1053,14 +1053,11 @@ app.post('/api/rooms', auth, async (req, res) => {
     }
 });
 
-
-
-// GET active housekeepers for the user's hotel
 app.get('/api/housekeepers', auth, async (req, res) => {
     try {
         const housekeepers = await User.find({ 
-            hotelId: req.user.hotelId, 
-            role: 'housekeeper' 
+            hotelId: new mongoose.Types.ObjectId(req.user.hotelId), 
+            role: { $regex: /^housekeeper$/i } // Case-insensitive exact match
         }).select('_id username role');
         
         res.json(housekeepers);

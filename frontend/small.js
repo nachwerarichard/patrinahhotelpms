@@ -3818,13 +3818,13 @@ if (room.assignedTo) {
         : room.assignedTo.toString();
 }
 
-// Generate Housekeeper Options with safe string comparison
 let hkOptionsHTML = `<option value="">-- UNASSIGNED --</option>`;
 globalHousekeepers.forEach(hk => {
     const hkIdStr = hk._id ? hk._id.toString() : '';
     const isSelected = hkIdStr === currentAssignedId && currentAssignedId !== '';
+    const displayName = (hk.username || hk.name || 'Unnamed').toUpperCase();
     
-    hkOptionsHTML += `<option value="${hkIdStr}" ${isSelected ? 'selected' : ''}>${hk.username.toUpperCase()}</option>`;
+    hkOptionsHTML += `<option value="${hkIdStr}" ${isSelected ? 'selected' : ''}>${displayName}</option>`;
 });
 
                 const card = document.createElement('div');
