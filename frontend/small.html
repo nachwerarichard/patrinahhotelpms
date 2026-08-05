@@ -818,19 +818,31 @@ body {
         
         <!-- Low Stock Items Card -->
         <div class="relative pl-4 sm:col-span-2 lg:col-span-1">
-            <div class="flex items-center justify-between mb-1">
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Low Stock Items</p>
-                <span id="low-stock-count" class="text-[10px] font-extrabold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full hidden">0</span>
+    <div class="flex items-center justify-between mb-1">
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Low Stock Items</p>
+        
+        <div class="flex items-center space-x-2">
+            <!-- Action Buttons (Hidden when count is 0) -->
+            <div id="low-stock-actions" class="hidden flex items-center space-x-1">
+                <button type="button" onclick="exportLowStockToCSV()" title="Export Low Stock to CSV" class="text-gray-400 hover:text-emerald-600 transition-colors p-1">
+                    <i class="fas fa-file-excel text-xs"></i>
+                </button>
+                <button type="button" onclick="printLowStockReport()" title="Print Low Stock Report" class="text-gray-400 hover:text-blue-600 transition-colors p-1">
+                    <i class="fas fa-print text-xs"></i>
+                </button>
             </div>
             
-            <div class="absolute left-0 top-0 h-full w-1 bg-rose-500 rounded-full"></div>
-
-            <!-- Scrollable list wrapper with fixed max-height -->
-            <div id="low-stock-container" class="mt-2 max-h-36 overflow-y-auto pr-1 space-y-2 scrollbar-thin scrollbar-thumb-rose-200 scrollbar-track-gray-50">
-                <!-- Placeholder when no low stock items -->
-                <p class="text-xs text-gray-400 italic py-1">All tracked items are adequately stocked.</p>
-            </div>
+            <span id="low-stock-count" class="text-[10px] font-extrabold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full hidden">0</span>
         </div>
+    </div>
+    
+    <div class="absolute left-0 top-0 h-full w-1 bg-rose-500 rounded-full"></div>
+
+    <!-- Scrollable list wrapper with fixed max-height -->
+    <div id="low-stock-container" class="mt-2 max-h-36 overflow-y-auto pr-1 space-y-2 scrollbar-thin scrollbar-thumb-rose-200 scrollbar-track-gray-50">
+        <p class="text-xs text-gray-400 italic py-1">All tracked items are adequately stocked.</p>
+    </div>
+</div>
 
     </div>
 </div>
