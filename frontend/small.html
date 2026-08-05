@@ -697,240 +697,241 @@ body {
     </div>
 </section>
 
-<section id="dashboard" class="section active bg-gray-50 p-4 md:p-8 rounded-2xl shadow-sm mb-8">
+<section id="dashboard" class="section active bg-slate-50/50 p-4 sm:p-6 lg:p-8 rounded-3xl border border-slate-200/80 shadow-sm mb-8 space-y-8">
     <!-- Dashboard Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200/60">
         <div>
-            <h2 class="text-3xl font-extrabold text-gray-800 tracking-tight flex items-center gap-3">
-                <i class="fas fa-th-large text-blue-600"></i>
-                Dashboard
-            </h2>
-            <p class="text-gray-500 mt-1 ml-9">Real-time property performance, finances, and staff analytics.</p>
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-blue-600 text-white rounded-xl shadow-md shadow-blue-500/20">
+                    <i class="fas fa-th-large text-lg"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Dashboard</h2>
+            </div>
+            <p class="text-sm text-slate-500 mt-1 sm:ml-[3.25rem] font-medium">Real-time property performance, finances, and staff analytics.</p>
         </div>
-        <div class="flex items-center gap-2 self-start md:self-center bg-white shadow-sm border border-gray-100 px-4 py-2 rounded-full">
-            <span class="relative flex h-3 w-3">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+        
+        <div class="flex items-center gap-2.5 self-start md:self-center bg-white shadow-sm border border-slate-200/80 px-4 py-2 rounded-full transition-all hover:border-slate-300">
+            <span class="relative flex h-2.5 w-2.5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
             </span>
-            <span class="text-sm font-semibold text-gray-600">Today's Overview</span>
+            <span class="text-xs font-bold text-slate-700 tracking-wide uppercase">Today's Overview</span>
         </div>
     </div>
 
-    <div class="space-y-10">
+    <div class="space-y-8">
         <!-- Operations Overview -->
         <div>
-            <div class="flex items-center gap-2 mb-5">
-                <div class="h-1 w-8 bg-blue-500 rounded-full"></div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Operations Overview</h3>
+            <div class="flex items-center gap-2.5 mb-4">
+                <div class="h-1.5 w-6 bg-blue-600 rounded-full"></div>
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Operations Overview</h3>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all group">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <!-- Arrivals Card -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-200 group">
                     <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Arrivals</p>
-                            <p id="total-arrivals" class="text-4xl font-black text-gray-900 mt-2">0</p>
+                        <div class="space-y-1">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Arrivals</p>
+                            <p id="total-arrivals" class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">0</p>
                         </div>
-                        <div class="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                            <i class="fas fa-sign-in-alt fa-lg"></i>
+                        <div class="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-all duration-200 shadow-sm">
+                            <i class="fas fa-sign-in-alt text-base"></i>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all group">
+                <!-- Departures Card -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-amber-200 transition-all duration-200 group">
                     <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Departures</p>
-                            <p id="total-departures" class="text-4xl font-black text-gray-900 mt-2">0</p>
+                        <div class="space-y-1">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Departures</p>
+                            <p id="total-departures" class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">0</p>
                         </div>
-                        <div class="p-3 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-600 group-hover:text-white transition-colors">
-                            <i class="fas fa-sign-out-alt fa-lg"></i>
+                        <div class="p-3 bg-amber-50 text-amber-600 rounded-xl group-hover:bg-amber-600 group-hover:text-white transition-all duration-200 shadow-sm">
+                            <i class="fas fa-sign-out-alt text-base"></i>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all group">
+                <!-- No Shows Card -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-rose-200 transition-all duration-200 group">
                     <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">No Shows</p>
-                            <p id="no-show-count" class="text-4xl font-black text-gray-900 mt-2">0</p>
+                        <div class="space-y-1">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">No Shows</p>
+                            <p id="no-show-count" class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">0</p>
                         </div>
-                        <div class="p-3 bg-red-50 text-red-600 rounded-xl group-hover:bg-red-600 group-hover:text-white transition-colors">
-                            <i class="fas fa-user-times fa-lg"></i>
+                        <div class="p-3 bg-rose-50 text-rose-600 rounded-xl group-hover:bg-rose-600 group-hover:text-white transition-all duration-200 shadow-sm">
+                            <i class="fas fa-user-times text-base"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Front Office Revenue & Payments -->
-        <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-            <div class="flex items-center gap-2 mb-6">
-                <div class="h-1 w-8 bg-green-500 rounded-full"></div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Front Office Room Revenue & Payments</h3>
+        <!-- Front Office Room Revenue & Payments -->
+        <div class="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-sm">
+            <div class="flex items-center gap-2.5 mb-6">
+                <div class="h-1.5 w-6 bg-emerald-500 rounded-full"></div>
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Front Office Room Revenue & Payments</h3>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div class="relative pl-4">
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Expected</p>
-                    <p id="today-revenue" class="text-xl font-bold text-gray-900 mt-1">UGX 0</p>
-                    <div class="absolute left-0 top-0 h-full w-1 bg-green-500 rounded-full"></div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="relative pl-4 border-l-2 border-emerald-500 py-0.5">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Expected</p>
+                    <p id="today-revenue" class="text-xl font-bold text-slate-900 mt-1">UGX 0</p>
                 </div>
-                <div class="relative pl-4">
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Collected</p>
-                    <p id="today-amountpaid" class="text-xl font-bold text-gray-900 mt-1 text-green-600">UGX 0</p>
-                    <div class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-full"></div>
+                <div class="relative pl-4 border-l-2 border-blue-500 py-0.5">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Collected</p>
+                    <p id="today-amountpaid" class="text-xl font-bold text-emerald-600 mt-1">UGX 0</p>
                 </div>
-                <div class="relative pl-4">
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Balance</p>
-                    <p id="today-balance" class="text-xl font-bold text-gray-900 mt-1 text-red-500">UGX 0</p>
-                    <div class="absolute left-0 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
+                <div class="relative pl-4 border-l-2 border-indigo-500 py-0.5">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Balance</p>
+                    <p id="today-balance" class="text-xl font-bold text-rose-500 mt-1">UGX 0</p>
                 </div>
-                <div class="relative pl-4 ">
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pending</p>
-                    <p id="pending-count" class="text-xl font-bold text-gray-900 mt-1">0</p>
-                    <div class="absolute left-0 top-0 h-full w-1 bg-yellow-500 rounded-full"></div>
+                <div class="relative pl-4 border-l-2 border-amber-500 py-0.5">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pending</p>
+                    <p id="pending-count" class="text-xl font-bold text-slate-900 mt-1">0</p>
                 </div>
             </div>
         </div>
 
-        <!-- Point of Sale -->
-        <div class="bg-white p-6 sm:p-8 rounded-3xl border border-gray-100 shadow-sm">
-    <div class="flex items-center gap-2 mb-6">
-        <div class="h-1 w-8 bg-indigo-500 rounded-full"></div>
-        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Point of Sale & Inventory Status</h3>
-    </div>
-    
-    <!-- Changed grid to 3 columns to fit POS stats and Low Stock list cleanly -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-        
-        <!-- Total Revenue -->
-        <div class="relative pl-4">
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Revenue</p>
-            <p id="postoday-revenue" class="text-xl font-bold text-gray-900 mt-1"> 0</p>
-            <div class="absolute left-0 top-0 h-full w-1 bg-green-500 rounded-full"></div>
-        </div>
-
-        <!-- Gross Profit -->
-        <div class="relative pl-4">
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Gross Profit</p>
-            <p id="postoday-profit" class="text-xl font-bold text-gray-900 mt-1 text-green-600">UGX 0</p>
-            <div class="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-full"></div>
-        </div>
-        
-        <!-- Low Stock Items Card -->
-        <div class="relative pl-4 sm:col-span-2 lg:col-span-1">
-    <div class="flex items-center justify-between mb-1">
-        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Low Stock Items</p>
-        
-        <div class="flex items-center space-x-2">
-            <!-- Action Buttons (Hidden when count is 0) -->
-            <div id="low-stock-actions" class="hidden flex items-center space-x-1">
-                <button type="button" onclick="exportLowStockToCSV()" title="Export Low Stock to CSV" class="text-gray-400 hover:text-emerald-600 transition-colors p-1">
-                    <i class="fas fa-file-excel text-xs"></i>
-                </button>
-                <button type="button" onclick="printLowStockReport()" title="Print Low Stock Report" class="text-gray-400 hover:text-blue-600 transition-colors p-1">
-                    <i class="fas fa-print text-xs"></i>
-                </button>
+        <!-- Point of Sale & Inventory Status -->
+        <div class="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-sm">
+            <div class="flex items-center gap-2.5 mb-6">
+                <div class="h-1.5 w-6 bg-indigo-500 rounded-full"></div>
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Point of Sale & Inventory Status</h3>
             </div>
             
-            <span id="low-stock-count" class="text-[10px] font-extrabold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full hidden">0</span>
-        </div>
-    </div>
-    
-    <div class="absolute left-0 top-0 h-full w-1 bg-rose-500 rounded-full"></div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Total Revenue -->
+                <div class="relative pl-4 border-l-2 border-emerald-500 py-0.5">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Revenue</p>
+                    <p id="postoday-revenue" class="text-xl font-bold text-slate-900 mt-1">0</p>
+                </div>
 
-    <!-- Scrollable list wrapper with fixed max-height -->
-    <div id="low-stock-container" class="mt-2 max-h-36 overflow-y-auto pr-1 space-y-2 scrollbar-thin scrollbar-thumb-rose-200 scrollbar-track-gray-50">
-        <p class="text-xs text-gray-400 italic py-1">All tracked items are adequately stocked.</p>
-    </div>
-</div>
-
-    </div>
-</div>
-
-        <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-            <div class="flex items-center gap-2 mb-6">
-                <div class="h-1 w-8 bg-indigo-500 rounded-full"></div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Expenses</h3>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                
-                <div class="relative pl-4">
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Expense</p>
-                    <p id="postoday-expense" class="text-xl font-bold text-gray-900 mt-1 text-red-500">UGX 0</p>
-                    <div class="absolute left-0 top-0 h-full w-1 bg-indigo-500 rounded-full"></div>
+                <!-- Gross Profit -->
+                <div class="relative pl-4 border-l-2 border-blue-500 py-0.5">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Gross Profit</p>
+                    <p id="postoday-profit" class="text-xl font-bold text-emerald-600 mt-1">UGX 0</p>
                 </div>
                 
+                <!-- Low Stock Items Card -->
+                <div class="relative pl-4 border-l-2 border-rose-500 py-0.5 sm:col-span-2 lg:col-span-1">
+                    <div class="flex items-center justify-between mb-1">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Low Stock Items</p>
+                        
+                        <div class="flex items-center space-x-2">
+                            <!-- Action Buttons (Hidden when count is 0) -->
+                            <div id="low-stock-actions" class="hidden flex items-center space-x-1">
+                                <button type="button" onclick="exportLowStockToCSV()" title="Export Low Stock to CSV" class="text-slate-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-slate-50">
+                                    <i class="fas fa-file-excel text-xs"></i>
+                                </button>
+                                <button type="button" onclick="printLowStockReport()" title="Print Low Stock Report" class="text-slate-400 hover:text-blue-600 transition-colors p-1 rounded hover:bg-slate-50">
+                                    <i class="fas fa-print text-xs"></i>
+                                </button>
+                            </div>
+                            
+                            <span id="low-stock-count" class="text-[10px] font-extrabold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full hidden">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Scrollable list wrapper -->
+                    <div id="low-stock-container" class="mt-2 max-h-36 overflow-y-auto pr-1 space-y-2 scrollbar-thin scrollbar-thumb-rose-200 scrollbar-track-slate-50">
+                        <p class="text-xs text-slate-400 italic py-1">All tracked items are adequately stocked.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Expenses -->
+        <div class="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-sm">
+            <div class="flex items-center gap-2.5 mb-6">
+                <div class="h-1.5 w-6 bg-indigo-500 rounded-full"></div>
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Total Expenses</h3>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="relative pl-4 border-l-2 border-indigo-500 py-0.5">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Expense</p>
+                    <p id="postoday-expense" class="text-xl font-bold text-rose-500 mt-1">UGX 0</p>
+                </div>
             </div>
         </div>
         
+        <!-- Stats Container Dynamic Injector -->
         <div id="stats-container" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
 
-<div>
-    <div class="flex items-center gap-2 mb-5 hidden">
-        <div class="h-1 w-8 bg-purple-600 rounded-full"></div>
-        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Staff Performance Analytics (Past 30 Days)</h3>
-    </div>
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 hidden">
-        <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                    <i class="fas fa-tasks text-purple-600"></i> Actions Handled per Staff (Last 30 Days)
-                </h3>
-                <button class="text-gray-400 hover:text-gray-600 transition-colors">
-                    <i class="fas fa-ellipsis-h"></i>
-                </button>
+        <!-- Staff Analytics (Hidden) -->
+        <div>
+            <div class="flex items-center gap-2.5 mb-5 hidden">
+                <div class="h-1.5 w-6 bg-purple-600 rounded-full"></div>
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Staff Performance Analytics (Past 30 Days)</h3>
             </div>
-            <div class="h-64 relative">
-                <canvas id="staffActivityChart"></canvas>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 hidden">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                            <i class="fas fa-tasks text-purple-600"></i> Actions Handled per Staff (Last 30 Days)
+                        </h3>
+                        <button type="button" class="text-slate-400 hover:text-slate-600 transition-colors p-1">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </button>
+                    </div>
+                    <div class="h-64 relative">
+                        <canvas id="staffActivityChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                            <i class="fas fa-exclamation-triangle text-amber-500"></i> Booking Voids & System Overrides (Last 30 Days)
+                        </h3>
+                        <button type="button" class="text-slate-400 hover:text-slate-600 transition-colors p-1">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </button>
+                    </div>
+                    <div class="h-64 relative">
+                        <canvas id="discrepancyChart"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                    <i class="fas fa-exclamation-triangle text-amber-500"></i> Booking Voids & System Overrides (Last 30 Days)
-                </h3>
-                <button class="text-gray-400 hover:text-gray-600 transition-colors">
-                    <i class="fas fa-ellipsis-h"></i>
-                </button>
+        <!-- Charts Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:border-slate-300 transition-colors">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2.5 text-sm">
+                        <div class="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        Guest Status
+                    </h3>
+                    <button type="button" class="text-slate-400 hover:text-slate-600 transition-colors p-1">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
+                </div>
+                <div class="h-64 relative">
+                    <canvas id="statusChart"></canvas>
+                </div>
             </div>
-            <div class="h-64 relative">
-                <canvas id="discrepancyChart"></canvas>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:border-slate-300 transition-colors">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2.5 text-sm">
+                        <div class="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+                            <i class="fas fa-globe"></i>
+                        </div>
+                        Booking Sources
+                    </h3>
+                    <button type="button" class="text-slate-400 hover:text-slate-600 transition-colors p-1">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
+                </div>
+                <div class="h-64 relative">
+                    <canvas id="sourceChart"></canvas>
+                </div>
             </div>
         </div>
-    </div>
-</div>
-
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-    <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-        <div class="flex items-center justify-between mb-6">
-            <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                <i class="fas fa-chart-pie text-blue-500"></i> Guest Status
-            </h3>
-            <button class="text-gray-400 hover:text-gray-600 transition-colors">
-                <i class="fas fa-ellipsis-h"></i>
-            </button>
-        </div>
-        <div class="h-64 relative">
-            <canvas id="statusChart"></canvas>
-        </div>
-    </div>
-
-    <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-        <div class="flex items-center justify-between mb-6">
-            <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                <i class="fas fa-globe text-indigo-500"></i> Booking Sources
-            </h3>
-            <button class="text-gray-400 hover:text-gray-600 transition-colors">
-                <i class="fas fa-ellipsis-h"></i>
-            </button>
-        </div>
-        <div class="h-64 relative">
-            <canvas id="sourceChart"></canvas>
-        </div>
-    </div>
-</div>
-        
     </div>
 </section>
 <!-- Hidden File Input for Inline Table Image Picker -->
