@@ -608,8 +608,8 @@ body {
                     <i id="financials-arrow" class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
                 </button>
                 <ul id="financials-menu" class="hidden pl-14 space-y-1 overflow-hidden transition-all duration-300">
-                    <li id="nav-payments"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">POS Payments & Folios</a></li>
-                    <li id="nav-receivables"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"> POS Receivables</a></li>
+                    <li id="nav-payments"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Sales Payments & Folios</a></li>
+                    <li id="nav-receivables"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"> Sales Receivables</a></li>
                     <li id="nav-cash"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Cash Drawer & Reconciliation</a></li>
                     <li id="nav-expenses"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Expenses</a></li>
                     <li id="nav-posreports"><a href="#" class="block p-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Room Service Reports</a></li>
@@ -796,10 +796,10 @@ body {
         <div class="bg-white p-6 sm:p-8 rounded-3xl border border-gray-100 shadow-sm">
     <div class="flex items-center gap-2 mb-6">
         <div class="h-1 w-8 bg-indigo-500 rounded-full"></div>
-        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Point of Sale & Inventory Status</h3>
+        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Sales & Inventory Status</h3>
     </div>
     
-    <!-- Changed grid to 3 columns to fit POS stats and Low Stock list cleanly -->
+    <!-- Changed grid to 3 columns to fit Sales stats and Low Stock list cleanly -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
         
         <!-- Total Revenue -->
@@ -1871,7 +1871,7 @@ body {
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
                     <h3 class="text-xs font-bold text-slate-400 uppercase mb-6 flex items-center gap-2">
-                        <i class="fas fa-cart-plus text-indigo-500"></i> POS Terminal
+                        <i class="fas fa-cart-plus text-indigo-500"></i> Sales
                     </h3>
                     <form id="addChargeForm" class="space-y-5">
                         <div class="space-y-2">
@@ -2792,7 +2792,7 @@ body {
                 <select id="active-accounts-type-filter" onchange="filterActiveAccounts()" class="h-8 px-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none">
                     <option value="ALL">All Account Types</option>
                     <option value="GUEST">In-House Guest</option>
-                    <option value="POS_TAB">Walk-In / POS Tab</option>
+                    <option value="POS_TAB">Walk-in</option>
                     <option value="CITY_LEDGER">Corporate / City Ledger</option>
                 </select>
             </div>

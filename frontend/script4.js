@@ -8250,7 +8250,7 @@ async function handleUpdateSubmit(event) {
         spoilage: parseInt(document.getElementById('edit-spoilage')?.value, 10) || 0,
         buyingprice: parseFloat(document.getElementById('edit-buyingprice')?.value) || 0,
         sellingprice: parseFloat(document.getElementById('edit-sellingprice')?.value) || 0,
-        lowStock: parseInt(document.getElementById('edit-lowStock')?.value, 10) ?? 5, // <-- Added here
+        lowStock: parseInt(document.getElementById('edit-lowStock')?.value, 10) || 5,
         trackInventory: document.getElementById('edit-trackInventory')?.checked ?? true,
         date: selectedDate 
     };
@@ -11222,14 +11222,13 @@ async function fetchInventory() {
         const itemFilter = itemFilterInput ? itemFilterInput.value.trim() : '';
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
 
-        // 2. Build Query Params
+        // 2. Build Query Params for the Paginated Table
         const params = new URLSearchParams();
         params.append('hotelId', hotelId); 
         
         if (itemFilter) params.append('item', itemFilter);
         if (dateFilter) params.append('date', dateFilter); 
         
-        // Dynamic Fallback Pagination logic safeguards
         const activePage = (typeof currentPage !== 'undefined') ? currentPage : 1;
         const activeLimit = (typeof itemsPerPage !== 'undefined') ? itemsPerPage : 10;
         
@@ -11238,7 +11237,7 @@ async function fetchInventory() {
 
         const url = `${API_BASE_URL}/inventory?${params.toString()}`;
 
-        // 3. Request Data Payload via Wrapper
+        // 3. Request Table Data
         const response = await authenticatedFetch(url);
 
         if (!response || !response.ok) {
@@ -11251,16 +11250,35 @@ async function fetchInventory() {
         // 4. Extract Inventory Normalized Array Data
         let inventoryData = result.items || result.data || result.report || [];
         
-        // 5. Render Responsive Matrix Interfaces
+        // 5. Render Main Table View
         renderInventoryTable(inventoryData);
-        updateLowStockWidget(inventoryData); // <-- Call widget update here
 
-        // 6. Handle Pagination Control Rendering
+        // 6. Fetch Full/Unpaginated Inventory for Low Stock Widget if needed
+        // (Ensures low stock items on later pages are not missed)
+        if (result.totalPages && result.totalPages > 1) {
+            const fullParams = new URLSearchParams();
+            fullParams.append('hotelId', hotelId);
+            if (dateFilter) fullParams.append('date', dateFilter);
+            fullParams.append('limit', '1000'); // Fetch full set for widget
+
+            const fullResponse = await authenticatedFetch(`${API_BASE_URL}/inventory?${fullParams.toString()}`);
+            if (fullResponse && fullResponse.ok) {
+                const fullResult = await fullResponse.json();
+                const allItems = fullResult.items || fullResult.data || fullResult.report || [];
+                updateLowStockWidget(allItems);
+            } else {
+                updateLowStockWidget(inventoryData);
+            }
+        } else {
+            updateLowStockWidget(inventoryData);
+        }
+
+        // 7. Handle Pagination Control Rendering
         if (typeof renderPagination === 'function') {
             renderPagination(result.currentPage || 1, result.totalPages || 1);
         }
 
-        // 7. Success Status Notification State
+        // 8. Success Status Notification State
         if (inventoryData.length === 0) {
             updateSearchButton('No Results', 'fas fa-exclamation-circle');
         } else {
@@ -11272,7 +11290,6 @@ async function fetchInventory() {
         showMessage('Error loading inventory: ' + error.message, true);
         updateSearchButton('Failed', 'fas fa-times');
     } finally {
-        // 8. Enforce Soft Button Interface UI Reset
         setTimeout(() => {
             updateSearchButton('Search', 'fas fa-search');
         }, 1500);
@@ -13409,40 +13426,57 @@ function calculateExpenseTotal() {
     }
 }
 
+// Global memory array to store calculated low stock items for export/print handlers
+let currentLowStockItems = [];
+
 function updateLowStockWidget(inventory) {
     const container = document.getElementById('low-stock-container');
     const countBadge = document.getElementById('low-stock-count');
+    const actionButtons = document.getElementById('low-stock-actions');
     
     if (!container) return;
 
-    // Filter items that track inventory and have closing stock <= lowStock threshold
-    const lowStockItems = inventory.filter(item => {
+    // Filter items where tracking is enabled AND current stock <= lowStock threshold
+    currentLowStockItems = (inventory || []).filter(item => {
         if (!item.trackInventory) return false;
         
-        const currentStock = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
-        const threshold = item.lowStock ?? 5; // Default threshold fallback
+        const opening = Number(item.opening) || 0;
+        const purchases = Number(item.purchases) || 0;
+        const sales = Number(item.sales) || 0;
+        const spoilage = Number(item.spoilage) || 0;
+        
+        const currentStock = opening + purchases - sales - spoilage;
+
+        const parsedThreshold = Number(item.lowStock);
+        const threshold = (!isNaN(parsedThreshold) && item.lowStock !== null) ? parsedThreshold : 5;
         
         return currentStock <= threshold;
     });
 
-    // Update Counter Badge
+    // Update Counter Badge and Export Actions
     if (countBadge) {
-        if (lowStockItems.length > 0) {
-            countBadge.textContent = lowStockItems.length;
+        if (currentLowStockItems.length > 0) {
+            countBadge.textContent = currentLowStockItems.length;
             countBadge.classList.remove('hidden');
+            if (actionButtons) actionButtons.classList.remove('hidden');
         } else {
             countBadge.classList.add('hidden');
+            if (actionButtons) actionButtons.classList.add('hidden');
         }
     }
 
     // Render Items or Empty State
-    if (lowStockItems.length === 0) {
+    if (currentLowStockItems.length === 0) {
         container.innerHTML = `<p class="text-xs text-emerald-600 font-medium italic py-1">✓ All tracked items are adequately stocked.</p>`;
         return;
     }
 
-    container.innerHTML = lowStockItems.map(item => {
-        const currentStock = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
+    container.innerHTML = currentLowStockItems.map(item => {
+        const opening = Number(item.opening) || 0;
+        const purchases = Number(item.purchases) || 0;
+        const sales = Number(item.sales) || 0;
+        const spoilage = Number(item.spoilage) || 0;
+        const currentStock = opening + purchases - sales - spoilage;
         
         return `
             <div class="flex items-center justify-between p-2 bg-rose-50/60 border border-rose-100 rounded-lg text-xs">
@@ -13458,6 +13492,102 @@ function updateLowStockWidget(inventory) {
             </div>
         `;
     }).join('');
+}
+
+// Export Low Stock Items directly to CSV (opens natively in Excel)
+function exportLowStockToCSV() {
+    if (!currentLowStockItems || currentLowStockItems.length === 0) {
+        return showMessage('No low stock items available to export.', true);
+    }
+
+    const headers = ["Item Name", "Department", "Current Stock", "Low Stock Threshold", "Buying Price", "Selling Price"];
+    const rows = currentLowStockItems.map(item => {
+        const currentStock = (Number(item.opening) || 0) + (Number(item.purchases) || 0) - (Number(item.sales) || 0) - (Number(item.spoilage) || 0);
+        return [
+            `"${item.item || ''}"`,
+            `"${item.department || 'General'}"`,
+            currentStock,
+            item.lowStock ?? 5,
+            item.buyingprice || 0,
+            item.sellingprice || 0
+        ];
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+        + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Low_Stock_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Print a clean Purchase Requisition / Stock Reorder List
+function printLowStockReport() {
+    if (!currentLowStockItems || currentLowStockItems.length === 0) {
+        return showMessage('No low stock items available to print.', true);
+    }
+
+    const printWindow = window.open('', '_blank');
+    const currentDate = new Date().toLocaleDateString();
+
+    const rows = currentLowStockItems.map(item => {
+        const currentStock = (Number(item.opening) || 0) + (Number(item.purchases) || 0) - (Number(item.sales) || 0) - (Number(item.spoilage) || 0);
+        const reorderQty = Math.max((item.lowStock ?? 5) * 2 - currentStock, 0); // Reorder suggestion
+
+        return `
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">${item.item || ''}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${item.department || 'General'}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center; color: red; font-weight: bold;">${currentStock}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.lowStock ?? 5}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${reorderQty}</td>
+            </tr>
+        `;
+    }).join('');
+
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Low Stock Reorder Report - ${currentDate}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    h2 { color: #333; margin-bottom: 5px; }
+                    p { color: #666; font-size: 12px; margin-top: 0; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+                    th { background-color: #f4f4f4; padding: 8px; border: 1px solid #ddd; text-align: left; }
+                </style>
+            </head>
+            <body>
+                <h2>Stock Reorder & Low Inventory List</h2>
+                <p>Generated on: ${currentDate}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item Description</th>
+                            <th>Department</th>
+                            <th style="text-align: center;">Current Level</th>
+                            <th style="text-align: center;">Threshold</th>
+                            <th style="text-align: center;">Suggested Reorder Qty</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            </body>
+        </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 250);
 }
 
 function switchInventoryTab(tabName) {
