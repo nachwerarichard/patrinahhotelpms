@@ -4812,7 +4812,8 @@ async function fetchReport() {
                 <span class="text-gray-500 text-sm font-medium">Processing Report Matrix...</span>
             </div>`;
 
-        if (tableBody) tableBody.innerHTML = `<tr><td colspan="9">${loadingIndicator}</td></tr>`;
+        // CHANGED: colspan="10" to match new table header count
+        if (tableBody) tableBody.innerHTML = `<tr><td colspan="10">${loadingIndicator}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = loadingIndicator;
 
         // 6. Execute Request Context Pipeline
@@ -4831,7 +4832,8 @@ async function fetchReport() {
             <div class="p-6 text-center text-red-500 font-semibold bg-red-50 rounded-lg">
                 <i class="fas fa-exclamation-triangle mr-2"></i> Error loading report structure. Check internet connectivity log.
             </div>`;
-        if (tableBody) tableBody.innerHTML = `<tr><td colspan="9">${errorTemplate}</td></tr>`;
+        // CHANGED: colspan="10" to match new table header count
+        if (tableBody) tableBody.innerHTML = `<tr><td colspan="10">${errorTemplate}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = errorTemplate;
     }
 }
