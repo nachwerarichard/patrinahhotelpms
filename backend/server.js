@@ -6194,13 +6194,15 @@ app.put('/api/inventory/:id', auth, async (req, res) => {
       return res.status(400).json({ error: "Invalid ID provided for update. Use POST to create new records." });
     }
 
+    // 1️⃣ Destructure lowStock from req.body
     const { 
       item, department, opening, purchases, sales, spoilage, 
-      buyingprice, sellingprice, trackInventory
+      buyingprice, sellingprice, trackInventory, lowStock 
     } = req.body;
 
     const closing = (Number(opening) + Number(purchases)) - (Number(sales) + Number(spoilage));
 
+    // 2️⃣ Include lowStock in updateData
     const updateData = {
       opening: Number(opening),
       purchases: Number(purchases),
@@ -6209,12 +6211,13 @@ app.put('/api/inventory/:id', auth, async (req, res) => {
       closing: closing,
       buyingprice: Number(buyingprice),
       sellingprice: Number(sellingprice),
-      trackInventory: trackInventory
+      trackInventory: trackInventory,
+      lowStock: Number(lowStock) || 5 // 👈 Added lowStock
     };
 
     // Update item and department if provided
     if (item) updateData.item = item;
-    if (department) updateData.department = department; // 👈 Added department
+    if (department) updateData.department = department;
 
     const updatedItem = await Inventory.findOneAndUpdate(
       { _id: id, hotelId: req.user.hotelId }, 
@@ -6227,16 +6230,16 @@ app.put('/api/inventory/:id', auth, async (req, res) => {
     }
 
     await addAuditLog(
-        'Inventory Item Updated', 
-        req.user.username || 'Unknown User', 
-        req.user.hotelId, 
-        {                 
-            inventoryId: id,
-            item: updatedItem.item,
-            department: updatedItem.department, // 👈 Added department to audit log
-            newClosingStock: closing,
-            updatedFields: { opening, purchases, sales, spoilage, department }
-        }
+      'Inventory Item Updated', 
+      req.user.username || 'Unknown User', 
+      req.user.hotelId, 
+      {         
+        inventoryId: id,
+        item: updatedItem.item,
+        department: updatedItem.department,
+        newClosingStock: closing,
+        updatedFields: { opening, purchases, sales, spoilage, department, lowStock }
+      }
     );
 
     res.status(200).json(updatedItem);

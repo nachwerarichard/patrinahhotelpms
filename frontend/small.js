@@ -8250,7 +8250,7 @@ async function handleUpdateSubmit(event) {
         spoilage: parseInt(document.getElementById('edit-spoilage')?.value, 10) || 0,
         buyingprice: parseFloat(document.getElementById('edit-buyingprice')?.value) || 0,
         sellingprice: parseFloat(document.getElementById('edit-sellingprice')?.value) || 0,
-        lowStock: parseInt(document.getElementById('edit-lowStock')?.value, 10) ?? 5, // <-- Added here
+        lowStock: parseInt(document.getElementById('edit-lowStock')?.value, 10) || 5,
         trackInventory: document.getElementById('edit-trackInventory')?.checked ?? true,
         date: selectedDate 
     };
