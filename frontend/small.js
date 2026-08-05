@@ -13426,18 +13426,20 @@ function calculateExpenseTotal() {
     }
 }
 
+// Global memory array to store calculated low stock items for export/print handlers
+let currentLowStockItems = [];
+
 function updateLowStockWidget(inventory) {
     const container = document.getElementById('low-stock-container');
     const countBadge = document.getElementById('low-stock-count');
+    const actionButtons = document.getElementById('low-stock-actions');
     
     if (!container) return;
 
     // Filter items where tracking is enabled AND current stock <= lowStock threshold
-    const lowStockItems = (inventory || []).filter(item => {
-        // Enforce inventory tracking requirement
+    currentLowStockItems = (inventory || []).filter(item => {
         if (!item.trackInventory) return false;
         
-        // Calculate current stock safely
         const opening = Number(item.opening) || 0;
         const purchases = Number(item.purchases) || 0;
         const sales = Number(item.sales) || 0;
@@ -13445,30 +13447,31 @@ function updateLowStockWidget(inventory) {
         
         const currentStock = opening + purchases - sales - spoilage;
 
-        // Parse lowStock safely (handles string numbers, null, undefined, and NaN)
         const parsedThreshold = Number(item.lowStock);
         const threshold = (!isNaN(parsedThreshold) && item.lowStock !== null) ? parsedThreshold : 5;
         
         return currentStock <= threshold;
     });
 
-    // Update Counter Badge
+    // Update Counter Badge and Export Actions
     if (countBadge) {
-        if (lowStockItems.length > 0) {
-            countBadge.textContent = lowStockItems.length;
+        if (currentLowStockItems.length > 0) {
+            countBadge.textContent = currentLowStockItems.length;
             countBadge.classList.remove('hidden');
+            if (actionButtons) actionButtons.classList.remove('hidden');
         } else {
             countBadge.classList.add('hidden');
+            if (actionButtons) actionButtons.classList.add('hidden');
         }
     }
 
     // Render Items or Empty State
-    if (lowStockItems.length === 0) {
+    if (currentLowStockItems.length === 0) {
         container.innerHTML = `<p class="text-xs text-emerald-600 font-medium italic py-1">✓ All tracked items are adequately stocked.</p>`;
         return;
     }
 
-    container.innerHTML = lowStockItems.map(item => {
+    container.innerHTML = currentLowStockItems.map(item => {
         const opening = Number(item.opening) || 0;
         const purchases = Number(item.purchases) || 0;
         const sales = Number(item.sales) || 0;
@@ -13489,6 +13492,102 @@ function updateLowStockWidget(inventory) {
             </div>
         `;
     }).join('');
+}
+
+// Export Low Stock Items directly to CSV (opens natively in Excel)
+function exportLowStockToCSV() {
+    if (!currentLowStockItems || currentLowStockItems.length === 0) {
+        return showMessage('No low stock items available to export.', true);
+    }
+
+    const headers = ["Item Name", "Department", "Current Stock", "Low Stock Threshold", "Buying Price", "Selling Price"];
+    const rows = currentLowStockItems.map(item => {
+        const currentStock = (Number(item.opening) || 0) + (Number(item.purchases) || 0) - (Number(item.sales) || 0) - (Number(item.spoilage) || 0);
+        return [
+            `"${item.item || ''}"`,
+            `"${item.department || 'General'}"`,
+            currentStock,
+            item.lowStock ?? 5,
+            item.buyingprice || 0,
+            item.sellingprice || 0
+        ];
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+        + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Low_Stock_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Print a clean Purchase Requisition / Stock Reorder List
+function printLowStockReport() {
+    if (!currentLowStockItems || currentLowStockItems.length === 0) {
+        return showMessage('No low stock items available to print.', true);
+    }
+
+    const printWindow = window.open('', '_blank');
+    const currentDate = new Date().toLocaleDateString();
+
+    const rows = currentLowStockItems.map(item => {
+        const currentStock = (Number(item.opening) || 0) + (Number(item.purchases) || 0) - (Number(item.sales) || 0) - (Number(item.spoilage) || 0);
+        const reorderQty = Math.max((item.lowStock ?? 5) * 2 - currentStock, 0); // Reorder suggestion
+
+        return `
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">${item.item || ''}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${item.department || 'General'}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center; color: red; font-weight: bold;">${currentStock}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.lowStock ?? 5}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${reorderQty}</td>
+            </tr>
+        `;
+    }).join('');
+
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Low Stock Reorder Report - ${currentDate}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    h2 { color: #333; margin-bottom: 5px; }
+                    p { color: #666; font-size: 12px; margin-top: 0; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+                    th { background-color: #f4f4f4; padding: 8px; border: 1px solid #ddd; text-align: left; }
+                </style>
+            </head>
+            <body>
+                <h2>Stock Reorder & Low Inventory List</h2>
+                <p>Generated on: ${currentDate}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item Description</th>
+                            <th>Department</th>
+                            <th style="text-align: center;">Current Level</th>
+                            <th style="text-align: center;">Threshold</th>
+                            <th style="text-align: center;">Suggested Reorder Qty</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            </body>
+        </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 250);
 }
 
 function switchInventoryTab(tabName) {
