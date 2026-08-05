@@ -2703,7 +2703,6 @@ app.get('/api/bookings/all', auth, async (req, res) => {
     }
 });
 
-// Get all bookings with pagination (Secure)
 app.get('/api/bookings', auth, async (req, res) => {
     try {
         const { search, gueststatus, paymentStatus, startDate, endDate, guestsource, paymentMethod } = req.query;
@@ -2716,7 +2715,7 @@ app.get('/api/bookings', auth, async (req, res) => {
 
         if (search) {
             query.$and = [
-                { hotelId: req.user.hotelId }, // Redundant but safe
+                { hotelId: req.user.hotelId },
                 { $or: [
                     { name: new RegExp(search, 'i') },
                     { room: new RegExp(search, 'i') },
@@ -2730,10 +2729,15 @@ app.get('/api/bookings', auth, async (req, res) => {
         if (guestsource) query.guestsource = guestsource;
         if (paymentMethod) query.paymentMethod = paymentMethod;
 
-        if (startDate || endDate) {
-            query.checkIn = {};
-            if (startDate) query.checkIn.$gte = startDate;
-            if (endDate) query.checkIn.$lte = endDate;
+        // --- UPDATED DATE FILTER LOGIC ---
+        // If user picks a startDate, query checkIn date
+        if (startDate) {
+            query.checkIn = startDate;
+        }
+
+        // If user picks an endDate (Checkout Date), query checkOut date independently
+        if (endDate) {
+            query.checkOut = endDate;
         }
 
         const [bookings, totalCount] = await Promise.all([

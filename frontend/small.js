@@ -4763,13 +4763,13 @@ async function fetchReport() {
     const sumBookings = document.getElementById('sumBookings');
 
     // 2. Capture Filter Values
-    const search = document.getElementById('filterSearch').value.trim();
-    const paymentStatus = document.getElementById('filterPaymentStatus').value;
-    const gueststatus = document.getElementById('filterGuestStatus').value;
-    const paymentMethod = document.getElementById('filterPaymentMethod').value;
-    const guestsource = document.getElementById('filterGuestSource').value;
-    const startDate = document.getElementById('filterDate').value;
-    const endDate = document.getElementById('endDate').value;
+    const search = document.getElementById('filterSearch')?.value.trim() || '';
+    const paymentStatus = document.getElementById('filterPaymentStatus')?.value || '';
+    const gueststatus = document.getElementById('filterGuestStatus')?.value || '';
+    const paymentMethod = document.getElementById('filterPaymentMethod')?.value || '';
+    const guestsource = document.getElementById('filterGuestSource')?.value || '';
+    const startDate = document.getElementById('filterDate')?.value || '';
+    const endDate = document.getElementById('endDate')?.value || '';
 
     // 3. Multi-Tenant Context Retrieval
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
@@ -4793,17 +4793,17 @@ async function fetchReport() {
         return;
     }
 
-    // 5. Build Parameters Query Array
-    const params = new URLSearchParams({
-        hotelId,
-        search,
-        paymentStatus,
-        gueststatus,
-        paymentMethod,
-        guestsource,
-        startDate,
-        endDate
-    });
+    // 5. Build Parameters Query Object
+    const queryParams = { hotelId };
+    if (search) queryParams.search = search;
+    if (paymentStatus) queryParams.paymentStatus = paymentStatus;
+    if (gueststatus) queryParams.gueststatus = gueststatus;
+    if (paymentMethod) queryParams.paymentMethod = paymentMethod;
+    if (guestsource) queryParams.guestsource = guestsource;
+    if (startDate) queryParams.startDate = startDate;
+    if (endDate) queryParams.endDate = endDate;
+
+    const params = new URLSearchParams(queryParams);
 
     try {
         const loadingIndicator = `
@@ -4812,7 +4812,6 @@ async function fetchReport() {
                 <span class="text-gray-500 text-sm font-medium">Processing Report Matrix...</span>
             </div>`;
 
-        // CHANGED: colspan="10" to match new table header count
         if (tableBody) tableBody.innerHTML = `<tr><td colspan="10">${loadingIndicator}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = loadingIndicator;
 
@@ -4832,7 +4831,6 @@ async function fetchReport() {
             <div class="p-6 text-center text-red-500 font-semibold bg-red-50 rounded-lg">
                 <i class="fas fa-exclamation-triangle mr-2"></i> Error loading report structure. Check internet connectivity log.
             </div>`;
-        // CHANGED: colspan="10" to match new table header count
         if (tableBody) tableBody.innerHTML = `<tr><td colspan="10">${errorTemplate}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = errorTemplate;
     }
