@@ -6272,7 +6272,6 @@ app.get('/api/inventory', auth, async (req, res) => {
         let report = await Promise.all(masterItems.map(async (itemName) => {
             let record = dailyRecords.find(r => r.item === itemName);
 
-            // 📍 RIGHT HERE IS WHERE YOU PUT IT:
             if (!record) {
                 const lastRecord = await Inventory.findOne({
                     hotelId,
@@ -6283,10 +6282,10 @@ app.get('/api/inventory', auth, async (req, res) => {
                 const previousClosing = lastRecord ? lastRecord.closing : 0;
 
                 record = {
-                    _id: lastRecord?._id || null, // 👈 Ensures backend sends an _id (or null)
-                    hotelId: hotelId,             // 👈 Ensures hotelId is present
+                    _id: lastRecord?._id || null, 
+                    hotelId: hotelId, 
                     item: itemName,
-                    department: lastRecord?.department || 'Bar', // 👈 Carries forward department
+                    department: lastRecord?.department || 'Bar',
                     opening: previousClosing,
                     purchases: 0,
                     sales: 0,
@@ -6294,12 +6293,19 @@ app.get('/api/inventory', auth, async (req, res) => {
                     closing: previousClosing,
                     buyingprice: lastRecord?.buyingprice || 0,
                     sellingprice: lastRecord?.sellingprice || 0,
+                    // 👈 FIX: Carry forward lowStock & trackInventory with schema defaults
+                    lowStock: (lastRecord && lastRecord.lowStock !== undefined && lastRecord.lowStock !== null) ? lastRecord.lowStock : 5,
+                    trackInventory: lastRecord?.trackInventory ?? true,
                     date: searchDate,
                     status: 'Static'
                 };
             } else {
                 record.status = (record.purchases > 0 || record.sales > 0 || record.spoilage > 0) ? 'Updated' : 'Static';
-                if (!record.department) record.department = 'Bar'; // Fallback for old records
+                
+                // 👈 FIX: Fallbacks for existing today-records missing fields
+                if (!record.department) record.department = 'Bar';
+                if (record.lowStock === undefined || record.lowStock === null) record.lowStock = 5;
+                if (record.trackInventory === undefined) record.trackInventory = true;
             }
 
             record.isToday = isSelectedDateToday;
