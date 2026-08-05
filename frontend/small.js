@@ -11222,14 +11222,13 @@ async function fetchInventory() {
         const itemFilter = itemFilterInput ? itemFilterInput.value.trim() : '';
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
 
-        // 2. Build Query Params
+        // 2. Build Query Params for the Paginated Table
         const params = new URLSearchParams();
         params.append('hotelId', hotelId); 
         
         if (itemFilter) params.append('item', itemFilter);
         if (dateFilter) params.append('date', dateFilter); 
         
-        // Dynamic Fallback Pagination logic safeguards
         const activePage = (typeof currentPage !== 'undefined') ? currentPage : 1;
         const activeLimit = (typeof itemsPerPage !== 'undefined') ? itemsPerPage : 10;
         
@@ -11238,7 +11237,7 @@ async function fetchInventory() {
 
         const url = `${API_BASE_URL}/inventory?${params.toString()}`;
 
-        // 3. Request Data Payload via Wrapper
+        // 3. Request Table Data
         const response = await authenticatedFetch(url);
 
         if (!response || !response.ok) {
@@ -11251,16 +11250,35 @@ async function fetchInventory() {
         // 4. Extract Inventory Normalized Array Data
         let inventoryData = result.items || result.data || result.report || [];
         
-        // 5. Render Responsive Matrix Interfaces
+        // 5. Render Main Table View
         renderInventoryTable(inventoryData);
-        updateLowStockWidget(inventoryData); // <-- Call widget update here
 
-        // 6. Handle Pagination Control Rendering
+        // 6. Fetch Full/Unpaginated Inventory for Low Stock Widget if needed
+        // (Ensures low stock items on later pages are not missed)
+        if (result.totalPages && result.totalPages > 1) {
+            const fullParams = new URLSearchParams();
+            fullParams.append('hotelId', hotelId);
+            if (dateFilter) fullParams.append('date', dateFilter);
+            fullParams.append('limit', '1000'); // Fetch full set for widget
+
+            const fullResponse = await authenticatedFetch(`${API_BASE_URL}/inventory?${fullParams.toString()}`);
+            if (fullResponse && fullResponse.ok) {
+                const fullResult = await fullResponse.json();
+                const allItems = fullResult.items || fullResult.data || fullResult.report || [];
+                updateLowStockWidget(allItems);
+            } else {
+                updateLowStockWidget(inventoryData);
+            }
+        } else {
+            updateLowStockWidget(inventoryData);
+        }
+
+        // 7. Handle Pagination Control Rendering
         if (typeof renderPagination === 'function') {
             renderPagination(result.currentPage || 1, result.totalPages || 1);
         }
 
-        // 7. Success Status Notification State
+        // 8. Success Status Notification State
         if (inventoryData.length === 0) {
             updateSearchButton('No Results', 'fas fa-exclamation-circle');
         } else {
@@ -11272,7 +11290,6 @@ async function fetchInventory() {
         showMessage('Error loading inventory: ' + error.message, true);
         updateSearchButton('Failed', 'fas fa-times');
     } finally {
-        // 8. Enforce Soft Button Interface UI Reset
         setTimeout(() => {
             updateSearchButton('Search', 'fas fa-search');
         }, 1500);
@@ -13415,12 +13432,22 @@ function updateLowStockWidget(inventory) {
     
     if (!container) return;
 
-    // Filter items that track inventory and have closing stock <= lowStock threshold
-    const lowStockItems = inventory.filter(item => {
+    // Filter items where tracking is enabled AND current stock <= lowStock threshold
+    const lowStockItems = (inventory || []).filter(item => {
+        // Enforce inventory tracking requirement
         if (!item.trackInventory) return false;
         
-        const currentStock = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
-        const threshold = item.lowStock ?? 5; // Default threshold fallback
+        // Calculate current stock safely
+        const opening = Number(item.opening) || 0;
+        const purchases = Number(item.purchases) || 0;
+        const sales = Number(item.sales) || 0;
+        const spoilage = Number(item.spoilage) || 0;
+        
+        const currentStock = opening + purchases - sales - spoilage;
+
+        // Parse lowStock safely (handles string numbers, null, undefined, and NaN)
+        const parsedThreshold = Number(item.lowStock);
+        const threshold = (!isNaN(parsedThreshold) && item.lowStock !== null) ? parsedThreshold : 5;
         
         return currentStock <= threshold;
     });
@@ -13442,7 +13469,11 @@ function updateLowStockWidget(inventory) {
     }
 
     container.innerHTML = lowStockItems.map(item => {
-        const currentStock = (item.opening || 0) + (item.purchases || 0) - (item.sales || 0) - (item.spoilage || 0);
+        const opening = Number(item.opening) || 0;
+        const purchases = Number(item.purchases) || 0;
+        const sales = Number(item.sales) || 0;
+        const spoilage = Number(item.spoilage) || 0;
+        const currentStock = opening + purchases - sales - spoilage;
         
         return `
             <div class="flex items-center justify-between p-2 bg-rose-50/60 border border-rose-100 rounded-lg text-xs">
