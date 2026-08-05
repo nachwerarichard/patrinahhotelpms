@@ -4850,7 +4850,7 @@ function renderTable(bookings) {
     // Handle empty dataset scenarios gracefully
     if (!bookings || bookings.length === 0) {
         const fallbackMsg = '<div class="p-8 text-center text-gray-400 font-medium italic">No match logs mapped for active criteria.</div>';
-        if (tbody) tbody.innerHTML = `<tr><td colspan="9">${fallbackMsg}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="10">${fallbackMsg}</td></tr>`; // Updated colspan to 10 for new column
         if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
         if (sumBookingsDisplay) sumBookingsDisplay.textContent = '0';
         if (sumPaidDisplay) sumPaidDisplay.textContent = `${CURRENT_CURRENCY} 0.00`;
@@ -4873,6 +4873,9 @@ function renderTable(bookings) {
         const payColor = b.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700';
         const statusColor = b.gueststatus === 'confirmed' || b.gueststatus === 'checkedin' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700';
         const methodColor = b.paymentMethod === 'Cash' ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700';
+        
+        // Checkout date extraction (supporting schema field 'checkOut' or fallback 'endDate')
+        const checkOutDate = b.checkOut || b.endDate || 'N/A';
 
         // 1. POPULATE VIEW 1: Render out standard desktop table row element
         if (tbody) {
@@ -4881,7 +4884,8 @@ function renderTable(bookings) {
             tr.innerHTML = `
                 <td class="p-3 font-semibold text-gray-800">${b.name || 'N/A'}</td>
                 <td class="p-3 text-gray-600 font-medium">${b.room || 'N/A'}</td>
-                <td class="p-3 text-gray-400 text-xs">${b.checkIn}</td>
+                <td class="p-3 text-gray-400 text-xs">${b.checkIn || 'N/A'}</td>
+                <td class="p-3 text-gray-400 text-xs">${checkOutDate}</td>
                 <td class="p-3 text-green-600 font-bold font-mono text-right">${Number(b.amountPaid || 0).toLocaleString()}</td>
                 <td class="p-3 text-red-600 font-bold font-mono text-right">${Number(b.balance || 0).toLocaleString()}</td>
                 <td class="p-3 text-center">
@@ -4923,7 +4927,10 @@ function renderTable(bookings) {
                 </div>
 
                 <div class="flex flex-wrap items-center justify-between text-xs pt-1 gap-2">
-                    <div class="text-gray-400 font-medium"><i class="far fa-calendar-alt mr-1"></i> In: ${b.checkIn}</div>
+                    <div class="text-gray-400 font-medium flex gap-3">
+                        <span><i class="far fa-calendar-alt mr-1"></i> In: ${b.checkIn || 'N/A'}</span>
+                        <span><i class="far fa-calendar-check mr-1"></i> Out: ${checkOutDate}</span>
+                    </div>
                     <div class="flex items-center gap-1.5">
                         <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase ${payColor}">${b.paymentStatus || 'Pending'}</span>
                         <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase ${methodColor}">${b.paymentMethod || 'N/A'}</span>
@@ -4942,7 +4949,7 @@ function renderTable(bookings) {
         const totalRow = document.createElement('tr');
         totalRow.className = "bg-slate-50 font-black border-t-2 border-gray-300 text-gray-900";
         totalRow.innerHTML = `
-            <td colspan="3" class="p-4 text-right text-gray-500 uppercase tracking-widest text-xs font-bold">Grand Total (${totalBookings} Bookings):</td>
+            <td colspan="4" class="p-4 text-right text-gray-500 uppercase tracking-widest text-xs font-bold">Grand Total (${totalBookings} Bookings):</td>
             <td class="p-4 text-green-700 text-right font-mono text-base">${totalPaid.toLocaleString()}</td>
             <td class="p-4 text-red-700 text-right font-mono text-base">${totalBalance.toLocaleString()}</td>
             <td colspan="4" class="p-4"></td>
