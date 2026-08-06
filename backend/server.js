@@ -7755,7 +7755,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
 });
 
 // Express route attached directly to `app`
-app.get('/api/dashboard/summary', authenticateUser, async (req, res) => {
+app.get('/api/dashboard/summary', auth, async (req, res) => {
     try {
         const hotelId = req.user.hotelId;
         if (!hotelId) {
