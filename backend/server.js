@@ -7754,7 +7754,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
     }
 });
 
-app.get('/api/dashboard/executive-flash', auth , async (req, res) => {
+app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
     try {
         const hotelId = req.user.hotelId;
         if (!hotelId) return res.status(400).json({ error: "Hotel ID missing" });
@@ -7769,7 +7769,6 @@ app.get('/api/dashboard/executive-flash', auth , async (req, res) => {
         if (range === 'today') {
             currStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             currEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-            // Prior: Yesterday
             prevStart = new Date(currStart);
             prevStart.setDate(prevStart.getDate() - 1);
             prevEnd = new Date(currStart);
@@ -7777,7 +7776,6 @@ app.get('/api/dashboard/executive-flash', auth , async (req, res) => {
         } else if (range === 'yesterday') {
             currStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
             currEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
-            // Prior: Day before yesterday
             prevStart = new Date(currStart);
             prevStart.setDate(prevStart.getDate() - 1);
             prevEnd = new Date(currStart);
@@ -7858,14 +7856,14 @@ app.get('/api/dashboard/executive-flash', auth , async (req, res) => {
                 { $match: { hotelId: hotelObjId, checkIn: { $gte: prevStartStr, $lte: prevEndStr } } },
                 { $group: { _id: null, roomRevenue: { $sum: "$totalDue" } } }
             ]),
-            // POS Aggregations: Current vs Previous
+            // POS Aggregations: Current vs Previous (Included $profit aggregation for prevPos)
             Sale.aggregate([
                 { $match: { hotelId: hotelObjId, date: { $gte: currStart, $lte: currEnd } } },
                 { $group: { _id: null, posSales: { $sum: "$sp" }, posProfit: { $sum: "$profit" } } }
             ]),
             Sale.aggregate([
                 { $match: { hotelId: hotelObjId, date: { $gte: prevStart, $lte: prevEnd } } },
-                { $group: { _id: null, posSales: { $sum: "$sp" } } }
+                { $group: { _id: null, posSales: { $sum: "$sp" }, posProfit: { $sum: "$profit" } } }
             ]),
             // Expense Aggregations: Current vs Previous
             Expense.aggregate([
@@ -7885,7 +7883,7 @@ app.get('/api/dashboard/executive-flash', auth , async (req, res) => {
         const finP = prevFinance[0] || { roomRevenue: 0 };
 
         const posC = currPos[0] || { posSales: 0, posProfit: 0 };
-        const posP = prevPos[0] || { posSales: 0 };
+        const posP = prevPos[0] || { posSales: 0, posProfit: 0 };
 
         const expC = currExp[0] || { totalExpense: 0 };
         const expP = prevExp[0] || { totalExpense: 0 };
@@ -7895,6 +7893,7 @@ app.get('/api/dashboard/executive-flash', auth , async (req, res) => {
         const currAdr = ops.inHouse > 0 ? Math.round(finC.roomRevenue / ops.inHouse) : 0;
         const currRevpar = Math.round(finC.roomRevenue / capacity);
         const currGrossRev = finC.roomRevenue + posC.posSales;
+        const currGrossProfit = finC.roomRevenue + posC.posProfit; // Room revenue + POS profit
         const currNoi = currGrossRev - expC.totalExpense;
 
         const prevGrossRev = finP.roomRevenue + posP.posSales;
@@ -7922,6 +7921,8 @@ app.get('/api/dashboard/executive-flash', auth , async (req, res) => {
                 grossRevenue: currGrossRev,
                 grossRevenueTrend: calcTrend(currGrossRev, prevGrossRev),
                 revparTrend: calcTrend(currRevpar, Math.round(finP.roomRevenue / capacity)),
+                posProfit: posC.posProfit,
+                posProfitTrend: calcTrend(posC.posProfit, posP.posProfit),
                 noi: currNoi,
                 noiTrend: calcTrend(currNoi, prevNoi)
             },
@@ -7937,6 +7938,8 @@ app.get('/api/dashboard/executive-flash', auth , async (req, res) => {
             financials: {
                 roomRevenue: finC.roomRevenue,
                 posSales: posC.posSales,
+                posProfit: posC.posProfit,
+                totalGrossProfit: currGrossProfit,
                 collectedCash: finC.collected,
                 cityLedgerBalance: finC.balance,
                 expenses: expC.totalExpense

@@ -12568,11 +12568,13 @@ async function fetchExecutiveDashboard(queryParams = 'range=today') {
         setTxt('val-adr', fmt(data.kpis.adr));
         setTxt('val-revpar', fmt(data.kpis.revpar));
         setTxt('val-gross-revenue', fmt(data.kpis.grossRevenue));
+        setTxt('val-pos-profit', fmt(data.kpis.posProfit)); // POS Profit KPI
         setTxt('val-noi', fmt(data.kpis.noi));
 
         // Render percentage arrows
         renderTrend('badge-revpar-trend', data.kpis.revparTrend);
         renderTrend('badge-gross-trend', data.kpis.grossRevenueTrend);
+        renderTrend('badge-pos-profit-trend', data.kpis.posProfitTrend); // POS Profit Trend
         renderTrend('badge-noi-trend', data.kpis.noiTrend);
 
         const bar = document.getElementById('bar-occupancy');
@@ -12595,6 +12597,8 @@ async function fetchExecutiveDashboard(queryParams = 'range=today') {
         // 4. Financial Audit
         setTxt('fin-room-rev', fmt(data.financials.roomRevenue));
         setTxt('fin-pos-rev', fmt(data.financials.posSales));
+        setTxt('fin-pos-profit', fmt(data.financials.posProfit)); // Financial Audit POS Profit
+        setTxt('fin-gross-profit', fmt(data.financials.totalGrossProfit)); // Room Rev + POS Profit
         setTxt('fin-collected', fmt(data.financials.collectedCash));
         setTxt('fin-ledger-bal', fmt(data.financials.cityLedgerBalance));
         setTxt('fin-expenses', fmt(data.financials.expenses));
@@ -12606,8 +12610,6 @@ async function fetchExecutiveDashboard(queryParams = 'range=today') {
 
 // Handler for predefined filter buttons
 function setDashboardRange(rangeKey) {
-    currentSelectedRange = rangeKey;
-    
     // Toggle active styles on buttons
     ['today', 'yesterday', 'this_week', 'this_month'].forEach(key => {
         const btn = document.getElementById(`btn-${key}`);
@@ -12639,7 +12641,7 @@ function applyCustomDateRange() {
         if (btn) btn.className = "px-3 py-1.5 rounded-md text-slate-400 hover:text-white transition font-semibold";
     });
 
-    loadExecutiveFlashDashboard(`range=custom&startDate=${start}&endDate=${end}`);
+    fetchExecutiveDashboard(`range=custom&startDate=${start}&endDate=${end}`);
 }
 
 // Initialise on DOM Ready
