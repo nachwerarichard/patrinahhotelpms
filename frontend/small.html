@@ -805,22 +805,21 @@ body {
 
     <!-- Low Stock & Action Center (1 Column) -->
     <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-      <div>
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-base font-bold text-slate-900">Inventory Alert Center</h2>
-          <span id="low-stock-count" class="text-xs font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">0</span>
+      <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Low Stock Items</p>
+        
+        <div class="flex items-center space-x-2">
+            <!-- Action Buttons (Hidden when count is 0) -->
+            <div id="low-stock-actions" class="hidden flex items-center space-x-1">
+                <button type="button" onclick="exportLowStockToCSV()" title="Export Low Stock to CSV" class="text-gray-400 hover:text-emerald-600 transition-colors p-1">
+                    <i class="fas fa-file-excel text-xs"></i>
+                </button>
+                <button type="button" onclick="printLowStockReport()" title="Print Low Stock Report" class="text-gray-400 hover:text-blue-600 transition-colors p-1">
+                    <i class="fas fa-print text-xs"></i>
+                </button>
+            </div>
+            
+            <span id="low-stock-count" class="text-[10px] font-extrabold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full hidden">0</span>
         </div>
-        <div id="low-stock-container" class="space-y-3 max-h-64 overflow-y-auto pr-1">
-          <p class="text-xs text-slate-400 italic">Checking stock levels...</p>
-        </div>
-      </div>
-      
-      <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-        <button onclick="printLowStockReport()" class="text-xs text-slate-600 hover:text-indigo-600 font-medium flex items-center gap-1">
-          <i class="fas fa-print"></i> Export List
-        </button>
-        <a href="#inventory" class="text-xs text-indigo-600 hover:underline font-semibold">Manage Inventory &rarr;</a>
-      </div>
     </div>
 
   </div>

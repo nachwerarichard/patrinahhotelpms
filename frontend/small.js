@@ -5053,54 +5053,96 @@ async function refreshDashboard() {
 
 
 // Initialize
-updateDashboard();
+fetchExecutiveDashboard();
 // 1️⃣ Global variables to store chart instances
 let statusChartInstance = null;
 let sourceChartInstance = null;
 
-function renderCharts(statusData, sourceData) {
-    const statusCtx = document.getElementById('statusChart').getContext('2d');
-    const sourceCtx = document.getElementById('sourceChart').getContext('2d');
+function renderCharts(statusData = {}, sourceData = {}) {
+    const statusCanvas = document.getElementById('statusChart');
+    const sourceCanvas = document.getElementById('sourceChart');
 
-    // 2️⃣ Destroy old charts if they exist
+    // Safe fallback if canvases are not present on the current DOM view
+    if (!statusCanvas || !sourceCanvas) return;
+
+    const statusCtx = statusCanvas.getContext('2d');
+    const sourceCtx = sourceCanvas.getContext('2d');
+
+    // Destroy existing instances to release canvas context
     if (statusChartInstance) statusChartInstance.destroy();
     if (sourceChartInstance) sourceChartInstance.destroy();
 
-    // 3️⃣ Status Pie Chart
+    const statusLabels = Object.keys(statusData);
+    const statusValues = Object.values(statusData);
+
+    const sourceLabels = Object.keys(sourceData);
+    const sourceValues = Object.values(sourceData);
+
+    // 1️⃣ Booking Status Distribution Chart
     statusChartInstance = new Chart(statusCtx, {
-        type: 'pie',
+        type: 'doughnut', // Doughnut generally renders cleaner than flat pie on dashboards
         data: {
-            labels: Object.keys(statusData),
+            labels: statusLabels.length ? statusLabels : ['No Data'],
             datasets: [{
-                data: Object.values(statusData),
-                backgroundColor: [
-                    '#3B82F6', // Blue
-                    '#EF4444', // Red
-                    '#F59E0B', // Amber
-                    '#10B981', // Emerald
-                    '#8B5CF6'  // Violet
-                ],
-                borderWidth: 1
+                data: statusValues.length ? statusValues : [1],
+                backgroundColor: statusValues.length ? [
+                    '#3B82F6', // Confirmed / Blue
+                    '#10B981', // Checked-In / Green
+                    '#F59E0B', // Pending / Amber
+                    '#EF4444', // Cancelled / Red
+                    '#8B5CF6'  // Checked-Out / Purple
+                ] : ['#E5E7EB'], // Muted gray when no records exist
+                borderWidth: 2,
+                borderColor: '#FFFFFF'
             }]
         },
         options: {
+            responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom' } }
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 15,
+                        font: { size: 12 }
+                    }
+                },
+                tooltip: {
+                    enabled: statusValues.length > 0
+                }
+            }
         }
     });
 
-    // 4️⃣ Source Bar Chart
+    // 2️⃣ Booking Source Bar Chart (Direct, OTA, Walk-in)
     sourceChartInstance = new Chart(sourceCtx, {
         type: 'bar',
         data: {
-            labels: Object.keys(sourceData),
+            labels: sourceLabels,
             datasets: [{
                 label: 'Bookings by Source',
-                data: Object.values(sourceData),
-                backgroundColor: '#10B981'
+                data: sourceValues,
+                backgroundColor: '#10B981',
+                borderRadius: 4 // Softened bar corners
             }]
         },
-        options: { maintainAspectRatio: false }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false } // Hidden since single-series chart title is clear
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 } // Ensures integer step ticks for booking counts
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
     });
 }
 
