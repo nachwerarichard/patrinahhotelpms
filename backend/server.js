@@ -7753,6 +7753,140 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         });
     }
 });
+
+// Express route attached directly to `app`
+app.get('/api/dashboard/summary', authenticateUser, async (req, res) => {
+    try {
+        const hotelId = req.user.hotelId;
+        if (!hotelId) {
+            return res.status(400).json({ error: "Hotel ID missing from session/token." });
+        }
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const hotelObjId = new mongoose.Types.ObjectId(hotelId);
+
+        // Execute queries concurrently
+        const [hotelDoc, totalRoomsCount, opsStats, roomRevStats, posStats, expenseStats] = await Promise.all([
+            // 1. Fetch Hotel Metadata (Currency)
+            Hotel.findById(hotelId).select('hotelCurrency').lean(),
+
+            // 2. Count Active Capacity from Room Collection
+            Room.countDocuments({
+                hotelId: hotelObjId,
+                status: { $ne: 'under-maintenance' }
+            }),
+
+            // 3. Operational Aggregations (Arrivals, Departures, In-House, No-Show)
+            Booking.aggregate([
+                { $match: { hotelId: hotelObjId } },
+                {
+                    $group: {
+                        _id: null,
+                        arrivalsToday: { $sum: { $cond: [{ $eq: ["$checkIn", todayStr] }, 1, 0] } },
+                        departuresToday: { $sum: { $cond: [{ $eq: ["$checkOut", todayStr] }, 1, 0] } },
+                        inHouseCount: { $sum: { $cond: [{ $eq: ["$gueststatus", "checkedin"] }, 1, 0] } },
+                        noShowToday: { 
+                            $sum: { 
+                                $cond: [
+                                    { $and: [{ $eq: ["$checkIn", todayStr] }, { $eq: ["$gueststatus", "no show"] }] }, 
+                                    1, 
+                                    0
+                                ] 
+                            } 
+                        }
+                    }
+                }
+            ]),
+
+            // 4. Front Office Room Revenue Metrics
+            Booking.aggregate([
+                { $match: { hotelId: hotelObjId, checkIn: todayStr } },
+                {
+                    $group: {
+                        _id: null,
+                        expectedRevenue: { $sum: "$totalDue" },
+                        collectedAmount: { $sum: "$amountPaid" },
+                        outstandingBalance: { $sum: "$balance" },
+                        pendingCount: { 
+                            $sum: { $cond: [{ $in: ["$paymentStatus", ["Pending", "Partially Paid"]] }, 1, 0] } 
+                        }
+                    }
+                }
+            ]),
+
+            // 5. POS Sales Summary for Today
+            Sale.aggregate([
+                { 
+                    $match: { 
+                        hotelId: hotelObjId,
+                        date: { $gte: startOfDay }
+                    } 
+                },
+                {
+                    $group: {
+                        _id: null,
+                        posRevenue: { $sum: "$sp" },
+                        posProfit: { $sum: "$profit" }
+                    }
+                }
+            ]),
+
+            // 6. Operating Expenses Summary for Today
+            Expense.aggregate([
+                {
+                    $match: {
+                        hotelId: hotelObjId,
+                        date: { $gte: startOfDay }
+                    }
+                },
+                { $group: { _id: null, totalExpense: { $sum: "$amount" } } }
+            ])
+        ]);
+
+        const currency = hotelDoc?.hotelCurrency || 'UGX';
+        const totalRooms = totalRoomsCount > 0 ? totalRoomsCount : 1; // Prevent zero-division
+
+        const ops = opsStats[0] || { arrivalsToday: 0, departuresToday: 0, inHouseCount: 0, noShowToday: 0 };
+        const roomRev = roomRevStats[0] || { expectedRevenue: 0, collectedAmount: 0, outstandingBalance: 0, pendingCount: 0 };
+        const pos = posStats[0] || { posRevenue: 0, posProfit: 0 };
+        const exp = expenseStats[0] || { totalExpense: 0 };
+
+        // Hospitality Key Performance Indicators
+        const occupancyRate = Number(((ops.inHouseCount / totalRooms) * 100).toFixed(1));
+        const adr = ops.inHouseCount > 0 ? Math.round(roomRev.expectedRevenue / ops.inHouseCount) : 0;
+        const revpar = Math.round(roomRev.expectedRevenue / totalRooms);
+
+        res.json({
+            currency,
+            operations: {
+                arrivals: ops.arrivalsToday,
+                departures: ops.departuresToday,
+                inHouse: ops.inHouseCount,
+                noShow: ops.noShowToday,
+                occupancyRate,
+                adr,
+                revpar
+            },
+            financials: {
+                roomRevenue: roomRev.expectedRevenue,
+                roomCollected: roomRev.collectedAmount,
+                roomBalance: roomRev.outstandingBalance,
+                pendingCount: roomRev.pendingCount,
+                posRevenue: pos.posRevenue,
+                posProfit: pos.posProfit,
+                expenses: exp.totalExpense,
+                netOperatingIncome: (roomRev.expectedRevenue + pos.posRevenue) - exp.totalExpense
+            }
+        });
+
+    } catch (error) {
+        console.error("Dashboard Summary Endpoint Error:", error);
+        res.status(500).json({ error: "Failed to fetch dashboard metrics." });
+    }
+});
   
 
 // GET /api/analytics/staff-performance

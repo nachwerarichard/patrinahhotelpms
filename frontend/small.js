@@ -513,78 +513,7 @@ let currentHotel = userData ? userData.hotelName : 'Property Mnagement System';
 
 
 
-async function updateDashboard() {
-  try {
-    const user = JSON.parse(localStorage.getItem('loggedInUser'));
-    const hotelId = user ? user.hotelId : localStorage.getItem('hotelId');
 
-    if (!hotelId) {
-        console.error("Dashboard Error: No hotelId found.");
-        return;
-    }
-
-    // Use authenticatedFetch - added a check to ensure response is valid JSON
-const response = await authenticatedFetch(`${API_BASE_URL}/bookings/all?limit=500`);    
-    // GUARD 1: Check if request was successful
-    if (!response || !response.ok) {
-        console.warn(`Bookings API returned status: ${response ? response.status : 'No Response'}`);
-        return;
-    }
-
-    const allBookings = await response.json();
-
-    // GUARD 2: Ensure data is an array
-    if (!Array.isArray(allBookings)) {
-        console.error("Expected array for bookings, but received:", allBookings);
-        return;
-    }
-
-    const today = new Date().toLocaleDateString('en-CA'); 
-
-    const todayArrivals = allBookings.filter(b => b.checkIn === today);
-    const todayDepartures = allBookings.filter(b => b.checkOut === today);
-
-    const kpis = {
-      arrivals: todayArrivals.length,
-      departures: todayDepartures.length,
-      amountpaid: todayArrivals.reduce((sum, b) => sum + (Number(b.amountPaid) || 0), 0),
-      revenue: todayArrivals.reduce((sum, b) => sum + (Number(b.totalDue) || 0), 0),
-      balance: todayArrivals.reduce((sum, b) => sum + (Number(b.balance) || 0), 0),
-      pending: todayArrivals.filter(b => ['Partially Paid', 'Pending'].includes(b.paymentStatus)).length,
-      noShow: todayArrivals.filter(b => b.gueststatus === 'no show').length
-    };
-
-    const updateText = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.innerText = val;
-    };
-
-    updateText('total-arrivals', kpis.arrivals);
-    updateText('arrivals', kpis.arrivals);
-    updateText('departures', kpis.departures);
-    updateText('total-departures', kpis.departures);
-    updateText('pending-count', kpis.pending);
-    updateText('no-show-count', kpis.noShow);
-    updateText('today-amountpaid', `${CURRENT_CURRENCY} ${kpis.amountpaid.toLocaleString()}`);
-    updateText('today-revenue', `${CURRENT_CURRENCY} ${kpis.revenue.toLocaleString()}`);
-    updateText('today-balance', `${CURRENT_CURRENCY} ${kpis.balance.toLocaleString()}`);
-
-    const statusCounts = { 'confirmed': 0, 'cancelled': 0, 'no show': 0, 'checkedin': 0, 'reserved': 0 };
-    const sourceCounts = { 'Walk in': 0, 'Booking.com': 0, 'Expedia': 0, 'Trip': 0, 'Hotel Website': 0 };
-
-    todayArrivals.forEach(b => {
-      if (statusCounts.hasOwnProperty(b.gueststatus)) statusCounts[b.gueststatus]++;
-      if (sourceCounts.hasOwnProperty(b.guestsource)) sourceCounts[b.guestsource]++;
-    });
-
-    if (typeof renderCharts === 'function') {
-        renderCharts(statusCounts, sourceCounts);
-    }
-
-  } catch (error) {
-    console.error('Critical Dashboard Failure:', error);
-  }
-}
 // --- 1. GLOBAL CONFIGURATION ---
 const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
 
@@ -12562,31 +12491,58 @@ searchInput.addEventListener('input', (e) => {
     }, 300);
 });
 
-async function refreshTodayPOSStats() {
-    try {
-        // We use your existing authenticatedFetch
-        const response = await authenticatedFetch(`${API_BASE_URL}/pos-today-summary`);
-        
-        if (!response || !response.ok) return;
-        
-        const data = await response.json();
-
-        // Update the UI with formatted currency
-        document.getElementById('postoday-revenue').innerText = `${CURRENT_CURRENCY} ${data.revenue.toLocaleString()}`;
-        document.getElementById('postoday-profit').innerText = `${CURRENT_CURRENCY} ${data.profit.toLocaleString()}`;
-        document.getElementById('postoday-expense').innerText = `${CURRENT_CURRENCY} ${data.expenses.toLocaleString()}`;
-
-        const balanceEl = document.getElementById('postoday-balance');
-        
-
-    } catch (err) {
-        console.error("Failed to refresh today's POS stats:", err);
+async function fetchExecutiveDashboard() {
+  try {
+    const response = await authenticatedFetch(`${API_BASE_URL}/dashboard/summary`);
+    if (!response || !response.ok) {
+        console.error("Dashboard API error:", response ? response.status : 'No response');
+        return;
     }
+
+    const data = await response.json();
+    const { currency, operations, financials } = data;
+
+    // Use dynamic currency returned by the backend (fallback to global CURRENT_CURRENCY if present)
+    const activeCurrency = currency || (typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX');
+    const fmt = (val) => `${activeCurrency} ${Number(val || 0).toLocaleString()}`;
+    
+    const setElemText = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.innerText = text;
+    };
+
+    // 1. Update Operational Metrics
+    setElemText('total-arrivals', operations.arrivals);
+    setElemText('total-departures', operations.departures);
+    setElemText('total-in-house', operations.inHouse);
+    setElemText('no-show-count', operations.noShow);
+    setElemText('occupancy-rate', `${operations.occupancyRate}%`);
+    setElemText('revpar-value', fmt(operations.revpar));
+
+    // Update Occupancy Bar Fill Width
+    const occBar = document.getElementById('occupancy-bar');
+    if (occBar) {
+        occBar.style.width = `${Math.min(operations.occupancyRate, 100)}%`;
+    }
+
+    // 2. Update Financial Metrics
+    setElemText('today-revenue', fmt(financials.roomRevenue));
+    setElemText('today-amountpaid', fmt(financials.roomCollected));
+    setElemText('today-balance', fmt(financials.roomBalance));
+    setElemText('pending-count', financials.pendingCount);
+    
+    // 3. Update POS Metrics
+    setElemText('postoday-revenue', fmt(financials.posRevenue));
+    setElemText('postoday-profit', fmt(financials.posProfit));
+    setElemText('postoday-expense', fmt(financials.expenses));
+
+  } catch (err) {
+    console.error("Executive Dashboard Refresh Failed:", err);
+  }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    refreshTodayPOSStats();
-});
+// Initialise dashboard on load
+document.addEventListener('DOMContentLoaded', fetchExecutiveDashboard);
 
 // Initialize: Set default date-time to now
 document.getElementById('reportDateTime').value = new Date().toISOString().slice(0, 16);
