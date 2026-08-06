@@ -2050,7 +2050,7 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
         // Refresh UI
         renderBookings(currentPage, currentSearchTerm);
         renderHousekeepingRooms();
-        updateDashboard();
+        fetchExecutiveDashboard();
         if (typeof renderCalendar === 'function') renderCalendar();
 
     } catch (error) {
@@ -2456,7 +2456,7 @@ bookingForm.addEventListener('submit', async function(event) {
         // Refresh UI components
         renderBookings(currentPage, currentSearchTerm);
         renderHousekeepingRooms();
-        updateDashboard()
+        fetchExecutiveDashboard();
         if (typeof renderCalendar === 'function') renderCalendar();
         if (typeof renderAuditLogs === 'function') renderAuditLogs();
 
@@ -2595,7 +2595,7 @@ function confirmDeleteBooking(id) {
             showMessage('Success', 'Booking and associated charges deleted successfully!');
             renderBookings(currentPage, currentSearchTerm);
             renderHousekeepingRooms();
-            updateDashboard();
+            fetchExecutiveDashboard();
             if (typeof renderCalendar === 'function') renderCalendar();
             if (typeof renderAuditLogs === 'function') renderAuditLogs();
         } catch (error) {
@@ -2633,7 +2633,7 @@ async function checkoutBooking(id) {
         await Promise.all([
             renderBookings(currentPage, currentSearchTerm),
             renderHousekeepingRooms(),
-            updateDashboard(),
+            fetchExecutiveDashboard(),
             (typeof renderCalendar === 'function' ? renderCalendar() : Promise.resolve()),
             (typeof renderAuditLogs === 'function' ? renderAuditLogs() : Promise.resolve())
         ]);
@@ -2673,10 +2673,10 @@ async function checkinBooking(id) {
         await Promise.all([
             renderBookings(currentPage, currentSearchTerm),
             renderHousekeepingRooms(),
-            updateDashboard(),
+            fetchExecutiveDashboard(),
             (typeof renderCalendar === 'function' ? renderCalendar() : Promise.resolve()),
             (typeof renderAuditLogs === 'function' ? renderAuditLogs() : Promise.resolve()),
-            (typeof updateDashboard === 'function' ? updateDashboard() : Promise.resolve())
+            (typeof fetchExecutiveDashboard === 'function' ? fetchExecutiveDashboard() : Promise.resolve())
         ]);
 
     } catch (error) {
@@ -4376,7 +4376,7 @@ async function markNoShow(bookingId) {
         
         // Refresh UI
         renderBookings(currentPage, currentSearchTerm);
-        updateDashboard()
+        fetchExecutiveDashboard();
         if (typeof generateReport === 'function') generateReport();
         
     } catch (err) {
@@ -4653,7 +4653,7 @@ const amount = parseFloat(rawAmount);
 }
 
 function refreshDashboardViews() {
-    if (typeof updateDashboard === 'function') updateDashboard();
+    if (typeof fetchExecutiveDashboard === 'function') fetchExecutiveDashboard();
     if (typeof renderBookings === 'function') renderBookings(currentPage, currentSearchTerm);
     if (typeof fetchReport === 'function') fetchReport();
 }
@@ -4972,7 +4972,7 @@ async function refreshDashboard() {
 
     try {
         await Promise.all([
-            updateDashboard(),       // Financials
+            fetchExecutiveDashboard(),       // Financials
             updateroomDashboard(),   // Occupancy
             renderHousekeepingRooms() // Room list
         ]);
@@ -5105,7 +5105,7 @@ function renderCharts(statusData, sourceData) {
 }
 
 // Initialize
-updateDashboard();
+fetchExecutiveDashboard();
 
         
     
