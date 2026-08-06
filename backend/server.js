@@ -7754,238 +7754,202 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
     }
 });
 
-// Express route attached directly to `app`
-app.get('/api/dashboard/summary', auth, async (req, res) => {
+app.get('/api/dashboard/executive-flash', auth , async (req, res) => {
     try {
         const hotelId = req.user.hotelId;
-        if (!hotelId) {
-            return res.status(400).json({ error: "Hotel ID missing from session/token." });
-        }
-
-        const todayStr = new Date().toISOString().split('T')[0];
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
+        if (!hotelId) return res.status(400).json({ error: "Hotel ID missing" });
 
         const hotelObjId = new mongoose.Types.ObjectId(hotelId);
+        const { range = 'today', startDate, endDate } = req.query;
 
-        // Execute queries concurrently
-        const [hotelDoc, totalRoomsCount, opsStats, roomRevStats, posStats, expenseStats] = await Promise.all([
-            // 1. Fetch Hotel Metadata (Currency)
-            Hotel.findById(hotelId).select('hotelCurrency').lean(),
+        // 1. Calculate Date Range Boundaries (Current vs. Prior Comparison Period)
+        let currStart, currEnd, prevStart, prevEnd;
+        const now = new Date();
 
-            // 2. Count Active Capacity from Room Collection
-            Room.countDocuments({
-                hotelId: hotelObjId,
-                status: { $ne: 'under-maintenance' }
-            }),
+        if (range === 'today') {
+            currStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            currEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            // Prior: Yesterday
+            prevStart = new Date(currStart);
+            prevStart.setDate(prevStart.getDate() - 1);
+            prevEnd = new Date(currStart);
+            prevEnd.setMilliseconds(-1);
+        } else if (range === 'yesterday') {
+            currStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+            currEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
+            // Prior: Day before yesterday
+            prevStart = new Date(currStart);
+            prevStart.setDate(prevStart.getDate() - 1);
+            prevEnd = new Date(currStart);
+            prevEnd.setMilliseconds(-1);
+        } else if (range === 'this_week') {
+            const dayOfWeek = now.getDay(); // 0 is Sunday
+            const distanceToMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+            currStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - distanceToMon);
+            currEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            
+            const durationMs = currEnd.getTime() - currStart.getTime();
+            prevStart = new Date(currStart.getTime() - durationMs);
+            prevEnd = new Date(currStart.getTime() - 1);
+        } else if (range === 'this_month') {
+            currStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            currEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-            // 3. Operational Aggregations (Arrivals, Departures, In-House, No-Show)
+            const durationMs = currEnd.getTime() - currStart.getTime();
+            prevStart = new Date(currStart.getTime() - durationMs);
+            prevEnd = new Date(currStart.getTime() - 1);
+        } else if (range === 'custom' && startDate && endDate) {
+            currStart = new Date(startDate);
+            currEnd = new Date(endDate);
+            currEnd.setHours(23, 59, 59, 999);
+
+            const durationMs = currEnd.getTime() - currStart.getTime();
+            prevStart = new Date(currStart.getTime() - durationMs);
+            prevEnd = new Date(currStart.getTime() - 1);
+        } else {
+            return res.status(400).json({ error: "Invalid date range parameters" });
+        }
+
+        const currStartStr = currStart.toISOString().split('T')[0];
+        const currEndStr = currEnd.toISOString().split('T')[0];
+        const prevStartStr = prevStart.toISOString().split('T')[0];
+        const prevEndStr = prevEnd.toISOString().split('T')[0];
+
+        // 2. Parallel Database Pipeline Queries
+        const [
+            hotel,
+            totalRooms,
+            roomStatusCounts,
+            dailyOps,
+            currFinance,
+            prevFinance,
+            currPos,
+            prevPos,
+            currExp,
+            prevExp
+        ] = await Promise.all([
+            Hotel.findById(hotelId).select('name hotelCurrency').lean(),
+            Room.countDocuments({ hotelId: hotelObjId, status: { $ne: 'out-of-order' } }),
+            Room.aggregate([
+                { $match: { hotelId: hotelObjId } },
+                { $group: { _id: "$status", count: { $sum: 1 } } }
+            ]),
+            // Operations Movement for Current Window
             Booking.aggregate([
                 { $match: { hotelId: hotelObjId } },
                 {
                     $group: {
                         _id: null,
-                        arrivalsToday: { $sum: { $cond: [{ $eq: ["$checkIn", todayStr] }, 1, 0] } },
-                        departuresToday: { $sum: { $cond: [{ $eq: ["$checkOut", todayStr] }, 1, 0] } },
-                        inHouseCount: { $sum: { $cond: [{ $eq: ["$gueststatus", "checkedin"] }, 1, 0] } },
-                        noShowToday: { 
-                            $sum: { 
-                                $cond: [
-                                    { $and: [{ $eq: ["$checkIn", todayStr] }, { $eq: ["$gueststatus", "no show"] }] }, 
-                                    1, 
-                                    0
-                                ] 
-                            } 
-                        }
+                        expectedArrivals: { $sum: { $cond: [{ $and: [{ $gte: ["$checkIn", currStartStr] }, { $lte: ["$checkIn", currEndStr] }] }, 1, 0] } },
+                        actualArrivals: { $sum: { $cond: [{ $and: [{ $gte: ["$checkIn", currStartStr] }, { $lte: ["$checkIn", currEndStr] }, { $eq: ["$gueststatus", "checkedin"] }] }, 1, 0] } },
+                        expectedDepartures: { $sum: { $cond: [{ $and: [{ $gte: ["$checkOut", currStartStr] }, { $lte: ["$checkOut", currEndStr] }] }, 1, 0] } },
+                        actualDepartures: { $sum: { $cond: [{ $and: [{ $gte: ["$checkOut", currStartStr] }, { $lte: ["$checkOut", currEndStr] }, { $eq: ["$gueststatus", "checkedout"] }] }, 1, 0] } },
+                        inHouse: { $sum: { $cond: [{ $eq: ["$gueststatus", "checkedin"] }, 1, 0] } },
+                        noShows: { $sum: { $cond: [{ $and: [{ $gte: ["$checkIn", currStartStr] }, { $lte: ["$checkIn", currEndStr] }, { $eq: ["$gueststatus", "no show"] }] }, 1, 0] } }
                     }
                 }
             ]),
-
-            // 4. Front Office Room Revenue Metrics
+            // Financial Aggregations: Current vs Previous
             Booking.aggregate([
-                { $match: { hotelId: hotelObjId, checkIn: todayStr } },
-                {
-                    $group: {
-                        _id: null,
-                        expectedRevenue: { $sum: "$totalDue" },
-                        collectedAmount: { $sum: "$amountPaid" },
-                        outstandingBalance: { $sum: "$balance" },
-                        pendingCount: { 
-                            $sum: { $cond: [{ $in: ["$paymentStatus", ["Pending", "Partially Paid"]] }, 1, 0] } 
-                        }
-                    }
-                }
+                { $match: { hotelId: hotelObjId, checkIn: { $gte: currStartStr, $lte: currEndStr } } },
+                { $group: { _id: null, roomRevenue: { $sum: "$totalDue" }, collected: { $sum: "$amountPaid" }, balance: { $sum: "$balance" } } }
             ]),
-
-            // 5. POS Sales Summary for Today
+            Booking.aggregate([
+                { $match: { hotelId: hotelObjId, checkIn: { $gte: prevStartStr, $lte: prevEndStr } } },
+                { $group: { _id: null, roomRevenue: { $sum: "$totalDue" } } }
+            ]),
+            // POS Aggregations: Current vs Previous
             Sale.aggregate([
-                { 
-                    $match: { 
-                        hotelId: hotelObjId,
-                        date: { $gte: startOfDay }
-                    } 
-                },
-                {
-                    $group: {
-                        _id: null,
-                        posRevenue: { $sum: "$sp" },
-                        posProfit: { $sum: "$profit" }
-                    }
-                }
+                { $match: { hotelId: hotelObjId, date: { $gte: currStart, $lte: currEnd } } },
+                { $group: { _id: null, posSales: { $sum: "$sp" }, posProfit: { $sum: "$profit" } } }
             ]),
-
-            // 6. Operating Expenses Summary for Today
+            Sale.aggregate([
+                { $match: { hotelId: hotelObjId, date: { $gte: prevStart, $lte: prevEnd } } },
+                { $group: { _id: null, posSales: { $sum: "$sp" } } }
+            ]),
+            // Expense Aggregations: Current vs Previous
             Expense.aggregate([
-                {
-                    $match: {
-                        hotelId: hotelObjId,
-                        date: { $gte: startOfDay }
-                    }
-                },
+                { $match: { hotelId: hotelObjId, date: { $gte: currStart, $lte: currEnd } } },
+                { $group: { _id: null, totalExpense: { $sum: "$amount" } } }
+            ]),
+            Expense.aggregate([
+                { $match: { hotelId: hotelObjId, date: { $gte: prevStart, $lte: prevEnd } } },
                 { $group: { _id: null, totalExpense: { $sum: "$amount" } } }
             ])
         ]);
 
-        const currency = hotelDoc?.hotelCurrency || 'UGX';
-        const totalRooms = totalRoomsCount > 0 ? totalRoomsCount : 1; // Prevent zero-division
+        const capacity = totalRooms > 0 ? totalRooms : 1;
+        const ops = dailyOps[0] || { expectedArrivals: 0, actualArrivals: 0, expectedDepartures: 0, actualDepartures: 0, inHouse: 0, noShows: 0 };
+        
+        const finC = currFinance[0] || { roomRevenue: 0, collected: 0, balance: 0 };
+        const finP = prevFinance[0] || { roomRevenue: 0 };
 
-        const ops = opsStats[0] || { arrivalsToday: 0, departuresToday: 0, inHouseCount: 0, noShowToday: 0 };
-        const roomRev = roomRevStats[0] || { expectedRevenue: 0, collectedAmount: 0, outstandingBalance: 0, pendingCount: 0 };
-        const pos = posStats[0] || { posRevenue: 0, posProfit: 0 };
-        const exp = expenseStats[0] || { totalExpense: 0 };
+        const posC = currPos[0] || { posSales: 0, posProfit: 0 };
+        const posP = prevPos[0] || { posSales: 0 };
 
-        // Hospitality Key Performance Indicators
-        const occupancyRate = Number(((ops.inHouseCount / totalRooms) * 100).toFixed(1));
-        const adr = ops.inHouseCount > 0 ? Math.round(roomRev.expectedRevenue / ops.inHouseCount) : 0;
-        const revpar = Math.round(roomRev.expectedRevenue / totalRooms);
+        const expC = currExp[0] || { totalExpense: 0 };
+        const expP = prevExp[0] || { totalExpense: 0 };
 
-        res.json({
-            currency,
-            operations: {
-                arrivals: ops.arrivalsToday,
-                departures: ops.departuresToday,
-                inHouse: ops.inHouseCount,
-                noShow: ops.noShowToday,
-                occupancyRate,
-                adr,
-                revpar
-            },
-            financials: {
-                roomRevenue: roomRev.expectedRevenue,
-                roomCollected: roomRev.collectedAmount,
-                roomBalance: roomRev.outstandingBalance,
-                pendingCount: roomRev.pendingCount,
-                posRevenue: pos.posRevenue,
-                posProfit: pos.posProfit,
-                expenses: exp.totalExpense,
-                netOperatingIncome: (roomRev.expectedRevenue + pos.posRevenue) - exp.totalExpense
-            }
-        });
+        // Core Hospitality Formulas
+        const currOccupancy = Number(((ops.inHouse / capacity) * 100).toFixed(1));
+        const currAdr = ops.inHouse > 0 ? Math.round(finC.roomRevenue / ops.inHouse) : 0;
+        const currRevpar = Math.round(finC.roomRevenue / capacity);
+        const currGrossRev = finC.roomRevenue + posC.posSales;
+        const currNoi = currGrossRev - expC.totalExpense;
 
-    } catch (error) {
-        console.error("Dashboard Summary Endpoint Error:", error);
-        res.status(500).json({ error: "Failed to fetch dashboard metrics." });
-    }
-});
-  
+        const prevGrossRev = finP.roomRevenue + posP.posSales;
+        const prevNoi = prevGrossRev - expP.totalExpense;
 
-// GET /api/analytics/staff-performance
-app.get('/api/analytics/staff-performance', auth, async (req, res) => {
-    try {
-        const userHotelId = req.user.hotelId; 
-        const userRole = req.user.role;
-
-        // 1. Calculate the threshold date for the past 30 days
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        thirtyDaysAgo.setHours(0, 0, 0, 0);
-
-        const matchStage = {
-            timestamp: { $gte: thirtyDaysAgo }
+        // Variance / Percentage Calculation Helper
+        const calcTrend = (current, previous) => {
+            if (!previous || previous === 0) return current > 0 ? 100 : 0;
+            return Number((((current - previous) / previous) * 100).toFixed(1));
         };
 
-        // 2. Fetch valid usernames belonging to this hotel from the User schema
-        let validUsernames = [];
-        
-        if (userRole !== 'super-admin' && userHotelId) {
-            if (mongoose.Types.ObjectId.isValid(userHotelId)) {
-                const targetHotelId = new mongoose.Types.ObjectId(userHotelId);
-                matchStage.hotelId = targetHotelId;
-
-                // Query the User collection for usernames bound to this specific hotelId
-                const users = await User.find({ hotelId: targetHotelId }).select('username');
-                validUsernames = users.map(u => u.username);
-            } else {
-                matchStage.hotelId = null; 
-            }
-        } else {
-            // For Super Admins, fetch all users globally across the entire PMS
-            const users = await User.find({}).select('username');
-            validUsernames = users.map(u => u.username);
-        }
-
-        // 3. Statically restrict logs to ONLY matching, active user accounts
-        // If no users exist yet for a new property, match an impossible string to safely yield an empty array
-        matchStage.user = { $in: validUsernames.length ? validUsernames : ["__NO_VALID_USERS__"] };
-
-        // 4. Run the optimized multi-faceted aggregation pipeline
-        const analytics = await AuditLog.aggregate([
-            { $match: matchStage },
-            {
-                $facet: {
-                    // Pipeline 1: Total volume distribution per operator string
-                    "totalActivity": [
-                        {
-                            $group: {
-                                _id: "$user",
-                                totalActions: { $sum: 1 }
-                            }
-                        },
-                        { $sort: { totalActions: -1 } },
-                        { $limit: 10 }
-                    ],
-                    // Pipeline 2: Exception conditional counts mapped to identical string IDs
-                    "discrepancies": [
-                        {
-                            $group: {
-                                _id: "$user",
-                                voidsCount: {
-                                    $sum: {
-                                        $cond: [
-                                            { $regexMatch: { input: "$action", regex: /void/i } },
-                                            1,
-                                            0
-                                        ]
-                                    }
-                                },
-                                overridesCount: {
-                                    $sum: {
-                                        $cond: [
-                                            { $regexMatch: { input: "$action", regex: /override|delete/i } },
-                                            1,
-                                            0
-                                        ]
-                                    }
-                                }
-                            }
-                        }
-                    ]
-                }
-            }
-        ]);
-
-        const responsePayload = analytics[0] || { totalActivity: [], discrepancies: [] };
-
-        res.status(200).json({
-            success: true,
-            data: responsePayload
+        const roomMatrix = { clean: 0, dirty: 0, occupied: 0, maintenance: 0 };
+        roomStatusCounts.forEach(item => {
+            const key = item._id ? item._id.toLowerCase().replace(/\s+/g, '') : 'clean';
+            if (roomMatrix.hasOwnProperty(key)) roomMatrix[key] = item.count;
         });
 
-    } catch (error) {
-        console.error("Staff analytics extraction failed:", error);
-        res.status(500).json({ success: false, message: "Server error tracking performance metrics." });
+        res.json({
+            currency: hotel?.hotelCurrency || 'UGX',
+            capacity,
+            kpis: {
+                occupancyRate: currOccupancy,
+                adr: currAdr,
+                revpar: currRevpar,
+                grossRevenue: currGrossRev,
+                grossRevenueTrend: calcTrend(currGrossRev, prevGrossRev),
+                revparTrend: calcTrend(currRevpar, Math.round(finP.roomRevenue / capacity)),
+                noi: currNoi,
+                noiTrend: calcTrend(currNoi, prevNoi)
+            },
+            frontDesk: {
+                arrivalsPending: ops.expectedArrivals - ops.actualArrivals,
+                arrivalsCheckedIn: ops.actualArrivals,
+                departuresPending: ops.expectedDepartures - ops.actualDepartures,
+                departuresCheckedOut: ops.actualDepartures,
+                inHouseGuests: ops.inHouse,
+                noShows: ops.noShows
+            },
+            housekeeping: roomMatrix,
+            financials: {
+                roomRevenue: finC.roomRevenue,
+                posSales: posC.posSales,
+                collectedCash: finC.collected,
+                cityLedgerBalance: finC.balance,
+                expenses: expC.totalExpense
+            }
+        });
+
+    } catch (err) {
+        console.error("PMS Dashboard Aggregation Error:", err);
+        res.status(500).json({ error: "Failed to generate executive flash report" });
     }
 });
+
+
 
 
 // Assuming standard router mounting. Substitute with "app" if necessary.

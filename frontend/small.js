@@ -12533,55 +12533,119 @@ searchInput.addEventListener('input', (e) => {
     }, 300);
 });
 
-async function fetchExecutiveDashboard() {
-  try {
-    const response = await authenticatedFetch(`${API_BASE_URL}/dashboard/summary`);
-    if (!response || !response.ok) {
-        console.error("Dashboard API error:", response ? response.status : 'No response');
+
+let currentSelectedRange = 'today';
+
+async function fetchExecutiveDashboard(queryParams = 'range=today') {
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/dashboard/executive-flash?${queryParams}`);
+        if (!response || !response.ok) return;
+
+        const data = await response.json();
+        const curr = data.currency || 'UGX';
+        const fmt = (val) => `${curr} ${Number(val || 0).toLocaleString()}`;
+        
+        const setTxt = (id, txt) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = txt;
+        };
+
+        // Helper to format percentage trend badges (Green up / Red down)
+        const renderTrend = (id, percentVal) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const isPositive = percentVal >= 0;
+            const arrow = isPositive ? '▲' : '▼';
+            el.innerText = `${arrow} ${Math.abs(percentVal)}%`;
+            el.className = `text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
+                isPositive ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+            }`;
+        };
+
+        // 1. Core KPIs
+        setTxt('val-capacity', data.capacity);
+        setTxt('val-occupancy', `${data.kpis.occupancyRate}%`);
+        setTxt('val-adr', fmt(data.kpis.adr));
+        setTxt('val-revpar', fmt(data.kpis.revpar));
+        setTxt('val-gross-revenue', fmt(data.kpis.grossRevenue));
+        setTxt('val-noi', fmt(data.kpis.noi));
+
+        // Render percentage arrows
+        renderTrend('badge-revpar-trend', data.kpis.revparTrend);
+        renderTrend('badge-gross-trend', data.kpis.grossRevenueTrend);
+        renderTrend('badge-noi-trend', data.kpis.noiTrend);
+
+        const bar = document.getElementById('bar-occupancy');
+        if (bar) bar.style.width = `${Math.min(data.kpis.occupancyRate, 100)}%`;
+
+        // 2. Front Desk Operations
+        setTxt('fd-arrivals-pending', data.frontDesk.arrivalsPending);
+        setTxt('fd-arrivals-done', data.frontDesk.arrivalsCheckedIn);
+        setTxt('fd-deps-pending', data.frontDesk.departuresPending);
+        setTxt('fd-deps-done', data.frontDesk.departuresCheckedOut);
+        setTxt('fd-in-house', data.frontDesk.inHouseGuests);
+        setTxt('fd-no-shows', data.frontDesk.noShows);
+
+        // 3. Housekeeping Matrix
+        setTxt('hk-clean', data.housekeeping.clean || 0);
+        setTxt('hk-dirty', data.housekeeping.dirty || 0);
+        setTxt('hk-occupied', data.housekeeping.occupied || 0);
+        setTxt('hk-maintenance', data.housekeeping.maintenance || 0);
+
+        // 4. Financial Audit
+        setTxt('fin-room-rev', fmt(data.financials.roomRevenue));
+        setTxt('fin-pos-rev', fmt(data.financials.posSales));
+        setTxt('fin-collected', fmt(data.financials.collectedCash));
+        setTxt('fin-ledger-bal', fmt(data.financials.cityLedgerBalance));
+        setTxt('fin-expenses', fmt(data.financials.expenses));
+
+    } catch (err) {
+        console.error("Failed to load PMS Flash Report:", err);
+    }
+}
+
+// Handler for predefined filter buttons
+function setDashboardRange(rangeKey) {
+    currentSelectedRange = rangeKey;
+    
+    // Toggle active styles on buttons
+    ['today', 'yesterday', 'this_week', 'this_month'].forEach(key => {
+        const btn = document.getElementById(`btn-${key}`);
+        if (btn) {
+            if (key === rangeKey) {
+                btn.className = "px-3 py-1.5 rounded-md text-white bg-blue-600 transition font-semibold";
+            } else {
+                btn.className = "px-3 py-1.5 rounded-md text-slate-400 hover:text-white transition font-semibold";
+            }
+        }
+    });
+
+    fetchExecutiveDashboard(`range=${rangeKey}`);
+}
+
+// Handler for custom date picker
+function applyCustomDateRange() {
+    const start = document.getElementById('custom-start-date').value;
+    const end = document.getElementById('custom-end-date').value;
+
+    if (!start || !end) {
+        alert("Please select both start and end dates.");
         return;
     }
 
-    const data = await response.json();
-    const { currency, operations, financials } = data;
+    // Reset preset button styling
+    ['today', 'yesterday', 'this_week', 'this_month'].forEach(key => {
+        const btn = document.getElementById(`btn-${key}`);
+        if (btn) btn.className = "px-3 py-1.5 rounded-md text-slate-400 hover:text-white transition font-semibold";
+    });
 
-    // Use dynamic currency returned by the backend (fallback to global CURRENT_CURRENCY if present)
-    const activeCurrency = currency || (typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX');
-    const fmt = (val) => `${activeCurrency} ${Number(val || 0).toLocaleString()}`;
-    
-    const setElemText = (id, text) => {
-      const el = document.getElementById(id);
-      if (el) el.innerText = text;
-    };
-
-    // 1. Update Operational Metrics
-    setElemText('total-arrivals', operations.arrivals);
-    setElemText('total-departures', operations.departures);
-    setElemText('total-in-house', operations.inHouse);
-    setElemText('no-show-count', operations.noShow);
-    setElemText('occupancy-rate', `${operations.occupancyRate}%`);
-    setElemText('revpar-value', fmt(operations.revpar));
-
-    // Update Occupancy Bar Fill Width
-    const occBar = document.getElementById('occupancy-bar');
-    if (occBar) {
-        occBar.style.width = `${Math.min(operations.occupancyRate, 100)}%`;
-    }
-
-    // 2. Update Financial Metrics
-    setElemText('today-revenue', fmt(financials.roomRevenue));
-    setElemText('today-amountpaid', fmt(financials.roomCollected));
-    setElemText('today-balance', fmt(financials.roomBalance));
-    setElemText('pending-count', financials.pendingCount);
-    
-    // 3. Update POS Metrics
-    setElemText('postoday-revenue', fmt(financials.posRevenue));
-    setElemText('postoday-profit', fmt(financials.posProfit));
-    setElemText('postoday-expense', fmt(financials.expenses));
-
-  } catch (err) {
-    console.error("Executive Dashboard Refresh Failed:", err);
-  }
+    loadExecutiveFlashDashboard(`range=custom&startDate=${start}&endDate=${end}`);
 }
+
+// Initialise on DOM Ready
+document.addEventListener('DOMContentLoaded', () => {
+    setDashboardRange('today');
+});
 
 // Initialise dashboard on load
 document.addEventListener('DOMContentLoaded', fetchExecutiveDashboard);
