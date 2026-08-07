@@ -949,7 +949,7 @@ event.preventDefault();
         
         // Fallback to a default accessible section if targetId is invalid
         if (currentUserRole === 'admin' || currentUserRole==='super-admin') {
-            document.getElementById('dashbaord').classList.add('active');
+            document.getElementById('dashboard').classList.add('active');
             //renderBookings(currentPage, currentSearchTerm); // Ensure it renders if fallback
         } else if (currentUserRole === 'housekeeper') {
             document.getElementById('housekeeping').classList.add('active');
@@ -5278,29 +5278,39 @@ function closeSection(sectionId) {
 }
         // A function to show a specific section and hide all others
 function showSection(sectionId) {
-    // Hide all sections first
-    const sections = document.querySelectorAll('main > section');
-    sections.forEach(section => {
-        section.classList.add('hidden');
-        closeSection(dashbaord);
-    });
-
-    // Then show the target section
+    // 1. Validate target section first
     const targetSection = document.getElementById(sectionId);
-    if (targetSection) {
-        targetSection.classList.remove('hidden');
+    if (!targetSection) {
+        console.error(`Section with ID '${sectionId}' not found.`);
+        return;
     }
 
-    // You can also manage the active state of your navigation links here
-    const navItems = document.querySelectorAll('aside nav li a');
-    navItems.forEach(item => {
-        item.classList.remove('bg-gray-700', 'text-white');
+    // 2. Target ALL sections within <main> and any element with class '.section'
+    const sections = document.querySelectorAll('main section, .section');
+    sections.forEach(section => {
+        // Clear any inline display styles that override CSS classes
+        section.style.display = ''; 
+        section.classList.add('hidden');
     });
 
-    // Add active class to the clicked link's parent <li>
+    // 3. Reveal target section
+    targetSection.classList.remove('hidden');
+
+    // 4. Update Navigation Links Active States
+    const navLinks = document.querySelectorAll('aside nav a');
+    navLinks.forEach(link => {
+        link.classList.remove('bg-slate-800', 'text-white', 'bg-gray-700');
+        link.classList.add('text-slate-600', 'hover:bg-slate-100');
+    });
+
+    // 5. Highlight the active navigation link
     const clickedNavItem = document.getElementById(`nav-${sectionId}`);
     if (clickedNavItem) {
-        clickedNavItem.querySelector('a').classList.add('bg-gray-700', 'text-white');
+        const link = clickedNavItem.tagName === 'A' ? clickedNavItem : clickedNavItem.querySelector('a');
+        if (link) {
+            link.classList.remove('text-slate-600', 'hover:bg-slate-100');
+            link.classList.add('bg-slate-800', 'text-white');
+        }
     }
 }
 
@@ -5473,7 +5483,7 @@ if (navPayments) {
     if (navDashboard) {
         navDashboard.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
-            showSection('dashbaord');
+            showSection('dashboard');
         });
     }
    
@@ -10667,30 +10677,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * Hides all main content sections and shows the one specified by sectionId.
  * @param {string} sectionId - The ID of the section element to show (e.g., 'inventory', 'sales').
  */
-function showSection(sectionId) {
-    // 1. Target '.section' to match your HTML class
-    const allSections = document.querySelectorAll('.section');
 
-    // 2. Loop through all sections and hide them.
-    allSections.forEach(section => {
-        section.style.display = 'none';
-        // Also remove Tailwind 'hidden' if it's being used elsewhere
-        section.classList.add('hidden'); 
-    });
-
-    // 3. Find the requested section and show it.
-    const targetSection = document.getElementById(sectionId);
-
-    if (targetSection) {
-        // Show the target section
-        targetSection.style.display = 'block'; 
-        targetSection.classList.remove('hidden'); // Ensure Tailwind doesn't hide it
-        
-        console.log(`Successfully showing section: ${sectionId}`);
-    } else {
-        console.error(`Section with ID '${sectionId}' not found.`);
-    }
-}
 
 
 
