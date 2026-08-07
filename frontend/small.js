@@ -949,7 +949,7 @@ event.preventDefault();
         
         // Fallback to a default accessible section if targetId is invalid
         if (currentUserRole === 'admin' || currentUserRole==='super-admin') {
-            document.getElementById('dashbaord').classList.add('active');
+            document.getElementById('dashboard').classList.add('active');
             //renderBookings(currentPage, currentSearchTerm); // Ensure it renders if fallback
         } else if (currentUserRole === 'housekeeper') {
             document.getElementById('housekeeping').classList.add('active');
@@ -5482,7 +5482,7 @@ if (navPayments) {
     if (navDashboard) {
         navDashboard.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
-            showSection('dashbaord');
+            showSection('dashboard');
         });
     }
    
