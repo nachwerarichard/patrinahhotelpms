@@ -12588,11 +12588,7 @@ async function fetchExecutiveDashboard(queryParams = 'range=today') {
         setTxt('fd-in-house', data.frontDesk.inHouseGuests);
         setTxt('fd-no-shows', data.frontDesk.noShows);
 
-        // 3. Housekeeping Matrix
-        setTxt('hk-clean', data.housekeeping.clean || 0);
-        setTxt('hk-dirty', data.housekeeping.dirty || 0);
-        setTxt('hk-occupied', data.housekeeping.occupied || 0);
-        setTxt('hk-maintenance', data.housekeeping.maintenance || 0);
+        
 
         // 4. Render Distribution Channel Mix
         renderChannelMix(data.channelMix || [], curr);
@@ -12663,24 +12659,79 @@ function setDashboardRange(rangeKey) {
 }
 
 // Handler for custom date picker
-function applyCustomDateRange() {
-    const start = document.getElementById('custom-start-date').value;
-    const end = document.getElementById('custom-end-date').value;
+/**
+ * Executes automatic dashboard fetching on valid custom range selection with dynamic spinner feedback
+ */
+async function applyCustomDateRange(isAutoTrigger = false) {
+    const startDateInput = document.getElementById('custom-start-date');
+    const endDateInput = document.getElementById('custom-end-date');
+    const applyBtn = document.getElementById('btn-apply-custom-date');
+    const btnSpinner = document.getElementById('apply-btn-spinner');
+    const btnText = document.getElementById('apply-btn-text');
 
+    const start = startDateInput.value;
+    const end = endDateInput.value;
+
+    // Direct manual click validation
     if (!start || !end) {
-        alert("Please select both start and end dates.");
+        if (!isAutoTrigger) {
+            alert("Please select both start and end dates.");
+        }
         return;
     }
 
-    // Reset preset button styling
+    // Ensure start date isn't later than end date
+    if (new Date(start) > new Date(end)) {
+        alert("Start date cannot be after the end date.");
+        return;
+    }
+
+    // Reset preset button styling to default unselected state
     ['today', 'yesterday', 'this_week', 'this_month'].forEach(key => {
         const btn = document.getElementById(`btn-${key}`);
-        if (btn) btn.className = "px-3 py-1.5 rounded-md text-slate-400 hover:text-white transition font-semibold";
+        if (btn) {
+            btn.className = "px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition";
+        }
     });
 
-    fetchExecutiveDashboard(`range=custom&startDate=${start}&endDate=${end}`);
+    // 1. Activate Loading Spinner State
+    if (applyBtn) applyBtn.disabled = true;
+    if (btnSpinner) btnSpinner.classList.remove('hidden');
+    if (btnText) btnText.textContent = "Loading...";
+
+    try {
+        // 2. Execute dashboard query (awaiting fetch response if function returns a Promise)
+        await fetchExecutiveDashboard(`range=custom&startDate=${start}&endDate=${end}`);
+    } catch (error) {
+        console.error("Failed to update executive dashboard:", error);
+    } finally {
+        // 3. Restore Button State
+        if (applyBtn) applyBtn.disabled = false;
+        if (btnSpinner) btnSpinner.classList.add('hidden');
+        if (btnText) btnText.textContent = "Apply";
+    }
 }
 
+// Attach automatic trigger listeners once DOM content is ready
+document.addEventListener('DOMContentLoaded', () => {
+    const startDateInput = document.getElementById('custom-start-date');
+    const endDateInput = document.getElementById('custom-end-date');
+
+    const autoFetchHandler = () => {
+        const start = startDateInput.value;
+        const end = endDateInput.value;
+
+        // Auto-run only if both dates are selected
+        if (start && end) {
+            applyCustomDateRange(true);
+        }
+    };
+
+    if (startDateInput && endDateInput) {
+        startDateInput.addEventListener('change', autoFetchHandler);
+        endDateInput.addEventListener('change', autoFetchHandler);
+    }
+});
 // Initialise on DOM Ready
 document.addEventListener('DOMContentLoaded', () => {
     setDashboardRange('today');
