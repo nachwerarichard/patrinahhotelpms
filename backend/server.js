@@ -7754,6 +7754,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
     }
 });
 
+
 app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
     try {
         const hotelId = req.user.hotelId;
@@ -7762,7 +7763,7 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
         const hotelObjId = new mongoose.Types.ObjectId(hotelId);
         const { range = 'today', startDate, endDate } = req.query;
 
-        // 1. Calculate Date Range Boundaries (Current vs. Prior Comparison Period)
+        // 1. Date Range Logic...
         let currStart, currEnd, prevStart, prevEnd;
         const now = new Date();
 
@@ -7781,7 +7782,7 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
             prevEnd = new Date(currStart);
             prevEnd.setMilliseconds(-1);
         } else if (range === 'this_week') {
-            const dayOfWeek = now.getDay(); // 0 is Sunday
+            const dayOfWeek = now.getDay();
             const distanceToMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
             currStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - distanceToMon);
             currEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
@@ -7813,7 +7814,7 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
         const prevStartStr = prevStart.toISOString().split('T')[0];
         const prevEndStr = prevEnd.toISOString().split('T')[0];
 
-        // 2. Parallel Database Pipeline Queries
+        // 2. Parallel Database Queries (Added channelMixAggregation)
         const [
             hotel,
             totalRooms,
@@ -7824,7 +7825,8 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
             currPos,
             prevPos,
             currExp,
-            prevExp
+            prevExp,
+            channelMixRaw
         ] = await Promise.all([
             Hotel.findById(hotelId).select('name hotelCurrency').lean(),
             Room.countDocuments({ hotelId: hotelObjId, status: { $ne: 'out-of-order' } }),
@@ -7832,7 +7834,6 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
                 { $match: { hotelId: hotelObjId } },
                 { $group: { _id: "$status", count: { $sum: 1 } } }
             ]),
-            // Operations Movement for Current Window
             Booking.aggregate([
                 { $match: { hotelId: hotelObjId } },
                 {
@@ -7847,7 +7848,6 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
                     }
                 }
             ]),
-            // Financial Aggregations: Current vs Previous
             Booking.aggregate([
                 { $match: { hotelId: hotelObjId, checkIn: { $gte: currStartStr, $lte: currEndStr } } },
                 { $group: { _id: null, roomRevenue: { $sum: "$totalDue" }, collected: { $sum: "$amountPaid" }, balance: { $sum: "$balance" } } }
@@ -7856,7 +7856,6 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
                 { $match: { hotelId: hotelObjId, checkIn: { $gte: prevStartStr, $lte: prevEndStr } } },
                 { $group: { _id: null, roomRevenue: { $sum: "$totalDue" } } }
             ]),
-            // POS Aggregations: Current vs Previous (Included $profit aggregation for prevPos)
             Sale.aggregate([
                 { $match: { hotelId: hotelObjId, date: { $gte: currStart, $lte: currEnd } } },
                 { $group: { _id: null, posSales: { $sum: "$sp" }, posProfit: { $sum: "$profit" } } }
@@ -7865,7 +7864,6 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
                 { $match: { hotelId: hotelObjId, date: { $gte: prevStart, $lte: prevEnd } } },
                 { $group: { _id: null, posSales: { $sum: "$sp" }, posProfit: { $sum: "$profit" } } }
             ]),
-            // Expense Aggregations: Current vs Previous
             Expense.aggregate([
                 { $match: { hotelId: hotelObjId, date: { $gte: currStart, $lte: currEnd } } },
                 { $group: { _id: null, totalExpense: { $sum: "$amount" } } }
@@ -7873,33 +7871,45 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
             Expense.aggregate([
                 { $match: { hotelId: hotelObjId, date: { $gte: prevStart, $lte: prevEnd } } },
                 { $group: { _id: null, totalExpense: { $sum: "$amount" } } }
+            ]),
+            // ➔ Distribution Channel Mix Aggregation
+            Booking.aggregate([
+                { 
+                    $match: { 
+                        hotelId: hotelObjId, 
+                        checkIn: { $gte: currStartStr, $lte: currEndStr },
+                        gueststatus: { $ne: 'cancelled' } 
+                    } 
+                },
+                { 
+                    $group: { 
+                        _id: "$guestsource", 
+                        bookingsCount: { $sum: 1 }, 
+                        revenue: { $sum: "$totalDue" } 
+                    } 
+                }
             ])
         ]);
 
         const capacity = totalRooms > 0 ? totalRooms : 1;
         const ops = dailyOps[0] || { expectedArrivals: 0, actualArrivals: 0, expectedDepartures: 0, actualDepartures: 0, inHouse: 0, noShows: 0 };
-        
         const finC = currFinance[0] || { roomRevenue: 0, collected: 0, balance: 0 };
         const finP = prevFinance[0] || { roomRevenue: 0 };
-
         const posC = currPos[0] || { posSales: 0, posProfit: 0 };
         const posP = prevPos[0] || { posSales: 0, posProfit: 0 };
-
         const expC = currExp[0] || { totalExpense: 0 };
         const expP = prevExp[0] || { totalExpense: 0 };
 
-        // Core Hospitality Formulas
         const currOccupancy = Number(((ops.inHouse / capacity) * 100).toFixed(1));
         const currAdr = ops.inHouse > 0 ? Math.round(finC.roomRevenue / ops.inHouse) : 0;
         const currRevpar = Math.round(finC.roomRevenue / capacity);
         const currGrossRev = finC.roomRevenue + posC.posSales;
-        const currGrossProfit = finC.roomRevenue + posC.posProfit; // Room revenue + POS profit
+        const currGrossProfit = finC.roomRevenue + posC.posProfit;
         const currNoi = currGrossRev - expC.totalExpense;
 
         const prevGrossRev = finP.roomRevenue + posP.posSales;
         const prevNoi = prevGrossRev - expP.totalExpense;
 
-        // Variance / Percentage Calculation Helper
         const calcTrend = (current, previous) => {
             if (!previous || previous === 0) return current > 0 ? 100 : 0;
             return Number((((current - previous) / previous) * 100).toFixed(1));
@@ -7910,6 +7920,16 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
             const key = item._id ? item._id.toLowerCase().replace(/\s+/g, '') : 'clean';
             if (roomMatrix.hasOwnProperty(key)) roomMatrix[key] = item.count;
         });
+
+        // Calculate total bookings for percentage calculations
+        const totalChannelBookings = channelMixRaw.reduce((sum, item) => sum + item.bookingsCount, 0);
+
+        const channelMix = channelMixRaw.map(item => ({
+            source: item._id || 'Unknown',
+            count: item.bookingsCount,
+            revenue: item.revenue,
+            percentage: totalChannelBookings > 0 ? Number(((item.bookingsCount / totalChannelBookings) * 100).toFixed(1)) : 0
+        })).sort((a, b) => b.count - a.count);
 
         res.json({
             currency: hotel?.hotelCurrency || 'UGX',
@@ -7935,6 +7955,7 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
                 noShows: ops.noShows
             },
             housekeeping: roomMatrix,
+            channelMix, // ➔ Returned array of channels
             financials: {
                 roomRevenue: finC.roomRevenue,
                 posSales: posC.posSales,
@@ -7951,7 +7972,6 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
         res.status(500).json({ error: "Failed to generate executive flash report" });
     }
 });
-
 
 
 

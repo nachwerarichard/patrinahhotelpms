@@ -12536,6 +12536,8 @@ searchInput.addEventListener('input', (e) => {
 
 let currentSelectedRange = 'today';
 
+// Append inside fetchExecutiveDashboard function:
+
 async function fetchExecutiveDashboard(queryParams = 'range=today') {
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/dashboard/executive-flash?${queryParams}`);
@@ -12550,7 +12552,6 @@ async function fetchExecutiveDashboard(queryParams = 'range=today') {
             if (el) el.innerText = txt;
         };
 
-        // Helper to format percentage trend badges (Green up / Red down)
         const renderTrend = (id, percentVal) => {
             const el = document.getElementById(id);
             if (!el) return;
@@ -12568,13 +12569,12 @@ async function fetchExecutiveDashboard(queryParams = 'range=today') {
         setTxt('val-adr', fmt(data.kpis.adr));
         setTxt('val-revpar', fmt(data.kpis.revpar));
         setTxt('val-gross-revenue', fmt(data.kpis.grossRevenue));
-        setTxt('val-pos-profit', fmt(data.kpis.posProfit)); // POS Profit KPI
+        setTxt('val-pos-profit', fmt(data.kpis.posProfit));
         setTxt('val-noi', fmt(data.kpis.noi));
 
-        // Render percentage arrows
         renderTrend('badge-revpar-trend', data.kpis.revparTrend);
         renderTrend('badge-gross-trend', data.kpis.grossRevenueTrend);
-        renderTrend('badge-pos-profit-trend', data.kpis.posProfitTrend); // POS Profit Trend
+        renderTrend('badge-pos-profit-trend', data.kpis.posProfitTrend);
         renderTrend('badge-noi-trend', data.kpis.noiTrend);
 
         const bar = document.getElementById('bar-occupancy');
@@ -12594,11 +12594,14 @@ async function fetchExecutiveDashboard(queryParams = 'range=today') {
         setTxt('hk-occupied', data.housekeeping.occupied || 0);
         setTxt('hk-maintenance', data.housekeeping.maintenance || 0);
 
-        // 4. Financial Audit
+        // 4. Render Distribution Channel Mix
+        renderChannelMix(data.channelMix || [], curr);
+
+        // 5. Financial Audit
         setTxt('fin-room-rev', fmt(data.financials.roomRevenue));
         setTxt('fin-pos-rev', fmt(data.financials.posSales));
-        setTxt('fin-pos-profit', fmt(data.financials.posProfit)); // Financial Audit POS Profit
-        setTxt('fin-gross-profit', fmt(data.financials.totalGrossProfit)); // Room Rev + POS Profit
+        setTxt('fin-pos-profit', fmt(data.financials.posProfit));
+        setTxt('fin-gross-profit', fmt(data.financials.totalGrossProfit));
         setTxt('fin-collected', fmt(data.financials.collectedCash));
         setTxt('fin-ledger-bal', fmt(data.financials.cityLedgerBalance));
         setTxt('fin-expenses', fmt(data.financials.expenses));
@@ -12606,6 +12609,40 @@ async function fetchExecutiveDashboard(queryParams = 'range=today') {
     } catch (err) {
         console.error("Failed to load PMS Flash Report:", err);
     }
+}
+
+// Channel mix DOM builder
+function renderChannelMix(channels, curr) {
+    const container = document.getElementById('channel-mix-container');
+    if (!container) return;
+
+    if (!channels || channels.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 italic py-2">No bookings recorded for this period.</p>`;
+        return;
+    }
+
+    const channelColors = {
+        'Walk in': 'bg-blue-500',
+        'Hotel Website': 'bg-emerald-500',
+        'Expedia': 'bg-amber-500',
+        'Booking.com': 'bg-indigo-500',
+        'Trip': 'bg-purple-500'
+    };
+
+    container.innerHTML = channels.map(ch => {
+        const colorClass = channelColors[ch.source] || 'bg-slate-500';
+        return `
+            <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="font-medium text-slate-300">${ch.source}</span>
+                    <span class="text-slate-400 font-mono">${ch.count} bkg (${ch.percentage}%) • <strong class="text-slate-200">${curr} ${ch.revenue.toLocaleString()}</strong></span>
+                </div>
+                <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
+                    <div class="${colorClass} h-full transition-all duration-500" style="width: ${Math.min(ch.percentage, 100)}%"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 // Handler for predefined filter buttons
