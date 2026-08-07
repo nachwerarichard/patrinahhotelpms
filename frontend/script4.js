@@ -513,78 +513,7 @@ let currentHotel = userData ? userData.hotelName : 'Property Mnagement System';
 
 
 
-async function updateDashboard() {
-  try {
-    const user = JSON.parse(localStorage.getItem('loggedInUser'));
-    const hotelId = user ? user.hotelId : localStorage.getItem('hotelId');
 
-    if (!hotelId) {
-        console.error("Dashboard Error: No hotelId found.");
-        return;
-    }
-
-    // Use authenticatedFetch - added a check to ensure response is valid JSON
-const response = await authenticatedFetch(`${API_BASE_URL}/bookings/all?limit=500`);    
-    // GUARD 1: Check if request was successful
-    if (!response || !response.ok) {
-        console.warn(`Bookings API returned status: ${response ? response.status : 'No Response'}`);
-        return;
-    }
-
-    const allBookings = await response.json();
-
-    // GUARD 2: Ensure data is an array
-    if (!Array.isArray(allBookings)) {
-        console.error("Expected array for bookings, but received:", allBookings);
-        return;
-    }
-
-    const today = new Date().toLocaleDateString('en-CA'); 
-
-    const todayArrivals = allBookings.filter(b => b.checkIn === today);
-    const todayDepartures = allBookings.filter(b => b.checkOut === today);
-
-    const kpis = {
-      arrivals: todayArrivals.length,
-      departures: todayDepartures.length,
-      amountpaid: todayArrivals.reduce((sum, b) => sum + (Number(b.amountPaid) || 0), 0),
-      revenue: todayArrivals.reduce((sum, b) => sum + (Number(b.totalDue) || 0), 0),
-      balance: todayArrivals.reduce((sum, b) => sum + (Number(b.balance) || 0), 0),
-      pending: todayArrivals.filter(b => ['Partially Paid', 'Pending'].includes(b.paymentStatus)).length,
-      noShow: todayArrivals.filter(b => b.gueststatus === 'no show').length
-    };
-
-    const updateText = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.innerText = val;
-    };
-
-    updateText('total-arrivals', kpis.arrivals);
-    updateText('arrivals', kpis.arrivals);
-    updateText('departures', kpis.departures);
-    updateText('total-departures', kpis.departures);
-    updateText('pending-count', kpis.pending);
-    updateText('no-show-count', kpis.noShow);
-    updateText('today-amountpaid', `${CURRENT_CURRENCY} ${kpis.amountpaid.toLocaleString()}`);
-    updateText('today-revenue', `${CURRENT_CURRENCY} ${kpis.revenue.toLocaleString()}`);
-    updateText('today-balance', `${CURRENT_CURRENCY} ${kpis.balance.toLocaleString()}`);
-
-    const statusCounts = { 'confirmed': 0, 'cancelled': 0, 'no show': 0, 'checkedin': 0, 'reserved': 0 };
-    const sourceCounts = { 'Walk in': 0, 'Booking.com': 0, 'Expedia': 0, 'Trip': 0, 'Hotel Website': 0 };
-
-    todayArrivals.forEach(b => {
-      if (statusCounts.hasOwnProperty(b.gueststatus)) statusCounts[b.gueststatus]++;
-      if (sourceCounts.hasOwnProperty(b.guestsource)) sourceCounts[b.guestsource]++;
-    });
-
-    if (typeof renderCharts === 'function') {
-        renderCharts(statusCounts, sourceCounts);
-    }
-
-  } catch (error) {
-    console.error('Critical Dashboard Failure:', error);
-  }
-}
 // --- 1. GLOBAL CONFIGURATION ---
 const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
 
@@ -2121,7 +2050,7 @@ document.getElementById('confirmMoveBtn').addEventListener('click', async () => 
         // Refresh UI
         renderBookings(currentPage, currentSearchTerm);
         renderHousekeepingRooms();
-        updateDashboard();
+        fetchExecutiveDashboard();
         if (typeof renderCalendar === 'function') renderCalendar();
 
     } catch (error) {
@@ -2527,7 +2456,7 @@ bookingForm.addEventListener('submit', async function(event) {
         // Refresh UI components
         renderBookings(currentPage, currentSearchTerm);
         renderHousekeepingRooms();
-        updateDashboard()
+        fetchExecutiveDashboard();
         if (typeof renderCalendar === 'function') renderCalendar();
         if (typeof renderAuditLogs === 'function') renderAuditLogs();
 
@@ -2666,7 +2595,7 @@ function confirmDeleteBooking(id) {
             showMessage('Success', 'Booking and associated charges deleted successfully!');
             renderBookings(currentPage, currentSearchTerm);
             renderHousekeepingRooms();
-            updateDashboard();
+            fetchExecutiveDashboard();
             if (typeof renderCalendar === 'function') renderCalendar();
             if (typeof renderAuditLogs === 'function') renderAuditLogs();
         } catch (error) {
@@ -2704,7 +2633,7 @@ async function checkoutBooking(id) {
         await Promise.all([
             renderBookings(currentPage, currentSearchTerm),
             renderHousekeepingRooms(),
-            updateDashboard(),
+            fetchExecutiveDashboard(),
             (typeof renderCalendar === 'function' ? renderCalendar() : Promise.resolve()),
             (typeof renderAuditLogs === 'function' ? renderAuditLogs() : Promise.resolve())
         ]);
@@ -2744,10 +2673,10 @@ async function checkinBooking(id) {
         await Promise.all([
             renderBookings(currentPage, currentSearchTerm),
             renderHousekeepingRooms(),
-            updateDashboard(),
+            fetchExecutiveDashboard(),
             (typeof renderCalendar === 'function' ? renderCalendar() : Promise.resolve()),
             (typeof renderAuditLogs === 'function' ? renderAuditLogs() : Promise.resolve()),
-            (typeof updateDashboard === 'function' ? updateDashboard() : Promise.resolve())
+            (typeof fetchExecutiveDashboard === 'function' ? fetchExecutiveDashboard() : Promise.resolve())
         ]);
 
     } catch (error) {
@@ -4447,7 +4376,7 @@ async function markNoShow(bookingId) {
         
         // Refresh UI
         renderBookings(currentPage, currentSearchTerm);
-        updateDashboard()
+        fetchExecutiveDashboard();
         if (typeof generateReport === 'function') generateReport();
         
     } catch (err) {
@@ -4724,7 +4653,7 @@ const amount = parseFloat(rawAmount);
 }
 
 function refreshDashboardViews() {
-    if (typeof updateDashboard === 'function') updateDashboard();
+    if (typeof fetchExecutiveDashboard === 'function') fetchExecutiveDashboard();
     if (typeof renderBookings === 'function') renderBookings(currentPage, currentSearchTerm);
     if (typeof fetchReport === 'function') fetchReport();
 }
@@ -5043,7 +4972,7 @@ async function refreshDashboard() {
 
     try {
         await Promise.all([
-            updateDashboard(),       // Financials
+            fetchExecutiveDashboard(),       // Financials
             updateroomDashboard(),   // Occupancy
             renderHousekeepingRooms() // Room list
         ]);
@@ -5124,59 +5053,101 @@ async function refreshDashboard() {
 
 
 // Initialize
-updateDashboard();
+fetchExecutiveDashboard();
 // 1️⃣ Global variables to store chart instances
 let statusChartInstance = null;
 let sourceChartInstance = null;
 
-function renderCharts(statusData, sourceData) {
-    const statusCtx = document.getElementById('statusChart').getContext('2d');
-    const sourceCtx = document.getElementById('sourceChart').getContext('2d');
+function renderCharts(statusData = {}, sourceData = {}) {
+    const statusCanvas = document.getElementById('statusChart');
+    const sourceCanvas = document.getElementById('sourceChart');
 
-    // 2️⃣ Destroy old charts if they exist
+    // Safe fallback if canvases are not present on the current DOM view
+    if (!statusCanvas || !sourceCanvas) return;
+
+    const statusCtx = statusCanvas.getContext('2d');
+    const sourceCtx = sourceCanvas.getContext('2d');
+
+    // Destroy existing instances to release canvas context
     if (statusChartInstance) statusChartInstance.destroy();
     if (sourceChartInstance) sourceChartInstance.destroy();
 
-    // 3️⃣ Status Pie Chart
+    const statusLabels = Object.keys(statusData);
+    const statusValues = Object.values(statusData);
+
+    const sourceLabels = Object.keys(sourceData);
+    const sourceValues = Object.values(sourceData);
+
+    // 1️⃣ Booking Status Distribution Chart
     statusChartInstance = new Chart(statusCtx, {
-        type: 'pie',
+        type: 'doughnut', // Doughnut generally renders cleaner than flat pie on dashboards
         data: {
-            labels: Object.keys(statusData),
+            labels: statusLabels.length ? statusLabels : ['No Data'],
             datasets: [{
-                data: Object.values(statusData),
-                backgroundColor: [
-                    '#3B82F6', // Blue
-                    '#EF4444', // Red
-                    '#F59E0B', // Amber
-                    '#10B981', // Emerald
-                    '#8B5CF6'  // Violet
-                ],
-                borderWidth: 1
+                data: statusValues.length ? statusValues : [1],
+                backgroundColor: statusValues.length ? [
+                    '#3B82F6', // Confirmed / Blue
+                    '#10B981', // Checked-In / Green
+                    '#F59E0B', // Pending / Amber
+                    '#EF4444', // Cancelled / Red
+                    '#8B5CF6'  // Checked-Out / Purple
+                ] : ['#E5E7EB'], // Muted gray when no records exist
+                borderWidth: 2,
+                borderColor: '#FFFFFF'
             }]
         },
         options: {
+            responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom' } }
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 15,
+                        font: { size: 12 }
+                    }
+                },
+                tooltip: {
+                    enabled: statusValues.length > 0
+                }
+            }
         }
     });
 
-    // 4️⃣ Source Bar Chart
+    // 2️⃣ Booking Source Bar Chart (Direct, OTA, Walk-in)
     sourceChartInstance = new Chart(sourceCtx, {
         type: 'bar',
         data: {
-            labels: Object.keys(sourceData),
+            labels: sourceLabels,
             datasets: [{
                 label: 'Bookings by Source',
-                data: Object.values(sourceData),
-                backgroundColor: '#10B981'
+                data: sourceValues,
+                backgroundColor: '#10B981',
+                borderRadius: 4 // Softened bar corners
             }]
         },
-        options: { maintainAspectRatio: false }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false } // Hidden since single-series chart title is clear
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 } // Ensures integer step ticks for booking counts
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
     });
 }
 
 // Initialize
-updateDashboard();
+fetchExecutiveDashboard();
 
         
     
@@ -12562,31 +12533,212 @@ searchInput.addEventListener('input', (e) => {
     }, 300);
 });
 
-async function refreshTodayPOSStats() {
+
+let currentSelectedRange = 'today';
+
+// Append inside fetchExecutiveDashboard function:
+
+async function fetchExecutiveDashboard(queryParams = 'range=today') {
     try {
-        // We use your existing authenticatedFetch
-        const response = await authenticatedFetch(`${API_BASE_URL}/pos-today-summary`);
-        
+        const response = await authenticatedFetch(`${API_BASE_URL}/dashboard/executive-flash?${queryParams}`);
         if (!response || !response.ok) return;
-        
+
         const data = await response.json();
-
-        // Update the UI with formatted currency
-        document.getElementById('postoday-revenue').innerText = `${CURRENT_CURRENCY} ${data.revenue.toLocaleString()}`;
-        document.getElementById('postoday-profit').innerText = `${CURRENT_CURRENCY} ${data.profit.toLocaleString()}`;
-        document.getElementById('postoday-expense').innerText = `${CURRENT_CURRENCY} ${data.expenses.toLocaleString()}`;
-
-        const balanceEl = document.getElementById('postoday-balance');
+        const curr = data.currency || 'UGX';
+        const fmt = (val) => `${curr} ${Number(val || 0).toLocaleString()}`;
         
+        const setTxt = (id, txt) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = txt;
+        };
+
+        const renderTrend = (id, percentVal) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const isPositive = percentVal >= 0;
+            const arrow = isPositive ? '▲' : '▼';
+            el.innerText = `${arrow} ${Math.abs(percentVal)}%`;
+            el.className = `text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
+                isPositive ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+            }`;
+        };
+
+        // 1. Core KPIs
+        setTxt('val-capacity', data.capacity);
+        setTxt('val-occupancy', `${data.kpis.occupancyRate}%`);
+        setTxt('val-adr', fmt(data.kpis.adr));
+        setTxt('val-revpar', fmt(data.kpis.revpar));
+        setTxt('val-gross-revenue', fmt(data.kpis.grossRevenue));
+        setTxt('val-pos-profit', fmt(data.kpis.posProfit));
+        setTxt('val-noi', fmt(data.kpis.noi));
+
+        renderTrend('badge-revpar-trend', data.kpis.revparTrend);
+        renderTrend('badge-gross-trend', data.kpis.grossRevenueTrend);
+        renderTrend('badge-pos-profit-trend', data.kpis.posProfitTrend);
+        renderTrend('badge-noi-trend', data.kpis.noiTrend);
+
+        const bar = document.getElementById('bar-occupancy');
+        if (bar) bar.style.width = `${Math.min(data.kpis.occupancyRate, 100)}%`;
+
+        // 2. Front Desk Operations
+        setTxt('fd-arrivals-pending', data.frontDesk.arrivalsPending);
+        setTxt('fd-arrivals-done', data.frontDesk.arrivalsCheckedIn);
+        setTxt('fd-deps-pending', data.frontDesk.departuresPending);
+        setTxt('fd-deps-done', data.frontDesk.departuresCheckedOut);
+        setTxt('fd-in-house', data.frontDesk.inHouseGuests);
+        setTxt('fd-no-shows', data.frontDesk.noShows);
+
+        
+
+        // 4. Render Distribution Channel Mix
+        renderChannelMix(data.channelMix || [], curr);
+
+        // 5. Financial Audit
+        setTxt('fin-room-rev', fmt(data.financials.roomRevenue));
+        setTxt('fin-pos-rev', fmt(data.financials.posSales));
+        setTxt('fin-pos-profit', fmt(data.financials.posProfit));
+        setTxt('fin-gross-profit', fmt(data.financials.totalGrossProfit));
+        setTxt('fin-collected', fmt(data.financials.collectedCash));
+        setTxt('fin-ledger-bal', fmt(data.financials.cityLedgerBalance));
+        setTxt('fin-expenses', fmt(data.financials.expenses));
 
     } catch (err) {
-        console.error("Failed to refresh today's POS stats:", err);
+        console.error("Failed to load PMS Flash Report:", err);
     }
 }
 
+// Channel mix DOM builder
+function renderChannelMix(channels, curr) {
+    const container = document.getElementById('channel-mix-container');
+    if (!container) return;
+
+    if (!channels || channels.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 italic py-2">No bookings recorded for this period.</p>`;
+        return;
+    }
+
+    const channelColors = {
+        'Walk in': 'bg-blue-500',
+        'Hotel Website': 'bg-emerald-500',
+        'Expedia': 'bg-amber-500',
+        'Booking.com': 'bg-indigo-500',
+        'Trip': 'bg-purple-500'
+    };
+
+    container.innerHTML = channels.map(ch => {
+        const colorClass = channelColors[ch.source] || 'bg-slate-500';
+        return `
+            <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="font-medium text-slate-300">${ch.source}</span>
+                    <span class="text-slate-400 font-mono">${ch.count} bkg (${ch.percentage}%) • <strong class="text-slate-200">${curr} ${ch.revenue.toLocaleString()}</strong></span>
+                </div>
+                <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
+                    <div class="${colorClass} h-full transition-all duration-500" style="width: ${Math.min(ch.percentage, 100)}%"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Handler for predefined filter buttons
+function setDashboardRange(rangeKey) {
+    // Toggle active styles on buttons
+    ['today', 'yesterday', 'this_week', 'this_month'].forEach(key => {
+        const btn = document.getElementById(`btn-${key}`);
+        if (btn) {
+            if (key === rangeKey) {
+                btn.className = "px-3 py-1.5 rounded-md text-white bg-blue-600 transition font-semibold";
+            } else {
+                btn.className = "px-3 py-1.5 rounded-md text-slate-400 hover:text-white transition font-semibold";
+            }
+        }
+    });
+
+    fetchExecutiveDashboard(`range=${rangeKey}`);
+}
+
+// Handler for custom date picker
+/**
+ * Executes automatic dashboard fetching on valid custom range selection with dynamic spinner feedback
+ */
+async function applyCustomDateRange(isAutoTrigger = false) {
+    const startDateInput = document.getElementById('custom-start-date');
+    const endDateInput = document.getElementById('custom-end-date');
+    const applyBtn = document.getElementById('btn-apply-custom-date');
+    const btnSpinner = document.getElementById('apply-btn-spinner');
+    const btnText = document.getElementById('apply-btn-text');
+
+    const start = startDateInput.value;
+    const end = endDateInput.value;
+
+    // Direct manual click validation
+    if (!start || !end) {
+        if (!isAutoTrigger) {
+            alert("Please select both start and end dates.");
+        }
+        return;
+    }
+
+    // Ensure start date isn't later than end date
+    if (new Date(start) > new Date(end)) {
+        alert("Start date cannot be after the end date.");
+        return;
+    }
+
+    // Reset preset button styling to default unselected state
+    ['today', 'yesterday', 'this_week', 'this_month'].forEach(key => {
+        const btn = document.getElementById(`btn-${key}`);
+        if (btn) {
+            btn.className = "px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition";
+        }
+    });
+
+    // 1. Activate Loading Spinner State
+    if (applyBtn) applyBtn.disabled = true;
+    if (btnSpinner) btnSpinner.classList.remove('hidden');
+    if (btnText) btnText.textContent = "Loading...";
+
+    try {
+        // 2. Execute dashboard query (awaiting fetch response if function returns a Promise)
+        await fetchExecutiveDashboard(`range=custom&startDate=${start}&endDate=${end}`);
+    } catch (error) {
+        console.error("Failed to update executive dashboard:", error);
+    } finally {
+        // 3. Restore Button State
+        if (applyBtn) applyBtn.disabled = false;
+        if (btnSpinner) btnSpinner.classList.add('hidden');
+        if (btnText) btnText.textContent = "Apply";
+    }
+}
+
+// Attach automatic trigger listeners once DOM content is ready
 document.addEventListener('DOMContentLoaded', () => {
-    refreshTodayPOSStats();
+    const startDateInput = document.getElementById('custom-start-date');
+    const endDateInput = document.getElementById('custom-end-date');
+
+    const autoFetchHandler = () => {
+        const start = startDateInput.value;
+        const end = endDateInput.value;
+
+        // Auto-run only if both dates are selected
+        if (start && end) {
+            applyCustomDateRange(true);
+        }
+    };
+
+    if (startDateInput && endDateInput) {
+        startDateInput.addEventListener('change', autoFetchHandler);
+        endDateInput.addEventListener('change', autoFetchHandler);
+    }
 });
+// Initialise on DOM Ready
+document.addEventListener('DOMContentLoaded', () => {
+    setDashboardRange('today');
+});
+
+// Initialise dashboard on load
+document.addEventListener('DOMContentLoaded', fetchExecutiveDashboard);
 
 // Initialize: Set default date-time to now
 document.getElementById('reportDateTime').value = new Date().toISOString().slice(0, 16);
