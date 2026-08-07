@@ -5278,29 +5278,38 @@ function closeSection(sectionId) {
 }
         // A function to show a specific section and hide all others
 function showSection(sectionId) {
-    // Hide all sections first
-    const sections = document.querySelectorAll('main > section');
-    sections.forEach(section => {
-        section.classList.add('hidden');
-        closeSection(dashbaord);
-    });
-
-    // Then show the target section
+    // 1. Get the target section early to avoid doing DOM work if it doesn't exist
     const targetSection = document.getElementById(sectionId);
-    if (targetSection) {
-        targetSection.classList.remove('hidden');
+    if (!targetSection) {
+        console.error(`Section with ID '${sectionId}' not found.`);
+        return;
     }
 
-    // You can also manage the active state of your navigation links here
-    const navItems = document.querySelectorAll('aside nav li a');
-    navItems.forEach(item => {
-        item.classList.remove('bg-gray-700', 'text-white');
+    // 2. Hide all main sections using Tailwind 'hidden' class
+    const sections = document.querySelectorAll('main > section, .section');
+    sections.forEach(section => {
+        section.classList.add('hidden');
     });
 
-    // Add active class to the clicked link's parent <li>
+    // 3. Show target section (preserves flex/grid classes defined on the element)
+    targetSection.classList.remove('hidden');
+
+    // 4. Update Navigation Active State
+    const navItems = document.querySelectorAll('aside nav a');
+    navItems.forEach(item => {
+        // Remove active styles (using slate palette to match your dashboard theme)
+        item.classList.remove('bg-slate-800', 'text-white', 'bg-gray-700');
+        item.classList.add('text-slate-600', 'hover:bg-slate-100');
+    });
+
+    // 5. Highlight current nav item
     const clickedNavItem = document.getElementById(`nav-${sectionId}`);
     if (clickedNavItem) {
-        clickedNavItem.querySelector('a').classList.add('bg-gray-700', 'text-white');
+        const link = clickedNavItem.tagName === 'A' ? clickedNavItem : clickedNavItem.querySelector('a');
+        if (link) {
+            link.classList.remove('text-slate-600', 'hover:bg-slate-100');
+            link.classList.add('bg-slate-800', 'text-white');
+        }
     }
 }
 
@@ -10667,30 +10676,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * Hides all main content sections and shows the one specified by sectionId.
  * @param {string} sectionId - The ID of the section element to show (e.g., 'inventory', 'sales').
  */
-function showSection(sectionId) {
-    // 1. Target '.section' to match your HTML class
-    const allSections = document.querySelectorAll('.section');
 
-    // 2. Loop through all sections and hide them.
-    allSections.forEach(section => {
-        section.style.display = 'none';
-        // Also remove Tailwind 'hidden' if it's being used elsewhere
-        section.classList.add('hidden'); 
-    });
-
-    // 3. Find the requested section and show it.
-    const targetSection = document.getElementById(sectionId);
-
-    if (targetSection) {
-        // Show the target section
-        targetSection.style.display = 'block'; 
-        targetSection.classList.remove('hidden'); // Ensure Tailwind doesn't hide it
-        
-        console.log(`Successfully showing section: ${sectionId}`);
-    } else {
-        console.error(`Section with ID '${sectionId}' not found.`);
-    }
-}
 
 
 
