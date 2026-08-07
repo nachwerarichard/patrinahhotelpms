@@ -5278,31 +5278,32 @@ function closeSection(sectionId) {
 }
         // A function to show a specific section and hide all others
 function showSection(sectionId) {
-    // 1. Get the target section early to avoid doing DOM work if it doesn't exist
+    // 1. Validate target section first
     const targetSection = document.getElementById(sectionId);
     if (!targetSection) {
         console.error(`Section with ID '${sectionId}' not found.`);
         return;
     }
 
-    // 2. Hide all main sections using Tailwind 'hidden' class
-    const sections = document.querySelectorAll('main > section, .section');
+    // 2. Target ALL sections within <main> and any element with class '.section'
+    const sections = document.querySelectorAll('main section, .section');
     sections.forEach(section => {
+        // Clear any inline display styles that override CSS classes
+        section.style.display = ''; 
         section.classList.add('hidden');
     });
 
-    // 3. Show target section (preserves flex/grid classes defined on the element)
+    // 3. Reveal target section
     targetSection.classList.remove('hidden');
 
-    // 4. Update Navigation Active State
-    const navItems = document.querySelectorAll('aside nav a');
-    navItems.forEach(item => {
-        // Remove active styles (using slate palette to match your dashboard theme)
-        item.classList.remove('bg-slate-800', 'text-white', 'bg-gray-700');
-        item.classList.add('text-slate-600', 'hover:bg-slate-100');
+    // 4. Update Navigation Links Active States
+    const navLinks = document.querySelectorAll('aside nav a');
+    navLinks.forEach(link => {
+        link.classList.remove('bg-slate-800', 'text-white', 'bg-gray-700');
+        link.classList.add('text-slate-600', 'hover:bg-slate-100');
     });
 
-    // 5. Highlight current nav item
+    // 5. Highlight the active navigation link
     const clickedNavItem = document.getElementById(`nav-${sectionId}`);
     if (clickedNavItem) {
         const link = clickedNavItem.tagName === 'A' ? clickedNavItem : clickedNavItem.querySelector('a');
