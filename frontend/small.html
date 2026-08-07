@@ -697,233 +697,234 @@ body {
     </div>
 </section>
 
-<section id="dashboard" class="hidden w-full space-y-6 p-6 bg-slate-100 min-h-screen font-sans">
-  <div class="p-6 bg-slate-900 text-slate-100 rounded-2xl shadow-xl min-h-screen font-sans">
-    
-    <!-- Top Bar & Date Range Selector Toolbar -->
-    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 border-b border-slate-800 pb-4 gap-4">
-        <div>
-            <h1 class="text-2xl font-bold tracking-tight text-white">Manager's Executive Flash Report</h1>
-            <p class="text-xs text-slate-400">Enterprise PMS Real-time Property Performance</p>
-        </div>
+<section id="dashboard" class="hidden w-full space-y-6 p-4 md:p-8 bg-slate-50 min-h-screen font-sans">
+    <div class="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm min-h-screen font-sans">
         
-        <!-- Interactive Date Controls -->
-        <div class="flex flex-wrap items-center gap-2">
-            <div class="bg-slate-800 p-1 rounded-lg border border-slate-700 flex text-xs font-semibold">
-                <button onclick="setDashboardRange('today')" id="btn-today" class="px-3 py-1.5 rounded-md text-white bg-blue-600 transition">Today</button>
-                <button onclick="setDashboardRange('yesterday')" id="btn-yesterday" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-white transition">Yesterday</button>
-                <button onclick="setDashboardRange('this_week')" id="btn-this_week" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-white transition">This Week</button>
-                <button onclick="setDashboardRange('this_month')" id="btn-this_month" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-white transition">This Month</button>
-            </div>
-            
-            <div class="flex items-center gap-1 bg-slate-800 p-1 rounded-lg border border-slate-700 text-xs">
-                <input type="date" id="custom-start-date" class="bg-slate-900 text-slate-200 px-2 py-1 rounded border border-slate-700 focus:outline-none" />
-                <span class="text-slate-500">to</span>
-                <input type="date" id="custom-end-date" class="bg-slate-900 text-slate-200 px-2 py-1 rounded border border-slate-700 focus:outline-none" />
-                <button onclick="applyCustomDateRange()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-white font-semibold transition">Apply</button>
-            </div>
-            
-            <div class="bg-slate-800 px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 border border-slate-700">
-                Capacity: <span id="val-capacity" class="text-white font-bold">--</span> Rooms
-            </div>
-        </div>
-    </div>
-
-    <!-- 1. Key Performance Indicators with Trend Badges -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4 mb-6">
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 relative">
-            <span class="text-xs font-semibold uppercase text-slate-400">Occupancy</span>
-            <div id="val-occupancy" class="text-2xl font-black text-blue-400 mt-1">0%</div>
-            <div class="w-full bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden">
-                <div id="bar-occupancy" class="bg-blue-500 h-full w-0 transition-all duration-500"></div>
-            </div>
-        </div>
-        
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-            <span class="text-xs font-semibold uppercase text-slate-400">ADR</span>
-            <div id="val-adr" class="text-2xl font-black text-emerald-400 mt-1">0</div>
-            <span class="text-[10px] text-slate-500">Avg Daily Rate</span>
-        </div>
-
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-            <div class="flex justify-between items-start">
-                <span class="text-xs font-semibold uppercase text-slate-400">RevPAR</span>
-                <span id="badge-revpar-trend" class="text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5"></span>
-            </div>
-            <div id="val-revpar" class="text-2xl font-black text-amber-400 mt-1">0</div>
-            <span class="text-[10px] text-slate-500">Rev Per Avail Room</span>
-        </div>
-
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-            <div class="flex justify-between items-start">
-                <span class="text-xs font-semibold uppercase text-slate-400">Gross Rev</span>
-                <span id="badge-gross-trend" class="text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5"></span>
-            </div>
-            <div id="val-gross-revenue" class="text-2xl font-black text-purple-400 mt-1">0</div>
-            <span class="text-[10px] text-slate-500">Rooms + POS Total</span>
-        </div>
-
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-            <div class="flex justify-between items-start">
-                <span class="text-xs font-semibold uppercase text-slate-400">POS Profit</span>
-                <span id="badge-pos-profit-trend" class="text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5"></span>
-            </div>
-            <div id="val-pos-profit" class="text-2xl font-black text-cyan-400 mt-1">0</div>
-            <span class="text-[10px] text-slate-500">Bar/Rest/Kitchen Profit</span>
-        </div>
-
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-            <div class="flex justify-between items-start">
-                <span class="text-xs font-semibold uppercase text-slate-400">Net Op Income</span>
-                <span id="badge-noi-trend" class="text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5"></span>
-            </div>
-            <div id="val-noi" class="text-2xl font-black text-teal-400 mt-1">0</div>
-            <span class="text-[10px] text-slate-500">Rev Less Expenses</span>
-        </div>
-    </div>
-
-    <!-- 2. Front Desk Operations, Housekeeping Matrix & Inventory Alerts -->
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-        <!-- Front Desk Operational Movement -->
-        <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-2">
-            <h2 class="text-sm font-bold uppercase text-slate-300 mb-4 border-b border-slate-700 pb-2">
-                Front Desk Operational Movement
-            </h2>
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800">
-                    <span class="text-xs text-slate-400">Arrivals Pending</span>
-                    <div id="fd-arrivals-pending" class="text-xl font-bold text-amber-400 mt-1">0</div>
-                </div>
-                <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800">
-                    <span class="text-xs text-slate-400">Checked In</span>
-                    <div id="fd-arrivals-done" class="text-xl font-bold text-emerald-400 mt-1">0</div>
-                </div>
-                <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800">
-                    <span class="text-xs text-slate-400">Departures Pending</span>
-                    <div id="fd-deps-pending" class="text-xl font-bold text-rose-400 mt-1">0</div>
-                </div>
-                <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800">
-                    <span class="text-xs text-slate-400">Checked Out</span>
-                    <div id="fd-deps-done" class="text-xl font-bold text-blue-400 mt-1">0</div>
-                </div>
-                <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800">
-                    <span class="text-xs text-slate-400">In-House Guests</span>
-                    <div id="fd-in-house" class="text-xl font-bold text-indigo-400 mt-1">0</div>
-                </div>
-                <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800">
-                    <span class="text-xs text-slate-400">No-Shows</span>
-                    <div id="fd-no-shows" class="text-xl font-bold text-slate-400 mt-1">0</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Housekeeping Matrix -->
-        <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-1">
-            <h2 class="text-sm font-bold uppercase text-slate-300 mb-4 border-b border-slate-700 pb-2">
-                Housekeeping Matrix
-            </h2>
-            <div class="space-y-3">
-                <div class="flex justify-between items-center text-xs">
-                    <span class="text-emerald-400 font-semibold">● Clean / Ready</span>
-                    <span id="hk-clean" class="font-bold text-white">0</span>
-                </div>
-                <div class="flex justify-between items-center text-xs">
-                    <span class="text-rose-400 font-semibold">● Dirty / Departure</span>
-                    <span id="hk-dirty" class="font-bold text-white">0</span>
-                </div>
-                <div class="flex justify-between items-center text-xs">
-                    <span class="text-blue-400 font-semibold">● Occupied</span>
-                    <span id="hk-occupied" class="font-bold text-white">0</span>
-                </div>
-                <div class="flex justify-between items-center text-xs">
-                    <span class="text-amber-400 font-semibold">● Maintenance</span>
-                    <span id="hk-maintenance" class="font-bold text-white">0</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Low Stock Items Alert Card -->
-        <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-1 relative overflow-hidden flex flex-col justify-between">
-            <div class="absolute left-0 top-0 h-full w-1 bg-rose-500 rounded-full"></div>
-            
+        <!-- Top Bar & Date Range Selector Toolbar -->
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 border-b border-slate-200 pb-5 gap-4">
             <div>
-                <div class="flex items-center justify-between mb-2 pb-2 border-b border-slate-700">
-                    <p class="text-xs font-bold text-slate-300 uppercase tracking-widest">Low Stock Items</p>
-                    
-                    <div class="flex items-center space-x-2">
-                        <!-- Action Buttons (Hidden when count is 0) -->
-                        <div id="low-stock-actions" class="hidden flex items-center space-x-1">
-                            <button type="button" onclick="exportLowStockToCSV()" title="Export Low Stock to CSV" class="text-slate-400 hover:text-emerald-400 transition-colors p-1">
-                                <i class="fas fa-file-excel text-xs"></i>
-                            </button>
-                            <button type="button" onclick="printLowStockReport()" title="Print Low Stock Report" class="text-slate-400 hover:text-blue-400 transition-colors p-1">
-                                <i class="fas fa-print text-xs"></i>
-                            </button>
-                        </div>
-                        
-                        <span id="low-stock-count" class="text-[10px] font-extrabold bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded-full hidden">0</span>
+                <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Manager's Executive Flash Report</h1>
+                <p class="text-xs font-medium text-slate-500 mt-0.5">Enterprise PMS Real-time Property Performance</p>
+            </div>
+            
+            <!-- Interactive Date Controls -->
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="bg-slate-100 p-1 rounded-xl border border-slate-200 flex text-xs font-semibold">
+                    <button onclick="setDashboardRange('today')" id="btn-today" class="px-3 py-1.5 rounded-lg text-white bg-blue-600 shadow-sm transition">Today</button>
+                    <button onclick="setDashboardRange('yesterday')" id="btn-yesterday" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition">Yesterday</button>
+                    <button onclick="setDashboardRange('this_week')" id="btn-this_week" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition">This Week</button>
+                    <button onclick="setDashboardRange('this_month')" id="btn-this_month" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition">This Month</button>
+                </div>
+                
+                <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+                    <input type="date" id="custom-start-date" class="bg-white text-slate-700 px-2.5 py-1 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <span class="text-slate-400 font-medium">to</span>
+                    <input type="date" id="custom-end-date" class="bg-white text-slate-700 px-2.5 py-1 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <button onclick="applyCustomDateRange()" class="bg-slate-800 hover:bg-slate-900 px-3 py-1 rounded-lg text-white font-semibold transition">Apply</button>
+                </div>
+                
+                <div class="bg-slate-100 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 border border-slate-200">
+                    Capacity: <span id="val-capacity" class="text-slate-900 font-extrabold">--</span> Rooms
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. Key Performance Indicators with Trend Badges -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm relative">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Occupancy</span>
+                <div id="val-occupancy" class="text-2xl font-black text-blue-600 mt-1">0%</div>
+                <div class="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div id="bar-occupancy" class="bg-blue-600 h-full w-0 transition-all duration-500"></div>
+                </div>
+            </div>
+            
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">ADR</span>
+                <div id="val-adr" class="text-2xl font-black text-emerald-600 mt-1">0</div>
+                <span class="text-[10px] font-medium text-slate-400">Avg Daily Rate</span>
+            </div>
+
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">RevPAR</span>
+                    <span id="badge-revpar-trend" class="text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5"></span>
+                </div>
+                <div id="val-revpar" class="text-2xl font-black text-amber-600 mt-1">0</div>
+                <span class="text-[10px] font-medium text-slate-400">Rev Per Avail Room</span>
+            </div>
+
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Gross Rev</span>
+                    <span id="badge-gross-trend" class="text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5"></span>
+                </div>
+                <div id="val-gross-revenue" class="text-2xl font-black text-purple-600 mt-1">0</div>
+                <span class="text-[10px] font-medium text-slate-400">Rooms + POS Total</span>
+            </div>
+
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">POS Profit</span>
+                    <span id="badge-pos-profit-trend" class="text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5"></span>
+                </div>
+                <div id="val-pos-profit" class="text-2xl font-black text-cyan-600 mt-1">0</div>
+                <span class="text-[10px] font-medium text-slate-400">Bar/Rest Profit</span>
+            </div>
+
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Net Op Income</span>
+                    <span id="badge-noi-trend" class="text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5"></span>
+                </div>
+                <div id="val-noi" class="text-2xl font-black text-teal-600 mt-1">0</div>
+                <span class="text-[10px] font-medium text-slate-400">Rev Less Expenses</span>
+            </div>
+        </div>
+
+        <!-- 2. Front Desk Operations, Channel Mix, Housekeeping & Inventory -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+            <!-- Front Desk Operational Movement -->
+            <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-sm lg:col-span-2">
+                <h2 class="text-xs font-extrabold uppercase text-slate-600 tracking-wider mb-4 border-b border-slate-200 pb-2">
+                    Front Desk Operational Movement
+                </h2>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-xs font-medium text-slate-500">Arrivals Pending</span>
+                        <div id="fd-arrivals-pending" class="text-xl font-extrabold text-amber-600 mt-1">0</div>
+                    </div>
+                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-xs font-medium text-slate-500">Checked In</span>
+                        <div id="fd-arrivals-done" class="text-xl font-extrabold text-emerald-600 mt-1">0</div>
+                    </div>
+                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-xs font-medium text-slate-500">Departures Pending</span>
+                        <div id="fd-deps-pending" class="text-xl font-extrabold text-rose-600 mt-1">0</div>
+                    </div>
+                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-xs font-medium text-slate-500">Checked Out</span>
+                        <div id="fd-deps-done" class="text-xl font-extrabold text-blue-600 mt-1">0</div>
+                    </div>
+                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-xs font-medium text-slate-500">In-House Guests</span>
+                        <div id="fd-in-house" class="text-xl font-extrabold text-indigo-600 mt-1">0</div>
+                    </div>
+                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-xs font-medium text-slate-500">No-Shows</span>
+                        <div id="fd-no-shows" class="text-xl font-extrabold text-slate-600 mt-1">0</div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Scrollable list wrapper with fixed max-height -->
-                <div id="low-stock-container" class="mt-2 max-h-36 overflow-y-auto pr-1 space-y-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800">
-                    <p class="text-xs text-slate-400 italic py-1">All tracked items are adequately stocked.</p>
+            <!-- Distribution Channel Mix Card -->
+            <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-sm lg:col-span-1">
+                <div class="flex justify-between items-center mb-4 border-b border-slate-200 pb-2">
+                    <h2 class="text-xs font-extrabold uppercase text-slate-600 tracking-wider">
+                        Channel Distribution Mix
+                    </h2>
+                    <span class="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-bold uppercase">Sources</span>
+                </div>
+                
+                <div id="channel-mix-container" class="space-y-3 max-h-48 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
+                    <p class="text-xs text-slate-400 italic py-2">Loading distribution data...</p>
+                </div>
+            </div>
+
+            <!-- Housekeeping Matrix -->
+            <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-sm lg:col-span-1">
+                <h2 class="text-xs font-extrabold uppercase text-slate-600 tracking-wider mb-4 border-b border-slate-200 pb-2">
+                    Housekeeping Matrix
+                </h2>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center text-xs bg-white p-2 rounded-lg border border-slate-200">
+                        <span class="text-emerald-700 font-bold">● Clean / Ready</span>
+                        <span id="hk-clean" class="font-extrabold text-slate-900">0</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs bg-white p-2 rounded-lg border border-slate-200">
+                        <span class="text-rose-700 font-bold">● Dirty / Departure</span>
+                        <span id="hk-dirty" class="font-extrabold text-slate-900">0</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs bg-white p-2 rounded-lg border border-slate-200">
+                        <span class="text-blue-700 font-bold">● Occupied</span>
+                        <span id="hk-occupied" class="font-extrabold text-slate-900">0</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs bg-white p-2 rounded-lg border border-slate-200">
+                        <span class="text-amber-700 font-bold">● Maintenance</span>
+                        <span id="hk-maintenance" class="font-extrabold text-slate-900">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Low Stock Items Alert Card -->
+            <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-sm lg:col-span-1 relative overflow-hidden flex flex-col justify-between">
+                <div class="absolute left-0 top-0 h-full w-1 bg-rose-500 rounded-full"></div>
+                
+                <div>
+                    <div class="flex items-center justify-between mb-2 pb-2 border-b border-slate-200">
+                        <p class="text-xs font-extrabold text-slate-600 uppercase tracking-wider">Low Stock Items</p>
+                        
+                        <div class="flex items-center space-x-2">
+                            <!-- Action Buttons -->
+                            <div id="low-stock-actions" class="hidden flex items-center space-x-1">
+                                <button type="button" onclick="exportLowStockToCSV()" title="Export Low Stock to CSV" class="text-slate-400 hover:text-emerald-600 transition-colors p-1">
+                                    <i class="fas fa-file-excel text-xs"></i>
+                                </button>
+                                <button type="button" onclick="printLowStockReport()" title="Print Low Stock Report" class="text-slate-400 hover:text-blue-600 transition-colors p-1">
+                                    <i class="fas fa-print text-xs"></i>
+                                </button>
+                            </div>
+                            
+                            <span id="low-stock-count" class="text-[10px] font-extrabold bg-rose-100 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full hidden">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Scrollable list wrapper -->
+                    <div id="low-stock-container" class="mt-2 max-h-36 overflow-y-auto pr-1 space-y-2 scrollbar-thin scrollbar-thumb-rose-200 scrollbar-track-slate-100">
+                        <p class="text-xs text-slate-400 italic py-1">All tracked items are adequately stocked.</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    <!-- Distribution Channel Mix Card -->
-<div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-1">
-    <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-        <h2 class="text-sm font-bold uppercase text-slate-300">
-            Channel Distribution Mix
-        </h2>
-        <span class="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full font-semibold uppercase">Source Breakdown</span>
-    </div>
-    
-    <div id="channel-mix-container" class="space-y-3 max-h-48 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800">
-        <!-- Rendered dynamically via renderChannelMix() -->
-        <p class="text-xs text-slate-400 italic py-2">Loading distribution data...</p>
-    </div>
-</div>
 
-    <!-- 3. Financial Audit -->
-    <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
-        <h2 class="text-sm font-bold uppercase text-slate-300 mb-4 border-b border-slate-700 pb-2">
-            Period Financial Audit Summary
-        </h2>
-        <div class="grid grid-cols-2 md:grid-cols-7 gap-4 text-center">
-            <div>
-                <span class="text-xs text-slate-400">Room Revenue</span>
-                <div id="fin-room-rev" class="text-base font-bold text-white mt-1">0</div>
-            </div>
-            <div>
-                <span class="text-xs text-slate-400">POS Revenue</span>
-                <div id="fin-pos-rev" class="text-base font-bold text-emerald-400 mt-1">0</div>
-            </div>
-            <div>
-                <span class="text-xs text-slate-400">POS Profit</span>
-                <div id="fin-pos-profit" class="text-base font-bold text-cyan-400 mt-1">0</div>
-            </div>
-            <div>
-                <span class="text-xs text-slate-400">Gross Profit</span>
-                <div id="fin-gross-profit" class="text-base font-bold text-purple-400 mt-1">0</div>
-            </div>
-            <div>
-                <span class="text-xs text-slate-400">Cash Collected</span>
-                <div id="fin-collected" class="text-base font-bold text-teal-400 mt-1">0</div>
-            </div>
-            <div>
-                <span class="text-xs text-slate-400">Guest Ledger Balance</span>
-                <div id="fin-ledger-bal" class="text-base font-bold text-rose-400 mt-1">0</div>
-            </div>
-            <div>
-                <span class="text-xs text-slate-400">Operating Expenses</span>
-                <div id="fin-expenses" class="text-base font-bold text-amber-400 mt-1">0</div>
+        <!-- 3. Financial Audit -->
+        <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-sm">
+            <h2 class="text-xs font-extrabold uppercase text-slate-600 tracking-wider mb-4 border-b border-slate-200 pb-2">
+                Period Financial Audit Summary
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-7 gap-4 text-center">
+                <div class="bg-white p-3 rounded-lg border border-slate-200">
+                    <span class="text-xs font-medium text-slate-500">Room Revenue</span>
+                    <div id="fin-room-rev" class="text-base font-extrabold text-slate-900 mt-1">0</div>
+                </div>
+                <div class="bg-white p-3 rounded-lg border border-slate-200">
+                    <span class="text-xs font-medium text-slate-500">POS Revenue</span>
+                    <div id="fin-pos-rev" class="text-base font-extrabold text-emerald-600 mt-1">0</div>
+                </div>
+                <div class="bg-white p-3 rounded-lg border border-slate-200">
+                    <span class="text-xs font-medium text-slate-500">POS Profit</span>
+                    <div id="fin-pos-profit" class="text-base font-extrabold text-cyan-600 mt-1">0</div>
+                </div>
+                <div class="bg-white p-3 rounded-lg border border-slate-200">
+                    <span class="text-xs font-medium text-slate-500">Gross Profit</span>
+                    <div id="fin-gross-profit" class="text-base font-extrabold text-purple-600 mt-1">0</div>
+                </div>
+                <div class="bg-white p-3 rounded-lg border border-slate-200">
+                    <span class="text-xs font-medium text-slate-500">Cash Collected</span>
+                    <div id="fin-collected" class="text-base font-extrabold text-teal-600 mt-1">0</div>
+                </div>
+                <div class="bg-white p-3 rounded-lg border border-slate-200">
+                    <span class="text-xs font-medium text-slate-500">Guest Ledger Bal</span>
+                    <div id="fin-ledger-bal" class="text-base font-extrabold text-rose-600 mt-1">0</div>
+                </div>
+                <div class="bg-white p-3 rounded-lg border border-slate-200">
+                    <span class="text-xs font-medium text-slate-500">Operating Expenses</span>
+                    <div id="fin-expenses" class="text-base font-extrabold text-amber-600 mt-1">0</div>
+                </div>
             </div>
         </div>
+
     </div>
-  </div>
 </section>
 <!-- Hidden File Input for Inline Table Image Picker -->
 <input type="file" id="globalRowImagePicker" multiple accept="image/*" class="hidden">
