@@ -5891,8 +5891,25 @@ async function getTodayInventory(itemName, initialOpening = 0, hotelId) {
 // --- ROUTES ---
 
 app.post('/logout', auth, async (req, res) => {
-  await logAction('Logout', req.user.username);
-  res.status(200).json({ message: 'Logged out successfully' });
+  try {
+    if (req.user) {
+      // Safely extract username and hotelId from req.user
+      const username = req.user.username || 'Unknown User';
+      const hotelId = req.user.hotelId || null;
+
+      // Pass action, username, hotelId, and optional IP/User-Agent details
+      await addAuditLog('Logout', username, hotelId, {
+        ip: req.ip,
+        userAgent: req.headers['user-agent']
+      });
+    }
+  } catch (error) {
+    // Log internal failure without breaking the client's logout flow
+    console.error('Failed to write logout audit log:', error.message);
+  }
+
+  // Always return success so local session cleanup proceeds on front-end
+  return res.status(200).json({ message: 'Logged out successfully' });
 });
 
 

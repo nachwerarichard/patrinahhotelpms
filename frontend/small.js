@@ -291,45 +291,53 @@ const getHotelCurrency = () => {
 };
 
 async function authenticatedFetch(url, options = {}) {
-    let token = localStorage.getItem('token');
-    const params = new URLSearchParams(window.location.search);
-    
-    // 1. Wait for token logic
-    if (!token && params.get('autoLogin') === 'true') {
-        await new Promise((resolve) => {
-            let attempts = 0;
-            const interval = setInterval(() => {
-                token = localStorage.getItem('token');
-                attempts++;
-                if (token || attempts > 30) { 
-                    clearInterval(interval);
-                    resolve();
-                }
-            }, 100);
-        });
-    }
+    let token = localStorage.getItem('token');
 
-    if (!token) {
-        window.location.replace('https://elegant-pasca-cea136.netlify.app/frontend/login.html');
-        return null;
-    }
+    // 1. If no token, return to inline login UI instead of redirecting externally
+    if (!token) {
+        console.warn('No token found. Showing inline login UI.');
+        if (typeof logout === 'function') {
+            logout();
+        } else {
+            const loginContainer = document.getElementById('login-container');
+            if (loginContainer) loginContainer.classList.remove('hidden');
+            const dashboardWrapper = document.getElementById('dashboard-wrapper');
+            if (dashboardWrapper) dashboardWrapper.style.display = 'none';
+        }
+        return null;
+    }
 
-    // 2. Start with standard headers + AUTOMATED MULTI-TENANT CURRENCY PASSTHROUGH
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'x-hotel-id': localStorage.getItem('hotelId') || 'global',
-        'x-hotel-currency': localStorage.getItem('hotelCurrency') || 'UGX', // ➔ INJECT CURRENCY HERE
-        ...options.headers 
-    };
+    // 2. Standard headers + Automated Multi-Tenant Headers
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'x-hotel-id': localStorage.getItem('hotelId') || 'global',
+        'x-hotel-currency': localStorage.getItem('hotelCurrency') || 'UGX',
+        ...options.headers 
+    };
 
-    // 3. Smart Content-Type Assignment
-    if (options.body instanceof FormData) {
-        delete headers['Content-Type']; 
-    } else if (options.body) { 
-        headers['Content-Type'] = 'application/json';
-    }
+    // 3. Smart Content-Type Assignment
+    if (options.body instanceof FormData) {
+        delete headers['Content-Type']; 
+    } else if (options.body && !headers['Content-Type']) { 
+        headers['Content-Type'] = 'application/json';
+    }
 
-    return fetch(url, { ...options, headers: headers });
+    try {
+        const response = await fetch(url, { ...options, headers });
+
+        // 4. Handle expired/invalid token globally
+        if (response.status === 401) {
+            console.warn('Session expired or unauthorized (401). Triggering logout...');
+            if (typeof logout === 'function') {
+                logout();
+            }
+        }
+
+        return response;
+    } catch (error) {
+        console.error('Network request failed:', error);
+        throw error;
+    }
 }
 
 function showMessage(title, message, isError = false) {
@@ -5231,39 +5239,67 @@ updateroomDashboard();
 
 async function logout() {
     console.log("Initiating secure logout...");
-    
-    try {
-        // Create an AbortController to prevent the logout from hanging 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000); 
 
-        // authenticatedFetch handles Authorization, x-hotel-id, and x-hotel-currency automatically
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); 
+
+    try {
         await authenticatedFetch(`${API_BASE_URL}/logout`, {
             method: 'POST',
             signal: controller.signal
         });
-
-        clearTimeout(timeoutId);
     } catch (error) {
         console.warn('Backend logout sync skipped or timed out:', error.message);
+    } finally {
+        clearTimeout(timeoutId);
     }
 
-    /* ---------- WIPE LOCAL STATE ---------- */
-    // 1. Clear All in-memory variables safely
+    /* ---------- 1. WIPE LOCAL STATE & STORAGE ---------- */
     if (typeof authToken !== 'undefined') authToken = '';
     if (typeof currentUsername !== 'undefined') currentUsername = '';
     if (typeof currentUserRole !== 'undefined') currentUserRole = '';
-    if (typeof currentCurrency !== 'undefined') currentCurrency = ''; // ➔ ADDED: Local runtime scope wipe
+    if (typeof currentCurrency !== 'undefined') currentCurrency = '';
 
-    // 2. Clear all persistence (Critical for multi-tenant security)
     localStorage.clear();
     sessionStorage.clear();
 
-    // 3. Secure Redirect
-    const LOGIN_PAGE = 'https://elegant-pasca-cea136.netlify.app/frontend/login.html';
-    console.log("Session cleared. Redirecting to login...");
-    
-    window.location.replace(LOGIN_PAGE);
+    /* ---------- 2. RESET INLINE UI COMPONENTS ---------- */
+    // Hide main application content wrapper using style.display
+    const dashboardWrapper = document.getElementById('dashboard-wrapper');
+    if (dashboardWrapper) {
+        dashboardWrapper.style.display = 'none';
+    }
+
+    // Reset and reveal inline login container
+    const loginContainer = document.getElementById('login-container');
+    if (loginContainer) {
+        loginContainer.classList.remove('hidden');
+    }
+
+    // Clean up login form inputs and button states
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.reset();
+    }
+
+    const err = document.getElementById('error-message');
+    if (err) {
+        err.textContent = '';
+        err.classList.add('hidden');
+    }
+
+    const btn = document.getElementById('login-button');
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-sign-in-alt mr-1.5"></i> Secure Login`;
+        btn.className = 'w-full py-3.5 bg-slate-900 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 active:scale-[0.98] transition-all duration-200 text-sm';
+    }
+
+    // Clean URL parameters from the address bar
+    const cleanUrl = window.location.origin + window.location.pathname;
+    window.history.replaceState({}, document.title, cleanUrl);
+
+    console.log("Session cleared. Returned to inline login screen.");
 }
 
 
@@ -15829,8 +15865,9 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
                 const loginContainer = document.getElementById('login-container');
                 if (loginContainer) loginContainer.classList.add('hidden');
 
-                const mainContent = document.getElementById('main-content');
-                if (mainContent) mainContent.classList.remove('hidden');
+                // ➔ TARGET dashboard-wrapper DIRECTLY AND SET DISPLAY TO FLEX
+                const dashboardWrapper = document.getElementById('dashboard-wrapper');
+                if (dashboardWrapper) dashboardWrapper.style.display = 'flex';
 
                 // Boot Main Application Controller
                 if (typeof initDashboard === 'function') {
