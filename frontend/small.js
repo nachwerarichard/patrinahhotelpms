@@ -15800,7 +15800,6 @@ function toggleDropdown(menuId, arrowId) {
     }
 }
 
-const API_URL = 'https://patrinahhotelpms.onrender.com/api';
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -15816,7 +15815,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     const password = document.getElementById('password').value.trim();
 
     try {
-        const response = await fetch(`${API_URL}/login`, {
+        const response = await fetch(`${API_BASE_URL}/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
