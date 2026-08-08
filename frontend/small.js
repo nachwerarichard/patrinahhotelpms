@@ -15763,3 +15763,91 @@ function toggleDropdown(menuId, arrowId) {
         arrow.classList.remove('rotate-180');
     }
 }
+
+const API_URL = 'https://patrinahhotelpms.onrender.com/api';
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const btn = document.getElementById('login-button');
+    const err = document.getElementById('error-message');
+    
+    btn.disabled = true;
+    btn.innerHTML = `<span class="flex items-center justify-center gap-2"><i class="fas fa-spinner fa-spin"></i> Verifying Credentials...</span>`;
+    err.classList.add('hidden');
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+
+    try {
+        const response = await fetch(`${API_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            const user = result.user;
+            const token = result.token;
+
+            // Extract User Data
+            const usernameVal = user.username;
+            const role = (user.role || '').toLowerCase();
+            const hotelId = user.hotelId || 'global';
+            const hotelName = user.hotelName || 'Our Hotel';
+            const hotelLocation = user.hotelLocation || 'Main Campus';
+            const hotelCurrency = user.hotelCurrency || 'UGX';
+
+            // Commit session state directly to localStorage
+            localStorage.setItem('token', token);
+            localStorage.setItem('username', usernameVal);
+            localStorage.setItem('userRole', role);
+            localStorage.setItem('hotelId', hotelId);
+            localStorage.setItem('hotelName', hotelName);
+            localStorage.setItem('hotelLocation', hotelLocation);
+            localStorage.setItem('hotelCurrency', hotelCurrency);
+
+            const targetUserObject = {
+                username: usernameVal,
+                role: role,
+                token: token,
+                hotelName: hotelName,
+                hotelId: hotelId,
+                hotelLocation: hotelLocation,
+                hotelCurrency: hotelCurrency
+            };
+            localStorage.setItem('loggedInUser', JSON.stringify(targetUserObject));
+
+            // Feedback UI
+            btn.innerHTML = `<span class="flex items-center justify-center gap-2"><i class="fas fa-check"></i> Access Granted</span>`;
+            btn.classList.replace('bg-slate-900', 'bg-emerald-600');
+
+            // Hide Login Overlay & Reveal Main Application
+            setTimeout(() => {
+                const loginContainer = document.getElementById('login-container');
+                if (loginContainer) loginContainer.classList.add('hidden');
+
+                const mainContent = document.getElementById('main-content');
+                if (mainContent) mainContent.classList.remove('hidden');
+
+                // Boot Main Application Controller
+                if (typeof initDashboard === 'function') {
+                    initDashboard();
+                }
+            }, 600);
+
+        } else {
+            err.textContent = result.message || 'Authentication failed.';
+            err.classList.remove('hidden');
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fas fa-sign-in-alt mr-1.5"></i> Secure Login`;
+        }
+    } catch (error) {
+        err.textContent = 'Server unreachable. Check your connection.';
+        err.classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-sign-in-alt mr-1.5"></i> Secure Login`;
+    }
+});
