@@ -13887,3 +13887,5 @@ document.getElementById('btn-sync-ical')?.addEventListener('click', async () => 
         spinner.classList.add('hidden');
     }
 });
+
+loadChannelManager();
