@@ -1,0 +1,296 @@
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        /*.glass-morphism { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }*/
+
+    .spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 0.8s linear infinite;
+    margin-right: 8px; /* Space between spinner and text */
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+    animation: spin 1s linear infinite;
+}
+    /* Custom Scrollbar for the Audit Table */
+.custom-scrollbar::-webkit-scrollbar {
+    height: 12px; /* Height of horizontal scrollbar */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #3b82f6; /* Blue-600 */
+    border-radius: 10px;
+    border: 3px solid #f1f1f1;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #2563eb;
+}
+    .radial-btn {
+        position: absolute;
+        z-index: 40;
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transform: translate(0, 0) scale(0.5);
+    }
+
+    /* This class is added via JS to trigger the "pop out" */
+    .radial-btn.show {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translate(var(--tw-translate-x), var(--tw-translate-y)) scale(1);
+    }
+        @keyframes bounce-in {
+        0% { transform: scale(0.9); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-bounce-in { animation: bounce-in 0.2s ease-out forwards; }
+        .hidden{display:none;}
+    /* Ensure the container stays inside the table cell */
+.action-buttons-container {
+    position: relative; 
+    display: inline-block;
+}
+
+/* Ensure the dropdown menu moves WITH the row */
+.hidden-action-buttons {
+    position: absolute;
+    right: 0;
+    top: 100%; /* Appears exactly below the button */
+    z-index: 50; /* Sits on top of other rows */
+    min-width: 150px;
+    white-space: nowrap; /* Prevents text wrapping */
+}
+
+/* Optional: If your table has 'overflow-hidden', the menu might get cut off. 
+   Apply this to the table wrapper if needed: */
+.overflow-x-auto {
+    position: relative;
+    overflow: visible !important;
+}
+
+/* ===============================================================
+   UNIFIED PRINT STYLESHEET (Reports & Guest Receipt/Folio Modal)
+   =============================================================== */
+
+/* ==========================================
+   NAMED PAGES FOR MULTI-FORMAT PRINTING
+   ========================================== */
+/* 1. Global A4 Page Setup */
+@page {
+    size: A4 portrait;
+    margin: 1.2cm;
+}
+
+@media print {
+    /* 2. Global Document Reset */
+    html, body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* 3. Hide Navigation, UI Controls & Modal Backdrop Overlays */
+    nav, 
+    header, 
+    aside, 
+    .sidebar, 
+    .filter-section, 
+    button, 
+    .no-print, 
+    #receiptModal button, 
+    #receiptModal .close-btn, 
+    .modal-footer {
+        display: none !important;
+    }
+
+    /* 4. Hide Main App Body when Printing Modal (Prevents Content Overlap) */
+    body > *:not(#receiptModal) {
+        display: none !important;
+    }
+
+    /* 5. Isolated Receipt / Invoice Container for A4 */
+    #receiptModal {
+        display: block !important;
+        position: relative !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        box-shadow: none !important;
+        border: none !important;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+        line-height: 1.4 !important;
+    }
+
+    /* 6. Unlock Scrollable Tailwind Containers */
+    .max-h-\[90vh\], 
+    .overflow-y-auto {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    /* 7. Clean Table Spacing for A4 Sheets */
+    #receiptModal table,
+    .report-container table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+    #receiptModal th, 
+    #receiptModal td {
+        padding: 8px 10px !important;
+        border-bottom: 1px solid #e5e7eb !important;
+    }
+
+    /* 8. Page Break Protection */
+    tr, h4, .totals, .invoice-header, .invoice-footer {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+    }
+}
+
+
+/* Hide the Google Translate branding/logo */
+/* 1. Hide the ugly "Powered by Google" branding and text noise */
+.goog-logo-link, 
+.goog-te-gadget span, 
+.goog-te-banner-frame,
+#goog-gt-tt {
+    display: none !important;
+}
+.goog-te-gadget {
+    color: transparent !important;
+    font-size: 0 !important;
+}
+
+/* 2. Style the actual dropdown element injected by Google */
+#google_translate_element select.goog-te-combo {
+    background-color: transparent !important;
+    border: none !important;
+    color: #334155 !important; /* Tailwind's text-slate-700 */
+    font-family: inherit !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    padding: 0 28px 0 4px !important; /* Spacing for custom arrow */
+    margin: 0 !important;
+    outline: none !important;
+    cursor: pointer !important;
+    appearance: none !important; /* Strips default browser styling */
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+}
+
+/* 3. Handle the dynamic positioning of the wrapper box */
+.translate-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* 4. Inject a clean, modern chevron arrow next to the text */
+.translate-wrapper::after {
+    content: "";
+    position: absolute;
+    right: 12px;
+    top: 51%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='3' stroke='%2364748b' %3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    pointer-events: none;
+    transition: all 0.2s;
+}
+
+/* Turn the arrow Indigo when hovering the widget box */
+.translate-wrapper:hover::after {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='3' stroke='%236366f1' %3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E");
+}
+
+/* Prevent Google from pushing the top of your page layout down */
+body {
+    top: 0 !important;
+}
+.skiptranslate {
+    display: none !important;
+}
+.skiptranslate.goog-te-gadget {
+    display: block !important;
+}
+    /* Custom, sleek scrollbar for your sidebar nav container */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 5px; /* Ultra-thin sleek track */
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent; /* Seamless blend with sidebar bg */
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #334155; /* Slate-700 to match dashboard borders */
+        border-radius: 9999px; /* Pill-shaped design */
+        transition: background 0.2s ease;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #4f46e5; /* Changes to Indigo-600 when hovered to match interactive states */
+    }
+
+    /* Firefox fallback styling */
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #334155 transparent;
+        -webkit-overflow-scrolling: touch; /* Butter-smooth momentum physics for iOS safari */
+    }
+
+    /* Enable smooth scrolling inside our table wrapper on mobile */
+.inventory-scroll-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* On screens smaller than 768px, stick the first column so the item name stays fixed */
+@media (max-width: 767px) {
+    .sticky-col {
+        position: sticky !important;
+        left: 0;
+        z-index: 20;
+        background-color: #ffffff; /* Matches row backgrounds */
+    }
+    
+    /* Give the fixed column row a clean divider line */
+    th.sticky-col, td.sticky-col {
+        border-right: 2px solid #e2e8f0 !important;
+    }
+}
+
+
+    
+
