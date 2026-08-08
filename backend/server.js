@@ -8602,30 +8602,49 @@ app.post('/api/integrations/sync-all', auth, async (req, res) => {
 // 1. EXPORT LOCAL BOOKINGS AS ICAL FEED
 // ==========================================
 // Public endpoint used by Airbnb/Booking.com to fetch your calendar
-app.get('/ical/export/:roomId/:token', async (req, res) => {
+
+const icalParser = require('node-ical');
+
+
+// Utility to normalize date strings to pure YYYY-MM-DD without UTC shift issues
+const toYMD = (dateVal) => {
+    const d = new Date(dateVal);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+// ==========================================
+// 1. EXPORT ICAL FEED (Public Endpoint)
+// ==========================================
+app.get('/export/:roomId/:token', async (req, res) => {
     const { roomId, token } = req.params;
 
     try {
         const roomDoc = await Room.findById(roomId);
         if (!roomDoc || roomDoc.icalExportToken !== token) {
-            return res.status(401).send('Unauthorized calendar request.');
+            return res.status(401).send('Unauthorized calendar feed.');
         }
 
         const bookings = await Booking.find({
             hotelId: roomDoc.hotelId,
             room: roomDoc.number,
-            gueststatus: { $ne: 'cancelled' } // Exclude cancelled reservations
+            gueststatus: { $nin: ['cancelled', 'no-show'] }
         });
 
-        const calendar = ical({ name: `Room ${roomDoc.number} Calendar` });
+        const calendar = ical({ 
+            name: `Property Unit ${roomDoc.number} Feed`,
+            prodId: { company: 'HotelPMS', product: 'ChannelManager' }
+        });
 
         bookings.forEach(booking => {
             calendar.createEvent({
-                id: booking.id,
+                id: booking._id.toString(),
                 start: new Date(booking.checkIn),
                 end: new Date(booking.checkOut),
-                summary: `Reserved - ${booking.name}`,
-                description: `Booking ID: ${booking.id}\nSource: ${booking.guestsource}`,
+                summary: `RESERVED - ${booking.name || 'Occupied'}`,
+                description: `PMS Reservation ID: ${booking.id || booking._id}\nSource: ${booking.guestsource || 'Direct'}`,
                 allDay: true
             });
         });
@@ -8636,23 +8655,27 @@ app.get('/ical/export/:roomId/:token', async (req, res) => {
 
     } catch (err) {
         console.error('iCal Export Error:', err);
-        return res.status(500).send('Internal server error generating calendar feed.');
+        return res.status(500).send('Error generating calendar feed.');
     }
 });
 
 // ==========================================
-// 2. SAVE IMPORT LINK FOR A ROOM
+// 2. SAVE IMPORT LINK
 // ==========================================
-app.post('/ical/import-link', auth, async (req, res) => {
+app.post('/import-link', auth, async (req, res) => {
     const { roomId, source, url } = req.body;
     try {
+        if (!url || !url.startsWith('http')) {
+            return res.status(400).json({ error: 'Valid iCal URL strictly required.' });
+        }
+
         const room = await Room.findOne({ _id: roomId, hotelId: req.user.hotelId });
-        if (!room) return res.status(404).json({ error: 'Room not found.' });
+        if (!room) return res.status(404).json({ error: 'Room unit not found.' });
 
         room.icalImportUrls.push({ source, url });
         await room.save();
 
-        res.json({ success: true, message: 'Import URL added successfully!', icalImportUrls: room.icalImportUrls });
+        res.json({ success: true, message: 'Channel feed connected!', icalImportUrls: room.icalImportUrls });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -8661,85 +8684,102 @@ app.post('/ical/import-link', auth, async (req, res) => {
 // ==========================================
 // 3. REMOVE IMPORT LINK
 // ==========================================
-app.delete('/ical/import-link/:roomId/:linkId', auth, async (req, res) => {
+app.delete('/import-link/:roomId/:linkId', auth, async (req, res) => {
     const { roomId, linkId } = req.params;
     try {
         const room = await Room.findOne({ _id: roomId, hotelId: req.user.hotelId });
-        if (!room) return res.status(404).json({ error: 'Room not found.' });
+        if (!room) return res.status(404).json({ error: 'Room unit not found.' });
 
         room.icalImportUrls = room.icalImportUrls.filter(item => item._id.toString() !== linkId);
         await room.save();
 
-        res.json({ success: true, message: 'Import URL removed successfully!', icalImportUrls: room.icalImportUrls });
+        res.json({ success: true, message: 'Channel feed disconnected!', icalImportUrls: room.icalImportUrls });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
 // ==========================================
-// 4. TRIGGER CALENDAR INGESTION (FETCH FROM OTAs)
+// 4. INGEST & SYNC EXTERNAL FEEDS
 // ==========================================
-app.post('/ical/sync-imports', auth, async (req, res) => {
+app.post('/sync-imports', auth, async (req, res) => {
     const hotelId = req.user.hotelId;
-    // node-ical can parse incoming .ics files
-    const icalParser = require('node-ical'); 
 
     try {
         const rooms = await Room.find({ hotelId, 'icalImportUrls.0': { $exists: true } });
-        let newReservationsCount = 0;
+        let createdCount = 0;
+        let updatedCount = 0;
 
         for (const room of rooms) {
             for (const importConfig of room.icalImportUrls) {
-                // Fetch the external calendar .ics raw data
-                const response = await axios.get(importConfig.url);
-                const webEvents = icalParser.sync.parseICS(response.data);
+                try {
+                    const response = await axios.get(importConfig.url, { timeout: 10000 });
+                    const webEvents = icalParser.sync.parseICS(response.data);
 
-                for (const key in webEvents) {
-                    const event = webEvents[key];
-                    if (event.type !== 'VEVENT') continue;
+                    for (const key in webEvents) {
+                        const event = webEvents[key];
+                        if (event.type !== 'VEVENT' || !event.start || !event.end) continue;
 
-                    const uid = event.uid || `ical-${Date.now()}-${Math.random()}`;
-                    const startYmd = new Date(event.start).toISOString().split('T')[0];
-                    const endYmd = new Date(event.end).toISOString().split('T')[0];
+                        const uid = event.uid || `ical-${room._id}-${event.start.getTime()}`;
+                        const startYmd = toYMD(event.start);
+                        const endYmd = toYMD(event.end);
 
-                    // Check if we have already imported this specific channel booking
-                    const existingBooking = await Booking.findOne({ 
-                        hotelId, 
-                        $or: [ { id: uid }, { transactionid: uid } ]
-                    });
+                        const startMs = new Date(startYmd).getTime();
+                        const endMs = new Date(endYmd).getTime();
+                        const nightsCount = Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24)));
 
-                    if (!existingBooking) {
-                        const nightsCount = Math.round((new Date(endYmd) - new Date(startYmd)) / (1000 * 60 * 60 * 24));
-
-                        const newBooking = new Booking({
-                            hotelId,
-                            id: uid,
-                            name: event.summary || `OTA Booking (Room ${room.number})`,
-                            room: room.number,
-                            checkIn: startYmd,
-                            checkOut: endYmd,
-                            nights: nightsCount || 1,
-                            people: 1,
-                            guestsource: importConfig.source,
-                            gueststatus: 'confirmed',
-                            totalDue: 0, 
-                            amountPaid: 0,
-                            transactionid: uid
+                        // Query for existing record
+                        let existingBooking = await Booking.findOne({ 
+                            hotelId, 
+                            $or: [{ id: uid }, { transactionid: uid }]
                         });
 
-                        await newBooking.save();
-                        newReservationsCount++;
+                        if (!existingBooking) {
+                            // Create New Booking
+                            const newBooking = new Booking({
+                                hotelId,
+                                id: uid,
+                                name: event.summary || `${importConfig.source} Booking`,
+                                room: room.number,
+                                checkIn: startYmd,
+                                checkOut: endYmd,
+                                nights: nightsCount,
+                                people: 1,
+                                guestsource: importConfig.source,
+                                gueststatus: 'confirmed',
+                                totalDue: 0,
+                                amountPaid: 0,
+                                transactionid: uid
+                            });
+                            await newBooking.save();
+                            createdCount++;
+                        } else {
+                            // Sync dates if external reservation modified
+                            if (existingBooking.checkIn !== startYmd || existingBooking.checkOut !== endYmd) {
+                                existingBooking.checkIn = startYmd;
+                                existingBooking.checkOut = endYmd;
+                                existingBooking.nights = nightsCount;
+                                await existingBooking.save();
+                                updatedCount++;
+                            }
+                        }
                     }
+                } catch (feedErr) {
+                    console.error(`Failed to fetch feed ${importConfig.url}:`, feedErr.message);
                 }
             }
         }
 
-        res.json({ success: true, message: `Successfully synchronized OTA channels. Imported ${newReservationsCount} new bookings.` });
+        res.json({ 
+            success: true, 
+            message: `Synchronization complete. ${createdCount} new bookings added, ${updatedCount} updated.` 
+        });
     } catch (err) {
         console.error('iCal Ingest Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
+
 
 
 

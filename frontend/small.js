@@ -13745,3 +13745,145 @@ function switchInventoryTab(tabName) {
         btnLive.className = 'px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200/60 transition-all';
     }
 }
+
+
+
+// Bind dynamic API Base URL
+const CHANNEL_API_BASE = typeof API_BASE_URL !== 'undefined' 
+    ? `${API_BASE_URL}/ical` 
+    : `${window.location.origin}/ical`;
+
+async function loadChannelManager() {
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/rooms`, { method: 'GET' });
+        if (!response || !response.ok) return;
+        const rooms = await response.json();
+
+        const tbody = document.getElementById('channel-manager-tbody');
+        tbody.innerHTML = '';
+
+        rooms.forEach(room => {
+            const exportUrl = `${CHANNEL_API_BASE}/export/${room._id}/${room.icalExportToken || 'global'}`;
+            
+            let importsHtml = '';
+            if (room.icalImportUrls && room.icalImportUrls.length > 0) {
+                importsHtml = room.icalImportUrls.map(link => `
+                    <div class="flex justify-between items-center bg-slate-50 border border-slate-200 p-2 rounded mb-1 text-xs">
+                        <span class="truncate max-w-[200px]">
+                            <strong class="text-slate-700">${link.source}:</strong> 
+                            <code class="text-slate-500">${link.url}</code>
+                        </span>
+                        <button onclick="deleteImportLink('${room._id}', '${link._id}')" class="text-red-500 hover:text-red-700 font-bold ml-2">
+                            ✕
+                        </button>
+                    </div>
+                `).join('');
+            } else {
+                importsHtml = '<span class="text-slate-400 text-xs italic">No active OTA channels connected</span>';
+            }
+
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-slate-200 hover:bg-slate-50 transition-colors';
+            tr.innerHTML = `
+                <td class="py-3 px-6 text-left font-bold text-slate-800">Room ${room.number}</td>
+                <td class="py-3 px-6 text-left">
+                    <div class="flex items-center gap-2">
+                        <input type="text" readonly value="${exportUrl}" class="bg-slate-100 border border-slate-200 text-xs p-2 rounded w-full select-all font-mono text-slate-600">
+                        <button onclick="copyToClipboard('${exportUrl}')" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs px-3 py-2 rounded font-medium transition">
+                            Copy
+                        </button>
+                    </div>
+                </td>
+                <td class="py-3 px-6 text-left">${importsHtml}</td>
+                <td class="py-3 px-6 text-center">
+                    <button onclick="openIcalModal('${room._id}')" class="bg-blue-50 text-blue-600 hover:bg-blue-100 font-semibold px-3 py-2 rounded text-xs transition">
+                        + Link OTA
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (err) {
+        console.error('Error rendering channel manager:', err);
+    }
+}
+
+// Clipboard helper
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Export iCal Feed URL copied to clipboard!');
+    }).catch(() => {
+        alert('Failed to copy. Please highlight and copy manually.');
+    });
+}
+
+// Global modal triggers
+function openIcalModal(roomId) {
+    document.getElementById('modal-ical-room-id').value = roomId;
+    document.getElementById('modal-ical-url').value = '';
+    document.getElementById('modal-add-ical').classList.remove('hidden');
+}
+
+function closeIcalModal() {
+    document.getElementById('modal-add-ical').classList.add('hidden');
+}
+
+async function submitIcalImport() {
+    const roomId = document.getElementById('modal-ical-room-id').value;
+    const source = document.getElementById('modal-ical-source').value;
+    const url = document.getElementById('modal-ical-url').value.trim();
+
+    if (!url) return alert('Please enter a valid iCal feed URL.');
+
+    try {
+        const response = await authenticatedFetch(`${CHANNEL_API_BASE}/import-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ roomId, source, url })
+        });
+
+        if (response && response.ok) {
+            closeIcalModal();
+            loadChannelManager();
+        } else {
+            const errData = await response.json();
+            alert(errData.error || 'Failed to link channel feed.');
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function deleteImportLink(roomId, linkId) {
+    if (!confirm('Are you sure you want to disconnect this feed?')) return;
+    try {
+        const response = await authenticatedFetch(`${CHANNEL_API_BASE}/import-link/${roomId}/${linkId}`, {
+            method: 'DELETE'
+        });
+        if (response && response.ok) loadChannelManager();
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+// Bind Global Channel Sync Button
+document.getElementById('btn-sync-ical')?.addEventListener('click', async () => {
+    const btn = document.getElementById('btn-sync-ical');
+    const spinner = document.getElementById('ical-sync-spinner');
+
+    btn.disabled = true;
+    spinner.classList.remove('hidden');
+
+    try {
+        const response = await authenticatedFetch(`${CHANNEL_API_BASE}/sync-imports`, { method: 'POST' });
+        if (response && response.ok) {
+            const data = await response.json();
+            alert(data.message);
+        }
+    } catch (err) {
+        console.error(err);
+    } finally {
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+    }
+});
