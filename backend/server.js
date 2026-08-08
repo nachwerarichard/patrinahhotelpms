@@ -8618,7 +8618,7 @@ const toYMD = (dateVal) => {
 // ==========================================
 // 1. EXPORT ICAL FEED (Public Endpoint)
 // ==========================================
-app.get('/export/:roomId/:token', async (req, res) => {
+app.get('api/export/:roomId/:token', async (req, res) => {
     const { roomId, token } = req.params;
 
     try {
@@ -8662,7 +8662,7 @@ app.get('/export/:roomId/:token', async (req, res) => {
 // ==========================================
 // 2. SAVE IMPORT LINK
 // ==========================================
-app.post('/import-link', auth, async (req, res) => {
+app.post('api/import-link', auth, async (req, res) => {
     const { roomId, source, url } = req.body;
     try {
         if (!url || !url.startsWith('http')) {
@@ -8684,7 +8684,7 @@ app.post('/import-link', auth, async (req, res) => {
 // ==========================================
 // 3. REMOVE IMPORT LINK
 // ==========================================
-app.delete('/import-link/:roomId/:linkId', auth, async (req, res) => {
+app.delete('api/import-link/:roomId/:linkId', auth, async (req, res) => {
     const { roomId, linkId } = req.params;
     try {
         const room = await Room.findOne({ _id: roomId, hotelId: req.user.hotelId });
@@ -8702,7 +8702,7 @@ app.delete('/import-link/:roomId/:linkId', auth, async (req, res) => {
 // ==========================================
 // 4. INGEST & SYNC EXTERNAL FEEDS
 // ==========================================
-app.post('/sync-imports', auth, async (req, res) => {
+app.post('api/sync-imports', auth, async (req, res) => {
     const hotelId = req.user.hotelId;
 
     try {
