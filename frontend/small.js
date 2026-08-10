@@ -15919,15 +15919,16 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 
 document.getElementById('toggle-password')?.addEventListener('click', function () {
     const passwordInput = document.getElementById('password');
-    const icon = document.getElementById('toggle-password-icon');
-    
+    const eyeOpen = document.getElementById('eye-icon-open');
+    const eyeClosed = document.getElementById('eye-icon-closed');
+
     if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
+        eyeOpen.classList.add('hidden');
+        eyeClosed.classList.remove('hidden');
     } else {
         passwordInput.type = 'password';
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
+        eyeClosed.classList.add('hidden');
+        eyeOpen.classList.remove('hidden');
     }
 });
