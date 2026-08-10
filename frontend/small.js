@@ -6827,34 +6827,40 @@ function getRoleClass(role) {
     return classes[role] || 'bg-gray-50 text-gray-600 border-gray-100';
 }
 
+// 1. Password toggle delegation (Runs ONCE globally, outside DOMContentLoaded)
+document.addEventListener('click', (e) => {
+    const toggleBtn = e.target.closest('#toggle-password');
+    if (!toggleBtn) return;
+
+    const passwordInput = document.getElementById('password');
+    const eyeOpen = document.getElementById('eye-icon-open');
+    const eyeClosed = document.getElementById('eye-icon-closed');
+
+    if (passwordInput) {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+
+        if (eyeOpen && eyeClosed) {
+            eyeOpen.classList.toggle('hidden', isPassword);
+            eyeClosed.classList.toggle('hidden', !isPassword);
+        }
+    }
+});
+
+// 2. Main App Initialization & Authentication Routing
 document.addEventListener('DOMContentLoaded', async () => {
     const loginContainer = document.getElementById('login-container');
     const dashboardWrapper = document.getElementById('dashboard-wrapper');
     const token = localStorage.getItem('token');
 
-    // Attach password toggle handler once DOM is ready
-    const toggleBtn = document.getElementById('toggle-password');
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', () => {
-            const passwordInput = document.getElementById('password');
-            const icon = document.getElementById('toggle-password-icon');
-            if (passwordInput && icon) {
-                const isPassword = passwordInput.type === 'password';
-                passwordInput.type = isPassword ? 'text' : 'password';
-                icon.classList.toggle('fa-eye', !isPassword);
-                icon.classList.toggle('fa-eye-slash', isPassword);
-            }
-        });
-    }
-
-    // Clean up any residual URL query parameters
+    // Clean up residual URL parameters if present
     if (window.location.search) {
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    // Check session state
+    // Strict authentication gate
     if (token) {
-        // Authenticated: Hide login modal & show main dashboard
+        // Authenticated State: Show Dashboard
         if (loginContainer) {
             loginContainer.style.display = 'none';
             loginContainer.classList.add('hidden');
@@ -6863,12 +6869,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             dashboardWrapper.style.display = 'flex';
         }
 
-        // Initialize PMS controller
+        // ONLY initialize dashboard logic & timers if token exists
         if (typeof initDashboard === 'function') {
             await initDashboard();
         }
     } else {
-        // Unauthenticated: Show inline login modal & hide dashboard
+        // Unauthenticated State: Show Login Modal
         if (dashboardWrapper) {
             dashboardWrapper.style.display = 'none';
         }
@@ -6876,8 +6882,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             loginContainer.style.display = 'flex';
             loginContainer.classList.remove('hidden');
         }
+
+        const usernameInput = document.getElementById('username');
+        if (usernameInput) {
+            usernameInput.focus();
+        }
     }
 });
+
 function openReportModal() {
     const modal = document.getElementById('reportModal');
     modal.classList.remove('hidden');
