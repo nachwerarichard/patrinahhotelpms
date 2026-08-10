@@ -5271,10 +5271,12 @@ async function logout() {
     }
 
     // Reset and reveal inline login container
-    const loginContainer = document.getElementById('login-container');
-    if (loginContainer) {
-        loginContainer.classList.remove('hidden');
-    }
+    // Inside your logout function:
+const loginContainer = document.getElementById('login-container');
+if (loginContainer) {
+    loginContainer.style.display = 'flex';
+    loginContainer.classList.remove('hidden');
+}
 
     // Clean up login form inputs and button states
     const loginForm = document.getElementById('login-form');
