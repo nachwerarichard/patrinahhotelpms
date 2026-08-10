@@ -15917,18 +15917,20 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     }
 });
 
-document.getElementById('toggle-password')?.addEventListener('click', function () {
+// Delegate toggle click to the document
+document.addEventListener('click', (e) => {
+    const toggleBtn = e.target.closest('#toggle-password');
+    if (!toggleBtn) return;
+
     const passwordInput = document.getElementById('password');
     const eyeOpen = document.getElementById('eye-icon-open');
     const eyeClosed = document.getElementById('eye-icon-closed');
 
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        eyeOpen.classList.add('hidden');
-        eyeClosed.classList.remove('hidden');
-    } else {
-        passwordInput.type = 'password';
-        eyeClosed.classList.add('hidden');
-        eyeOpen.classList.remove('hidden');
+    if (passwordInput && eyeOpen && eyeClosed) {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        
+        eyeOpen.classList.toggle('hidden', isPassword);
+        eyeClosed.classList.toggle('hidden', !isPassword);
     }
 });
