@@ -5293,7 +5293,7 @@ if (loginContainer) {
     const btn = document.getElementById('login-button');
     if (btn) {
         btn.disabled = false;
-        btn.innerHTML = `<i class="fas fa-sign-in-alt mr-1.5"></i> Secure Login`;
+        btn.innerHTML = `<i class="fas fa-sign-in-alt mr-1.5"></i> Secure Sign In`;
         btn.className = 'w-full py-3.5 bg-slate-900 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 active:scale-[0.98] transition-all duration-200 text-sm';
     }
 
@@ -6828,33 +6828,56 @@ function getRoleClass(role) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const params = new URLSearchParams(window.location.search);
-    const isAutoLogin = params.get('autoLogin') === 'true';
-    
-    if (isAutoLogin) {
-        const token = params.get('t');
-        if (token) {
-            localStorage.setItem('token', token);
-            localStorage.setItem('username', params.get('u'));
-            localStorage.setItem('userRole', params.get('r'));
-            localStorage.setItem('hotelId', params.get('h'));
+    const loginContainer = document.getElementById('login-container');
+    const dashboardWrapper = document.getElementById('dashboard-wrapper');
+    const token = localStorage.getItem('token');
 
-            // IMPORTANT: Do NOT clean the URL here. 
-            // Wait until the dashboard is initialized.
-            if (typeof initDashboard === "function") {
-                await initDashboard(); 
+    // Attach password toggle handler once DOM is ready
+    const toggleBtn = document.getElementById('toggle-password');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            const passwordInput = document.getElementById('password');
+            const icon = document.getElementById('toggle-password-icon');
+            if (passwordInput && icon) {
+                const isPassword = passwordInput.type === 'password';
+                passwordInput.type = isPassword ? 'text' : 'password';
+                icon.classList.toggle('fa-eye', !isPassword);
+                icon.classList.toggle('fa-eye-slash', isPassword);
             }
+        });
+    }
 
-            // NOW clean the URL after fetches have had a chance to start
-            window.history.replaceState({}, document.title, window.location.pathname);
+    // Clean up any residual URL query parameters
+    if (window.location.search) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // Check session state
+    if (token) {
+        // Authenticated: Hide login modal & show main dashboard
+        if (loginContainer) {
+            loginContainer.style.display = 'none';
+            loginContainer.classList.add('hidden');
+        }
+        if (dashboardWrapper) {
+            dashboardWrapper.style.display = 'flex';
+        }
+
+        // Initialize PMS controller
+        if (typeof initDashboard === 'function') {
+            await initDashboard();
         }
     } else {
-        if (!localStorage.getItem('token')) {
-            window.location.href = 'https://elegant-pasca-cea136.netlify.app/frontend/login.html';
+        // Unauthenticated: Show inline login modal & hide dashboard
+        if (dashboardWrapper) {
+            dashboardWrapper.style.display = 'none';
+        }
+        if (loginContainer) {
+            loginContainer.style.display = 'flex';
+            loginContainer.classList.remove('hidden');
         }
     }
 });
-
 function openReportModal() {
     const modal = document.getElementById('reportModal');
     modal.classList.remove('hidden');
@@ -15891,5 +15914,20 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         err.classList.remove('hidden');
         btn.disabled = false;
         btn.innerHTML = `<i class="fas fa-shield-alt mr-1.5"></i> Secure Authentication`;
+    }
+});
+
+document.getElementById('toggle-password')?.addEventListener('click', function () {
+    const passwordInput = document.getElementById('password');
+    const icon = document.getElementById('toggle-password-icon');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        passwordInput.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
     }
 });
