@@ -5293,7 +5293,7 @@ if (loginContainer) {
     const btn = document.getElementById('login-button');
     if (btn) {
         btn.disabled = false;
-        btn.innerHTML = `<i class="fas fa-sign-in-alt mr-1.5"></i> Secure Sign In`;
+        btn.innerHTML = `<i class="fas fa-sign-in-alt mr-1.5"></i>  Sign In`;
         btn.className = 'w-full py-3.5 bg-slate-900 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 active:scale-[0.98] transition-all duration-200 text-sm';
     }
 
