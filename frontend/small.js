@@ -15808,7 +15808,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     const err = document.getElementById('error-message');
     
     btn.disabled = true;
-    btn.innerHTML = `<span class="flex items-center justify-center gap-2"><i class="fas fa-spinner fa-spin"></i> Verifying Credentials...</span>`;
+    btn.innerHTML = `<span class="flex items-center justify-center gap-2"><i class="fas fa-spinner fa-spin"></i> Authenticating...</span>`;
     err.classList.add('hidden');
 
     const username = document.getElementById('username').value.trim();
@@ -15859,14 +15859,18 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             btn.innerHTML = `<span class="flex items-center justify-center gap-2"><i class="fas fa-check"></i> Access Granted</span>`;
             btn.classList.replace('bg-slate-900', 'bg-emerald-600');
 
-            // Hide Login Overlay & Reveal Main Application
+            // Hide Login Overlay & Reveal Dashboard
             setTimeout(() => {
                 const loginContainer = document.getElementById('login-container');
-                if (loginContainer) loginContainer.classList.add('hidden');
+                if (loginContainer) {
+                    loginContainer.style.display = 'none'; // Explicit inline style hide
+                    loginContainer.classList.add('hidden');
+                }
 
-                // ➔ TARGET dashboard-wrapper DIRECTLY AND SET DISPLAY TO FLEX
                 const dashboardWrapper = document.getElementById('dashboard-wrapper');
-                if (dashboardWrapper) dashboardWrapper.style.display = 'flex';
+                if (dashboardWrapper) {
+                    dashboardWrapper.style.display = 'flex'; // Reveal main interface
+                }
 
                 // Boot Main Application Controller
                 if (typeof initDashboard === 'function') {
@@ -15878,12 +15882,12 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             err.textContent = result.message || 'Authentication failed.';
             err.classList.remove('hidden');
             btn.disabled = false;
-            btn.innerHTML = `<i class="fas fa-sign-in-alt mr-1.5"></i> Secure Login`;
+            btn.innerHTML = `<i class="fas fa-shield-alt mr-1.5"></i> Secure Authentication`;
         }
     } catch (error) {
         err.textContent = 'Server unreachable. Check your connection.';
         err.classList.remove('hidden');
         btn.disabled = false;
-        btn.innerHTML = `<i class="fas fa-sign-in-alt mr-1.5"></i> Secure Login`;
+        btn.innerHTML = `<i class="fas fa-shield-alt mr-1.5"></i> Secure Authentication`;
     }
 });
