@@ -121,145 +121,163 @@ const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn
 
 
 
-(function autoLoginHook() {
-    const urlParams = new URLSearchParams(window.location.search);
 
-    // Only run if autoLogin flag is present
-    if (urlParams.get('autoLogin') === 'true') {
-        
-        console.log("==================== HOOK DEBUG START ====================");
-        console.log("🔗 Full URL query parameters caught on arrival:", Object.fromEntries(urlParams.entries()));
 
-        // 1. Inject CSS for the Preloader
-        const style = document.createElement('style');
-        style.id = 'auto-login-styles';
-        style.innerHTML = `
-            #auto-login-overlay {
-                position: fixed; 
-                top: 0; left: 0; 
-                width: 100%; height: 100%;
-                background: white;
-                display: flex; 
-                flex-direction: column;
-                justify-content: center; 
-                align-items: center;
-                z-index: 999999; 
-                transition: opacity 0.4s ease;
-            }
-            .loader {
-                --d: 22px;
-                width: 4px; height: 4px;
-                border-radius: 50%;
-                color: #4f46e5;
-                box-shadow: 
-                    calc(1 * var(--d))      calc(0 * var(--d))      0 0,
-                    calc(0.707 * var(--d)) calc(0.707 * var(--d)) 0 1px,
-                    calc(0 * var(--d))      calc(1 * var(--d))      0 2px,
-                    calc(-0.707 * var(--d)) calc(0.707 * var(--d)) 0 3px,
-                    calc(-1 * var(--d))    calc(0 * var(--d))      0 4px,
-                    calc(-0.707 * var(--d)) calc(-0.707 * var(--d)) 0 5px,
-                    calc(0 * var(--d))      calc(-1 * var(--d))     0 6px;
-                animation: l27 1s infinite steps(8);
-            }
-            @keyframes l27 { 100% { transform: rotate(1turn); } }
-            .sync-text { margin-top: 2rem; font-family: sans-serif; font-size: 12px; color: #64748b; letter-spacing: 0.1em; font-weight: bold; }
-        `;
-        document.head.appendChild(style);
+const CURRENT_CURRENCY = localStorage.getItem('hotelCurrency') || 'UGX';
 
-        // 2. Create Overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'auto-login-overlay';
-        overlay.innerHTML = `
-            <div class="loader"></div>
-            <div class="sync-text">ESTABLISHING SECURE SESSION...</div>
-        `;
-        document.body.appendChild(overlay);
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const btn = document.getElementById('login-button');
+    const err = document.getElementById('error-message');
+    
+    btn.disabled = true;
+    btn.innerHTML = `<span class="flex items-center justify-center gap-2"><i class="fas fa-spinner fa-spin"></i> Authenticating...</span>`;
+    err.classList.add('hidden');
 
-        const removeOverlay = () => {
-            const el = document.getElementById('auto-login-overlay');
-            if (el) {
-                el.style.opacity = '0';
-                setTimeout(() => el.remove(), 400); 
-            }
-        };
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
 
-        // 3. Extract Data and Sync LocalStorage
-        const token = urlParams.get('t');
-        const user = urlParams.get('u');
-        const role = urlParams.get('r');
-        const hotelId = urlParams.get('h');
-        const hotelName = urlParams.get('n');
-        const hotelLocation = urlParams.get('l'); // 📍 EXTRACT LOCATION PARAMETER 'l'
-        const hotelCurrency = urlParams.get('c'); 
+    try {
+        const response = await fetch(`${API_BASE_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
 
-        // 🔍 HOOK DEBUG 1: Verify URL extraction
-        console.log("📥 Extracted location string ('l') directly from URL:", hotelLocation);
-        console.log("📥 Extracted currency string ('c') directly from URL:", hotelCurrency);
+        const result = await response.json();
 
-        if (token && user) {
-            // Save data to the current domain's storage
+        if (response.ok) {
+            const user = result.user;
+            const token = result.token;
+
+            // Extract User Data
+            const usernameVal = user.username;
+            const role = (user.role || '').toLowerCase();
+            const hotelId = user.hotelId || 'global';
+            const hotelName = user.hotelName || 'Our Hotel';
+            const hotelLocation = user.hotelLocation || 'Main Campus';
+            const hotelCurrency = user.hotelCurrency || 'UGX';
+
+            // Commit session state directly to localStorage
             localStorage.setItem('token', token);
-            localStorage.setItem('username', user);
+            localStorage.setItem('username', usernameVal);
             localStorage.setItem('userRole', role);
-            localStorage.setItem('hotelId', hotelId || 'global');
-            localStorage.setItem('hotelName', hotelName || 'global');
-            localStorage.setItem('hotelLocation', hotelLocation || 'Main Campus'); // 📍 SAVE TO STORAGE
-            localStorage.setItem('hotelCurrency', hotelCurrency || 'UGX'); 
+            localStorage.setItem('hotelId', hotelId);
+            localStorage.setItem('hotelName', hotelName);
+            localStorage.setItem('hotelLocation', hotelLocation);
+            localStorage.setItem('hotelCurrency', hotelCurrency);
 
-            // Re-create the loggedInUser object if your other scripts need it
             const targetUserObject = {
-                username: user,
+                username: usernameVal,
                 role: role,
                 token: token,
                 hotelName: hotelName,
-                hotelId: hotelId || 'global',
-                hotelLocation: hotelLocation || 'Main Campus', // 📍 ADD TO USER OBJECT
-                hotelCurrency: hotelCurrency || 'UGX'
+                hotelId: hotelId,
+                hotelLocation: hotelLocation,
+                hotelCurrency: hotelCurrency
             };
             localStorage.setItem('loggedInUser', JSON.stringify(targetUserObject));
 
-            // 🔍 HOOK DEBUG 2: Verify storage commit
-            console.log("💾 Storage Key 'hotelLocation' value:", localStorage.getItem('hotelLocation'));
-            console.log("💾 Storage Key 'hotelCurrency' value:", localStorage.getItem('hotelCurrency'));
-            console.log("💾 Storage Key 'loggedInUser' complete parsed contents:", JSON.parse(localStorage.getItem('loggedInUser')));
+            // Feedback UI
+            btn.innerHTML = `<span class="flex items-center justify-center gap-2"><i class="fas fa-check"></i> Access Granted</span>`;
+            btn.classList.replace('bg-slate-900', 'bg-emerald-600');
 
-            // Clean the URL (remove sensitive data from address bar)
-            const cleanUrl = window.location.origin + window.location.pathname;
-            window.history.replaceState({}, document.title, cleanUrl);
-            console.log("🧹 Address bar cleaned. Parameter data shielded.");
-            console.log("===================== HOOK DEBUG END =====================");
-
-            // 4. Initialize the App
-            console.log("Session synchronized. Initializing dashboard...");
-            
-            if (typeof initDashboard === "function") {
-                initDashboard();
-            }
-
-            // Watchdog: Hide overlay when specific UI elements appear
-            const checkUI = setInterval(() => {
-                const mainContent = document.getElementById('main-content') || document.querySelector('nav');
-                if (mainContent) {
-                    removeOverlay();
-                    clearInterval(checkUI);
-                }
-            }, 100);
-
-            // Safety timeout: Remove overlay after 3 seconds anyway
+            // Hide Login Overlay & Reveal Dashboard
             setTimeout(() => {
-                removeOverlay();
-                clearInterval(checkUI);
-            }, 3000);
+                const loginContainer = document.getElementById('login-container');
+                if (loginContainer) {
+                    loginContainer.style.display = 'none'; // Explicit inline style hide
+                    loginContainer.classList.add('hidden');
+                }
+
+                const dashboardWrapper = document.getElementById('dashboard-wrapper');
+                if (dashboardWrapper) {
+                    dashboardWrapper.style.display = 'flex'; // Reveal main interface
+                }
+
+                // Boot Main Application Controller
+                if (typeof initDashboard === 'function') {
+                    initDashboard();
+                }
+            }, 600);
 
         } else {
-            console.error("❌ Auto-login failed: Missing parameters in URL string.");
-            console.log("===================== HOOK DEBUG END =====================");
-            removeOverlay();
+            err.textContent = result.message || 'Authentication failed.';
+            err.classList.remove('hidden');
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fas fa-shield-alt mr-1.5"></i> Sign In`;
+        }
+    } catch (error) {
+        err.textContent = 'Server unreachable. Check your connection.';
+        err.classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-shield-alt mr-1.5"></i> Sign In`;
+    }
+});
+
+// Global Password Toggle Handler (Use this single function)
+document.addEventListener('click', (e) => {
+    const toggleBtn = e.target.closest('#toggle-password');
+    if (!toggleBtn) return;
+
+    const passwordInput = document.getElementById('password');
+    const eyeOpen = document.getElementById('eye-icon-open');
+    const eyeClosed = document.getElementById('eye-icon-closed');
+
+    if (passwordInput) {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+
+        if (eyeOpen && eyeClosed) {
+            eyeOpen.classList.toggle('hidden', isPassword);
+            eyeClosed.classList.toggle('hidden', !isPassword);
         }
     }
-})();
+});
 
-const CURRENT_CURRENCY = localStorage.getItem('hotelCurrency') || 'UGX';
+// 2. Main App Initialization & Authentication Routing
+document.addEventListener('DOMContentLoaded', async () => {
+    const loginContainer = document.getElementById('login-container');
+    const dashboardWrapper = document.getElementById('dashboard-wrapper');
+    const token = localStorage.getItem('token');
+
+    // Clean up residual URL parameters if present
+    if (window.location.search) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // Strict authentication gate
+    if (token) {
+        // Authenticated State: Show Dashboard
+        if (loginContainer) {
+            loginContainer.style.display = 'none';
+            loginContainer.classList.add('hidden');
+        }
+        if (dashboardWrapper) {
+            dashboardWrapper.style.display = 'flex';
+        }
+
+        // ONLY initialize dashboard logic & timers if token exists
+        if (typeof initDashboard === 'function') {
+            await initDashboard();
+        }
+    } else {
+        // Unauthenticated State: Show Login Modal
+        if (dashboardWrapper) {
+            dashboardWrapper.style.display = 'none';
+        }
+        if (loginContainer) {
+            loginContainer.style.display = 'flex';
+            loginContainer.classList.remove('hidden');
+        }
+
+        const usernameInput = document.getElementById('username');
+        if (usernameInput) {
+            usernameInput.focus();
+        }
+    }
+});
 const getHotelId = () => {
     // 1. Get the role and hotelId from separate keys
     const role = localStorage.getItem('userRole');
@@ -291,45 +309,45 @@ const getHotelCurrency = () => {
 };
 
 async function authenticatedFetch(url, options = {}) {
-    let token = localStorage.getItem('token');
-    const params = new URLSearchParams(window.location.search);
-    
-    // 1. Wait for token logic
-    if (!token && params.get('autoLogin') === 'true') {
-        await new Promise((resolve) => {
-            let attempts = 0;
-            const interval = setInterval(() => {
-                token = localStorage.getItem('token');
-                attempts++;
-                if (token || attempts > 30) { 
-                    clearInterval(interval);
-                    resolve();
-                }
-            }, 100);
-        });
-    }
+    let token = localStorage.getItem('token');
 
-    if (!token) {
-        window.location.replace('https://elegant-pasca-cea136.netlify.app/frontend/login.html');
-        return null;
-    }
+    // 1. If no token, abort immediately without triggering logout routines
+    if (!token) {
+        console.warn('No token found. Aborting authenticated request.');
+        return null;
+    }
 
-    // 2. Start with standard headers + AUTOMATED MULTI-TENANT CURRENCY PASSTHROUGH
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'x-hotel-id': localStorage.getItem('hotelId') || 'global',
-        'x-hotel-currency': localStorage.getItem('hotelCurrency') || 'UGX', // ➔ INJECT CURRENCY HERE
-        ...options.headers 
-    };
+    // 2. Standard headers + Automated Multi-Tenant Headers
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'x-hotel-id': localStorage.getItem('hotelId') || 'global',
+        'x-hotel-currency': localStorage.getItem('hotelCurrency') || 'UGX',
+        ...options.headers 
+    };
 
-    // 3. Smart Content-Type Assignment
-    if (options.body instanceof FormData) {
-        delete headers['Content-Type']; 
-    } else if (options.body) { 
-        headers['Content-Type'] = 'application/json';
-    }
+    // 3. Smart Content-Type Assignment
+    if (options.body instanceof FormData) {
+        delete headers['Content-Type']; 
+    } else if (options.body && !headers['Content-Type']) { 
+        headers['Content-Type'] = 'application/json';
+    }
 
-    return fetch(url, { ...options, headers: headers });
+    try {
+        const response = await fetch(url, { ...options, headers });
+
+        // 4. Handle expired/invalid token globally
+        if (response.status === 401) {
+            console.warn('Session expired or unauthorized (401). Triggering logout...');
+            if (typeof logout === 'function') {
+                await logout();
+            }
+        }
+
+        return response;
+    } catch (error) {
+        console.error('Network request failed:', error);
+        throw error;
+    }
 }
 
 function showMessage(title, message, isError = false) {
@@ -807,7 +825,7 @@ roomTypes[typeName].push(room);
 
     // 3. Update the UI
     
-    
+    // --- Login and Role Management ---
 // --- Login and Role Management ---
 async function showDashboard(username, role) {
     currentUserRole = role;
@@ -819,257 +837,256 @@ async function showDashboard(username, role) {
     const displayName = document.getElementById('display-user-role');
     if (displayName) displayName.textContent = currentUserRole;
 
-    loginContainer.style.display = 'none';
-    mainContent.style.display = 'flex';
+    const loginContainer = document.getElementById('login-container');
+    const mainContent = document.getElementById('main-content') || document.getElementById('dashboard-wrapper');
+
+    if (loginContainer) loginContainer.style.display = 'none';
+    if (mainContent) mainContent.style.display = 'flex';
     
+    // Apply granular role permissions to sidebar items
     applyRoleAccess(role);
 
     let initialSectionId = '';
     let initialNavLinkId = '';
 
-    // LOGIC: Only Admins/Super-Admins go to the dashboard
+    const dashboardSection = document.getElementById('dashboard');
+
     if (role === 'admin' || role === 'super-admin') {
-        initialSectionId = 'dashboard'; // Keeping your specific spelling
+        initialSectionId = 'dashboard';
         initialNavLinkId = 'nav-dashboard';
     } 
     else if (role === 'housekeeper') {
         initialSectionId = 'housekeeping';
         initialNavLinkId = 'nav-housekeeping';
-        document.getElementById('dashboard').style.display = 'none';
+        if (dashboardSection) dashboardSection.style.display = 'none';
     } 
     else if (role === 'chef') {
         initialSectionId = 'kds';
         initialNavLinkId = 'nav-kds';
-        document.getElementById('dashboard').style.display = 'none';
+        if (dashboardSection) dashboardSection.style.display = 'none';
     } 
     else if (role === 'cashier' || role === 'bar') {
-        initialSectionId = 'sales-records'; // Change this to your POS section ID
+        initialSectionId = 'sales-records';
         initialNavLinkId = 'nav-sales';
-        document.getElementById('dashboard').style.display = 'none';
+        if (dashboardSection) dashboardSection.style.display = 'none';
     }
     else if (role === 'front office') {
         initialSectionId = 'booking-management';
         initialNavLinkId = 'nav-booking';
-        document.getElementById('dashboard').style.display = 'none';
-        document.getElementById('nav-paymentgateway').style.display = 'none';
-        renderBookings()
+        if (dashboardSection) dashboardSection.style.display = 'none';
+
+        if (typeof renderBookings === 'function') {
+            renderBookings(typeof currentPage !== 'undefined' ? currentPage : 1, typeof currentSearchTerm !== 'undefined' ? currentSearchTerm : '');
+        }
     }
 
-    // Reset current active states
+    // Hide all view panels first
+    const sections = document.querySelectorAll('.section-panel, section');
+    sections.forEach(sec => {
+        sec.classList.remove('active');
+        sec.style.display = 'none';
+    });
+
+    // Reset current active class across nav items
     document.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
 
-    // Set new active section
+    // Activate initial nav item and display section
     if (initialNavLinkId) {
         const navEl = document.getElementById(initialNavLinkId);
-        if (navEl) navEl.classList.add('active');
+        if (navEl) {
+            navEl.classList.add('active');
+            
+            // Expand parent dropdown menu if nested
+            const parentMenu = navEl.closest('ul[id$="-menu"]');
+            if (parentMenu) parentMenu.classList.remove('hidden');
+        }
     }
     
     if (initialSectionId) {
         const secEl = document.getElementById(initialSectionId);
         if (secEl) {
             secEl.classList.add('active');
-            secEl.style.display = 'block'; // Ensure it's visible
-
+            secEl.style.display = 'block';
         }
     }
 }
 
-/*async function authenticatedFetch(url, options = {}) {
-    let token = localStorage.getItem('token');
-    let hotelId = localStorage.getItem('hotelId'); // Pull current tenant ID
 
-    if (!token) {
-        window.location.replace('/login.html');
-        return null;
-    }
-
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'x-hotel-id': hotelId || 'global', // Identify the tenant
-        ...options.headers 
-    };
-
-    return fetch(url, { ...options, headers });
-}*/
-/**
- * Handles navigation clicks, showing/hiding sections and re-rendering content.
- * @param {Event} event - The click event.
- */
-/**
- * Handles navigation clicks, showing the correct section and triggering data renders.
- * @param {Event} event - The click event object.
- */
-/**
- * Handles navigation clicks, showing the correct section and triggering data renders.
- * @param {Event} event - The click event object.
- */
 function handleNavigation(event) {
-    
-event.preventDefault();
+    // 1. Ignore top-level dropdown buttons
+    if (event.target.closest('button')) return;
 
-    // Find the closest parent <li> element to get its ID
+    // 2. Find closest list item
     const clickedElement = event.target.closest('li');
-    if (!clickedElement) {
-        // This prevents errors if a click somehow happens outside a list item
-        return; 
-    }
-    
-    // Get the ID from the <li> element
-    const targetId = clickedElement.id === 'nav-booking' ? 'booking-management' : clickedElement.id.replace('nav-', '');
+    if (!clickedElement || !clickedElement.id) return;
 
+    // Ignore clicks on main parent menu items that host submenus (e.g., nav-frontoffice)
+    if (clickedElement.querySelector('ul')) return;
 
-    
-    // Prevent navigation if the user's role doesn't permit it
-    if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping') {
-        //showMessage('Access Denied', 'Housekeepers can only access the Housekeeping section.', true);
-        //return;
-    }
-    
-    // Block 'bar' user from accessing sections they don't have permission for
-    const barRestrictedSections = ['housekeeping', 'reports', 'service-reports', 'audit-logs','dashboard'];
+    event.preventDefault();
+
+    // 3. Map nav element IDs to target content section IDs
+    const targetId = clickedElement.id === 'nav-booking' 
+        ? 'booking-management' 
+        : clickedElement.id.replace('nav-', '');
+
+    // 4. Role restriction checks
+    const barRestrictedSections = ['housekeeping', 'reports', 'service-reports', 'audit-logs', 'dashboard'];
     if (currentUserRole === 'bar' && barRestrictedSections.includes(targetId)) {
-        showMessage('Access Denied', 'You do not have permission to access this section.', true);
+        if (typeof showMessage === 'function') {
+            showMessage('Access Denied', 'You do not have permission to access this section.', true);
+        }
         return;
     }
 
-    // Remove 'active' class from all nav links and sections
+    // 5. Update Navigation States FIRST
+    const navLinks = document.querySelectorAll('nav li');
     navLinks.forEach(link => link.classList.remove('active'));
-    sections.forEach(section => section.classList.remove('active'));
+    clickedElement.classList.add('active');
 
-    // Add 'active' class to the clicked nav link
-    event.target.classList.add('active');
+    // 6. Update Section Visibility
+    const sections = document.querySelectorAll('.section-panel, section');
+    sections.forEach(section => {
+        section.classList.remove('active');
+        section.style.display = 'none';
+    });
 
-    // Add 'active' class to the corresponding section
     const targetSection = document.getElementById(targetId);
     if (targetSection) {
         targetSection.classList.add('active');
+        targetSection.style.display = 'block';
     } else {
-        console.error(`Error: Section with ID "${targetId}" not found.`);
-        
-        // Fallback to a default accessible section if targetId is invalid
-        if (currentUserRole === 'admin' || currentUserRole==='super-admin') {
-            document.getElementById('dashboard').classList.add('active');
-            //renderBookings(currentPage, currentSearchTerm); // Ensure it renders if fallback
-        } else if (currentUserRole === 'housekeeper') {
-            document.getElementById('housekeeping').classList.add('active');
-            document.getElementById('nav-housekeeping').classList.add('active');
-            document.getElementById('booking-management').style.display='none';
-            //renderHousekeepingRooms(); // Ensure it renders if fallback
-        } else if (currentUserRole === 'bar') {
-            document.getElementById('booking-management').classList.add('active');
-            document.getElementById('nav-booking').classList.add('active');
-           document.getElementById('housekeeping').style.display="none";
-            document.getElementById('booking-management').style.display="block";
-
-           // renderBookings(currentPage, currentSearchTerm); // Ensure it renders if fallback
-        }
-        return;
+        console.warn(`Warning: Target section with ID "${targetId}" is missing from the layout.`);
+        // Active class remains on menu item even if main content view is missing
     }
 
-    // Re-render sections when active
-    if (targetId === 'booking-management') {
-        currentPage = 1; // Reset to first page when navigating to bookings
-        currentSearchTerm = ''; // Clear search term when navigating via menu
-        bookingSearchInput.value = ''; // Clear search input field
+    // 7. Trigger section views...
+    if (targetId === 'booking-management' && typeof renderBookings === 'function') {
+        if (typeof currentPage !== 'undefined') currentPage = 1;
+        if (typeof currentSearchTerm !== 'undefined') currentSearchTerm = '';
+        
+        const bookingSearchInput = document.getElementById('booking-search-input');
+        if (bookingSearchInput) bookingSearchInput.value = '';
+        
         renderBookings(currentPage, currentSearchTerm);
-    } else if (targetId === 'housekeeping') {
+    } else if (targetId === 'housekeeping' && typeof renderHousekeepingRooms === 'function') {
         renderHousekeepingRooms();
-    } else if (targetId === 'calendar') {
+    } else if (targetId === 'calendar' && typeof renderCalendar === 'function') {
         renderCalendar();
-    } else if (targetId === 'service-reports') {
-        // Set default dates for service reports to current month
+    } else if (targetId === 'service-reports' && typeof renderServiceReports === 'function') {
         const today = new Date();
         const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
         const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        serviceReportStartDate.value = firstDay.toISOString().split('T')[0];
-        serviceReportEndDate.value = lastDay.toISOString().split('T')[0];
+        
+        const serviceReportStartDate = document.getElementById('service-report-start-date');
+        const serviceReportEndDate = document.getElementById('service-report-end-date');
+        
+        if (serviceReportStartDate) serviceReportStartDate.value = firstDay.toISOString().split('T')[0];
+        if (serviceReportEndDate) serviceReportEndDate.value = lastDay.toISOString().split('T')[0];
+        
         renderServiceReports();
-    } else if (targetId === 'audit-logs') {
-        // Set default dates for audit logs to last 30 days
+    } else if (targetId === 'audit-logs' && typeof renderAuditLogs === 'function') {
         const today = new Date();
         const thirtyDaysAgo = new Date(today);
         thirtyDaysAgo.setDate(today.getDate() - 30);
-        auditLogStartDateFilter.value = thirtyDaysAgo.toISOString().split('T')[0];
-        auditLogEndDateFilter.value = today.toISOString().split('T')[0];
+        
+        const auditLogStartDateFilter = document.getElementById('audit-log-start-date');
+        const auditLogEndDateFilter = document.getElementById('audit-log-end-date');
+
+        if (auditLogStartDateFilter) auditLogStartDateFilter.value = thirtyDaysAgo.toISOString().split('T')[0];
+        if (auditLogEndDateFilter) auditLogEndDateFilter.value = today.toISOString().split('T')[0];
+        
         renderAuditLogs();
     }
 }
-/**
- * Applies access restrictions to navigation and sections based on user role.
- * @param {string} role - The role of the logged-in user ('admin' or 'housekeeper').
- */
 
-// A new function to update the UI based on the user's role
-/**
- * Adjusts UI elements based on the user's role.
- * @param {string} role - The role of the currently logged-in user ('admin', 'housekeeper', 'bar').
- */
+
 function applyRoleAccess(role) {
-    // 1. Select all nav items (using a class is cleaner, but keeping your ID method for now)
     const navIds = [
-        'nav-booking', 'nav-dashboard', 'nav-housekeeping', 'nav-inventory', 
-        'nav-sales', 'nav-payments','nav-posinventory', 'nav-kds', 
-         'nav-expenses', 'nav-cash', , 'nav-checklistform', 'nav-checklisttable','nav-missingitems' ,
-        'nav-posreports', 'nav-salereport', 'nav-expensereport','nav-housekeepingreports', 'nav-receivables',
-        'nav-staff', 'nav-reports', 'nav-calendar','nav-roominventory','nav-channelmanager','nav-integration','nav-audit-logs'
+        'nav-dashboard',
+        'nav-booking', 'nav-calendar', 'nav-inventory', 'nav-channelmanager', 'nav-reports',
+        'nav-sales', 'nav-posinventory', 'nav-kds', 'nav-prep-list-section',
+        'nav-housekeeping', 'nav-checklisttable', 'nav-checklistform', 'nav-missingitems', 'nav-housekeepingreports',
+        'nav-payments', 'nav-receivables', 'nav-cash', 'nav-expenses', 'nav-posreports', 'nav-salereport', 'nav-expensereport',
+        'nav-staff', 'nav-paymentgateway', 'nav-integrations', 'nav-audit-logs'
     ];
 
-    // Hide everything first
+    // Hide all navigation links first
     navIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
 
-    // 2. Show based on role
+    const showNavs = (ids) => {
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'block';
+        });
+    };
+
+    // Assign visible elements per role
     switch (role) {
         case 'admin':
-        case 'super-admin': // Correct way to handle multiple cases
-            // Admins see everything, including the dashboard
-            navIds.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.style.display = 'list-item';
-            });
+        case 'super-admin':
+            showNavs(navIds);
             break;
 
         case 'housekeeper':
-            document.getElementById('nav-housekeeping').style.display = 'list-item';
-            document.getElementById('nav-housekeepingreports').style.display = 'list-item';
-             document.getElementById('nav-checklistform').style.display = 'list-item';
-            document.getElementById('nav-checklisttable').style.display = 'list-item';
-            document.getElementById('nav-missingitems').style.display = 'list-item';
+            showNavs([
+                'nav-housekeeping', 
+                'nav-checklisttable', 
+                'nav-checklistform', 
+                'nav-missingitems',
+                'nav-housekeepingreports'
+            ]);
             break;
 
         case 'bar':
-            document.getElementById('nav-sales').style.display = 'list-item';
+            showNavs(['nav-sales']);
             break;
 
         case 'chef':
-            document.getElementById('nav-kds').style.display = 'list-item';
+            showNavs(['nav-kds', 'nav-prep-list-section']);
             break;
 
         case 'cashier':
-            document.getElementById('nav-sales').style.display = 'list-item';
-            document.getElementById('nav-payments').style.display = 'list-item';
-            document.getElementById('nav-payments').style.display = 'list-item';
-            document.getElementById('nav-expenses').style.display = 'list-item';
-            document.getElementById('nav-cash').style.display = 'list-item';
-            document.getElementById('nav-posreports').style.display = 'list-item';
-            document.getElementById('nav-salereport').style.display = 'list-item';
-            document.getElementById('nav-expensereport').style.display = 'list-item';
-            document.getElementById('nav-housekeepingreports').style.display = 'list-item';
+            showNavs([
+                'nav-sales', 
+                'nav-payments', 
+                'nav-expenses', 
+                'nav-cash', 
+                'nav-posreports', 
+                'nav-salereport', 
+                'nav-expensereport', 
+                'nav-housekeepingreports'
+            ]);
             break;
 
         case 'front office':
-            document.getElementById('nav-booking').style.display = 'list-item';
+            showNavs(['nav-booking', 'nav-calendar', 'nav-inventory']);
             break;
     }
+
+    // Toggle parent module containers based on child visibility
+    const parentModules = [
+        { parentId: 'nav-frontoffice', menuId: 'frontoffice-menu' },
+        { parentId: 'nav-pos', menuId: 'pos-menu' },
+        { parentId: 'nav-housekeep', menuId: 'housekeeping-menu' },
+        { parentId: 'nav-financials', menuId: 'financials-menu' },
+        { parentId: 'nav-admin', menuId: 'admin-menu' }
+    ];
+
+    parentModules.forEach(({ parentId, menuId }) => {
+        const parentEl = document.getElementById(parentId);
+        const menuEl = document.getElementById(menuId);
+
+        if (parentEl && menuEl) {
+            const hasVisibleChild = Array.from(menuEl.children).some(child => child.style.display !== 'none');
+            parentEl.style.display = hasVisibleChild ? 'block' : 'none';
+        }
+    });
 }
-/**
- * Renders the bookings table, fetching data from the backend with pagination and search.
- * @param {number} page - The current page number to fetch.
- * @param {string} [searchTerm=''] - Optional: A search term to filter bookings.
- */
+
 async function renderBookings(page = 1, searchTerm = '') {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelId = sessionData?.hotelId;
@@ -4308,44 +4325,62 @@ function handleLogout() {
 
 
 window.addEventListener('DOMContentLoaded', async () => {
+    // 1. Get DOM elements safely
+    const loginContainer = document.getElementById('login-container');
+    const mainContent = document.getElementById('main-content') || document.getElementById('dashboard-wrapper');
+    
+    // 2. Retrieve session data
     const savedUser = localStorage.getItem('loggedInUser');
+    const token = localStorage.getItem('token');
 
-    if (savedUser) {
+    // 3. Verify BOTH user object and token exist
+    if (savedUser && token) {
         try {
             const userData = JSON.parse(savedUser);
             
-            // Re-assign global variables for use in fetch headers
-            currentUsername = userData.username;
-            currentUserRole = userData.role;
-            // hotelId and token should be pulled from userData whenever a fetch is made
+            // Re-assign global variables for runtime scope
+            if (typeof currentUsername !== 'undefined') currentUsername = userData.username;
+            if (typeof currentUserRole !== 'undefined') currentUserRole = userData.role;
 
-            // UI logic to show the main app
-            loginContainer.style.display = 'none';
-            mainContent.style.display = 'flex';
-   const displayName = document.getElementById('hotel-name-display');
-    if (displayName && userData) {
-        displayName.textContent = userData.hotelName;
-    }
-   const displayrhName = document.getElementById('receipt-hotel-name');
-    if (displayrhName && userData) {
-        displayrhName.textContent = userData.hotelName;
-    }
-            // Function to initialize the UI based on the user's hotel and role
+            // UI logic to toggle views
+            if (loginContainer) loginContainer.style.display = 'none';
+            if (mainContent) mainContent.style.display = 'flex';
+
+            // Display hotel name across UI components
+            const displayName = document.getElementById('hotel-name-display');
+            if (displayName && userData.hotelName) {
+                displayName.textContent = userData.hotelName;
+            }
+
+            const displayrhName = document.getElementById('receipt-hotel-name');
+            if (displayrhName && userData.hotelName) {
+                displayrhName.textContent = userData.hotelName;
+            }
+
+            // Initialize app views
             if (typeof showDashboard === 'function') {
                 await showDashboard(userData.username, userData.role);
             } else {
-                // Fallback: if showDashboard isn't used, trigger standard renders
-                renderBookings(currentPage, currentSearchTerm);
-                updateBookingStats();
+                if (typeof renderBookings === 'function') {
+                    renderBookings(typeof currentPage !== 'undefined' ? currentPage : 1, typeof currentSearchTerm !== 'undefined' ? currentSearchTerm : '');
+                }
+                if (typeof updateBookingStats === 'function') {
+                    updateBookingStats();
+                }
             }
         } catch (e) {
             console.error("Session restoration failed:", e);
+            // Clear corrupted session data without infinite reload loops
             localStorage.removeItem('loggedInUser');
-            location.reload(); 
+            localStorage.removeItem('token');
+            
+            if (loginContainer) loginContainer.style.display = 'flex';
+            if (mainContent) mainContent.style.display = 'none';
         }
     } else {
-        loginContainer.style.display = 'flex';
-        mainContent.style.display = 'none';
+        // No session found - present login interface
+        if (loginContainer) loginContainer.style.display = 'flex';
+        if (mainContent) mainContent.style.display = 'none';
     }
 });
 async function markNoShow(bookingId) {
@@ -5230,40 +5265,85 @@ updateroomDashboard();
 
 
 async function logout() {
-    console.log("Initiating secure logout...");
-    
-    try {
-        // Create an AbortController to prevent the logout from hanging 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000); 
+    // ➔ GUARD 1: Exit immediately if already logged out to prevent clearing active login typing
+    const hasToken = localStorage.getItem('token') || (typeof authToken !== 'undefined' && authToken);
+    const loginContainer = document.getElementById('login-container');
+    const isLoginVisible = loginContainer && loginContainer.style.display !== 'none' && !loginContainer.classList.contains('hidden');
 
-        // authenticatedFetch handles Authorization, x-hotel-id, and x-hotel-currency automatically
+    if (!hasToken && isLoginVisible) {
+        return;
+    }
+
+    console.log("Initiating secure logout...");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); 
+
+    try {
         await authenticatedFetch(`${API_BASE_URL}/logout`, {
             method: 'POST',
             signal: controller.signal
         });
-
-        clearTimeout(timeoutId);
     } catch (error) {
         console.warn('Backend logout sync skipped or timed out:', error.message);
+    } finally {
+        clearTimeout(timeoutId);
     }
 
-    /* ---------- WIPE LOCAL STATE ---------- */
-    // 1. Clear All in-memory variables safely
+    /* ---------- 1. WIPE LOCAL STATE & STORAGE ---------- */
     if (typeof authToken !== 'undefined') authToken = '';
     if (typeof currentUsername !== 'undefined') currentUsername = '';
     if (typeof currentUserRole !== 'undefined') currentUserRole = '';
-    if (typeof currentCurrency !== 'undefined') currentCurrency = ''; // ➔ ADDED: Local runtime scope wipe
+    if (typeof currentCurrency !== 'undefined') currentCurrency = '';
 
-    // 2. Clear all persistence (Critical for multi-tenant security)
     localStorage.clear();
     sessionStorage.clear();
 
-    // 3. Secure Redirect
-    const LOGIN_PAGE = 'https://elegant-pasca-cea136.netlify.app/frontend/login.html';
-    console.log("Session cleared. Redirecting to login...");
-    
-    window.location.replace(LOGIN_PAGE);
+    /* ---------- 2. RESET INLINE UI COMPONENTS ---------- */
+    // Hide main application content wrapper
+    const dashboardWrapper = document.getElementById('dashboard-wrapper');
+    if (dashboardWrapper) {
+        dashboardWrapper.style.display = 'none';
+    }
+
+    // Reveal inline login container
+    if (loginContainer) {
+        loginContainer.style.display = 'flex';
+        loginContainer.classList.remove('hidden');
+    }
+
+    // ➔ GUARD 2: Only reset inputs if the user is NOT actively typing in them
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+
+        const isUserTyping = document.activeElement === usernameInput || document.activeElement === passwordInput;
+        if (!isUserTyping) {
+            loginForm.reset();
+        }
+    }
+
+    // Reset error messages
+    const err = document.getElementById('error-message');
+    if (err) {
+        err.textContent = '';
+        err.classList.add('hidden');
+    }
+
+    // Reset submit button state
+    const btn = document.getElementById('login-button');
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-sign-in-alt mr-1.5"></i> Sign In`;
+        btn.className = 'w-full py-3.5 bg-slate-900 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 active:scale-[0.98] transition-all duration-200 text-sm';
+    }
+
+    // Clean URL parameters from address bar
+    const cleanUrl = window.location.origin + window.location.pathname;
+    window.history.replaceState({}, document.title, cleanUrl);
+
+    console.log("Session cleared. Returned to inline login screen.");
 }
 
 
@@ -6789,33 +6869,7 @@ function getRoleClass(role) {
     return classes[role] || 'bg-gray-50 text-gray-600 border-gray-100';
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const params = new URLSearchParams(window.location.search);
-    const isAutoLogin = params.get('autoLogin') === 'true';
-    
-    if (isAutoLogin) {
-        const token = params.get('t');
-        if (token) {
-            localStorage.setItem('token', token);
-            localStorage.setItem('username', params.get('u'));
-            localStorage.setItem('userRole', params.get('r'));
-            localStorage.setItem('hotelId', params.get('h'));
 
-            // IMPORTANT: Do NOT clean the URL here. 
-            // Wait until the dashboard is initialized.
-            if (typeof initDashboard === "function") {
-                await initDashboard(); 
-            }
-
-            // NOW clean the URL after fetches have had a chance to start
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
-    } else {
-        if (!localStorage.getItem('token')) {
-            window.location.href = 'https://elegant-pasca-cea136.netlify.app/frontend/login.html';
-        }
-    }
-});
 
 function openReportModal() {
     const modal = document.getElementById('reportModal');
@@ -7897,50 +7951,48 @@ function handleItemDeletionWorkflow(item) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Handle Inventory Setup
+    // 1. Declare todayString at top of scope to fix ReferenceError
+    const todayString = new Date().toISOString().split('T')[0];
+
+    // 2. Set default dates in inputs cleanly using todayString
     const inventoryDateInput = document.getElementById('search-inventory-date');
     if (inventoryDateInput && !inventoryDateInput.value) {
-        inventoryDateInput.value = new Date().toISOString().split('T')[0];
-    }
-    if (typeof fetchInventory === 'function') {
-        fetchInventory();
+        inventoryDateInput.value = todayString;
     }
 
     const cashDateInput = document.getElementById('cash-filter-date');
     if (cashDateInput && !cashDateInput.value) {
-        // Set the default filter criteria instantly to today
         cashDateInput.value = todayString;
-    }
-    if (typeof fetchCashJournal === 'function') {
-        fetchCashJournal();
     }
 
     const expensesDateInput = document.getElementById('expenses-date-filter');
     if (expensesDateInput && !expensesDateInput.value) {
-        // Default the picker to today's date context
         expensesDateInput.value = todayString;
-    }
-    
-    // Execute data retrieval immediately on system launch
-    if (typeof fetchExpenses === 'function') {
-        fetchExpenses();
     }
 
     const salesDateInput = document.getElementById('sales-date-filter');
     if (salesDateInput && !salesDateInput.value) {
-        // Automatically default sales date selector parameters to today
         salesDateInput.value = todayString;
     }
-    if (typeof fetchSales === 'function') {
-        fetchSales();
-    }
-    // Change 'search-report-date' to match the exact ID used in your status reports HTML layout
-    const reportDateInput = document.getElementById('statusReportFilterDate') || document.getElementById('statusReportFilterDate');
+
+    const reportDateInput = document.getElementById('statusReportFilterDate');
     if (reportDateInput && !reportDateInput.value) {
-        reportDateInput.value = new Date().toISOString().split('T')[0];
+        reportDateInput.value = todayString;
     }
-    
-    // Change 'fetchStatusReports' to match your actual JavaScript fetch function name for reports
+
+    // 3. AUTH GUARD: Stop execution if no user token exists
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.warn('User not authenticated. Skipping startup data fetches.');
+        return; // Prevents 401 response loops on the login screen
+    }
+
+    // 4. Safe data retrieval execution (runs strictly when logged in)
+    if (typeof fetchInventory === 'function') fetchInventory();
+    if (typeof fetchCashJournal === 'function') fetchCashJournal();
+    if (typeof fetchExpenses === 'function') fetchExpenses();
+    if (typeof fetchSales === 'function') fetchSales();
+
     if (typeof fetchStatusReports === 'function') {
         fetchStatusReports();
     } else if (typeof fetchReports === 'function') {
@@ -8974,11 +9026,6 @@ async function fetchExpenses() {
         // FIXED: Using currentPage and totalPages from your backend
         renderExpensesPagination(result.currentPage, result.totalPages);
 
-        // 6. Success Feedback UI
-        if (expensesData.length === 0 && dateFilter) {
-            showMessage('No expenses found for this date.', false);
-        }
-
         updateExpensesSearchButton('Done', 'fas fa-check');
 
         // Revert button text
@@ -9659,10 +9706,7 @@ async function fetchCashJournal() {
         // Pass records to render table layout structures
         renderCashJournalTable(journalsArray);
 
-        // 4. ADDED: Show feedback message if backend returns an empty dataset
-        if (journalsArray.length === 0) {
-            showMessage('No cash records found for the selected filters.', false);
-        }
+        
 
         updateCashSearchButton('Done', 'fas fa-check');
         setTimeout(() => {
@@ -12799,32 +12843,7 @@ async function fetchStatusReports() {
 let allStatusReports = [];       // Master data cache
 let filteredStatusReports = [];  // Active filtered set
 
-// 1. RUN ON LOAD: Fetch real backend reports dynamically
-document.addEventListener("DOMContentLoaded", initPage);
 
-async function initPage() {
-    try {
-        // Fetch all base data on load (remove date query to get default baseline reports)
-        const url = `${API_BASE_URL}/status-reports`;
-        const response = await authenticatedFetch(url);
-        
-        if (!response.ok) throw new Error("Failed to pull initial data logs");
-        
-        const data = await response.json();
-        
-        // Cache it safely in your master pointer
-        allStatusReports = data || [];
-        
-        // Paint the complete baseline elements instantly
-        //renderStatusTable(allStatusReports);
-        
-    } catch (err) {
-        console.error("Initialization Error:", err);
-        showMessage("Could not populate baseline reports: " + err.message);
-        // Fall back to empty layout safely
-        renderStatusTable([]);
-    }
-}
 
 // 2. REAL-TIME CHANGE HANDLER: Hits API when date picker changes
 async function filterStatusReportsByDate() {
@@ -15202,97 +15221,7 @@ function setFieldValue(id, value) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const modal = document.getElementById('quickPayModal');
-    const openBtn = document.getElementById('openQuickPayModal');
-    const closeBtn = document.getElementById('closeQuickPayModal');
-    const form = document.getElementById('quickPayForm');
-    const messageBox = document.getElementById('quickPayMessage');
-    const submitBtn = document.getElementById('submitQuickPay');
 
-    // Open Modal
-    openBtn.addEventListener('click', () => {
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-    });
-
-    // Reset view variables when closing the modal window
-    const closeModal = () => {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Proceed To Payment';
-        messageBox.className = 'hidden';
-    };
-
-    closeBtn.addEventListener('click', closeModal);
-
-    // Close when clicking outside modal backdrop
-    window.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeModal();
-        }
-    });
-
-    // Form submission processing
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Processing...';
-        messageBox.className = 'hidden';
-
-        try {
-            const payload = {
-                amount: Number(document.getElementById('amount').value),
-                outlet: document.getElementById('outlet').value,
-                phone: document.getElementById('phone').value
-            };
-
-            const response = await authenticatedFetch('https://patrinahhotelpms.onrender.com/api/quick-sales/initiate-payment', {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
-
-            if (!response) return; 
-
-            const data = await response.json();
-            console.log("Backend Response Data:", data); 
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to initiate payment');
-            }
-            
-            // Check for valid camelCase string sent from backend schema rules
-            if (!data.redirectUrl) {
-                throw new Error("Payment gateway failed to provide a redirection link.");
-            }
-
-            messageBox.className = 'bg-green-50 text-green-700 border-green-200 text-sm font-medium rounded-lg p-3.5';
-            messageBox.textContent = 'Redirecting to secure Pesapal checkout page...';
-            messageBox.classList.remove('hidden');
-
-            // Securely transfer whole window frame to checkout link location
-            setTimeout(() => {
-                window.location.href = data.redirectUrl;
-            }, 1200);
-
-        } catch (error) {
-            messageBox.className = 'bg-red-50 text-red-700 border-red-200 text-sm font-medium rounded-lg p-3.5';
-            messageBox.textContent = error.message;
-            messageBox.classList.remove('hidden');
-            
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Proceed To Payment';
-        } finally {
-            // Re-enable input button only if it catches early network failure
-            if (!messageBox.classList.contains('text-green-700')) {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Proceed To Payment';
-            }
-        }
-    });
-});
 
 function googleTranslateElementInit() {
     new google.translate.TranslateElement(
@@ -15763,3 +15692,5 @@ function toggleDropdown(menuId, arrowId) {
         arrow.classList.remove('rotate-180');
     }
 }
+
+
