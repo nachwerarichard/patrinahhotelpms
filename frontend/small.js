@@ -826,6 +826,7 @@ roomTypes[typeName].push(room);
     // 3. Update the UI
     
     // --- Login and Role Management ---
+// --- Login and Role Management ---
 async function showDashboard(username, role) {
     currentUserRole = role;
     localStorage.setItem('hotel_username', username);
@@ -842,12 +843,12 @@ async function showDashboard(username, role) {
     if (loginContainer) loginContainer.style.display = 'none';
     if (mainContent) mainContent.style.display = 'flex';
     
+    // Apply granular role permissions to sidebar items
     applyRoleAccess(role);
 
     let initialSectionId = '';
     let initialNavLinkId = '';
 
-    // Hide dashboard panel explicitly for non-admin roles
     const dashboardSection = document.getElementById('dashboard');
 
     if (role === 'admin' || role === 'super-admin') {
@@ -873,29 +874,32 @@ async function showDashboard(username, role) {
         initialSectionId = 'booking-management';
         initialNavLinkId = 'nav-booking';
         if (dashboardSection) dashboardSection.style.display = 'none';
-        
-        const paymentGatewayNav = document.getElementById('nav-paymentgateway');
-        if (paymentGatewayNav) paymentGatewayNav.style.display = 'none';
 
         if (typeof renderBookings === 'function') {
             renderBookings(typeof currentPage !== 'undefined' ? currentPage : 1, typeof currentSearchTerm !== 'undefined' ? currentSearchTerm : '');
         }
     }
 
-    // Hide all sections first so non-active views aren't visible
+    // Hide all view panels first
     const sections = document.querySelectorAll('.section-panel, section');
     sections.forEach(sec => {
         sec.classList.remove('active');
         sec.style.display = 'none';
     });
 
-    // Reset current active nav items
+    // Reset current active class across nav items
     document.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
 
-    // Activate selected section and menu item
+    // Activate initial nav item and display section
     if (initialNavLinkId) {
         const navEl = document.getElementById(initialNavLinkId);
-        if (navEl) navEl.classList.add('active');
+        if (navEl) {
+            navEl.classList.add('active');
+            
+            // Expand parent dropdown menu if nested
+            const parentMenu = navEl.closest('ul[id$="-menu"]');
+            if (parentMenu) parentMenu.classList.remove('hidden');
+        }
     }
     
     if (initialSectionId) {
@@ -909,11 +913,15 @@ async function showDashboard(username, role) {
 
 
 function handleNavigation(event) {
-    event.preventDefault();
+    // If the click happened on a dropdown toggle button, allow standard toggle handling
+    if (event.target.closest('button')) return;
 
     const clickedElement = event.target.closest('li');
-    if (!clickedElement) return; 
-    
+    if (!clickedElement || !clickedElement.id) return;
+
+    event.preventDefault();
+
+    // Map nav element IDs to target content section IDs
     const targetId = clickedElement.id === 'nav-booking' ? 'booking-management' : clickedElement.id.replace('nav-', '');
 
     // Role restriction checks
@@ -923,8 +931,8 @@ function handleNavigation(event) {
         return;
     }
 
-    // Toggle active classes on nav elements and sections
-    const navLinks = document.querySelectorAll('nav li, .nav-item');
+    // Toggle active state on menu items and sections
+    const navLinks = document.querySelectorAll('nav li');
     const sections = document.querySelectorAll('.section-panel, section');
 
     navLinks.forEach(link => link.classList.remove('active'));
@@ -944,7 +952,7 @@ function handleNavigation(event) {
         return;
     }
 
-    // Trigger dynamic component rendering based on section ID
+    // Trigger section-specific views
     if (targetId === 'booking-management' && typeof renderBookings === 'function') {
         if (typeof currentPage !== 'undefined') currentPage = 1;
         if (typeof currentSearchTerm !== 'undefined') currentSearchTerm = '';
@@ -987,27 +995,28 @@ function handleNavigation(event) {
 
 function applyRoleAccess(role) {
     const navIds = [
-        'nav-booking', 'nav-dashboard', 'nav-housekeeping', 'nav-inventory', 
-        'nav-sales', 'nav-payments', 'nav-posinventory', 'nav-kds', 
-        'nav-expenses', 'nav-cash', 'nav-checklistform', 'nav-checklisttable', 'nav-missingitems',
-        'nav-posreports', 'nav-salereport', 'nav-expensereport', 'nav-housekeepingreports', 'nav-receivables',
-        'nav-staff', 'nav-reports', 'nav-calendar', 'nav-roominventory', 'nav-channelmanager', 'nav-integration', 'nav-audit-logs'
+        'nav-dashboard',
+        'nav-booking', 'nav-calendar', 'nav-inventory', 'nav-channelmanager', 'nav-reports',
+        'nav-sales', 'nav-posinventory', 'nav-kds', 'nav-prep-list-section',
+        'nav-housekeeping', 'nav-checklisttable', 'nav-checklistform', 'nav-missingitems', 'nav-housekeepingreports',
+        'nav-payments', 'nav-receivables', 'nav-cash', 'nav-expenses', 'nav-posreports', 'nav-salereport', 'nav-expensereport',
+        'nav-staff', 'nav-paymentgateway', 'nav-integrations', 'nav-audit-logs'
     ];
 
-    // Hide all navigation elements safely
+    // Hide all navigation links first
     navIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
 
-    // Helper function to show designated items
     const showNavs = (ids) => {
         ids.forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.style.display = 'list-item';
+            if (el) el.style.display = 'block';
         });
     };
 
+    // Assign visible elements per role
     switch (role) {
         case 'admin':
         case 'super-admin':
@@ -1017,10 +1026,10 @@ function applyRoleAccess(role) {
         case 'housekeeper':
             showNavs([
                 'nav-housekeeping', 
-                'nav-housekeepingreports', 
-                'nav-checklistform', 
                 'nav-checklisttable', 
-                'nav-missingitems'
+                'nav-checklistform', 
+                'nav-missingitems',
+                'nav-housekeepingreports'
             ]);
             break;
 
@@ -1029,7 +1038,7 @@ function applyRoleAccess(role) {
             break;
 
         case 'chef':
-            showNavs(['nav-kds']);
+            showNavs(['nav-kds', 'nav-prep-list-section']);
             break;
 
         case 'cashier':
@@ -1046,9 +1055,28 @@ function applyRoleAccess(role) {
             break;
 
         case 'front office':
-            showNavs(['nav-booking']);
+            showNavs(['nav-booking', 'nav-calendar', 'nav-inventory']);
             break;
     }
+
+    // Toggle parent module containers based on child visibility
+    const parentModules = [
+        { parentId: 'nav-frontoffice', menuId: 'frontoffice-menu' },
+        { parentId: 'nav-pos', menuId: 'pos-menu' },
+        { parentId: 'nav-housekeep', menuId: 'housekeeping-menu' },
+        { parentId: 'nav-financials', menuId: 'financials-menu' },
+        { parentId: 'nav-admin', menuId: 'admin-menu' }
+    ];
+
+    parentModules.forEach(({ parentId, menuId }) => {
+        const parentEl = document.getElementById(parentId);
+        const menuEl = document.getElementById(menuId);
+
+        if (parentEl && menuEl) {
+            const hasVisibleChild = Array.from(menuEl.children).some(child => child.style.display !== 'none');
+            parentEl.style.display = hasVisibleChild ? 'block' : 'none';
+        }
+    });
 }
 
 async function renderBookings(page = 1, searchTerm = '') {
