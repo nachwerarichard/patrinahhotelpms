@@ -9678,10 +9678,7 @@ async function fetchCashJournal() {
         // Pass records to render table layout structures
         renderCashJournalTable(journalsArray);
 
-        // 4. ADDED: Show feedback message if backend returns an empty dataset
-        if (journalsArray.length === 0) {
-            showMessage('No cash records found for the selected filters.', false);
-        }
+        
 
         updateCashSearchButton('Done', 'fas fa-check');
         setTimeout(() => {
