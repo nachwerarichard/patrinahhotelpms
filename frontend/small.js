@@ -12807,32 +12807,7 @@ async function fetchStatusReports() {
 let allStatusReports = [];       // Master data cache
 let filteredStatusReports = [];  // Active filtered set
 
-// 1. RUN ON LOAD: Fetch real backend reports dynamically
-document.addEventListener("DOMContentLoaded", initPage);
 
-async function initPage() {
-    try {
-        // Fetch all base data on load (remove date query to get default baseline reports)
-        const url = `${API_BASE_URL}/status-reports`;
-        const response = await authenticatedFetch(url);
-        
-        if (!response.ok) throw new Error("Failed to pull initial data logs");
-        
-        const data = await response.json();
-        
-        // Cache it safely in your master pointer
-        allStatusReports = data || [];
-        
-        // Paint the complete baseline elements instantly
-        //renderStatusTable(allStatusReports);
-        
-    } catch (err) {
-        console.error("Initialization Error:", err);
-        showMessage("Could not populate baseline reports: " + err.message);
-        // Fall back to empty layout safely
-        renderStatusTable([]);
-    }
-}
 
 // 2. REAL-TIME CHANGE HANDLER: Hits API when date picker changes
 async function filterStatusReportsByDate() {
