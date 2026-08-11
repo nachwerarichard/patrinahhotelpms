@@ -311,17 +311,9 @@ const getHotelCurrency = () => {
 async function authenticatedFetch(url, options = {}) {
     let token = localStorage.getItem('token');
 
-    // 1. If no token, return to inline login UI instead of redirecting externally
+    // 1. If no token, abort immediately without triggering logout routines
     if (!token) {
-        console.warn('No token found. Showing inline login UI.');
-        if (typeof logout === 'function') {
-            logout();
-        } else {
-            const loginContainer = document.getElementById('login-container');
-            if (loginContainer) loginContainer.classList.remove('hidden');
-            const dashboardWrapper = document.getElementById('dashboard-wrapper');
-            if (dashboardWrapper) dashboardWrapper.style.display = 'none';
-        }
+        console.warn('No token found. Aborting authenticated request.');
         return null;
     }
 
@@ -347,7 +339,7 @@ async function authenticatedFetch(url, options = {}) {
         if (response.status === 401) {
             console.warn('Session expired or unauthorized (401). Triggering logout...');
             if (typeof logout === 'function') {
-                logout();
+                await logout();
             }
         }
 
@@ -5227,6 +5219,15 @@ updateroomDashboard();
 
 
 async function logout() {
+    // ➔ GUARD 1: Exit immediately if already logged out to prevent clearing active login typing
+    const hasToken = localStorage.getItem('token') || (typeof authToken !== 'undefined' && authToken);
+    const loginContainer = document.getElementById('login-container');
+    const isLoginVisible = loginContainer && loginContainer.style.display !== 'none' && !loginContainer.classList.contains('hidden');
+
+    if (!hasToken && isLoginVisible) {
+        return;
+    }
+
     console.log("Initiating secure logout...");
 
     const controller = new AbortController();
@@ -5253,40 +5254,46 @@ async function logout() {
     sessionStorage.clear();
 
     /* ---------- 2. RESET INLINE UI COMPONENTS ---------- */
-    // Hide main application content wrapper using style.display
+    // Hide main application content wrapper
     const dashboardWrapper = document.getElementById('dashboard-wrapper');
     if (dashboardWrapper) {
         dashboardWrapper.style.display = 'none';
     }
 
-    // Reset and reveal inline login container
-    // Inside your logout function:
-const loginContainer = document.getElementById('login-container');
-if (loginContainer) {
-    loginContainer.style.display = 'flex';
-    loginContainer.classList.remove('hidden');
-}
-
-    // Clean up login form inputs and button states
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) {
-        loginForm.reset();
+    // Reveal inline login container
+    if (loginContainer) {
+        loginContainer.style.display = 'flex';
+        loginContainer.classList.remove('hidden');
     }
 
+    // ➔ GUARD 2: Only reset inputs if the user is NOT actively typing in them
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+
+        const isUserTyping = document.activeElement === usernameInput || document.activeElement === passwordInput;
+        if (!isUserTyping) {
+            loginForm.reset();
+        }
+    }
+
+    // Reset error messages
     const err = document.getElementById('error-message');
     if (err) {
         err.textContent = '';
         err.classList.add('hidden');
     }
 
+    // Reset submit button state
     const btn = document.getElementById('login-button');
     if (btn) {
         btn.disabled = false;
-        btn.innerHTML = `<i class="fas fa-sign-in-alt mr-1.5"></i>  Sign In`;
+        btn.innerHTML = `<i class="fas fa-sign-in-alt mr-1.5"></i> Sign In`;
         btn.className = 'w-full py-3.5 bg-slate-900 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 active:scale-[0.98] transition-all duration-200 text-sm';
     }
 
-    // Clean URL parameters from the address bar
+    // Clean URL parameters from address bar
     const cleanUrl = window.location.origin + window.location.pathname;
     window.history.replaceState({}, document.title, cleanUrl);
 
