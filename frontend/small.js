@@ -206,13 +206,13 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             err.textContent = result.message || 'Authentication failed.';
             err.classList.remove('hidden');
             btn.disabled = false;
-            btn.innerHTML = `<i class="fas fa-shield-alt mr-1.5"></i> Secure Authentication`;
+            btn.innerHTML = `<i class="fas fa-shield-alt mr-1.5"></i> Sign In`;
         }
     } catch (error) {
         err.textContent = 'Server unreachable. Check your connection.';
         err.classList.remove('hidden');
         btn.disabled = false;
-        btn.innerHTML = `<i class="fas fa-shield-alt mr-1.5"></i> Secure Authentication`;
+        btn.innerHTML = `<i class="fas fa-shield-alt mr-1.5"></i> Sign In`;
     }
 });
 
