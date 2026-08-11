@@ -4297,44 +4297,62 @@ function handleLogout() {
 
 
 window.addEventListener('DOMContentLoaded', async () => {
+    // 1. Get DOM elements safely
+    const loginContainer = document.getElementById('login-container');
+    const mainContent = document.getElementById('main-content') || document.getElementById('dashboard-wrapper');
+    
+    // 2. Retrieve session data
     const savedUser = localStorage.getItem('loggedInUser');
+    const token = localStorage.getItem('token');
 
-    if (savedUser) {
+    // 3. Verify BOTH user object and token exist
+    if (savedUser && token) {
         try {
             const userData = JSON.parse(savedUser);
             
-            // Re-assign global variables for use in fetch headers
-            currentUsername = userData.username;
-            currentUserRole = userData.role;
-            // hotelId and token should be pulled from userData whenever a fetch is made
+            // Re-assign global variables for runtime scope
+            if (typeof currentUsername !== 'undefined') currentUsername = userData.username;
+            if (typeof currentUserRole !== 'undefined') currentUserRole = userData.role;
 
-            // UI logic to show the main app
-            loginContainer.style.display = 'none';
-            mainContent.style.display = 'flex';
-   const displayName = document.getElementById('hotel-name-display');
-    if (displayName && userData) {
-        displayName.textContent = userData.hotelName;
-    }
-   const displayrhName = document.getElementById('receipt-hotel-name');
-    if (displayrhName && userData) {
-        displayrhName.textContent = userData.hotelName;
-    }
-            // Function to initialize the UI based on the user's hotel and role
+            // UI logic to toggle views
+            if (loginContainer) loginContainer.style.display = 'none';
+            if (mainContent) mainContent.style.display = 'flex';
+
+            // Display hotel name across UI components
+            const displayName = document.getElementById('hotel-name-display');
+            if (displayName && userData.hotelName) {
+                displayName.textContent = userData.hotelName;
+            }
+
+            const displayrhName = document.getElementById('receipt-hotel-name');
+            if (displayrhName && userData.hotelName) {
+                displayrhName.textContent = userData.hotelName;
+            }
+
+            // Initialize app views
             if (typeof showDashboard === 'function') {
                 await showDashboard(userData.username, userData.role);
             } else {
-                // Fallback: if showDashboard isn't used, trigger standard renders
-                renderBookings(currentPage, currentSearchTerm);
-                updateBookingStats();
+                if (typeof renderBookings === 'function') {
+                    renderBookings(typeof currentPage !== 'undefined' ? currentPage : 1, typeof currentSearchTerm !== 'undefined' ? currentSearchTerm : '');
+                }
+                if (typeof updateBookingStats === 'function') {
+                    updateBookingStats();
+                }
             }
         } catch (e) {
             console.error("Session restoration failed:", e);
+            // Clear corrupted session data without infinite reload loops
             localStorage.removeItem('loggedInUser');
-            location.reload(); 
+            localStorage.removeItem('token');
+            
+            if (loginContainer) loginContainer.style.display = 'flex';
+            if (mainContent) mainContent.style.display = 'none';
         }
     } else {
-        loginContainer.style.display = 'flex';
-        mainContent.style.display = 'none';
+        // No session found - present login interface
+        if (loginContainer) loginContainer.style.display = 'flex';
+        if (mainContent) mainContent.style.display = 'none';
     }
 });
 async function markNoShow(bookingId) {
@@ -7905,50 +7923,48 @@ function handleItemDeletionWorkflow(item) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Handle Inventory Setup
+    // 1. Declare todayString at top of scope to fix ReferenceError
+    const todayString = new Date().toISOString().split('T')[0];
+
+    // 2. Set default dates in inputs cleanly using todayString
     const inventoryDateInput = document.getElementById('search-inventory-date');
     if (inventoryDateInput && !inventoryDateInput.value) {
-        inventoryDateInput.value = new Date().toISOString().split('T')[0];
-    }
-    if (typeof fetchInventory === 'function') {
-        fetchInventory();
+        inventoryDateInput.value = todayString;
     }
 
     const cashDateInput = document.getElementById('cash-filter-date');
     if (cashDateInput && !cashDateInput.value) {
-        // Set the default filter criteria instantly to today
         cashDateInput.value = todayString;
-    }
-    if (typeof fetchCashJournal === 'function') {
-        fetchCashJournal();
     }
 
     const expensesDateInput = document.getElementById('expenses-date-filter');
     if (expensesDateInput && !expensesDateInput.value) {
-        // Default the picker to today's date context
         expensesDateInput.value = todayString;
-    }
-    
-    // Execute data retrieval immediately on system launch
-    if (typeof fetchExpenses === 'function') {
-        fetchExpenses();
     }
 
     const salesDateInput = document.getElementById('sales-date-filter');
     if (salesDateInput && !salesDateInput.value) {
-        // Automatically default sales date selector parameters to today
         salesDateInput.value = todayString;
     }
-    if (typeof fetchSales === 'function') {
-        fetchSales();
-    }
-    // Change 'search-report-date' to match the exact ID used in your status reports HTML layout
-    const reportDateInput = document.getElementById('statusReportFilterDate') || document.getElementById('statusReportFilterDate');
+
+    const reportDateInput = document.getElementById('statusReportFilterDate');
     if (reportDateInput && !reportDateInput.value) {
-        reportDateInput.value = new Date().toISOString().split('T')[0];
+        reportDateInput.value = todayString;
     }
-    
-    // Change 'fetchStatusReports' to match your actual JavaScript fetch function name for reports
+
+    // 3. AUTH GUARD: Stop execution if no user token exists
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.warn('User not authenticated. Skipping startup data fetches.');
+        return; // Prevents 401 response loops on the login screen
+    }
+
+    // 4. Safe data retrieval execution (runs strictly when logged in)
+    if (typeof fetchInventory === 'function') fetchInventory();
+    if (typeof fetchCashJournal === 'function') fetchCashJournal();
+    if (typeof fetchExpenses === 'function') fetchExpenses();
+    if (typeof fetchSales === 'function') fetchSales();
+
     if (typeof fetchStatusReports === 'function') {
         fetchStatusReports();
     } else if (typeof fetchReports === 'function') {
