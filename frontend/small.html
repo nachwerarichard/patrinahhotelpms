@@ -3931,16 +3931,20 @@ Add Guest Details            </h2>
 
                     <!-- Password Input with Toggle Eye -->
                     <div>
-                        <label class="block text-sm font-medium mb-1" for="staffpassword">System Password:</label>
-                        <div class="relative">
-                            <input type="password" id="staffpassword" placeholder="••••••••" 
-                                class="w-full border p-2 pr-10 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <button type="button" onclick="togglePasswordVisibility('staffpassword', 'togglePasswordIcon')" 
-                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none">
-                                <i id="togglePasswordIcon" class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                    </div>
+    <label class="block text-sm font-medium mb-1" for="staffpassword">System Password:</label>
+    <div class="relative flex items-center">
+        <input type="password" id="staffpassword" placeholder="••••••••" 
+            class="w-full border p-2 pr-10 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+        
+        <button type="button" 
+            onclick="togglePasswordVisibility('staffpassword', 'togglePasswordIcon')" 
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none p-1 cursor-pointer z-10"
+            aria-label="Toggle password visibility">
+            <!-- Using fa-solid fa-eye for Font Awesome 6 support -->
+            <i id="togglePasswordIcon" class="fa-solid fa-eye text-base"></i>
+        </button>
+    </div>
+</div>
 
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium mb-1" for="staffrole">Role Assignment:</label>
