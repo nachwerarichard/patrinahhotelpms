@@ -825,8 +825,7 @@ roomTypes[typeName].push(room);
 
     // 3. Update the UI
     
-    
-// --- Login and Role Management ---
+    // --- Login and Role Management ---
 async function showDashboard(username, role) {
     currentUserRole = role;
     localStorage.setItem('hotel_username', username);
@@ -837,46 +836,63 @@ async function showDashboard(username, role) {
     const displayName = document.getElementById('display-user-role');
     if (displayName) displayName.textContent = currentUserRole;
 
-    loginContainer.style.display = 'none';
-    mainContent.style.display = 'flex';
+    const loginContainer = document.getElementById('login-container');
+    const mainContent = document.getElementById('main-content') || document.getElementById('dashboard-wrapper');
+
+    if (loginContainer) loginContainer.style.display = 'none';
+    if (mainContent) mainContent.style.display = 'flex';
     
     applyRoleAccess(role);
 
     let initialSectionId = '';
     let initialNavLinkId = '';
 
-    // LOGIC: Only Admins/Super-Admins go to the dashboard
+    // Hide dashboard panel explicitly for non-admin roles
+    const dashboardSection = document.getElementById('dashboard');
+
     if (role === 'admin' || role === 'super-admin') {
-        initialSectionId = 'dashboard'; // Keeping your specific spelling
+        initialSectionId = 'dashboard';
         initialNavLinkId = 'nav-dashboard';
     } 
     else if (role === 'housekeeper') {
         initialSectionId = 'housekeeping';
         initialNavLinkId = 'nav-housekeeping';
-        document.getElementById('dashboard').style.display = 'none';
+        if (dashboardSection) dashboardSection.style.display = 'none';
     } 
     else if (role === 'chef') {
         initialSectionId = 'kds';
         initialNavLinkId = 'nav-kds';
-        document.getElementById('dashboard').style.display = 'none';
+        if (dashboardSection) dashboardSection.style.display = 'none';
     } 
     else if (role === 'cashier' || role === 'bar') {
-        initialSectionId = 'sales-records'; // Change this to your POS section ID
+        initialSectionId = 'sales-records';
         initialNavLinkId = 'nav-sales';
-        document.getElementById('dashboard').style.display = 'none';
+        if (dashboardSection) dashboardSection.style.display = 'none';
     }
     else if (role === 'front office') {
         initialSectionId = 'booking-management';
         initialNavLinkId = 'nav-booking';
-        document.getElementById('dashboard').style.display = 'none';
-        document.getElementById('nav-paymentgateway').style.display = 'none';
-        renderBookings()
+        if (dashboardSection) dashboardSection.style.display = 'none';
+        
+        const paymentGatewayNav = document.getElementById('nav-paymentgateway');
+        if (paymentGatewayNav) paymentGatewayNav.style.display = 'none';
+
+        if (typeof renderBookings === 'function') {
+            renderBookings(typeof currentPage !== 'undefined' ? currentPage : 1, typeof currentSearchTerm !== 'undefined' ? currentSearchTerm : '');
+        }
     }
 
-    // Reset current active states
+    // Hide all sections first so non-active views aren't visible
+    const sections = document.querySelectorAll('.section-panel, section');
+    sections.forEach(sec => {
+        sec.classList.remove('active');
+        sec.style.display = 'none';
+    });
+
+    // Reset current active nav items
     document.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
 
-    // Set new active section
+    // Activate selected section and menu item
     if (initialNavLinkId) {
         const navEl = document.getElementById(initialNavLinkId);
         if (navEl) navEl.classList.add('active');
@@ -886,179 +902,155 @@ async function showDashboard(username, role) {
         const secEl = document.getElementById(initialSectionId);
         if (secEl) {
             secEl.classList.add('active');
-            secEl.style.display = 'block'; // Ensure it's visible
-
+            secEl.style.display = 'block';
         }
     }
 }
 
 
 function handleNavigation(event) {
-    
-event.preventDefault();
+    event.preventDefault();
 
-    // Find the closest parent <li> element to get its ID
     const clickedElement = event.target.closest('li');
-    if (!clickedElement) {
-        // This prevents errors if a click somehow happens outside a list item
-        return; 
-    }
+    if (!clickedElement) return; 
     
-    // Get the ID from the <li> element
     const targetId = clickedElement.id === 'nav-booking' ? 'booking-management' : clickedElement.id.replace('nav-', '');
 
-
-    
-    // Prevent navigation if the user's role doesn't permit it
-    if (currentUserRole === 'housekeeper' && targetId !== 'housekeeping') {
-        //showMessage('Access Denied', 'Housekeepers can only access the Housekeeping section.', true);
-        //return;
-    }
-    
-    // Block 'bar' user from accessing sections they don't have permission for
-    const barRestrictedSections = ['housekeeping', 'reports', 'service-reports', 'audit-logs','dashboard'];
+    // Role restriction checks
+    const barRestrictedSections = ['housekeeping', 'reports', 'service-reports', 'audit-logs', 'dashboard'];
     if (currentUserRole === 'bar' && barRestrictedSections.includes(targetId)) {
-        showMessage('Access Denied', 'You do not have permission to access this section.', true);
+        if (typeof showMessage === 'function') showMessage('Access Denied', 'You do not have permission to access this section.', true);
         return;
     }
 
-    // Remove 'active' class from all nav links and sections
+    // Toggle active classes on nav elements and sections
+    const navLinks = document.querySelectorAll('nav li, .nav-item');
+    const sections = document.querySelectorAll('.section-panel, section');
+
     navLinks.forEach(link => link.classList.remove('active'));
-    sections.forEach(section => section.classList.remove('active'));
+    sections.forEach(section => {
+        section.classList.remove('active');
+        section.style.display = 'none';
+    });
 
-    // Add 'active' class to the clicked nav link
-    event.target.classList.add('active');
+    clickedElement.classList.add('active');
 
-    // Add 'active' class to the corresponding section
     const targetSection = document.getElementById(targetId);
     if (targetSection) {
         targetSection.classList.add('active');
+        targetSection.style.display = 'block';
     } else {
         console.error(`Error: Section with ID "${targetId}" not found.`);
-        
-        // Fallback to a default accessible section if targetId is invalid
-        if (currentUserRole === 'admin' || currentUserRole==='super-admin') {
-            document.getElementById('dashboard').classList.add('active');
-            //renderBookings(currentPage, currentSearchTerm); // Ensure it renders if fallback
-        } else if (currentUserRole === 'housekeeper') {
-            document.getElementById('housekeeping').classList.add('active');
-            document.getElementById('nav-housekeeping').classList.add('active');
-            document.getElementById('booking-management').style.display='none';
-            //renderHousekeepingRooms(); // Ensure it renders if fallback
-        } else if (currentUserRole === 'bar') {
-            document.getElementById('booking-management').classList.add('active');
-            document.getElementById('nav-booking').classList.add('active');
-           document.getElementById('housekeeping').style.display="none";
-            document.getElementById('booking-management').style.display="block";
-
-           // renderBookings(currentPage, currentSearchTerm); // Ensure it renders if fallback
-        }
         return;
     }
 
-    // Re-render sections when active
-    if (targetId === 'booking-management') {
-        currentPage = 1; // Reset to first page when navigating to bookings
-        currentSearchTerm = ''; // Clear search term when navigating via menu
-        bookingSearchInput.value = ''; // Clear search input field
+    // Trigger dynamic component rendering based on section ID
+    if (targetId === 'booking-management' && typeof renderBookings === 'function') {
+        if (typeof currentPage !== 'undefined') currentPage = 1;
+        if (typeof currentSearchTerm !== 'undefined') currentSearchTerm = '';
+        
+        const bookingSearchInput = document.getElementById('booking-search-input');
+        if (bookingSearchInput) bookingSearchInput.value = '';
+        
         renderBookings(currentPage, currentSearchTerm);
-    } else if (targetId === 'housekeeping') {
+    } else if (targetId === 'housekeeping' && typeof renderHousekeepingRooms === 'function') {
         renderHousekeepingRooms();
-    } else if (targetId === 'calendar') {
+    } else if (targetId === 'calendar' && typeof renderCalendar === 'function') {
         renderCalendar();
-    } else if (targetId === 'service-reports') {
-        // Set default dates for service reports to current month
+    } else if (targetId === 'service-reports' && typeof renderServiceReports === 'function') {
         const today = new Date();
         const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
         const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        serviceReportStartDate.value = firstDay.toISOString().split('T')[0];
-        serviceReportEndDate.value = lastDay.toISOString().split('T')[0];
+        
+        const serviceReportStartDate = document.getElementById('service-report-start-date');
+        const serviceReportEndDate = document.getElementById('service-report-end-date');
+        
+        if (serviceReportStartDate) serviceReportStartDate.value = firstDay.toISOString().split('T')[0];
+        if (serviceReportEndDate) serviceReportEndDate.value = lastDay.toISOString().split('T')[0];
+        
         renderServiceReports();
-    } else if (targetId === 'audit-logs') {
-        // Set default dates for audit logs to last 30 days
+    } else if (targetId === 'audit-logs' && typeof renderAuditLogs === 'function') {
         const today = new Date();
         const thirtyDaysAgo = new Date(today);
         thirtyDaysAgo.setDate(today.getDate() - 30);
-        auditLogStartDateFilter.value = thirtyDaysAgo.toISOString().split('T')[0];
-        auditLogEndDateFilter.value = today.toISOString().split('T')[0];
+        
+        const auditLogStartDateFilter = document.getElementById('audit-log-start-date');
+        const auditLogEndDateFilter = document.getElementById('audit-log-end-date');
+
+        if (auditLogStartDateFilter) auditLogStartDateFilter.value = thirtyDaysAgo.toISOString().split('T')[0];
+        if (auditLogEndDateFilter) auditLogEndDateFilter.value = today.toISOString().split('T')[0];
+        
         renderAuditLogs();
     }
 }
-/**
- * Applies access restrictions to navigation and sections based on user role.
- * @param {string} role - The role of the logged-in user ('admin' or 'housekeeper').
- */
 
-// A new function to update the UI based on the user's role
-/**
- * Adjusts UI elements based on the user's role.
- * @param {string} role - The role of the currently logged-in user ('admin', 'housekeeper', 'bar').
- */
+
 function applyRoleAccess(role) {
-    // 1. Select all nav items (using a class is cleaner, but keeping your ID method for now)
     const navIds = [
         'nav-booking', 'nav-dashboard', 'nav-housekeeping', 'nav-inventory', 
-        'nav-sales', 'nav-payments','nav-posinventory', 'nav-kds', 
-         'nav-expenses', 'nav-cash', , 'nav-checklistform', 'nav-checklisttable','nav-missingitems' ,
-        'nav-posreports', 'nav-salereport', 'nav-expensereport','nav-housekeepingreports', 'nav-receivables',
-        'nav-staff', 'nav-reports', 'nav-calendar','nav-roominventory','nav-channelmanager','nav-integration','nav-audit-logs'
+        'nav-sales', 'nav-payments', 'nav-posinventory', 'nav-kds', 
+        'nav-expenses', 'nav-cash', 'nav-checklistform', 'nav-checklisttable', 'nav-missingitems',
+        'nav-posreports', 'nav-salereport', 'nav-expensereport', 'nav-housekeepingreports', 'nav-receivables',
+        'nav-staff', 'nav-reports', 'nav-calendar', 'nav-roominventory', 'nav-channelmanager', 'nav-integration', 'nav-audit-logs'
     ];
 
-    // Hide everything first
+    // Hide all navigation elements safely
     navIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
 
-    // 2. Show based on role
+    // Helper function to show designated items
+    const showNavs = (ids) => {
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'list-item';
+        });
+    };
+
     switch (role) {
         case 'admin':
-        case 'super-admin': // Correct way to handle multiple cases
-            // Admins see everything, including the dashboard
-            navIds.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.style.display = 'list-item';
-            });
+        case 'super-admin':
+            showNavs(navIds);
             break;
 
         case 'housekeeper':
-            document.getElementById('nav-housekeeping').style.display = 'list-item';
-            document.getElementById('nav-housekeepingreports').style.display = 'list-item';
-             document.getElementById('nav-checklistform').style.display = 'list-item';
-            document.getElementById('nav-checklisttable').style.display = 'list-item';
-            document.getElementById('nav-missingitems').style.display = 'list-item';
+            showNavs([
+                'nav-housekeeping', 
+                'nav-housekeepingreports', 
+                'nav-checklistform', 
+                'nav-checklisttable', 
+                'nav-missingitems'
+            ]);
             break;
 
         case 'bar':
-            document.getElementById('nav-sales').style.display = 'list-item';
+            showNavs(['nav-sales']);
             break;
 
         case 'chef':
-            document.getElementById('nav-kds').style.display = 'list-item';
+            showNavs(['nav-kds']);
             break;
 
         case 'cashier':
-            document.getElementById('nav-sales').style.display = 'list-item';
-            document.getElementById('nav-payments').style.display = 'list-item';
-            document.getElementById('nav-payments').style.display = 'list-item';
-            document.getElementById('nav-expenses').style.display = 'list-item';
-            document.getElementById('nav-cash').style.display = 'list-item';
-            document.getElementById('nav-posreports').style.display = 'list-item';
-            document.getElementById('nav-salereport').style.display = 'list-item';
-            document.getElementById('nav-expensereport').style.display = 'list-item';
-            document.getElementById('nav-housekeepingreports').style.display = 'list-item';
+            showNavs([
+                'nav-sales', 
+                'nav-payments', 
+                'nav-expenses', 
+                'nav-cash', 
+                'nav-posreports', 
+                'nav-salereport', 
+                'nav-expensereport', 
+                'nav-housekeepingreports'
+            ]);
             break;
 
         case 'front office':
-            document.getElementById('nav-booking').style.display = 'list-item';
+            showNavs(['nav-booking']);
             break;
     }
 }
-/**
- * Renders the bookings table, fetching data from the backend with pagination and search.
- * @param {number} page - The current page number to fetch.
- * @param {string} [searchTerm=''] - Optional: A search term to filter bookings.
- */
+
 async function renderBookings(page = 1, searchTerm = '') {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelId = sessionData?.hotelId;
