@@ -913,46 +913,54 @@ async function showDashboard(username, role) {
 
 
 function handleNavigation(event) {
-    // If the click happened on a dropdown toggle button, allow standard toggle handling
+    // 1. Ignore top-level dropdown buttons
     if (event.target.closest('button')) return;
 
+    // 2. Find closest list item
     const clickedElement = event.target.closest('li');
     if (!clickedElement || !clickedElement.id) return;
 
+    // Ignore clicks on main parent menu items that host submenus (e.g., nav-frontoffice)
+    if (clickedElement.querySelector('ul')) return;
+
     event.preventDefault();
 
-    // Map nav element IDs to target content section IDs
-    const targetId = clickedElement.id === 'nav-booking' ? 'booking-management' : clickedElement.id.replace('nav-', '');
+    // 3. Map nav element IDs to target content section IDs
+    const targetId = clickedElement.id === 'nav-booking' 
+        ? 'booking-management' 
+        : clickedElement.id.replace('nav-', '');
 
-    // Role restriction checks
+    // 4. Role restriction checks
     const barRestrictedSections = ['housekeeping', 'reports', 'service-reports', 'audit-logs', 'dashboard'];
     if (currentUserRole === 'bar' && barRestrictedSections.includes(targetId)) {
-        if (typeof showMessage === 'function') showMessage('Access Denied', 'You do not have permission to access this section.', true);
+        if (typeof showMessage === 'function') {
+            showMessage('Access Denied', 'You do not have permission to access this section.', true);
+        }
         return;
     }
 
-    // Toggle active state on menu items and sections
+    // 5. Update Navigation States FIRST
     const navLinks = document.querySelectorAll('nav li');
-    const sections = document.querySelectorAll('.section-panel, section');
-
     navLinks.forEach(link => link.classList.remove('active'));
+    clickedElement.classList.add('active');
+
+    // 6. Update Section Visibility
+    const sections = document.querySelectorAll('.section-panel, section');
     sections.forEach(section => {
         section.classList.remove('active');
         section.style.display = 'none';
     });
-
-    clickedElement.classList.add('active');
 
     const targetSection = document.getElementById(targetId);
     if (targetSection) {
         targetSection.classList.add('active');
         targetSection.style.display = 'block';
     } else {
-        console.error(`Error: Section with ID "${targetId}" not found.`);
-        return;
+        console.warn(`Warning: Target section with ID "${targetId}" is missing from the layout.`);
+        // Active class remains on menu item even if main content view is missing
     }
 
-    // Trigger section-specific views
+    // 7. Trigger section views...
     if (targetId === 'booking-management' && typeof renderBookings === 'function') {
         if (typeof currentPage !== 'undefined') currentPage = 1;
         if (typeof currentSearchTerm !== 'undefined') currentSearchTerm = '';

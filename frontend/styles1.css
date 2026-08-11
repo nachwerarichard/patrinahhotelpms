@@ -311,6 +311,11 @@ body {
   justify-content: center !important;
 }
 
+nav li.active > a {
+    background-color: #1e293b; /* bg-slate-800 */
+    color: #ffffff !important;
+}
+
 
     
 
