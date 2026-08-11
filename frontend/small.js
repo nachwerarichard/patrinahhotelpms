@@ -124,6 +124,160 @@ const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn
 
 
 const CURRENT_CURRENCY = localStorage.getItem('hotelCurrency') || 'UGX';
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const btn = document.getElementById('login-button');
+    const err = document.getElementById('error-message');
+    
+    btn.disabled = true;
+    btn.innerHTML = `<span class="flex items-center justify-center gap-2"><i class="fas fa-spinner fa-spin"></i> Authenticating...</span>`;
+    err.classList.add('hidden');
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            const user = result.user;
+            const token = result.token;
+
+            // Extract User Data
+            const usernameVal = user.username;
+            const role = (user.role || '').toLowerCase();
+            const hotelId = user.hotelId || 'global';
+            const hotelName = user.hotelName || 'Our Hotel';
+            const hotelLocation = user.hotelLocation || 'Main Campus';
+            const hotelCurrency = user.hotelCurrency || 'UGX';
+
+            // Commit session state directly to localStorage
+            localStorage.setItem('token', token);
+            localStorage.setItem('username', usernameVal);
+            localStorage.setItem('userRole', role);
+            localStorage.setItem('hotelId', hotelId);
+            localStorage.setItem('hotelName', hotelName);
+            localStorage.setItem('hotelLocation', hotelLocation);
+            localStorage.setItem('hotelCurrency', hotelCurrency);
+
+            const targetUserObject = {
+                username: usernameVal,
+                role: role,
+                token: token,
+                hotelName: hotelName,
+                hotelId: hotelId,
+                hotelLocation: hotelLocation,
+                hotelCurrency: hotelCurrency
+            };
+            localStorage.setItem('loggedInUser', JSON.stringify(targetUserObject));
+
+            // Feedback UI
+            btn.innerHTML = `<span class="flex items-center justify-center gap-2"><i class="fas fa-check"></i> Access Granted</span>`;
+            btn.classList.replace('bg-slate-900', 'bg-emerald-600');
+
+            // Hide Login Overlay & Reveal Dashboard
+            setTimeout(() => {
+                const loginContainer = document.getElementById('login-container');
+                if (loginContainer) {
+                    loginContainer.style.display = 'none'; // Explicit inline style hide
+                    loginContainer.classList.add('hidden');
+                }
+
+                const dashboardWrapper = document.getElementById('dashboard-wrapper');
+                if (dashboardWrapper) {
+                    dashboardWrapper.style.display = 'flex'; // Reveal main interface
+                }
+
+                // Boot Main Application Controller
+                if (typeof initDashboard === 'function') {
+                    initDashboard();
+                }
+            }, 600);
+
+        } else {
+            err.textContent = result.message || 'Authentication failed.';
+            err.classList.remove('hidden');
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fas fa-shield-alt mr-1.5"></i> Secure Authentication`;
+        }
+    } catch (error) {
+        err.textContent = 'Server unreachable. Check your connection.';
+        err.classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-shield-alt mr-1.5"></i> Secure Authentication`;
+    }
+});
+
+// Global Password Toggle Handler (Use this single function)
+document.addEventListener('click', (e) => {
+    const toggleBtn = e.target.closest('#toggle-password');
+    if (!toggleBtn) return;
+
+    const passwordInput = document.getElementById('password');
+    const eyeOpen = document.getElementById('eye-icon-open');
+    const eyeClosed = document.getElementById('eye-icon-closed');
+
+    if (passwordInput) {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+
+        if (eyeOpen && eyeClosed) {
+            eyeOpen.classList.toggle('hidden', isPassword);
+            eyeClosed.classList.toggle('hidden', !isPassword);
+        }
+    }
+});
+
+// 2. Main App Initialization & Authentication Routing
+document.addEventListener('DOMContentLoaded', async () => {
+    const loginContainer = document.getElementById('login-container');
+    const dashboardWrapper = document.getElementById('dashboard-wrapper');
+    const token = localStorage.getItem('token');
+
+    // Clean up residual URL parameters if present
+    if (window.location.search) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // Strict authentication gate
+    if (token) {
+        // Authenticated State: Show Dashboard
+        if (loginContainer) {
+            loginContainer.style.display = 'none';
+            loginContainer.classList.add('hidden');
+        }
+        if (dashboardWrapper) {
+            dashboardWrapper.style.display = 'flex';
+        }
+
+        // ONLY initialize dashboard logic & timers if token exists
+        if (typeof initDashboard === 'function') {
+            await initDashboard();
+        }
+    } else {
+        // Unauthenticated State: Show Login Modal
+        if (dashboardWrapper) {
+            dashboardWrapper.style.display = 'none';
+        }
+        if (loginContainer) {
+            loginContainer.style.display = 'flex';
+            loginContainer.classList.remove('hidden');
+        }
+
+        const usernameInput = document.getElementById('username');
+        if (usernameInput) {
+            usernameInput.focus();
+        }
+    }
+});
 const getHotelId = () => {
     // 1. Get the role and hotelId from separate keys
     const role = localStorage.getItem('userRole');
@@ -6662,68 +6816,7 @@ function getRoleClass(role) {
     return classes[role] || 'bg-gray-50 text-gray-600 border-gray-100';
 }
 
-// 1. Password toggle delegation (Runs ONCE globally, outside DOMContentLoaded)
-document.addEventListener('click', (e) => {
-    const toggleBtn = e.target.closest('#toggle-password');
-    if (!toggleBtn) return;
 
-    const passwordInput = document.getElementById('password');
-    const eyeOpen = document.getElementById('eye-icon-open');
-    const eyeClosed = document.getElementById('eye-icon-closed');
-
-    if (passwordInput) {
-        const isPassword = passwordInput.type === 'password';
-        passwordInput.type = isPassword ? 'text' : 'password';
-
-        if (eyeOpen && eyeClosed) {
-            eyeOpen.classList.toggle('hidden', isPassword);
-            eyeClosed.classList.toggle('hidden', !isPassword);
-        }
-    }
-});
-
-// 2. Main App Initialization & Authentication Routing
-document.addEventListener('DOMContentLoaded', async () => {
-    const loginContainer = document.getElementById('login-container');
-    const dashboardWrapper = document.getElementById('dashboard-wrapper');
-    const token = localStorage.getItem('token');
-
-    // Clean up residual URL parameters if present
-    if (window.location.search) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-    }
-
-    // Strict authentication gate
-    if (token) {
-        // Authenticated State: Show Dashboard
-        if (loginContainer) {
-            loginContainer.style.display = 'none';
-            loginContainer.classList.add('hidden');
-        }
-        if (dashboardWrapper) {
-            dashboardWrapper.style.display = 'flex';
-        }
-
-        // ONLY initialize dashboard logic & timers if token exists
-        if (typeof initDashboard === 'function') {
-            await initDashboard();
-        }
-    } else {
-        // Unauthenticated State: Show Login Modal
-        if (dashboardWrapper) {
-            dashboardWrapper.style.display = 'none';
-        }
-        if (loginContainer) {
-            loginContainer.style.display = 'flex';
-            loginContainer.classList.remove('hidden');
-        }
-
-        const usernameInput = document.getElementById('username');
-        if (usernameInput) {
-            usernameInput.focus();
-        }
-    }
-});
 
 function openReportModal() {
     const modal = document.getElementById('reportModal');
@@ -15673,111 +15766,3 @@ function toggleDropdown(menuId, arrowId) {
 }
 
 
-document.getElementById('login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const btn = document.getElementById('login-button');
-    const err = document.getElementById('error-message');
-    
-    btn.disabled = true;
-    btn.innerHTML = `<span class="flex items-center justify-center gap-2"><i class="fas fa-spinner fa-spin"></i> Authenticating...</span>`;
-    err.classList.add('hidden');
-
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            const user = result.user;
-            const token = result.token;
-
-            // Extract User Data
-            const usernameVal = user.username;
-            const role = (user.role || '').toLowerCase();
-            const hotelId = user.hotelId || 'global';
-            const hotelName = user.hotelName || 'Our Hotel';
-            const hotelLocation = user.hotelLocation || 'Main Campus';
-            const hotelCurrency = user.hotelCurrency || 'UGX';
-
-            // Commit session state directly to localStorage
-            localStorage.setItem('token', token);
-            localStorage.setItem('username', usernameVal);
-            localStorage.setItem('userRole', role);
-            localStorage.setItem('hotelId', hotelId);
-            localStorage.setItem('hotelName', hotelName);
-            localStorage.setItem('hotelLocation', hotelLocation);
-            localStorage.setItem('hotelCurrency', hotelCurrency);
-
-            const targetUserObject = {
-                username: usernameVal,
-                role: role,
-                token: token,
-                hotelName: hotelName,
-                hotelId: hotelId,
-                hotelLocation: hotelLocation,
-                hotelCurrency: hotelCurrency
-            };
-            localStorage.setItem('loggedInUser', JSON.stringify(targetUserObject));
-
-            // Feedback UI
-            btn.innerHTML = `<span class="flex items-center justify-center gap-2"><i class="fas fa-check"></i> Access Granted</span>`;
-            btn.classList.replace('bg-slate-900', 'bg-emerald-600');
-
-            // Hide Login Overlay & Reveal Dashboard
-            setTimeout(() => {
-                const loginContainer = document.getElementById('login-container');
-                if (loginContainer) {
-                    loginContainer.style.display = 'none'; // Explicit inline style hide
-                    loginContainer.classList.add('hidden');
-                }
-
-                const dashboardWrapper = document.getElementById('dashboard-wrapper');
-                if (dashboardWrapper) {
-                    dashboardWrapper.style.display = 'flex'; // Reveal main interface
-                }
-
-                // Boot Main Application Controller
-                if (typeof initDashboard === 'function') {
-                    initDashboard();
-                }
-            }, 600);
-
-        } else {
-            err.textContent = result.message || 'Authentication failed.';
-            err.classList.remove('hidden');
-            btn.disabled = false;
-            btn.innerHTML = `<i class="fas fa-shield-alt mr-1.5"></i> Secure Authentication`;
-        }
-    } catch (error) {
-        err.textContent = 'Server unreachable. Check your connection.';
-        err.classList.remove('hidden');
-        btn.disabled = false;
-        btn.innerHTML = `<i class="fas fa-shield-alt mr-1.5"></i> Secure Authentication`;
-    }
-});
-
-// Delegate toggle click to the document
-document.addEventListener('click', (e) => {
-    const toggleBtn = e.target.closest('#toggle-password');
-    if (!toggleBtn) return;
-
-    const passwordInput = document.getElementById('password');
-    const eyeOpen = document.getElementById('eye-icon-open');
-    const eyeClosed = document.getElementById('eye-icon-closed');
-
-    if (passwordInput && eyeOpen && eyeClosed) {
-        const isPassword = passwordInput.type === 'password';
-        passwordInput.type = isPassword ? 'text' : 'password';
-        
-        eyeOpen.classList.toggle('hidden', isPassword);
-        eyeClosed.classList.toggle('hidden', !isPassword);
-    }
-});
