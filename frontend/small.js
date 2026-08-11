@@ -2086,13 +2086,17 @@ async function openBookingModal() {
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 
-    if (form) {
-        form.reset();
-        
-        // Note: You can completely remove the manual inline style overrides for the grid 
-        // and child containers here because they will naturally inherit visibility 
-        // once the parent modal loses its 'hidden' class!
-    }
+// Ensure form and all inner elements/sections are visible
+if (form) {
+    form.reset();
+    form.style.display = 'block'; // or clear inline display: form.style.display = '';
+    
+    // Reset display for any inner hidden sections or grid elements
+    const hiddenChildren = form.querySelectorAll('*');
+    hiddenChildren.forEach(child => {
+        child.style.display = '';
+    });
+}
 
     // 2. Reset values
     const fieldIds = ['bookingId', 'nights', 'totalDue', 'balance', 'amountPaid'];
