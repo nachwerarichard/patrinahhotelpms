@@ -8998,11 +8998,6 @@ async function fetchExpenses() {
         // FIXED: Using currentPage and totalPages from your backend
         renderExpensesPagination(result.currentPage, result.totalPages);
 
-        // 6. Success Feedback UI
-        if (expensesData.length === 0 && dateFilter) {
-            showMessage('No expenses found for this date.', false);
-        }
-
         updateExpensesSearchButton('Done', 'fas fa-check');
 
         // Revert button text
