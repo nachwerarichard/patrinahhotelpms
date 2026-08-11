@@ -3911,7 +3911,7 @@ Add Guest Details            </h2>
   </div>
 </div>
     
-    <div id="userModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden flex items-center justify-center p-4">
+<div id="userModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
         <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
             <h3 id="modalTitle" class="text-lg font-semibold">Staff Registration Form</h3>
@@ -3919,9 +3919,8 @@ Add Guest Details            </h2>
         </div>
         
         <div class="p-6">
-
             <form id="userForm" class="space-y-4" onsubmit="event.preventDefault(); handleSaveUser();">
-                            <input type="hidden" id="staffId" value="">
+                <input type="hidden" id="staffId" value="">
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -3930,10 +3929,17 @@ Add Guest Details            </h2>
                             class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>
 
+                    <!-- Password Input with Toggle Eye -->
                     <div>
                         <label class="block text-sm font-medium mb-1" for="staffpassword">System Password:</label>
-                        <input type="password" id="staffpassword" placeholder="••••••••" 
-                            class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <div class="relative">
+                            <input type="password" id="staffpassword" placeholder="••••••••" 
+                                class="w-full border p-2 pr-10 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <button type="button" onclick="togglePasswordVisibility('staffpassword', 'togglePasswordIcon')" 
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none">
+                                <i id="togglePasswordIcon" class="fas fa-eye"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="md:col-span-2">
@@ -3950,18 +3956,17 @@ Add Guest Details            </h2>
                     </div>
                 </div>
 
-<div class="flex justify-end gap-3 mt-6 pt-4 border-t">
-        <button type="button" onclick="closeUserModal()" 
-            class="px-4 py-2 bg-slate-200 rounded-lg hover:bg-slate-300">
-            Close
-        </button>
- <!-- Change type to submit, and remove onclick -->
-<button type="submit" id="modalSubmitBtn" 
-    class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2">
-    <i id="btnIcon" class="fa-solid fa-save"></i>
-    <span id="btnText">Save Staff</span>
-</button>
-    </div>
+                <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
+                    <button type="button" onclick="closeUserModal()" 
+                        class="px-4 py-2 bg-slate-200 rounded-lg hover:bg-slate-300">
+                        Close
+                    </button>
+                    <button type="submit" id="modalSubmitBtn" 
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                        <i id="btnIcon" class="fa-solid fa-save"></i>
+                        <span id="btnText">Save Staff</span>
+                    </button>
+                </div>
             </form>
             
             <p id="userStatusMessage" class="text-center mt-4 font-bold text-blue-500"></p>
