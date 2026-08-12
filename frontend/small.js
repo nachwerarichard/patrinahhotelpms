@@ -6232,7 +6232,7 @@ async function saveInlineEdit(id) {
 
     try {
         // MUST pass headers: {} so authenticatedFetch doesn't force 'application/json'
-        const response = await authenticatedFetch(`${API_BASE_URL}/api/room-types/${id}`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/room-types/${id}`, {
             method: 'PUT',
             headers: {}, 
             body: formData
