@@ -6269,7 +6269,6 @@ async function saveInlineEdit(id) {
         if (typeof showMessage === 'function') showMessage(err.message || "Network error", true);
     }
 }
-
 async function fetchRoomsV2() {
     const tbody = document.getElementById('roomTableBody');
     const mobileGrid = document.getElementById('roomMobileGrid');
@@ -6283,7 +6282,7 @@ async function fetchRoomsV2() {
         if (!res.ok) throw new Error(rooms.error || "Inventory endpoint communication error.");
 
         if (!rooms || rooms.length === 0) {
-            const fallbackMsg = '<div class="p-10 text-center text-slate-400 font-medium text-xs">No registered rooms found in property inventory.</div>';
+            const fallbackMsg = '<div class="p-8 text-center text-slate-400 font-medium text-xs">No registered physical rooms found in property inventory.</div>';
             if (tbody) tbody.innerHTML = `<tr><td colspan="6">${fallbackMsg}</td></tr>`;
             if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
             return;
@@ -6293,20 +6292,20 @@ async function fetchRoomsV2() {
         if (mobileGrid) mobileGrid.innerHTML = '';
 
         rooms.forEach(room => {
-            const categoryName = room.roomTypeId?.name || '<span class="text-rose-400 font-medium">Unassigned</span>';
-            const rate = room.overridePrice 
-                ? room.overridePrice.toLocaleString() 
-                : (room.roomTypeId?.basePrice ? room.roomTypeId.basePrice.toLocaleString() : '0.00');
+            const categoryName = room.roomTypeId?.name || 'Unassigned';
+            const rawRate = room.overridePrice ?? room.roomTypeId?.basePrice ?? 0;
+            const rateFormatted = rawRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             
             // Housekeeping Badge
             const hkStatus = (room.status || 'clean').toLowerCase();
-            const hkBadge = hkStatus === 'clean' 
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                : 'bg-amber-50 text-amber-700 border-amber-200';
+            let hkBadgeStyle = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            if (hkStatus === 'dirty') hkBadgeStyle = 'bg-rose-50 text-rose-700 border-rose-200';
+            if (hkStatus === 'inspected') hkBadgeStyle = 'bg-blue-50 text-blue-700 border-blue-200';
+            if (hkStatus === 'out_of_order' || hkStatus === 'ooo') hkBadgeStyle = 'bg-amber-50 text-amber-700 border-amber-200';
 
-            // Front Office Occupancy State Badge
+            // Occupancy Badge
             const foStatus = room.isOccupied ? 'Occupied' : 'Vacant';
-            const foBadge = room.isOccupied 
+            const foBadgeStyle = room.isOccupied 
                 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' 
                 : 'bg-slate-100 text-slate-600 border-slate-200';
 
@@ -6315,21 +6314,25 @@ async function fetchRoomsV2() {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100 inventory-row";
                 tr.innerHTML = `
-                    <td class="px-6 py-3.5">
-                        <span class="font-black text-slate-800 text-sm room-number">${room.number}</span>
-                    </td>
-                    <td class="px-6 py-3.5 text-slate-600 font-semibold room-category">${categoryName}</td>
-                    <td class="px-6 py-3.5 font-mono text-xs text-indigo-600 font-bold">${CURRENT_CURRENCY} ${rate}</td>
-                    <td class="px-6 py-3.5 text-center">
-                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${hkBadge}">
-                            ${hkStatus}
+                    <td class="py-2.5 px-3.5 font-semibold text-slate-900 room-number">${room.number}</td>
+                    <td class="py-2.5 px-3.5 text-slate-600 room-category">${categoryName}</td>
+                    <td class="py-2.5 px-3.5 font-mono text-slate-800 font-semibold">${CURRENT_CURRENCY} ${rateFormatted}</td>
+                    <td class="py-2.5 px-3.5 text-center">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border uppercase tracking-wider ${hkBadgeStyle} room-hk-status">
+                            ${hkStatus.replace('_', ' ')}
                         </span>
                     </td>
-                    
-                    <td class="px-6 py-3.5 text-right">
-                        <div class="flex items-center justify-end gap-1.5">
-                            
-                            <button onclick="deleteRoom('${room._id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded transition" title="Remove Room">
+                    <td class="py-2.5 px-3.5 text-center">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border uppercase tracking-wider ${foBadgeStyle}">
+                            ${foStatus}
+                        </span>
+                    </td>
+                    <td class="py-2.5 px-3.5 text-right">
+                        <div class="flex items-center justify-end gap-1">
+                            <button onclick="openEditRoomModal('${room._id}', '${room.number}', '${categoryName}', '${room.roomTypeId?._id || ''}', '${room.overridePrice || ''}')" class="p-1 text-slate-400 hover:text-slate-700 rounded transition" title="Edit Room">
+                                <i class="fa-solid fa-pen-to-square text-xs"></i>
+                            </button>
+                            <button onclick="deleteRoom('${room._id}')" class="p-1 text-slate-400 hover:text-rose-600 rounded transition" title="Remove Room">
                                 <i class="fa-solid fa-trash-can text-xs"></i>
                             </button>
                         </div>
@@ -6338,31 +6341,34 @@ async function fetchRoomsV2() {
                 tbody.appendChild(tr);
             }
 
-            // SMARTPHONE CARD
+            // MOBILE CARD
             if (mobileGrid) {
                 const card = document.createElement('div');
-                card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-xs space-y-3 inventory-card";
+                card.className = "p-3 bg-white border border-slate-200 rounded-md shadow-xs space-y-2.5 inventory-card";
                 card.innerHTML = `
                     <div class="flex justify-between items-start">
                         <div>
-                            <span class="text-[9px] uppercase tracking-wider font-extrabold text-slate-400 block">Room Number</span>
-                            <h4 class="text-base font-black text-slate-800 room-number">${room.number}</h4>
+                            <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-400 block">Room</span>
+                            <h4 class="text-sm font-semibold text-slate-900 room-number">${room.number}</h4>
                         </div>
                         <div class="flex items-center gap-1">
-                            
-                            <button onclick="deleteRoom('${room._id}')" class="p-1.5 text-slate-400 hover:text-rose-600">
+                            <button onclick="openEditRoomModal('${room._id}', '${room.number}', '${categoryName}', '${room.roomTypeId?._id || ''}', '${room.overridePrice || ''}')" class="p-1 text-slate-400 hover:text-slate-700">
+                                <i class="fa-solid fa-pen-to-square text-xs"></i>
+                            </button>
+                            <button onclick="deleteRoom('${room._id}')" class="p-1 text-slate-400 hover:text-rose-600">
                                 <i class="fa-solid fa-trash-can text-xs"></i>
                             </button>
                         </div>
                     </div>
                     
                     <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                        <span class="text-slate-500 font-medium room-category">${categoryName}</span>
-                        <span class="font-mono font-bold text-indigo-600">${CURRENT_CURRENCY} ${rate}</span>
+                        <span class="text-slate-500 room-category">${categoryName}</span>
+                        <span class="font-mono font-semibold text-slate-900">${CURRENT_CURRENCY} ${rateFormatted}</span>
                     </div>
 
-                    <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-[10px]">
-                        <span class="px-2 py-0.5 rounded-full font-extrabold uppercase border ${hkBadge}">${hkStatus}</span>
+                    <div class="pt-2 border-t border-slate-100 flex justify-between items-center gap-2">
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border uppercase tracking-wider ${hkBadgeStyle} room-hk-status">${hkStatus.replace('_', ' ')}</span>
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border uppercase tracking-wider ${foBadgeStyle}">${foStatus}</span>
                     </div>
                 `;
                 mobileGrid.appendChild(card);
@@ -6371,29 +6377,49 @@ async function fetchRoomsV2() {
 
     } catch (err) {
         console.error("Table Refresh Error Catch Exception:", err);
-        const errorMsg = '<div class="p-10 text-center text-rose-500 font-semibold text-xs"><i class="fa-solid fa-circle-exclamation mr-2"></i>Error loading physical inventory matrix records.</div>';
+        const errorMsg = '<div class="p-8 text-center text-rose-500 font-semibold text-xs"><i class="fa-solid fa-circle-exclamation mr-1.5"></i>Error loading room inventory matrix records.</div>';
         if (tbody) tbody.innerHTML = `<tr><td colspan="6">${errorMsg}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = errorMsg;
     }
 }
 
-// Search helper for live physical inventory
+/**
+ * Filter inventory table rows and mobile cards in real-time
+ */
 function filterInventoryTable() {
-    const query = document.getElementById('inventorySearchInput').value.toLowerCase();
+    const input = document.getElementById('inventorySearchInput');
+    if (!input) return;
     
-    document.querySelectorAll('.inventory-row').forEach(row => {
-        const num = row.querySelector('.room-number')?.innerText.toLowerCase() || '';
-        const cat = row.querySelector('.room-category')?.innerText.toLowerCase() || '';
-        row.style.display = (num.includes(query) || cat.includes(query)) ? '' : 'none';
+    const query = input.value.toLowerCase().trim();
+
+    // Filter Desktop Rows
+    const rows = document.querySelectorAll('.inventory-row');
+    rows.forEach(row => {
+        const roomNum = row.querySelector('.room-number')?.textContent.toLowerCase() || '';
+        const roomCat = row.querySelector('.room-category')?.textContent.toLowerCase() || '';
+        const roomHk = row.querySelector('.room-hk-status')?.textContent.toLowerCase() || '';
+        
+        if (roomNum.includes(query) || roomCat.includes(query) || roomHk.includes(query)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
     });
 
-    document.querySelectorAll('.inventory-card').forEach(card => {
-        const num = card.querySelector('.room-number')?.innerText.toLowerCase() || '';
-        const cat = card.querySelector('.room-category')?.innerText.toLowerCase() || '';
-        card.style.display = (num.includes(query) || cat.includes(query)) ? '' : 'none';
+    // Filter Mobile Cards
+    const cards = document.querySelectorAll('.inventory-card');
+    cards.forEach(card => {
+        const roomNum = card.querySelector('.room-number')?.textContent.toLowerCase() || '';
+        const roomCat = card.querySelector('.room-category')?.textContent.toLowerCase() || '';
+        const roomHk = card.querySelector('.room-hk-status')?.textContent.toLowerCase() || '';
+
+        if (roomNum.includes(query) || roomCat.includes(query) || roomHk.includes(query)) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
     });
 }
-
 // Run on page load
 fetchRoomsV2();
 // --- G. EDIT ROOM MODAL LOGIC ---
