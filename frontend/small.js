@@ -4651,15 +4651,13 @@ async function submitPayment() {
     const amountInput = document.getElementById('paymentAmount');
     const methodInput = document.getElementById('payMethod');
     const submitBtn = document.getElementById('submitPaymentBtn');
-// Add this adjustment in your small.js file:
-     const rawAmount = amountInput.value.replace(/,/g, '').trim(); 
 
-// 2. Parse it cleanly as a float
-const amount = parseFloat(rawAmount);
+    const rawAmount = amountInput.value.replace(/,/g, '').trim(); 
+    const amount = parseFloat(rawAmount);
     const method = methodInput.value;
 
     if (!bookingId) return showMessage("Error", "No booking context linked.", true);
-    if (!amount || amount <= 0) return showMessage("Error", "Please enter a valid amount.", true);
+    if (!amount || isNaN(amount) || amount <= 0) return showMessage("Error", "Please enter a valid amount.", true);
     if (!method) return showMessage("Error", "Select a payment channel.", true);
 
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
@@ -4676,8 +4674,8 @@ const amount = parseFloat(rawAmount);
     };
 
     if (isPesapalGateway) {
-        const phone = document.getElementById('pesapalPhone').value.trim();
-        const email = document.getElementById('pesapalEmail').value.trim();
+        const phone = document.getElementById('pesapalPhone')?.value.trim() || '';
+        const email = document.getElementById('pesapalEmail')?.value.trim() || '';
 
         if (!phone && !email) {
             showMessage("Error", "Pesapal checkout requires either a phone number or an email address.", true);
@@ -4690,10 +4688,9 @@ const amount = parseFloat(rawAmount);
     try {
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.innerHTML = 'Processing Payment...';
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Processing...';
         }
 
-        // --- NEW POLYMORPHIC ROUTING ENDPOINTS ---
         let endpoint = `${API_BASE_URL}/bookings/${bookingId}/add-payment`;
         if (isPesapalGateway) {
             endpoint = `${API_BASE_URL}/bookings/${bookingId}/initiate-pesapal-payment`;
@@ -4713,49 +4710,49 @@ const amount = parseFloat(rawAmount);
 
         const result = await response.json();
 
-        // Handle both Gateway IFRAME loading pipelines 
+        // Handle Gateway Redirections
         if (isPesapalGateway || isStripeGateway) {
-    if (result.success && result.redirectUrl) {
-        
-        // ➔ STRIPE PATH: Redirect the entire window safely
-        if (isStripeGateway) {
-            showMessage("Redirecting", "Transferring you to secure Stripe Checkout...", false);
-            window.location.href = result.redirectUrl;
-            return; // Exit the function here
-        }
+            if (result.success && result.redirectUrl) {
+                if (isStripeGateway) {
+                    showMessage("Redirecting", "Transferring you to secure Stripe Checkout...", false);
+                    window.location.href = result.redirectUrl;
+                    return;
+                }
 
-        // ➔ PESAPAL PATH: Keep loading inside the local iframe container
-        document.getElementById('paymentFormInputs').classList.add('hidden');
-        document.getElementById('modalActionButtons').classList.add('hidden');
-        
-        const container = document.getElementById('pesapalIframeContainer');
-        const iframe = document.getElementById('pesapalIframe');
-        const label = document.getElementById('gatewayProviderLabel');
-        
-        // Use optional chaining (?.) so it never crashes even if the label element is missing
-        if (label) {
-            label.innerText = "🔒 Secured Via Pesapal Merchant Framework V3";
+                document.getElementById('paymentFormInputs')?.classList.add('hidden');
+                document.getElementById('modalActionButtons')?.classList.add('hidden');
+                
+                const container = document.getElementById('pesapalIframeContainer');
+                const iframe = document.getElementById('pesapalIframe');
+                const label = document.getElementById('gatewayProviderLabel');
+                
+                if (label) label.innerText = "🔒 Secured Via Pesapal Merchant Framework V3";
+                
+                if (container && iframe) {
+                    container.classList.remove('hidden');
+                    iframe.src = result.redirectUrl; 
+                }
+                
+                showMessage("Checkout Loaded", "Please complete payment inside the secure gateway frame.", false);
+            } else {
+                throw new Error(result.message || "Failed initializing gateway session.");
+            }
+        } else {
+            // Cash / Manual Path
+            const currencySymbol = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+            showMessage("Success", `Payment of ${currencySymbol} ${amount.toLocaleString()} recorded to ledger! ✅`);
+            
+            amountInput.value = '';
+            if (typeof closePaymentModal === 'function') closePaymentModal();
+            if (typeof refreshDashboardViews === 'function') refreshDashboardViews();
+            
+            // Refreshes the booking table accurately
+            if (typeof renderBookings === 'function') {
+                const targetPage = typeof currentPage !== 'undefined' ? currentPage : 1;
+                const targetSearch = typeof currentSearchTerm !== 'undefined' ? currentSearchTerm : '';
+                renderBookings(targetPage, targetSearch);
+            }
         }
-        
-        if (container && iframe) {
-            container.classList.remove('hidden');
-            iframe.src = result.redirectUrl; 
-        }
-        
-        showMessage("Checkout Loaded", "Please complete payment inside the secure gateway frame.", false);
-    } else {
-        throw new Error(result.message || "Failed initializing gateway session.");
-    }
-} else {
-    // Cash path
-    showMessage("Success", `Payment of ${CURRENT_CURRENCY} ${amount.toLocaleString()} recorded to ledger! ✅`);
-    amountInput.value = '';
-    closePaymentModal();
-    refreshDashboardViews();
-    if (typeof renderBookings === 'function') {
-        renderBookings(currentPage, currentSearchTerm);
-    }
-}
 
     } catch (err) {
         console.error("Critical Execution Fault:", err);
