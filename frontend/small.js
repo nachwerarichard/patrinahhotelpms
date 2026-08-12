@@ -3995,19 +3995,109 @@ async function updateRoomStatus(roomMongoId, newStatus) {
     }
 }
 
-function updateStatusCounters(roomsArray) {
-    const counts = { clean: 0, dirty: 0, maintenance: 0, blocked: 0 };
+/**
+ * Updates the Housekeeping and Occupancy KPI cards across the dashboard.
+ * @param {Array} roomsArray - List of room objects containing status properties.
+ * @param {Array} bookingsArray - Optional: List of active bookings for arrivals/departures tracking.
+ */
+function updateStatusCounters(roomsArray = [], bookingsArray = []) {
+    const counts = { 
+        occupied: 0, 
+        clean: 0, 
+        dirty: 0, 
+        maintenance: 0, 
+        blocked: 0,
+        arrivalsPending: 0,
+        departuresPending: 0
+    };
+
+    const totalRooms = roomsArray.length;
+
+    // 1. Calculate room status metrics
     roomsArray.forEach(room => {
-        if (room.status === 'clean') counts.clean++;
-        else if (room.status === 'dirty') counts.dirty++;
-        else if (room.status === 'under-maintenance') counts.maintenance++;
-        else if (room.status === 'blocked') counts.blocked++;
+        const status = (room.status || '').toLowerCase();
+        
+        if (status === 'occupied') {
+            counts.occupied++;
+        } else if (status === 'clean' || status === 'vacant-clean') {
+            counts.clean++;
+        } else if (status === 'dirty' || status === 'vacant-dirty') {
+            counts.dirty++;
+        } else if (status === 'under-maintenance' || status === 'maintenance' || status === 'ooo') {
+            counts.maintenance++;
+        } else if (status === 'blocked') {
+            counts.blocked++;
+        }
     });
 
-    if (document.getElementById('stat-clean')) document.getElementById('stat-clean').textContent = counts.clean;
-    if (document.getElementById('stat-dirty')) document.getElementById('stat-dirty').textContent = counts.dirty;
-    if (document.getElementById('stat-maintenance')) document.getElementById('stat-maintenance').textContent = counts.maintenance;
-    if (document.getElementById('stat-occupied')) document.getElementById('stat-occupied').textContent = counts.blocked;
+    // Treat 'blocked' rooms as occupied if your business logic routes them together
+    const totalOccupied = counts.occupied + counts.blocked;
+
+    // 2. Calculate today's arrivals and departures if bookings data is provided
+    if (Array.isArray(bookingsArray) && bookingsArray.length > 0) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        bookingsArray.forEach(b => {
+            const checkInStr = b.checkInDate ? new Date(b.checkInDate).toISOString().split('T')[0] : '';
+            const checkOutStr = b.checkOutDate ? new Date(b.checkOutDate).toISOString().split('T')[0] : '';
+            
+            if (checkInStr === todayStr && b.status !== 'checked_in' && b.status !== 'cancelled') {
+                counts.arrivalsPending++;
+            }
+            if (checkOutStr === todayStr && b.status === 'checked_in') {
+                counts.departuresPending++;
+            }
+        });
+    }
+
+    // Helper safely updating DOM nodes if they exist
+    const setNodeText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+    };
+
+    // 3. Update main counter elements
+    setNodeText('stat-occupied', totalOccupied);
+    setNodeText('stat-clean', counts.clean);
+    setNodeText('stat-dirty', counts.dirty);
+    setNodeText('stat-maintenance', counts.maintenance + counts.blocked);
+
+    // 4. Update dynamic secondary indicators
+    const occupancyRate = totalRooms > 0 ? Math.round((totalOccupied / totalRooms) * 100) : 0;
+    setNodeText('stat-occupancy-rate', `${occupancyRate}%`);
+    setNodeText('arrivals-pending', `${counts.arrivalsPending} Pending`);
+    setNodeText('departures-pending', `${counts.departuresPending} Remaining`);
+
+    // 5. Update timestamp badge
+    const timeEl = document.getElementById('pms-last-updated');
+    if (timeEl) {
+        const now = new Date();
+        timeEl.textContent = `Updated ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+}
+
+/**
+ * Handles clicking on any KPI card to filter the room/tape chart view.
+ * @param {string} filterType - The status to isolate ('occupied', 'clean', 'dirty', 'arrivals', 'departures', 'maintenance')
+ */
+function filterByStatus(filterType) {
+    console.log(`Filtering UI grid by status: ${filterType}`);
+
+    // Highlight the active card visual state if needed
+    document.querySelectorAll('[onclick^="filterByStatus"]').forEach(btn => {
+        btn.classList.remove('ring-2', 'ring-blue-500', 'bg-slate-800');
+    });
+    
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('ring-2', 'ring-blue-500');
+    }
+
+    // Connect to your main renderer function or state manager
+    if (typeof applyRoomFilter === 'function') {
+        applyRoomFilter(filterType);
+    } else if (typeof renderRoomGrid === 'function') {
+        renderRoomGrid(filterType);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
