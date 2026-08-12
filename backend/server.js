@@ -2293,7 +2293,7 @@ app.post('/api/bookings/:id/move', auth, async (req, res) => {
         // 3️⃣ Update old room → clean
         await Room.updateOne(
             { number: booking.room, hotelId: req.user.hotelId },
-            { $set: { status: 'clean' } }
+            { $set: { status: 'dirty' } }
         );
 
         // 4️⃣ Update new room → blocked
