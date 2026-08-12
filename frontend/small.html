@@ -917,124 +917,66 @@
 
     </div>
 </section>
-<section id="housekeepingreports" class="section bg-white p-4 md:p-6 rounded-lg shadow-md mb-8 hidden">
-    <div class="flex justify-between items-center mb-6">
+<!-- HOUSEKEEPING REPORTS SECTION -->
+<section id="housekeepingreports" class="section bg-white p-6 rounded-xl shadow-md mb-8 hidden">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h2 class="text-lg font-bold text-slate-900 leading-tight">Housekeeping Reports</h2>
-        <button onclick="openReportModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium">
+        <button onclick="openReportModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors text-sm font-medium shadow-sm">
             <i class="fas fa-plus"></i> New Status Report
         </button>
     </div>
 
     <div id="reportsTable">
-    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 mb-6 border-b border-gray-100">
-        <div class="flex flex-wrap items-center gap-3">
-            <label for="statusReportFilterDate" class="font-semibold text-slate-700 text-sm">Filter by Date:</label>
-            <!-- ADDED: onchange="filterStatusReportsByDate()" -->
-            <input type="date" id="statusReportFilterDate" onchange="filterStatusReportsByDate()" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-44">
-            
-            <div class="flex gap-2 w-full sm:w-auto">
-                <!-- REMOVED: Search Button -->
-                <button onclick="clearStatusDateFilter()" class="bg-slate-400 hover:bg-slate-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 mb-6 border-b border-slate-100">
+            <div class="flex flex-wrap items-center gap-3">
+                <label for="statusReportFilterDate" class="font-semibold text-slate-700 text-sm">Filter by Date:</label>
+                <input type="date" id="statusReportFilterDate" onchange="filterStatusReportsByDate()" class="border border-slate-300 rounded-xl px-3.5 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all w-full sm:w-44">
+                <button onclick="clearStatusDateFilter()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold transition-colors w-full sm:w-auto">
                     Clear Filter
                 </button>
             </div>
+            
+            <div class="flex items-center gap-3 justify-end">
+                <button onclick="exportStatusReportsToExcel()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-4 py-2.5 rounded-xl text-sm flex items-center gap-2 transition-colors shadow-sm">
+                    <i class="fa-solid fa-file-export"></i> Export
+                </button>
+                <button onclick="printStatusReports()" class="bg-sky-500 hover:bg-sky-600 text-white font-semibold px-4 py-2.5 rounded-xl text-sm flex items-center gap-2 transition-colors shadow-sm">
+                    <i class="fa-solid fa-print"></i> Print
+                </button>
+            </div>
         </div>
-        
-        <div class="flex gap-2 justify-end">
-            <button onclick="exportStatusReportsToExcel()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors">
-                <i class="fa-solid fa-file-export"></i> Export
-            </button>
-            <button onclick="printStatusReports()" class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors">
-                <i class="fa-solid fa-print"></i> Print
-            </button>
+
+        <!-- Desktop Table View -->
+        <div class="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
+            <table id="statusReportTable" class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-700 uppercase text-xs font-bold tracking-wider">
+                        <th class="px-6 py-4">Room</th>
+                        <th class="px-6 py-4">Category</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4">Remarks</th>
+                        <th class="px-6 py-4">Date & Time</th>
+                        <th class="px-6 py-4 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="statusReportTableBody" class="divide-y divide-slate-100 text-slate-600 text-sm font-medium">
+                    <tr>
+                        <td colspan="6" class="text-center py-8 text-slate-400 font-medium">
+                            <i class="fa-regular fa-calendar-days mr-2 text-slate-300"></i> Please select a date to view reports.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
-    </div>
 
-    <!-- Desktop View -->
-    <div class="hidden md:block overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
-        <table id="statusReportTable" class="w-full text-left border-collapse bg-white">
-            <thead>
-                <tr class="bg-slate-100 text-slate-700 uppercase text-xs font-bold tracking-wider">
-                    <th class="p-3.5 border-b border-gray-200">Room</th>
-                    <th class="p-3.5 border-b border-gray-200">Category</th>
-                    <th class="p-3.5 border-b border-gray-200">Status</th>
-                    <th class="p-3.5 border-b border-gray-200">Remarks</th>
-                    <th class="p-3.5 border-b border-gray-200">Date & Time</th>
-                    <th class="p-3.5 border-b border-gray-200 text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="statusReportTableBody" class="text-gray-600 text-sm divide-y divide-gray-100 font-medium">
-    <!-- Static Initial Placeholder State -->
-    <tr>
-        <td colspan="6" class="text-center p-6 text-gray-400 font-medium">
-            <i class="fa-regular fa-calendar-days mr-2 text-gray-300"></i> Please select a date to view reports.
-        </td>
-    </tr>
-</tbody>
-        </table>
+        <!-- Mobile Card View -->
+        <div id="statusReportMobileGrid" class="block md:hidden space-y-4"></div>
     </div>
-
-    <!-- Mobile View -->
-    <div id="statusReportMobileGrid" class="block md:hidden space-y-4"></div>
-</div>
 </section>
 
-<div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
-        <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
-            <h3 class="text-lg font-semibold">Housekeeping Room Status Report Form</h3>
-            <button onclick="closeReportModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
-        </div>
-        
-        <div class="p-6">
-            <form id="statusReportForm" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input type="hidden" id="reportId" name="_id">
-<div>
-    <label class="block text-sm font-medium mb-1" for="reportRoom">Room Name/Number:</label>
-    <input type="text" id="reportRoom" name="room" list="roomOptions" required placeholder="e.g., 101" class="w-full border p-2 rounded">
-    <datalist id="roomOptions">
-        </datalist>
-</div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1" for="reportCategory">Category:</label>
-                        <input type="text" id="reportCategory" name="category" required placeholder="Delux" class="w-full border p-2 rounded">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1" for="reportStatus">Status:</label>
-                        <select id="reportStatus" name="status" required class="w-full border p-2 rounded">
-                            <option value="">-- Select Status --</option>
-                            <option value="blocked">Occupied</option>
-                            <option value="under-maintenance">Out of order</option>
-                            <option value="clean">Ready to assign</option>
-                            <option value="dirty">Needs Cleaning</option>
-                            <option value="In progress">In progress</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1" for="reportDateTime">Date and Time:</label>
-                        <input type="datetime-local" id="reportDateTime" name="dateTime" required class="w-full border p-2 rounded">
-                    </div>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium mb-1" for="reportRemarks">Remarks:</label>
-                    <textarea id="reportRemarks" name="remarks" rows="3" placeholder="Any additional notes..." class="w-full border p-2 rounded"></textarea>
-                </div>
-                
-                <div class="flex justify-end gap-3 mt-6">
-                    <button type="button" onclick="closeReportModal()" class="px-4 py-2 bg-slate-200 rounded-lg hover:bg-slate-300">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-                        <i class="fa-solid fa-upload mr-2"></i> Submit Report
-                    </button>
-                </div>
-            </form>
-            <p id="statusMessage" class="text-center mt-4 font-bold text-blue-500"></p>
-        </div>
-    </div>
-</div>
-  <section id="checklistform" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-    <h2 class="text-lg font-bold text-slate-900 leading-tight">
+<!-- HOTEL ROOM CHECKLIST FORM SECTION -->
+<section id="checklistform" class="section bg-white p-6 rounded-xl shadow-md mb-8 hidden">
+    <h2 class="text-lg font-bold text-slate-900 leading-tight mb-6">
         Hotel Room Checklist Form
     </h2>
     
@@ -1042,12 +984,12 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="flex flex-col gap-2">
                 <label for="roomnumber" class="text-sm font-semibold text-slate-700">Room Number:</label>
-                <input type="number" id="roomnumber" name="rno" class="w-full md:w-64 px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-700" required>
+                <input type="number" id="roomnumber" name="rno" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-700" required>
             </div>
             
             <div class="flex flex-col gap-2">
                 <label for="date" class="text-sm font-semibold text-slate-700">Date:</label>
-                <input type="date" id="date" name="date" class="w-full md:w-64 px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-700" required>
+                <input type="date" id="date" name="date" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-700" required>
             </div>
         </div>
 
@@ -1155,8 +1097,8 @@
             </div>
         </div>
 
-        <div class="pt-4 border-t border-slate-100 flex items-center justify-end">
-            <button type="submit" class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold rounded-xl shadow-md shadow-indigo-200 transition-all transform active:scale-[0.98]">
+        <div class="pt-6 border-t border-slate-100 flex items-center justify-end">
+            <button type="submit" class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold rounded-xl shadow-md shadow-indigo-100 transition-all transform active:scale-[0.98]">
                 <i class="fa-solid fa-check"></i> Submit Checklist
             </button>
         </div>
@@ -1164,17 +1106,18 @@
     <p id="message" class="text-center text-emerald-600 font-bold mt-4"></p>
 </section>
 
-<section id="checklisttable" class="section bg-white p-4 md:p-6 rounded-lg shadow-md mb-8 hidden">
-    <h2 class="text-lg font-bold text-slate-900 leading-tight">
+<!-- ROOM CHECKLISTS TABLE SECTION -->
+<section id="checklisttable" class="section bg-white p-6 rounded-xl shadow-md mb-8 hidden">
+    <h2 class="text-lg font-bold text-slate-900 leading-tight mb-6">
         Room Checklists Table
     </h2>
     
     <div class="flex flex-col sm:flex-row gap-4 items-center justify-between mb-6">
         <div class="relative w-full sm:w-72">
-            <input type="text" id="searchInputdate" class="w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm" placeholder="Search room or date...">
+            <input type="text" id="searchInputdate" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm" placeholder="Search room or date...">
         </div>
         
-        <div class="flex gap-3 w-full sm:w-auto justify-end">
+        <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
             <button onclick="exportToExcel()" class="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold text-sm rounded-xl transition-colors shadow-sm">
                 <i class="fa-solid fa-file-export"></i> Export
             </button>
@@ -1187,41 +1130,43 @@
     <div class="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
         <table id="checklistTable" class="w-full text-left border-collapse">
             <thead>
-                <tr class="bg-slate-50 border-b border-slate-200 text-slate-700 text-sm font-semibold uppercase tracking-wider">
+                <tr class="bg-slate-50 border-b border-slate-200 text-slate-700 text-xs font-bold uppercase tracking-wider">
                     <th class="px-6 py-4">Room</th>
                     <th class="px-6 py-4">Date</th>
                     <th class="px-6 py-4">Items</th>
                     <th id="checklistActionsHeader" class="px-6 py-4 text-center">Actions</th>
                 </tr>
             </thead>
-            <tbody id="checklistBody" class="divide-y divide-slate-100 text-sm text-slate-600">
-                </tbody>
+            <tbody id="checklistBody" class="divide-y divide-slate-100 text-sm text-slate-600 font-medium">
+            </tbody>
         </table>
     </div>
 
     <div id="checklistMobileGrid" class="block md:hidden space-y-4">
-        </div>
+    </div>
 
     <div class="flex items-center justify-center gap-4 mt-6">
-        <button id="prevBtn" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium rounded-lg transition-colors text-sm disabled:opacity-50">&laquo; Prev</button>
+        <button id="prevBtn" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-xl transition-colors text-sm disabled:opacity-50">&laquo; Prev</button>
         <span id="pageInfo" class="text-sm font-semibold text-slate-700">Page 1 of X</span>
-        <button id="nextBtn" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium rounded-lg transition-colors text-sm disabled:opacity-50">Next &raquo;</button>
+        <button id="nextBtn" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-xl transition-colors text-sm disabled:opacity-50">Next &raquo;</button>
     </div>
 </section>
 
-<section id="missingitems" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-    <h2 class="text-lg font-bold text-slate-900 leading-tight"></h2>
+<!-- MISSING ITEMS SECTION -->
+<section id="missingitems" class="section bg-white p-6 rounded-xl shadow-md mb-8 hidden">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6 mb-6">
+        <h2 class="text-lg font-bold text-slate-900 leading-tight">Missing Items</h2>
         
-    
-    <div class="flex flex-wrap items-center gap-4 border-b border-slate-100 pb-6 mb-6">
-        <label for="missingItemsDateFilter" class="text-sm font-semibold text-slate-700">Filter by Date:</label>
-        <input type="date" id="missingItemsDateFilter" class="w-full sm:w-56 px-4 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
-        <button id="clearMissingItemsDateFilter" class="inline-flex items-center gap-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-sm rounded-xl transition-colors">
-            <i class="fa-solid fa-xmark"></i> Clear Filter
-        </button>
+        <div class="flex flex-wrap items-center gap-3">
+            <label for="missingItemsDateFilter" class="text-sm font-semibold text-slate-700">Filter by Date:</label>
+            <input type="date" id="missingItemsDateFilter" class="w-full sm:w-56 px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all">
+            <button id="clearMissingItemsDateFilter" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-sm rounded-xl transition-colors w-full sm:w-auto">
+                <i class="fa-solid fa-xmark"></i> Clear Filter
+            </button>
+        </div>
     </div>
     
-    <div id="missingItemsSummary" class="p-6 bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-center text-sm">
+    <div id="missingItemsSummary" class="p-8 bg-slate-50 rounded-xl border border-slate-200 text-slate-500 text-center text-sm font-medium">
         <p>No missing items found for the selected date. Select a date to view a summary.</p>
     </div>
 </section>
@@ -4481,6 +4426,61 @@ Add Guest Details            </h2>
             </form>
         </div>
     </div>
+
+    <div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
+            <h3 class="text-lg font-semibold">Housekeeping Room Status Report Form</h3>
+            <button onclick="closeReportModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        
+        <div class="p-6">
+            <form id="statusReportForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" id="reportId" name="_id">
+<div>
+    <label class="block text-sm font-medium mb-1" for="reportRoom">Room Name/Number:</label>
+    <input type="text" id="reportRoom" name="room" list="roomOptions" required placeholder="e.g., 101" class="w-full border p-2 rounded">
+    <datalist id="roomOptions">
+        </datalist>
+</div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1" for="reportCategory">Category:</label>
+                        <input type="text" id="reportCategory" name="category" required placeholder="Delux" class="w-full border p-2 rounded">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1" for="reportStatus">Status:</label>
+                        <select id="reportStatus" name="status" required class="w-full border p-2 rounded">
+                            <option value="">-- Select Status --</option>
+                            <option value="blocked">Occupied</option>
+                            <option value="under-maintenance">Out of order</option>
+                            <option value="clean">Ready to assign</option>
+                            <option value="dirty">Needs Cleaning</option>
+                            <option value="In progress">In progress</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1" for="reportDateTime">Date and Time:</label>
+                        <input type="datetime-local" id="reportDateTime" name="dateTime" required class="w-full border p-2 rounded">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-1" for="reportRemarks">Remarks:</label>
+                    <textarea id="reportRemarks" name="remarks" rows="3" placeholder="Any additional notes..." class="w-full border p-2 rounded"></textarea>
+                </div>
+                
+                <div class="flex justify-end gap-3 mt-6">
+                    <button type="button" onclick="closeReportModal()" class="px-4 py-2 bg-slate-200 rounded-lg hover:bg-slate-300">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                        <i class="fa-solid fa-upload mr-2"></i> Submit Report
+                    </button>
+                </div>
+            </form>
+            <p id="statusMessage" class="text-center mt-4 font-bold text-blue-500"></p>
+        </div>
+    </div>
+</div>
     
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
