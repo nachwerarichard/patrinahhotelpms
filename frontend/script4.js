@@ -14339,208 +14339,246 @@ document.addEventListener("click", (e) => {
     }
 });
 
-   document.addEventListener("DOMContentLoaded", () => {
-    const openBtn = document.getElementById("open-ai-btn");
-    const closeBtn = document.getElementById("close-ai-btn");
-    const drawer = document.getElementById("ai-drawer");
-    const chatForm = document.getElementById("ai-chat-form");
-    const userInput = document.getElementById("ai-user-input");
-    const chatMessages = document.getElementById("ai-chat-messages");
+   /**
+ * Novus Operations Copilot — Global Drawer & Chat Standard
+ */
+(() => {
+    // Prevent duplicate initializations if script is loaded multiple times
+    if (window.NovusCopilot) return;
 
-    // Holds the session message history array for context continuity
+    // 1. Template markup for Floating Trigger Button & Drawer Container
+    const copilotHTML = `
+        <button id="open-ai-btn" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-2xl transition duration-300 flex items-center justify-center z-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" aria-label="Open Novus Copilot">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+        </button>
+
+        <div id="ai-drawer" class="fixed inset-y-0 right-0 w-full sm:w-96 bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col hidden">
+            <div class="p-4 bg-indigo-600 text-white flex justify-between items-center shadow-md">
+                <div class="flex items-center space-x-2">
+                    <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <h3 class="font-semibold text-lg">Novus Operations Copilot</h3>
+                </div>
+                <button id="close-ai-btn" class="text-white hover:text-gray-200 focus:outline-none p-1 rounded-md hover:bg-indigo-700 transition" aria-label="Close Copilot">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div id="ai-chat-messages" class="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50">
+                <div class="flex items-start space-x-2">
+                    <div class="bg-indigo-100 text-indigo-800 text-sm p-3 rounded-lg rounded-tl-none max-w-[85%] shadow-sm">
+                        Hello! I am connected to your live reservation tracking data. Ask me anything about room clean states, arrivals, departures, or occupancy counts today.
+                    </div>
+                </div>
+            </div>
+
+            <form id="ai-chat-form" class="p-4 bg-white border-t border-gray-200 flex items-center space-x-2 pb-5 sm:pb-4">
+                <input type="text" id="ai-user-input" placeholder="e.g., How many rooms need cleaning?" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" required autocomplete="off">
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shrink-0">
+                    Send
+                </button>
+            </form>
+        </div>
+    `;
+
+    // 2. Memory State
     let chatHistory = [];
 
-    // Configure marked options for security and line breaks
-    if (typeof marked !== 'undefined') {
-        marked.setOptions({
-            breaks: true,
-            gfm: true
-        });
-    }
+    // Initialize UI on DOM Ready
+    function initCopilot() {
+        if (!document.getElementById("ai-drawer")) {
+            const container = document.createElement("div");
+            container.id = "novus-copilot-container";
+            container.innerHTML = copilotHTML;
+            document.body.appendChild(container);
+        }
 
-    // Toggle panel drawer visibility
-    openBtn.addEventListener("click", () => {
-        drawer.classList.remove("hidden");
-        setTimeout(() => drawer.classList.remove("translate-x-full"), 10);
-    });
+        const openBtn = document.getElementById("open-ai-btn");
+        const closeBtn = document.getElementById("close-ai-btn");
+        const drawer = document.getElementById("ai-drawer");
+        const chatForm = document.getElementById("ai-chat-form");
+        const userInput = document.getElementById("ai-user-input");
+        const chatMessages = document.getElementById("ai-chat-messages");
 
-    closeBtn.addEventListener("click", () => {
-        drawer.classList.add("translate-x-full");
-        setTimeout(() => drawer.classList.add("hidden"), 300);
-    });
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({ breaks: true, gfm: true });
+        }
 
-    // Handle Form Submission
-    chatForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const messageText = userInput.value.trim();
-        if (!messageText) return;
+        function openDrawer() {
+            drawer.classList.remove("hidden");
+            setTimeout(() => drawer.classList.remove("translate-x-full"), 10);
+            if (userInput) userInput.focus();
+        }
 
-        // 1. Append User Bubble to UI window
-        appendMessageBubble(messageText, "user");
-        userInput.value = "";
+        function closeDrawer() {
+            drawer.classList.add("translate-x-full");
+            setTimeout(() => drawer.classList.add("hidden"), 300);
+        }
 
-        // 2. Append Typing/Loading indicator bubble
-        const loadingId = appendLoadingBubble();
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        openBtn?.addEventListener("click", openDrawer);
+        closeBtn?.addEventListener("click", closeDrawer);
 
-        try {
-            // 3. Post prompt and current history stack to the backend
-            const response = await authenticatedFetch(`${API_BASE_URL}/ai/manager-chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    message: messageText,
-                    history: chatHistory 
-                })
-            });
+        // Form Submit Handler
+        chatForm?.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const messageText = userInput.value.trim();
+            if (!messageText) return;
 
-            if (!response) {
+            appendMessageBubble(messageText, "user");
+            userInput.value = "";
+
+            const loadingId = appendLoadingBubble();
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                const response = await authenticatedFetch(`${API_BASE_URL}/ai/manager-chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: messageText,
+                        history: chatHistory
+                    })
+                });
+
                 removeBubble(loadingId);
-                appendMessageBubble("System failed to yield a valid server response.", "error");
-                return;
-            }
 
-            const data = await response.json();
-            removeBubble(loadingId);
-
-            if (response.ok) {
-                // 🛡️ Safe verification fallback string if data.reply is undefined or missing
-                const aiReply = data.reply || data.message || "No response content returned from the platform system.";
-                
-                appendMessageBubble(aiReply, "ai");
-                
-                // 4. Update memory context array for subsequent questions
-                chatHistory.push({ role: "user", parts: [{ text: messageText }] });
-                chatHistory.push({ role: "model", parts: [{ text: aiReply }] });
-                
-                // Keep history trimmed to avoid sending excessive payload data over HTTP request blocks
-                if (chatHistory.length > 16) {
-                    chatHistory = chatHistory.slice(-16);
+                if (!response) {
+                    appendMessageBubble("System failed to yield a valid server response.", "error");
+                    return;
                 }
-            } else {
-                // 🛑 Handle explicit 429 Rate Limit Status Codes
-                if (response.status === 429) {
-                    appendMessageBubble("⚠️ AI service limits reached. Please wait a moment before trying again.", "error");
-                    
-                    if (typeof showMessage === "function") {
-                        showMessage(
-                            data.title || "Limit Reached", 
-                            data.message || "We have temporarily reached our limit.", 
-                            true
-                        );
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    const aiReply = data.reply || data.message || "No response content returned from the platform system.";
+                    appendMessageBubble(aiReply, "ai");
+
+                    chatHistory.push({ role: "user", parts: [{ text: messageText }] });
+                    chatHistory.push({ role: "model", parts: [{ text: aiReply }] });
+
+                    if (chatHistory.length > 16) {
+                        chatHistory = chatHistory.slice(-16);
                     }
                 } else {
-                    const fallbackError = data.message || "Failed to process operational request state.";
-                    appendMessageBubble(`Error: ${fallbackError}`, "error");
+                    if (response.status === 429) {
+                        appendMessageBubble("⚠️ AI service limits reached. Please wait a moment before trying again.", "error");
+                        if (typeof showMessage === "function") {
+                            showMessage(
+                                data.title || "Limit Reached",
+                                data.message || "We have temporarily reached our limit.",
+                                true
+                            );
+                        }
+                    } else {
+                        const fallbackError = data.message || "Failed to process operational request state.";
+                        appendMessageBubble(`Error: ${fallbackError}`, "error");
+                    }
                 }
+            } catch (err) {
+                removeBubble(loadingId);
+                appendMessageBubble("Network error. Unable to contact AI assistant service.", "error");
+                console.error("AI Communication Failure:", err);
             }
-        } catch (err) {
-            removeBubble(loadingId);
-            appendMessageBubble("Network error. Unable to contact AI assistant service.", "error");
-            console.error("AI Communication Failure:", err);
-        }
-    });
+        });
 
-    // Helper functions to construct UI bubble states with dynamic table rendering support
-    function appendMessageBubble(text, sender) {
-        const cleanText = text ? String(text) : "";
+        // Bubble Builders & Markdown Style Injectors
+        function appendMessageBubble(text, sender) {
+            const cleanText = text ? String(text) : "";
+            const bubbleContainer = document.createElement("div");
+            bubbleContainer.className = "flex items-start my-2.5 " + (sender === "user" ? "justify-end" : "justify-start");
 
-        const bubbleContainer = document.createElement("div");
-        bubbleContainer.className = "flex items-start my-2.5 " + (sender === "user" ? "justify-end" : "justify-start");
+            const bubble = document.createElement("div");
+            bubble.className = "text-sm p-3 rounded-lg max-w-[92%] shadow-sm overflow-x-auto " +
+                (sender === "user"
+                    ? "bg-indigo-600 text-white rounded-tr-none"
+                    : sender === "error"
+                        ? "bg-red-100 text-red-800 rounded-tl-none border border-red-200"
+                        : "bg-indigo-50 text-indigo-950 rounded-tl-none border border-indigo-100");
 
-        const bubble = document.createElement("div");
-        bubble.className = "text-sm p-3 rounded-lg max-w-[92%] shadow-sm overflow-x-auto " + 
-            (sender === "user" 
-                ? "bg-indigo-600 text-white rounded-tr-none" 
-                : sender === "error" 
-                    ? "bg-red-100 text-red-800 rounded-tl-none border border-red-200" 
-                    : "bg-indigo-50 text-indigo-950 rounded-tl-none border border-indigo-100");
-
-        if (sender === "user") {
-            bubble.textContent = cleanText;
-            bubble.style.whiteSpace = "pre-line";
-        } else if (sender === "error") {
-            bubble.textContent = cleanText;
-        } else {
-            // Use marked parsing engine if safely available on global window execution scope
-            if (typeof marked !== 'undefined') {
-                // Wrap in explicit string conversion to avoid structural failure faults
-                bubble.innerHTML = marked.parse(cleanText);
-                injectTableStyles(bubble); 
-            } else {
-                // Fallback basic text parser matching native rules if script asset fails to load
-                let formattedText = cleanText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                formattedText = formattedText.replace(/^\*\s+/gm, '• ');
-                bubble.innerHTML = formattedText;
+            if (sender === "user") {
+                bubble.textContent = cleanText;
                 bubble.style.whiteSpace = "pre-line";
+            } else if (sender === "error") {
+                bubble.textContent = cleanText;
+            } else {
+                if (typeof marked !== 'undefined') {
+                    bubble.innerHTML = marked.parse(cleanText);
+                    injectTableStyles(bubble);
+                } else {
+                    let formattedText = cleanText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    formattedText = formattedText.replace(/^\*\s+/gm, '• ');
+                    bubble.innerHTML = formattedText;
+                    bubble.style.whiteSpace = "pre-line";
+                }
             }
+
+            bubbleContainer.appendChild(bubble);
+            chatMessages.appendChild(bubbleContainer);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        bubbleContainer.appendChild(bubble);
-        chatMessages.appendChild(bubbleContainer);
-
-        // 🔄 FIX: Enforce clear programmatic view indexing immediately following layout updates
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    // Dynamic Tailwind class injection utility for generated markdown structural layouts
-    function injectTableStyles(container) {
-        const tables = container.querySelectorAll("table");
-        tables.forEach(table => {
-            table.className = "w-full my-3 border-collapse text-xs text-left bg-white rounded border border-gray-200 shadow-xs block sm:table overflow-x-auto";
-            
-            // Stylize header nodes blocks cleanly
-            table.querySelectorAll("th").forEach(th => {
-                th.className = "p-2 bg-indigo-100 text-indigo-900 font-semibold border-b border-gray-200 uppercase tracking-wider white-space-nowrap";
-            });
-            
-            // Stylize cell partitions sections
-            table.querySelectorAll("td").forEach(td => {
-                td.className = "p-2 border-b border-gray-100 text-gray-700 font-normal";
+        function injectTableStyles(container) {
+            container.querySelectorAll("table").forEach(table => {
+                table.className = "w-full my-3 border-collapse text-xs text-left bg-white rounded border border-gray-200 shadow-xs block sm:table overflow-x-auto";
+                table.querySelectorAll("th").forEach(th => {
+                    th.className = "p-2 bg-indigo-100 text-indigo-900 font-semibold border-b border-gray-200 uppercase tracking-wider white-space-nowrap";
+                });
+                table.querySelectorAll("td").forEach(td => {
+                    td.className = "p-2 border-b border-gray-100 text-gray-700 font-normal";
+                });
+                table.querySelectorAll("tr").forEach((tr, index) => {
+                    if (index > 0 && index % 2 === 0) tr.classList.add("bg-gray-50/50");
+                });
             });
 
-            // Alternate row background highlight colors
-            table.querySelectorAll("tr").forEach((tr, index) => {
-                if (index > 0 && index % 2 === 0) {
-                    tr.classList.add("bg-gray-50/50");
-                }
+            container.querySelectorAll("blockquote").forEach(bq => {
+                bq.className = "my-2 pl-3 border-l-4 border-indigo-500 italic text-gray-600 bg-indigo-50/40 py-1 rounded-r";
             });
-        });
+            container.querySelectorAll("ul").forEach(ul => {
+                ul.className = "list-disc pl-5 my-2 space-y-1";
+            });
+            container.querySelectorAll("ol").forEach(ol => {
+                ol.className = "list-decimal pl-5 my-2 space-y-1";
+            });
+        }
 
-        // Stylize markdown blockquotes if system insights throw recommendations
-        container.querySelectorAll("blockquote").forEach(bq => {
-            bq.className = "my-2 pl-3 border-l-4 border-indigo-500 italic text-gray-600 bg-indigo-50/40 py-1 rounded-r";
-        });
+        function appendLoadingBubble() {
+            const id = "loading-" + Date.now();
+            const bubbleContainer = document.createElement("div");
+            bubbleContainer.id = id;
+            bubbleContainer.className = "flex items-start justify-start my-2";
 
-        // Stylize clean structured bullet entries spacing loops
-        container.querySelectorAll("ul").forEach(ul => {
-            ul.className = "list-disc pl-5 my-2 space-y-1";
-        });
-        container.querySelectorAll("ol").forEach(ol => {
-            ol.className = "list-decimal pl-5 my-2 space-y-1";
-        });
+            const bubble = document.createElement("div");
+            bubble.className = "bg-gray-100 text-gray-500 text-sm p-3 rounded-lg rounded-tl-none border border-gray-200/60 animate-pulse";
+            bubble.textContent = "Copilot is analyzing system states...";
+
+            bubbleContainer.appendChild(bubble);
+            chatMessages.appendChild(bubbleContainer);
+            return id;
+        }
+
+        function removeBubble(id) {
+            const element = document.getElementById(id);
+            if (element) element.remove();
+        }
+
+        // Public Controls Global API
+        window.NovusCopilot = {
+            open: openDrawer,
+            close: closeDrawer,
+            resetHistory: () => { chatHistory = []; }
+        };
     }
 
-    function appendLoadingBubble() {
-        const id = "loading-" + Date.now();
-        const bubbleContainer = document.createElement("div");
-        bubbleContainer.id = id;
-        bubbleContainer.className = "flex items-start justify-start my-2";
-
-        const bubble = document.createElement("div");
-        bubble.className = "bg-gray-100 text-gray-500 text-sm p-3 rounded-lg rounded-tl-none border border-gray-200/60 animate-pulse";
-        bubble.textContent = "Copilot is analyzing system states...";
-
-        bubbleContainer.appendChild(bubble);
-        chatMessages.appendChild(bubbleContainer);
-        return id;
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initCopilot);
+    } else {
+        initCopilot();
     }
-
-    function removeBubble(id) {
-        const element = document.getElementById(id);
-        if (element) element.remove();
-    }
-   });
+})();
 
     /**
  * Opens a designated inventory component modal
