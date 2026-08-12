@@ -4057,7 +4057,7 @@ function updateStatusCounters(roomsArray = [], bookingsArray = []) {
     setNodeText('stat-occupied', totalOccupied);
     setNodeText('stat-clean', counts.clean);
     setNodeText('stat-dirty', counts.dirty);
-    setNodeText('stat-maintenance', counts.maintenance + counts.blocked);
+    setNodeText('stat-maintenance', counts.maintenance);
 
     // 4. Update dynamic secondary indicators
     const occupancyRate = totalRooms > 0 ? Math.round((totalOccupied / totalRooms) * 100) : 0;
