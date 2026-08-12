@@ -4029,14 +4029,11 @@ function updateStatusCounters(roomsArray = [], bookingsArray = []) {
             counts.blocked++;
         }
     });
-
     // Treat 'blocked' rooms as occupied if your business logic routes them together
-    const totalOccupied = counts.occupied + counts.blocked;
-
+    const totalOccupied = counts.blocked;
     // 2. Calculate today's arrivals and departures if bookings data is provided
     if (Array.isArray(bookingsArray) && bookingsArray.length > 0) {
         const todayStr = new Date().toISOString().split('T')[0];
-        
         bookingsArray.forEach(b => {
             const checkInStr = b.checkInDate ? new Date(b.checkInDate).toISOString().split('T')[0] : '';
             const checkOutStr = b.checkOutDate ? new Date(b.checkOutDate).toISOString().split('T')[0] : '';
