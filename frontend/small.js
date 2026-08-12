@@ -4064,13 +4064,6 @@ function updateStatusCounters(roomsArray = [], bookingsArray = []) {
     setNodeText('stat-occupancy-rate', `${occupancyRate}%`);
     setNodeText('arrivals-pending', `${counts.arrivalsPending} Pending`);
     setNodeText('departures-pending', `${counts.departuresPending} Remaining`);
-
-    // 5. Update timestamp badge
-    const timeEl = document.getElementById('pms-last-updated');
-    if (timeEl) {
-        const now = new Date();
-        timeEl.textContent = `Updated ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    }
 }
 
 /**
