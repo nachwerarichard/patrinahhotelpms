@@ -3295,63 +3295,88 @@ Manage payment providers used for guest payments.            </p>
                 </div>
             </section>
 
- <!-- REMOVED min-w-[2600px] and added w-full max-w-full -->
-<section id="audit-logs" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden w-full max-w-full overflow-hidden">
-    <h2 class="text-lg font-bold text-slate-900 leading-tight">Audit Logs</h2>
-    <div class="sticky top-0 z-30 bg-white pb-4">
-        <div class="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100 shadow-sm">
-            <div class="flex items-center space-x-2">
-                <label for="auditLogUserFilter" class="text-gray-700 font-semibold text-sm">User:</label>
-                <!-- Added 'filter-input' class for JS targeting -->
-                <input type="text" id="auditLogUserFilter" placeholder="Username" class="filter-input border border-gray-300 rounded-lg px-3 py-2 text-sm">
+<section id="audit-logs" class="section bg-white p-4 md:p-5 rounded-md border border-slate-200 shadow-sm mb-6 hidden w-full max-w-full overflow-hidden">
+    <!-- Header -->
+    <div class="pb-3 mb-4 border-b border-slate-100">
+        <h2 class="text-base font-semibold text-slate-900 tracking-tight leading-none">System Audit Logs</h2>
+        <p class="text-xs text-slate-500 mt-1">Track security events, user overrides, rate adjustments, and system transactions.</p>
+    </div>
+
+    <!-- Sticky Compact Filter Toolbar -->
+    <div class="sticky top-0 z-30 bg-white pb-3">
+        <div class="flex flex-wrap items-center gap-2.5 p-2.5 bg-slate-50 rounded border border-slate-200">
+            <!-- User Filter -->
+            <div class="flex items-center gap-1.5">
+                <label for="auditLogUserFilter" class="text-slate-600 font-medium text-xs">User:</label>
+                <input type="text" id="auditLogUserFilter" placeholder="Username" class="filter-input border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 placeholder-slate-400 w-32 sm:w-36">
             </div>
             
-            <div class="flex items-center space-x-2">
-                <label for="auditLogActionFilter" class="text-gray-700 font-semibold text-sm">Action:</label>
-                <!-- Added 'filter-input' class for JS targeting -->
-                <input type="text" id="auditLogActionFilter" placeholder="Action" class="filter-input border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <!-- Action Filter -->
+            <div class="flex items-center gap-1.5">
+                <label for="auditLogActionFilter" class="text-slate-600 font-medium text-xs">Action:</label>
+                <input type="text" id="auditLogActionFilter" placeholder="e.g., Rate Override" class="filter-input border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 placeholder-slate-400 w-32 sm:w-40">
             </div>
             
-            <div class="flex items-center space-x-2">
-                <label for="auditLogStartDateFilter" class="text-gray-700 font-semibold text-sm">Start:</label>
-                <!-- Added 'filter-input' class for JS targeting -->
-                <input type="date" id="auditLogStartDateFilter" class="filter-input border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <!-- Start Date -->
+            <div class="flex items-center gap-1.5">
+                <label for="auditLogStartDateFilter" class="text-slate-600 font-medium text-xs">From:</label>
+                <input type="date" id="auditLogStartDateFilter" class="filter-input border border-slate-300 rounded px-2 py-1 text-xs text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-blue-600">
             </div>
             
-            <div class="flex items-center space-x-2">
-                <label for="auditLogEndDateFilter" class="text-gray-700 font-semibold text-sm">End:</label>
-                <!-- Added 'filter-input' class for JS targeting -->
-                <input type="date" id="auditLogEndDateFilter" class="filter-input border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <!-- End Date -->
+            <div class="flex items-center gap-1.5">
+                <label for="auditLogEndDateFilter" class="text-slate-600 font-medium text-xs">To:</label>
+                <input type="date" id="auditLogEndDateFilter" class="filter-input border border-slate-300 rounded px-2 py-1 text-xs text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-blue-600">
             </div>
             
-            <!-- Kept search button just as a backup fallback, though hidden or optional now -->
-            <button class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition" id="applyAuditLogFiltersBtn">
-                Search
+            <!-- Apply Button -->
+            <button class="ml-auto inline-flex items-center gap-1 bg-slate-800 hover:bg-slate-900 text-white font-medium text-xs py-1 px-3 rounded transition-colors" id="applyAuditLogFiltersBtn">
+                <i class="fas fa-filter text-[10px]"></i>
+                <span>Filter</span>
             </button>
         </div>
     </div>
 
-    <div class="relative border border-gray-200 rounded-lg overflow-x-auto shadow-inner">
-        <table id="auditLogTable" class="table-auto w-full min-w-full bg-white">
-            <thead class="sticky top-0 z-20 shadow-sm">
-                <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
-                    <th class="py-3 px-4 text-left bg-gray-100 whitespace-nowrap w-48">Timestamp</th>
-                    <th class="py-3 px-4 text-left bg-gray-100 whitespace-nowrap w-32">User</th>
-                    <th class="py-3 px-4 text-left bg-gray-100 whitespace-nowrap w-48">Action</th>
-                    <th class="py-3 px-4 text-left bg-gray-100 w-64">Reasons</th>
-                    <th class="py-3 px-4 text-left bg-gray-100">Details</th>
+    <!-- High-Density Data Table -->
+    <div class="relative border border-slate-200 rounded overflow-x-auto">
+        <table id="auditLogTable" class="w-full text-left border-collapse bg-white">
+            <thead class="sticky top-0 z-20">
+                <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-semibold text-[11px] uppercase tracking-wider">
+                    <th class="py-2 px-3 whitespace-nowrap w-40">Timestamp</th>
+                    <th class="py-2 px-3 whitespace-nowrap w-32">User</th>
+                    <th class="py-2 px-3 whitespace-nowrap w-44">Action</th>
+                    <th class="py-2 px-3 w-56">Reason</th>
+                    <th class="py-2 px-3">Details</th>
                 </tr>
             </thead>
-            <tbody class="text-gray-600 text-sm divide-y divide-gray-100">
-                <!-- Data injected dynamically -->
+            <tbody class="text-slate-700 text-xs divide-y divide-slate-100 font-normal">
+                <!-- Example Row for reference -->
+                <!-- 
+                <tr class="hover:bg-slate-50/80 transition-colors">
+                    <td class="py-2 px-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">2026-08-12 14:23:01</td>
+                    <td class="py-2 px-3 font-medium text-slate-900">m.rossi</td>
+                    <td class="py-2 px-3"><span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">Rate Comped</span></td>
+                    <td class="py-2 px-3 text-slate-600">Manager Approval #882</td>
+                    <td class="py-2 px-3 text-slate-500 truncate max-w-xs">Room 304 rate reduced from $220 to $0.00</td>
+                </tr>
+                -->
             </tbody>
         </table>
     </div>
 
-    <div class="flex justify-between items-center mt-6 bg-white py-2">
-        <button id="prevAuditPage" class="bg-gray-100 px-4 py-2 rounded-lg disabled:opacity-50">Previous</button>
-        <span id="auditPageIndicator" class="font-medium">Page 1</span>
-        <button id="nextAuditPage" class="bg-gray-100 px-4 py-2 rounded-lg disabled:opacity-50">Next</button>
+    <!-- Table Footer / Pagination -->
+    <div class="flex items-center justify-between pt-3 mt-3 text-xs border-t border-slate-100">
+        <div class="text-slate-500">
+            Showing page <span id="auditPageIndicator" class="font-semibold text-slate-800">1</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+            <button id="prevAuditPage" class="inline-flex items-center gap-1 bg-white border border-slate-300 text-slate-700 font-medium py-1.5 px-3 rounded hover:bg-slate-50 disabled:opacity-40 disabled:bg-slate-100 disabled:cursor-not-allowed transition-colors" disabled>
+                <i class="fas fa-chevron-left text-[10px]"></i> Previous
+            </button>
+            <button id="nextAuditPage" class="inline-flex items-center gap-1 bg-white border border-slate-300 text-slate-700 font-medium py-1.5 px-3 rounded hover:bg-slate-50 disabled:opacity-40 disabled:bg-slate-100 disabled:cursor-not-allowed transition-colors" disabled>
+                Next <i class="fas fa-chevron-right text-[10px]"></i>
+            </button>
+        </div>
     </div>
 </section>
 
