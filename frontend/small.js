@@ -1087,37 +1087,59 @@ function applyRoleAccess(role) {
     });
 }
 
+// Module-level guard state to manage cancellation and ongoing fetches
+let activeBookingsController = null;
+let isBookingsRendering = false;
+
 async function renderBookings(page = 1, searchTerm = '') {
+    // 1. Cancel previous pending HTTP fetch if a new render call arrives
+    if (activeBookingsController) {
+        activeBookingsController.abort();
+    }
+    activeBookingsController = new AbortController();
+    const { signal } = activeBookingsController;
+
+    // 2. Prevent overlapping execution
+    if (isBookingsRendering) return;
+    isBookingsRendering = true;
+
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelId = sessionData?.hotelId;
     const token = sessionData?.token;
     const currentUserRole = sessionData?.role;
 
-    renderHousekeepingRooms();
-    
+    // Optional: Call sync functions outside async DOM loops
+    if (typeof renderHousekeepingRooms === 'function') {
+        renderHousekeepingRooms();
+    }
+
     const tableBody = document.querySelector("#bookingsTable tbody");
     const mobileGrid = document.getElementById("bookingsMobileGrid");
-    
-    if(tableBody) tableBody.innerHTML = '';
-    if(mobileGrid) mobileGrid.innerHTML = '';
 
-    if (!pageInfoSpan) return; 
-
-    if (!['admin', 'front office', 'bar', 'super-admin'].includes(currentUserRole)) {
-        const errorMsg = '<div class="text-center p-6 text-gray-500 font-bold">Access Denied.</div>';
-        if(tableBody) tableBody.innerHTML = `<tr><td colspan="8">${errorMsg}</td></tr>`;
-        if(mobileGrid) mobileGrid.innerHTML = errorMsg;
-        prevPageBtn.disabled = true;
-        nextPageBtn.disabled = true;
-        pageInfoSpan.textContent = 'Page 1';
+    if (!pageInfoSpan) {
+        isBookingsRendering = false;
         return;
     }
 
+    // Role Validation Check
+    if (!['admin', 'front office', 'bar', 'super-admin'].includes(currentUserRole)) {
+        const errorMsg = '<div class="text-center p-6 text-gray-500 font-bold">Access Denied.</div>';
+        if (tableBody) tableBody.innerHTML = `<tr><td colspan="8">${errorMsg}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = errorMsg;
+        if (prevPageBtn) prevPageBtn.disabled = true;
+        if (nextPageBtn) nextPageBtn.disabled = true;
+        pageInfoSpan.textContent = 'Page 1';
+        
+        isBookingsRendering = false;
+        return;
+    }
+
+    currentPage = page;
+    currentSearchTerm = searchTerm;
+
     let currentBookings = [];
     let totalPages = 1;
-    let totalCount = 1;
-    currentPage = page; 
-    currentSearchTerm = searchTerm; 
+    let totalCount = 0;
 
     try {
         let url = `${API_BASE_URL}/bookings?page=${currentPage}&limit=${recordsPerPage}&hotelId=${hotelId}`;
@@ -1125,141 +1147,155 @@ async function renderBookings(page = 1, searchTerm = '') {
 
         const response = await fetch(url, {
             method: 'GET',
+            signal: signal, // Connect AbortSignal
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
                 'x-hotel-id': hotelId
             }
         });
+
         if (!response.ok) throw new Error(`HTTP fetch error Status code: ${response.status}`);
-        
+
         const data = await response.json();
         currentBookings = data.bookings || [];
         totalPages = data.totalPages || 1;
         totalCount = data.totalCount || 0;
+
     } catch (error) {
+        // Suppress errors caused intentionally by controller aborts
+        if (error.name === 'AbortError') {
+            isBookingsRendering = false;
+            return;
+        }
         console.error('Error fetching bookings:', error);
+        isBookingsRendering = false;
         return;
     }
 
+    // 3. WIPE DOM TARGETS ONLY AFTER DATA SUCCESSFULLY ARRIVES
+    if (tableBody) tableBody.innerHTML = '';
+    if (mobileGrid) mobileGrid.innerHTML = '';
+
+    // Render Empty State
     if (currentBookings.length === 0) {
         const emptyMsg = '<div class="text-center p-6 text-gray-400">No records tracked.</div>';
-        if(tableBody) tableBody.innerHTML = `<tr><td colspan="8">${emptyMsg}</td></tr>`;
-        if(mobileGrid) mobileGrid.innerHTML = emptyMsg;
+        if (tableBody) tableBody.innerHTML = `<tr><td colspan="8">${emptyMsg}</td></tr>`;
+        if (mobileGrid) mobileGrid.innerHTML = emptyMsg;
     } else {
+        // Use DocumentFragments for single atomic DOM operations (prevents reflow flickering)
+        const tableFragment = document.createDocumentFragment();
+        const mobileFragment = document.createDocumentFragment();
+
         currentBookings.forEach(booking => {
             const isCancelled = booking.gueststatus === 'cancelled';
             const baseBtn = "inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white focus:outline-none transition-all duration-200 w-full justify-center mb-1";
-            
+
             let actionButtonsHtml = '';
             if (['admin', 'super-admin', 'front office'].includes(currentUserRole)) {
-    if (isCancelled) {
-    actionButtonsHtml = `
-        <span class="text-xs text-red-600 font-bold block mb-2 text-center uppercase tracking-wide">Cancelled</span>
-        <button class="${baseBtn} bg-red-600 hover:bg-red-700" onclick="confirmDeleteBooking('${booking.id}')">
-            <i class="fa-solid fa-trash-can mr-1"></i> Delete Permanently
-        </button>
-    `;
-} else {
-    actionButtonsHtml = `
-        <!-- 1. PRIMARY OPERATIONAL ACTIONS (Guest Lifecycle) -->
-        ${booking.gueststatus === 'reserved' ? `
-            <button class="${baseBtn} bg-gray-600 hover:bg-gray-700" onclick="Confirm('${booking.id}')">
-                <i class="fa-solid fa-circle-check mr-1"></i> Confirm
-            </button>
-        ` : ''}
+                if (isCancelled) {
+                    actionButtonsHtml = `
+                        <span class="text-xs text-red-600 font-bold block mb-2 text-center uppercase tracking-wide">Cancelled</span>
+                        <button class="${baseBtn} bg-red-600 hover:bg-red-700" onclick="confirmDeleteBooking('${booking.id}')">
+                            <i class="fa-solid fa-trash-can mr-1"></i> Delete Permanently
+                        </button>
+                    `;
+                } else {
+                    actionButtonsHtml = `
+                        ${booking.gueststatus === 'reserved' ? `
+                            <button class="${baseBtn} bg-gray-600 hover:bg-gray-700" onclick="Confirm('${booking.id}')">
+                                <i class="fa-solid fa-circle-check mr-1"></i> Confirm
+                            </button>
+                        ` : ''}
 
-        ${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `
-            <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')">
-                <i class="fa-solid ${booking.gueststatus === 'checkedin' ? 'fa-right-left' : 'fa-door-open'} mr-1"></i>
-                ${booking.gueststatus === 'checkedin' ? 'Move' : 'Assign'}
-            </button>
-        ` : ''}
+                        ${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `
+                            <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')">
+                                <i class="fa-solid ${booking.gueststatus === 'checkedin' ? 'fa-right-left' : 'fa-door-open'} mr-1"></i>
+                                ${booking.gueststatus === 'checkedin' ? 'Move' : 'Assign'}
+                            </button>
+                        ` : ''}
 
-        ${(booking.gueststatus === 'confirmed' || booking.gueststatus === 'reserved') ? `
-            <button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">
-                <i class="fa-solid fa-right-to-bracket mr-1"></i> Check In
-            </button>
-        ` : ''}
+                        ${(booking.gueststatus === 'confirmed' || booking.gueststatus === 'reserved') ? `
+                            <button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">
+                                <i class="fa-solid fa-right-to-bracket mr-1"></i> Check In
+                            </button>
+                        ` : ''}
 
-        ${booking.gueststatus === 'checkedin' && booking.paymentStatus === 'Paid' && booking.balance === 0 ? `
-            <button class="${baseBtn} bg-amber-500 hover:bg-amber-600" onclick="checkoutBooking('${booking.id}')">
-                <i class="fa-solid fa-right-from-bracket mr-1"></i> Check-out
-            </button>
-        ` : ''}
+                        ${booking.gueststatus === 'checkedin' && booking.paymentStatus === 'Paid' && booking.balance === 0 ? `
+                            <button class="${baseBtn} bg-amber-500 hover:bg-amber-600" onclick="checkoutBooking('${booking.id}')">
+                                <i class="fa-solid fa-right-from-bracket mr-1"></i> Check-out
+                            </button>
+                        ` : ''}
 
-        <!-- 2. FINANCIAL & BILLING ACTIONS -->
-        ${booking.balance > 0 && booking.gueststatus !== 'cancelled' ? `
-            <button class="${baseBtn} bg-green-600 hover:bg-green-700" onclick="openAddPaymentModal('${booking.id}', ${booking.balance})">
-                <i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment
-            </button>
-        ` : ''}
+                        ${booking.balance > 0 && booking.gueststatus !== 'cancelled' ? `
+                            <button class="${baseBtn} bg-green-600 hover:bg-green-700" onclick="openAddPaymentModal('${booking.id}', ${booking.balance})">
+                                <i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment
+                            </button>
+                        ` : ''}
 
-        ${!['checkedout', 'cancelled', 'void'].includes(booking.gueststatus) ? `
-            <button class="${baseBtn} bg-blue-700 hover:bg-blue-800" onclick="viewCharges('${booking.id}')">
-                <i class="fa-solid fa-receipt mr-1"></i> View Charges
-            </button>
-        ` : ''}
+                        ${!['checkedout', 'cancelled', 'void'].includes(booking.gueststatus) ? `
+                            <button class="${baseBtn} bg-blue-700 hover:bg-blue-800" onclick="viewCharges('${booking.id}')">
+                                <i class="fa-solid fa-receipt mr-1"></i> View Charges
+                            </button>
+                        ` : ''}
 
-        <button class="${baseBtn} bg-teal-600 hover:bg-teal-700" onclick="generateInvoice('${booking.id}')">
-            <i class="fas fa-file-invoice-dollar mr-1"></i> Invoice
-        </button>
+                        <button class="${baseBtn} bg-teal-600 hover:bg-teal-700" onclick="generateInvoice('${booking.id}')">
+                            <i class="fas fa-file-invoice-dollar mr-1"></i> Invoice
+                        </button>
 
-        ${booking.amountPaid > 0 ? `
-            <button class="${baseBtn} bg-orange-500 hover:bg-orange-600" onclick="printGuestReceipt('${booking.id}')">
-                <i class="fas fa-print mr-1"></i> Print Receipt
-            </button>
-        ` : ''}
+                        ${booking.amountPaid > 0 ? `
+                            <button class="${baseBtn} bg-orange-500 hover:bg-orange-600" onclick="printGuestReceipt('${booking.id}')">
+                                <i class="fas fa-print mr-1"></i> Print Receipt
+                            </button>
+                        ` : ''}
 
-        <!-- 3. VIEW & EDIT CONTROLS -->
-        <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="viewBooking('${booking.id}')">
-            <i class="fa-solid fa-eye mr-1"></i> View
-        </button>
+                        <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="viewBooking('${booking.id}')">
+                            <i class="fa-solid fa-eye mr-1"></i> View
+                        </button>
 
-        ${!['checkedout', 'cancelled', 'void'].includes(booking.gueststatus) ? `
-            <button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">
-                <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
-            </button>
-        ` : ''}
+                        ${!['checkedout', 'cancelled', 'void'].includes(booking.gueststatus) ? `
+                            <button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">
+                                <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
+                            </button>
+                        ` : ''}
 
-        <!-- 4. DESTRUCTIVE / CANCELLATION ACTIONS (Isolated) -->
-        <div class="border-t border-gray-200 my-2"></div>
+                        <div class="border-t border-gray-200 my-2"></div>
 
-        ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
-            <button class="${baseBtn} bg-red-500 hover:bg-red-600" onclick="openCancelModal('${booking.id}')">
-                <i class="fa-solid fa-xmark mr-1"></i> Cancel
-            </button>
-        ` : ''}
+                        ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
+                            <button class="${baseBtn} bg-red-500 hover:bg-red-600" onclick="openCancelModal('${booking.id}')">
+                                <i class="fa-solid fa-xmark mr-1"></i> Cancel
+                            </button>
+                        ` : ''}
 
-        ${booking.gueststatus === 'checkedin' ? `
-            <button class="${baseBtn} bg-orange-600 hover:bg-orange-700" onclick="openVoidModal('${booking.id}')">
-                <i class="fa-solid fa-ban mr-1"></i> Void
-            </button>
-        ` : ''}
+                        ${booking.gueststatus === 'checkedin' ? `
+                            <button class="${baseBtn} bg-orange-600 hover:bg-orange-700" onclick="openVoidModal('${booking.id}')">
+                                <i class="fa-solid fa-ban mr-1"></i> Void
+                            </button>
+                        ` : ''}
 
-        ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
-            <button class="${baseBtn} bg-yellow-500 hover:bg-yellow-600" onclick="markNoShow('${booking.id}')">
-                <i class="fa-solid fa-user-slash mr-1"></i> No Show
-            </button>
-        ` : ''}
+                        ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
+                            <button class="${baseBtn} bg-yellow-500 hover:bg-yellow-600" onclick="markNoShow('${booking.id}')">
+                                <i class="fa-solid fa-user-slash mr-1"></i> No Show
+                            </button>
+                        ` : ''}
 
-        ${['reserved', 'confirmed', 'cancelled'].includes(booking.gueststatus) ? `
-            <button class="${baseBtn} bg-red-700 hover:bg-red-800" onclick="confirmDeleteBooking('${booking.id}')">
-                <i class="fa-solid fa-trash-can mr-1"></i> Delete
-            </button>
-        ` : ''}
-    `;
-}
-}
+                        ${['reserved', 'confirmed', 'cancelled'].includes(booking.gueststatus) ? `
+                            <button class="${baseBtn} bg-red-700 hover:bg-red-800" onclick="confirmDeleteBooking('${booking.id}')">
+                                <i class="fa-solid fa-trash-can mr-1"></i> Delete
+                            </button>
+                        ` : ''}
+                    `;
+                }
+            }
 
             const cancellationReason = booking.cancellationReason || "No reason provided";
 
-            // Populate View 1: Desktop Layout
-            if(tableBody) {
-                const row = tableBody.insertRow();
-                row.dataset.id = booking.id;
-                row.className = isCancelled ? "bg-red-50 hover:bg-red-100 transition-colors opacity-75" : "hover:bg-gray-50 transition-colors";
-                row.innerHTML = `
+            // Build Desktop Row
+            if (tableBody) {
+                const tr = document.createElement('tr');
+                tr.dataset.id = booking.id;
+                tr.className = isCancelled ? "bg-red-50 hover:bg-red-100 transition-colors opacity-75" : "hover:bg-gray-50 transition-colors";
+                tr.innerHTML = `
                     <td class="py-3 px-6">${booking.name}</td>
                     <td class="py-3 px-6">${booking.room}</td>
                     <td class="py-3 px-6">${booking.checkIn}</td>
@@ -1279,10 +1315,11 @@ async function renderBookings(page = 1, searchTerm = '') {
                         </div>
                     </td>
                 `;
+                tableFragment.appendChild(tr);
             }
 
-            // Populate View 2: Mobile Stack Layout
-            if(mobileGrid) {
+            // Build Mobile Card
+            if (mobileGrid) {
                 const card = document.createElement('div');
                 card.className = `p-4 rounded-xl border ${isCancelled ? 'bg-red-50/50 border-red-200' : 'bg-gray-50 border-gray-200'} shadow-sm relative`;
                 card.innerHTML = `
@@ -1307,14 +1344,22 @@ async function renderBookings(page = 1, searchTerm = '') {
                         <div class="px-2 py-0.5 rounded font-bold ${booking.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${booking.paymentStatus}</div>
                     </div>
                 `;
-                mobileGrid.appendChild(card);
+                mobileFragment.appendChild(card);
             }
         });
+
+        // Append generated fragments to DOM atomically
+        if (tableBody) tableBody.appendChild(tableFragment);
+        if (mobileGrid) mobileGrid.appendChild(mobileFragment);
     }
 
-    prevPageBtn.disabled = currentPage <= 1;
-    nextPageBtn.disabled = currentPage >= totalPages;
-    pageInfoSpan.textContent = `Page ${totalPages}`;
+    // Update Pagination UI
+    if (prevPageBtn) prevPageBtn.disabled = currentPage <= 1;
+    if (nextPageBtn) nextPageBtn.disabled = currentPage >= totalPages;
+    if (pageInfoSpan) pageInfoSpan.textContent = `Page ${currentPage} of ${totalPages}`;
+
+    // Release flag
+    isBookingsRendering = false;
 }
 
 // 1. Trigger function attached to the UI button
@@ -2325,11 +2370,44 @@ function forceOpenModal(modalId) {
 /**
  * Handles the search input, triggering a re-render of bookings with the search term.
  */
-function filterBookings() {
+// Utility: Debounce function to delay execution until typing stops
+
+
+// Track previous query to avoid re-rendering on unchanged input
+let lastSearchQuery = '';
+
+function filterBookings(event) {
+    // Ignore navigation/modifier keys that don't change text
+    const ignoredKeys = [
+        'Control', 'Alt', 'Shift', 'Meta', 'CapsLock', 'Tab',
+        'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+        'Home', 'End', 'PageUp', 'PageDown', 'Escape'
+    ];
+    
+    if (event && ignoredKeys.includes(event.key)) {
+        return;
+    }
+
     const searchTerm = bookingSearchInput.value.toLowerCase().trim();
+
+    // Prevent duplicate calls if the query hasn't actually changed
+    if (searchTerm === lastSearchQuery) {
+        return;
+    }
+
+    lastSearchQuery = searchTerm;
+
     // Reset to page 1 for a new search
     renderBookings(1, searchTerm);
 }
+
+// Attach debounced filter to 'keyup' and 'search' (for clear button on type="search")
+const debouncedFilter = debounce((e) => filterBookings(e), 350);
+
+bookingSearchInput.addEventListener('keyup', debouncedFilter);
+
+// Handles clearing the search box via the "x" button in <input type="search">
+bookingSearchInput.addEventListener('search', (e) => filterBookings(e));
 
 
 /**
@@ -2714,7 +2792,6 @@ amtPerNightInput.addEventListener('input', calculateRoomFinancials);
 amountPaidInput.addEventListener('input', calculateRoomFinancials);
 
 // Event listener for search input
-bookingSearchInput.addEventListener('keyup', filterBookings);
 
 // Pagination event listeners
 prevPageBtn.addEventListener('click', () => {
