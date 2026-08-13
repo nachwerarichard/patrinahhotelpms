@@ -2949,97 +2949,134 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
         showMessage('Error', `Failed to add charge: ${error.message}`, true);
     }
 });
+let currentBookingObjectId = null;
+let currentBookingCustomId = null;
+
+// --- 1. VIEW INCIDENTAL CHARGES MODAL HANDLER ---
 async function viewCharges(bookingCustomId) {
+    currentBookingCustomId = bookingCustomId;
     const payAllBtn = document.getElementById('payAllChargesBtn');
-    
-    // Reset initial state
-    incidentalChargesTableBody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-gray-500">Loading charges...</td></tr>';
-    totalIncidentalChargesSpan.textContent = '0.00';
-    if (payAllBtn) payAllBtn.classList.add('hidden'); // Hide pay button by default while loading
+    const incidentalChargesTableBody = document.querySelector('#incidentalChargesTable tbody');
+    const totalIncidentalChargesSpan = document.getElementById('totalIncidentalCharges');
+    const viewChargesGuestNameSpan = document.getElementById('viewChargesGuestName');
+    const viewChargesRoomNumberSpan = document.getElementById('viewChargesRoomNumber');
+    const viewChargesModal = document.getElementById('viewChargesModal');
+
+    // Reset initial UI loading state
+    if (incidentalChargesTableBody) {
+        incidentalChargesTableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="py-12 text-center text-slate-400 font-medium">
+                    <i class="fas fa-spinner fa-spin mr-2 text-indigo-500"></i> Loading incidental charges...
+                </td>
+            </tr>`;
+    }
+    if (totalIncidentalChargesSpan) totalIncidentalChargesSpan.textContent = '0.00';
+    if (payAllBtn) payAllBtn.classList.add('hidden');
 
     try {
         // 1. Fetch booking details
-        const bookingResponse = await authenticatedFetch(
-            `${API_BASE_URL}/bookings/id/${bookingCustomId}`
-        );
-
-        if (!bookingResponse) return;
-
-        if (!bookingResponse.ok) {
-            const text = await bookingResponse.text();
-            console.error("❌ Booking fetch failed:", text);
-            throw new Error('Booking fetch failed');
+        const bookingResponse = await authenticatedFetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}`);
+        if (!bookingResponse || !bookingResponse.ok) {
+            throw new Error('Booking details could not be retrieved');
         }
-
         const booking = await bookingResponse.json();
 
         currentBookingObjectId = booking._id;
-        viewChargesGuestNameSpan.textContent = booking.name || 'Guest';
-        viewChargesRoomNumberSpan.textContent = booking.room || 'N/A';
+        if (viewChargesGuestNameSpan) viewChargesGuestNameSpan.textContent = booking.name || 'Walk-In Guest';
+        if (viewChargesRoomNumberSpan) viewChargesRoomNumberSpan.textContent = booking.room || 'N/A';
 
-        // 2. Fetch incidental charges
-        const response = await authenticatedFetch(
-            `${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`
-        );
-
-        if (!response) return;
-
-        if (!response.ok) {
-            const text = await response.text();
-            console.error("❌ Charges fetch failed:", text);
-            throw new Error('Charges fetch failed');
+        // 2. Fetch incidental charges for booking
+        const response = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`);
+        if (!response || !response.ok) {
+            throw new Error('Failed to load incidental charges');
         }
 
         const charges = await response.json();
-
-        incidentalChargesTableBody.innerHTML = '';
+        if (incidentalChargesTableBody) incidentalChargesTableBody.innerHTML = '';
 
         let totalChargesAmount = 0;
         let hasUnpaidCharges = false;
 
         if (!Array.isArray(charges) || charges.length === 0) {
-            incidentalChargesTableBody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-gray-500 italic">No incidental charges recorded.</td></tr>';
+            incidentalChargesTableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="py-12 text-center text-slate-400 italic text-sm">
+                        No incidental charges recorded for this folio.
+                    </td>
+                </tr>`;
         } else {
-            charges.forEach(charge => {
+            const currencySymbol = localStorage.getItem('hotelCurrency') || 'UGX';
+
+            charges.forEach((charge) => {
                 if (!charge.isPaid) hasUnpaidCharges = true;
 
                 const row = incidentalChargesTableBody.insertRow();
                 const isPaid = charge.isPaid;
+                const chargeId = charge._id || charge.id;
+                const chargeAmount = Number(charge.amount || 0);
+                totalChargesAmount += chargeAmount;
 
-                row.className = "hover:bg-gray-50 transition";
+                // Category badge styling
+                const typeBadgeClass = charge.type === 'Bar' ? 'bg-amber-50 text-amber-700 border-amber-200/60' :
+                                      charge.type === 'Restaurant' ? 'bg-indigo-50 text-indigo-700 border-indigo-200/60' :
+                                      'bg-slate-100 text-slate-600 border-slate-200';
+
+                row.className = "hover:bg-slate-50/80 transition-colors group";
                 row.innerHTML = `
-                    <td class="px-4 py-3 font-medium">${charge.type || 'Other'}</td>
-                    <td class="px-4 py-3 text-gray-600">${charge.description || '-'}</td>
-                    <td class="px-4 py-3 text-right font-semibold">${Number(charge.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                    <td class="px-4 py-3 text-gray-500">${new Date(charge.date).toLocaleDateString()}</td>
-                    <td class="px-4 py-3 text-center">
-                        ${isPaid 
-                            ? '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800"><i class="fa-solid fa-check mr-1"></i> Paid</span>' 
-                            : `<button onclick="confirmPayIncidentalCharge('${charge._id}', '${bookingCustomId}')" 
-                                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-xs font-semibold transition">
-                                Mark Paid
-                               </button>`
-                        }
+                    <td class="py-3 px-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-bold border ${typeBadgeClass}">
+                            ${charge.type || 'Other'}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 font-medium text-slate-700">${charge.description || '-'}</td>
+                    <td class="py-3 px-4 text-right font-extrabold text-slate-900">
+                        ${currencySymbol} ${chargeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                    <td class="py-3 px-4 text-xs font-medium text-slate-400">
+                        ${charge.date ? new Date(charge.date).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            ${isPaid 
+                                ? `<span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                                     <i class="fa-solid fa-check mr-1"></i> Paid
+                                   </span>` 
+                                : `<button data-id="${chargeId}" class="mark-paid-btn bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg text-xs font-bold transition shadow-sm">
+                                     Mark Paid
+                                   </button>`
+                            }
+                            <button 
+                                data-id="${chargeId}" 
+                                class="delete-charge-btn text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition-all inline-flex items-center justify-center"
+                                title="Delete Charge"
+                            >
+                                <i class="fas fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
                     </td>
                 `;
-
-                totalChargesAmount += Number(charge.amount);
             });
         }
 
-        totalIncidentalChargesSpan.textContent = totalChargesAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
+        if (totalIncidentalChargesSpan) {
+            totalIncidentalChargesSpan.textContent = totalChargesAmount.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        }
 
-        // Show/Hide "Pay All" button based on presence of unpaid charges
+        // Show/Hide "Pay All" action button
         if (payAllBtn) {
             if (hasUnpaidCharges) {
                 payAllBtn.classList.remove('hidden');
+                payAllBtn.disabled = false;
             } else {
                 payAllBtn.classList.add('hidden');
             }
         }
 
         // Open Modal
-        viewChargesModal.classList.remove('hidden');
+        if (viewChargesModal) {
+            viewChargesModal.classList.remove('hidden');
+        }
 
     } catch (error) {
         console.error("🔥 View charges error:", error);
@@ -3048,132 +3085,119 @@ async function viewCharges(bookingCustomId) {
         } else {
             alert(error.message);
         }
-        incidentalChargesTableBody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-red-500 font-medium">Error loading incidental charges.</td></tr>';
+        if (incidentalChargesTableBody) {
+            incidentalChargesTableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="py-8 text-center text-red-500 font-medium">
+                        Error loading incidental charges.
+                    </td>
+                </tr>`;
+        }
     }
 }
 
-document.getElementById('payAllChargesBtn').addEventListener('click', async () => {
-    // 1. Get session data
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
-    const currentUsername = sessionData?.username || 'FrontDesk';
-
+// --- 2. PAY ALL CHARGES HANDLER ---
+document.getElementById('payAllChargesBtn')?.addEventListener('click', async () => {
     if (!currentBookingObjectId) {
-        showMessage('Error', 'Booking ID not found', true);
+        if (typeof showMessage === 'function') showMessage('Error', 'Booking ID not found', true);
         return;
     }
 
-    if (!confirm('Mark ALL unpaid incidental charges as paid?')) return;
+    if (!confirm('Mark ALL unpaid incidental charges as paid for this guest?')) return;
 
     try {
-        // 2. Add Authorization and hotelId validation
-        const response = await fetch(`${API_BASE_URL}/incidental-charges/pay-all/${currentBookingObjectId}`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/pay-all/${currentBookingObjectId}`, {
             method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                    'x-hotel-id': sessionData?.hotelId
-
-            },
             body: JSON.stringify({
-                username: currentUsername,
-                hotelId: hotelId // Ensure security boundary
+                username: JSON.parse(localStorage.getItem('loggedInUser'))?.username || 'FrontDesk'
             })
         });
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            showMessage('Error', data.message || 'Failed to pay charges', true);
-            return;
+        if (!response || !response.ok) {
+            const data = response ? await response.json() : {};
+            throw new Error(data.message || 'Failed to settle all charges');
         }
 
-        showMessage('Success', data.message);
+        const data = await response.json();
+        if (typeof showMessage === 'function') showMessage('Success', data.message || 'All charges marked as paid');
 
-        // 3. UI Update: Disable buttons and mark as paid
-        document.querySelectorAll('.mark-paid-btn').forEach(btn => {
-            btn.disabled = true;
-            btn.innerText = 'Paid';
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
-        });
-
-        document.getElementById('payAllChargesBtn').disabled = true;
+        // Re-fetch and update modal state
+        if (currentBookingCustomId) viewCharges(currentBookingCustomId);
         
-        // Refresh audit logs to show the payment action
         if (typeof renderAuditLogs === 'function') renderAuditLogs();
 
     } catch (err) {
-        console.error(err);
-        showMessage('Error', 'Server error while paying charges', true);
+        console.error('Error paying all charges:', err);
+        if (typeof showMessage === 'function') showMessage('Error', err.message || 'Server error while paying charges', true);
     }
 });
+
+// --- 3. DELEGATED EVENT LISTENERS (MARK PAID & DELETE) ---
 document.addEventListener('click', async (e) => {
-    if (!e.target.classList.contains('mark-paid-btn')) return;
-
-    // 1. Get session data
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
-    const currentUsername = sessionData?.username;
-
-    const chargeId = e.target.dataset.id;
-    if (!chargeId) return showMessage('Error', 'Invalid charge ID', true);
-
-    if (!confirm('Mark this charge as paid?')) return;
-
-    try {
-        // 2. Add Authorization and hotelId in query or body (based on your API preference)
-        const response = await fetch(`${API_BASE_URL}/incidental-charges/${chargeId}/mark-paid`, { 
-            method: 'PATCH',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                    'x-hotel-id': sessionData?.hotelId
-
-            },
-            body: JSON.stringify({ 
-                hotelId: hotelId,
-                username: currentUsername 
-            })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            showMessage('Error', data.message || 'Failed to mark as paid', true);
-            return;
-        }
-
-        // 3. UI update
-        e.target.disabled = true;
-        e.target.innerText = 'Paid';
-        e.target.classList.add('opacity-50', 'cursor-not-allowed');
+    // A. MARK SINGLE CHARGE AS PAID
+    if (e.target.classList.contains('mark-paid-btn') || e.target.closest('.mark-paid-btn')) {
+        const btn = e.target.classList.contains('mark-paid-btn') ? e.target : e.target.closest('.mark-paid-btn');
+        const chargeId = btn.dataset.id;
         
-        if (typeof renderAuditLogs === 'function') renderAuditLogs();
+        if (!chargeId) return;
+        if (!confirm('Mark this incidental charge as paid?')) return;
 
-    } catch (err) {
-        console.error(err);
-        showMessage('Error', 'Server error while processing payment', true);
+        try {
+            const response = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/${chargeId}/mark-paid`, { 
+                method: 'PATCH',
+                body: JSON.stringify({ 
+                    username: JSON.parse(localStorage.getItem('loggedInUser'))?.username || 'FrontDesk' 
+                })
+            });
+
+            if (!response || !response.ok) {
+                const data = response ? await response.json() : {};
+                throw new Error(data.message || 'Failed to mark charge as paid');
+            }
+
+            // Refresh modal UI to update indicators and recalculate totals
+            if (currentBookingCustomId) viewCharges(currentBookingCustomId);
+            if (typeof renderAuditLogs === 'function') renderAuditLogs();
+
+        } catch (err) {
+            console.error('Error marking charge paid:', err);
+            if (typeof showMessage === 'function') showMessage('Error', err.message, true);
+        }
+    }
+
+    // B. DELETE CHARGE HANDLER
+    if (e.target.classList.contains('delete-charge-btn') || e.target.closest('.delete-charge-btn')) {
+        const btn = e.target.classList.contains('delete-charge-btn') ? e.target : e.target.closest('.delete-charge-btn');
+        const chargeId = btn.dataset.id;
+
+        if (!chargeId) return;
+        if (!confirm('Are you sure you want to permanently delete this charge?')) return;
+
+        try {
+            const response = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/${chargeId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response || !response.ok) {
+                const data = response ? await response.json() : {};
+                throw new Error(data.message || 'Failed to delete charge from server');
+            }
+
+            // Refresh modal UI instantly to recalculate total and update view
+            if (currentBookingCustomId) viewCharges(currentBookingCustomId);
+            if (typeof renderAuditLogs === 'function') renderAuditLogs();
+
+        } catch (err) {
+            console.error('Error deleting charge:', err);
+            if (typeof showMessage === 'function') showMessage('Error', err.message, true);
+        }
     }
 });
 
-function openViewChargesModal() {
-    const modal = document.getElementById('viewChargesModal');
-    if (modal) {
-        modal.style.display = ''; // Clear inline styles
-        modal.classList.remove('hidden');
-    }
-}
-/**
- * Closes the view charges modal.
- */
+// Utility helper to close modal cleanly
 function closeViewChargesModal() {
-    const modal = document.getElementById('viewChargesModal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.style.display = ''; // Clear inline styles
-    }
+    const viewChargesModal = document.getElementById('viewChargesModal');
+    if (viewChargesModal) viewChargesModal.classList.add('hidden');
 }
 /**
  * Initiates the deletion process for an incidental charge by opening the reason modal.
