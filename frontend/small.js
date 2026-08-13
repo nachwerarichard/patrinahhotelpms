@@ -8389,10 +8389,13 @@ confirmDeleteBtn.addEventListener('click', () => {
     hideDeleteModal();
 });
 
-// 1. Shared Reset Function to clear layout/visibility mutations
+// 1. Core Reset Function
 function resetInventoryModal() {
     const modal = document.getElementById('edit-inventory-modal');
     if (!modal) return;
+
+    // Remove mode attribute
+    modal.removeAttribute('data-mode');
 
     const allInputIds = [
         'edit-item', 
@@ -8407,7 +8410,7 @@ function resetInventoryModal() {
         'edit-trackInventory'
     ];
     
-    // Restore all fields to default visible & editable state
+    // Reset inputs & force containers visible
     allInputIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -8415,8 +8418,11 @@ function resetInventoryModal() {
             el.disabled = false;
             el.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
             
+            // Unhide nearest parent container wrapper
             const container = el.closest('div');
-            if (container) container.classList.remove('hidden');
+            if (container) {
+                container.classList.remove('hidden');
+            }
         }
     });
 }
@@ -8426,10 +8432,11 @@ function openAdjustModal(item) {
     const modal = document.getElementById('edit-inventory-modal');
     if (!modal) return;    
 
-    // FIX: Always reset state before applying adjustment overrides
+    // STEP A: FORCE RESET DOM FIRST
     resetInventoryModal();
+    modal.setAttribute('data-mode', 'adjust');
 
-    // Populate form data
+    // STEP B: Populate Form
     document.getElementById('edit-inventory-id').value = item._id || item.id || '';
     document.getElementById('edit-item').value = item.item || '';
     
@@ -8448,7 +8455,7 @@ function openAdjustModal(item) {
 
     document.getElementById('edit-trackInventory').checked = !!item.trackInventory;
 
-    // Hide read-only inputs for quick adjustment
+    // STEP C: Hide Non-Adjustable Containers
     const lockedIds = [
         'edit-item', 
         'edit-department',
@@ -8468,29 +8475,29 @@ function openAdjustModal(item) {
         }
     });
 
-    // Update Title & Show Modal
+    // STEP D: Set Title & Show
     const title = modal.querySelector('h2');
     if (title) title.textContent = `Adjust Stock: ${item.item}`;
     
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
 
-    // Focus on purchases for immediate typing
     setTimeout(() => {
         const purchaseInput = document.getElementById('edit-purchases');
         if (purchaseInput) purchaseInput.focus();
     }, 50);
 }
 
-// 3. Open Full Edit Modal
+// 3. Open Full Edit Modal (Edit Mode)
 function openEditModal(item) {
     const modal = document.getElementById('edit-inventory-modal');
     if (!modal) return;
 
-    // Reset visibility and input states
+    // STEP A: FORCE RESET DOM FIRST (Ensures no hidden fields remain)
     resetInventoryModal();
+    modal.setAttribute('data-mode', 'edit');
 
-    // Fill form fields
+    // STEP B: Populate Form
     document.getElementById('edit-inventory-id').value = item._id || item.id || '';
     document.getElementById('edit-item').value = item.item || '';
     
@@ -8509,7 +8516,7 @@ function openEditModal(item) {
 
     document.getElementById('edit-trackInventory').checked = !!item.trackInventory;
 
-    // Set Title & Display
+    // STEP C: Set Title & Display
     const title = modal.querySelector('h2');
     if (title) title.textContent = `Edit Inventory Item: ${item.item}`;
 
@@ -8525,7 +8532,7 @@ function closeEditModal() {
     modal.classList.add('hidden');
     modal.style.display = 'none';
 
-    // Clean reset upon exit
+    // Reset visibility immediately upon exit
     resetInventoryModal();
 }
 
