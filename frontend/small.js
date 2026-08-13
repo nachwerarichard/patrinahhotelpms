@@ -7642,7 +7642,7 @@ async function deleteAccountCharge(chargeId, index) {
 
     // 3. Persist to API
    try {
-    const response = await authenticatedFetch(`/api/client-accounts/${activeAccountId}/charges/${chargeId}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/client-accounts/${activeAccountId}/charges/${chargeId}`, {
         method: 'DELETE'
     });
 
