@@ -406,241 +406,231 @@
     </div>
 </aside>
         <main class="flex-1 p-8 overflow-y-auto">
-          <section id="dashboard" class="section hidden w-full p-3 sm:p-6 lg:p-8 bg-slate-900/5 min-h-screen font-sans antialiased">
-    <div id="executive-dashboard-container" class="p-4 sm:p-6 lg:p-8 bg-white border border-slate-200/80 rounded-2xl shadow-sm transition-opacity duration-200">
+          <section id="dashboard" class="section hidden w-full space-y-6 p-3 sm:p-4 md:p-8 bg-slate-50 min-h-screen font-sans">
+    <div id="executive-dashboard-container" class="p-4 sm:p-6 bg-white border border-slate-200 rounded-2xl shadow-sm min-h-screen transition-opacity duration-200">
         
-        <!-- Top Toolbar & Filter Engine -->
-        <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 border-b border-slate-100 pb-5 gap-4">
+        <!-- Top Bar & Date Range Selector Toolbar -->
+        <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 border-b border-slate-200 pb-5 gap-4">
             <div>
-                <div class="flex items-center gap-2">
-                    <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900">Executive Dashboard</h1>
-                    <span class="px-2 py-0.5 text-[10px] font-bold uppercase bg-slate-100 text-slate-600 rounded-md border border-slate-200/60">Flash Report</span>
-                </div>
-                <p class="text-xs font-medium text-slate-500 mt-0.5">Real-time Property Yield & Operational Metrics</p>
+                <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Dashboard</h1>
+                <p class="text-xs font-medium text-slate-500 mt-0.5">Property Operational & Financial Flash Intelligence</p>
             </div>
             
-            <!-- Interactive Date Filter Toolbar -->
-            <div class="flex flex-wrap items-center gap-2.5 w-full xl:w-auto">
-                <!-- Preset Quick Filters -->
-                <div class="bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 flex text-xs font-semibold overflow-x-auto max-w-full">
-                    <button onclick="setDashboardRange('today')" id="btn-today" class="px-3 py-1.5 rounded-lg text-white bg-indigo-600 shadow-sm font-semibold text-xs transition-all whitespace-nowrap">Today</button>
-                    <button onclick="setDashboardRange('yesterday')" id="btn-yesterday" class="px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 font-semibold text-xs transition-all whitespace-nowrap">Yesterday</button>
-                    <button onclick="setDashboardRange('this_week')" id="btn-this_week" class="px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 font-semibold text-xs transition-all whitespace-nowrap">This Week</button>
-                    <button onclick="setDashboardRange('this_month')" id="btn-this_month" class="px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 font-semibold text-xs transition-all whitespace-nowrap">This Month</button>
+            <!-- Interactive Date Controls -->
+            <div class="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full xl:w-auto">
+                <!-- Preset Buttons -->
+                <div class="bg-slate-100 p-1 rounded-xl border border-slate-200/80 flex text-xs font-semibold overflow-x-auto max-w-full">
+                    <button onclick="setDashboardRange('today')" id="btn-today" class="px-3 py-1.5 rounded-lg text-white bg-indigo-600 shadow-xs transition-all whitespace-nowrap">Today</button>
+                    <button onclick="setDashboardRange('yesterday')" id="btn-yesterday" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition-all whitespace-nowrap">Yesterday</button>
+                    <button onclick="setDashboardRange('this_week')" id="btn-this_week" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition-all whitespace-nowrap">This Week</button>
+                    <button onclick="setDashboardRange('this_month')" id="btn-this_month" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition-all whitespace-nowrap">This Month</button>
                 </div>
                 
-                <!-- Custom Range Selector -->
-                <div class="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 text-xs">
-                    <input type="date" id="custom-start-date" class="bg-white text-slate-700 px-2 py-1 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs transition-colors" />
+                <!-- Custom Date Inputs -->
+                <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs">
+                    <input type="date" id="custom-start-date" class="bg-white text-slate-700 px-2 py-1 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors w-28 sm:w-auto text-[11px] font-mono" />
                     <span class="text-slate-400 font-medium text-[11px]">to</span>
-                    <input type="date" id="custom-end-date" class="bg-white text-slate-700 px-2 py-1 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs transition-colors" />
+                    <input type="date" id="custom-end-date" class="bg-white text-slate-700 px-2 py-1 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors w-28 sm:w-auto text-[11px] font-mono" />
                     
-                    <button id="btn-apply-custom-date" onclick="applyCustomDateRange()" class="bg-slate-900 hover:bg-slate-800 disabled:opacity-75 disabled:cursor-not-allowed px-3 py-1 rounded-lg text-white font-semibold text-xs transition flex items-center gap-1.5">
+                    <button id="btn-apply-custom-date" onclick="applyCustomDateRange()" class="bg-slate-800 hover:bg-slate-900 active:bg-slate-950 disabled:opacity-75 disabled:cursor-not-allowed px-3 py-1 rounded-lg text-white font-semibold transition-all flex items-center gap-1.5 shrink-0">
                         <svg id="apply-btn-spinner" class="hidden animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        <span id="apply-btn-text">Apply</span>
+                        <span id="apply-btn-text">Search</span>
                     </button>
                 </div>
                 
-                <!-- Inventory Capacity Indicator -->
-                <div class="bg-slate-100/80 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 border border-slate-200/80 flex items-center gap-1">
-                    <span>Capacity:</span>
-                    <span id="val-capacity" class="text-slate-900 font-black">--</span> 
-                    <span class="text-slate-400 text-[10px]">Keys</span>
+                <!-- Room Capacity Indicator -->
+                <div class="bg-slate-100 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 border border-slate-200/80 flex items-center gap-1 shrink-0">
+                    <span>Capacity:</span> 
+                    <span id="val-capacity" class="text-slate-900 font-extrabold font-mono">--</span> 
+                    <span class="text-slate-500 font-normal">Keys</span>
                 </div>
             </div>
         </div>
 
-        <!-- 1. Primary Hospitality KPIs (Fluid Grid) -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 lg:gap-4 mb-6">
-            
-            <!-- Occupancy Rate -->
-            <div class="bg-slate-50/70 p-4 rounded-xl border border-slate-200/70 shadow-xs flex flex-col justify-between min-w-0">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">Occupancy</span>
-                <div class="my-1">
-                    <div id="val-occupancy" class="text-lg sm:text-xl lg:text-2xl font-black text-indigo-600 truncate" title="0%">0%</div>
-                </div>
-                <div class="w-full bg-slate-200/80 h-1.5 rounded-full overflow-hidden">
+        <!-- 1. Key Performance Indicators (Primary Executive Metrics) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-6">
+            <!-- Occupancy -->
+            <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between overflow-hidden">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Occupancy</span>
+                <div id="val-occupancy" class="text-xl sm:text-2xl font-black text-indigo-600 mt-1 font-mono tracking-tight truncate" title="0%">0%</div>
+                <div class="w-full bg-slate-200/80 h-1.5 rounded-full mt-2 overflow-hidden">
                     <div id="bar-occupancy" class="bg-indigo-600 h-full w-0 transition-all duration-500 rounded-full"></div>
                 </div>
             </div>
             
             <!-- ADR -->
-            <div class="bg-slate-50/70 p-4 rounded-xl border border-slate-200/70 shadow-xs flex flex-col justify-between min-w-0">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate" title="Average Daily Rate">ADR</span>
-                <div class="my-1">
-                    <div id="val-adr" class="text-lg sm:text-xl lg:text-2xl font-black text-emerald-600 truncate" title="0">0</div>
-                </div>
-                <span class="text-[10px] font-semibold text-slate-400 truncate">Avg Daily Rate</span>
+            <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between overflow-hidden">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">ADR</span>
+                <div id="val-adr" class="text-lg sm:text-xl xl:text-2xl font-black text-emerald-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
+                <span class="text-[10px] font-medium text-slate-400 truncate">Avg Daily Rate</span>
             </div>
 
             <!-- RevPAR -->
-            <div class="bg-slate-50/70 p-4 rounded-xl border border-slate-200/70 shadow-xs flex flex-col justify-between min-w-0">
-                <div class="flex items-center justify-between gap-1">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate" title="Revenue Per Available Room">RevPAR</span>
-                    <span id="badge-revpar-trend" class="shrink-0"></span>
+            <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between overflow-hidden">
+                <div class="flex justify-between items-center gap-1">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">RevPAR</span>
+                    <span id="badge-revpar-trend" class="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full"></span>
                 </div>
-                <div class="my-1">
-                    <div id="val-revpar" class="text-lg sm:text-xl lg:text-2xl font-black text-amber-600 truncate" title="0">0</div>
-                </div>
-                <span class="text-[10px] font-semibold text-slate-400 truncate">Rev Per Avail Room</span>
+                <div id="val-revpar" class="text-lg sm:text-xl xl:text-2xl font-black text-amber-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
+                <span class="text-[10px] font-medium text-slate-400 truncate">Rev Per Avail Room</span>
             </div>
 
             <!-- Gross Revenue -->
-            <div class="bg-slate-50/70 p-4 rounded-xl border border-slate-200/70 shadow-xs flex flex-col justify-between min-w-0">
-                <div class="flex items-center justify-between gap-1">
+            <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between overflow-hidden">
+                <div class="flex justify-between items-center gap-1">
                     <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">Gross Rev</span>
-                    <span id="badge-gross-trend" class="shrink-0"></span>
+                    <span id="badge-gross-trend" class="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full"></span>
                 </div>
-                <div class="my-1">
-                    <div id="val-gross-revenue" class="text-lg sm:text-xl lg:text-2xl font-black text-purple-600 truncate" title="0">0</div>
-                </div>
-                <span class="text-[10px] font-semibold text-slate-400 truncate">Rooms + Outlets Total</span>
+                <div id="val-gross-revenue" class="text-lg sm:text-xl xl:text-2xl font-black text-purple-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
+                <span class="text-[10px] font-medium text-slate-400 truncate">Rooms + POS Total</span>
             </div>
 
-            <!-- POS Net Profit -->
-            <div class="bg-slate-50/70 p-4 rounded-xl border border-slate-200/70 shadow-xs flex flex-col justify-between min-w-0">
-                <div class="flex items-center justify-between gap-1">
+            <!-- POS Profit -->
+            <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between overflow-hidden">
+                <div class="flex justify-between items-center gap-1">
                     <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">POS Profit</span>
-                    <span id="badge-pos-profit-trend" class="shrink-0"></span>
+                    <span id="badge-pos-profit-trend" class="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full"></span>
                 </div>
-                <div class="my-1">
-                    <div id="val-pos-profit" class="text-lg sm:text-xl lg:text-2xl font-black text-cyan-600 truncate" title="0">0</div>
-                </div>
-                <span class="text-[10px] font-semibold text-slate-400 truncate">Food & Beverage Net</span>
+                <div id="val-pos-profit" class="text-lg sm:text-xl xl:text-2xl font-black text-cyan-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
+                <span class="text-[10px] font-medium text-slate-400 truncate">Outlet Gross Margin</span>
             </div>
 
-            <!-- Net Operating Income (NOI) -->
-            <div class="bg-slate-50/70 p-4 rounded-xl border border-slate-200/70 shadow-xs flex flex-col justify-between min-w-0">
-                <div class="flex items-center justify-between gap-1">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate" title="Net Operating Income">NOI</span>
-                    <span id="badge-noi-trend" class="shrink-0"></span>
+            <!-- Net Operating Income -->
+            <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between overflow-hidden">
+                <div class="flex justify-between items-center gap-1">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">NOI</span>
+                    <span id="badge-noi-trend" class="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full"></span>
                 </div>
-                <div class="my-1">
-                    <div id="val-noi" class="text-lg sm:text-xl lg:text-2xl font-black text-teal-600 truncate" title="0">0</div>
-                </div>
-                <span class="text-[10px] font-semibold text-slate-400 truncate">Rev Less Operating Costs</span>
+                <div id="val-noi" class="text-lg sm:text-xl xl:text-2xl font-black text-teal-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
+                <span class="text-[10px] font-medium text-slate-400 truncate">Net Op Income</span>
             </div>
         </div>
 
-        <!-- 2. Operations & Channel Performance Grid -->
-        <div class="grid grid-cols-1 xl:grid-cols-4 gap-6 mb-6">
+        <!-- 2. Operational Movement, Channel Mix & Stock Controls -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
             
             <!-- Front Desk Operational Movement -->
-            <div class="bg-slate-50/70 p-5 rounded-xl border border-slate-200/70 shadow-xs xl:col-span-2 flex flex-col justify-between">
-                <h2 class="text-xs font-black uppercase text-slate-600 tracking-wider mb-4 border-b border-slate-200/60 pb-2">
-                    Front Desk Operational Movement
+            <div class="bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-xs lg:col-span-2">
+                <h2 class="text-xs font-extrabold uppercase text-slate-700 tracking-wider mb-3.5 border-b border-slate-200 pb-2 flex items-center justify-between">
+                    <span>Front Desk Operational Movement</span>
+                    <span class="text-[10px] font-semibold text-slate-400 lowercase italic">real-time updates</span>
                 </h2>
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <div class="bg-white p-3.5 rounded-xl border border-slate-200/60 shadow-2xs min-w-0">
-                        <span class="text-[11px] font-semibold text-slate-500 truncate block">Arrivals Pending</span>
-                        <div id="fd-arrivals-pending" class="text-lg sm:text-xl font-extrabold text-amber-600 mt-0.5 truncate">0</div>
+                    <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
+                        <span class="text-[11px] font-semibold text-slate-500 block truncate">Arrivals Pending</span>
+                        <div id="fd-arrivals-pending" class="text-lg sm:text-xl font-extrabold text-amber-600 mt-0.5 font-mono truncate">0</div>
                     </div>
-                    <div class="bg-white p-3.5 rounded-xl border border-slate-200/60 shadow-2xs min-w-0">
-                        <span class="text-[11px] font-semibold text-slate-500 truncate block">Checked In</span>
-                        <div id="fd-arrivals-done" class="text-lg sm:text-xl font-extrabold text-emerald-600 mt-0.5 truncate">0</div>
+                    <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
+                        <span class="text-[11px] font-semibold text-slate-500 block truncate">Checked In</span>
+                        <div id="fd-arrivals-done" class="text-lg sm:text-xl font-extrabold text-emerald-600 mt-0.5 font-mono truncate">0</div>
                     </div>
-                    <div class="bg-white p-3.5 rounded-xl border border-slate-200/60 shadow-2xs min-w-0">
-                        <span class="text-[11px] font-semibold text-slate-500 truncate block">Departures Pending</span>
-                        <div id="fd-deps-pending" class="text-lg sm:text-xl font-extrabold text-rose-600 mt-0.5 truncate">0</div>
+                    <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
+                        <span class="text-[11px] font-semibold text-slate-500 block truncate">Departures Pending</span>
+                        <div id="fd-deps-pending" class="text-lg sm:text-xl font-extrabold text-rose-600 mt-0.5 font-mono truncate">0</div>
                     </div>
-                    <div class="bg-white p-3.5 rounded-xl border border-slate-200/60 shadow-2xs min-w-0">
-                        <span class="text-[11px] font-semibold text-slate-500 truncate block">Checked Out</span>
-                        <div id="fd-deps-done" class="text-lg sm:text-xl font-extrabold text-indigo-600 mt-0.5 truncate">0</div>
+                    <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
+                        <span class="text-[11px] font-semibold text-slate-500 block truncate">Checked Out</span>
+                        <div id="fd-deps-done" class="text-lg sm:text-xl font-extrabold text-indigo-600 mt-0.5 font-mono truncate">0</div>
                     </div>
-                    <div class="bg-white p-3.5 rounded-xl border border-slate-200/60 shadow-2xs min-w-0">
-                        <span class="text-[11px] font-semibold text-slate-500 truncate block">In-House Guests</span>
-                        <div id="fd-in-house" class="text-lg sm:text-xl font-extrabold text-slate-800 mt-0.5 truncate">0</div>
+                    <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
+                        <span class="text-[11px] font-semibold text-slate-500 block truncate">In-House Guests</span>
+                        <div id="fd-in-house" class="text-lg sm:text-xl font-extrabold text-cyan-600 mt-0.5 font-mono truncate">0</div>
                     </div>
-                    <div class="bg-white p-3.5 rounded-xl border border-slate-200/60 shadow-2xs min-w-0">
-                        <span class="text-[11px] font-semibold text-slate-500 truncate block">No-Shows</span>
-                        <div id="fd-no-shows" class="text-lg sm:text-xl font-extrabold text-slate-500 mt-0.5 truncate">0</div>
+                    <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
+                        <span class="text-[11px] font-semibold text-slate-500 block truncate">No-Shows</span>
+                        <div id="fd-no-shows" class="text-lg sm:text-xl font-extrabold text-slate-600 mt-0.5 font-mono truncate">0</div>
                     </div>
                 </div>
             </div>
 
             <!-- Distribution Channel Mix Card -->
-            <div class="bg-slate-50/70 p-5 rounded-xl border border-slate-200/70 shadow-xs xl:col-span-1 flex flex-col justify-between">
-                <div>
-                    <div class="flex justify-between items-center mb-4 border-b border-slate-200/60 pb-2">
-                        <h2 class="text-xs font-black uppercase text-slate-600 tracking-wider">
-                            Distribution Mix
-                        </h2>
-                        <span class="text-[10px] bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">OTA / Direct</span>
-                    </div>
-                    
-                    <div id="channel-mix-container" class="space-y-3 max-h-52 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
-                        <p class="text-xs text-slate-400 italic py-2">Loading channel performance...</p>
-                    </div>
+            <div class="bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-xs lg:col-span-1 flex flex-col">
+                <div class="flex justify-between items-center mb-3 border-b border-slate-200 pb-2">
+                    <h2 class="text-xs font-extrabold uppercase text-slate-700 tracking-wider truncate">
+                        Channel Mix
+                    </h2>
+                    <span class="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-bold uppercase shrink-0">Sources</span>
+                </div>
+                
+                <div id="channel-mix-container" class="space-y-3 max-h-52 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100 flex-1">
+                    <p class="text-xs text-slate-400 italic py-2">Loading distribution metrics...</p>
                 </div>
             </div>
 
-            <!-- Low Stock Inventory Alert Card -->
-            <div class="bg-slate-50/70 p-5 rounded-xl border border-slate-200/70 shadow-xs xl:col-span-1 relative overflow-hidden flex flex-col justify-between">
-                <div class="absolute left-0 top-0 h-full w-1 bg-rose-500"></div>
+            <!-- Low Stock Items Alert Card -->
+            <div class="bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-xs lg:col-span-1 relative overflow-hidden flex flex-col justify-between">
+                <div class="absolute left-0 top-0 h-full w-1 bg-rose-500 rounded-full"></div>
                 
-                <div>
-                    <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-200/60">
-                        <p class="text-xs font-black text-slate-600 uppercase tracking-wider">Low Stock Alerts</p>
+                <div class="w-full">
+                    <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-200 gap-1">
+                        <p class="text-xs font-extrabold text-slate-700 uppercase tracking-wider truncate">Low Stock Alert</p>
                         
-                        <div class="flex items-center space-x-2">
+                        <div class="flex items-center space-x-1.5 shrink-0">
+                            <!-- Action Buttons -->
                             <div id="low-stock-actions" class="hidden flex items-center space-x-1">
-                                <button type="button" onclick="exportLowStockToCSV()" title="Export CSV" class="text-slate-400 hover:text-emerald-600 transition-colors p-1">
+                                <button type="button" onclick="exportLowStockToCSV()" title="Export Low Stock to CSV" class="text-slate-400 hover:text-emerald-600 transition-colors p-1 rounded-md hover:bg-slate-200/50">
                                     <i class="fas fa-file-excel text-xs"></i>
                                 </button>
-                                <button type="button" onclick="printLowStockReport()" title="Print Report" class="text-slate-400 hover:text-indigo-600 transition-colors p-1">
+                                <button type="button" onclick="printLowStockReport()" title="Print Low Stock Report" class="text-slate-400 hover:text-indigo-600 transition-colors p-1 rounded-md hover:bg-slate-200/50">
                                     <i class="fas fa-print text-xs"></i>
                                 </button>
                             </div>
-                            <span id="low-stock-count" class="text-[10px] font-extrabold bg-rose-100 text-rose-700 border border-rose-200/80 px-2 py-0.5 rounded-full hidden">0</span>
+                            
+                            <span id="low-stock-count" class="text-[10px] font-extrabold bg-rose-100 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full hidden">0</span>
                         </div>
                     </div>
 
-                    <!-- Scrollable inventory alerts -->
-                    <div id="low-stock-container" class="max-h-44 overflow-y-auto pr-1 space-y-2 scrollbar-thin scrollbar-thumb-rose-200 scrollbar-track-slate-100">
-                        <p class="text-xs text-slate-400 italic py-1">All tracked items are adequately stocked.</p>
+                    <!-- Scrollable list wrapper -->
+                    <div id="low-stock-container" class="mt-1 max-h-36 overflow-y-auto pr-1 space-y-2 scrollbar-thin scrollbar-thumb-rose-200 scrollbar-track-slate-100">
+                        <p class="text-xs text-slate-400 italic py-1">All tracked inventory levels are healthy.</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 3. Period Financial Audit Summary -->
-        <div class="bg-slate-50/70 p-5 rounded-xl border border-slate-200/70 shadow-xs">
-            <h2 class="text-xs font-black uppercase text-slate-600 tracking-wider mb-4 border-b border-slate-200/60 pb-2">
-                Period Financial Ledger Audit
+        <!-- 3. Financial Audit & Ledger Summary -->
+        <div class="bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-xs">
+            <h2 class="text-xs font-extrabold uppercase text-slate-700 tracking-wider mb-3.5 border-b border-slate-200 pb-2">
+                Period Financial Audit & Revenue Ledger
             </h2>
-            
-            <!-- Auto-fitting responsive grid for monetary figures -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 text-center">
-                <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs min-w-0">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-3 text-center">
+                <!-- Room Revenue -->
+                <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                     <span class="text-[11px] font-semibold text-slate-500 block truncate">Room Revenue</span>
-                    <div id="fin-room-rev" class="text-sm lg:text-base font-black text-slate-900 mt-1 truncate" title="0">0</div>
+                    <div id="fin-room-rev" class="text-sm sm:text-base font-extrabold text-slate-900 mt-1 font-mono tracking-tight truncate" title="0">0</div>
                 </div>
-                <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs min-w-0">
+                <!-- POS Revenue -->
+                <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                     <span class="text-[11px] font-semibold text-slate-500 block truncate">POS Revenue</span>
-                    <div id="fin-pos-rev" class="text-sm lg:text-base font-black text-emerald-600 mt-1 truncate" title="0">0</div>
+                    <div id="fin-pos-rev" class="text-sm sm:text-base font-extrabold text-emerald-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
                 </div>
-                <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs min-w-0">
+                <!-- POS Profit -->
+                <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                     <span class="text-[11px] font-semibold text-slate-500 block truncate">POS Profit</span>
-                    <div id="fin-pos-profit" class="text-sm lg:text-base font-black text-cyan-600 mt-1 truncate" title="0">0</div>
+                    <div id="fin-pos-profit" class="text-sm sm:text-base font-extrabold text-cyan-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
                 </div>
-                <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs min-w-0">
+                <!-- Gross Profit -->
+                <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                     <span class="text-[11px] font-semibold text-slate-500 block truncate">Gross Profit</span>
-                    <div id="fin-gross-profit" class="text-sm lg:text-base font-black text-purple-600 mt-1 truncate" title="0">0</div>
+                    <div id="fin-gross-profit" class="text-sm sm:text-base font-extrabold text-purple-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
                 </div>
-                <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs min-w-0">
+                <!-- Cash Collected -->
+                <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                     <span class="text-[11px] font-semibold text-slate-500 block truncate">Cash Collected</span>
-                    <div id="fin-collected" class="text-sm lg:text-base font-black text-teal-600 mt-1 truncate" title="0">0</div>
+                    <div id="fin-collected" class="text-sm sm:text-base font-extrabold text-teal-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
                 </div>
-                <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs min-w-0">
-                    <span class="text-[11px] font-semibold text-slate-500 block truncate">City Ledger Bal</span>
-                    <div id="fin-ledger-bal" class="text-sm lg:text-base font-black text-rose-600 mt-1 truncate" title="0">0</div>
+                <!-- Guest Ledger Balance -->
+                <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
+                    <span class="text-[11px] font-semibold text-slate-500 block truncate">Guest Ledger Bal</span>
+                    <div id="fin-ledger-bal" class="text-sm sm:text-base font-extrabold text-rose-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
                 </div>
-                <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs min-w-0">
-                    <span class="text-[11px] font-semibold text-slate-500 block truncate">Operating Expenses</span>
-                    <div id="fin-expenses" class="text-sm lg:text-base font-black text-amber-600 mt-1 truncate" title="0">0</div>
+                <!-- Operating Expenses -->
+                <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden col-span-2 sm:col-span-1">
+                    <span class="text-[11px] font-semibold text-slate-500 block truncate">Op Expenses</span>
+                    <div id="fin-expenses" class="text-sm sm:text-base font-extrabold text-amber-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
                 </div>
             </div>
         </div>
