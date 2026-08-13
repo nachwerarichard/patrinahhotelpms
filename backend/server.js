@@ -1928,6 +1928,52 @@ app.get('/api/pos/client/accounts/closed', auth, async (req, res) => {
         res.status(500).json({ message: 'Failed to retrieve records', details: error.message });
     }
 });
+
+app.delete('/api/client-accounts/:accountId/charges/:chargeId', auth, async (req, res) => {
+    try {
+        const { accountId, chargeId } = req.params;
+
+        // 1. Pull/Remove the charge subdocument from the charges array
+        const updatedAccount = await ClientAccount.findByIdAndUpdate(
+            accountId,
+            { 
+                $pull: { charges: { _id: chargeId } } 
+            },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedAccount) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Client account not found.' 
+            });
+        }
+
+        // 2. Recalculate totalCharges on the updated account
+        updatedAccount.totalCharges = updatedAccount.charges.reduce((sum, item) => {
+            return sum + (Number(item.amount) || 0);
+        }, 0);
+
+        // 3. Save updated total charges to database
+        await updatedAccount.save();
+
+        // 4. Return updated account object
+        return res.status(200).json({
+            success: true,
+            message: 'Charge deleted successfully.',
+            account: updatedAccount
+        });
+
+    } catch (error) {
+        console.error('Error deleting account charge:', error);
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Server error while deleting charge.',
+            error: error.message 
+        });
+    }
+});
+
 // Audit Log Schema
 
 // --- 6. Hardcoded Users for Authentication (Highly Insecure for Production!) ---
