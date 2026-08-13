@@ -15471,8 +15471,7 @@ function renderDropdownResults(bookings) {
         item.innerHTML = `
             <div class="flex flex-col min-w-0">
                 <!-- Dark primary text, shifts to indigo on row hover -->
-<span class="text-[15px] font-extrabold text-slate-900 group-hover:text-indigo-600 transition-colors capitalize tracking-tight">${escapeHTML(booking.name)}</span>                <!-- Subtle slate secondary text -->
-                <span class="text-[11px] text-slate-500 mt-0.5">ID: ${escapeHTML(booking.id)} | Room: <span class="capitalize">${escapeHTML(booking.room || 'N/A')}</span></span>
+ <span class="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition-colors capitalize">${escapeHTML(booking.name)}</span>                <span class="text-[11px] text-slate-500 mt-0.5">ID: ${escapeHTML(booking.id)} | Room: <span class="capitalize">${escapeHTML(booking.room || 'N/A')}</span></span>
             </div>
             <!-- Pill button adapted for light theme contrast -->
             <span class="text-[10px] px-2.5 py-1 rounded-md font-semibold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-transparent transition-all shadow-sm">
