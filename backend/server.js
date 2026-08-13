@@ -8006,19 +8006,25 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
                 { $group: { _id: "$status", count: { $sum: 1 } } }
             ]),
             Booking.aggregate([
-                { $match: { hotelId: hotelObjId } },
-                {
-                    $group: {
-                        _id: null,
-                        expectedArrivals: { $sum: { $cond: [{ $and: [{ $gte: ["$checkIn", currStartStr] }, { $lte: ["$checkIn", currEndStr] }] }, 1, 0] } },
-                        actualArrivals: { $sum: { $cond: [{ $and: [{ $gte: ["$checkIn", currStartStr] }, { $lte: ["$checkIn", currEndStr] }, { $eq: ["$gueststatus", "checkedin"] }] }, 1, 0] } },
-                        expectedDepartures: { $sum: { $cond: [{ $and: [{ $gte: ["$checkOut", currStartStr] }, { $lte: ["$checkOut", currEndStr] }] }, 1, 0] } },
-                        actualDepartures: { $sum: { $cond: [{ $and: [{ $gte: ["$checkOut", currStartStr] }, { $lte: ["$checkOut", currEndStr] }, { $eq: ["$gueststatus", "checkedout"] }] }, 1, 0] } },
-                        inHouse: { $sum: { $cond: [{ $eq: ["$gueststatus", "checkedin"] }, 1, 0] } },
-                        noShows: { $sum: { $cond: [{ $and: [{ $gte: ["$checkIn", currStartStr] }, { $lte: ["$checkIn", currEndStr] }, { $eq: ["$gueststatus", "no show"] }] }, 1, 0] } }
-                    }
-                }
-            ]),
+    { $match: { hotelId: hotelObjId } },
+    {
+        $group: {
+            _id: null,
+            expectedArrivals: { $sum: { $cond: [{ $and: [{ $gte: ["$checkIn", currStartStr] }, { $lte: ["$checkIn", currEndStr] }] }, 1, 0] } },
+            actualArrivals: { $sum: { $cond: [{ $and: [{ $gte: ["$checkIn", currStartStr] }, { $lte: ["$checkIn", currEndStr] }, { $eq: ["$gueststatus", "checkedin"] }] }, 1, 0] } },
+            expectedDepartures: { $sum: { $cond: [{ $and: [{ $gte: ["$checkOut", currStartStr] }, { $lte: ["$checkOut", currEndStr] }] }, 1, 0] } },
+            actualDepartures: { $sum: { $cond: [{ $and: [{ $gte: ["$checkOut", currStartStr] }, { $lte: ["$checkOut", currEndStr] }, { $eq: ["$gueststatus", "checkedout"] }] }, 1, 0] } },
+            
+            // Track total guest headcount
+            inHouseHeadcount: { $sum: { $cond: [{ $eq: ["$gueststatus", "checkedin"] }, "$people", 0] } },
+            
+            // Track occupied rooms count for accurate ADR & Occupancy %
+            occupiedRooms: { $sum: { $cond: [{ $eq: ["$gueststatus", "checkedin"] }, 1, 0] } },
+            
+            noShows: { $sum: { $cond: [{ $and: [{ $gte: ["$checkIn", currStartStr] }, { $lte: ["$checkIn", currEndStr] }, { $eq: ["$gueststatus", "no show"] }] }, 1, 0] } }
+        }
+    }
+]),
             Booking.aggregate([
                 { $match: { hotelId: hotelObjId, checkIn: { $gte: currStartStr, $lte: currEndStr } } },
                 { $group: { _id: null, roomRevenue: { $sum: "$totalDue" }, collected: { $sum: "$amountPaid" }, balance: { $sum: "$balance" } } }
@@ -8063,17 +8069,14 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
         ]);
 
         const capacity = totalRooms > 0 ? totalRooms : 1;
-        const ops = dailyOps[0] || { expectedArrivals: 0, actualArrivals: 0, expectedDepartures: 0, actualDepartures: 0, inHouse: 0, noShows: 0 };
-        const finC = currFinance[0] || { roomRevenue: 0, collected: 0, balance: 0 };
+        const ops = dailyOps[0] || { expectedArrivals: 0, actualArrivals: 0, expectedDepartures: 0, actualDepartures: 0, inHouseHeadcount: 0, occupiedRooms: 0, noShows: 0 };        const finC = currFinance[0] || { roomRevenue: 0, collected: 0, balance: 0 };
         const finP = prevFinance[0] || { roomRevenue: 0 };
         const posC = currPos[0] || { posSales: 0, posProfit: 0 };
         const posP = prevPos[0] || { posSales: 0, posProfit: 0 };
         const expC = currExp[0] || { totalExpense: 0 };
         const expP = prevExp[0] || { totalExpense: 0 };
-
-        const currOccupancy = Number(((ops.inHouse / capacity) * 100).toFixed(1));
-        const currAdr = ops.inHouse > 0 ? Math.round(finC.roomRevenue / ops.inHouse) : 0;
-        const currRevpar = Math.round(finC.roomRevenue / capacity);
+        const currOccupancy = Number(((ops.occupiedRooms / capacity) * 100).toFixed(1));
+        const currAdr = ops.occupiedRooms > 0 ? Math.round(finC.roomRevenue / ops.occupiedRooms) : 0;        const currRevpar = Math.round(finC.roomRevenue / capacity);
         const currGrossRev = finC.roomRevenue + posC.posSales;
         const currGrossProfit = finC.roomRevenue + posC.posProfit;
         const currNoi = currGrossRev - expC.totalExpense;
@@ -8118,13 +8121,13 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
                 noiTrend: calcTrend(currNoi, prevNoi)
             },
             frontDesk: {
-                arrivalsPending: ops.expectedArrivals - ops.actualArrivals,
-                arrivalsCheckedIn: ops.actualArrivals,
-                departuresPending: ops.expectedDepartures - ops.actualDepartures,
-                departuresCheckedOut: ops.actualDepartures,
-                inHouseGuests: ops.inHouse,
-                noShows: ops.noShows
-            },
+        arrivalsPending: ops.expectedArrivals - ops.actualArrivals,
+        arrivalsCheckedIn: ops.actualArrivals,
+        departuresPending: ops.expectedDepartures - ops.actualDepartures,
+        departuresCheckedOut: ops.actualDepartures,
+        inHouseGuests: ops.inHouseHeadcount, // Total guests from `people` field
+        noShows: ops.noShows
+    },
             housekeeping: roomMatrix,
             channelMix, // ➔ Returned array of channels
             financials: {
