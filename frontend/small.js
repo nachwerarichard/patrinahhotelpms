@@ -6617,24 +6617,45 @@ function closeModal() {
 async function handleEditRoomSubmit(event) {
     event.preventDefault();
 
-    const roomId = document.getElementById('editRoomId').value;
-    const roomNumber = document.getElementById('editRoomNumber').value.trim();
-    const overridePriceRaw = document.getElementById('editBasePrice').value.trim();
-    const submitBtn = event.target.querySelector('button[type="submit"]');
+    // 1. Safe DOM element extraction with optional chaining
+    const roomIdInput = document.getElementById('editRoomId');
+    const roomNumberInput = document.getElementById('editRoomNumber');
+    const overridePriceInput = document.getElementById('editBasePrice');
+    const submitBtn = event.target ? event.target.querySelector('button[type="submit"]') : null;
 
+    // Fail early if crucial form elements are missing from the DOM
+    if (!roomIdInput || !roomNumberInput) {
+        console.error('Edit room modal input fields missing from DOM.');
+        if (typeof showMessage === 'function') {
+            showMessage('Error', 'Form fields are missing in DOM.', true);
+        }
+        return;
+    }
+
+    const roomId = roomIdInput.value;
+    const roomNumber = roomNumberInput.value.trim();
+    const overridePriceRaw = overridePriceInput ? overridePriceInput.value.trim() : '';
+
+    // 2. Client-side Validation
     if (!roomId) {
-        return showMessage('Error', 'Invalid room reference.', true);
+        return typeof showMessage === 'function'
+            ? showMessage('Error', 'Invalid room reference.', true)
+            : alert('Invalid room reference.');
     }
 
     if (!roomNumber) {
-        return showMessage('Validation Error', 'Room number is required.', true);
+        return typeof showMessage === 'function'
+            ? showMessage('Validation Error', 'Room number is required.', true)
+            : alert('Room number is required.');
     }
 
     // Convert blank input to null, otherwise parse as float
     const overridePrice = overridePriceRaw !== '' ? parseFloat(overridePriceRaw) : null;
 
     if (overridePriceRaw !== '' && isNaN(overridePrice)) {
-        return showMessage('Validation Error', 'Please enter a valid rate number.', true);
+        return typeof showMessage === 'function'
+            ? showMessage('Validation Error', 'Please enter a valid rate number.', true)
+            : alert('Please enter a valid rate number.');
     }
 
     const payload = {
@@ -6643,9 +6664,10 @@ async function handleEditRoomSubmit(event) {
     };
 
     try {
+        // UI Loading State
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Saving...`;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...`;
         }
 
         const res = await authenticatedFetch(`${API_BASE_URL}/v2/rooms/${roomId}`, {
@@ -6656,19 +6678,36 @@ async function handleEditRoomSubmit(event) {
             body: JSON.stringify(payload)
         });
 
-        const data = await res.json();
+        if (!res) {
+            throw new Error('No response returned from network client.');
+        }
+
+        // 3. Safe Response Parsing (Handles non-JSON/HTML 404/500 pages gracefully)
+        const contentType = res.headers.get('content-type');
+        let data = {};
+
+        if (contentType && contentType.includes('application/json')) {
+            data = await res.json();
+        } else {
+            const rawText = await res.text();
+            console.error(`Non-JSON response received from server (${res.status}):`, rawText);
+            throw new Error(`Server returned HTTP ${res.status}. Endpoint route may be incorrect.`);
+        }
 
         if (!res.ok) {
             throw new Error(data.message || data.error || 'Failed to update room.');
         }
 
+        // Success Workflow
         if (typeof showMessage === 'function') {
             showMessage('Success', 'Room updated successfully!', false);
         }
 
-        closeModal();
+        if (typeof closeModal === 'function') {
+            closeModal();
+        }
 
-        // Refresh room inventory list
+        // Refresh inventory matrix table
         if (typeof fetchRoomsV2 === 'function') {
             fetchRoomsV2();
         }
@@ -6681,6 +6720,7 @@ async function handleEditRoomSubmit(event) {
             alert(err.message);
         }
     } finally {
+        // Restore UI State
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.innerHTML = 'Save Changes';
@@ -6692,6 +6732,8 @@ async function handleEditRoomSubmit(event) {
 document.addEventListener('DOMContentLoaded', () => {
     const editForm = document.getElementById('editRoomForm');
     if (editForm) {
+        // Prevent duplicate listener bindings
+        editForm.removeEventListener('submit', handleEditRoomSubmit);
         editForm.addEventListener('submit', handleEditRoomSubmit);
     }
 });
