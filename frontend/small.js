@@ -7657,30 +7657,42 @@ async function deleteAccountCharge(chargeId, index) {
 
     if (!confirm('Are you sure you want to remove this charge?')) return;
 
+    // Resolve username safely from session or fallback scope variable
+    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const username = loggedInUser.username || (typeof currentUsername !== 'undefined' ? currentUsername : 'Unknown User');
+
     // 1. Optimistic UI update: Remove the item locally first
     currentActiveAccountData.charges.splice(index, 1);
     
     // 2. Refresh the UI to reflect updated list & totals immediately
-    updateActiveAccountUI(currentActiveAccountData);
-
-    // 3. Persist to API
-   try {
-    const response = await authenticatedFetch(`${API_BASE_URL}/client-accounts/${activeAccountId}/charges/${chargeId}`, {
-        method: 'DELETE'
-    });
-
-    // Check if authenticatedFetch returned null (token missing/aborted) or HTTP error status
-    if (!response || !response.ok) {
-        throw new Error('Failed to delete charge on server');
+    if (typeof updateActiveAccountUI === 'function') {
+        updateActiveAccountUI(currentActiveAccountData);
     }
 
-    const data = await response.json();
-    console.log('Charge deleted successfully:', data);
+    // 3. Persist to API with username payload
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/client-accounts/${activeAccountId}/charges/${chargeId}`, {
+            method: 'DELETE',
+            body: JSON.stringify({ username })
+        });
 
-} catch (err) {
-    console.error('Error deleting charge:', err);
-    alert('Could not sync deletion with server. Please refresh.');
-}
+        // Check if authenticatedFetch returned null (token missing/aborted) or HTTP error status
+        if (!response || !response.ok) {
+            throw new Error('Failed to delete charge on server');
+        }
+
+        const data = await response.json();
+        console.log('Charge deleted successfully by:', username, data);
+
+        // Optional: Refresh audit logs if function is available on current page
+        if (typeof renderAuditLogs === 'function') {
+            renderAuditLogs();
+        }
+
+    } catch (err) {
+        console.error('Error deleting charge:', err);
+        alert('Could not sync deletion with server. Please refresh.');
+    }
 }
 
 const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
