@@ -7641,19 +7641,23 @@ async function deleteAccountCharge(chargeId, index) {
     updateActiveAccountUI(currentActiveAccountData);
 
     // 3. Persist to API
-    try {
-        const response = await fetch(`/api/client-accounts/${activeAccountId}/charges/${chargeId}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' }
-        });
+   try {
+    const response = await authenticatedFetch(`/api/client-accounts/${activeAccountId}/charges/${chargeId}`, {
+        method: 'DELETE'
+    });
 
-        if (!response.ok) {
-            throw new Error('Failed to delete charge on server');
-        }
-    } catch (err) {
-        console.error('Error deleting charge:', err);
-        alert('Could not sync deletion with server. Please refresh.');
+    // Check if authenticatedFetch returned null (token missing/aborted) or HTTP error status
+    if (!response || !response.ok) {
+        throw new Error('Failed to delete charge on server');
     }
+
+    const data = await response.json();
+    console.log('Charge deleted successfully:', data);
+
+} catch (err) {
+    console.error('Error deleting charge:', err);
+    alert('Could not sync deletion with server. Please refresh.');
+}
 }
 
 const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
