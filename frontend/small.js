@@ -2949,7 +2949,6 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
         showMessage('Error', `Failed to add charge: ${error.message}`, true);
     }
 });
-let currentBookingObjectId = null;
 let currentBookingCustomId = null;
 
 // --- 1. VIEW INCIDENTAL CHARGES MODAL HANDLER ---
