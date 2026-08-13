@@ -1090,6 +1090,58 @@ function applyRoleAccess(role) {
 let activeBookingsController = null;
 let isBookingsRendering = false;
 
+// Helper to capitalize words (e.g., "checkedin" -> "Checked In", "walk in" -> "Walk In")
+function formatStatusText(str) {
+    if (!str) return '';
+    // Handle specific cases like "checkedin" or "checkedout"
+    let formatted = str
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .replace(/checkedin/i, 'Checked In')
+        .replace(/checkedout/i, 'Checked Out')
+        .replace(/noshow/i, 'No Show');
+
+    return formatted
+        .split(/[\s_-]+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+}
+
+// Helper to return styled badge pills for Guest Status
+function getGuestStatusBadge(status) {
+    const text = formatStatusText(status);
+    const lower = (status || '').toLowerCase();
+
+    let badgeClasses = 'bg-slate-100 text-slate-700 border-slate-200'; // Default fallback
+
+    if (['checkedin', 'checked-in', 'in-house'].includes(lower)) {
+        badgeClasses = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    } else if (['confirmed', 'reserved'].includes(lower)) {
+        badgeClasses = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    } else if (['checkedout', 'checked-out'].includes(lower)) {
+        badgeClasses = 'bg-slate-100 text-slate-600 border-slate-200';
+    } else if (['cancelled', 'void', 'no-show', 'noshow'].includes(lower)) {
+        badgeClasses = 'bg-rose-50 text-rose-700 border-rose-200';
+    }
+
+    return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${badgeClasses}">${text}</span>`;
+}
+
+// Helper to return styled badge pills for Payment Status
+function getPaymentStatusBadge(status) {
+    const text = formatStatusText(status);
+    const lower = (status || '').toLowerCase();
+
+    let badgeClasses = 'bg-amber-50 text-amber-700 border-amber-200'; // Default Pending/Unpaid
+
+    if (['paid', 'completed'].includes(lower)) {
+        badgeClasses = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    } else if (['partially paid', 'partial'].includes(lower)) {
+        badgeClasses = 'bg-blue-50 text-blue-700 border-blue-200';
+    }
+
+    return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${badgeClasses}">${text}</span>`;
+}
+
 async function renderBookings(page = 1, searchTerm = '') {
     // 1. Cancel previous pending HTTP fetch if a new render call arrives
     if (activeBookingsController) {
@@ -1102,7 +1154,7 @@ async function renderBookings(page = 1, searchTerm = '') {
     if (isBookingsRendering) return;
     isBookingsRendering = true;
 
-    // Safely query DOM element references locally to prevent ReferenceErrors
+    // Safely query DOM element references locally
     const tableBody = document.querySelector("#bookingsTable tbody");
     const mobileGrid = document.getElementById("bookingsMobileGrid");
     const pageInfoSpan = document.getElementById("pageInfo") || document.querySelector(".page-info");
@@ -1121,7 +1173,7 @@ async function renderBookings(page = 1, searchTerm = '') {
 
         // Role Validation Check
         if (!['admin', 'front office', 'bar', 'super-admin'].includes(currentUserRole)) {
-            const errorMsg = '<div class="text-center p-6 text-gray-500 font-bold">Access Denied.</div>';
+            const errorMsg = '<div class="text-center p-6 text-slate-500 font-bold">Access Denied.</div>';
             if (tableBody) tableBody.innerHTML = `<tr><td colspan="8">${errorMsg}</td></tr>`;
             if (mobileGrid) mobileGrid.innerHTML = errorMsg;
             if (prevPageBtn) prevPageBtn.disabled = true;
@@ -1135,7 +1187,6 @@ async function renderBookings(page = 1, searchTerm = '') {
 
         let currentBookings = [];
         let totalPages = 1;
-        let totalCount = 0;
 
         let url = `${API_BASE_URL}/bookings?page=${currentPage}&limit=${recordsPerPage}&hotelId=${hotelId}`;
         if (currentSearchTerm) url += `&search=${encodeURIComponent(currentSearchTerm)}`;
@@ -1155,14 +1206,13 @@ async function renderBookings(page = 1, searchTerm = '') {
         const data = await response.json();
         currentBookings = data.bookings || [];
         totalPages = data.totalPages || 1;
-        totalCount = data.totalCount || 0;
 
         // Clear DOM
         if (tableBody) tableBody.innerHTML = '';
         if (mobileGrid) mobileGrid.innerHTML = '';
 
         if (currentBookings.length === 0) {
-            const emptyMsg = '<div class="text-center p-6 text-gray-400">No records tracked.</div>';
+            const emptyMsg = '<div class="text-center p-6 text-slate-400">No records tracked.</div>';
             if (tableBody) tableBody.innerHTML = `<tr><td colspan="8">${emptyMsg}</td></tr>`;
             if (mobileGrid) mobileGrid.innerHTML = emptyMsg;
         } else {
@@ -1177,15 +1227,15 @@ async function renderBookings(page = 1, searchTerm = '') {
                 if (['admin', 'super-admin', 'front office'].includes(currentUserRole)) {
                     if (isCancelled) {
                         actionButtonsHtml = `
-                            <span class="text-xs text-red-600 font-bold block mb-2 text-center uppercase tracking-wide">Cancelled</span>
-                            <button class="${baseBtn} bg-red-600 hover:bg-red-700" onclick="confirmDeleteBooking('${booking.id}')">
+                            <span class="text-xs text-rose-600 font-bold block mb-2 text-center uppercase tracking-wide">Cancelled</span>
+                            <button class="${baseBtn} bg-rose-600 hover:bg-rose-700" onclick="confirmDeleteBooking('${booking.id}')">
                                 <i class="fa-solid fa-trash-can mr-1"></i> Delete Permanently
                             </button>
                         `;
                     } else {
                         actionButtonsHtml = `
                             ${booking.gueststatus === 'reserved' ? `
-                                <button class="${baseBtn} bg-gray-600 hover:bg-gray-700" onclick="Confirm('${booking.id}')">
+                                <button class="${baseBtn} bg-slate-600 hover:bg-slate-700" onclick="Confirm('${booking.id}')">
                                     <i class="fa-solid fa-circle-check mr-1"></i> Confirm
                                 </button>
                             ` : ''}
@@ -1210,13 +1260,13 @@ async function renderBookings(page = 1, searchTerm = '') {
                             ` : ''}
 
                             ${booking.balance > 0 && booking.gueststatus !== 'cancelled' ? `
-                                <button class="${baseBtn} bg-green-600 hover:bg-green-700" onclick="openAddPaymentModal('${booking.id}', ${booking.balance})">
+                                <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="openAddPaymentModal('${booking.id}', ${booking.balance})">
                                     <i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment
                                 </button>
                             ` : ''}
 
                             ${!['checkedout', 'cancelled', 'void'].includes(booking.gueststatus) ? `
-                                <button class="${baseBtn} bg-blue-700 hover:bg-blue-800" onclick="viewCharges('${booking.id}')">
+                                <button class="${baseBtn} bg-indigo-700 hover:bg-indigo-800" onclick="viewCharges('${booking.id}')">
                                     <i class="fa-solid fa-receipt mr-1"></i> View Charges
                                 </button>
                             ` : ''}
@@ -1226,43 +1276,43 @@ async function renderBookings(page = 1, searchTerm = '') {
                             </button>
 
                             ${booking.amountPaid > 0 ? `
-                                <button class="${baseBtn} bg-orange-500 hover:bg-orange-600" onclick="printGuestReceipt('${booking.id}')">
+                                <button class="${baseBtn} bg-amber-600 hover:bg-amber-700" onclick="printGuestReceipt('${booking.id}')">
                                     <i class="fas fa-print mr-1"></i> Print Receipt
                                 </button>
                             ` : ''}
 
-                            <button class="${baseBtn} bg-gray-700 hover:bg-gray-800" onclick="viewBooking('${booking.id}')">
+                            <button class="${baseBtn} bg-slate-700 hover:bg-slate-800" onclick="viewBooking('${booking.id}')">
                                 <i class="fa-solid fa-eye mr-1"></i> View
                             </button>
 
                             ${!['checkedout', 'cancelled', 'void'].includes(booking.gueststatus) ? `
-                                <button class="${baseBtn} bg-blue-500 hover:bg-blue-600" onclick="editBooking('${booking.id}')">
+                                <button class="${baseBtn} bg-sky-600 hover:bg-sky-700" onclick="editBooking('${booking.id}')">
                                     <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
                                 </button>
                             ` : ''}
 
-                            <div class="border-t border-gray-200 my-2"></div>
+                            <div class="border-t border-slate-200 my-2"></div>
 
                             ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
-                                <button class="${baseBtn} bg-red-500 hover:bg-red-600" onclick="openCancelModal('${booking.id}')">
+                                <button class="${baseBtn} bg-rose-500 hover:bg-rose-600" onclick="openCancelModal('${booking.id}')">
                                     <i class="fa-solid fa-xmark mr-1"></i> Cancel
                                 </button>
                             ` : ''}
 
                             ${booking.gueststatus === 'checkedin' ? `
-                                <button class="${baseBtn} bg-orange-600 hover:bg-orange-700" onclick="openVoidModal('${booking.id}')">
+                                <button class="${baseBtn} bg-amber-600 hover:bg-amber-700" onclick="openVoidModal('${booking.id}')">
                                     <i class="fa-solid fa-ban mr-1"></i> Void
                                 </button>
                             ` : ''}
 
                             ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
-                                <button class="${baseBtn} bg-yellow-500 hover:bg-yellow-600" onclick="markNoShow('${booking.id}')">
+                                <button class="${baseBtn} bg-amber-500 hover:bg-amber-600" onclick="markNoShow('${booking.id}')">
                                     <i class="fa-solid fa-user-slash mr-1"></i> No Show
                                 </button>
                             ` : ''}
 
                             ${['reserved', 'confirmed', 'cancelled'].includes(booking.gueststatus) ? `
-                                <button class="${baseBtn} bg-red-700 hover:bg-red-800" onclick="confirmDeleteBooking('${booking.id}')">
+                                <button class="${baseBtn} bg-rose-700 hover:bg-rose-800" onclick="confirmDeleteBooking('${booking.id}')">
                                     <i class="fa-solid fa-trash-can mr-1"></i> Delete
                                 </button>
                             ` : ''}
@@ -1275,24 +1325,24 @@ async function renderBookings(page = 1, searchTerm = '') {
                 if (tableBody) {
                     const tr = document.createElement('tr');
                     tr.dataset.id = booking.id;
-                    tr.className = isCancelled ? "bg-red-50 hover:bg-red-100 transition-colors opacity-75" : "hover:bg-gray-50 transition-colors";
+                    tr.className = isCancelled ? "bg-rose-50/50 hover:bg-rose-100/60 transition-colors" : "hover:bg-slate-50 transition-colors";
                     tr.innerHTML = `
-                        <td class="py-3 px-6">${booking.name}</td>
-                        <td class="py-3 px-6">${booking.room}</td>
-                        <td class="py-3 px-6">${booking.checkIn}</td>
-                        <td class="py-3 px-6">${booking.checkOut}</td>
-                        <td class="py-3 px-6">${booking.paymentStatus}</td>
-                        <td class="py-3 px-6 relative group cursor-help">
-                            <span class="${isCancelled ? 'text-red-600 font-semibold' : 'text-gray-700'}">${booking.gueststatus}</span>
-                            ${isCancelled ? `<div class="invisible group-hover:visible absolute z-50 w-48 bg-gray-900 text-white text-xs rounded p-2 -top-12 left-0 shadow-xl pointer-events-none"><strong>Reason:</strong> ${cancellationReason}</div>` : ''}
+                        <td class="py-2.5 px-3 font-medium text-slate-900 capitalize">${formatStatusText(booking.name)}</td>
+                        <td class="py-2.5 px-3 text-slate-700 font-semibold">${booking.room}</td>
+                        <td class="py-2.5 px-3 text-slate-600">${booking.checkIn}</td>
+                        <td class="py-2.5 px-3 text-slate-600">${booking.checkOut}</td>
+                        <td class="py-2.5 px-3">${getPaymentStatusBadge(booking.paymentStatus)}</td>
+                        <td class="py-2.5 px-3 relative group cursor-help">
+                            ${getGuestStatusBadge(booking.gueststatus)}
+                            ${isCancelled ? `<div class="invisible group-hover:visible absolute z-50 w-48 bg-slate-900 text-white text-xs rounded p-2 -top-12 left-0 shadow-xl pointer-events-none"><strong>Reason:</strong> ${cancellationReason}</div>` : ''}
                         </td>
-                        <td class="py-3 px-6">${booking.guestsource}</td>
-                        <td class="py-3 px-6 text-center">
+                        <td class="py-2.5 px-3 text-slate-600 capitalize">${formatStatusText(booking.guestsource)}</td>
+                        <td class="py-2.5 px-3 text-right">
                             <div class="relative inline-block text-left">
-                                <button class="p-2 hover:bg-gray-200 rounded-full transition-colors" onclick="toggleActionButtons(event, this)">
-                                    <i class="fas fa-ellipsis-v text-gray-600"></i>
+                                <button class="p-1 text-slate-400 hover:text-slate-700 rounded transition-colors" onclick="toggleActionButtons(event, this)">
+                                    <i class="fas fa-ellipsis-v"></i>
                                 </button>
-                                <div class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 shadow-2xl rounded-lg p-2 z-[100]">${actionButtonsHtml}</div>
+                                <div class="hidden absolute right-0 mt-2 w-48 bg-white border border-slate-200 shadow-2xl rounded-xl p-2 z-[100]">${actionButtonsHtml}</div>
                             </div>
                         </td>
                     `;
@@ -1301,27 +1351,32 @@ async function renderBookings(page = 1, searchTerm = '') {
 
                 if (mobileGrid) {
                     const card = document.createElement('div');
-                    card.className = `p-4 rounded-xl border ${isCancelled ? 'bg-red-50/50 border-red-200' : 'bg-gray-50 border-gray-200'} shadow-sm relative`;
+                    card.className = `p-4 rounded-xl border ${isCancelled ? 'bg-rose-50/50 border-rose-200' : 'bg-white border-slate-200'} shadow-sm relative`;
                     card.innerHTML = `
                         <div class="flex justify-between items-start mb-2">
                             <div>
-                                <h4 class="text-base font-bold text-gray-900">${booking.name}</h4>
-                                <p class="text-xs text-gray-500 font-medium">Room: <span class="text-blue-600 font-bold">${booking.room}</span> | Source: ${booking.guestsource}</p>
+                                <h4 class="text-sm font-bold text-slate-900 capitalize">${formatStatusText(booking.name)}</h4>
+                                <p class="text-xs text-slate-500 font-medium mt-0.5">Room: <span class="text-indigo-600 font-bold">${booking.room}</span> | Source: <span class="capitalize">${formatStatusText(booking.guestsource)}</span></p>
                             </div>
                             <div class="relative">
-                                <button class="p-1.5 bg-white border border-gray-200 rounded-lg shadow-sm" onclick="toggleActionButtons(event, this)">
-                                    <i class="fas fa-ellipsis-h text-gray-600"></i>
+                                <button class="p-1.5 bg-slate-50 border border-slate-200 rounded-lg shadow-sm hover:bg-slate-100" onclick="toggleActionButtons(event, this)">
+                                    <i class="fas fa-ellipsis-h text-slate-600"></i>
                                 </button>
-                                <div class="hidden absolute right-0 mt-1 w-48 bg-white border border-gray-200 shadow-2xl rounded-lg p-2 z-[100]">${actionButtonsHtml}</div>
+                                <div class="hidden absolute right-0 mt-1 w-48 bg-white border border-slate-200 shadow-2xl rounded-xl p-2 z-[100]">${actionButtonsHtml}</div>
                             </div>
                         </div>
-                        <div class="grid grid-cols-2 gap-2 my-3 text-xs border-y border-gray-200/60 py-2">
-                            <div><span class="text-gray-400 block uppercase font-bold tracking-tight text-[10px]">Check In</span> <span class="font-medium text-gray-700">${booking.checkIn}</span></div>
-                            <div><span class="text-gray-400 block uppercase font-bold tracking-tight text-[10px]">Check Out</span> <span class="font-medium text-gray-700">${booking.checkOut}</span></div>
+                        <div class="grid grid-cols-2 gap-2 my-3 text-xs border-y border-slate-100 py-2">
+                            <div><span class="text-slate-400 block uppercase font-bold tracking-tight text-[10px]">Check In</span> <span class="font-medium text-slate-700">${booking.checkIn}</span></div>
+                            <div><span class="text-slate-400 block uppercase font-bold tracking-tight text-[10px]">Check Out</span> <span class="font-medium text-slate-700">${booking.checkOut}</span></div>
                         </div>
                         <div class="flex items-center justify-between text-xs pt-1">
-                            <div>Status: <span class="font-bold ${isCancelled ? 'text-red-600' : 'text-emerald-600'}">${booking.gueststatus}</span></div>
-                            <div class="px-2 py-0.5 rounded font-bold ${booking.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${booking.paymentStatus}</div>
+                            <div class="flex items-center space-x-1">
+                                <span class="text-slate-500">Status:</span> 
+                                ${getGuestStatusBadge(booking.gueststatus)}
+                            </div>
+                            <div>
+                                ${getPaymentStatusBadge(booking.paymentStatus)}
+                            </div>
                         </div>
                     `;
                     mobileFragment.appendChild(card);
@@ -1342,11 +1397,9 @@ async function renderBookings(page = 1, searchTerm = '') {
             console.error('Error fetching bookings:', error);
         }
     } finally {
-        // ALWAYS unlock execution state regardless of failures or aborts
         isBookingsRendering = false;
     }
 }
-
 // 1. Trigger function attached to the UI button
 // 1. Asynchronous Fetcher with Parallel API Requests
 // 1. Asynchronous Fetcher with Parallel API Requests
