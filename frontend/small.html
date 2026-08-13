@@ -3466,191 +3466,193 @@ Manage payment providers used for guest payments.            </p>
         </div>
     </div>
 </div>
-<div id="bookingModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-50 hidden transition-all duration-300">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-5xl relative max-h-[92vh] flex flex-col overflow-hidden text-slate-200">
+<div id="bookingModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 z-50 hidden transition-all duration-300">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl relative max-h-[92vh] flex flex-col overflow-hidden border border-slate-200/80">
         
-        <!-- Modal Header -->
-        <div class="px-6 py-4 bg-slate-800/80 border-b border-slate-700/60 flex justify-between items-center">
+        <!-- Header Bar -->
+        <div class="px-6 py-4 bg-slate-50/90 border-b border-slate-200 flex justify-between items-center sticky top-0 z-10">
             <div class="flex items-center gap-3">
-                <div class="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                <div class="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
                 </div>
                 <div>
-                    <h2 id="modalTitle" class="text-lg font-bold text-white tracking-tight">New Reservation & Guest Folio</h2>
-                    <p class="text-xs text-slate-400">Create or update stay details, room allocation, and billing breakdown</p>
+                    <h2 id="modalTitle" class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        Add Guest Details
+                    </h2>
+                    <p class="text-xs text-slate-500 font-medium">Create or modify room reservation record</p>
                 </div>
             </div>
-            <button class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-700/50 transition" onclick="closeBookingModal()">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
+            <button type="button" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition text-xl leading-none" onclick="closeBookingModal()">&times;</button>
         </div>
 
-        <!-- Live Folio Summary Bar -->
-        <div class="bg-slate-950/60 px-6 py-2.5 border-b border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono">
-            <div class="flex flex-col">
-                <span class="text-[10px] text-slate-500 uppercase tracking-wider font-sans font-semibold">Stay Duration</span>
-                <span class="text-slate-200 font-bold"><span id="summary-nights">0</span> Nights</span>
-            </div>
-            <div class="flex flex-col">
-                <span class="text-[10px] text-slate-500 uppercase tracking-wider font-sans font-semibold">Nightly Rate</span>
-                <span class="text-blue-400 font-bold" id="summary-rate">UGX 0.00</span>
-            </div>
-            <div class="flex flex-col">
-                <span class="text-[10px] text-slate-500 uppercase tracking-wider font-sans font-semibold">Total Folio Due</span>
-                <span class="text-white font-extrabold" id="summary-total">UGX 0.00</span>
-            </div>
-            <div class="flex flex-col">
-                <span class="text-[10px] text-slate-500 uppercase tracking-wider font-sans font-semibold">Balance Pending</span>
-                <span class="text-emerald-400 font-bold" id="summary-balance">UGX 0.00</span>
-            </div>
-        </div>
-
-        <!-- Modal Body / Form -->
-        <div class="p-6 overflow-y-auto space-y-8 custom-scrollbar">
+        <!-- Scrollable Modal Content -->
+        <div class="p-6 md:p-8 overflow-y-auto bg-slate-50/30">
             <form id="bookingForm" class="space-y-8">
                 <input type="hidden" id="bookingId">
 
-                <!-- SECTION 1: Guest Personal Profile -->
-                <section class="space-y-4">
-                    <div class="flex items-center gap-2 pb-2 border-b border-slate-800">
-                        <span class="flex items-center justify-center w-5 h-5 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold">1</span>
-                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Guest Profile & Identification</h3>
+                <!-- Section 1: Guest Profile -->
+                <section class="bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
+                        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold">1</span>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Guest Personal Information</h3>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div class="flex flex-col">
-                            <label for="name" class="text-[11px] font-semibold text-slate-400 mb-1">Full Name <span class="text-rose-400">*</span></label>
-                            <input type="text" id="name" required placeholder="e.g. John Doe" class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
+                            <label for="name" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Full Name <span class="text-rose-500">*</span></label>
+                            <input type="text" id="name" required placeholder="e.g. John Doe" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800 transition placeholder:text-slate-300">
                         </div>
+
                         <div class="flex flex-col">
-                            <label for="nationality" class="text-[11px] font-semibold text-slate-400 mb-1">Nationality</label>
-                            <input type="text" id="nationality" placeholder="e.g. Ugandan, American" class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
+                            <label for="guestEmail" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Email Address</label>
+                            <input type="email" id="guestEmail" placeholder="guest@example.com" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800 transition placeholder:text-slate-300">
                         </div>
+
                         <div class="flex flex-col">
-                            <label for="nationalIdNo" class="text-[11px] font-semibold text-slate-400 mb-1">Passport / National ID No.</label>
-                            <input type="text" id="nationalIdNo" placeholder="Document ID Number" class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
+                            <label for="phoneNo" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Phone Number</label>
+                            <input type="tel" id="phoneNo" placeholder="+256 700 000 000" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800 transition placeholder:text-slate-300">
                         </div>
+
                         <div class="flex flex-col">
-                            <label for="guestEmail" class="text-[11px] font-semibold text-slate-400 mb-1">Email Address</label>
-                            <input type="email" idguestEmail" placeholder="guest@domain.com" class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
+                            <label for="nationality" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nationality</label>
+                            <input type="text" id="nationality" placeholder="e.g. Ugandan" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800 transition placeholder:text-slate-300">
                         </div>
+
                         <div class="flex flex-col">
-                            <label for="phoneNo" class="text-[11px] font-semibold text-slate-400 mb-1">Phone Number</label>
-                            <input type="tel" id="phoneNo" placeholder="+256 700 000 000" class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
+                            <label for="nationalIdNo" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Passport / National ID</label>
+                            <input type="text" id="nationalIdNo" placeholder="Document ID No." class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800 transition placeholder:text-slate-300">
                         </div>
+
                         <div class="flex flex-col">
-                            <label for="occupation" class="text-[11px] font-semibold text-slate-400 mb-1">Occupation</label>
-                            <input type="text" id="occupation" placeholder="Title or Organization" class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
+                            <label for="occupation" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Occupation</label>
+                            <input type="text" id="occupation" placeholder="Professional Role" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800 transition placeholder:text-slate-300">
                         </div>
+
                         <div class="md:col-span-2 lg:col-span-3 flex flex-col">
-                            <label for="address" class="text-[11px] font-semibold text-slate-400 mb-1">Permanent Residential Address</label>
-                            <input type="text" id="address" placeholder="Street Address, City, Country" class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
+                            <label for="address" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Permanent Residence Address</label>
+                            <input type="text" id="address" placeholder="Street Address, City, Country" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800 transition placeholder:text-slate-300">
                         </div>
                     </div>
                 </section>
 
-                <!-- SECTION 2: Stay & Room Allocation -->
-                <section class="space-y-4">
-                    <div class="flex items-center gap-2 pb-2 border-b border-slate-800">
-                        <span class="flex items-center justify-center w-5 h-5 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold">2</span>
-                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Room Allocation & Schedule</h3>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div class="flex flex-col">
-                            <label for="room" class="text-[11px] font-semibold text-slate-400 mb-1">Assigned Room <span class="text-rose-400">*</span></label>
-                            <select id="room" required class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
-                                <option value="">Select Clean Room...</option>
-                            </select>
-                        </div>
-                        <div class="flex flex-col">
-                            <label for="checkIn" class="text-[11px] font-semibold text-slate-400 mb-1">Check-In Date <span class="text-rose-400">*</span></label>
-                            <input type="date" id="checkIn" required class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
-                        </div>
-                        <div class="flex flex-col">
-                            <label for="checkIntime" class="text-[11px] font-semibold text-slate-400 mb-1">Check-In Time</label>
-                            <input type="time" id="checkIntime" class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
-                        </div>
-                        <div class="flex flex-col">
-                            <label for="checkOut" class="text-[11px] font-semibold text-slate-400 mb-1">Check-Out Date <span class="text-rose-400">*</span></label>
-                            <input type="date" id="checkOut" required class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
-                        </div>
-                        <div class="flex flex-col">
-                            <label for="checkOuttime" class="text-[11px] font-semibold text-slate-400 mb-1">Check-Out Time</label>
-                            <input type="time" id="checkOuttime" class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
-                        </div>
-                        <div class="flex flex-col">
-                            <label for="nights" class="text-[11px] font-semibold text-slate-400 mb-1">Calculated Nights</label>
-                            <input type="number" id="nights" readonly class="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2 text-sm font-bold text-blue-400 outline-none">
-                        </div>
-                        <div class="flex flex-col">
-                            <label for="people" class="text-[11px] font-semibold text-slate-400 mb-1">Pax (Occupants) <span class="text-rose-400">*</span></label>
-                            <input type="number" id="people" min="1" required placeholder="1" class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
-                        </div>
-                        <div class="flex flex-col">
-                            <label for="extraperson" class="text-[11px] font-semibold text-slate-400 mb-1">Accompanying Guest(s)</label>
-                            <input type="text" id="extraperson" placeholder="Additional guest names" class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
-                        </div>
-                    </div>
-                </section>
-
-                <!-- SECTION 3: Financial & Folio Ledger -->
-                <section class="bg-slate-950/50 p-5 rounded-xl border border-slate-800 space-y-4">
-                    <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                <!-- Section 2: Room & Stay Details -->
+                <section class="bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
                         <div class="flex items-center gap-2">
-                            <span class="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold">3</span>
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Financial Ledger & Settlement</h3>
+                            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold">2</span>
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Room Allocation & Stay Period</h3>
                         </div>
-                        <span class="text-[11px] font-mono text-slate-500">Auto-calculated</span>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div class="flex flex-col">
-                            <label for="amtPerNight" class="text-[11px] font-semibold text-slate-400 mb-1">Nightly Rate <span class="text-rose-400">*</span></label>
-                            <input type="number" id="amtPerNight" step="0.01" required placeholder="0.00" class="bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition">
+                            <label for="room" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Assigned Room</label>
+                            <select id="room" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800 font-medium">
+                                <option value="">Select Room</option>
+                            </select>
                         </div>
+
                         <div class="flex flex-col">
-                            <label for="totalDue" class="text-[11px] font-semibold text-slate-400 mb-1">Total Stay Due</label>
-                            <input type="number" id="totalDue" step="0.01" readonly class="bg-slate-900/90 border border-slate-800 rounded-lg px-3 py-2 text-sm font-bold text-white outline-none">
+                            <label for="checkIn" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Check-In Date <span class="text-rose-500">*</span></label>
+                            <input type="date" id="checkIn" required class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800 font-medium">
                         </div>
+
                         <div class="flex flex-col">
-                            <label for="amountPaid" class="text-[11px] font-semibold text-slate-400 mb-1">Deposit / Amount Paid</label>
-                            <input type="number" id="amountPaid" step="0.01" placeholder="0.00" class="bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-emerald-400 font-medium focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition">
+                            <label for="checkIntime" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Check-In Time</label>
+                            <input type="time" id="checkIntime" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800">
                         </div>
+
                         <div class="flex flex-col">
-                            <label for="balance" class="text-[11px] font-semibold text-slate-400 mb-1">Outstanding Balance</label>
-                            <input type="number" id="balance" step="0.01" readonly class="bg-slate-900/90 border border-slate-800 rounded-lg px-3 py-2 text-sm font-bold text-rose-400 outline-none">
+                            <label for="checkOut" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Check-Out Date <span class="text-rose-500">*</span></label>
+                            <input type="date" id="checkOut" required class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800 font-medium">
                         </div>
+
                         <div class="flex flex-col">
-                            <label for="paymentMethod" class="text-[11px] font-semibold text-slate-400 mb-1">Payment Channel</label>
-                            <select id="paymentMethod" class="bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition">
+                            <label for="checkOuttime" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Check-Out Time</label>
+                            <input type="time" id="checkOuttime" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="nights" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Total Nights</label>
+                            <input type="number" id="nights" readonly class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg bg-slate-100 text-slate-700 font-bold cursor-not-allowed">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="people" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Guests Count <span class="text-rose-500">*</span></label>
+                            <input type="number" id="people" required min="1" placeholder="1" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="extraperson" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Accompanying Guest(s)</label>
+                            <input type="text" id="extraperson" placeholder="Additional guest names" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800 placeholder:text-slate-300">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 3: Financial & Folio Ledger -->
+                <section class="bg-indigo-50/40 p-5 rounded-xl border border-indigo-100/80 shadow-sm">
+                    <div class="flex items-center justify-between mb-4 pb-2 border-b border-indigo-100">
+                        <div class="flex items-center gap-2">
+                            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold">3</span>
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-950">Folio & Settlement Details</h3>
+                        </div>
+                        <span class="text-[11px] font-semibold text-indigo-600 bg-indigo-100/60 px-2 py-0.5 rounded">Auto-Calculated Ledger</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="flex flex-col">
+                            <label for="amtPerNight" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Rate / Night <span class="text-rose-500">*</span></label>
+                            <div class="relative">
+                                <input type="number" id="amtPerNight" step="0.01" required placeholder="0.00" class="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none bg-white font-semibold text-slate-800">
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="totalDue" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Total Stay Amount</label>
+                            <input type="number" id="totalDue" step="0.01" readonly placeholder="0.00" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg bg-white font-bold text-indigo-900 cursor-not-allowed">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="amountPaid" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Advance Payment</label>
+                            <input type="number" id="amountPaid" step="0.01" placeholder="0.00" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none bg-white font-semibold text-emerald-700">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="balance" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Outstanding Balance</label>
+                            <input type="number" id="balance" step="0.01" readonly placeholder="0.00" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg bg-white font-bold text-rose-600 cursor-not-allowed">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="paymentMethod" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Payment Method</label>
+                            <select id="paymentMethod" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800 font-medium">
                                 <option value="Cash">Cash</option>
-                                <option value="MTN Momo">MTN Mobile Money</option>
-                                <option value="Airtel Pay">Airtel Money</option>
-                                <option value="Bank">Bank Wire Transfer</option>
-                                <option value="Stripe">Credit / Debit Card (Stripe)</option>
-                                <option value="Pesapal">Pesapal Gateway</option>
+                                <option value="MTN Momo">MTN Momo</option>
+                                <option value="Airtel Pay">Airtel Pay</option>
+                                <option value="Bank">Bank Transfer / Card</option>
                             </select>
                         </div>
+
                         <div class="flex flex-col">
-                            <label for="transactionid" class="text-[11px] font-semibold text-slate-400 mb-1">Transaction Ref / Cheque No.</label>
-                            <input type="text" id="transactionid" placeholder="Optional audit ref" class="bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition">
+                            <label for="transactionid" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Reference / TXN ID</label>
+                            <input type="text" id="transactionid" placeholder="e.g. TRX-902148" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none bg-white text-slate-800">
                         </div>
+
                         <div class="flex flex-col">
-                            <label for="paymentStatus" class="text-[11px] font-semibold text-slate-400 mb-1">Folio Payment Status</label>
-                            <select id="paymentStatus" class="bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition">
-                                <option value="Pending">Unpaid (Pending)</option>
+                            <label for="paymentStatus" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Folio Payment Status</label>
+                            <select id="paymentStatus" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800 font-semibold">
+                                <option value="Pending">Pending</option>
                                 <option value="Partially Paid">Partially Paid</option>
-                                <option value="Paid">Fully Paid</option>
+                                <option value="Paid">Paid</option>
                             </select>
                         </div>
+
                         <div class="flex flex-col">
-                            <label for="gueststatus" class="text-[11px] font-semibold text-slate-400 mb-1">Reservation Status</label>
-                            <select id="gueststatus" class="bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-2 text-sm font-semibold text-blue-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
-                                <option value="reserved">Reserved (Unconfirmed)</option>
+                            <label for="gueststatus" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Reservation Status</label>
+                            <select id="gueststatus" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-indigo-700 font-bold">
+                                <option value="reserved">Reservation</option>
                                 <option value="confirmed">Confirmed</option>
-                                <option value="checkedin">Checked-In (In-House)</option>
-                                <option value="checkedout">Checked-Out</option>
+                                <option value="checkedin">Checked In</option>
+                                <option value="checkedout">Checked Out</option>
                                 <option value="cancelled">Cancelled</option>
                                 <option value="no show">No Show</option>
                             </select>
@@ -3658,68 +3660,73 @@ Manage payment providers used for guest payments.            </p>
                     </div>
                 </section>
 
-                <!-- SECTION 4: Travel, Channel & Compliance -->
-                <section class="space-y-4">
-                    <div class="flex items-center gap-2 pb-2 border-b border-slate-800">
-                        <span class="flex items-center justify-center w-5 h-5 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold">4</span>
-                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Channel Origin & Compliance</h3>
+                <!-- Section 4: Travel & Compliance -->
+                <section class="bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
+                        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold">4</span>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Travel & Compliance Information</h3>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div class="flex flex-col">
-                            <label for="guestsource" class="text-[11px] font-semibold text-slate-400 mb-1">Booking Source (OTA / Direct)</label>
-                            <select id="guestsource" class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
-                                <option value="Walk in">Direct Walk-In</option>
-                                <option value="Hotel Website">Direct Web Booking</option>
+                            <label for="vehno" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Vehicle Reg No.</label>
+                            <input type="text" id="vehno" placeholder="Plate Number" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="destination" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Next Destination</label>
+                            <input type="text" id="destination" placeholder="City / Hotel" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="guestsource" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Channel / Source</label>
+                            <select id="guestsource" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800">
+                                <option value="Walk in">Walk In</option>
+                                <option value="Hotel Website">Hotel Website</option>
                                 <option value="Booking.com">Booking.com</option>
                                 <option value="Expedia">Expedia Group</option>
-                                <option value="Airbnb">Airbnb</option>
-                                <option value="Trip.com">Trip.com</option>
-                                <option value="Corporate">Corporate Account</option>
+                                <option value="Airbnd">Airbnb</option>
+                                <option value="Trip">Trip.com</option>
                             </select>
                         </div>
+
                         <div class="flex flex-col">
-                            <label for="vehno" class="text-[11px] font-semibold text-slate-400 mb-1">Vehicle License Plate</label>
-                            <input type="text" id="vehno" placeholder="For guest parking" class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
+                            <label for="kin" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Emergency Contact Name</label>
+                            <input type="text" id="kin" placeholder="Next of Kin" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800">
                         </div>
+
                         <div class="flex flex-col">
-                            <label for="destination" class="text-[11px] font-semibold text-slate-400 mb-1">Next Destination</label>
-                            <input type="text" id="destination" placeholder="Forwarding city/country" class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
+                            <label for="kintel" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Emergency Contact Phone</label>
+                            <input type="tel" id="kintel" placeholder="Phone Number" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800">
                         </div>
+
                         <div class="flex flex-col">
-                            <label for="kin" class="text-[11px] font-semibold text-slate-400 mb-1">Emergency Contact Name</label>
-                            <input type="text" id="kin" placeholder="Next of kin" class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
+                            <label for="purpose" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Purpose of Visit</label>
+                            <input type="text" id="purpose" placeholder="Leisure, Business, Event" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800">
                         </div>
-                        <div class="flex flex-col">
-                            <label for="kintel" class="text-[11px] font-semibold text-slate-400 mb-1">Emergency Phone</label>
-                            <input type="tel" id="kintel" placeholder="+256..." class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
-                        </div>
-                        <div class="flex flex-col">
-                            <label for="purpose" class="text-[11px] font-semibold text-slate-400 mb-1">Purpose of Visit</label>
-                            <input type="text" id="purpose" placeholder="Leisure, Business, Event" class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
-                        </div>
+
                         <div class="md:col-span-3 flex flex-col">
-                            <label for="declarations" class="text-[11px] font-semibold text-slate-400 mb-1">Special Requests & Guest Declarations</label>
-                            <textarea id="declarations" rows="2" placeholder="Dietary requests, late check-out arrangements, accessibility needs..." class="bg-slate-800/60 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"></textarea>
+                            <label for="declarations" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Special Requests & Declarations</label>
+                            <textarea id="declarations" rows="2" placeholder="Dietary requirements, accessibility needs, or hotel policy acknowledgments..." class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800 transition placeholder:text-slate-300"></textarea>
                         </div>
                     </div>
                 </section>
             </form>
         </div>
 
-        <!-- Sticky Modal Action Footer -->
-        <div class="px-6 py-4 bg-slate-800/80 border-t border-slate-700/60 flex items-center justify-between">
-            <button type="button" onclick="closeBookingModal()" class="px-5 py-2 rounded-xl border border-slate-700 text-slate-300 font-semibold text-sm hover:bg-slate-700/50 hover:text-white transition">
-                Discard Changes
-            </button>
-            <div class="flex items-center gap-3">
-                <button type="submit" form="bookingForm" id="saveBookingBtn" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/20 transition flex items-center gap-2">
+        <!-- Sticky Footer Actions -->
+        <div class="px-6 py-4 bg-slate-50/90 border-t border-slate-200 flex items-center justify-between sticky bottom-0 z-10">
+            <span class="text-xs text-slate-400 font-medium hidden sm:inline-block"><span class="text-rose-500">*</span> Required operational fields</span>
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <button type="button" onclick="closeBookingModal()" class="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 font-semibold text-sm rounded-xl hover:bg-slate-100 hover:text-slate-900 transition shadow-sm">
+                    Cancel
+                </button>
+                <button type="submit" form="bookingForm" id="saveBookingBtn" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md shadow-indigo-600/20 transition flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                    Save & Sync Folio
+                    Save Reservation
                 </button>
             </div>
         </div>
-
     </div>
 </div>
     <div id="incidentalChargeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
