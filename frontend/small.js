@@ -11369,68 +11369,7 @@ document.getElementById('exportposReportBtn').addEventListener('click', function
 
     // New function to handle the modal display and population
 // New function to handle the modal display and population
-function openEditModal(item) {
-    // 1. Permission check
-    const authorizedRoles = ['admin', 'super-admin', 'manager'];
-    if (!authorizedRoles.includes(currentUserRole)) {
-        if (typeof showMessage === 'function') showMessage('Permission Denied', true);
-        else showMessage('Permission Denied');
-        return;
-    }
 
-    // 2. Data Validation
-    if (!item || !item.item) {
-        console.error("Item object is invalid:", item);
-        showMessage("Error: Could not identify the inventory item.");
-        return;
-    }
-
-    const modal = document.getElementById('edit-inventory-modal');
-    if (!modal) return console.error("Modal 'edit-inventory-modal' missing from HTML");
-
-    // 3. Populate Form
-    const idField = document.getElementById('edit-inventory-id');
-    if (idField) idField.value = item._id ||item.id || '';
-
-    const nameField = document.getElementById('edit-item');
-    if (nameField) nameField.value = item.item || '';
-
-    // Populate Department dropdown
-    const deptField = document.getElementById('edit-department');
-    if (deptField) deptField.value = item.department || '';
-
-    document.getElementById('edit-lowStock').value = item.lowStock ?? 5;
-
-    // Numeric fields with 0 fallback
-    const numericFields = {
-        'edit-opening': item.opening,
-        'edit-purchases': item.purchases,
-        'edit-inventory-sales': item.sales,
-        'edit-spoilage': item.spoilage,
-        'edit-buyingprice': item.buyingprice,
-        'edit-sellingprice': item.sellingprice
-    };
-
-    for (let [id, val] of Object.entries(numericFields)) {
-        const input = document.getElementById(id);
-        if (input) input.value = val !== undefined ? val : 0;
-    }
-
-    const trackInput = document.getElementById('edit-trackInventory');
-    if (trackInput) {
-        trackInput.checked = item.trackInventory !== undefined ? item.trackInventory : true;
-    }
-
-    // 4. Dynamic Modal Header
-    const title = modal.querySelector('h2');
-    if (title) {
-        title.textContent = item._id ? `Edit ${item.item}` : `Initialize ${item.item} for ${item.viewingDate || 'Today'}`;
-    }
-
-    // 5. Open Modal
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-}
 // New function to handle the form submission for the modal
 /**
  * Manages the loading state of the Edit Inventory button.
