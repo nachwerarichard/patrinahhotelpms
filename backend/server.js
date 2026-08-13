@@ -1025,7 +1025,7 @@ app.post('/api/v2/rooms', auth, async (req, res) => {
  * @desc    Update physical room details (number and override price)
  * @access  Private / Authenticated
  */
-app.put('/v2/rooms/:id', auth,async (req, res) => {
+app.put('/api/v2/rooms/:id', auth,async (req, res) => {
     try {
         const { id } = req.params;
         const { number, overridePrice } = req.body;
