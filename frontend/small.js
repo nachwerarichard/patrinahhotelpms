@@ -15429,29 +15429,34 @@ async function executeGuestSearch(query) {
     }
 }
 
-// 2. Render dropdown results safely
+// 2. Render dropdown results safely (Light Theme UI)
 function renderDropdownResults(bookings) {
     const resultsDropdown = document.getElementById('search-results-dropdown');
     resultsDropdown.innerHTML = '';
 
-    // Handle empty arrays safely
+    // Handle empty arrays safely - Updated text color for light backgrounds
     if (!bookings || bookings.length === 0) {
-        showDropdownMessage('<div class="p-4 text-xs text-slate-400">No active records match that search.</div>');
+        showDropdownMessage('<div class="p-4 text-xs text-slate-500 font-medium">No active records match that search.</div>');
         return;
     }
 
+    // Ensure container styling matches the light theme floating panel
+    resultsDropdown.className = "absolute left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto divide-y divide-slate-100";
     resultsDropdown.classList.remove('hidden');
 
     bookings.forEach(booking => {
         const item = document.createElement('div');
-        item.className = "flex items-center justify-between p-3 border-b border-slate-800/60 hover:bg-slate-800 cursor-pointer transition-colors group";
+        // Light hover state & cleaner border treatment
+        item.className = "flex items-center justify-between p-3 border-b border-slate-100 hover:bg-indigo-50/60 cursor-pointer transition-colors group";
         
         item.innerHTML = `
             <div class="flex flex-col min-w-0">
-                <span class="text-sm font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">${escapeHTML(booking.name)}</span>
-                <span class="text-[11px] text-slate-400 mt-0.5">ID: ${escapeHTML(booking.id)} | Room: ${escapeHTML(booking.room || 'N/A')}</span>
+                <!-- Dark primary text, shifts to indigo on row hover -->
+<span class="text-[15px] font-extrabold text-slate-900 group-hover:text-indigo-600 transition-colors capitalize tracking-tight">${escapeHTML(booking.name)}</span>                <!-- Subtle slate secondary text -->
+                <span class="text-[11px] text-slate-500 mt-0.5">ID: ${escapeHTML(booking.id)} | Room: <span class="capitalize">${escapeHTML(booking.room || 'N/A')}</span></span>
             </div>
-            <span class="text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-slate-800 text-indigo-400 border border-slate-700 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-transparent transition-all">
+            <!-- Pill button adapted for light theme contrast -->
+            <span class="text-[10px] px-2.5 py-1 rounded-md font-semibold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-transparent transition-all shadow-sm">
                 Open Details
             </span>
         `;
@@ -15460,7 +15465,8 @@ function renderDropdownResults(bookings) {
         item.addEventListener('click', () => {
             populateAndOpenModal(booking);
             resultsDropdown.classList.add('hidden');
-            document.getElementById('global-guest-search').value = '';
+            const searchInput = document.getElementById('global-guest-search');
+            if (searchInput) searchInput.value = '';
         });
 
         resultsDropdown.appendChild(item);
