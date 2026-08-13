@@ -7417,7 +7417,7 @@ const addCharge = async (description, number, department) => {
         if (department === 'Restaurant') {
             showMessage('Success', 'Kitchen order sent successfully! 🍳', false);
         } else if (department === 'Bar') {
-            showMessage('Success', 'Bar sale recorded to ledger! 🍸💰', false);
+            //showMessage('Success', 'Bar sale recorded to ledger! 🍸💰', false);
         } else if (activeAccountId) {
             fetchActiveAccounts();
             //showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
@@ -7559,6 +7559,7 @@ const settleAccount = async (method, accountId, phone = '') => {
 };
 
 let currentActiveAccountData = null;
+
 // --- UI UPDATES ---
 const updateActiveAccountUI = (account) => {
     if (!account) return;
@@ -7577,15 +7578,31 @@ const updateActiveAccountUI = (account) => {
 
     const chargesListContainer = document.getElementById('chargesList');
     if (chargesListContainer) {
+        // Updated colspan to 4 to account for the new action column
         chargesListContainer.innerHTML = charges.length === 0 
-            ? `<tr><td colspan="3" class="text-center py-4 text-gray-400">No charges yet</td></tr>`
-            : charges.map(item => `
-                <tr class="border-b border-gray-100 text-sm">
-                    <td class="py-2 text-gray-400">${item.date ? new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}</td>
-                    <td class="py-2 font-medium text-gray-700">${item.item || item.description}</td>
-                    <td class="py-2 text-right font-bold text-indigo-600">${Number(item.amount || item.sp || 0).toLocaleString()}</td>
-                </tr>
-            `).join('');
+            ? `<tr><td colspan="4" class="text-center py-4 text-gray-400">No charges yet</td></tr>`
+            : charges.map((item, index) => {
+                const chargeId = item._id || item.id || index; // Fallback to index if subdocument ID doesn't exist
+                return `
+                    <tr class="border-b border-gray-100 text-sm hover:bg-slate-50/50 transition-colors group">
+                        <td class="py-2 text-gray-400">${item.date ? new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}</td>
+                        <td class="py-2 font-medium text-gray-700">${item.item || item.description}</td>
+                        <td class="py-2 text-right font-bold text-indigo-600">${Number(item.amount || item.sp || 0).toLocaleString()}</td>
+                        <td class="py-2 text-right pr-2">
+                            <button 
+                                type="button"
+                                onclick="deleteAccountCharge('${chargeId}', ${index})" 
+                                class="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-md transition-all inline-flex items-center justify-center"
+                                title="Remove charge"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
     }
 
     document.getElementById('postToRoomBtn')?.classList.toggle('hidden', !account.roomNumber);
@@ -7610,6 +7627,34 @@ const updateActiveAccountUI = (account) => {
         };
     }
 };
+
+// --- DELETE CHARGE HANDLER ---
+async function deleteAccountCharge(chargeId, index) {
+    if (!currentActiveAccountData) return;
+
+    if (!confirm('Are you sure you want to remove this charge?')) return;
+
+    // 1. Optimistic UI update: Remove the item locally first
+    currentActiveAccountData.charges.splice(index, 1);
+    
+    // 2. Refresh the UI to reflect updated list & totals immediately
+    updateActiveAccountUI(currentActiveAccountData);
+
+    // 3. Persist to API
+    try {
+        const response = await fetch(`/api/client-accounts/${activeAccountId}/charges/${chargeId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to delete charge on server');
+        }
+    } catch (err) {
+        console.error('Error deleting charge:', err);
+        alert('Could not sync deletion with server. Please refresh.');
+    }
+}
 
 const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
     if (!accountData) return;
