@@ -451,11 +451,11 @@
         </div>
 
         <!-- 1. Key Performance Indicators (Primary Executive Metrics) -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-6 gap-3 sm:gap-4 mb-6">
             <!-- Occupancy -->
             <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between overflow-hidden">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Occupancy</span>
-                <div id="val-occupancy" class="text-xl sm:text-2xl font-black text-indigo-600 mt-1 font-mono tracking-tight truncate" title="0%">0%</div>
+                <div id="val-occupancy" class="text-xl sm:text-2xl font-black text-indigo-600 mt-1 font-mono tracking-tight" title="0%">0%</div>
                 <div class="w-full bg-slate-200/80 h-1.5 rounded-full mt-2 overflow-hidden">
                     <div id="bar-occupancy" class="bg-indigo-600 h-full w-0 transition-all duration-500 rounded-full"></div>
                 </div>
@@ -463,49 +463,49 @@
             
             <!-- ADR -->
             <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between overflow-hidden">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">ADR</span>
-                <div id="val-adr" class="text-lg sm:text-xl xl:text-2xl font-black text-emerald-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
-                <span class="text-[10px] font-medium text-slate-400 truncate">Avg Daily Rate</span>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">ADR</span>
+                <div id="val-adr" class="text-base sm:text-lg xl:text-xl 2xl:text-2xl font-black text-emerald-600 mt-1 font-mono tracking-tight leading-tight break-words" title="0">0</div>
+                <span class="text-[10px] font-medium text-slate-400">Avg Daily Rate</span>
             </div>
 
             <!-- RevPAR -->
             <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between overflow-hidden">
                 <div class="flex justify-between items-center gap-1">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">RevPAR</span>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">RevPAR</span>
                     <span id="badge-revpar-trend" class="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full"></span>
                 </div>
-                <div id="val-revpar" class="text-lg sm:text-xl xl:text-2xl font-black text-amber-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
-                <span class="text-[10px] font-medium text-slate-400 truncate">Rev Per Avail Room</span>
+                <div id="val-revpar" class="text-base sm:text-lg xl:text-xl 2xl:text-2xl font-black text-amber-600 mt-1 font-mono tracking-tight leading-tight break-words" title="0">0</div>
+                <span class="text-[10px] font-medium text-slate-400">Rev Per Avail Room</span>
             </div>
 
             <!-- Gross Revenue -->
             <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between overflow-hidden">
                 <div class="flex justify-between items-center gap-1">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">Gross Rev</span>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Gross Rev</span>
                     <span id="badge-gross-trend" class="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full"></span>
                 </div>
-                <div id="val-gross-revenue" class="text-lg sm:text-xl xl:text-2xl font-black text-purple-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
-                <span class="text-[10px] font-medium text-slate-400 truncate">Rooms + POS Total</span>
+                <div id="val-gross-revenue" class="text-base sm:text-lg xl:text-xl 2xl:text-2xl font-black text-purple-600 mt-1 font-mono tracking-tight leading-tight break-words" title="0">0</div>
+                <span class="text-[10px] font-medium text-slate-400">Rooms + POS Total</span>
             </div>
 
             <!-- POS Profit -->
             <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between overflow-hidden">
                 <div class="flex justify-between items-center gap-1">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">POS Profit</span>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">POS Profit</span>
                     <span id="badge-pos-profit-trend" class="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full"></span>
                 </div>
-                <div id="val-pos-profit" class="text-lg sm:text-xl xl:text-2xl font-black text-cyan-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
-                <span class="text-[10px] font-medium text-slate-400 truncate">Outlet Gross Margin</span>
+                <div id="val-pos-profit" class="text-base sm:text-lg xl:text-xl 2xl:text-2xl font-black text-cyan-600 mt-1 font-mono tracking-tight leading-tight break-words" title="0">0</div>
+                <span class="text-[10px] font-medium text-slate-400">Outlet Gross Margin</span>
             </div>
 
             <!-- Net Operating Income -->
             <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between overflow-hidden">
                 <div class="flex justify-between items-center gap-1">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">NOI</span>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">NOI</span>
                     <span id="badge-noi-trend" class="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full"></span>
                 </div>
-                <div id="val-noi" class="text-lg sm:text-xl xl:text-2xl font-black text-teal-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
-                <span class="text-[10px] font-medium text-slate-400 truncate">Net Op Income</span>
+                <div id="val-noi" class="text-base sm:text-lg xl:text-xl 2xl:text-2xl font-black text-teal-600 mt-1 font-mono tracking-tight leading-tight break-words" title="0">0</div>
+                <span class="text-[10px] font-medium text-slate-400">Net Op Income</span>
             </div>
         </div>
 
@@ -521,27 +521,27 @@
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                         <span class="text-[11px] font-semibold text-slate-500 block truncate">Arrivals Pending</span>
-                        <div id="fd-arrivals-pending" class="text-lg sm:text-xl font-extrabold text-amber-600 mt-0.5 font-mono truncate">0</div>
+                        <div id="fd-arrivals-pending" class="text-lg sm:text-xl font-extrabold text-amber-600 mt-0.5 font-mono">0</div>
                     </div>
                     <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                         <span class="text-[11px] font-semibold text-slate-500 block truncate">Checked In</span>
-                        <div id="fd-arrivals-done" class="text-lg sm:text-xl font-extrabold text-emerald-600 mt-0.5 font-mono truncate">0</div>
+                        <div id="fd-arrivals-done" class="text-lg sm:text-xl font-extrabold text-emerald-600 mt-0.5 font-mono">0</div>
                     </div>
                     <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                         <span class="text-[11px] font-semibold text-slate-500 block truncate">Departures Pending</span>
-                        <div id="fd-deps-pending" class="text-lg sm:text-xl font-extrabold text-rose-600 mt-0.5 font-mono truncate">0</div>
+                        <div id="fd-deps-pending" class="text-lg sm:text-xl font-extrabold text-rose-600 mt-0.5 font-mono">0</div>
                     </div>
                     <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                         <span class="text-[11px] font-semibold text-slate-500 block truncate">Checked Out</span>
-                        <div id="fd-deps-done" class="text-lg sm:text-xl font-extrabold text-indigo-600 mt-0.5 font-mono truncate">0</div>
+                        <div id="fd-deps-done" class="text-lg sm:text-xl font-extrabold text-indigo-600 mt-0.5 font-mono">0</div>
                     </div>
                     <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                         <span class="text-[11px] font-semibold text-slate-500 block truncate">In-House Guests</span>
-                        <div id="fd-in-house" class="text-lg sm:text-xl font-extrabold text-cyan-600 mt-0.5 font-mono truncate">0</div>
+                        <div id="fd-in-house" class="text-lg sm:text-xl font-extrabold text-cyan-600 mt-0.5 font-mono">0</div>
                     </div>
                     <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                         <span class="text-[11px] font-semibold text-slate-500 block truncate">No-Shows</span>
-                        <div id="fd-no-shows" class="text-lg sm:text-xl font-extrabold text-slate-600 mt-0.5 font-mono truncate">0</div>
+                        <div id="fd-no-shows" class="text-lg sm:text-xl font-extrabold text-slate-600 mt-0.5 font-mono">0</div>
                     </div>
                 </div>
             </div>
@@ -549,7 +549,7 @@
             <!-- Distribution Channel Mix Card -->
             <div class="bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-xs lg:col-span-1 flex flex-col">
                 <div class="flex justify-between items-center mb-3 border-b border-slate-200 pb-2">
-                    <h2 class="text-xs font-extrabold uppercase text-slate-700 tracking-wider truncate">
+                    <h2 class="text-xs font-extrabold uppercase text-slate-700 tracking-wider">
                         Channel Mix
                     </h2>
                     <span class="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-bold uppercase shrink-0">Sources</span>
@@ -566,7 +566,7 @@
                 
                 <div class="w-full">
                     <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-200 gap-1">
-                        <p class="text-xs font-extrabold text-slate-700 uppercase tracking-wider truncate">Low Stock Alert</p>
+                        <p class="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Low Stock Alert</p>
                         
                         <div class="flex items-center space-x-1.5 shrink-0">
                             <!-- Action Buttons -->
@@ -596,41 +596,41 @@
             <h2 class="text-xs font-extrabold uppercase text-slate-700 tracking-wider mb-3.5 border-b border-slate-200 pb-2">
                 Period Financial Audit & Revenue Ledger
             </h2>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-3 text-center">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 text-center">
                 <!-- Room Revenue -->
                 <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                     <span class="text-[11px] font-semibold text-slate-500 block truncate">Room Revenue</span>
-                    <div id="fin-room-rev" class="text-sm sm:text-base font-extrabold text-slate-900 mt-1 font-mono tracking-tight truncate" title="0">0</div>
+                    <div id="fin-room-rev" class="text-xs sm:text-sm md:text-base font-extrabold text-slate-900 mt-1 font-mono tracking-tight leading-tight break-words" title="0">0</div>
                 </div>
                 <!-- POS Revenue -->
                 <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                     <span class="text-[11px] font-semibold text-slate-500 block truncate">POS Revenue</span>
-                    <div id="fin-pos-rev" class="text-sm sm:text-base font-extrabold text-emerald-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
+                    <div id="fin-pos-rev" class="text-xs sm:text-sm md:text-base font-extrabold text-emerald-600 mt-1 font-mono tracking-tight leading-tight break-words" title="0">0</div>
                 </div>
                 <!-- POS Profit -->
                 <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                     <span class="text-[11px] font-semibold text-slate-500 block truncate">POS Profit</span>
-                    <div id="fin-pos-profit" class="text-sm sm:text-base font-extrabold text-cyan-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
+                    <div id="fin-pos-profit" class="text-xs sm:text-sm md:text-base font-extrabold text-cyan-600 mt-1 font-mono tracking-tight leading-tight break-words" title="0">0</div>
                 </div>
                 <!-- Gross Profit -->
                 <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                     <span class="text-[11px] font-semibold text-slate-500 block truncate">Gross Profit</span>
-                    <div id="fin-gross-profit" class="text-sm sm:text-base font-extrabold text-purple-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
+                    <div id="fin-gross-profit" class="text-xs sm:text-sm md:text-base font-extrabold text-purple-600 mt-1 font-mono tracking-tight leading-tight break-words" title="0">0</div>
                 </div>
                 <!-- Cash Collected -->
                 <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                     <span class="text-[11px] font-semibold text-slate-500 block truncate">Cash Collected</span>
-                    <div id="fin-collected" class="text-sm sm:text-base font-extrabold text-teal-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
+                    <div id="fin-collected" class="text-xs sm:text-sm md:text-base font-extrabold text-teal-600 mt-1 font-mono tracking-tight leading-tight break-words" title="0">0</div>
                 </div>
                 <!-- Guest Ledger Balance -->
                 <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                     <span class="text-[11px] font-semibold text-slate-500 block truncate">Guest Ledger Bal</span>
-                    <div id="fin-ledger-bal" class="text-sm sm:text-base font-extrabold text-rose-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
+                    <div id="fin-ledger-bal" class="text-xs sm:text-sm md:text-base font-extrabold text-rose-600 mt-1 font-mono tracking-tight leading-tight break-words" title="0">0</div>
                 </div>
                 <!-- Operating Expenses -->
                 <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden col-span-2 sm:col-span-1">
                     <span class="text-[11px] font-semibold text-slate-500 block truncate">Op Expenses</span>
-                    <div id="fin-expenses" class="text-sm sm:text-base font-extrabold text-amber-600 mt-1 font-mono tracking-tight truncate" title="0">0</div>
+                    <div id="fin-expenses" class="text-xs sm:text-sm md:text-base font-extrabold text-amber-600 mt-1 font-mono tracking-tight leading-tight break-words" title="0">0</div>
                 </div>
             </div>
         </div>
