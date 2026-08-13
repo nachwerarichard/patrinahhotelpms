@@ -12876,6 +12876,8 @@ searchInput.addEventListener('input', (e) => {
     }, 300);
 });
 
+document.addEventListener('DOMContentLoaded', fetchExecutiveDashboard);
+
 
 /**
  * Executive Flash Dashboard Controller
