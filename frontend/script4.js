@@ -6448,9 +6448,10 @@ async function fetchRoomsV2() {
             if (hkStatus === 'inspected') hkBadgeStyle = 'bg-blue-50 text-blue-700 border-blue-200';
             if (hkStatus === 'out_of_order' || hkStatus === 'ooo') hkBadgeStyle = 'bg-amber-50 text-amber-700 border-amber-200';
 
-            // Occupancy Badge
-            const foStatus = room.isOccupied ? 'Occupied' : 'Vacant';
-            const foBadgeStyle = room.isOccupied 
+            // Occupancy Badge (Modified: "Occupied" if blocked, "Vacant" otherwise)
+            const isBlocked = (room.status || '').toLowerCase() === 'blocked';
+            const foStatus = isBlocked ? 'Occupied' : 'Vacant';
+            const foBadgeStyle = isBlocked 
                 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' 
                 : 'bg-slate-100 text-slate-600 border-slate-200';
 
@@ -6568,42 +6569,169 @@ function filterInventoryTable() {
 // Run on page load
 fetchRoomsV2();
 // --- G. EDIT ROOM MODAL LOGIC ---
-async function editRoom(roomId) {
+
+/**
+ * Opens the Edit Room modal and populates form fields with existing room data.
+ * 
+ * @param {string} roomId - The _id of the room asset
+ * @param {string} roomNumber - Room identification/number
+ * @param {string} categoryName - Name of the room category/type
+ * @param {string} typeId - The _id of the roomTypeId
+ * @param {string|number} overridePrice - Nightly rate override (if any)
+ */
+function openEditRoomModal(roomId, roomNumber, categoryName, typeId, overridePrice) {
+    const modal = document.getElementById('editModal');
+    if (!modal) return;
+
+    // 1. Populate Hidden Form Fields
+    document.getElementById('editRoomId').value = roomId || '';
+    document.getElementById('editTypeId').value = typeId || '';
+
+    // 2. Populate Visible Inputs
+    document.getElementById('editRoomNumber').value = roomNumber || '';
+    document.getElementById('editTypeName').value = categoryName || '';
+    document.getElementById('editBasePrice').value = overridePrice ?? '';
+
+    // 3. Display Modal (Swaps hidden for flex layout)
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+/**
+ * Closes the Edit Room modal and resets form inputs.
+ */
+
+
+// 1. Module-Specific Close Function
+function closeEditRoomModal() {
+    const modal = document.getElementById('editModal');
+    if (!modal) return;
+
+    // Hide Modal
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+
+    // Reset form fields safely
+    const form = document.getElementById('editRoomForm');
+    if (form) form.reset();
+}
+
+// 2. Updated Submit Handler (calling closeEditRoomModal)
+async function handleEditRoomSubmit(event) {
+    event.preventDefault();
+
+    const roomIdInput = document.getElementById('editRoomId');
+    const roomNumberInput = document.getElementById('editRoomNumber');
+    const overridePriceInput = document.getElementById('editBasePrice');
+    const submitBtn = event.target ? event.target.querySelector('button[type="submit"]') : null;
+
+    if (!roomIdInput || !roomNumberInput) {
+        console.error('Edit room modal input fields missing from DOM.');
+        if (typeof showMessage === 'function') {
+            showMessage('Error', 'Form fields are missing in DOM.', true);
+        }
+        return;
+    }
+
+    const roomId = roomIdInput.value;
+    const roomNumber = roomNumberInput.value.trim();
+    const overridePriceRaw = overridePriceInput ? overridePriceInput.value.trim() : '';
+
+    if (!roomId) {
+        return typeof showMessage === 'function'
+            ? showMessage('Error', 'Invalid room reference.', true)
+            : alert('Invalid room reference.');
+    }
+
+    if (!roomNumber) {
+        return typeof showMessage === 'function'
+            ? showMessage('Validation Error', 'Room number is required.', true)
+            : alert('Room number is required.');
+    }
+
+    const overridePrice = overridePriceRaw !== '' ? parseFloat(overridePriceRaw) : null;
+
+    if (overridePriceRaw !== '' && isNaN(overridePrice)) {
+        return typeof showMessage === 'function'
+            ? showMessage('Validation Error', 'Please enter a valid rate number.', true)
+            : alert('Please enter a valid rate number.');
+    }
+
+    const payload = {
+        number: roomNumber,
+        overridePrice: overridePrice
+    };
+
     try {
-        // Fetch all rooms for this hotel and find the specific one
-        const hotelId = getSessionHotelId();
-        const res = await authenticatedFetch(`${API_BASE_URL}/rooms?hotelId=${hotelId}`);
-        const rooms = await res.json();
-        const room = rooms.find(r => r._id === roomId);
-
-        if (!room) return showMessage("Room data not found", true);
-
-        // Fill Modal Fields
-        document.getElementById('editRoomId').value = room._id;
-        document.getElementById('editRoomNumber').value = room.number;
-        document.getElementById('editRoomStatus').value = room.status;
-        
-        // If your schema allows editing the underlying category here:
-        if (room.roomTypeId) {
-            document.getElementById('editTypeId').value = room.roomTypeId._id;
-            document.getElementById('editTypeName').value = room.roomTypeId.name;
-            document.getElementById('editBasePrice').value = room.roomTypeId.basePrice;
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...`;
         }
 
-        // Show Modal
-        const modal = document.getElementById('editModal');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        const res = await authenticatedFetch(`${API_BASE_URL}/v2/rooms/${roomId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res) {
+            throw new Error('No response returned from network client.');
+        }
+
+        const contentType = res.headers.get('content-type');
+        let data = {};
+
+        if (contentType && contentType.includes('application/json')) {
+            data = await res.json();
+        } else {
+            const rawText = await res.text();
+            console.error(`Non-JSON response received from server (${res.status}):`, rawText);
+            throw new Error(`Server returned HTTP ${res.status}. Endpoint route may be incorrect.`);
+        }
+
+        if (!res.ok) {
+            throw new Error(data.message || data.error || 'Failed to update room.');
+        }
+
+        if (typeof showMessage === 'function') {
+            showMessage('Success', 'Room updated successfully!', false);
+        }
+
+        // Call the uniquely named close function
+        closeEditRoomModal();
+
+        if (typeof fetchRoomsV2 === 'function') {
+            fetchRoomsV2();
+        }
+
     } catch (err) {
-        console.error("Error opening modal:", err);
+        console.error('Update Room Error:', err);
+        if (typeof showMessage === 'function') {
+            showMessage('Error', err.message, true);
+        } else {
+            alert(err.message);
+        }
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Save Changes';
+        }
     }
 }
 
-function closeModal() {
-    const modal = document.getElementById('editModal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-}
+// Bind Event Listener on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+    const editForm = document.getElementById('editRoomForm');
+    if (editForm) {
+        // Prevent duplicate listener bindings
+        editForm.removeEventListener('submit', handleEditRoomSubmit);
+        editForm.addEventListener('submit', handleEditRoomSubmit);
+    }
+});
+
+
 
 // --- H. HANDLE MODAL SUBMISSION ---
 document.getElementById('editRoomForm').addEventListener('submit', async (e) => {
@@ -7210,35 +7338,39 @@ const addCharge = async (description, number, department) => {
             submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ADDING...`;
         }
 
-        // 1. Send Order to correct Endpoints
+        let res;
+        let serverResponse = {};
+
+        // 1. Send Order to Department-Specific Endpoints
         if (department === 'Restaurant') {
-            authenticatedFetch(`${API_BASE_URL}/kitchen/order`, {
+            res = await authenticatedFetch(`${API_BASE_URL}/kitchen/order`, {
                 method: 'POST',
                 body: JSON.stringify(payload)
-            }).catch(err => console.error("Kitchen ticket routing failed:", err));
+            });
+        } else if (department === 'Bar') {
+            // ONLY Bar items hit the sales endpoint
+            res = await authenticatedFetch(`${API_BASE_URL}/sales`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
         }
 
-        // EVERY department item hits sales ledger endpoint
-        const endpoint = `${API_BASE_URL}/sales`;
-        const res = await authenticatedFetch(endpoint, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-
-        if (!res) return;
-        if (!res.ok) throw new Error("Failed to record sale to the ledger.");
-
-        const serverResponse = await res.json(); 
+        if (res) {
+            if (!res.ok) throw new Error(`Failed to process order for ${department}.`);
+            serverResponse = await res.json();
+        }
 
         // 2. Process Notifications
         if (department === 'Restaurant') {
-            showMessage('Success', 'Kitchen order sent & added to ledger! 🍳💰', false);
+            showMessage('Success', 'Kitchen order sent successfully! 🍳', false);
+        } else if (department === 'Bar') {
+            showMessage('Success', 'Bar sale recorded to ledger! 🍸💰', false);
         } else if (activeAccountId) {
             fetchActiveAccounts();
             //showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
         } else {
             fetchActiveAccounts();
-            //showMessage('Success', 'Walk-in Sale Recorded to Ledger! 💰✅', false);
+            //showMessage('Success', 'Walk-in Sale Recorded! 💰✅', false);
         }
 
         // 3. Update UI using server response
@@ -7249,7 +7381,7 @@ const addCharge = async (description, number, department) => {
                     const freshAccountData = await accountRes.json();
                     updateActiveAccountUI(freshAccountData);
                 }
-            } else if (serverResponse.updatedAccount) {
+            } else if (serverResponse && serverResponse.updatedAccount) {
                 activeAccountId = serverResponse.updatedAccount._id || serverResponse.updatedAccount.id;
                 updateActiveAccountUI(serverResponse.updatedAccount);
             }
@@ -7963,81 +8095,6 @@ function exportTableToExcel(tableId, filename) { console.log(`Exporting table ${
 /**
  * Wrapper for fetch API to include authentication token and handle errors.
  */
-
-/**
- * Wrapper for fetch API to include authentication token and handle errors.
- */
-/**
- * Wrapper for fetch API to include authentication token and handle errors.
- * * IMPORTANT FIX: It now retrieves the token directly from localStorage 
- * every time it is called, preventing the 'Bearer undefined' error 
- * if the global authToken variable is stale.
- */
-/*async function authenticatedFetch(url, options = {}) {
-    // 1. Retrieve the session data
-    const savedUserData = localStorage.getItem('loggedInUser');
-    let currentToken = null;
-    let currentHotelId = null;
-
-    if (savedUserData) {
-        const user = JSON.parse(savedUserData);
-        currentToken = user.token;
-        currentHotelId = user.hotelId;
-    }
-
-    // 2. Prepare headers
-    const headers = {
-        'Content-Type': 'application/json',
-        ...options.headers // Merge any existing headers provided by the caller
-    };
-
-    if (currentToken) {
-        headers['Authorization'] = `Bearer ${currentToken}`;
-        
-        // Strategy: We can also inject the hotelId into the headers 
-        // if the backend is configured to look for it there.
-        headers['X-Hotel-ID'] = currentHotelId; 
-    } else {
-        console.warn("Unauthorized request attempt: No token found in localStorage.");
-    }
-
-    try {
-        const response = await fetch(url, {
-            ...options,
-            headers: headers
-        });
-
-        // 3. Centralized handling for Auth failures (Expired/Invalid Token)
-        if (response.status === 401 || response.status === 403) {
-            console.error(`Auth failure (Status: ${response.status}). Cleaning up session.`);
-            
-            // If the UI has a showMessage function, use it
-            if (typeof showMessage === 'function') {
-                showMessage('Session Expired', 'Your session has timed out. Please login again.', true);
-            } else {
-                showMessage('Session expired. Logging out.');
-            }
-
-            // Trigger the logout function we just updated
-            setTimeout(() => logout(), 1500); 
-            return null; 
-        }
-
-        return response;
-
-    } catch (error) {
-        console.error('Network or CORS error during fetch:', error);
-        // We throw it so specific functions can catch it (e.g., to show a "Retry" button)
-        throw error;
-    }
-}   */
-/**
- * Handles the login process by sending credentials to the API.
- */
-
-
-// Example of what your successful login code should look like in script.js:
-
 
 
 
