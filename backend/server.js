@@ -1933,31 +1933,60 @@ app.delete('/api/client-accounts/:accountId/charges/:chargeId', auth, async (req
     try {
         const { accountId, chargeId } = req.params;
 
-        // 1. Pull/Remove the charge subdocument from the charges array
-        const updatedAccount = await ClientAccount.findByIdAndUpdate(
-            accountId,
-            { 
-                $pull: { charges: { _id: chargeId } } 
-            },
-            { new: true, runValidators: true }
-        );
+        // 1. Fetch account FIRST to retrieve charge details before deletion for auditing
+        const accountBeforeDelete = await ClientAccount.findById(accountId);
 
-        if (!updatedAccount) {
+        if (!accountBeforeDelete) {
             return res.status(404).json({ 
                 success: false, 
                 message: 'Client account not found.' 
             });
         }
 
-        // 2. Recalculate totalCharges on the updated account
+        // Find the specific charge being removed
+        const deletedCharge = accountBeforeDelete.charges.id(chargeId) || 
+            accountBeforeDelete.charges.find(c => c._id.toString() === chargeId);
+
+        // 2. Remove the charge subdocument
+        const updatedAccount = await ClientAccount.findByIdAndUpdate(
+            accountId,
+            { $pull: { charges: { _id: chargeId } } },
+            { new: true, runValidators: true }
+        );
+
+        // 3. Recalculate totalCharges
         updatedAccount.totalCharges = updatedAccount.charges.reduce((sum, item) => {
             return sum + (Number(item.amount) || 0);
         }, 0);
 
-        // 3. Save updated total charges to database
+        // 4. Save updated account
         await updatedAccount.save();
 
-        // 4. Return updated account object
+        // 5. Trigger Audit Log
+        // Extracts user info from req.user (attached by auth middleware) or fallback parameters
+        const username = req.user?.username || req.body?.username || 'Unknown User';
+        const hotelId = req.headers['x-hotel-id'] || req.user?.hotelId || updatedAccount.hotelId;
+
+        await addAuditLog(
+            'DELETE_INCIDENTAL_CHARGE',
+            username,
+            hotelId,
+            {
+                accountId: updatedAccount._id,
+                guestName: updatedAccount.guestName,
+                roomNumber: updatedAccount.roomNumber || 'Walk-In',
+                chargeId: chargeId,
+                deletedCharge: deletedCharge ? {
+                    description: deletedCharge.description,
+                    amount: deletedCharge.amount,
+                    type: deletedCharge.type,
+                    date: deletedCharge.date
+                } : 'Details unavailable',
+                newTotalCharges: updatedAccount.totalCharges
+            }
+        );
+
+        // 6. Return response
         return res.status(200).json({
             success: true,
             message: 'Charge deleted successfully.',
