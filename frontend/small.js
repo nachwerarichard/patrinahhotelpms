@@ -12877,133 +12877,223 @@ searchInput.addEventListener('input', (e) => {
 });
 
 
-let currentSelectedRange = 'today';
+/**
+ * Executive Flash Dashboard Controller
+ * Standardized for Enterprise Multi-Tenant Hotel Management Systems
+ */
 
-// Append inside fetchExecutiveDashboard function:
+// Global Dashboard State Controller
+const DashboardState = {
+    currentRange: 'today',
+    isLoading: false,
+    abortController: null
+};
 
+/**
+ * Safe DOM Utilities
+ */
+const DOM = {
+    setText: (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value !== undefined && value !== null ? value : '--';
+    },
+    setStyle: (id, property, value) => {
+        const el = document.getElementById(id);
+        if (el) el.style[property] = value;
+    },
+    toggleClass: (id, className, force) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle(className, force);
+    }
+};
+
+/**
+ * Currency & Number Formatting Utility
+ */
+const Formatters = {
+    currency: (amount, currencyCode = 'UGX') => {
+        const num = Number(amount || 0);
+        try {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: currencyCode,
+                maximumFractionDigits: 0
+            }).format(num);
+        } catch (e) {
+            return `${currencyCode} ${num.toLocaleString()}`;
+        }
+    },
+    percent: (val) => `${Number(val || 0).toFixed(1)}%`
+};
+
+/**
+ * Main Data Fetching Engine
+ * @param {string} queryParams - API search parameters
+ */
 async function fetchExecutiveDashboard(queryParams = 'range=today') {
+    // Abort active pending requests if user rapidly switches filters
+    if (DashboardState.abortController) {
+        DashboardState.abortController.abort();
+    }
+    DashboardState.abortController = new AbortController();
+
+    setDashboardLoadingState(true);
+
     try {
-        const response = await authenticatedFetch(`${API_BASE_URL}/dashboard/executive-flash?${queryParams}`);
-        if (!response || !response.ok) return;
+        const response = await authenticatedFetch(
+            `${API_BASE_URL}/dashboard/executive-flash?${queryParams}`, 
+            { signal: DashboardState.abortController.signal }
+        );
+
+        if (!response || !response.ok) {
+            throw new Error(`Server returned status ${response?.status || 'network error'}`);
+        }
 
         const data = await response.json();
-        const curr = data.currency || 'UGX';
-        const fmt = (val) => `${curr} ${Number(val || 0).toLocaleString()}`;
-        
-        const setTxt = (id, txt) => {
-            const el = document.getElementById(id);
-            if (el) el.innerText = txt;
-        };
-
-        const renderTrend = (id, percentVal) => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            const isPositive = percentVal >= 0;
-            const arrow = isPositive ? '▲' : '▼';
-            el.innerText = `${arrow} ${Math.abs(percentVal)}%`;
-            el.className = `text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
-                isPositive ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-            }`;
-        };
+        const curr = data.currency || localStorage.getItem('hotelCurrency') || 'UGX';
 
         // 1. Core KPIs
-        setTxt('val-capacity', data.capacity);
-        setTxt('val-occupancy', `${data.kpis.occupancyRate}%`);
-        setTxt('val-adr', fmt(data.kpis.adr));
-        setTxt('val-revpar', fmt(data.kpis.revpar));
-        setTxt('val-gross-revenue', fmt(data.kpis.grossRevenue));
-        setTxt('val-pos-profit', fmt(data.kpis.posProfit));
-        setTxt('val-noi', fmt(data.kpis.noi));
+        DOM.setText('val-capacity', data.capacity);
+        DOM.setText('val-occupancy', Formatters.percent(data.kpis?.occupancyRate));
+        DOM.setText('val-adr', Formatters.currency(data.kpis?.adr, curr));
+        DOM.setText('val-revpar', Formatters.currency(data.kpis?.revpar, curr));
+        DOM.setText('val-gross-revenue', Formatters.currency(data.kpis?.grossRevenue, curr));
+        DOM.setText('val-pos-profit', Formatters.currency(data.kpis?.posProfit, curr));
+        DOM.setText('val-noi', Formatters.currency(data.kpis?.noi, curr));
 
-        renderTrend('badge-revpar-trend', data.kpis.revparTrend);
-        renderTrend('badge-gross-trend', data.kpis.grossRevenueTrend);
-        renderTrend('badge-pos-profit-trend', data.kpis.posProfitTrend);
-        renderTrend('badge-noi-trend', data.kpis.noiTrend);
+        // 2. Trend Badges & Occupancy Meter
+        renderTrendBadge('badge-revpar-trend', data.kpis?.revparTrend);
+        renderTrendBadge('badge-gross-trend', data.kpis?.grossRevenueTrend);
+        renderTrendBadge('badge-pos-profit-trend', data.kpis?.posProfitTrend);
+        renderTrendBadge('badge-noi-trend', data.kpis?.noiTrend);
 
-        const bar = document.getElementById('bar-occupancy');
-        if (bar) bar.style.width = `${Math.min(data.kpis.occupancyRate, 100)}%`;
+        const occupancyPct = Math.min(Math.max(data.kpis?.occupancyRate || 0, 0), 100);
+        DOM.setStyle('bar-occupancy', 'width', `${occupancyPct}%`);
 
-        // 2. Front Desk Operations
-        setTxt('fd-arrivals-pending', data.frontDesk.arrivalsPending);
-        setTxt('fd-arrivals-done', data.frontDesk.arrivalsCheckedIn);
-        setTxt('fd-deps-pending', data.frontDesk.departuresPending);
-        setTxt('fd-deps-done', data.frontDesk.departuresCheckedOut);
-        setTxt('fd-in-house', data.frontDesk.inHouseGuests);
-        setTxt('fd-no-shows', data.frontDesk.noShows);
+        // 3. Front Desk Operations
+        DOM.setText('fd-arrivals-pending', data.frontDesk?.arrivalsPending);
+        DOM.setText('fd-arrivals-done', data.frontDesk?.arrivalsCheckedIn);
+        DOM.setText('fd-deps-pending', data.frontDesk?.departuresPending);
+        DOM.setText('fd-deps-done', data.frontDesk?.departuresCheckedOut);
+        DOM.setText('fd-in-house', data.frontDesk?.inHouseGuests);
+        DOM.setText('fd-no-shows', data.frontDesk?.noShows);
 
-        
-
-        // 4. Render Distribution Channel Mix
+        // 4. Distribution Channel Mix Breakdown
         renderChannelMix(data.channelMix || [], curr);
 
-        // 5. Financial Audit
-        setTxt('fin-room-rev', fmt(data.financials.roomRevenue));
-        setTxt('fin-pos-rev', fmt(data.financials.posSales));
-        setTxt('fin-pos-profit', fmt(data.financials.posProfit));
-        setTxt('fin-gross-profit', fmt(data.financials.totalGrossProfit));
-        setTxt('fin-collected', fmt(data.financials.collectedCash));
-        setTxt('fin-ledger-bal', fmt(data.financials.cityLedgerBalance));
-        setTxt('fin-expenses', fmt(data.financials.expenses));
+        // 5. Financial Audit & Ledger Balance
+        DOM.setText('fin-room-rev', Formatters.currency(data.financials?.roomRevenue, curr));
+        DOM.setText('fin-pos-rev', Formatters.currency(data.financials?.posSales, curr));
+        DOM.setText('fin-pos-profit', Formatters.currency(data.financials?.posProfit, curr));
+        DOM.setText('fin-gross-profit', Formatters.currency(data.financials?.totalGrossProfit, curr));
+        DOM.setText('fin-collected', Formatters.currency(data.financials?.collectedCash, curr));
+        DOM.setText('fin-ledger-bal', Formatters.currency(data.financials?.cityLedgerBalance, curr));
+        DOM.setText('fin-expenses', Formatters.currency(data.financials?.expenses, curr));
 
     } catch (err) {
-        console.error("Failed to load PMS Flash Report:", err);
+        if (err.name === 'AbortError') return; // Ignore aborted requests
+        console.error("❌ Failed to load Executive Flash Report:", err);
+        if (typeof showMessage === 'function') {
+            showMessage('Error', 'Failed to update executive dashboard metrics.', true);
+        }
+    } finally {
+        setDashboardLoadingState(false);
     }
 }
 
-// Channel mix DOM builder
-function renderChannelMix(channels, curr) {
+/**
+ * Render KPI Percentage Trend Badges
+ */
+function renderTrendBadge(elementId, percentVal) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+
+    const val = Number(percentVal || 0);
+    const isPositive = val >= 0;
+    const arrow = isPositive ? '▲' : '▼';
+
+    el.textContent = `${arrow} ${Math.abs(val).toFixed(1)}%`;
+    el.className = `text-[11px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 transition-colors ${
+        isPositive 
+            ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' 
+            : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+    }`;
+}
+
+/**
+ * Channel Mix Component Renderer
+ */
+function renderChannelMix(channels, currencyCode) {
     const container = document.getElementById('channel-mix-container');
     if (!container) return;
 
-    if (!channels || channels.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-400 italic py-2">No bookings recorded for this period.</p>`;
+    if (!Array.isArray(channels) || channels.length === 0) {
+        container.innerHTML = `
+            <div class="p-4 text-center border border-dashed border-slate-200 rounded-xl">
+                <p class="text-xs text-slate-400 italic">No distribution metrics recorded for this active range.</p>
+            </div>`;
         return;
     }
 
-    const channelColors = {
+    const channelPalette = {
         'Walk in': 'bg-blue-500',
         'Hotel Website': 'bg-emerald-500',
         'Expedia': 'bg-amber-500',
-        'Booking.com': 'bg-indigo-500',
-        'Trip': 'bg-purple-500'
+        'Booking.com': 'bg-indigo-600',
+        'Trip': 'bg-purple-500',
+        'Corporate': 'bg-slate-700'
     };
 
     container.innerHTML = channels.map(ch => {
-        const colorClass = channelColors[ch.source] || 'bg-slate-500';
+        const colorClass = channelPalette[ch.source] || 'bg-slate-500';
+        const formattedRev = Formatters.currency(ch.revenue, currencyCode);
+        const percentage = Math.min(Math.max(ch.percentage || 0, 0), 100);
+
         return `
-            <div class="space-y-1">
+            <div class="space-y-1.5 group">
                 <div class="flex justify-between items-center text-xs">
-                    <span class="font-medium text-slate-300">${ch.source}</span>
-                    <span class="text-slate-400 font-mono">${ch.count} bkg (${ch.percentage}%) • <strong class="text-slate-200">${curr} ${ch.revenue.toLocaleString()}</strong></span>
+                    <span class="font-bold text-slate-700 group-hover:text-slate-900 transition-colors">${ch.source}</span>
+                    <span class="text-slate-500 font-mono text-[11px]">
+                        ${ch.count} bkg (${percentage.toFixed(1)}%) • <strong class="text-slate-800 font-bold">${formattedRev}</strong>
+                    </span>
                 </div>
-                <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
-                    <div class="${colorClass} h-full transition-all duration-500" style="width: ${Math.min(ch.percentage, 100)}%"></div>
+                <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200/60 p-[1px]">
+                    <div class="${colorClass} h-full rounded-full transition-all duration-700 ease-out" style="width: ${percentage}%"></div>
                 </div>
             </div>
         `;
     }).join('');
 }
 
-// Handler for predefined filter buttons
+/**
+ * Predefined Quick-Filter Range Switcher
+ */
 function setDashboardRange(rangeKey) {
-    // Toggle active styles on buttons
+    DashboardState.currentRange = rangeKey;
+
+    // Reset Custom Date Inputs when a standard range is selected
+    const startInput = document.getElementById('custom-start-date');
+    const endInput = document.getElementById('custom-end-date');
+    if (startInput) startInput.value = '';
+    if (endInput) endInput.value = '';
+
+    // Update active visual button state
     ['today', 'yesterday', 'this_week', 'this_month'].forEach(key => {
         const btn = document.getElementById(`btn-${key}`);
-        if (btn) {
-            if (key === rangeKey) {
-                btn.className = "px-3 py-1.5 rounded-md text-white bg-blue-600 transition font-semibold";
-            } else {
-                btn.className = "px-3 py-1.5 rounded-md text-slate-400 hover:text-white transition font-semibold";
-            }
+        if (!btn) return;
+
+        if (key === rangeKey) {
+            btn.className = "px-3.5 py-1.5 rounded-lg text-white bg-indigo-600 shadow-sm font-semibold text-xs transition-all";
+        } else {
+            btn.className = "px-3.5 py-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 font-semibold text-xs transition-all";
         }
     });
 
     fetchExecutiveDashboard(`range=${rangeKey}`);
 }
 
-// Handler for custom date picker
 /**
- * Executes automatic dashboard fetching on valid custom range selection with dynamic spinner feedback
+ * Custom Date Range Handler
  */
 async function applyCustomDateRange(isAutoTrigger = false) {
     const startDateInput = document.getElementById('custom-start-date');
@@ -13012,76 +13102,81 @@ async function applyCustomDateRange(isAutoTrigger = false) {
     const btnSpinner = document.getElementById('apply-btn-spinner');
     const btnText = document.getElementById('apply-btn-text');
 
-    const start = startDateInput.value;
-    const end = endDateInput.value;
+    const start = startDateInput?.value;
+    const end = endDateInput?.value;
 
-    // Direct manual click validation
     if (!start || !end) {
         if (!isAutoTrigger) {
-            alert("Please select both start and end dates.");
+            if (typeof showMessage === 'function') {
+                showMessage('Validation Error', 'Please select both start and end dates.', true);
+            } else {
+                alert("Please select both start and end dates.");
+            }
         }
         return;
     }
 
-    // Ensure start date isn't later than end date
     if (new Date(start) > new Date(end)) {
-        alert("Start date cannot be after the end date.");
+        if (typeof showMessage === 'function') {
+            showMessage('Validation Error', 'Start date cannot be later than end date.', true);
+        } else {
+            alert("Start date cannot be after the end date.");
+        }
         return;
     }
 
-    // Reset preset button styling to default unselected state
+    // Unselect preset button styles
     ['today', 'yesterday', 'this_week', 'this_month'].forEach(key => {
         const btn = document.getElementById(`btn-${key}`);
         if (btn) {
-            btn.className = "px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition";
+            btn.className = "px-3.5 py-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 font-semibold text-xs transition-all";
         }
     });
 
-    // 1. Activate Loading Spinner State
+    // Button Spinner Loading Feedback
     if (applyBtn) applyBtn.disabled = true;
     if (btnSpinner) btnSpinner.classList.remove('hidden');
-    if (btnText) btnText.textContent = "Loading...";
+    if (btnText) btnText.textContent = "Applying...";
 
     try {
-        // 2. Execute dashboard query (awaiting fetch response if function returns a Promise)
+        DashboardState.currentRange = 'custom';
         await fetchExecutiveDashboard(`range=custom&startDate=${start}&endDate=${end}`);
-    } catch (error) {
-        console.error("Failed to update executive dashboard:", error);
     } finally {
-        // 3. Restore Button State
         if (applyBtn) applyBtn.disabled = false;
         if (btnSpinner) btnSpinner.classList.add('hidden');
         if (btnText) btnText.textContent = "Apply";
     }
 }
 
-// Attach automatic trigger listeners once DOM content is ready
+/**
+ * Dynamic Loading Pulse Handler
+ */
+function setDashboardLoadingState(isLoading) {
+    DashboardState.isLoading = isLoading;
+    DOM.toggleClass('executive-dashboard-container', 'opacity-60', isLoading);
+}
+
+/**
+ * Lifecycle Event Listener Binding
+ */
 document.addEventListener('DOMContentLoaded', () => {
     const startDateInput = document.getElementById('custom-start-date');
     const endDateInput = document.getElementById('custom-end-date');
 
-    const autoFetchHandler = () => {
-        const start = startDateInput.value;
-        const end = endDateInput.value;
-
-        // Auto-run only if both dates are selected
-        if (start && end) {
+    const handleAutoCustomFetch = () => {
+        if (startDateInput?.value && endDateInput?.value) {
             applyCustomDateRange(true);
         }
     };
 
     if (startDateInput && endDateInput) {
-        startDateInput.addEventListener('change', autoFetchHandler);
-        endDateInput.addEventListener('change', autoFetchHandler);
+        startDateInput.addEventListener('change', handleAutoCustomFetch);
+        endDateInput.addEventListener('change', handleAutoCustomFetch);
     }
-});
-// Initialise on DOM Ready
-document.addEventListener('DOMContentLoaded', () => {
+
+    // Initial Dashboard Hydration
     setDashboardRange('today');
 });
-
-// Initialise dashboard on load
-document.addEventListener('DOMContentLoaded', fetchExecutiveDashboard);
 
 // Initialize: Set default date-time to now
 document.getElementById('reportDateTime').value = new Date().toISOString().slice(0, 16);
