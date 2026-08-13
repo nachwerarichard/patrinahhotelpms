@@ -7210,35 +7210,39 @@ const addCharge = async (description, number, department) => {
             submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ADDING...`;
         }
 
-        // 1. Send Order to correct Endpoints
+        let res;
+        let serverResponse = {};
+
+        // 1. Send Order to Department-Specific Endpoints
         if (department === 'Restaurant') {
-            authenticatedFetch(`${API_BASE_URL}/kitchen/order`, {
+            res = await authenticatedFetch(`${API_BASE_URL}/kitchen/order`, {
                 method: 'POST',
                 body: JSON.stringify(payload)
-            }).catch(err => console.error("Kitchen ticket routing failed:", err));
+            });
+        } else if (department === 'Bar') {
+            // ONLY Bar items hit the sales endpoint
+            res = await authenticatedFetch(`${API_BASE_URL}/sales`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
         }
 
-        // EVERY department item hits sales ledger endpoint
-        const endpoint = `${API_BASE_URL}/sales`;
-        const res = await authenticatedFetch(endpoint, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-
-        if (!res) return;
-        if (!res.ok) throw new Error("Failed to record sale to the ledger.");
-
-        const serverResponse = await res.json(); 
+        if (res) {
+            if (!res.ok) throw new Error(`Failed to process order for ${department}.`);
+            serverResponse = await res.json();
+        }
 
         // 2. Process Notifications
         if (department === 'Restaurant') {
-            showMessage('Success', 'Kitchen order sent & added to ledger! 🍳💰', false);
+            showMessage('Success', 'Kitchen order sent successfully! 🍳', false);
+        } else if (department === 'Bar') {
+            showMessage('Success', 'Bar sale recorded to ledger! 🍸💰', false);
         } else if (activeAccountId) {
             fetchActiveAccounts();
             //showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
         } else {
             fetchActiveAccounts();
-            //showMessage('Success', 'Walk-in Sale Recorded to Ledger! 💰✅', false);
+            //showMessage('Success', 'Walk-in Sale Recorded! 💰✅', false);
         }
 
         // 3. Update UI using server response
@@ -7249,7 +7253,7 @@ const addCharge = async (description, number, department) => {
                     const freshAccountData = await accountRes.json();
                     updateActiveAccountUI(freshAccountData);
                 }
-            } else if (serverResponse.updatedAccount) {
+            } else if (serverResponse && serverResponse.updatedAccount) {
                 activeAccountId = serverResponse.updatedAccount._id || serverResponse.updatedAccount.id;
                 updateActiveAccountUI(serverResponse.updatedAccount);
             }
