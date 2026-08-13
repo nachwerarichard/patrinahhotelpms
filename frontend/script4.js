@@ -2949,97 +2949,133 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
         showMessage('Error', `Failed to add charge: ${error.message}`, true);
     }
 });
+let currentBookingCustomId = null;
+
+// --- 1. VIEW INCIDENTAL CHARGES MODAL HANDLER ---
 async function viewCharges(bookingCustomId) {
+    currentBookingCustomId = bookingCustomId;
     const payAllBtn = document.getElementById('payAllChargesBtn');
-    
-    // Reset initial state
-    incidentalChargesTableBody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-gray-500">Loading charges...</td></tr>';
-    totalIncidentalChargesSpan.textContent = '0.00';
-    if (payAllBtn) payAllBtn.classList.add('hidden'); // Hide pay button by default while loading
+    const incidentalChargesTableBody = document.querySelector('#incidentalChargesTable tbody');
+    const totalIncidentalChargesSpan = document.getElementById('totalIncidentalCharges');
+    const viewChargesGuestNameSpan = document.getElementById('viewChargesGuestName');
+    const viewChargesRoomNumberSpan = document.getElementById('viewChargesRoomNumber');
+    const viewChargesModal = document.getElementById('viewChargesModal');
+
+    // Reset initial UI loading state
+    if (incidentalChargesTableBody) {
+        incidentalChargesTableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="py-12 text-center text-slate-400 font-medium">
+                    <i class="fas fa-spinner fa-spin mr-2 text-indigo-500"></i> Loading incidental charges...
+                </td>
+            </tr>`;
+    }
+    if (totalIncidentalChargesSpan) totalIncidentalChargesSpan.textContent = '0.00';
+    if (payAllBtn) payAllBtn.classList.add('hidden');
 
     try {
         // 1. Fetch booking details
-        const bookingResponse = await authenticatedFetch(
-            `${API_BASE_URL}/bookings/id/${bookingCustomId}`
-        );
-
-        if (!bookingResponse) return;
-
-        if (!bookingResponse.ok) {
-            const text = await bookingResponse.text();
-            console.error("❌ Booking fetch failed:", text);
-            throw new Error('Booking fetch failed');
+        const bookingResponse = await authenticatedFetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}`);
+        if (!bookingResponse || !bookingResponse.ok) {
+            throw new Error('Booking details could not be retrieved');
         }
-
         const booking = await bookingResponse.json();
 
         currentBookingObjectId = booking._id;
-        viewChargesGuestNameSpan.textContent = booking.name || 'Guest';
-        viewChargesRoomNumberSpan.textContent = booking.room || 'N/A';
+        if (viewChargesGuestNameSpan) viewChargesGuestNameSpan.textContent = booking.name || 'Walk-In Guest';
+        if (viewChargesRoomNumberSpan) viewChargesRoomNumberSpan.textContent = booking.room || 'N/A';
 
-        // 2. Fetch incidental charges
-        const response = await authenticatedFetch(
-            `${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`
-        );
-
-        if (!response) return;
-
-        if (!response.ok) {
-            const text = await response.text();
-            console.error("❌ Charges fetch failed:", text);
-            throw new Error('Charges fetch failed');
+        // 2. Fetch incidental charges for booking
+        const response = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/booking-custom-id/${bookingCustomId}`);
+        if (!response || !response.ok) {
+            throw new Error('Failed to load incidental charges');
         }
 
         const charges = await response.json();
-
-        incidentalChargesTableBody.innerHTML = '';
+        if (incidentalChargesTableBody) incidentalChargesTableBody.innerHTML = '';
 
         let totalChargesAmount = 0;
         let hasUnpaidCharges = false;
 
         if (!Array.isArray(charges) || charges.length === 0) {
-            incidentalChargesTableBody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-gray-500 italic">No incidental charges recorded.</td></tr>';
+            incidentalChargesTableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="py-12 text-center text-slate-400 italic text-sm">
+                        No incidental charges recorded for this folio.
+                    </td>
+                </tr>`;
         } else {
-            charges.forEach(charge => {
+            const currencySymbol = localStorage.getItem('hotelCurrency') || 'UGX';
+
+            charges.forEach((charge) => {
                 if (!charge.isPaid) hasUnpaidCharges = true;
 
                 const row = incidentalChargesTableBody.insertRow();
                 const isPaid = charge.isPaid;
+                const chargeId = charge._id || charge.id;
+                const chargeAmount = Number(charge.amount || 0);
+                totalChargesAmount += chargeAmount;
 
-                row.className = "hover:bg-gray-50 transition";
+                // Category badge styling
+                const typeBadgeClass = charge.type === 'Bar' ? 'bg-amber-50 text-amber-700 border-amber-200/60' :
+                                      charge.type === 'Restaurant' ? 'bg-indigo-50 text-indigo-700 border-indigo-200/60' :
+                                      'bg-slate-100 text-slate-600 border-slate-200';
+
+                row.className = "hover:bg-slate-50/80 transition-colors group";
                 row.innerHTML = `
-                    <td class="px-4 py-3 font-medium">${charge.type || 'Other'}</td>
-                    <td class="px-4 py-3 text-gray-600">${charge.description || '-'}</td>
-                    <td class="px-4 py-3 text-right font-semibold">${Number(charge.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                    <td class="px-4 py-3 text-gray-500">${new Date(charge.date).toLocaleDateString()}</td>
-                    <td class="px-4 py-3 text-center">
-                        ${isPaid 
-                            ? '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800"><i class="fa-solid fa-check mr-1"></i> Paid</span>' 
-                            : `<button onclick="confirmPayIncidentalCharge('${charge._id}', '${bookingCustomId}')" 
-                                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-xs font-semibold transition">
-                                Mark Paid
-                               </button>`
-                        }
+                    <td class="py-3 px-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-bold border ${typeBadgeClass}">
+                            ${charge.type || 'Other'}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 font-medium text-slate-700">${charge.description || '-'}</td>
+                    <td class="py-3 px-4 text-right font-extrabold text-slate-900">
+                        ${currencySymbol} ${chargeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                    <td class="py-3 px-4 text-xs font-medium text-slate-400">
+                        ${charge.date ? new Date(charge.date).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            ${isPaid 
+                                ? `<span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                                     <i class="fa-solid fa-check mr-1"></i> Paid
+                                   </span>` 
+                                : `<button data-id="${chargeId}" class="mark-paid-btn bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg text-xs font-bold transition shadow-sm">
+                                     Mark Paid
+                                   </button>`
+                            }
+                            <button 
+                                data-id="${chargeId}" 
+                                class="delete-charge-btn text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition-all inline-flex items-center justify-center"
+                                title="Delete Charge"
+                            >
+                                <i class="fas fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
                     </td>
                 `;
-
-                totalChargesAmount += Number(charge.amount);
             });
         }
 
-        totalIncidentalChargesSpan.textContent = totalChargesAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
+        if (totalIncidentalChargesSpan) {
+            totalIncidentalChargesSpan.textContent = totalChargesAmount.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        }
 
-        // Show/Hide "Pay All" button based on presence of unpaid charges
+        // Show/Hide "Pay All" action button
         if (payAllBtn) {
             if (hasUnpaidCharges) {
                 payAllBtn.classList.remove('hidden');
+                payAllBtn.disabled = false;
             } else {
                 payAllBtn.classList.add('hidden');
             }
         }
 
         // Open Modal
-        viewChargesModal.classList.remove('hidden');
+        if (viewChargesModal) {
+            viewChargesModal.classList.remove('hidden');
+        }
 
     } catch (error) {
         console.error("🔥 View charges error:", error);
@@ -3048,132 +3084,119 @@ async function viewCharges(bookingCustomId) {
         } else {
             alert(error.message);
         }
-        incidentalChargesTableBody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-red-500 font-medium">Error loading incidental charges.</td></tr>';
+        if (incidentalChargesTableBody) {
+            incidentalChargesTableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="py-8 text-center text-red-500 font-medium">
+                        Error loading incidental charges.
+                    </td>
+                </tr>`;
+        }
     }
 }
 
-document.getElementById('payAllChargesBtn').addEventListener('click', async () => {
-    // 1. Get session data
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
-    const currentUsername = sessionData?.username || 'FrontDesk';
-
+// --- 2. PAY ALL CHARGES HANDLER ---
+document.getElementById('payAllChargesBtn')?.addEventListener('click', async () => {
     if (!currentBookingObjectId) {
-        showMessage('Error', 'Booking ID not found', true);
+        if (typeof showMessage === 'function') showMessage('Error', 'Booking ID not found', true);
         return;
     }
 
-    if (!confirm('Mark ALL unpaid incidental charges as paid?')) return;
+    if (!confirm('Mark ALL unpaid incidental charges as paid for this guest?')) return;
 
     try {
-        // 2. Add Authorization and hotelId validation
-        const response = await fetch(`${API_BASE_URL}/incidental-charges/pay-all/${currentBookingObjectId}`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/pay-all/${currentBookingObjectId}`, {
             method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                    'x-hotel-id': sessionData?.hotelId
-
-            },
             body: JSON.stringify({
-                username: currentUsername,
-                hotelId: hotelId // Ensure security boundary
+                username: JSON.parse(localStorage.getItem('loggedInUser'))?.username || 'FrontDesk'
             })
         });
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            showMessage('Error', data.message || 'Failed to pay charges', true);
-            return;
+        if (!response || !response.ok) {
+            const data = response ? await response.json() : {};
+            throw new Error(data.message || 'Failed to settle all charges');
         }
 
-        showMessage('Success', data.message);
+        const data = await response.json();
+        if (typeof showMessage === 'function') showMessage('Success', data.message || 'All charges marked as paid');
 
-        // 3. UI Update: Disable buttons and mark as paid
-        document.querySelectorAll('.mark-paid-btn').forEach(btn => {
-            btn.disabled = true;
-            btn.innerText = 'Paid';
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
-        });
-
-        document.getElementById('payAllChargesBtn').disabled = true;
+        // Re-fetch and update modal state
+        if (currentBookingCustomId) viewCharges(currentBookingCustomId);
         
-        // Refresh audit logs to show the payment action
         if (typeof renderAuditLogs === 'function') renderAuditLogs();
 
     } catch (err) {
-        console.error(err);
-        showMessage('Error', 'Server error while paying charges', true);
+        console.error('Error paying all charges:', err);
+        if (typeof showMessage === 'function') showMessage('Error', err.message || 'Server error while paying charges', true);
     }
 });
+
+// --- 3. DELEGATED EVENT LISTENERS (MARK PAID & DELETE) ---
 document.addEventListener('click', async (e) => {
-    if (!e.target.classList.contains('mark-paid-btn')) return;
-
-    // 1. Get session data
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
-    const currentUsername = sessionData?.username;
-
-    const chargeId = e.target.dataset.id;
-    if (!chargeId) return showMessage('Error', 'Invalid charge ID', true);
-
-    if (!confirm('Mark this charge as paid?')) return;
-
-    try {
-        // 2. Add Authorization and hotelId in query or body (based on your API preference)
-        const response = await fetch(`${API_BASE_URL}/incidental-charges/${chargeId}/mark-paid`, { 
-            method: 'PATCH',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                    'x-hotel-id': sessionData?.hotelId
-
-            },
-            body: JSON.stringify({ 
-                hotelId: hotelId,
-                username: currentUsername 
-            })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            showMessage('Error', data.message || 'Failed to mark as paid', true);
-            return;
-        }
-
-        // 3. UI update
-        e.target.disabled = true;
-        e.target.innerText = 'Paid';
-        e.target.classList.add('opacity-50', 'cursor-not-allowed');
+    // A. MARK SINGLE CHARGE AS PAID
+    if (e.target.classList.contains('mark-paid-btn') || e.target.closest('.mark-paid-btn')) {
+        const btn = e.target.classList.contains('mark-paid-btn') ? e.target : e.target.closest('.mark-paid-btn');
+        const chargeId = btn.dataset.id;
         
-        if (typeof renderAuditLogs === 'function') renderAuditLogs();
+        if (!chargeId) return;
+        if (!confirm('Mark this incidental charge as paid?')) return;
 
-    } catch (err) {
-        console.error(err);
-        showMessage('Error', 'Server error while processing payment', true);
+        try {
+            const response = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/${chargeId}/mark-paid`, { 
+                method: 'PATCH',
+                body: JSON.stringify({ 
+                    username: JSON.parse(localStorage.getItem('loggedInUser'))?.username || 'FrontDesk' 
+                })
+            });
+
+            if (!response || !response.ok) {
+                const data = response ? await response.json() : {};
+                throw new Error(data.message || 'Failed to mark charge as paid');
+            }
+
+            // Refresh modal UI to update indicators and recalculate totals
+            if (currentBookingCustomId) viewCharges(currentBookingCustomId);
+            if (typeof renderAuditLogs === 'function') renderAuditLogs();
+
+        } catch (err) {
+            console.error('Error marking charge paid:', err);
+            if (typeof showMessage === 'function') showMessage('Error', err.message, true);
+        }
+    }
+
+    // B. DELETE CHARGE HANDLER
+    if (e.target.classList.contains('delete-charge-btn') || e.target.closest('.delete-charge-btn')) {
+        const btn = e.target.classList.contains('delete-charge-btn') ? e.target : e.target.closest('.delete-charge-btn');
+        const chargeId = btn.dataset.id;
+
+        if (!chargeId) return;
+        if (!confirm('Are you sure you want to permanently delete this charge?')) return;
+
+        try {
+            const response = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/${chargeId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response || !response.ok) {
+                const data = response ? await response.json() : {};
+                throw new Error(data.message || 'Failed to delete charge from server');
+            }
+
+            // Refresh modal UI instantly to recalculate total and update view
+            if (currentBookingCustomId) viewCharges(currentBookingCustomId);
+            if (typeof renderAuditLogs === 'function') renderAuditLogs();
+
+        } catch (err) {
+            console.error('Error deleting charge:', err);
+            if (typeof showMessage === 'function') showMessage('Error', err.message, true);
+        }
     }
 });
 
-function openViewChargesModal() {
-    const modal = document.getElementById('viewChargesModal');
-    if (modal) {
-        modal.style.display = ''; // Clear inline styles
-        modal.classList.remove('hidden');
-    }
-}
-/**
- * Closes the view charges modal.
- */
+// Utility helper to close modal cleanly
 function closeViewChargesModal() {
-    const modal = document.getElementById('viewChargesModal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.style.display = ''; // Clear inline styles
-    }
+    const viewChargesModal = document.getElementById('viewChargesModal');
+    if (viewChargesModal) viewChargesModal.classList.add('hidden');
 }
 /**
  * Initiates the deletion process for an incidental charge by opening the reason modal.
@@ -7417,7 +7440,7 @@ const addCharge = async (description, number, department) => {
         if (department === 'Restaurant') {
             showMessage('Success', 'Kitchen order sent successfully! 🍳', false);
         } else if (department === 'Bar') {
-            showMessage('Success', 'Bar sale recorded to ledger! 🍸💰', false);
+            //showMessage('Success', 'Bar sale recorded to ledger! 🍸💰', false);
         } else if (activeAccountId) {
             fetchActiveAccounts();
             //showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
@@ -7559,6 +7582,7 @@ const settleAccount = async (method, accountId, phone = '') => {
 };
 
 let currentActiveAccountData = null;
+
 // --- UI UPDATES ---
 const updateActiveAccountUI = (account) => {
     if (!account) return;
@@ -7577,15 +7601,31 @@ const updateActiveAccountUI = (account) => {
 
     const chargesListContainer = document.getElementById('chargesList');
     if (chargesListContainer) {
+        // Updated colspan to 4 to account for the new action column
         chargesListContainer.innerHTML = charges.length === 0 
-            ? `<tr><td colspan="3" class="text-center py-4 text-gray-400">No charges yet</td></tr>`
-            : charges.map(item => `
-                <tr class="border-b border-gray-100 text-sm">
-                    <td class="py-2 text-gray-400">${item.date ? new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}</td>
-                    <td class="py-2 font-medium text-gray-700">${item.item || item.description}</td>
-                    <td class="py-2 text-right font-bold text-indigo-600">${Number(item.amount || item.sp || 0).toLocaleString()}</td>
-                </tr>
-            `).join('');
+            ? `<tr><td colspan="4" class="text-center py-4 text-gray-400">No charges yet</td></tr>`
+            : charges.map((item, index) => {
+                const chargeId = item._id || item.id || index; // Fallback to index if subdocument ID doesn't exist
+                return `
+                    <tr class="border-b border-gray-100 text-sm hover:bg-slate-50/50 transition-colors group">
+                        <td class="py-2 text-gray-400">${item.date ? new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}</td>
+                        <td class="py-2 font-medium text-gray-700">${item.item || item.description}</td>
+                        <td class="py-2 text-right font-bold text-indigo-600">${Number(item.amount || item.sp || 0).toLocaleString()}</td>
+                        <td class="py-2 text-right pr-2">
+                            <button 
+                                type="button"
+                                onclick="deleteAccountCharge('${chargeId}', ${index})" 
+                                class="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-md transition-all inline-flex items-center justify-center"
+                                title="Remove charge"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
     }
 
     document.getElementById('postToRoomBtn')?.classList.toggle('hidden', !account.roomNumber);
@@ -7610,6 +7650,50 @@ const updateActiveAccountUI = (account) => {
         };
     }
 };
+
+// --- DELETE CHARGE HANDLER ---
+async function deleteAccountCharge(chargeId, index) {
+    if (!currentActiveAccountData) return;
+
+    if (!confirm('Are you sure you want to remove this charge?')) return;
+
+    // Resolve username safely from session or fallback scope variable
+    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const username = loggedInUser.username || (typeof currentUsername !== 'undefined' ? currentUsername : 'Unknown User');
+
+    // 1. Optimistic UI update: Remove the item locally first
+    currentActiveAccountData.charges.splice(index, 1);
+    
+    // 2. Refresh the UI to reflect updated list & totals immediately
+    if (typeof updateActiveAccountUI === 'function') {
+        updateActiveAccountUI(currentActiveAccountData);
+    }
+
+    // 3. Persist to API with username payload
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/client-accounts/${activeAccountId}/charges/${chargeId}`, {
+            method: 'DELETE',
+            body: JSON.stringify({ username })
+        });
+
+        // Check if authenticatedFetch returned null (token missing/aborted) or HTTP error status
+        if (!response || !response.ok) {
+            throw new Error('Failed to delete charge on server');
+        }
+
+        const data = await response.json();
+        console.log('Charge deleted successfully by:', username, data);
+
+        // Optional: Refresh audit logs if function is available on current page
+        if (typeof renderAuditLogs === 'function') {
+            renderAuditLogs();
+        }
+
+    } catch (err) {
+        console.error('Error deleting charge:', err);
+        alert('Could not sync deletion with server. Please refresh.');
+    }
+}
 
 const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
     if (!accountData) return;
@@ -8389,82 +8473,14 @@ confirmDeleteBtn.addEventListener('click', () => {
     hideDeleteModal();
 });
 
-function openAdjustModal(item) {
-    const modal = document.getElementById('edit-inventory-modal');
-    if (!modal) return;    
-
-    // 1. Populate all form data (including lowStock)
-    document.getElementById('edit-inventory-id').value = item._id || item.id || '';
-    document.getElementById('edit-item').value = item.item || '';
-    
-    const deptField = document.getElementById('edit-department');
-    if (deptField) deptField.value = item.department || '';
-
-    document.getElementById('edit-opening').value = item.opening || 0;
-    document.getElementById('edit-purchases').value = item.purchases || 0;
-    document.getElementById('edit-inventory-sales').value = item.sales || 0;
-    document.getElementById('edit-spoilage').value = item.spoilage || 0;
-    document.getElementById('edit-buyingprice').value = item.buyingprice || 0;
-    document.getElementById('edit-sellingprice').value = item.sellingprice || 0;
-    
-    // Set Low Stock Threshold
-    const lowStockInput = document.getElementById('edit-lowStock');
-    if (lowStockInput) lowStockInput.value = item.lowStock ?? 5;
-
-    document.getElementById('edit-trackInventory').checked = !!item.trackInventory;
-
-    // 2. Hide locked/read-only input containers (including edit-lowStock)
-    const lockedIds = [
-        'edit-item', 
-        'edit-department',
-        'edit-opening', 
-        'edit-inventory-sales', 
-        'edit-buyingprice', 
-        'edit-sellingprice',
-        'edit-lowStock',        // Hidden during quick adjustment
-        'edit-trackInventory'
-    ];
-    
-    lockedIds.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            const container = el.closest('div');
-            if (container) container.classList.add('hidden');
-        }
-    });
-
-    // 3. Keep Purchases and Spoilage VISIBLE & EDITABLE
-    const editableIds = ['edit-purchases', 'edit-spoilage'];
-    editableIds.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            const container = el.closest('div');
-            if (container) container.classList.remove('hidden');
-            el.readOnly = false;
-        }
-    });
-
-    // Focus on purchases field for fast entry
-    const purchaseInput = document.getElementById('edit-purchases');
-    if (purchaseInput) purchaseInput.focus();
-
-    // 4. Update UI Title
-    const title = modal.querySelector('h2');
-    if (title) title.textContent = `Adjust Stock: ${item.item}`;
-    
-    // 5. Show Modal
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-}
-
-function closeEditModal() {
+// 1. Core Reset Function
+function resetInventoryModal() {
     const modal = document.getElementById('edit-inventory-modal');
     if (!modal) return;
 
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
+    // Remove mode attribute
+    modal.removeAttribute('data-mode');
 
-    // UNLOCK all inputs and restore visibility to all containers for full edits
     const allInputIds = [
         'edit-item', 
         'edit-department', 
@@ -8478,6 +8494,7 @@ function closeEditModal() {
         'edit-trackInventory'
     ];
     
+    // Reset inputs & force containers visible
     allInputIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -8485,22 +8502,25 @@ function closeEditModal() {
             el.disabled = false;
             el.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
             
-            // Unhide parent container
+            // Unhide nearest parent container wrapper
             const container = el.closest('div');
-            if (container) container.classList.remove('hidden');
+            if (container) {
+                container.classList.remove('hidden');
+            }
         }
     });
 }
 
-// Standard Edit Modal Opener (Call this when clicking "Edit" in table actions)
-function openEditModal(item) {
+// 2. Open Adjust Modal (Stock Adjustment Mode)
+function openAdjustModal(item) {
     const modal = document.getElementById('edit-inventory-modal');
-    if (!modal) return;
+    if (!modal) return;    
 
-    // Reset visibility on all fields first
-    closeEditModal();
+    // STEP A: FORCE RESET DOM FIRST
+    resetInventoryModal();
+    modal.setAttribute('data-mode', 'adjust');
 
-    // Fill form fields
+    // STEP B: Populate Form
     document.getElementById('edit-inventory-id').value = item._id || item.id || '';
     document.getElementById('edit-item').value = item.item || '';
     
@@ -8519,13 +8539,85 @@ function openEditModal(item) {
 
     document.getElementById('edit-trackInventory').checked = !!item.trackInventory;
 
-    // Set UI Title
+    // STEP C: Hide Non-Adjustable Containers
+    const lockedIds = [
+        'edit-item', 
+        'edit-department',
+        'edit-opening', 
+        'edit-inventory-sales', 
+        'edit-buyingprice', 
+        'edit-sellingprice',
+        'edit-lowStock',
+        'edit-trackInventory'
+    ];
+    
+    lockedIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            const container = el.closest('div');
+            if (container) container.classList.add('hidden');
+        }
+    });
+
+    // STEP D: Set Title & Show
+    const title = modal.querySelector('h2');
+    if (title) title.textContent = `Adjust Stock: ${item.item}`;
+    
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+
+    setTimeout(() => {
+        const purchaseInput = document.getElementById('edit-purchases');
+        if (purchaseInput) purchaseInput.focus();
+    }, 50);
+}
+
+// 3. Open Full Edit Modal (Edit Mode)
+function openEditModal(item) {
+    const modal = document.getElementById('edit-inventory-modal');
+    if (!modal) return;
+
+    // STEP A: FORCE RESET DOM FIRST (Ensures no hidden fields remain)
+    resetInventoryModal();
+    modal.setAttribute('data-mode', 'edit');
+
+    // STEP B: Populate Form
+    document.getElementById('edit-inventory-id').value = item._id || item.id || '';
+    document.getElementById('edit-item').value = item.item || '';
+    
+    const deptField = document.getElementById('edit-department');
+    if (deptField) deptField.value = item.department || '';
+
+    document.getElementById('edit-opening').value = item.opening || 0;
+    document.getElementById('edit-purchases').value = item.purchases || 0;
+    document.getElementById('edit-inventory-sales').value = item.sales || 0;
+    document.getElementById('edit-spoilage').value = item.spoilage || 0;
+    document.getElementById('edit-buyingprice').value = item.buyingprice || 0;
+    document.getElementById('edit-sellingprice').value = item.sellingprice || 0;
+    
+    const lowStockInput = document.getElementById('edit-lowStock');
+    if (lowStockInput) lowStockInput.value = item.lowStock ?? 5;
+
+    document.getElementById('edit-trackInventory').checked = !!item.trackInventory;
+
+    // STEP C: Set Title & Display
     const title = modal.querySelector('h2');
     if (title) title.textContent = `Edit Inventory Item: ${item.item}`;
 
-    // Display Modal
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
+}
+
+// 4. Close Modal
+function closeEditModal() {
+    const modal = document.getElementById('edit-inventory-modal');
+    if (!modal) return;
+
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+
+    // Reset visibility immediately upon exit
+    resetInventoryModal();
 }
 
 async function handleUpdateSubmit(event) {
@@ -11361,68 +11453,7 @@ document.getElementById('exportposReportBtn').addEventListener('click', function
 
     // New function to handle the modal display and population
 // New function to handle the modal display and population
-function openEditModal(item) {
-    // 1. Permission check
-    const authorizedRoles = ['admin', 'super-admin', 'manager'];
-    if (!authorizedRoles.includes(currentUserRole)) {
-        if (typeof showMessage === 'function') showMessage('Permission Denied', true);
-        else showMessage('Permission Denied');
-        return;
-    }
 
-    // 2. Data Validation
-    if (!item || !item.item) {
-        console.error("Item object is invalid:", item);
-        showMessage("Error: Could not identify the inventory item.");
-        return;
-    }
-
-    const modal = document.getElementById('edit-inventory-modal');
-    if (!modal) return console.error("Modal 'edit-inventory-modal' missing from HTML");
-
-    // 3. Populate Form
-    const idField = document.getElementById('edit-inventory-id');
-    if (idField) idField.value = item._id ||item.id || '';
-
-    const nameField = document.getElementById('edit-item');
-    if (nameField) nameField.value = item.item || '';
-
-    // Populate Department dropdown
-    const deptField = document.getElementById('edit-department');
-    if (deptField) deptField.value = item.department || '';
-
-    document.getElementById('edit-lowStock').value = item.lowStock ?? 5;
-
-    // Numeric fields with 0 fallback
-    const numericFields = {
-        'edit-opening': item.opening,
-        'edit-purchases': item.purchases,
-        'edit-inventory-sales': item.sales,
-        'edit-spoilage': item.spoilage,
-        'edit-buyingprice': item.buyingprice,
-        'edit-sellingprice': item.sellingprice
-    };
-
-    for (let [id, val] of Object.entries(numericFields)) {
-        const input = document.getElementById(id);
-        if (input) input.value = val !== undefined ? val : 0;
-    }
-
-    const trackInput = document.getElementById('edit-trackInventory');
-    if (trackInput) {
-        trackInput.checked = item.trackInventory !== undefined ? item.trackInventory : true;
-    }
-
-    // 4. Dynamic Modal Header
-    const title = modal.querySelector('h2');
-    if (title) {
-        title.textContent = item._id ? `Edit ${item.item}` : `Initialize ${item.item} for ${item.viewingDate || 'Today'}`;
-    }
-
-    // 5. Open Modal
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-}
 // New function to handle the form submission for the modal
 /**
  * Manages the loading state of the Edit Inventory button.
@@ -12845,134 +12876,226 @@ searchInput.addEventListener('input', (e) => {
     }, 300);
 });
 
+document.addEventListener('DOMContentLoaded', fetchExecutiveDashboard);
 
-let currentSelectedRange = 'today';
 
-// Append inside fetchExecutiveDashboard function:
+/**
+ * Executive Flash Dashboard Controller
+ * Standardized for Enterprise Multi-Tenant Hotel Management Systems
+ */
 
+// Global Dashboard State Controller
+const DashboardState = {
+    currentRange: 'today',
+    isLoading: false,
+    abortController: null
+};
+
+/**
+ * Safe DOM Utilities
+ */
+const DOM = {
+    setText: (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value !== undefined && value !== null ? value : '--';
+    },
+    setStyle: (id, property, value) => {
+        const el = document.getElementById(id);
+        if (el) el.style[property] = value;
+    },
+    toggleClass: (id, className, force) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle(className, force);
+    }
+};
+
+/**
+ * Currency & Number Formatting Utility
+ */
+const Formatters = {
+    currency: (amount, currencyCode = 'UGX') => {
+        const num = Number(amount || 0);
+        try {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: currencyCode,
+                maximumFractionDigits: 0
+            }).format(num);
+        } catch (e) {
+            return `${currencyCode} ${num.toLocaleString()}`;
+        }
+    },
+    percent: (val) => `${Number(val || 0).toFixed(1)}%`
+};
+
+/**
+ * Main Data Fetching Engine
+ * @param {string} queryParams - API search parameters
+ */
 async function fetchExecutiveDashboard(queryParams = 'range=today') {
+    // Abort active pending requests if user rapidly switches filters
+    if (DashboardState.abortController) {
+        DashboardState.abortController.abort();
+    }
+    DashboardState.abortController = new AbortController();
+
+    setDashboardLoadingState(true);
+
     try {
-        const response = await authenticatedFetch(`${API_BASE_URL}/dashboard/executive-flash?${queryParams}`);
-        if (!response || !response.ok) return;
+        const response = await authenticatedFetch(
+            `${API_BASE_URL}/dashboard/executive-flash?${queryParams}`, 
+            { signal: DashboardState.abortController.signal }
+        );
+
+        if (!response || !response.ok) {
+            throw new Error(`Server returned status ${response?.status || 'network error'}`);
+        }
 
         const data = await response.json();
-        const curr = data.currency || 'UGX';
-        const fmt = (val) => `${curr} ${Number(val || 0).toLocaleString()}`;
-        
-        const setTxt = (id, txt) => {
-            const el = document.getElementById(id);
-            if (el) el.innerText = txt;
-        };
-
-        const renderTrend = (id, percentVal) => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            const isPositive = percentVal >= 0;
-            const arrow = isPositive ? '▲' : '▼';
-            el.innerText = `${arrow} ${Math.abs(percentVal)}%`;
-            el.className = `text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
-                isPositive ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-            }`;
-        };
+        const curr = data.currency || localStorage.getItem('hotelCurrency') || 'UGX';
 
         // 1. Core KPIs
-        setTxt('val-capacity', data.capacity);
-        setTxt('val-occupancy', `${data.kpis.occupancyRate}%`);
-        setTxt('val-adr', fmt(data.kpis.adr));
-        setTxt('val-revpar', fmt(data.kpis.revpar));
-        setTxt('val-gross-revenue', fmt(data.kpis.grossRevenue));
-        setTxt('val-pos-profit', fmt(data.kpis.posProfit));
-        setTxt('val-noi', fmt(data.kpis.noi));
+        DOM.setText('val-capacity', data.capacity);
+        DOM.setText('val-occupancy', Formatters.percent(data.kpis?.occupancyRate));
+        DOM.setText('val-adr', Formatters.currency(data.kpis?.adr, curr));
+        DOM.setText('val-revpar', Formatters.currency(data.kpis?.revpar, curr));
+        DOM.setText('val-gross-revenue', Formatters.currency(data.kpis?.grossRevenue, curr));
+        DOM.setText('val-pos-profit', Formatters.currency(data.kpis?.posProfit, curr));
+        DOM.setText('val-noi', Formatters.currency(data.kpis?.noi, curr));
 
-        renderTrend('badge-revpar-trend', data.kpis.revparTrend);
-        renderTrend('badge-gross-trend', data.kpis.grossRevenueTrend);
-        renderTrend('badge-pos-profit-trend', data.kpis.posProfitTrend);
-        renderTrend('badge-noi-trend', data.kpis.noiTrend);
+        // 2. Trend Badges & Occupancy Meter
+        renderTrendBadge('badge-revpar-trend', data.kpis?.revparTrend);
+        renderTrendBadge('badge-gross-trend', data.kpis?.grossRevenueTrend);
+        renderTrendBadge('badge-pos-profit-trend', data.kpis?.posProfitTrend);
+        renderTrendBadge('badge-noi-trend', data.kpis?.noiTrend);
 
-        const bar = document.getElementById('bar-occupancy');
-        if (bar) bar.style.width = `${Math.min(data.kpis.occupancyRate, 100)}%`;
+        const occupancyPct = Math.min(Math.max(data.kpis?.occupancyRate || 0, 0), 100);
+        DOM.setStyle('bar-occupancy', 'width', `${occupancyPct}%`);
 
-        // 2. Front Desk Operations
-        setTxt('fd-arrivals-pending', data.frontDesk.arrivalsPending);
-        setTxt('fd-arrivals-done', data.frontDesk.arrivalsCheckedIn);
-        setTxt('fd-deps-pending', data.frontDesk.departuresPending);
-        setTxt('fd-deps-done', data.frontDesk.departuresCheckedOut);
-        setTxt('fd-in-house', data.frontDesk.inHouseGuests);
-        setTxt('fd-no-shows', data.frontDesk.noShows);
+        // 3. Front Desk Operations
+        DOM.setText('fd-arrivals-pending', data.frontDesk?.arrivalsPending);
+        DOM.setText('fd-arrivals-done', data.frontDesk?.arrivalsCheckedIn);
+        DOM.setText('fd-deps-pending', data.frontDesk?.departuresPending);
+        DOM.setText('fd-deps-done', data.frontDesk?.departuresCheckedOut);
+        DOM.setText('fd-in-house', data.frontDesk?.inHouseGuests);
+        DOM.setText('fd-no-shows', data.frontDesk?.noShows);
 
-        
-
-        // 4. Render Distribution Channel Mix
+        // 4. Distribution Channel Mix Breakdown
         renderChannelMix(data.channelMix || [], curr);
 
-        // 5. Financial Audit
-        setTxt('fin-room-rev', fmt(data.financials.roomRevenue));
-        setTxt('fin-pos-rev', fmt(data.financials.posSales));
-        setTxt('fin-pos-profit', fmt(data.financials.posProfit));
-        setTxt('fin-gross-profit', fmt(data.financials.totalGrossProfit));
-        setTxt('fin-collected', fmt(data.financials.collectedCash));
-        setTxt('fin-ledger-bal', fmt(data.financials.cityLedgerBalance));
-        setTxt('fin-expenses', fmt(data.financials.expenses));
+        // 5. Financial Audit & Ledger Balance
+        DOM.setText('fin-room-rev', Formatters.currency(data.financials?.roomRevenue, curr));
+        DOM.setText('fin-pos-rev', Formatters.currency(data.financials?.posSales, curr));
+        DOM.setText('fin-pos-profit', Formatters.currency(data.financials?.posProfit, curr));
+        DOM.setText('fin-gross-profit', Formatters.currency(data.financials?.totalGrossProfit, curr));
+        DOM.setText('fin-collected', Formatters.currency(data.financials?.collectedCash, curr));
+        DOM.setText('fin-ledger-bal', Formatters.currency(data.financials?.cityLedgerBalance, curr));
+        DOM.setText('fin-expenses', Formatters.currency(data.financials?.expenses, curr));
 
     } catch (err) {
-        console.error("Failed to load PMS Flash Report:", err);
+        if (err.name === 'AbortError') return; // Ignore aborted requests
+        console.error("❌ Failed to load Executive Flash Report:", err);
+        if (typeof showMessage === 'function') {
+            showMessage('Error', 'Failed to update executive dashboard metrics.', true);
+        }
+    } finally {
+        setDashboardLoadingState(false);
     }
 }
 
-// Channel mix DOM builder
-function renderChannelMix(channels, curr) {
+/**
+ * Render KPI Percentage Trend Badges
+ */
+function renderTrendBadge(elementId, percentVal) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+
+    const val = Number(percentVal || 0);
+    const isPositive = val >= 0;
+    const arrow = isPositive ? '▲' : '▼';
+
+    el.textContent = `${arrow} ${Math.abs(val).toFixed(1)}%`;
+    el.className = `text-[11px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 transition-colors ${
+        isPositive 
+            ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' 
+            : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+    }`;
+}
+
+/**
+ * Channel Mix Component Renderer
+ */
+function renderChannelMix(channels, currencyCode) {
     const container = document.getElementById('channel-mix-container');
     if (!container) return;
 
-    if (!channels || channels.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-400 italic py-2">No bookings recorded for this period.</p>`;
+    if (!Array.isArray(channels) || channels.length === 0) {
+        container.innerHTML = `
+            <div class="p-4 text-center border border-dashed border-slate-200 rounded-xl">
+                <p class="text-xs text-slate-400 italic">No distribution metrics recorded for this active range.</p>
+            </div>`;
         return;
     }
 
-    const channelColors = {
+    const channelPalette = {
         'Walk in': 'bg-blue-500',
         'Hotel Website': 'bg-emerald-500',
         'Expedia': 'bg-amber-500',
-        'Booking.com': 'bg-indigo-500',
-        'Trip': 'bg-purple-500'
+        'Booking.com': 'bg-indigo-600',
+        'Trip': 'bg-purple-500',
+        'Corporate': 'bg-slate-700'
     };
 
     container.innerHTML = channels.map(ch => {
-        const colorClass = channelColors[ch.source] || 'bg-slate-500';
+        const colorClass = channelPalette[ch.source] || 'bg-slate-500';
+        const formattedRev = Formatters.currency(ch.revenue, currencyCode);
+        const percentage = Math.min(Math.max(ch.percentage || 0, 0), 100);
+
         return `
-            <div class="space-y-1">
+            <div class="space-y-1.5 group">
                 <div class="flex justify-between items-center text-xs">
-                    <span class="font-medium text-slate-300">${ch.source}</span>
-                    <span class="text-slate-400 font-mono">${ch.count} bkg (${ch.percentage}%) • <strong class="text-slate-200">${curr} ${ch.revenue.toLocaleString()}</strong></span>
+                    <span class="font-bold text-slate-700 group-hover:text-slate-900 transition-colors">${ch.source}</span>
+                    <span class="text-slate-500 font-mono text-[11px]">
+                        ${ch.count} bkg (${percentage.toFixed(1)}%) • <strong class="text-slate-800 font-bold">${formattedRev}</strong>
+                    </span>
                 </div>
-                <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
-                    <div class="${colorClass} h-full transition-all duration-500" style="width: ${Math.min(ch.percentage, 100)}%"></div>
+                <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200/60 p-[1px]">
+                    <div class="${colorClass} h-full rounded-full transition-all duration-700 ease-out" style="width: ${percentage}%"></div>
                 </div>
             </div>
         `;
     }).join('');
 }
 
-// Handler for predefined filter buttons
+/**
+ * Predefined Quick-Filter Range Switcher
+ */
 function setDashboardRange(rangeKey) {
-    // Toggle active styles on buttons
+    DashboardState.currentRange = rangeKey;
+
+    // Reset Custom Date Inputs when a standard range is selected
+    const startInput = document.getElementById('custom-start-date');
+    const endInput = document.getElementById('custom-end-date');
+    if (startInput) startInput.value = '';
+    if (endInput) endInput.value = '';
+
+    // Update active visual button state
     ['today', 'yesterday', 'this_week', 'this_month'].forEach(key => {
         const btn = document.getElementById(`btn-${key}`);
-        if (btn) {
-            if (key === rangeKey) {
-                btn.className = "px-3 py-1.5 rounded-md text-white bg-blue-600 transition font-semibold";
-            } else {
-                btn.className = "px-3 py-1.5 rounded-md text-slate-400 hover:text-white transition font-semibold";
-            }
+        if (!btn) return;
+
+        if (key === rangeKey) {
+            btn.className = "px-3.5 py-1.5 rounded-lg text-white bg-indigo-600 shadow-sm font-semibold text-xs transition-all";
+        } else {
+            btn.className = "px-3.5 py-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 font-semibold text-xs transition-all";
         }
     });
 
     fetchExecutiveDashboard(`range=${rangeKey}`);
 }
 
-// Handler for custom date picker
 /**
- * Executes automatic dashboard fetching on valid custom range selection with dynamic spinner feedback
+ * Custom Date Range Handler
  */
 async function applyCustomDateRange(isAutoTrigger = false) {
     const startDateInput = document.getElementById('custom-start-date');
@@ -12981,76 +13104,81 @@ async function applyCustomDateRange(isAutoTrigger = false) {
     const btnSpinner = document.getElementById('apply-btn-spinner');
     const btnText = document.getElementById('apply-btn-text');
 
-    const start = startDateInput.value;
-    const end = endDateInput.value;
+    const start = startDateInput?.value;
+    const end = endDateInput?.value;
 
-    // Direct manual click validation
     if (!start || !end) {
         if (!isAutoTrigger) {
-            alert("Please select both start and end dates.");
+            if (typeof showMessage === 'function') {
+                showMessage('Validation Error', 'Please select both start and end dates.', true);
+            } else {
+                alert("Please select both start and end dates.");
+            }
         }
         return;
     }
 
-    // Ensure start date isn't later than end date
     if (new Date(start) > new Date(end)) {
-        alert("Start date cannot be after the end date.");
+        if (typeof showMessage === 'function') {
+            showMessage('Validation Error', 'Start date cannot be later than end date.', true);
+        } else {
+            alert("Start date cannot be after the end date.");
+        }
         return;
     }
 
-    // Reset preset button styling to default unselected state
+    // Unselect preset button styles
     ['today', 'yesterday', 'this_week', 'this_month'].forEach(key => {
         const btn = document.getElementById(`btn-${key}`);
         if (btn) {
-            btn.className = "px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition";
+            btn.className = "px-3.5 py-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 font-semibold text-xs transition-all";
         }
     });
 
-    // 1. Activate Loading Spinner State
+    // Button Spinner Loading Feedback
     if (applyBtn) applyBtn.disabled = true;
     if (btnSpinner) btnSpinner.classList.remove('hidden');
-    if (btnText) btnText.textContent = "Loading...";
+    if (btnText) btnText.textContent = "Applying...";
 
     try {
-        // 2. Execute dashboard query (awaiting fetch response if function returns a Promise)
+        DashboardState.currentRange = 'custom';
         await fetchExecutiveDashboard(`range=custom&startDate=${start}&endDate=${end}`);
-    } catch (error) {
-        console.error("Failed to update executive dashboard:", error);
     } finally {
-        // 3. Restore Button State
         if (applyBtn) applyBtn.disabled = false;
         if (btnSpinner) btnSpinner.classList.add('hidden');
         if (btnText) btnText.textContent = "Apply";
     }
 }
 
-// Attach automatic trigger listeners once DOM content is ready
+/**
+ * Dynamic Loading Pulse Handler
+ */
+function setDashboardLoadingState(isLoading) {
+    DashboardState.isLoading = isLoading;
+    DOM.toggleClass('executive-dashboard-container', 'opacity-60', isLoading);
+}
+
+/**
+ * Lifecycle Event Listener Binding
+ */
 document.addEventListener('DOMContentLoaded', () => {
     const startDateInput = document.getElementById('custom-start-date');
     const endDateInput = document.getElementById('custom-end-date');
 
-    const autoFetchHandler = () => {
-        const start = startDateInput.value;
-        const end = endDateInput.value;
-
-        // Auto-run only if both dates are selected
-        if (start && end) {
+    const handleAutoCustomFetch = () => {
+        if (startDateInput?.value && endDateInput?.value) {
             applyCustomDateRange(true);
         }
     };
 
     if (startDateInput && endDateInput) {
-        startDateInput.addEventListener('change', autoFetchHandler);
-        endDateInput.addEventListener('change', autoFetchHandler);
+        startDateInput.addEventListener('change', handleAutoCustomFetch);
+        endDateInput.addEventListener('change', handleAutoCustomFetch);
     }
-});
-// Initialise on DOM Ready
-document.addEventListener('DOMContentLoaded', () => {
+
+    // Initial Dashboard Hydration
     setDashboardRange('today');
 });
-
-// Initialise dashboard on load
-document.addEventListener('DOMContentLoaded', fetchExecutiveDashboard);
 
 // Initialize: Set default date-time to now
 document.getElementById('reportDateTime').value = new Date().toISOString().slice(0, 16);
@@ -15452,8 +15580,7 @@ function renderDropdownResults(bookings) {
         item.innerHTML = `
             <div class="flex flex-col min-w-0">
                 <!-- Dark primary text, shifts to indigo on row hover -->
-<span class="text-[15px] font-extrabold text-slate-900 group-hover:text-indigo-600 transition-colors capitalize tracking-tight">${escapeHTML(booking.name)}</span>                <!-- Subtle slate secondary text -->
-                <span class="text-[11px] text-slate-500 mt-0.5">ID: ${escapeHTML(booking.id)} | Room: <span class="capitalize">${escapeHTML(booking.room || 'N/A')}</span></span>
+ <span class="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition-colors capitalize">${escapeHTML(booking.name)}</span>                <span class="text-[11px] text-slate-500 mt-0.5">ID: ${escapeHTML(booking.id)} | Room: <span class="capitalize">${escapeHTML(booking.room || 'N/A')}</span></span>
             </div>
             <!-- Pill button adapted for light theme contrast -->
             <span class="text-[10px] px-2.5 py-1 rounded-md font-semibold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-transparent transition-all shadow-sm">
