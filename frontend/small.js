@@ -6449,7 +6449,7 @@ async function fetchRoomsV2() {
             if (hkStatus === 'out_of_order' || hkStatus === 'ooo') hkBadgeStyle = 'bg-amber-50 text-amber-700 border-amber-200';
 
             // Occupancy Badge
-            const foStatus = room.isOccupied ? 'Occupied' : 'Vacant';
+            const foStatus = room.isOccupied ? 'blocked' : 'Occupied';
             const foBadgeStyle = room.isOccupied 
                 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' 
                 : 'bg-slate-100 text-slate-600 border-slate-200';
@@ -6568,42 +6568,134 @@ function filterInventoryTable() {
 // Run on page load
 fetchRoomsV2();
 // --- G. EDIT ROOM MODAL LOGIC ---
-async function editRoom(roomId) {
+
+/**
+ * Opens the Edit Room modal and populates form fields with existing room data.
+ * 
+ * @param {string} roomId - The _id of the room asset
+ * @param {string} roomNumber - Room identification/number
+ * @param {string} categoryName - Name of the room category/type
+ * @param {string} typeId - The _id of the roomTypeId
+ * @param {string|number} overridePrice - Nightly rate override (if any)
+ */
+function openEditRoomModal(roomId, roomNumber, categoryName, typeId, overridePrice) {
+    const modal = document.getElementById('editModal');
+    if (!modal) return;
+
+    // 1. Populate Hidden Form Fields
+    document.getElementById('editRoomId').value = roomId || '';
+    document.getElementById('editTypeId').value = typeId || '';
+
+    // 2. Populate Visible Inputs
+    document.getElementById('editRoomNumber').value = roomNumber || '';
+    document.getElementById('editTypeName').value = categoryName || '';
+    document.getElementById('editBasePrice').value = overridePrice ?? '';
+
+    // 3. Display Modal (Swaps hidden for flex layout)
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+/**
+ * Closes the Edit Room modal and resets form inputs.
+ */
+function closeModal() {
+    const modal = document.getElementById('editModal');
+    if (!modal) return;
+
+    // Hide Modal
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+
+    // Optional: Reset form fields
+    const form = document.getElementById('editRoomForm');
+    if (form) form.reset();
+}
+
+// Submit Handler Function
+async function handleEditRoomSubmit(event) {
+    event.preventDefault();
+
+    const roomId = document.getElementById('editRoomId').value;
+    const roomNumber = document.getElementById('editRoomNumber').value.trim();
+    const overridePriceRaw = document.getElementById('editBasePrice').value.trim();
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+
+    if (!roomId) {
+        return showMessage('Error', 'Invalid room reference.', true);
+    }
+
+    if (!roomNumber) {
+        return showMessage('Validation Error', 'Room number is required.', true);
+    }
+
+    // Convert blank input to null, otherwise parse as float
+    const overridePrice = overridePriceRaw !== '' ? parseFloat(overridePriceRaw) : null;
+
+    if (overridePriceRaw !== '' && isNaN(overridePrice)) {
+        return showMessage('Validation Error', 'Please enter a valid rate number.', true);
+    }
+
+    const payload = {
+        number: roomNumber,
+        overridePrice: overridePrice
+    };
+
     try {
-        // Fetch all rooms for this hotel and find the specific one
-        const hotelId = getSessionHotelId();
-        const res = await authenticatedFetch(`${API_BASE_URL}/rooms?hotelId=${hotelId}`);
-        const rooms = await res.json();
-        const room = rooms.find(r => r._id === roomId);
-
-        if (!room) return showMessage("Room data not found", true);
-
-        // Fill Modal Fields
-        document.getElementById('editRoomId').value = room._id;
-        document.getElementById('editRoomNumber').value = room.number;
-        document.getElementById('editRoomStatus').value = room.status;
-        
-        // If your schema allows editing the underlying category here:
-        if (room.roomTypeId) {
-            document.getElementById('editTypeId').value = room.roomTypeId._id;
-            document.getElementById('editTypeName').value = room.roomTypeId.name;
-            document.getElementById('editBasePrice').value = room.roomTypeId.basePrice;
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Saving...`;
         }
 
-        // Show Modal
-        const modal = document.getElementById('editModal');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        const res = await authenticatedFetch(`${API_BASE_URL}/v2/rooms/${roomId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.message || data.error || 'Failed to update room.');
+        }
+
+        if (typeof showMessage === 'function') {
+            showMessage('Success', 'Room updated successfully!', false);
+        }
+
+        closeModal();
+
+        // Refresh room inventory list
+        if (typeof fetchRoomsV2 === 'function') {
+            fetchRoomsV2();
+        }
+
     } catch (err) {
-        console.error("Error opening modal:", err);
+        console.error('Update Room Error:', err);
+        if (typeof showMessage === 'function') {
+            showMessage('Error', err.message, true);
+        } else {
+            alert(err.message);
+        }
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Save Changes';
+        }
     }
 }
 
-function closeModal() {
-    const modal = document.getElementById('editModal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-}
+// Bind Event Listener on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+    const editForm = document.getElementById('editRoomForm');
+    if (editForm) {
+        editForm.addEventListener('submit', handleEditRoomSubmit);
+    }
+});
+
+
 
 // --- H. HANDLE MODAL SUBMISSION ---
 document.getElementById('editRoomForm').addEventListener('submit', async (e) => {

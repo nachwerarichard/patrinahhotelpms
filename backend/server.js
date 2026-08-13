@@ -1019,6 +1019,89 @@ app.post('/api/v2/rooms', auth, async (req, res) => {
         res.status(400).json({ error: err.message });
     }
 });
+
+const express = require('express');
+const router = express.Router();
+const Room = require('../models/Room'); // Adjust path to your Room schema
+
+/**
+ * @route   PUT /api/v2/rooms/:id
+ * @desc    Update physical room details (number and override price)
+ * @access  Private / Authenticated
+ */
+app.put('/v2/rooms/:id', auth,async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { number, overridePrice } = req.body;
+        
+        // Extract hotelId from auth middleware context (adjust based on your auth implementation)
+        const hotelId = req.user?.hotelId || req.hotelId || req.body.hotelId;
+
+        if (!id) {
+            return res.status(400).json({ error: 'Room ID is required.' });
+        }
+
+        if (!number || typeof number !== 'string' || !number.trim()) {
+            return res.status(400).json({ error: 'Room number is required.' });
+        }
+
+        const trimmedNumber = number.trim();
+
+        // 1. Check if the room exists
+        const room = await Room.findById(id);
+        if (!room) {
+            return res.status(404).json({ error: 'Room asset not found.' });
+        }
+
+        // 2. Check for room number conflicts within the same hotel
+        const existingRoom = await Room.findOne({
+            hotelId: room.hotelId,
+            number: trimmedNumber,
+            _id: { $ne: id }
+        });
+
+        if (existingRoom) {
+            return res.status(400).json({ 
+                error: `Room number "${trimmedNumber}" is already in use at this property.` 
+            });
+        }
+
+        // 3. Update fields
+        room.number = trimmedNumber;
+        
+        // Handle overridePrice: null/undefined unsets it, number updates it
+        if (overridePrice === null || overridePrice === '' || overridePrice === undefined) {
+            room.overridePrice = undefined; // Clears the override, falling back to RoomType base price
+        } else {
+            const parsedPrice = parseFloat(overridePrice);
+            if (isNaN(parsedPrice) || parsedPrice < 0) {
+                return res.status(400).json({ error: 'Invalid override rate value.' });
+            }
+            room.overridePrice = parsedPrice;
+        }
+
+        const updatedRoom = await room.save();
+
+        // Populate roomTypeId for response consistency
+        await updatedRoom.populate('roomTypeId', 'name basePrice');
+
+        return res.status(200).json({
+            message: 'Room asset updated successfully.',
+            room: updatedRoom
+        });
+
+    } catch (err) {
+        console.error('Error updating room:', err);
+
+        // Handle MongoDB duplicate key index error (hotelId + number)
+        if (err.code === 11000) {
+            return res.status(400).json({ error: 'Room number already exists for this hotel.' });
+        }
+
+        return res.status(500).json({ error: 'Internal server error while updating room.' });
+    }
+});
+
 app.post('/api/rooms', auth, async (req, res) => {
     try {
         const { number, roomTypeId, status, hotelId } = req.body;
