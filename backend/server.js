@@ -1020,10 +1020,6 @@ app.post('/api/v2/rooms', auth, async (req, res) => {
     }
 });
 
-const express = require('express');
-const router = express.Router();
-const Room = require('../models/Room'); // Adjust path to your Room schema
-
 /**
  * @route   PUT /api/v2/rooms/:id
  * @desc    Update physical room details (number and override price)
