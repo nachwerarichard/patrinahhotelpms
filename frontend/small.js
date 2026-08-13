@@ -6448,9 +6448,10 @@ async function fetchRoomsV2() {
             if (hkStatus === 'inspected') hkBadgeStyle = 'bg-blue-50 text-blue-700 border-blue-200';
             if (hkStatus === 'out_of_order' || hkStatus === 'ooo') hkBadgeStyle = 'bg-amber-50 text-amber-700 border-amber-200';
 
-            // Occupancy Badge
-            const foStatus = room.isOccupied ? 'blocked' : 'Occupied';
-            const foBadgeStyle = room.isOccupied 
+            // Occupancy Badge (Modified: "Occupied" if blocked, "Vacant" otherwise)
+            const isBlocked = (room.status || '').toLowerCase() === 'blocked';
+            const foStatus = isBlocked ? 'Occupied' : 'Vacant';
+            const foBadgeStyle = isBlocked 
                 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' 
                 : 'bg-slate-100 text-slate-600 border-slate-200';
 
