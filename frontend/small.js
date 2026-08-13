@@ -6600,7 +6600,10 @@ function openEditRoomModal(roomId, roomNumber, categoryName, typeId, overridePri
 /**
  * Closes the Edit Room modal and resets form inputs.
  */
-function closeModal() {
+
+
+// 1. Module-Specific Close Function
+function closeEditRoomModal() {
     const modal = document.getElementById('editModal');
     if (!modal) return;
 
@@ -6608,22 +6611,20 @@ function closeModal() {
     modal.classList.add('hidden');
     modal.classList.remove('flex');
 
-    // Optional: Reset form fields
+    // Reset form fields safely
     const form = document.getElementById('editRoomForm');
     if (form) form.reset();
 }
 
-// Submit Handler Function
+// 2. Updated Submit Handler (calling closeEditRoomModal)
 async function handleEditRoomSubmit(event) {
     event.preventDefault();
 
-    // 1. Safe DOM element extraction with optional chaining
     const roomIdInput = document.getElementById('editRoomId');
     const roomNumberInput = document.getElementById('editRoomNumber');
     const overridePriceInput = document.getElementById('editBasePrice');
     const submitBtn = event.target ? event.target.querySelector('button[type="submit"]') : null;
 
-    // Fail early if crucial form elements are missing from the DOM
     if (!roomIdInput || !roomNumberInput) {
         console.error('Edit room modal input fields missing from DOM.');
         if (typeof showMessage === 'function') {
@@ -6636,7 +6637,6 @@ async function handleEditRoomSubmit(event) {
     const roomNumber = roomNumberInput.value.trim();
     const overridePriceRaw = overridePriceInput ? overridePriceInput.value.trim() : '';
 
-    // 2. Client-side Validation
     if (!roomId) {
         return typeof showMessage === 'function'
             ? showMessage('Error', 'Invalid room reference.', true)
@@ -6649,7 +6649,6 @@ async function handleEditRoomSubmit(event) {
             : alert('Room number is required.');
     }
 
-    // Convert blank input to null, otherwise parse as float
     const overridePrice = overridePriceRaw !== '' ? parseFloat(overridePriceRaw) : null;
 
     if (overridePriceRaw !== '' && isNaN(overridePrice)) {
@@ -6664,7 +6663,6 @@ async function handleEditRoomSubmit(event) {
     };
 
     try {
-        // UI Loading State
         if (submitBtn) {
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...`;
@@ -6682,7 +6680,6 @@ async function handleEditRoomSubmit(event) {
             throw new Error('No response returned from network client.');
         }
 
-        // 3. Safe Response Parsing (Handles non-JSON/HTML 404/500 pages gracefully)
         const contentType = res.headers.get('content-type');
         let data = {};
 
@@ -6698,16 +6695,13 @@ async function handleEditRoomSubmit(event) {
             throw new Error(data.message || data.error || 'Failed to update room.');
         }
 
-        // Success Workflow
         if (typeof showMessage === 'function') {
             showMessage('Success', 'Room updated successfully!', false);
         }
 
-        if (typeof closeModal === 'function') {
-            closeModal();
-        }
+        // Call the uniquely named close function
+        closeEditRoomModal();
 
-        // Refresh inventory matrix table
         if (typeof fetchRoomsV2 === 'function') {
             fetchRoomsV2();
         }
@@ -6720,7 +6714,6 @@ async function handleEditRoomSubmit(event) {
             alert(err.message);
         }
     } finally {
-        // Restore UI State
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.innerHTML = 'Save Changes';
