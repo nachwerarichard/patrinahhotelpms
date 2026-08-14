@@ -7373,112 +7373,7 @@ if (!res) return; // in case redirect happened
 };
 
 
-const addCharge = async (description, number, department) => {
-    const hotelId = localStorage.getItem('hotelId') || (typeof getHotelId === 'function' ? getHotelId() : null);
-    const submitBtn = document.getElementById('submitBtn');
-    const isQuickSale = (!activeAccountId);
 
-    const itemInfo = document.getElementById('itemDesc').dataset;
-    const qtyValue = parseInt(number) || 1;
-    const tableNum = document.getElementById('tableNum')?.value || "N/A";
-
-    const basePrice = parseFloat(itemInfo.bp || 0);
-    const sellingPrice = parseFloat(document.getElementById('itemPrice').value || itemInfo.sp || 0);
-    const calculatedProfit = (sellingPrice - basePrice) * qtyValue;
-    const profitPercentage = basePrice !== 0 ? (calculatedProfit / (basePrice * qtyValue)) * 100 : 0;
-
-    if (!description || isNaN(qtyValue) || isNaN(sellingPrice)) {
-        return showMessage('Incomplete Form', 'Please fill all fields with valid data.', true);
-    }
-
-    const payload = {
-        hotelId: hotelId,
-        item: description.trim(),
-        department: department,
-        number: qtyValue,
-        bp: basePrice,
-        sp: sellingPrice,
-        profit: calculatedProfit,
-        percentageprofit: profitPercentage,
-        accountId: activeAccountId || null,
-        tableNumber: tableNum,
-        isQuickSale: isQuickSale,
-        date: new Date(),
-        recordedBy: currentUsername, // Required by Sale schema
-        role: currentUserRole        // Included for context
-    };
-
-    try {
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ADDING...`;
-        }
-
-        let res;
-        let serverResponse = {};
-
-        // 1. Send Order to Department-Specific Endpoints
-        if (department === 'Restaurant') {
-            res = await authenticatedFetch(`${API_BASE_URL}/kitchen/order`, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
-        } else if (department === 'Bar') {
-            // ONLY Bar items hit the sales endpoint
-            res = await authenticatedFetch(`${API_BASE_URL}/sales`, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
-        }
-
-        if (res) {
-            if (!res.ok) throw new Error(`Failed to process order for ${department}.`);
-            serverResponse = await res.json();
-        }
-
-        // 2. Process Notifications
-        if (department === 'Restaurant') {
-            showMessage('Success', 'Kitchen order sent successfully! 🍳', false);
-        } else if (department === 'Bar') {
-            //showMessage('Success', 'Bar sale recorded to ledger! 🍸💰', false);
-        } else if (activeAccountId) {
-            fetchActiveAccounts();
-            //showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
-        } else {
-            fetchActiveAccounts();
-            //showMessage('Success', 'Walk-in Sale Recorded! 💰✅', false);
-        }
-
-        // 3. Update UI using server response
-        if (typeof updateActiveAccountUI === 'function') {
-            if (activeAccountId) {
-                const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
-                if (accountRes && accountRes.ok) {
-                    const freshAccountData = await accountRes.json();
-                    updateActiveAccountUI(freshAccountData);
-                }
-            } else if (serverResponse && serverResponse.updatedAccount) {
-                activeAccountId = serverResponse.updatedAccount._id || serverResponse.updatedAccount.id;
-                updateActiveAccountUI(serverResponse.updatedAccount);
-            }
-        }
-
-        // --- SUCCESS CLEANUP ---
-        document.getElementById('addChargeForm').reset();
-        
-        if (typeof fetchSales === 'function') fetchSales(); 
-        if (typeof refreshTodayPOSStats === 'function') refreshTodayPOSStats();
-
-    } catch (err) {
-        console.error("Add Charge Error:", err);
-        showMessage('Error', err.message, true);
-    } finally {
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = "SUBMIT ITEM"; 
-        }
-    }
-};
 
 // Add accountId as an explicit second argument
 // Add phone parameter to function definition signature
@@ -7581,57 +7476,70 @@ const settleAccount = async (method, accountId, phone = '') => {
     }
 };
 
+// Global scope tracker for currently active account data
 let currentActiveAccountData = null;
+let activeAccountId = null;
 
-// --- UI UPDATES ---
 const updateActiveAccountUI = (account) => {
     if (!account) return;
 
     currentActiveAccountData = account;
-
-    // Keep activeAccountId in sync with current account object
     activeAccountId = account._id || account.id || activeAccountId;
 
     const charges = account.charges || [];
     const liveTotal = charges.reduce((sum, item) => sum + (Number(item.amount) || Number(item.sp) || 0), 0);
 
-    document.getElementById('currentGuestName').textContent = account.guestName || 'Walk-In Guest';
-    document.getElementById('currentRoomNumber').textContent = account.roomNumber ? `Room ${account.roomNumber}` : 'Walk-In Guest';
-    document.getElementById('totalCharges').textContent = liveTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
+    const guestNameElem = document.getElementById('currentGuestName');
+    const roomNumElem = document.getElementById('currentRoomNumber');
+    const totalChargesElem = document.getElementById('totalCharges');
+
+    if (guestNameElem) guestNameElem.textContent = account.guestName || 'Walk-In Guest';
+    if (roomNumElem) roomNumElem.textContent = account.roomNumber ? `Room ${account.roomNumber}` : 'Walk-In Guest';
+    if (totalChargesElem) totalChargesElem.textContent = liveTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
 
     const chargesListContainer = document.getElementById('chargesList');
     if (chargesListContainer) {
-        // Updated colspan to 4 to account for the new action column
         chargesListContainer.innerHTML = charges.length === 0 
-            ? `<tr><td colspan="4" class="text-center py-4 text-gray-400">No charges yet</td></tr>`
+            ? `<tr><td colspan="4" class="text-center py-6 text-slate-400 italic text-sm">No items in tab</td></tr>`
             : charges.map((item, index) => {
-                const chargeId = item._id || item.id || index; // Fallback to index if subdocument ID doesn't exist
+                const chargeId = item._id || item.id || index;
+                const isCommitted = item.committed || item.status === 'Sent' || item.status === 'Completed';
+                
                 return `
-                    <tr class="border-b border-gray-100 text-sm hover:bg-slate-50/50 transition-colors group">
-                        <td class="py-2 text-gray-400">${item.date ? new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}</td>
-                        <td class="py-2 font-medium text-gray-700">${item.item || item.description}</td>
-                        <td class="py-2 text-right font-bold text-indigo-600">${Number(item.amount || item.sp || 0).toLocaleString()}</td>
-                        <td class="py-2 text-right pr-2">
-                            <button 
-                                type="button"
-                                onclick="deleteAccountCharge('${chargeId}', ${index})" 
-                                class="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-md transition-all inline-flex items-center justify-center"
-                                title="Remove charge"
-                            >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
+                    <tr class="border-b border-slate-100 text-sm hover:bg-slate-50/50 transition-colors group">
+                        <td class="py-2.5 pl-6 text-slate-400 text-xs">${item.date ? new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}</td>
+                        <td class="py-2.5 font-medium text-slate-700">
+                            ${item.item || item.description}
+                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded ml-1 ${
+                                item.type === 'Bar' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                            }">${item.type || item.department || 'Item'}</span>
+                            ${!isCommitted ? '<span class="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 rounded ml-1">Draft</span>' : ''}
+                        </td>
+                        <td class="py-2.5 text-right font-bold text-indigo-600">${Number(item.amount || item.sp || 0).toLocaleString()}</td>
+                        <td class="py-2.5 text-center pr-4">
+                            ${!isCommitted ? `
+                                <button 
+                                    type="button"
+                                    onclick="deleteAccountCharge('${chargeId}', ${index})" 
+                                    class="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-md transition-all inline-flex items-center justify-center"
+                                    title="Remove item from tab"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            ` : '<i class="fas fa-check text-emerald-500 text-xs" title="Posted"></i>'}
                         </td>
                     </tr>
                 `;
             }).join('');
     }
 
+    // Toggle Room post button based on guest assignment
     document.getElementById('postToRoomBtn')?.classList.toggle('hidden', !account.roomNumber);
     document.getElementById('activeAccountSection')?.classList.remove('hidden');
 
-    // Attach listener for modal settlement
+    // Settle Modal Trigger
     const issueBtn = document.getElementById('issueReceiptBtn');
     if (issueBtn) {
         issueBtn.onclick = (e) => {
@@ -7641,13 +7549,188 @@ const updateActiveAccountUI = (account) => {
             const settleForm = document.getElementById('settleBillForm');
             if (settleForm) settleForm.setAttribute('data-account-id', activeAccountId);
 
-            document.getElementById('settleModalTotal').textContent = `${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : '$'}${liveTotal.toLocaleString()}`;
-            document.getElementById('settleModalGuest').textContent = `${account.guestName} (${account.roomNumber ? 'Room ' + account.roomNumber : 'Walk-In Guest'})`;
+            const totalDisplay = document.getElementById('settleModalTotal');
+            if (totalDisplay) totalDisplay.textContent = `${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX '}${liveTotal.toLocaleString()}`;
+            
+            const guestDisplay = document.getElementById('settleModalGuest');
+            if (guestDisplay) guestDisplay.textContent = `${account.guestName} (${account.roomNumber ? 'Room ' + account.roomNumber : 'Walk-In Guest'})`;
 
             const settleModal = document.getElementById('settleBillModal');
             settleModal?.classList.remove('hidden');
             settleModal?.classList.add('flex');
         };
+    }
+};
+
+/**
+ * 1. STAGE CHARGE TO TAB (Draft Mode)
+ * Adds the item to the client account charges without committing sales or kitchen orders yet.
+ */
+const addCharge = async (description, number, department) => {
+    const hotelId = localStorage.getItem('hotelId') || (typeof getHotelId === 'function' ? getHotelId() : null);
+    const submitBtn = document.getElementById('submitBtn');
+
+    const itemInfo = document.getElementById('itemDesc')?.dataset || {};
+    const qtyValue = parseInt(number) || 1;
+    const tableNum = document.getElementById('tableNum')?.value || "N/A";
+
+    const basePrice = parseFloat(itemInfo.bp || 0);
+    const sellingPrice = parseFloat(document.getElementById('itemPrice')?.value || itemInfo.sp || 0);
+    const calculatedProfit = (sellingPrice - basePrice) * qtyValue;
+    const profitPercentage = basePrice !== 0 ? (calculatedProfit / (basePrice * qtyValue)) * 100 : 0;
+
+    if (!description || isNaN(qtyValue) || isNaN(sellingPrice)) {
+        return showMessage('Incomplete Form', 'Please fill all fields with valid data.', true);
+    }
+
+    const newChargeItem = {
+        hotelId,
+        item: description.trim(),
+        description: description.trim(),
+        department,
+        type: department,
+        number: qtyValue,
+        quantity: qtyValue,
+        bp: basePrice,
+        sp: sellingPrice,
+        amount: sellingPrice * qtyValue,
+        profit: calculatedProfit,
+        percentageprofit: profitPercentage,
+        tableNumber: tableNum,
+        date: new Date(),
+        committed: false // Uncommitted draft tag
+    };
+
+    try {
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ADDING...`;
+        }
+
+        // Add to Client Account tab draft endpoint (or local draft state)
+        if (activeAccountId) {
+            const res = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}/add-item`, {
+                method: 'POST',
+                body: JSON.stringify(newChargeItem)
+            });
+
+            if (res && res.ok) {
+                const freshAccountData = await res.json();
+                updateActiveAccountUI(freshAccountData);
+            }
+        } else {
+            // Local fallback for quick draft session
+            if (!currentActiveAccountData) {
+                currentActiveAccountData = { guestName: 'Walk-In Guest', charges: [] };
+            }
+            currentActiveAccountData.charges.push(newChargeItem);
+            updateActiveAccountUI(currentActiveAccountData);
+        }
+
+        document.getElementById('addChargeForm')?.reset();
+
+    } catch (err) {
+        console.error("Add Charge Error:", err);
+        showMessage('Error', err.message, true);
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = "SUBMIT ITEM"; 
+        }
+    }
+};
+
+/**
+ * 2. COMPLETE ORDER (Commit Sales & Kitchen Orders)
+ * Processes all uncommitted items from the folio and dispatches them to their respective endpoints.
+ */
+const completeCurrentOrder = async () => {
+    if (!currentActiveAccountData || !currentActiveAccountData.charges || currentActiveAccountData.charges.length === 0) {
+        return showMessage('No Items', 'There are no active items in this tab to complete.', true);
+    }
+
+    const completeBtn = document.getElementById('completeOrderBtn');
+    const hotelId = localStorage.getItem('hotelId') || (typeof getHotelId === 'function' ? getHotelId() : null);
+
+    // Extract uncommitted draft charges
+    const uncommittedCharges = currentActiveAccountData.charges.filter(item => !item.committed && item.status !== 'Sent');
+
+    if (uncommittedCharges.length === 0) {
+        return showMessage('Notice', 'All items in this tab have already been processed.', false);
+    }
+
+    try {
+        if (completeBtn) {
+            completeBtn.disabled = true;
+            completeBtn.innerHTML = `<i class="fas fa-spinner fa-spin mb-1 text-sm"></i><span class="text-[10px] font-extrabold uppercase">Processing...</span>`;
+        }
+
+        // Iterate through items and post to specific endpoints
+        for (const item of uncommittedCharges) {
+            const department = item.department || item.type;
+            const payload = {
+                hotelId: hotelId,
+                item: item.item || item.description,
+                department: department,
+                number: item.number || item.quantity || 1,
+                bp: item.bp || 0,
+                sp: item.sp || item.amount,
+                profit: item.profit || 0,
+                percentageprofit: item.percentageprofit || 0,
+                accountId: activeAccountId || null,
+                tableNumber: item.tableNumber || "N/A",
+                isQuickSale: !activeAccountId,
+                date: item.date || new Date(),
+                recordedBy: typeof currentUsername !== 'undefined' ? currentUsername : 'System User',
+                role: typeof currentUserRole !== 'undefined' ? currentUserRole : 'POS User'
+            };
+
+            if (department === 'Restaurant') {
+                // Restaurant items hit Kitchen Orders endpoint
+                await authenticatedFetch(`${API_BASE_URL}/kitchen/order`, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+            } else if (department === 'Bar') {
+                // Bar items hit Sales Ledger endpoint
+                await authenticatedFetch(`${API_BASE_URL}/sales`, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+            }
+            
+            // Mark charge as committed locally
+            item.committed = true;
+            item.status = 'Sent';
+        }
+
+        showMessage('Success', 'Order completed! Kitchen ticket sent & sales recorded. 🍽️🍸', false);
+
+        // Sync with backend active account state
+        if (activeAccountId) {
+            const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
+            if (accountRes && accountRes.ok) {
+                const freshData = await accountRes.json();
+                updateActiveAccountUI(freshData);
+            }
+        } else {
+            updateActiveAccountUI(currentActiveAccountData);
+        }
+
+        if (typeof fetchSales === 'function') fetchSales();
+        if (typeof refreshTodayPOSStats === 'function') refreshTodayPOSStats();
+
+    } catch (err) {
+        console.error("Complete Order Error:", err);
+        showMessage('Error', `Failed to complete order: ${err.message}`, true);
+    } finally {
+        if (completeBtn) {
+            completeBtn.disabled = false;
+            completeBtn.innerHTML = `
+                <i class="fas fa-check-circle mb-1 text-sm group-hover:scale-110 transition-transform"></i>
+                <span class="text-[10px] font-extrabold uppercase tracking-tight">Complete Order</span>
+            `;
+        }
     }
 };
 

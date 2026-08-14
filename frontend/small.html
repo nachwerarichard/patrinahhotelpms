@@ -1606,11 +1606,11 @@
                     </form>
                 </div>
 
-                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+       <div class="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
     <!-- Header -->
     <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
         <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Live Folio</h3>
-        <span class="text-[10px] font-bold text-indigo-500 px-2 py-0.5 bg-indigo-50 rounded">AUTO-SAVING</span>
+        <span id="folioStatusBadge" class="text-[10px] font-bold text-amber-600 px-2 py-0.5 bg-amber-50 rounded uppercase">Open Tab</span>
     </div>
 
     <!-- Scrollable Table Container -->
@@ -1622,14 +1622,12 @@
                     <th class="pl-6 pr-2 py-3 w-1/4">Time</th>
                     <th class="px-2 py-3 w-2/5">Item</th>
                     <th class="px-2 py-3 text-right">Price</th>
-                    <!-- Added Action Column for Delete -->
                     <th class="pl-2 pr-6 py-3 text-center w-12">Action</th>
                 </tr>
             </thead>
             
             <!-- Dynamic Charges Body -->
             <tbody id="chargesList" class="divide-y divide-slate-50">
-                <!-- Colspan updated to 4 for empty state alignment -->
                 <tr>
                     <td colspan="4" class="px-6 py-10 text-center text-slate-400 italic text-sm">
                         No items posted yet
@@ -1639,15 +1637,24 @@
         </table>
     </div>
 
-    <!-- Actions Footer -->
-    <div class="p-6 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-3">
-        <button id="postToRoomBtn" class="flex flex-col items-center justify-center p-3 border-2 border-indigo-100 bg-white text-indigo-600 rounded-2xl hover:border-indigo-600 transition-all group">
-            <i class="fas fa-bed mb-1 group-hover:scale-110 transition-transform"></i>
-            <span class="text-[10px] font-extrabold uppercase">Post to Room</span>
+    <!-- Actions Footer: 3-Button Layout -->
+    <div class="p-4 bg-slate-50 border-t border-slate-100 grid grid-cols-3 gap-2">
+        <!-- 1. COMPLETE / COMMIT ORDER BUTTON -->
+        <button id="completeOrderBtn" type="button" onclick="completeCurrentOrder()" class="flex flex-col items-center justify-center p-3 border-2 border-emerald-500 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all group disabled:opacity-50 disabled:cursor-not-allowed">
+            <i class="fas fa-check-circle mb-1 text-sm group-hover:scale-110 transition-transform"></i>
+            <span class="text-[10px] font-extrabold uppercase tracking-tight">Complete Order</span>
         </button>
-        <button id="issueReceiptBtn" class="flex flex-col items-center justify-center p-3 bg-slate-900 text-white rounded-2xl hover:bg-black transition-all group">
-            <i class="fas fa-print mb-1 group-hover:scale-110 transition-transform"></i>
-            <span class="text-[10px] font-extrabold uppercase">Settle Bill</span>
+
+        <!-- 2. POST TO ROOM -->
+        <button id="postToRoomBtn" type="button" class="flex flex-col items-center justify-center p-3 border-2 border-indigo-100 bg-white text-indigo-600 rounded-2xl hover:border-indigo-600 transition-all group">
+            <i class="fas fa-bed mb-1 text-sm group-hover:scale-110 transition-transform"></i>
+            <span class="text-[10px] font-extrabold uppercase tracking-tight">Post to Room</span>
+        </button>
+
+        <!-- 3. SETTLE BILL -->
+        <button id="issueReceiptBtn" type="button" class="flex flex-col items-center justify-center p-3 bg-slate-900 text-white rounded-2xl hover:bg-black transition-all group">
+            <i class="fas fa-print mb-1 text-sm group-hover:scale-110 transition-transform"></i>
+            <span class="text-[10px] font-extrabold uppercase tracking-tight">Settle Bill</span>
         </button>
     </div>
 </div>
