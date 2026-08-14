@@ -1517,355 +1517,305 @@
     </form>
   </div>
 </div>
-           <section id="sale" class="section bg-slate-50 p-4 md:p-8 rounded-3xl shadow-sm mb-8 hidden">
-    <!-- TOP MODULE HEADER -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-4 border-b border-slate-200">
-        <div>
-            <div class="flex items-center gap-2">
-                <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-700 font-bold text-[10px] rounded-full uppercase tracking-wider">POS Terminal #01</span>
-                <span class="text-xs text-slate-400 font-medium">| Outlet: Main Restaurant & Bar</span>
+            <section id="sale" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-lg font-bold text-slate-900 leading-tight">Sales</h2>
+        <!--<button onclick="toggleSaleModal(true)" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 flex items-center space-x-2">
+            <i class="fas fa-plus-circle"></i>
+            <span>Manual Sale Entry</span>
+        </button>-->
+    </div>
+<!-- <div id="messageBox" class="fixed top-20 right-4 z-50 transition-all duration-300 transform translate-x-full"></div>-->
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div class="lg:col-span-9 space-y-6">
+        <div id="activeAccountSection" class="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <!-- Active Folio Header Card -->
+            <div class="bg-slate-900 rounded-[2rem] p-8 text-white flex flex-col md:flex-row justify-between items-center shadow-xl relative overflow-hidden">
+                <div class="relative z-10">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="px-2 py-0.5 bg-emerald-500 text-[10px] font-black rounded uppercase">Active Folio</span>
+                        <span id="currentRoomNumber" class="text-indigo-300 text-sm font-bold tracking-widest"></span>
+                    </div>
+                    <h2 id="currentGuestName" class="text-3xl font-black">New Sale</h2>
+                </div>
+                
+                <div class="flex items-center gap-6 mt-6 md:mt-0 relative z-10">
+                    <!-- NEW WALK-IN / RESET BUTTON -->
+                    <button 
+                        type="button" 
+                        onclick="resetActiveFolio()" 
+                        class="px-4 py-2.5 bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition-all border border-slate-700/60 flex items-center gap-2 shadow-sm"
+                        title="Clear current active session and start a new walk-in order"
+                    >
+                        <i class="fas fa-user-plus text-emerald-400"></i>
+                        <span>New Walk-In</span>
+                    </button>
+
+                    <div class="text-center md:text-right">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-tighter mb-1">Unpaid Balance</p>
+                        <div class="flex items-baseline justify-center md:justify-end gap-1">
+                            <span class="text-slate-400 text-lg font-medium"></span>
+                            <span id="totalCharges" class="text-5xl font-black text-white">0.00</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="absolute right-0 top-0 w-64 h-64 bg-indigo-500 opacity-10 rounded-full -mr-20 -mt-20"></div>
             </div>
-            <h2 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Point of Sale & Folio Management</h2>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-6 flex items-center gap-2">
+                        <i class="fas fa-cart-plus text-indigo-500"></i> Sales
+                    </h3>
+                    <form id="addChargeForm" class="space-y-5">
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Search Inventory</label>
+                            <input 
+                                list="inventoryItems" 
+                                name="description" 
+                                id="itemDesc" 
+                                oninput="autoFillPrices(this.value)" 
+                                onchange="autoFillPrices(this.value)" 
+                                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" 
+                                placeholder="Type item name..."
+                            >
+                            <datalist id="inventoryItems"></datalist>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Department</label>
+                            <select name="department" id="deptSelect" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700">
+                                <option value="">Select Department</option>
+                                <option value="Bar">Bar</option>
+                                <option value="Restaurant">Restaurant</option>
+                            </select>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="col-span-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Qty</label>
+                                <input type="number" name="number" id="number" value="1" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
+                            </div>
+                            <div class="col-span-2">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Selling Price</label>
+                                <input type="number" name="amount" id="itemPrice" class="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl outline-none text-slate-600 font-bold">
+                            </div>
+                        </div>
+                           
+                        <button type="submit" id="submitBtn" class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg transition-all uppercase tracking-widest text-sm">Add Item</button>
+                    </form>
+                </div>
+
+       <div class="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+    <!-- Header -->
+    <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Live Folio</h3>
+        <span id="folioStatusBadge" class="text-[10px] font-bold text-amber-600 px-2 py-0.5 bg-amber-50 rounded uppercase">Open Tab</span>
+    </div>
+
+    <!-- Scrollable Table Container -->
+    <div class="flex-grow overflow-y-auto max-h-[280px] custom-scroll relative">
+        <table class="w-full text-left border-collapse table-fixed">
+            <!-- Sticky Table Header -->
+            <thead class="sticky top-0 bg-white shadow-sm z-10">
+                <tr class="text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
+                    <th class="pl-4 pr-2 py-3 w-[22%]">Time</th>
+                    <th class="px-2 py-3 w-[45%]">Item</th>
+                    <th class="px-2 py-3 text-right w-[20%]">Price</th>
+                    <th class="pl-2 pr-4 py-3 text-center w-[13%]">Action</th>
+                </tr>
+            </thead>
+            
+            <!-- Dynamic Charges Body -->
+            <tbody id="chargesList" class="divide-y divide-slate-50">
+                <tr>
+                    <td colspan="4" class="px-6 py-10 text-center text-slate-400 italic text-sm">
+                        No items posted yet
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Actions Footer Container -->
+<div id="folioActionsFooter" class="p-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row gap-2">
+    <!-- 1. Complete Order (Primary Step: Shown when draft items exist) -->
+    <button id="completeOrderBtn" type="button" onclick="completeCurrentOrder()" class="w-full flex-1 flex flex-col items-center justify-center p-3 border-2 border-emerald-500 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all group disabled:opacity-50 disabled:cursor-not-allowed">
+        <i class="fas fa-check-circle mb-1 text-sm group-hover:scale-110 transition-transform"></i>
+        <span class="text-[10px] font-extrabold uppercase tracking-tight">Complete Order</span>
+    </button>
+
+    <!-- 2. Post to Room (Secondary Step: Hidden until order is completed & guest has room) -->
+    <button id="postToRoomBtn" type="button" class="hidden w-full flex-1 flex flex-col items-center justify-center p-3 border-2 border-indigo-100 bg-white text-indigo-600 rounded-2xl hover:border-indigo-600 transition-all group">
+        <i class="fas fa-bed mb-1 text-sm group-hover:scale-110 transition-transform"></i>
+        <span class="text-[10px] font-extrabold uppercase tracking-tight">Post to Room</span>
+    </button>
+
+    <!-- 3. Settle Bill (Secondary Step: Hidden until order is completed) -->
+    <button id="issueReceiptBtn" type="button" class="hidden w-full flex-1 flex flex-col items-center justify-center p-3 bg-slate-900 text-white rounded-2xl hover:bg-black transition-all group">
+        <i class="fas fa-print mb-1 text-sm group-hover:scale-110 transition-transform"></i>
+        <span class="text-[10px] font-extrabold uppercase tracking-tight">Settle Bill</span>
+    </button>
+</div>
+</div>
+            </div>
         </div>
-        
-        <div class="flex items-center gap-3">
-            <button onclick="fetchSales()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-2">
-                <i class="fas fa-sync-alt text-slate-400"></i> Refresh System
+    </div>
+
+    <div class="lg:col-span-3 space-y-6">
+        <div id="createAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">New In-house guest</h2>
+            
+            <form id="createAccountForm" class="space-y-4">
+                <div class="relative">
+                    <input type="text" name="guestName" id="guestname" autocomplete="off" required 
+                           placeholder="Guest Full Name" 
+                           class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                    
+                    <div id="bookingSuggestions" 
+                         class="hidden absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                    </div>
+                </div>
+
+                <input type="text" name="roomNumber" id="roomNumber" placeholder="Room Number" 
+                       class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                
+                <button type="submit" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl text-sm">Open Account</button>
+            </form>
+        </div>
+
+        <div id="searchAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-3">Search Accounts</label>
+            <form id="searchAccountForm" class="relative">
+                <input type="text" id="searchQuery" required placeholder="Name or Room..." class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                <button type="submit" class="absolute right-2 top-2 p-1.5 bg-indigo-600 text-white rounded-lg"><i class="fas fa-search"></i></button>
+            </form>
+            <div id="searchResults" class="mt-4 space-y-2 max-h-48 overflow-y-auto"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Settle Bill Confirmation Modal -->
+<div
+    id="settleBillModal"
+    class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4 backdrop-blur-sm"
+>
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-md transform transition-all overflow-hidden border border-slate-100">
+        <!-- Header -->
+        <div class="flex justify-between items-center border-b border-slate-100 px-8 py-5 bg-slate-50/50">
+            <h2 class="text-base font-black text-slate-900 uppercase tracking-wider">
+                Settle Folio Bill
+            </h2>
+            <button
+                type="button"
+                id="closeSettleModalBtn"
+                class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-xl text-2xl transition-colors leading-none"
+            >
+                &times;
+            </button>
+        </div>
+
+        <!-- Form Context -->
+        <form id="settleBillForm" class="p-8 space-y-6">
+            <!-- Summary Card -->
+            <div class="bg-slate-900 rounded-2xl p-5 text-white flex justify-between items-center">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Amount Due</p>
+                    <span id="settleModalGuest" class="text-xs font-semibold text-indigo-300 block mt-0.5">Guest Folio</span>
+                </div>
+                <div class="text-right">
+                    <span id="settleModalTotal" class="text-3xl font-black text-white">0.00</span>
+                </div>
+            </div>
+
+            <!-- Payment Selection -->
+            <div class="space-y-2">
+                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Choose Payment Method</label>
+                <select
+                    id="settlePaymentMethod"
+                    required
+                    class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"
+                    onchange="togglePesapalFields(this.value)"
+                >
+                    <option value="Cash">Cash </option>
+                    <option value="MTN Momo">MTN Momo</option>
+                    <option value="Airtel Pay">Airtel Pay </option>
+                    <option value="Pesapal">Pesapal </option>
+                </select>
+            </div>
+
+            <!-- Conditionally Visible Pesapal Phone Input Container -->
+            <div id="pesapalPhoneContainer" class="space-y-2 hidden">
+                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Guest Phone Number (Required for Pesapal)</label>
+                <input 
+                    type="tel" 
+                    id="settlePesapalPhone" 
+                    placeholder="e.g. +256770000000"
+                    class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 font-semibold"
+                />
+            </div>
+
+            <!-- Action Buttons -->
+            <button
+                type="submit"
+                class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg transition-all uppercase tracking-widest text-sm"
+            >
+                Confirm Settlement
+            </button>
+        </form>
+    </div>
+</div>
+    <div id="sales-records" class="mt-12 pt-8 border-t border-slate-200">
+    <h3 class="text-xl font-bold mb-6 text-slate-800">Historical Sales Records</h3>
+    
+    <div class="filter-controls flex flex-col sm:flex-row flex-wrap gap-4 mb-6 items-stretch sm:items-end bg-slate-50 p-4 rounded-2xl border border-slate-100">
+        <div class="flex-1 min-w-[200px]">
+            <label for="sales-date-filter" class="block text-xs font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Search by Date:</label>
+            <input type="date" id="sales-date-filter" onchange="fetchSales()" class="w-full p-2.5 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm shadow-sm">
+        </div>
+        <div class="flex gap-3">
+            <button id="sales-search-button" onclick="fetchSales()" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm focus:outline-none">
+                <i class="fas fa-search"></i> Search
+            </button>
+            <button class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm focus:outline-none" onclick="exportTableToExcel('sales-table', 'Sales_Report')">
+                <i class="fas fa-file-excel"></i> Export Excel
             </button>
         </div>
     </div>
-
-    <!-- MAIN TERMINAL GRID -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <!-- LEFT COLUMN: ACTIVE FOLIO & ITEM ENTRY (9 COLS) -->
-        <div class="lg:col-span-9 space-y-6">
-            <div id="activeAccountSection" class="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                
-                <!-- ACTIVE FOLIO HEADER CARD -->
-                <div class="bg-slate-900 rounded-[2.5rem] p-6 md:p-8 text-white flex flex-col md:flex-row justify-between items-start md:items-center shadow-xl relative overflow-hidden">
-                    <div class="relative z-10 space-y-1">
-                        <div class="flex items-center gap-2">
-                            <span id="folioTypeBadge" class="px-2.5 py-0.5 bg-emerald-500 text-slate-950 text-[10px] font-black rounded-md uppercase tracking-wider">Walk-In Customer</span>
-                            <span id="currentRoomNumber" class="text-indigo-300 text-xs font-bold tracking-widest uppercase"></span>
-                        </div>
-                        <h2 id="currentGuestName" class="text-3xl font-black tracking-tight">Direct Sales Terminal</h2>
-                        <p class="text-xs text-slate-400 font-mono">Folio ID: <span id="currentFolioId" class="text-slate-200">#WALK-IN-TEMP</span></p>
-                    </div>
-                    
-                    <div class="flex items-center gap-6 mt-6 md:mt-0 relative z-10 w-full md:w-auto justify-between md:justify-end">
-                        <button 
-                            type="button" 
-                            onclick="resetActiveFolio()" 
-                            class="px-4 py-3 bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white rounded-2xl text-xs font-extrabold transition-all border border-slate-700/80 flex items-center gap-2 shadow-sm"
-                            title="Clear active workspace and start a new non-resident transaction"
-                        >
-                            <i class="fas fa-user-plus text-emerald-400"></i>
-                            <span>New Transaction</span>
-                        </button>
-
-                        <div class="text-right">
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Folio Balance</p>
-                            <div class="flex items-baseline justify-end gap-1.5">
-                                <span id="folioCurrencySymbol" class="text-indigo-400 text-sm font-black">UGX</span>
-                                <span id="totalCharges" class="text-4xl font-black text-white tracking-tight">0.00</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="absolute right-0 top-0 w-80 h-80 bg-indigo-600 opacity-10 rounded-full -mr-20 -mt-20 blur-2xl pointer-events-none"></div>
-                </div>
-
-                <!-- ITEM POSTING & LIVE FOLIO GRID -->
-                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    
-                    <!-- ITEM CHARGE POSTING FORM -->
-                    <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
-                        <div>
-                            <div class="flex justify-between items-center mb-6">
-                                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                    <i class="fas fa-cart-plus text-indigo-600"></i> Post Department Charge
-                                </h3>
-                                <span class="text-[10px] text-slate-400 font-bold">Standard Standard Bar/Resto</span>
-                            </div>
-
-                            <form id="addChargeForm" class="space-y-4">
-                                <div class="space-y-1">
-                                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">Search Inventory / Item Name</label>
-                                    <input 
-                                        list="inventoryItems" 
-                                        name="description" 
-                                        id="itemDesc" 
-                                        oninput="autoFillPrices(this.value)" 
-                                        onchange="autoFillPrices(this.value)" 
-                                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all" 
-                                        placeholder="Type product name or scan barcode..."
-                                        required
-                                    >
-                                    <datalist id="inventoryItems"></datalist>
-                                </div>
-
-                                <div>
-                                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">Department Outlet</label>
-                                    <select name="department" id="deptSelect" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm text-slate-700 transition-all">
-                                        <option value="">Select Department Outlet</option>
-                                        <option value="Bar">Beverage / Bar</option>
-                                        <option value="Restaurant">Food / Restaurant</option>
-                                        <option value="Room Service">In-Room Dining</option>
-                                        <option value="Laundry">Laundry Service</option>
-                                        <option value="Spa">Spa & Wellness</option>
-                                        <option value="Miscellaneous">Miscellaneous Revenue</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="grid grid-cols-3 gap-3">
-                                    <div class="col-span-1">
-                                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">Quantity</label>
-                                        <input type="number" name="number" id="number" min="1" value="1" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-black text-slate-800 focus:ring-2 focus:ring-indigo-500">
-                                    </div>
-                                    <div class="col-span-2">
-                                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">Unit Price (<span class="currencyLabel">UGX</span>)</label>
-                                        <input type="number" step="any" name="amount" id="itemPrice" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none text-slate-800 font-black focus:ring-2 focus:ring-indigo-500" placeholder="0.00" required>
-                                    </div>
-                                </div>
-                                   
-                                <button type="submit" id="submitBtn" class="w-full py-4 bg-emerald-600 text-white font-black rounded-2xl hover:bg-emerald-700 shadow-md hover:shadow-lg transition-all uppercase tracking-widest text-xs mt-2">
-                                    Add Charge to Folio
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- LIVE FOLIO STATEMENT DISPLAY -->
-                    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between overflow-hidden">
-                        <div>
-                            <!-- Header -->
-                            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/70">
-                                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Live Guest Folio</h3>
-                                <span id="folioStatusBadge" class="text-[10px] font-black text-amber-700 px-2.5 py-1 bg-amber-100/80 rounded-full uppercase tracking-wider">Open Tab</span>
-                            </div>
-
-                            <!-- Scrollable Table Container -->
-                            <div class="flex-grow overflow-y-auto max-h-[290px] custom-scroll relative">
-                                <table class="w-full text-left border-collapse table-fixed">
-                                    <thead class="sticky top-0 bg-white shadow-xs z-10">
-                                        <tr class="text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
-                                            <th class="pl-4 pr-2 py-3 w-[22%]">Posting Time</th>
-                                            <th class="px-2 py-3 w-[43%]">Description</th>
-                                            <th class="px-2 py-3 text-right w-[22%]">Amount</th>
-                                            <th class="pl-2 pr-4 py-3 text-center w-[13%]">Void</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="chargesList" class="divide-y divide-slate-50 text-xs font-medium text-slate-700">
-                                        <tr>
-                                            <td colspan="4" class="px-6 py-12 text-center text-slate-400 italic font-normal">
-                                                No transactions posted to current folio
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Actions Footer Container -->
-                        <div id="folioActionsFooter" class="p-4 bg-slate-50/80 border-t border-slate-100 flex flex-col sm:flex-row gap-2">
-                            <!-- 1. Dispatch Order -->
-                            <button id="completeOrderBtn" type="button" onclick="completeCurrentOrder()" class="w-full flex-1 flex flex-col items-center justify-center p-3 border-2 border-emerald-500 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all group disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
-                                <i class="fas fa-check-circle mb-1 text-sm group-hover:scale-110 transition-transform"></i>
-                                <span class="text-[10px] font-black uppercase tracking-wider">Commit & Send KOT</span>
-                            </button>
-
-                            <!-- 2. Transfer Charge to Room -->
-                            <button id="postToRoomBtn" type="button" class="hidden w-full flex-1 flex flex-col items-center justify-center p-3 border-2 border-indigo-200 bg-indigo-50/50 text-indigo-700 rounded-2xl hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all group shadow-sm">
-                                <i class="fas fa-bed mb-1 text-sm group-hover:scale-110 transition-transform"></i>
-                                <span class="text-[10px] font-black uppercase tracking-wider">Post to Room Folio</span>
-                            </button>
-
-                            <!-- 3. Settle Bill -->
-                            <button id="issueReceiptBtn" type="button" class="hidden w-full flex-1 flex flex-col items-center justify-center p-3 bg-slate-900 text-white rounded-2xl hover:bg-black transition-all group shadow-sm">
-                                <i class="fas fa-receipt mb-1 text-sm group-hover:scale-110 transition-transform"></i>
-                                <span class="text-[10px] font-black uppercase tracking-wider">Settle Folio Bill</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- RIGHT COLUMN: IN-HOUSE GUEST REGISTRY & SEARCH (3 COLS) -->
-        <div class="lg:col-span-3 space-y-6">
-            
-            <!-- OPEN GUEST FOLIO MODULE -->
-            <div id="createAccountSection" class="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest">In-House Guest Registry</h2>
-                    <i class="fas fa-hotel text-slate-300"></i>
-                </div>
-                
-                <form id="createAccountForm" class="space-y-3">
-                    <div class="relative">
-                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">Guest Full Name</label>
-                        <input type="text" name="guestName" id="guestname" autocomplete="off" required 
-                               placeholder="Search or enter guest name..." 
-                               class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
-                        
-                        <div id="bookingSuggestions" 
-                             class="hidden absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-60 overflow-y-auto">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">Assigned Room #</label>
-                        <input type="text" name="roomNumber" id="roomNumber" placeholder="e.g. 104, Suite A" 
-                               class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
-                    </div>
-                    
-                    <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-black text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm">
-                        Attach / Open Folio
-                    </button>
-                </form>
-            </div>
-
-            <!-- SEARCH ACTIVE FOLIOS MODULE -->
-            <div id="searchAccountSection" class="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5">
-                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Lookup Active Folios</label>
-                <form id="searchAccountForm" class="relative">
-                    <input type="text" id="searchQuery" required placeholder="Room #, Guest Name, or Folio ID..." class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
-                    <button type="submit" class="absolute right-1.5 top-1.5 p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"><i class="fas fa-search text-xs"></i></button>
-                </form>
-                <div id="searchResults" class="mt-3 space-y-2 max-h-48 overflow-y-auto custom-scroll"></div>
-            </div>
-        </div>
+    
+    <!-- DESKTOP TABLE VIEW -->
+    <div class="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
+        <table id="sales-table" class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
+                    <th class="px-6 py-4">Dept</th>
+                    <th class="px-6 py-4">Item</th>
+                    <th class="px-6 py-4 text-center">Qty</th>
+                    <th class="px-6 py-4">BP</th>
+                    <th class="px-6 py-4">SP</th>
+                    <th class="px-6 py-4">Profit</th>
+                    <th class="px-6 py-4">%</th>
+                    <th class="px-6 py-4">Date</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
+            </tbody>
+        </table>
     </div>
 
-    <!-- INTERNATIONAL SETTLEMENT MODAL -->
-    <div id="settleBillModal" class="fixed inset-0 bg-slate-950/70 hidden items-center justify-center z-50 p-4 backdrop-blur-md">
-        <div class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg transform transition-all overflow-hidden border border-slate-100">
-            <!-- Modal Header -->
-            <div class="flex justify-between items-center border-b border-slate-100 px-8 py-5 bg-slate-50/80">
-                <div>
-                    <h2 class="text-sm font-black text-slate-900 uppercase tracking-wider">Folio Settlement & Checkout</h2>
-                    <p class="text-[11px] text-slate-400">Finalize payments and issue formal tax receipts</p>
-                </div>
-                <button type="button" id="closeSettleModalBtn" class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-2 rounded-xl text-xl transition-colors leading-none">&times;</button>
-            </div>
-
-            <!-- Modal Form Context -->
-            <form id="settleBillForm" class="p-8 space-y-5">
-                <!-- Summary Card -->
-                <div class="bg-slate-900 rounded-2xl p-6 text-white flex justify-between items-center shadow-inner relative overflow-hidden">
-                    <div class="relative z-10">
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Outstanding Due</p>
-                        <span id="settleModalGuest" class="text-xs font-bold text-indigo-300 block mt-0.5">Guest: Walk-In / General</span>
-                    </div>
-                    <div class="text-right relative z-10">
-                        <span id="settleModalTotal" class="text-3xl font-black text-white tracking-tight">0.00</span>
-                    </div>
-                </div>
-
-                <!-- Currency & Gateway Selector -->
-                <div class="grid grid-cols-3 gap-3">
-                    <div class="col-span-1">
-                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">Currency</label>
-                        <select id="settleCurrency" class="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-extrabold text-xs text-slate-700">
-                            <option value="UGX">UGX (Shs)</option>
-                            <option value="USD">USD ($)</option>
-                            <option value="EUR">EUR (€)</option>
-                            <option value="GBP">GBP (£)</option>
-                        </select>
-                    </div>
-                    <div class="col-span-2">
-                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">Payment Method</label>
-                        <select
-                            id="settlePaymentMethod"
-                            required
-                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-xs text-slate-800"
-                            onchange="togglePesapalFields(this.value)"
-                        >
-                            <option value="Cash">Cash / Local Currency</option>
-                            <option value="Visa/Mastercard">Credit/Debit Card (POS Terminal)</option>
-                            <option value="City Ledger">Direct Bill / City Ledger (Corporate)</option>
-                            <option value="Pesapal">Pesapal Gateway (Card/Online)</option>
-                            <option value="MTN Momo">MTN Mobile Money</option>
-                            <option value="Airtel Pay">Airtel Pay</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Conditional Digital Gateway Container -->
-                <div id="pesapalPhoneContainer" class="space-y-1.5 hidden">
-                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">Guest Phone Number / Cardholder Ref</label>
-                    <input 
-                        type="tel" 
-                        id="settlePesapalPhone" 
-                        placeholder="e.g. +256770000000"
-                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-semibold text-slate-800"
-                    />
-                </div>
-
-                <!-- Confirm Button -->
-                <button
-                    type="submit"
-                    class="w-full py-4 bg-emerald-600 text-white font-black rounded-2xl hover:bg-emerald-700 shadow-lg hover:shadow-xl transition-all uppercase tracking-widest text-xs mt-2"
-                >
-                    Post Payment & Print Receipt
-                </button>
-            </form>
-        </div>
+    <!-- MOBILE CARD GRID VIEW -->
+    <div id="sales-mobile-grid" class="block md:hidden space-y-4">
     </div>
 
-    <!-- AUDIT & HISTORICAL SALES RECORDS -->
-    <div id="sales-records" class="mt-12 pt-8 border-t border-slate-200">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <div>
-                <h3 class="text-xl font-black text-slate-900 tracking-tight">Department Sales Audit Log</h3>
-                <p class="text-xs text-slate-400">Historical revenue entries across all hotel outlets</p>
-            </div>
-            
-            <div class="filter-controls flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
-                <div class="flex-1 min-w-[160px]">
-                    <label for="sales-date-filter" class="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-wider">Filter Date:</label>
-                    <input type="date" id="sales-date-filter" onchange="fetchSales()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-semibold text-slate-700">
-                </div>
-                <div class="flex gap-2">
-                    <button id="sales-search-button" onclick="fetchSales()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-colors shadow-xs">
-                        <i class="fas fa-filter"></i> Filter
-                    </button>
-                    <button class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-colors shadow-xs" onclick="exportTableToExcel('sales-table', 'Sales_Audit_Report')">
-                        <i class="fas fa-file-excel"></i> Export CSV/Excel
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- DESKTOP AUDIT TABLE -->
-        <div class="hidden md:block overflow-x-auto border border-slate-200/80 rounded-2xl bg-white shadow-sm">
-            <table id="sales-table" class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-400 uppercase text-[10px] font-black tracking-wider">
-                        <th class="px-6 py-4">Outlet</th>
-                        <th class="px-6 py-4">Item Description</th>
-                        <th class="px-6 py-4 text-center">Qty</th>
-                        <th class="px-6 py-4">Cost Price (BP)</th>
-                        <th class="px-6 py-4">Sale Price (SP)</th>
-                        <th class="px-6 py-4">Gross Margin</th>
-                        <th class="px-6 py-4">Margin %</th>
-                        <th class="px-6 py-4">Timestamp</th>
-                        <th class="px-6 py-4 text-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                </tbody>
-            </table>
-        </div>
-
-        <!-- MOBILE CARD GRID VIEW -->
-        <div id="sales-mobile-grid" class="block md:hidden space-y-4"></div>
-
-        <!-- MOBILE SUMMARY CONTAINER -->
-        <div id="sales-summary" class="block md:hidden mt-6 p-5 bg-amber-50/80 rounded-2xl border border-amber-200/80 text-xs text-slate-700 shadow-xs leading-relaxed"></div>
-
-        <!-- PAGINATION CONTAINER -->
-        <div id="sales-pagination" class="mt-6 flex justify-center gap-2"></div>
+    <!-- MOBILE ONLY SUMMARY CARDS CONTAINER -->
+    <div id="sales-summary" class="block md:hidden mt-6 p-5 bg-amber-50/60 rounded-xl border border-amber-200 text-sm text-slate-700 shadow-sm leading-relaxed">
     </div>
+
+    <!-- PAGINATION CONTAINER -->
+    <div id="sales-pagination" class="mt-6 flex justify-center gap-2">
+    </div>
+</div>
 </section>
 
 <div id="sale-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden items-center justify-center z-[60] p-4">
