@@ -7373,112 +7373,7 @@ if (!res) return; // in case redirect happened
 };
 
 
-const addCharge = async (description, number, department) => {
-    const hotelId = localStorage.getItem('hotelId') || (typeof getHotelId === 'function' ? getHotelId() : null);
-    const submitBtn = document.getElementById('submitBtn');
-    const isQuickSale = (!activeAccountId);
 
-    const itemInfo = document.getElementById('itemDesc').dataset;
-    const qtyValue = parseInt(number) || 1;
-    const tableNum = document.getElementById('tableNum')?.value || "N/A";
-
-    const basePrice = parseFloat(itemInfo.bp || 0);
-    const sellingPrice = parseFloat(document.getElementById('itemPrice').value || itemInfo.sp || 0);
-    const calculatedProfit = (sellingPrice - basePrice) * qtyValue;
-    const profitPercentage = basePrice !== 0 ? (calculatedProfit / (basePrice * qtyValue)) * 100 : 0;
-
-    if (!description || isNaN(qtyValue) || isNaN(sellingPrice)) {
-        return showMessage('Incomplete Form', 'Please fill all fields with valid data.', true);
-    }
-
-    const payload = {
-        hotelId: hotelId,
-        item: description.trim(),
-        department: department,
-        number: qtyValue,
-        bp: basePrice,
-        sp: sellingPrice,
-        profit: calculatedProfit,
-        percentageprofit: profitPercentage,
-        accountId: activeAccountId || null,
-        tableNumber: tableNum,
-        isQuickSale: isQuickSale,
-        date: new Date(),
-        recordedBy: currentUsername, // Required by Sale schema
-        role: currentUserRole        // Included for context
-    };
-
-    try {
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ADDING...`;
-        }
-
-        let res;
-        let serverResponse = {};
-
-        // 1. Send Order to Department-Specific Endpoints
-        if (department === 'Restaurant') {
-            res = await authenticatedFetch(`${API_BASE_URL}/kitchen/order`, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
-        } else if (department === 'Bar') {
-            // ONLY Bar items hit the sales endpoint
-            res = await authenticatedFetch(`${API_BASE_URL}/sales`, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
-        }
-
-        if (res) {
-            if (!res.ok) throw new Error(`Failed to process order for ${department}.`);
-            serverResponse = await res.json();
-        }
-
-        // 2. Process Notifications
-        if (department === 'Restaurant') {
-            showMessage('Success', 'Kitchen order sent successfully! 🍳', false);
-        } else if (department === 'Bar') {
-            //showMessage('Success', 'Bar sale recorded to ledger! 🍸💰', false);
-        } else if (activeAccountId) {
-            fetchActiveAccounts();
-            //showMessage('Success', 'Charged to Guest Folio! 📄✅', false);
-        } else {
-            fetchActiveAccounts();
-            //showMessage('Success', 'Walk-in Sale Recorded! 💰✅', false);
-        }
-
-        // 3. Update UI using server response
-        if (typeof updateActiveAccountUI === 'function') {
-            if (activeAccountId) {
-                const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
-                if (accountRes && accountRes.ok) {
-                    const freshAccountData = await accountRes.json();
-                    updateActiveAccountUI(freshAccountData);
-                }
-            } else if (serverResponse && serverResponse.updatedAccount) {
-                activeAccountId = serverResponse.updatedAccount._id || serverResponse.updatedAccount.id;
-                updateActiveAccountUI(serverResponse.updatedAccount);
-            }
-        }
-
-        // --- SUCCESS CLEANUP ---
-        document.getElementById('addChargeForm').reset();
-        
-        if (typeof fetchSales === 'function') fetchSales(); 
-        if (typeof refreshTodayPOSStats === 'function') refreshTodayPOSStats();
-
-    } catch (err) {
-        console.error("Add Charge Error:", err);
-        showMessage('Error', err.message, true);
-    } finally {
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = "SUBMIT ITEM"; 
-        }
-    }
-};
 
 // Add accountId as an explicit second argument
 // Add phone parameter to function definition signature
@@ -7581,57 +7476,114 @@ const settleAccount = async (method, accountId, phone = '') => {
     }
 };
 
+// Global scope tracker for currently active account data
 let currentActiveAccountData = null;
 
-// --- UI UPDATES ---
 const updateActiveAccountUI = (account) => {
     if (!account) return;
 
     currentActiveAccountData = account;
-
-    // Keep activeAccountId in sync with current account object
     activeAccountId = account._id || account.id || activeAccountId;
 
     const charges = account.charges || [];
-    const liveTotal = charges.reduce((sum, item) => sum + (Number(item.amount) || Number(item.sp) || 0), 0);
+    
+    // FIX 1: Multiply sp * quantity when computing live total sum
+    const liveTotal = charges.reduce((sum, item) => {
+        const qty = Number(item.quantity || item.number || 1);
+        const lineTotal = Number(item.amount) || (Number(item.sp || 0) * qty);
+        return sum + lineTotal;
+    }, 0);
 
-    document.getElementById('currentGuestName').textContent = account.guestName || 'Walk-In Guest';
-    document.getElementById('currentRoomNumber').textContent = account.roomNumber ? `Room ${account.roomNumber}` : 'Walk-In Guest';
-    document.getElementById('totalCharges').textContent = liveTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
+    const guestNameElem = document.getElementById('currentGuestName');
+    const roomNumElem = document.getElementById('currentRoomNumber');
+    const totalChargesElem = document.getElementById('totalCharges');
+
+    if (guestNameElem) guestNameElem.textContent = account.guestName || 'Walk-In Guest';
+    if (roomNumElem) roomNumElem.textContent = account.roomNumber ? `Room ${account.roomNumber}` : 'Walk-In Guest';
+    if (totalChargesElem) totalChargesElem.textContent = liveTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
 
     const chargesListContainer = document.getElementById('chargesList');
     if (chargesListContainer) {
-        // Updated colspan to 4 to account for the new action column
         chargesListContainer.innerHTML = charges.length === 0 
-            ? `<tr><td colspan="4" class="text-center py-4 text-gray-400">No charges yet</td></tr>`
+            ? `<tr><td colspan="4" class="text-center py-6 text-slate-400 italic text-sm">No items in tab</td></tr>`
             : charges.map((item, index) => {
-                const chargeId = item._id || item.id || index; // Fallback to index if subdocument ID doesn't exist
+                const chargeId = item._id || item.id || index;
+                const isCommitted = item.committed || item.status === 'Sent' || item.status === 'Completed';
+                const qty = Number(item.quantity || item.number || 1);
+                
+                // FIX 2: Calculate explicit line total per item
+                const lineTotal = Number(item.amount) || (Number(item.sp || 0) * qty);
+                
                 return `
-                    <tr class="border-b border-gray-100 text-sm hover:bg-slate-50/50 transition-colors group">
-                        <td class="py-2 text-gray-400">${item.date ? new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}</td>
-                        <td class="py-2 font-medium text-gray-700">${item.item || item.description}</td>
-                        <td class="py-2 text-right font-bold text-indigo-600">${Number(item.amount || item.sp || 0).toLocaleString()}</td>
-                        <td class="py-2 text-right pr-2">
-                            <button 
-                                type="button"
-                                onclick="deleteAccountCharge('${chargeId}', ${index})" 
-                                class="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-md transition-all inline-flex items-center justify-center"
-                                title="Remove charge"
-                            >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
+                    <tr class="border-b border-slate-100 text-sm hover:bg-slate-50 transition-colors">
+                        <td class="py-2.5 pl-4 pr-2 text-slate-400 text-xs whitespace-nowrap">
+                            ${item.date ? new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}
+                        </td>
+                        <td class="py-2.5 px-2 font-medium text-slate-700 max-w-[140px] truncate">
+                            <span>${item.item || item.description}</span>
+                            <!-- Quantity Pill -->
+                            <span class="text-[10px] font-black px-1.5 py-0.5 rounded ml-1 bg-slate-100 text-slate-600 inline-block">
+                                x${qty}
+                            </span>
+                            <!-- Department Pill -->
+                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded ml-1 inline-block ${
+                                item.type === 'Bar' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                            }">${item.type || item.department || 'Item'}</span>
+                            ${!isCommitted ? '<span class="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 rounded ml-1 inline-block">Draft</span>' : ''}
+                        </td>
+                        <td class="py-2.5 px-2 text-right font-bold text-indigo-600 whitespace-nowrap">
+                            ${lineTotal.toLocaleString()}
+                        </td>
+                        <td class="py-2.5 pl-2 pr-4 text-center whitespace-nowrap">
+                            ${!isCommitted ? `
+                                <button 
+                                    type="button"
+                                    onclick="deleteAccountCharge('${chargeId}', ${index})" 
+                                    class="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-md transition-all inline-flex items-center justify-center cursor-pointer"
+                                    title="Remove item from tab"
+                                >
+                                    <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            ` : '<i class="fas fa-check text-emerald-500 text-xs" title="Posted"></i>'}
                         </td>
                     </tr>
                 `;
             }).join('');
+
+        // AUTO-SCROLL FIX
+        const scrollContainer = chargesListContainer.closest('.overflow-y-auto');
+        if (scrollContainer) {
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        }
     }
 
-    document.getElementById('postToRoomBtn')?.classList.toggle('hidden', !account.roomNumber);
+    // WORKFLOW CONTROL
+    const hasUncommittedCharges = charges.some(item => !item.committed && item.status !== 'Sent' && item.status !== 'Completed');
+    const hasAnyCharges = charges.length > 0;
+
+    const completeOrderBtn = document.getElementById('completeOrderBtn');
+    const postToRoomBtn = document.getElementById('postToRoomBtn');
+    const issueReceiptBtn = document.getElementById('issueReceiptBtn');
+
+    if (completeOrderBtn) {
+        completeOrderBtn.classList.toggle('hidden', !hasUncommittedCharges);
+    }
+
+    const canSettle = hasAnyCharges && !hasUncommittedCharges;
+
+    if (postToRoomBtn) {
+        postToRoomBtn.classList.toggle('hidden', !(canSettle && account.roomNumber));
+    }
+
+    if (issueReceiptBtn) {
+        issueReceiptBtn.classList.toggle('hidden', !canSettle);
+    }
+
     document.getElementById('activeAccountSection')?.classList.remove('hidden');
 
-    // Attach listener for modal settlement
+    // Settle Modal Trigger
     const issueBtn = document.getElementById('issueReceiptBtn');
     if (issueBtn) {
         issueBtn.onclick = (e) => {
@@ -7641,13 +7593,195 @@ const updateActiveAccountUI = (account) => {
             const settleForm = document.getElementById('settleBillForm');
             if (settleForm) settleForm.setAttribute('data-account-id', activeAccountId);
 
-            document.getElementById('settleModalTotal').textContent = `${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : '$'}${liveTotal.toLocaleString()}`;
-            document.getElementById('settleModalGuest').textContent = `${account.guestName} (${account.roomNumber ? 'Room ' + account.roomNumber : 'Walk-In Guest'})`;
+            const totalDisplay = document.getElementById('settleModalTotal');
+            if (totalDisplay) totalDisplay.textContent = `${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX '}${liveTotal.toLocaleString()}`;
+            
+            const guestDisplay = document.getElementById('settleModalGuest');
+            if (guestDisplay) guestDisplay.textContent = `${account.guestName || 'Walk-In Guest'} (${account.roomNumber ? 'Room ' + account.roomNumber : 'Walk-In Guest'})`;
 
             const settleModal = document.getElementById('settleBillModal');
             settleModal?.classList.remove('hidden');
             settleModal?.classList.add('flex');
         };
+    }
+};
+
+/**
+ * 1. STAGE CHARGE TO TAB (Draft Mode)
+ * Adds the item to the client account charges without committing sales or kitchen orders yet.
+ */
+/**
+ * 1. STAGE CHARGE TO TAB (Draft Mode)
+ * Adds the item to the client account charges without committing sales or kitchen orders yet.
+ */
+const addCharge = async (description, number, department) => {
+    const hotelId = localStorage.getItem('hotelId') || (typeof getHotelId === 'function' ? getHotelId() : null);
+    const submitBtn = document.getElementById('submitBtn');
+
+    const itemInfo = document.getElementById('itemDesc')?.dataset || {};
+    const qtyValue = parseInt(number) || 1;
+    const tableNum = document.getElementById('tableNum')?.value || "N/A";
+
+    const basePrice = parseFloat(itemInfo.bp || 0);
+    const sellingPrice = parseFloat(document.getElementById('itemPrice')?.value || itemInfo.sp || 0);
+    const calculatedProfit = (sellingPrice - basePrice) * qtyValue;
+    const profitPercentage = basePrice !== 0 ? (calculatedProfit / (basePrice * qtyValue)) * 100 : 0;
+
+    if (!description || isNaN(qtyValue) || isNaN(sellingPrice)) {
+        return showMessage('Incomplete Form', 'Please fill all fields with valid data.', true);
+    }
+
+    const newChargeItem = {
+        hotelId,
+        item: description.trim(),
+        description: description.trim(),
+        department,
+        type: department,
+        number: qtyValue,
+        quantity: qtyValue,
+        bp: basePrice,
+        sp: sellingPrice,
+        amount: sellingPrice * qtyValue,
+        profit: calculatedProfit,
+        percentageprofit: profitPercentage,
+        tableNumber: tableNum,
+        date: new Date(),
+        committed: false // Uncommitted draft tag
+    };
+
+    try {
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ADDING...`;
+        }
+
+        if (activeAccountId) {
+            // FIX 1: Use the correct backend '/charge' endpoint instead of '/add-item'
+            const res = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}/charge`, {
+                method: 'POST',
+                body: JSON.stringify(newChargeItem)
+            });
+
+            if (res && res.ok) {
+                const freshAccountData = await res.json();
+                updateActiveAccountUI(freshAccountData);
+            }
+        } else {
+            // FIX 2 & 3: Actually create the account on the backend if it doesn't exist
+            // We pass the newChargeItem directly into the charges array so it saves in one go
+            const res = await authenticatedFetch(`${API_BASE_URL}/pos/client/account`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    guestName: "", // Leaving this blank triggers your backend Walk-in #1234 logic!
+                    roomNumber: "",
+                    charges: [newChargeItem] 
+                })
+            });
+
+            if (res && res.ok) {
+                const newAccountData = await res.json();
+                // Store the newly created ID so subsequent items are added to this tab
+                activeAccountId = newAccountData._id; 
+                updateActiveAccountUI(newAccountData);
+            }
+        }
+
+        document.getElementById('addChargeForm')?.reset();
+
+    } catch (err) {
+        console.error("Add Charge Error:", err);
+        showMessage('Error', err.message, true);
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = "SUBMIT ITEM"; 
+        }
+    }
+};
+
+/**
+ * 2. COMPLETE ORDER (Commit Sales & Kitchen Orders)
+ * Processes all uncommitted items from the folio and dispatches them to their respective endpoints.
+ */
+const completeCurrentOrder = async () => {
+    if (!currentActiveAccountData || !currentActiveAccountData.charges || currentActiveAccountData.charges.length === 0) {
+        return showMessage('No Items', 'There are no active items in this tab to complete.', true);
+    }
+
+    const completeBtn = document.getElementById('completeOrderBtn');
+    const hotelId = localStorage.getItem('hotelId') || (typeof getHotelId === 'function' ? getHotelId() : null);
+
+    // 1. Extract uncommitted draft charges
+    const uncommittedCharges = currentActiveAccountData.charges.filter(item => !item.committed && item.status !== 'Sent' && item.status !== 'Completed');
+
+    if (uncommittedCharges.length === 0) {
+        return showMessage('Notice', 'All items in this tab have already been processed.', false);
+    }
+
+    try {
+        if (completeBtn) {
+            completeBtn.disabled = true;
+            completeBtn.innerHTML = `<i class="fas fa-spinner fa-spin mb-1 text-sm"></i><span class="text-[10px] font-extrabold uppercase">Processing...</span>`;
+        }
+
+        // 2. Send dispatch requests
+        for (const item of uncommittedCharges) {
+            const department = item.department || item.type || 'Bar';
+            const qty = Number(item.number || item.quantity || 1);
+            const unitSp = item.sp ? Number(item.sp) : (item.amount ? Number(item.amount) / qty : 0);
+
+            const payload = {
+                hotelId: hotelId,
+                item: item.item || item.description,
+                department: department,
+                number: qty,
+                quantity: qty,
+                bp: Number(item.bp || 0),
+                sp: unitSp,
+                amount: Number(item.amount || (unitSp * qty)),
+                profit: Number(item.profit || 0),
+                percentageprofit: Number(item.percentageprofit || 0),
+                accountId: activeAccountId || null,
+                tableNumber: item.tableNumber || "N/A",
+                isQuickSale: !activeAccountId,
+                date: item.date || new Date(),
+                recordedBy: typeof currentUsername !== 'undefined' ? currentUsername : 'System User',
+                role: typeof currentUserRole !== 'undefined' ? currentUserRole : 'POS User'
+            };
+
+            const endpoint = department === 'Restaurant' ? `${API_BASE_URL}/kitchen/order` : `${API_BASE_URL}/sales`;
+
+            await authenticatedFetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            // Mark local item as committed immediately so UI reflects it without duplicate rows
+            item.committed = true;
+            item.status = 'Sent';
+        }
+
+        showMessage('Success', 'Order completed!', false);
+
+        // 3. Update UI directly from local state (No re-fetch = No duplicate rows!)
+        updateActiveAccountUI(currentActiveAccountData);
+
+        // 4. Refresh auxiliary POS stats/tables
+        if (typeof fetchSales === 'function') fetchSales();
+        if (typeof refreshTodayPOSStats === 'function') refreshTodayPOSStats();
+
+    } catch (err) {
+        console.error("Complete Order Error:", err);
+        showMessage('Error', `Failed to complete order: ${err.message}`, true);
+    } finally {
+        if (completeBtn) {
+            completeBtn.disabled = false;
+            completeBtn.innerHTML = `
+                <i class="fas fa-check-circle mb-1 text-sm group-hover:scale-110 transition-transform"></i>
+                <span class="text-[10px] font-extrabold uppercase tracking-tight">Complete Order</span>
+            `;
+        }
     }
 };
 
@@ -7713,21 +7847,27 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
 
     const charges = accountData.charges || [];
     
-    // Calculate total accounting for quantity if present
+    // Calculate total cleanly
     const total = charges.reduce((sum, item) => {
-        const qty = Number(item.qty) || Number(item.quantity) || 1;
-        const price = Number(item.amount) || Number(item.sp) || Number(item.price) || 0;
-        return sum + (price * qty);
+        const qty = Number(item.qty) || Number(item.quantity) || Number(item.number) || 1;
+        
+        // FIX: Extract actual unit price first
+        const unitPrice = Number(item.sp) || Number(item.price) || (item.amount ? Number(item.amount) / qty : 0);
+        const lineTotal = Number(item.amount) || (unitPrice * qty);
+        
+        return sum + lineTotal;
     }, 0);
 
     const receiptDate = new Date().toLocaleString('en-GB');
     const receiptNumber = accountData.receiptNumber || accountData._id || accountData.id || `POS-${Date.now().toString().slice(-6)}`;
 
-    // Generate POS item lines with quantity & unit price
+    // Generate POS item lines with proper unit price resolution
     const itemsHtml = charges.map(item => {
-        const qty = Number(item.qty) || Number(item.quantity) || 1;
-        const unitPrice = Number(item.amount) || Number(item.sp) || Number(item.price) || 0;
-        const itemTotal = unitPrice * qty;
+        const qty = Number(item.qty) || Number(item.quantity) || Number(item.number) || 1;
+        
+        // FIX: Look for unit price attributes (sp/price) before fallback line total
+        const unitPrice = Number(item.sp) || Number(item.price) || (item.amount ? Number(item.amount) / qty : 0);
+        const itemTotal = Number(item.amount) || (unitPrice * qty);
         const itemName = item.item || item.description || 'Item Charge';
 
         return `
@@ -7747,10 +7887,10 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
         <!DOCTYPE html>
         <html>
         <head>
-            <title></title> <!-- Empty title suppresses auto browser headers -->
+            <title></title>
             <style>
                 @page {
-                    size: 80mm auto; /* Standard Thermal Roll Width */
+                    size: 80mm auto;
                     margin: 0;
                 }
                 * {
@@ -7766,7 +7906,7 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
                     color: #000;
                 }
                 .receipt-container {
-                    width: 76mm; /* Keeps content strictly inside 80mm printable boundary */
+                    width: 76mm;
                     margin: 0 auto;
                     padding: 8px 4px;
                 }
@@ -7870,11 +8010,14 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
 };
 
 
+/**
+ * Resets the active folio session back to a blank state for a new walk-in sale.
+ */
 const resetActiveFolio = () => {
-    // 1. Clear the global active account state variable
-    if (typeof activeAccountId !== 'undefined') {
-        activeAccountId = null;
-    }
+    // 1. Clear global state variables
+    if (typeof activeAccountId !== 'undefined') activeAccountId = null;
+    if (typeof currentActiveAccountData !== 'undefined') currentActiveAccountData = null;
+    if (typeof activeAccountData !== 'undefined') activeAccountData = null;
 
     // 2. Reset Header Card Display Values
     const guestNameEl = document.getElementById('currentGuestName');
@@ -7885,48 +8028,103 @@ const resetActiveFolio = () => {
     if (roomNumEl) roomNumEl.textContent = '';
     if (totalChargesEl) totalChargesEl.textContent = '0.00';
 
-    // 3. Reset Charges List Table
+    // 3. Reset Charges List Table (colspan="4" matches Time, Item, Price, Action)
     const chargesListContainer = document.getElementById('chargesList');
     if (chargesListContainer) {
         chargesListContainer.innerHTML = `
-            <tr><td colspan="3" class="px-6 py-10 text-center text-slate-400 italic text-sm">No items posted yet</td></tr>
+            <tr>
+                <td colspan="4" class="px-6 py-10 text-center text-slate-400 italic text-sm">
+                    No items posted yet
+                </td>
+            </tr>
         `;
     }
 
-    // 4. Reset Form Inputs
+    // 4. Reset Form Inputs & POS Item State
     const addChargeForm = document.getElementById('addChargeForm');
     if (addChargeForm) addChargeForm.reset();
+    resetposForm();
 
-    // 5. Hide Post to Room Button (since walk-in has no room)
+    // 5. Hide Post to Room Button (walk-ins have no room account assigned)
     const postToRoomBtn = document.getElementById('postToRoomBtn');
     if (postToRoomBtn) postToRoomBtn.classList.add('hidden');
 
+    // 6. Optional Notification Callback
     if (typeof showMessage === 'function') {
         showMessage('Session Cleared', 'Ready for new walk-in sale.', false);
     }
 };
 
+/**
+ * Resets the overall POS UI view, search state, and active account variables.
+ */
 const resetUI = () => {
-    document.getElementById('currentGuestName').textContent = 'New Sale';
-    document.getElementById('currentRoomNumber').textContent = '';
-    document.getElementById('totalCharges').textContent = '0';
-    document.getElementById('createAccountForm').reset();
-    document.getElementById('addChargeForm').reset();
-    document.getElementById('searchResults').innerHTML = '';
+    // Reset global state
     activeAccountId = null;
-    activeAccountData = null;
-    document.getElementById('chargesList').innerHTML = `<tr><td colspan="3" class="text-center py-10 text-slate-400 italic">No items yet</td></tr>`;
+    if (typeof currentActiveAccountData !== 'undefined') currentActiveAccountData = null;
+    if (typeof activeAccountData !== 'undefined') activeAccountData = null;
+
+    // Reset Header Display
+    const guestNameEl = document.getElementById('currentGuestName');
+    const roomNumEl = document.getElementById('currentRoomNumber');
+    const totalChargesEl = document.getElementById('totalCharges');
+
+    if (guestNameEl) guestNameEl.textContent = 'New Sale';
+    if (roomNumEl) roomNumEl.textContent = '';
+    if (totalChargesEl) totalChargesEl.textContent = '0.00';
+
+    // Safe Form Resets
+    const createForm = document.getElementById('createAccountForm');
+    if (createForm) createForm.reset();
+
+    const addForm = document.getElementById('addChargeForm');
+    if (addForm) addForm.reset();
+
+    // Clear Search Results
+    const searchResults = document.getElementById('searchResults');
+    if (searchResults) searchResults.innerHTML = '';
+
+    // Reset Folio Table
+    const chargesListContainer = document.getElementById('chargesList');
+    if (chargesListContainer) {
+        chargesListContainer.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center py-10 text-slate-400 italic text-sm">
+                    No items yet
+                </td>
+            </tr>
+        `;
+    }
+
+    // Hide Room Charge option by default
+    const postToRoomBtn = document.getElementById('postToRoomBtn');
+    if (postToRoomBtn) postToRoomBtn.classList.add('hidden');
+
+    resetposForm();
 };
 
+/**
+ * Resets specific item input fields, datasets, and restores focus for quick POS entry.
+ */
 const resetposForm = () => {
-    document.getElementById('itemDesc').value = '';
-    document.getElementById('number').value = '';
-    document.getElementById('itemPrice').value = '';
     const itemDescInput = document.getElementById('itemDesc');
-    itemDescInput.dataset.bp = '0';
-    itemDescInput.dataset.sp = '0';
-    document.getElementById('deptSelect').focus();
+    const numberInput = document.getElementById('number');
+    const itemPriceInput = document.getElementById('itemPrice');
+    const deptSelect = document.getElementById('deptSelect');
+
+    if (itemDescInput) {
+        itemDescInput.value = '';
+        itemDescInput.dataset.bp = '0';
+        itemDescInput.dataset.sp = '0';
+    }
+
+    if (numberInput) numberInput.value = '';
+    if (itemPriceInput) itemPriceInput.value = '';
+
+    // Shift focus back to Department Selector for fast keyboard entry
+    if (deptSelect) deptSelect.focus();
 };
+
 // --- INVENTORY LOOKUP ---
 async function loadInventory() {
     //const hotelId = getHotelId();
@@ -11212,6 +11410,7 @@ async function completeOrder(id) {
 );
 if (res.ok) loadOrders();
 fetchActiveAccounts();
+fetchSales(); // Refresh sales data to reflect the completed order
 if (!res) return; // Redirect handled if token missing
 if (!res.ok) {
     const error = await res.json();
