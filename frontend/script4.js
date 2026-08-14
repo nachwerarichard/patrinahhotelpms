@@ -16369,3 +16369,255 @@ function toggleModalPassword() {
         `;
     }
 }
+
+let selectedAccountForSettlement = null;
+
+/**
+ * 1. Opens the Folio Details Modal & calculates totals
+ */
+function viewAccountDetails(accountId) {
+    const account = cachedActiveAccounts.find(acc => acc._id === accountId);
+    if (!account) {
+        console.error('Account not found in cache:', accountId);
+        return;
+    }
+
+    selectedAccountForSettlement = account;
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+
+    // Populate Headers
+    document.getElementById('detailGuestName').textContent = account.guestName || 'Walk-In Customer';
+    document.getElementById('detailRoomNumber').textContent = account.roomNumber ? `ROOM ${account.roomNumber}` : 'NON-RESIDENT';
+    
+    const badge = document.getElementById('detailAccountBadge');
+    if (account.accountType === 'CITY_LEDGER' || account.isCorporate) {
+        badge.className = 'px-2 py-0.5 bg-purple-100 text-purple-800 text-[10px] font-extrabold rounded uppercase';
+        badge.textContent = 'City Ledger';
+    } else if (account.roomNumber) {
+        badge.className = 'px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-extrabold rounded uppercase';
+        badge.textContent = 'In-House';
+    } else {
+        badge.className = 'px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-extrabold rounded uppercase';
+        badge.textContent = 'POS Tab';
+    }
+
+    // Populate Itemized List
+    const tableBody = document.getElementById('detailItemsTableBody');
+    const charges = account.charges || [];
+    document.getElementById('detailItemCount').textContent = `${charges.length} Item${charges.length === 1 ? '' : 's'}`;
+
+    if (charges.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic">No posted charges on this folio.</td></tr>`;
+    } else {
+        tableBody.innerHTML = charges.map(item => {
+            // Mongoose schema quantity and price fallbacks
+            const qty = Number(item.quantity || item.number || 1);
+            const unitPrice = Number(item.sp || item.amount || 0);
+            const lineTotal = qty * unitPrice;
+            const dept = item.type || 'Other';
+
+            return `
+                <tr class="hover:bg-slate-50/50">
+                    <td class="p-3"><span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px] font-bold uppercase">${dept}</span></td>
+                    <td class="p-3 font-bold text-slate-800">${item.description || 'Service Charge'}</td>
+                    <td class="p-3 text-center font-mono">${qty}</td>
+                    <td class="p-3 text-right font-mono">${unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td class="p-3 text-right font-mono font-bold text-slate-900">${lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // Populate Total
+    const total = Number(account.totalCharges || 0);
+    document.getElementById('detailTotalCharges').textContent = `${currency} ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    // Show Details Modal
+    document.getElementById('accountDetailsModal').classList.remove('hidden');
+    document.getElementById('accountDetailsModal').classList.add('flex');
+}
+
+/**
+ * 2. Closes the Folio Details Modal
+ */
+function closeAccountDetailsModal() {
+    const modal = document.getElementById('accountDetailsModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+/**
+ * 3. Transfers data directly into your settleBillModal
+ */
+function openSettlementFromDetails() {
+    if (!selectedAccountForSettlement) return;
+
+    closeAccountDetailsModal();
+
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+    const total = Number(selectedAccountForSettlement.totalCharges || 0);
+
+    // Populate your existing settleBillModal elements
+    const guestLabel = document.getElementById('settleModalGuest');
+    const totalLabel = document.getElementById('settleModalTotal');
+
+    if (guestLabel) {
+        guestLabel.textContent = `${selectedAccountForSettlement.guestName}${selectedAccountForSettlement.roomNumber ? ` (Room ${selectedAccountForSettlement.roomNumber})` : ''}`;
+    }
+    if (totalLabel) {
+        totalLabel.textContent = `${currency} ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    // Show your existing Settle Modal
+    const settleModal = document.getElementById('settleBillModal');
+    if (settleModal) {
+        settleModal.classList.remove('hidden');
+        settleModal.classList.add('flex');
+    }
+}
+
+let targetAccountToSettle = null;
+
+/**
+ * 1. Closes the Account Details / Inspector Modal
+ */
+function closeAccountDetailsModal() {
+    const modal = document.getElementById('accountDetailsModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+/**
+ * 2. Triggered when 'Settle Account' is clicked inside the Details Modal.
+ *    Closes the Details Modal & Opens the Payment Submission Form.
+ */
+function openSettlementFromDetails() {
+    if (!selectedAccountForSettlement) {
+        console.error('No active account selected for settlement.');
+        return;
+    }
+
+    // Cache local reference
+    targetAccountToSettle = selectedAccountForSettlement;
+
+    // STEP 1: Close the Folio Details Modal
+    closeAccountDetailsModal();
+
+    // STEP 2: Populate the Standalone Payment Form
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+    const totalAmount = Number(targetAccountToSettle.totalCharges || 0);
+    const guestIdentifier = `${targetAccountToSettle.guestName}${targetAccountToSettle.roomNumber ? ` (Room ${targetAccountToSettle.roomNumber})` : ''}`;
+
+    document.getElementById('paymentGuestLabel').textContent = guestIdentifier;
+    document.getElementById('paymentTotalAmount').textContent = `${currency} ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    // Reset phone container visibility
+    document.getElementById('paymentMethodSelect').value = 'Cash';
+    togglePesapalField('Cash');
+
+    // STEP 3: Open the Standalone Payment Form Modal
+    const paymentModal = document.getElementById('paymentSubmissionModal');
+    if (paymentModal) {
+        paymentModal.classList.remove('hidden');
+        paymentModal.classList.add('flex');
+    }
+}
+
+/**
+ * 3. Closes the Standalone Payment Form Modal
+ */
+function closePaymentModal() {
+    const modal = document.getElementById('paymentSubmissionModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+    targetAccountToSettle = null;
+}
+
+/**
+ * 4. Helper to toggle phone input for Pesapal or Mobile Money
+ */
+function togglePesapalField(method) {
+    const phoneContainer = document.getElementById('paymentPhoneContainer');
+    if (!phoneContainer) return;
+
+    if (method === 'Pesapal' || method === 'MTN Momo' || method === 'Airtel Pay') {
+        phoneContainer.classList.remove('hidden');
+    } else {
+        phoneContainer.classList.add('hidden');
+    }
+}
+
+/**
+ * 5. Handle Payment Submission
+ */
+document.getElementById('standalonePaymentForm')?.addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    if (!targetAccountToSettle) {
+        if (typeof showMessage === 'function') {
+            showMessage('Error', 'No target account selected for settlement.', true);
+        } else {
+            alert('No target account selected for settlement.');
+        }
+        return;
+    }
+
+    const submitBtn = document.getElementById('submitPaymentBtn');
+    const rawMethod = document.getElementById('paymentMethodSelect').value;
+    const phoneNumber = document.getElementById('paymentPhoneNumber')?.value || '';
+    const accountId = targetAccountToSettle._id;
+
+    // Map UI select values to internal settleAccount parameters
+    let settleMethod = rawMethod;
+    if (rawMethod === 'MTN Momo' || rawMethod === 'Airtel Pay') {
+        settleMethod = 'MobileMoney';
+    } else if (rawMethod === 'Room Charge') {
+        settleMethod = 'room';
+    }
+
+    try {
+        // 1. Show UI Loading State
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Processing...`;
+        }
+
+        // 2. Set global active account reference (required for receipt printing & fallbacks)
+        if (typeof currentActiveAccountData !== 'undefined') {
+            currentActiveAccountData = targetAccountToSettle;
+        }
+
+        // 3. Delegate directly to core settleAccount function
+        await settleAccount(settleMethod, accountId, phoneNumber);
+
+        // 4. Close the modal on success (if not redirected to Pesapal)
+        if (settleMethod !== 'Pesapal') {
+            closePaymentModal();
+
+            // Refresh account tables/grids
+            if (typeof fetchActiveAccounts === 'function') {
+                fetchActiveAccounts();
+            }
+        }
+
+    } catch (err) {
+        console.error('Settlement Delegation Error:', err);
+        if (typeof showMessage === 'function') {
+            showMessage('Error', 'An unexpected error occurred during settlement.', true);
+        } else {
+            alert('An error occurred while processing settlement.');
+        }
+    } finally {
+        // Restore Submit Button
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<i class="fas fa-check-circle"></i> <span>Submit Payment</span>`;
+        }
+    }
+});
+
+
