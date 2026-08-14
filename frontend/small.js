@@ -7762,7 +7762,7 @@ const completeCurrentOrder = async () => {
             item.status = 'Sent';
         }
 
-        showMessage('Success', 'Order completed! Kitchen ticket sent & sales recorded. 🍽️🍸', false);
+        showMessage('Success', 'Order completed!', false);
 
         // 3. Update UI directly from local state (No re-fetch = No duplicate rows!)
         updateActiveAccountUI(currentActiveAccountData);
@@ -7847,21 +7847,27 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
 
     const charges = accountData.charges || [];
     
-    // Calculate total accounting for quantity if present
+    // Calculate total cleanly
     const total = charges.reduce((sum, item) => {
-        const qty = Number(item.qty) || Number(item.quantity) || 1;
-        const price = Number(item.amount) || Number(item.sp) || Number(item.price) || 0;
-        return sum + (price * qty);
+        const qty = Number(item.qty) || Number(item.quantity) || Number(item.number) || 1;
+        
+        // FIX: Extract actual unit price first
+        const unitPrice = Number(item.sp) || Number(item.price) || (item.amount ? Number(item.amount) / qty : 0);
+        const lineTotal = Number(item.amount) || (unitPrice * qty);
+        
+        return sum + lineTotal;
     }, 0);
 
     const receiptDate = new Date().toLocaleString('en-GB');
     const receiptNumber = accountData.receiptNumber || accountData._id || accountData.id || `POS-${Date.now().toString().slice(-6)}`;
 
-    // Generate POS item lines with quantity & unit price
+    // Generate POS item lines with proper unit price resolution
     const itemsHtml = charges.map(item => {
-        const qty = Number(item.qty) || Number(item.quantity) || 1;
-        const unitPrice = Number(item.amount) || Number(item.sp) || Number(item.price) || 0;
-        const itemTotal = unitPrice * qty;
+        const qty = Number(item.qty) || Number(item.quantity) || Number(item.number) || 1;
+        
+        // FIX: Look for unit price attributes (sp/price) before fallback line total
+        const unitPrice = Number(item.sp) || Number(item.price) || (item.amount ? Number(item.amount) / qty : 0);
+        const itemTotal = Number(item.amount) || (unitPrice * qty);
         const itemName = item.item || item.description || 'Item Charge';
 
         return `
@@ -7881,10 +7887,10 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
         <!DOCTYPE html>
         <html>
         <head>
-            <title></title> <!-- Empty title suppresses auto browser headers -->
+            <title></title>
             <style>
                 @page {
-                    size: 80mm auto; /* Standard Thermal Roll Width */
+                    size: 80mm auto;
                     margin: 0;
                 }
                 * {
@@ -7900,7 +7906,7 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
                     color: #000;
                 }
                 .receipt-container {
-                    width: 76mm; /* Keeps content strictly inside 80mm printable boundary */
+                    width: 76mm;
                     margin: 0 auto;
                     padding: 8px 4px;
                 }
