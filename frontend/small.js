@@ -7498,51 +7498,57 @@ const updateActiveAccountUI = (account) => {
 
     const chargesListContainer = document.getElementById('chargesList');
     if (chargesListContainer) {
-        chargesListContainer.innerHTML = charges.length === 0 
-            ? `<tr><td colspan="4" class="text-center py-6 text-slate-400 italic text-sm">No items in tab</td></tr>`
-            : charges.map((item, index) => {
-                const chargeId = item._id || item.id || index;
-                const isCommitted = item.committed || item.status === 'Sent' || item.status === 'Completed';
-                
-                return `
-                    <tr class="border-b border-slate-100 text-sm hover:bg-slate-50 transition-colors">
-                        <td class="py-2.5 pl-4 pr-2 text-slate-400 text-xs whitespace-nowrap">
-                            ${item.date ? new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}
-                        </td>
-                        <td class="py-2.5 px-2 font-medium text-slate-700 max-w-[120px] truncate">
-                            ${item.item || item.description}
-                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded ml-1 inline-block ${
-                                item.type === 'Bar' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
-                            }">${item.type || item.department || 'Item'}</span>
-                            ${!isCommitted ? '<span class="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 rounded ml-1 inline-block">Draft</span>' : ''}
-                        </td>
-                        <td class="py-2.5 px-2 text-right font-bold text-indigo-600 whitespace-nowrap">
-                            ${Number(item.amount || item.sp || 0).toLocaleString()}
-                        </td>
-                        <td class="py-2.5 pl-2 pr-4 text-center whitespace-nowrap">
-                            ${!isCommitted ? `
-                                <button 
-                                    type="button"
-                                    onclick="deleteAccountCharge('${chargeId}', ${index})" 
-                                    class="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-md transition-all inline-flex items-center justify-center cursor-pointer"
-                                    title="Remove item from tab"
-                                >
-                                    <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                </button>
-                            ` : '<i class="fas fa-check text-emerald-500 text-xs" title="Posted"></i>'}
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+    chargesListContainer.innerHTML = charges.length === 0 
+        ? `<tr><td colspan="4" class="text-center py-6 text-slate-400 italic text-sm">No items in tab</td></tr>`
+        : charges.map((item, index) => {
+            const chargeId = item._id || item.id || index;
+            const isCommitted = item.committed || item.status === 'Sent' || item.status === 'Completed';
+            const qty = item.quantity || item.number || 1;
+            
+            return `
+                <tr class="border-b border-slate-100 text-sm hover:bg-slate-50 transition-colors">
+                    <td class="py-2.5 pl-4 pr-2 text-slate-400 text-xs whitespace-nowrap">
+                        ${item.date ? new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}
+                    </td>
+                    <td class="py-2.5 px-2 font-medium text-slate-700 max-w-[140px] truncate">
+                        <span>${item.item || item.description}</span>
+                        <!-- Quantity Pill -->
+                        <span class="text-[10px] font-black px-1.5 py-0.5 rounded ml-1 bg-slate-100 text-slate-600 inline-block">
+                            x${qty}
+                        </span>
+                        <!-- Department Pill -->
+                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded ml-1 inline-block ${
+                            item.type === 'Bar' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                        }">${item.type || item.department || 'Item'}</span>
+                        ${!isCommitted ? '<span class="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 rounded ml-1 inline-block">Draft</span>' : ''}
+                    </td>
+                    <td class="py-2.5 px-2 text-right font-bold text-indigo-600 whitespace-nowrap">
+                        ${Number(item.amount || (item.sp * qty) || 0).toLocaleString()}
+                    </td>
+                    <td class="py-2.5 pl-2 pr-4 text-center whitespace-nowrap">
+                        ${!isCommitted ? `
+                            <button 
+                                type="button"
+                                onclick="deleteAccountCharge('${chargeId}', ${index})" 
+                                class="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-md transition-all inline-flex items-center justify-center cursor-pointer"
+                                title="Remove item from tab"
+                            >
+                                <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        ` : '<i class="fas fa-check text-emerald-500 text-xs" title="Posted"></i>'}
+                    </td>
+                </tr>
+            `;
+        }).join('');
 
-        // AUTO-SCROLL FIX: Scroll the parent container to the bottom so the newly added item is visible
-        const scrollContainer = chargesListContainer.closest('.overflow-y-auto');
-        if (scrollContainer) {
-            scrollContainer.scrollTop = scrollContainer.scrollHeight;
-        }
+    // AUTO-SCROLL FIX: Keep newly added items visible
+    const scrollContainer = chargesListContainer.closest('.overflow-y-auto');
+    if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
     }
+}
 
     // -------------------------------------------------------------
     // WORKFLOW CONTROL: Show/Hide buttons dynamically

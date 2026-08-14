@@ -1359,6 +1359,10 @@ const clientAccountSchema = new mongoose.Schema({
     charges: [{
         description: { type: String, required: true },
         amount: { type: Number, required: true },
+        quantity: { type: Number, default: 1 },
+        number: { type: Number, default: 1 }, // Fallback/alias for quantity
+        sp: { type: Number },
+        bp: { type: Number },
         type: { 
             type: String,
             enum: ['Bar', 'Restaurant', 'Other'],
@@ -1770,21 +1774,33 @@ app.post('/api/pos/client/account', auth, async (req, res) => {
     }
 });
 
-// POST: Add charge (Verify ownership)
 app.post('/api/pos/client/account/:accountId/charge', auth, async (req, res) => {
     const { accountId } = req.params;
-    const { amount } = req.body;
+    const { amount, sp, quantity, number } = req.body;
+    
     try {
-        // Find account only if it belongs to this hotel
         const account = await ClientAccount.findOne({ _id: accountId, hotelId: req.user.hotelId });
         if (!account) return res.status(404).json({ message: 'Account not found' });
 
-        account.charges.push({ ...req.body, date: new Date() });
-        account.totalCharges += Number(amount);
+        const qty = Number(quantity || number || 1);
+        const lineTotal = Number(amount || (sp * qty) || 0);
+
+        // Push charge payload with fallback attributes
+        account.charges.push({
+            ...req.body,
+            quantity: qty,
+            number: qty,
+            amount: lineTotal,
+            date: new Date()
+        });
+
+        // Recalculate total account charges reliably
+        account.totalCharges = account.charges.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
         await account.save();
         res.status(200).json(account);
     } catch (error) {
+        console.error('Error adding charge:', error);
         res.status(500).json({ message: 'Error adding charge' });
     }
 });
