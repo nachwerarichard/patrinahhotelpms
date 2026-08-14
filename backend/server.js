@@ -1719,16 +1719,38 @@ app.get('/api/pos/accounts/active', auth, async (req, res) => {
     }
 });
 // POST: Create a new scoped client account
+// POST: Create a new scoped client account
 app.post('/api/pos/client/account', auth, async (req, res) => {
     try {
+        const { guestName, roomNumber } = req.body;
+
+        // Generate 4-digit identifier if name is omitted or empty
+        const resolvedGuestName = (guestName && guestName.trim() !== '') 
+            ? guestName.trim() 
+            : `Walk-in #${Math.floor(1000 + Math.random() * 9000)}`;
+
         const newAccount = new ClientAccount({ 
             ...req.body, 
+            guestName: resolvedGuestName,
+            roomNumber: roomNumber || "",
             hotelId: req.user.hotelId // Link account to hotel
         }); 
+
         await newAccount.save();
+
+        // Audit Log for tracking tab creation
+        if (typeof addAuditLog === 'function') {
+            await addAuditLog('POS Account Created', req.user.username || 'Staff', req.user.hotelId, {
+                accountId: newAccount._id,
+                guestName: newAccount.guestName,
+                roomNumber: newAccount.roomNumber
+            });
+        }
+
         res.status(201).json(newAccount);
     } catch (error) {
-        res.status(500).json({ message: 'Error creating account' });
+        console.error('Error creating account:', error);
+        res.status(500).json({ message: 'Error creating account', error: error.message });
     }
 });
 
@@ -6727,12 +6749,13 @@ app.get('/api/sales/by-date', auth,async (req, res) => {
     }
 });
 
+// POST: Process Sale & Commit Charge
 app.post('/api/sales', auth, async (req, res) => {
   try {
-    const { item, department, number, bp, sp, date, accountId, guestName, roomNumber } = req.body;
+    const { item, department, number, bp, sp, date, accountId } = req.body;
     const hotelId = req.user.hotelId; 
-    const username = req.user.username || req.body.recordedBy || 'Guest'; // Extract username
-    const userRole = req.user.role || req.body.role || 'Staff';           // Extract role
+    const username = req.user.username || req.body.recordedBy || 'Staff'; 
+    const userRole = req.user.role || req.body.role || 'Staff'; 
 
     // 1. Fetch Inventory record
     const todayInventory = await getTodayInventory(item, 0, hotelId);
@@ -6761,18 +6784,18 @@ app.post('/api/sales', auth, async (req, res) => {
       await todayInventory.save();
     }
 
-    // 4. Folio / Walk-in Charging Logic
+    // 4. Folio Charge Logic
     let appliedToAccount = false;
     let updatedAccount = null;
-    let finalAccountId = accountId;
 
     const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');
     const validChargeType = ['Bar', 'Restaurant'].includes(department) ? department : 'Other';
     const totalChargeAmount = sp * number;
 
-    if (finalAccountId) {
+    // Attach charge to pre-existing ClientAccount
+    if (accountId) {
       updatedAccount = await AccountModel.findOneAndUpdate(
-        { _id: finalAccountId, hotelId },
+        { _id: accountId, hotelId },
         {
           $push: { 
             charges: { 
@@ -6786,45 +6809,24 @@ app.post('/api/sales', auth, async (req, res) => {
         },
         { new: true }
       );
-    } else {
-      // Dynamic fallback: Uses custom name if sent from frontend, otherwise generates a unique Walk-in ID
-      const resolvedGuestName = guestName && guestName.trim() !== '' 
-        ? guestName.trim() 
-        : `Walk-in #${Math.floor(1000 + Math.random() * 9000)}`;
 
-      updatedAccount = await AccountModel.create({
-        hotelId: hotelId,
-        guestName: resolvedGuestName,
-        roomNumber: roomNumber || "",
-        isClosed: false,
-        totalCharges: totalChargeAmount,
-        charges: [{
-          description: `${item} (x${number})`,
-          amount: totalChargeAmount,
-          type: validChargeType,
-          date: new Date()
-        }]
-      });
-
-      finalAccountId = updatedAccount._id;
+      if (updatedAccount) {
+        appliedToAccount = true;
+        await addAuditLog('Folio Charged via Sale', username, hotelId, {
+          accountId: updatedAccount._id,
+          item,
+          totalCharge: totalChargeAmount,
+          department,
+          role: userRole
+        });
+      }
     }
 
-    if (updatedAccount) {
-      appliedToAccount = true;
-      await addAuditLog('Folio Charged via Sale', username, hotelId, {
-        accountId: finalAccountId,
-        item,
-        totalCharge: totalChargeAmount,
-        department,
-        role: userRole
-      });
-    }
-
-    // 5. Create Sale Record (Pass recordedBy to satisfy Mongoose Schema)
+    // 5. Create Sale Record
     const sale = await Sale.create({
       ...req.body,
       recordedBy: username, 
-      accountId: finalAccountId,
+      accountId: accountId || null,
       hotelId,
       profit: (sp - bp) * number,
       percentageprofit: bp !== 0 ? ((sp - bp) / bp) * 100 : 0
@@ -6848,6 +6850,7 @@ app.post('/api/sales', auth, async (req, res) => {
     });
 
   } catch (err) {
+    console.error('Sale POST Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
