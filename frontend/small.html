@@ -4527,7 +4527,67 @@ Manage payment providers used for guest payments.            </p>
     </div>
 </div>
 
+<!-- FOLIO DETAILS INSPECTOR MODAL -->
+<div id="accountDetailsModal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-50 p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl transform transition-all overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
+        
+        <!-- Modal Header -->
+        <div class="flex justify-between items-center border-b border-slate-100 px-6 py-5 bg-slate-50/50">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span id="detailAccountBadge" class="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-extrabold rounded uppercase">In-House</span>
+                    <span id="detailRoomNumber" class="text-xs font-mono font-bold text-slate-500">ROOM --</span>
+                </div>
+                <h2 id="detailGuestName" class="text-lg font-black text-slate-900 tracking-tight mt-0.5">Guest Name</h2>
+            </div>
+            <button type="button" onclick="closeAccountDetailsModal()" class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-xl text-2xl transition-colors leading-none">&times;</button>
+        </div>
 
+        <!-- Scrollable Itemized Charges List -->
+        <div class="p-6 overflow-y-auto space-y-4 flex-1 custom-scroll">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-wider">Itemized Folio Breakdown</h3>
+                <span id="detailItemCount" class="text-xs font-bold text-slate-500">0 Items</span>
+            </div>
+
+            <!-- Table for Desktop -->
+            <div class="overflow-x-auto border border-slate-100 rounded-xl">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase">
+                            <th class="p-3">Department</th>
+                            <th class="p-3">Item Description</th>
+                            <th class="p-3 text-center">Qty</th>
+                            <th class="p-3 text-right">Unit Price</th>
+                            <th class="p-3 text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailItemsTableBody" class="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
+                        <!-- Populated dynamically via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Modal Footer / Total Summary & Action -->
+        <div class="p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Total Balance Due</span>
+                <span id="detailTotalCharges" class="text-2xl font-black text-slate-900 font-mono">UGX 0.00</span>
+            </div>
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+                <button type="button" onclick="closeAccountDetailsModal()" class="flex-1 sm:flex-none px-5 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition-all uppercase tracking-wider">
+                    Close
+                </button>
+                <button type="button" id="proceedToSettleBtn" onclick="openSettlementFromDetails()" class="flex-1 sm:flex-none px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs transition-all uppercase tracking-wider shadow-md flex items-center justify-center gap-2">
+                    <i class="fas fa-wallet"></i>
+                    <span>Settle Account</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
 
 <!-- Edit Room Asset Modal -->
     <div id="editModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
