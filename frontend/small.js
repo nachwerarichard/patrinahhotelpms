@@ -7478,7 +7478,6 @@ const settleAccount = async (method, accountId, phone = '') => {
 
 // Global scope tracker for currently active account data
 let currentActiveAccountData = null;
-let activeAccountId = null;
 
 const updateActiveAccountUI = (account) => {
     if (!account) return;
