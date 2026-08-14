@@ -16476,6 +16476,148 @@ function openSettlementFromDetails() {
     }
 }
 
+let targetAccountToSettle = null;
 
+/**
+ * 1. Closes the Account Details / Inspector Modal
+ */
+function closeAccountDetailsModal() {
+    const modal = document.getElementById('accountDetailsModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+/**
+ * 2. Triggered when 'Settle Account' is clicked inside the Details Modal.
+ *    Closes the Details Modal & Opens the Payment Submission Form.
+ */
+function openSettlementFromDetails() {
+    if (!selectedAccountForSettlement) {
+        console.error('No active account selected for settlement.');
+        return;
+    }
+
+    // Cache local reference
+    targetAccountToSettle = selectedAccountForSettlement;
+
+    // STEP 1: Close the Folio Details Modal
+    closeAccountDetailsModal();
+
+    // STEP 2: Populate the Standalone Payment Form
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+    const totalAmount = Number(targetAccountToSettle.totalCharges || 0);
+    const guestIdentifier = `${targetAccountToSettle.guestName}${targetAccountToSettle.roomNumber ? ` (Room ${targetAccountToSettle.roomNumber})` : ''}`;
+
+    document.getElementById('paymentGuestLabel').textContent = guestIdentifier;
+    document.getElementById('paymentTotalAmount').textContent = `${currency} ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    // Reset phone container visibility
+    document.getElementById('paymentMethodSelect').value = 'Cash';
+    togglePesapalField('Cash');
+
+    // STEP 3: Open the Standalone Payment Form Modal
+    const paymentModal = document.getElementById('paymentSubmissionModal');
+    if (paymentModal) {
+        paymentModal.classList.remove('hidden');
+        paymentModal.classList.add('flex');
+    }
+}
+
+/**
+ * 3. Closes the Standalone Payment Form Modal
+ */
+function closePaymentModal() {
+    const modal = document.getElementById('paymentSubmissionModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+    targetAccountToSettle = null;
+}
+
+/**
+ * 4. Helper to toggle phone input for Pesapal or Mobile Money
+ */
+function togglePesapalField(method) {
+    const phoneContainer = document.getElementById('paymentPhoneContainer');
+    if (!phoneContainer) return;
+
+    if (method === 'Pesapal' || method === 'MTN Momo' || method === 'Airtel Pay') {
+        phoneContainer.classList.remove('hidden');
+    } else {
+        phoneContainer.classList.add('hidden');
+    }
+}
+
+/**
+ * 5. Handle Payment Submission
+ */
+document.getElementById('standalonePaymentForm')?.addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    if (!targetAccountToSettle) {
+        if (typeof showMessage === 'function') {
+            showMessage('Error', 'No target account selected for settlement.', true);
+        } else {
+            alert('No target account selected for settlement.');
+        }
+        return;
+    }
+
+    const submitBtn = document.getElementById('submitPaymentBtn');
+    const rawMethod = document.getElementById('paymentMethodSelect').value;
+    const phoneNumber = document.getElementById('paymentPhoneNumber')?.value || '';
+    const accountId = targetAccountToSettle._id;
+
+    // Map UI select values to internal settleAccount parameters
+    let settleMethod = rawMethod;
+    if (rawMethod === 'MTN Momo' || rawMethod === 'Airtel Pay') {
+        settleMethod = 'MobileMoney';
+    } else if (rawMethod === 'Room Charge') {
+        settleMethod = 'room';
+    }
+
+    try {
+        // 1. Show UI Loading State
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Processing...`;
+        }
+
+        // 2. Set global active account reference (required for receipt printing & fallbacks)
+        if (typeof currentActiveAccountData !== 'undefined') {
+            currentActiveAccountData = targetAccountToSettle;
+        }
+
+        // 3. Delegate directly to core settleAccount function
+        await settleAccount(settleMethod, accountId, phoneNumber);
+
+        // 4. Close the modal on success (if not redirected to Pesapal)
+        if (settleMethod !== 'Pesapal') {
+            closePaymentModal();
+
+            // Refresh account tables/grids
+            if (typeof fetchActiveAccounts === 'function') {
+                fetchActiveAccounts();
+            }
+        }
+
+    } catch (err) {
+        console.error('Settlement Delegation Error:', err);
+        if (typeof showMessage === 'function') {
+            showMessage('Error', 'An unexpected error occurred during settlement.', true);
+        } else {
+            alert('An error occurred while processing settlement.');
+        }
+    } finally {
+        // Restore Submit Button
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<i class="fas fa-check-circle"></i> <span>Submit Payment</span>`;
+        }
+    }
+});
 
 
