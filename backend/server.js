@@ -1735,17 +1735,20 @@ app.post('/api/pos/client/account', auth, async (req, res) => {
     try {
         const { guestName, roomNumber, charges, ...otherFields } = req.body;
 
-        // Ensure empty strings, spaces, null, or undefined fall back to a Walk-in tag
-        const cleanName = guestName ? guestName.trim() : '';
+        // Clean up guest name parameter
+        const cleanName = (typeof guestName === 'string') ? guestName.trim() : '';
+        
+        // Always append random 4-digit string if cleanName is empty
+        const randomId = Math.floor(1000 + Math.random() * 9000);
         const resolvedGuestName = cleanName !== '' 
             ? cleanName 
-            : `Walk-in #${Math.floor(1000 + Math.random() * 9000)}`;
+            : `Walk-in #${randomId}`;
 
         const newAccount = new ClientAccount({ 
             ...otherFields,
             guestName: resolvedGuestName,
             roomNumber: roomNumber ? roomNumber.trim() : "",
-            hotelId: req.user.hotelId, // Enforce logged-in user's hotel ID
+            hotelId: req.user.hotelId,
             charges: charges || []
         }); 
 

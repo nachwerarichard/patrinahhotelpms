@@ -7608,7 +7608,7 @@ const addCharge = async (description, number, department) => {
 
         // Add to Client Account tab draft endpoint (or local draft state)
         if (activeAccountId) {
-            const res = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}/add-item`, {
+            const res = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}/charge`, {
                 method: 'POST',
                 body: JSON.stringify(newChargeItem)
             });
