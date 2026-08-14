@@ -7952,11 +7952,14 @@ const printReceipt = (accountData, paymentMethod, settlementInfo = {}) => {
 };
 
 
+/**
+ * Resets the active folio session back to a blank state for a new walk-in sale.
+ */
 const resetActiveFolio = () => {
-    // 1. Clear the global active account state variable
-    if (typeof activeAccountId !== 'undefined') {
-        activeAccountId = null;
-    }
+    // 1. Clear global state variables
+    if (typeof activeAccountId !== 'undefined') activeAccountId = null;
+    if (typeof currentActiveAccountData !== 'undefined') currentActiveAccountData = null;
+    if (typeof activeAccountData !== 'undefined') activeAccountData = null;
 
     // 2. Reset Header Card Display Values
     const guestNameEl = document.getElementById('currentGuestName');
@@ -7967,48 +7970,103 @@ const resetActiveFolio = () => {
     if (roomNumEl) roomNumEl.textContent = '';
     if (totalChargesEl) totalChargesEl.textContent = '0.00';
 
-    // 3. Reset Charges List Table
+    // 3. Reset Charges List Table (colspan="4" matches Time, Item, Price, Action)
     const chargesListContainer = document.getElementById('chargesList');
     if (chargesListContainer) {
         chargesListContainer.innerHTML = `
-            <tr><td colspan="3" class="px-6 py-10 text-center text-slate-400 italic text-sm">No items posted yet</td></tr>
+            <tr>
+                <td colspan="4" class="px-6 py-10 text-center text-slate-400 italic text-sm">
+                    No items posted yet
+                </td>
+            </tr>
         `;
     }
 
-    // 4. Reset Form Inputs
+    // 4. Reset Form Inputs & POS Item State
     const addChargeForm = document.getElementById('addChargeForm');
     if (addChargeForm) addChargeForm.reset();
+    resetposForm();
 
-    // 5. Hide Post to Room Button (since walk-in has no room)
+    // 5. Hide Post to Room Button (walk-ins have no room account assigned)
     const postToRoomBtn = document.getElementById('postToRoomBtn');
     if (postToRoomBtn) postToRoomBtn.classList.add('hidden');
 
+    // 6. Optional Notification Callback
     if (typeof showMessage === 'function') {
         showMessage('Session Cleared', 'Ready for new walk-in sale.', false);
     }
 };
 
+/**
+ * Resets the overall POS UI view, search state, and active account variables.
+ */
 const resetUI = () => {
-    document.getElementById('currentGuestName').textContent = 'New Sale';
-    document.getElementById('currentRoomNumber').textContent = '';
-    document.getElementById('totalCharges').textContent = '0';
-    document.getElementById('createAccountForm').reset();
-    document.getElementById('addChargeForm').reset();
-    document.getElementById('searchResults').innerHTML = '';
+    // Reset global state
     activeAccountId = null;
-    activeAccountData = null;
-    document.getElementById('chargesList').innerHTML = `<tr><td colspan="3" class="text-center py-10 text-slate-400 italic">No items yet</td></tr>`;
+    if (typeof currentActiveAccountData !== 'undefined') currentActiveAccountData = null;
+    if (typeof activeAccountData !== 'undefined') activeAccountData = null;
+
+    // Reset Header Display
+    const guestNameEl = document.getElementById('currentGuestName');
+    const roomNumEl = document.getElementById('currentRoomNumber');
+    const totalChargesEl = document.getElementById('totalCharges');
+
+    if (guestNameEl) guestNameEl.textContent = 'New Sale';
+    if (roomNumEl) roomNumEl.textContent = '';
+    if (totalChargesEl) totalChargesEl.textContent = '0.00';
+
+    // Safe Form Resets
+    const createForm = document.getElementById('createAccountForm');
+    if (createForm) createForm.reset();
+
+    const addForm = document.getElementById('addChargeForm');
+    if (addForm) addForm.reset();
+
+    // Clear Search Results
+    const searchResults = document.getElementById('searchResults');
+    if (searchResults) searchResults.innerHTML = '';
+
+    // Reset Folio Table
+    const chargesListContainer = document.getElementById('chargesList');
+    if (chargesListContainer) {
+        chargesListContainer.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center py-10 text-slate-400 italic text-sm">
+                    No items yet
+                </td>
+            </tr>
+        `;
+    }
+
+    // Hide Room Charge option by default
+    const postToRoomBtn = document.getElementById('postToRoomBtn');
+    if (postToRoomBtn) postToRoomBtn.classList.add('hidden');
+
+    resetposForm();
 };
 
+/**
+ * Resets specific item input fields, datasets, and restores focus for quick POS entry.
+ */
 const resetposForm = () => {
-    document.getElementById('itemDesc').value = '';
-    document.getElementById('number').value = '';
-    document.getElementById('itemPrice').value = '';
     const itemDescInput = document.getElementById('itemDesc');
-    itemDescInput.dataset.bp = '0';
-    itemDescInput.dataset.sp = '0';
-    document.getElementById('deptSelect').focus();
+    const numberInput = document.getElementById('number');
+    const itemPriceInput = document.getElementById('itemPrice');
+    const deptSelect = document.getElementById('deptSelect');
+
+    if (itemDescInput) {
+        itemDescInput.value = '';
+        itemDescInput.dataset.bp = '0';
+        itemDescInput.dataset.sp = '0';
+    }
+
+    if (numberInput) numberInput.value = '';
+    if (itemPriceInput) itemPriceInput.value = '';
+
+    // Shift focus back to Department Selector for fast keyboard entry
+    if (deptSelect) deptSelect.focus();
 };
+
 // --- INVENTORY LOOKUP ---
 async function loadInventory() {
     //const hotelId = getHotelId();
@@ -11294,6 +11352,7 @@ async function completeOrder(id) {
 );
 if (res.ok) loadOrders();
 fetchActiveAccounts();
+fetchSales(); // Refresh sales data to reflect the completed order
 if (!res) return; // Redirect handled if token missing
 if (!res.ok) {
     const error = await res.json();
