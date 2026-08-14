@@ -1351,11 +1351,11 @@ const incidentalChargeSchema = new mongoose.Schema({
 }, { timestamps: true });
 const IncidentalCharge = mongoose.model('IncidentalCharge', incidentalChargeSchema);
 
-// --- Define Mongoose Schemas and Models (cont.) ---
+// --- Mongoose Schema ---
 const clientAccountSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
     guestName: { type: String, required: true },
-    roomNumber: { type: String },
+    roomNumber: { type: String, default: "" },
     charges: [{
         description: { type: String, required: true },
         amount: { type: Number, required: true },
@@ -1363,7 +1363,7 @@ const clientAccountSchema = new mongoose.Schema({
             type: String,
             enum: ['Bar', 'Restaurant', 'Other'],
             required: true
-        }, // Cleaned up the bracket property structure here
+        },
         date: { type: Date, default: Date.now }
     }],
     totalCharges: { type: Number, default: 0 },
@@ -1371,28 +1371,39 @@ const clientAccountSchema = new mongoose.Schema({
     
     // Audit reporting trackers
     settledAt: { type: Date },
-settledByMethod: { 
-    type: String, 
-    enum: [
-        'Pesapal', 
-        'Card', 
-        'Visa', 
-        'Visa Card', 
-        'MasterCard', 
-        'Amex', 
-        'Room Charge', 
-        'Mobile Money', 
-        'Cash', 
-        'M-Pesa', 
-        'MTN Momo', 
-        'Airtel Pay', 
-        'Bank', 
-        'Stripe', 
-        'Stripe Card'
-    ] 
-},
+    settledByMethod: { 
+        type: String, 
+        enum: [
+            'Pesapal', 
+            'Card', 
+            'Visa', 
+            'Visa Card', 
+            'MasterCard', 
+            'Amex', 
+            'Room Charge', 
+            'Mobile Money', 
+            'Cash', 
+            'M-Pesa', 
+            'MTN Momo', 
+            'Airtel Pay', 
+            'Bank', 
+            'Stripe', 
+            'Stripe Card'
+        ] 
+    },
     isClosed: { type: Boolean, default: false }
 }, { timestamps: true });
+
+// Pre-validate Hook: Auto-generate Walk-in identifier if guestName is missing/empty
+clientAccountSchema.pre('validate', function(next) {
+    if (!this.guestName || this.guestName.trim() === '') {
+        const randomNumber = Math.floor(1000 + Math.random() * 9000);
+        this.guestName = `Walk-in #${randomNumber}`;
+    } else {
+        this.guestName = this.guestName.trim();
+    }
+    next();
+});
 
 const ClientAccount = mongoose.model('ClientAccount', clientAccountSchema);
 
@@ -1718,27 +1729,29 @@ app.get('/api/pos/accounts/active', auth, async (req, res) => {
         res.status(500).json({ message: 'Error fetching accounts' });
     }
 });
-// POST: Create a new scoped client account
+
 // POST: Create a new scoped client account
 app.post('/api/pos/client/account', auth, async (req, res) => {
     try {
-        const { guestName, roomNumber } = req.body;
+        const { guestName, roomNumber, charges, ...otherFields } = req.body;
 
-        // Generate 4-digit identifier if name is omitted or empty
-        const resolvedGuestName = (guestName && guestName.trim() !== '') 
-            ? guestName.trim() 
+        // Ensure empty strings, spaces, null, or undefined fall back to a Walk-in tag
+        const cleanName = guestName ? guestName.trim() : '';
+        const resolvedGuestName = cleanName !== '' 
+            ? cleanName 
             : `Walk-in #${Math.floor(1000 + Math.random() * 9000)}`;
 
         const newAccount = new ClientAccount({ 
-            ...req.body, 
+            ...otherFields,
             guestName: resolvedGuestName,
-            roomNumber: roomNumber || "",
-            hotelId: req.user.hotelId // Link account to hotel
+            roomNumber: roomNumber ? roomNumber.trim() : "",
+            hotelId: req.user.hotelId, // Enforce logged-in user's hotel ID
+            charges: charges || []
         }); 
 
         await newAccount.save();
 
-        // Audit Log for tracking tab creation
+        // Audit Log tracking
         if (typeof addAuditLog === 'function') {
             await addAuditLog('POS Account Created', req.user.username || 'Staff', req.user.hotelId, {
                 accountId: newAccount._id,
