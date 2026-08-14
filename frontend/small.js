@@ -7724,12 +7724,10 @@ const completeCurrentOrder = async () => {
             completeBtn.innerHTML = `<i class="fas fa-spinner fa-spin mb-1 text-sm"></i><span class="text-[10px] font-extrabold uppercase">Processing...</span>`;
         }
 
-        // 2. Process kitchen ticket and bar dispatch requests
+        // 2. Send dispatch requests
         for (const item of uncommittedCharges) {
             const department = item.department || item.type || 'Bar';
             const qty = Number(item.number || item.quantity || 1);
-            
-            // Calculate unit selling price safely (sp should be unit price, not line total)
             const unitSp = item.sp ? Number(item.sp) : (item.amount ? Number(item.amount) / qty : 0);
 
             const payload = {
@@ -7758,45 +7756,18 @@ const completeCurrentOrder = async () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-        }
 
-        // 3. Commit/Mark items as sent in MongoDB
-        if (activeAccountId) {
-            const chargeIdsToCommit = uncommittedCharges.map(c => c._id || c.id).filter(Boolean);
-            
-            await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}/commit-charges`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chargeIds: chargeIdsToCommit })
-            });
+            // Mark local item as committed immediately so UI reflects it without duplicate rows
+            item.committed = true;
+            item.status = 'Sent';
         }
 
         showMessage('Success', 'Order completed! Kitchen ticket sent & sales recorded. 🍽️🍸', false);
 
-        // 4. Re-fetch fresh account state from database
-        if (activeAccountId) {
-            const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
-            if (accountRes && accountRes.ok) {
-                const freshData = await accountRes.json();
-                updateActiveAccountUI(freshData);
-            } else {
-                // Optimistic local update fallback
-                uncommittedCharges.forEach(item => {
-                    item.committed = true;
-                    item.status = 'Sent';
-                });
-                updateActiveAccountUI(currentActiveAccountData);
-            }
-        } else {
-            // Quick Sale fallback update
-            uncommittedCharges.forEach(item => {
-                item.committed = true;
-                item.status = 'Sent';
-            });
-            updateActiveAccountUI(currentActiveAccountData);
-        }
+        // 3. Update UI directly from local state (No re-fetch = No duplicate rows!)
+        updateActiveAccountUI(currentActiveAccountData);
 
-        // Refresh auxiliary data tables/stats if methods exist
+        // 4. Refresh auxiliary POS stats/tables
         if (typeof fetchSales === 'function') fetchSales();
         if (typeof refreshTodayPOSStats === 'function') refreshTodayPOSStats();
 
