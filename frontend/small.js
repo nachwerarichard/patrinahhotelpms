@@ -7565,6 +7565,10 @@ const updateActiveAccountUI = (account) => {
  * 1. STAGE CHARGE TO TAB (Draft Mode)
  * Adds the item to the client account charges without committing sales or kitchen orders yet.
  */
+/**
+ * 1. STAGE CHARGE TO TAB (Draft Mode)
+ * Adds the item to the client account charges without committing sales or kitchen orders yet.
+ */
 const addCharge = async (description, number, department) => {
     const hotelId = localStorage.getItem('hotelId') || (typeof getHotelId === 'function' ? getHotelId() : null);
     const submitBtn = document.getElementById('submitBtn');
@@ -7606,8 +7610,8 @@ const addCharge = async (description, number, department) => {
             submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ADDING...`;
         }
 
-        // Add to Client Account tab draft endpoint (or local draft state)
         if (activeAccountId) {
+            // FIX 1: Use the correct backend '/charge' endpoint instead of '/add-item'
             const res = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}/charge`, {
                 method: 'POST',
                 body: JSON.stringify(newChargeItem)
@@ -7618,12 +7622,23 @@ const addCharge = async (description, number, department) => {
                 updateActiveAccountUI(freshAccountData);
             }
         } else {
-            // Local fallback for quick draft session
-            if (!currentActiveAccountData) {
-                currentActiveAccountData = { guestName: 'Walk-In Guest', charges: [] };
+            // FIX 2 & 3: Actually create the account on the backend if it doesn't exist
+            // We pass the newChargeItem directly into the charges array so it saves in one go
+            const res = await authenticatedFetch(`${API_BASE_URL}/pos/client/account`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    guestName: "", // Leaving this blank triggers your backend Walk-in #1234 logic!
+                    roomNumber: "",
+                    charges: [newChargeItem] 
+                })
+            });
+
+            if (res && res.ok) {
+                const newAccountData = await res.json();
+                // Store the newly created ID so subsequent items are added to this tab
+                activeAccountId = newAccountData._id; 
+                updateActiveAccountUI(newAccountData);
             }
-            currentActiveAccountData.charges.push(newChargeItem);
-            updateActiveAccountUI(currentActiveAccountData);
         }
 
         document.getElementById('addChargeForm')?.reset();
