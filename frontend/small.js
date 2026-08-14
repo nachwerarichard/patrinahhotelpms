@@ -7711,8 +7711,8 @@ const completeCurrentOrder = async () => {
     const completeBtn = document.getElementById('completeOrderBtn');
     const hotelId = localStorage.getItem('hotelId') || (typeof getHotelId === 'function' ? getHotelId() : null);
 
-    // Extract uncommitted draft charges
-    const uncommittedCharges = currentActiveAccountData.charges.filter(item => !item.committed && item.status !== 'Sent');
+    // 1. Extract uncommitted draft charges
+    const uncommittedCharges = currentActiveAccountData.charges.filter(item => !item.committed && item.status !== 'Sent' && item.status !== 'Completed');
 
     if (uncommittedCharges.length === 0) {
         return showMessage('Notice', 'All items in this tab have already been processed.', false);
@@ -7724,18 +7724,25 @@ const completeCurrentOrder = async () => {
             completeBtn.innerHTML = `<i class="fas fa-spinner fa-spin mb-1 text-sm"></i><span class="text-[10px] font-extrabold uppercase">Processing...</span>`;
         }
 
-        // Iterate through items and post to specific endpoints
+        // 2. Process kitchen ticket and bar dispatch requests
         for (const item of uncommittedCharges) {
-            const department = item.department || item.type;
+            const department = item.department || item.type || 'Bar';
+            const qty = Number(item.number || item.quantity || 1);
+            
+            // Calculate unit selling price safely (sp should be unit price, not line total)
+            const unitSp = item.sp ? Number(item.sp) : (item.amount ? Number(item.amount) / qty : 0);
+
             const payload = {
                 hotelId: hotelId,
                 item: item.item || item.description,
                 department: department,
-                number: item.number || item.quantity || 1,
-                bp: item.bp || 0,
-                sp: item.sp || item.amount,
-                profit: item.profit || 0,
-                percentageprofit: item.percentageprofit || 0,
+                number: qty,
+                quantity: qty,
+                bp: Number(item.bp || 0),
+                sp: unitSp,
+                amount: Number(item.amount || (unitSp * qty)),
+                profit: Number(item.profit || 0),
+                percentageprofit: Number(item.percentageprofit || 0),
                 accountId: activeAccountId || null,
                 tableNumber: item.tableNumber || "N/A",
                 isQuickSale: !activeAccountId,
@@ -7744,38 +7751,52 @@ const completeCurrentOrder = async () => {
                 role: typeof currentUserRole !== 'undefined' ? currentUserRole : 'POS User'
             };
 
-            if (department === 'Restaurant') {
-                // Restaurant items hit Kitchen Orders endpoint
-                await authenticatedFetch(`${API_BASE_URL}/kitchen/order`, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-            } else if (department === 'Bar') {
-                // Bar items hit Sales Ledger endpoint
-                await authenticatedFetch(`${API_BASE_URL}/sales`, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-            }
+            const endpoint = department === 'Restaurant' ? `${API_BASE_URL}/kitchen/order` : `${API_BASE_URL}/sales`;
+
+            await authenticatedFetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        }
+
+        // 3. Commit/Mark items as sent in MongoDB
+        if (activeAccountId) {
+            const chargeIdsToCommit = uncommittedCharges.map(c => c._id || c.id).filter(Boolean);
             
-            // Mark charge as committed locally
-            item.committed = true;
-            item.status = 'Sent';
+            await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}/commit-charges`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chargeIds: chargeIdsToCommit })
+            });
         }
 
         showMessage('Success', 'Order completed! Kitchen ticket sent & sales recorded. 🍽️🍸', false);
 
-        // Sync with backend active account state
+        // 4. Re-fetch fresh account state from database
         if (activeAccountId) {
             const accountRes = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${activeAccountId}`);
             if (accountRes && accountRes.ok) {
                 const freshData = await accountRes.json();
                 updateActiveAccountUI(freshData);
+            } else {
+                // Optimistic local update fallback
+                uncommittedCharges.forEach(item => {
+                    item.committed = true;
+                    item.status = 'Sent';
+                });
+                updateActiveAccountUI(currentActiveAccountData);
             }
         } else {
+            // Quick Sale fallback update
+            uncommittedCharges.forEach(item => {
+                item.committed = true;
+                item.status = 'Sent';
+            });
             updateActiveAccountUI(currentActiveAccountData);
         }
 
+        // Refresh auxiliary data tables/stats if methods exist
         if (typeof fetchSales === 'function') fetchSales();
         if (typeof refreshTodayPOSStats === 'function') refreshTodayPOSStats();
 

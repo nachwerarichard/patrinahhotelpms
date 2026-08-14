@@ -1824,7 +1824,30 @@ app.get('/api/pos/client/account/:accountId', auth, async (req, res) => {
         res.status(500).json({ message: 'Error retrieving account details' });
     }
 });
+// PATCH: Mark draft charges as committed/sent
+app.patch('/api/pos/client/account/:accountId/commit-charges', auth, async (req, res) => {
+    const { accountId } = req.params;
+    const { chargeIds } = req.body; // Array of charge _id strings to commit
 
+    try {
+        const account = await ClientAccount.findOne({ _id: accountId, hotelId: req.user.hotelId });
+        if (!account) return res.status(404).json({ message: 'Account not found' });
+
+        // Update matching charges in-place
+        account.charges.forEach(charge => {
+            if (!chargeIds || chargeIds.includes(charge._id.toString())) {
+                charge.committed = true;
+                charge.status = 'Sent';
+            }
+        });
+
+        await account.save();
+        res.status(200).json(account);
+    } catch (error) {
+        console.error('Error committing charges:', error);
+        res.status(500).json({ message: 'Error committing charges', error: error.message });
+    }
+});
 app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => {
     const { accountId } = req.params;
     const { paymentMethod, roomPost } = req.body;
