@@ -13,8 +13,8 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const path = require('path'); // 👈 Add this line
 cloudinary.config({
     cloud_name: 'dckvyguun',
-    api_key: '986177637794957',
-    api_secret: '986177637794957'
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
 const storage = new CloudinaryStorage({
@@ -271,12 +271,6 @@ function authorize(roles = []) {
 
 // --- 3. Middleware Setup ---
 
-// --- 4. MongoDB Connection ---
-// IMPORTANT: Replace '<YOUR_MONGODB_CONNECTION_STRING>' with your actual MongoDB Atlas
-// connection string or a local MongoDB connection string (e.g., 'mongodb://localhost:27017/hoteldb').
-// Make sure your MongoDB user has read/write access to the database.
-//const MONGO_URI = 'mongodb+srv://nachwerarichard:hotelpms@cluster0.g4cjpwg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'; // Your MongoDB Atlas connection string
-//const MONGO_URI = 'mongodb+srv://nachwerarichard:TQ4VX7zQZIxjCVzU@novuscloud.z4w1k8c.mongodb.net/novuspms?appName=novuscloud'; // Your MongoDB Atlas connection string
 
 mongoose.connect(process.env.MONGO_URI)
     .then(async () => { 
