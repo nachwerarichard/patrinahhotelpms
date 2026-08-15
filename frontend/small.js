@@ -8169,55 +8169,167 @@ if (!res.ok) {
     } catch (err) { console.error(err); }
 }
 
-function autoFillPrices(selectedItemName) {
-    if (!selectedItemName) return;
+// Global inventory lookup cache
+let inventoryData = [];
 
-    // 1. Sanitize search input
-    const cleanSearchName = selectedItemName.trim().toLowerCase();
+// Helper: Normalize strings for string matching (strip non-alphanumeric chars & casing)
+function normalizeStr(str) {
+    return String(str || '').toLowerCase().replace(/[^a-z0-0]/g, '');
+}
 
-    // 2. Find matching item in inventory lookup array
-    const item = inventoryData.find(
-        i => i.item && i.item.trim().toLowerCase() === cleanSearchName
-    );
+// Helper: Compute Levenshtein distance for fuzzy typo tolerance
+function getLevenshteinDistance(a, b) {
+    const matrix = Array.from({ length: a.length + 1 }, () => []);
+    for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+    for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+
+    for (let i = 1; i <= a.length; i++) {
+        for (let j = 1; j <= b.length; j++) {
+            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+            matrix[i][j] = Math.min(
+                matrix[i - 1][j] + 1,
+                matrix[i][j - 1] + 1,
+                matrix[i - 1][j - 1] + cost
+            );
+        }
+    }
+    return matrix[a.length][b.length];
+}
+
+/**
+ * Render custom search results with matching score
+ */
+function renderInventorySearch(query) {
+    const dropdown = document.getElementById('inventoryDropdown');
+    if (!dropdown) return;
+
+    if (!query || query.trim().length === 0) {
+        dropdown.classList.add('hidden');
+        dropdown.innerHTML = '';
+        return;
+    }
+
+    const cleanQuery = normalizeStr(query);
+
+    // Calculate score for each item in inventory
+    const scoredItems = inventoryData.map(item => {
+        const cleanItemName = normalizeStr(item.item);
+        let score = 0;
+
+        if (cleanItemName === cleanQuery) {
+            score = 100; // Exact match
+        } else if (cleanItemName.startsWith(cleanQuery)) {
+            score = 80;  // Starts with
+        } else if (cleanItemName.includes(cleanQuery)) {
+            score = 60;  // Substring match
+        } else {
+            // Levenshtein fuzzy distance check for minor typos
+            const dist = getLevenshteinDistance(cleanQuery, cleanItemName);
+            if (dist <= 2) score = 40; // High similarity
+        }
+
+        return { itemRecord: item, score };
+    }).filter(i => i.score > 0).sort((a, b) => b.score - a.score);
+
+    if (scoredItems.length === 0) {
+        dropdown.innerHTML = `
+            <div class="px-4 py-3 text-xs text-slate-400 italic font-medium">
+                No matching inventory items found
+            </div>
+        `;
+        dropdown.classList.remove('hidden');
+        return;
+    }
+
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+
+    dropdown.innerHTML = scoredItems.map(({ itemRecord }) => {
+        const isBar = (itemRecord.department || 'Bar').toLowerCase() === 'bar';
+        const badgeStyle = isBar 
+            ? 'bg-amber-50 text-amber-700 border-amber-200' 
+            : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+
+        return `
+            <div 
+                onclick="selectInventoryItem('${itemRecord.item.replace(/'/g, "\\'")}')"
+                class="px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors flex justify-between items-center group"
+            >
+                <div>
+                    <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
+                        ${itemRecord.item}
+                    </div>
+                    <span class="inline-block text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${badgeStyle} mt-0.5">
+                        ${itemRecord.department || 'Bar'}
+                    </span>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs font-extrabold text-slate-900">
+                        ${currency} ${Number(itemRecord.sellingprice || 0).toLocaleString()}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    dropdown.classList.remove('hidden');
+}
+
+/**
+ * Handle Item Selection
+ */
+function selectInventoryItem(itemName) {
+    const item = inventoryData.find(i => normalizeStr(i.item) === normalizeStr(itemName));
+    const descInput = document.getElementById('itemDesc');
+    const priceInput = document.getElementById('itemPrice');
+    const deptSelect = document.getElementById('deptSelect');
+    const dropdown = document.getElementById('inventoryDropdown');
 
     if (item) {
-        console.log("🎯 Found item record:", item); // Debug log to check contents
-
-        const priceInput = document.getElementById('itemPrice');
-        const descInput = document.getElementById('itemDesc');
-        const deptSelect = document.getElementById('deptSelect');
-
-        // Populate prices
-        if (priceInput) priceInput.value = item.sellingprice || 0;
-        
         if (descInput) {
+            descInput.value = item.item; // Set exact clean name
             descInput.dataset.bp = item.buyingprice || 0;
             descInput.dataset.sp = item.sellingprice || 0;
         }
 
-        // --- DEPARTMENT AUTO-SELECT ---
+        if (priceInput) {
+            priceInput.value = item.sellingprice || 0;
+        }
+
         if (deptSelect && item.department) {
             const targetDept = item.department.trim().toLowerCase();
-            let matched = false;
-
-            // Iterate over options to match case-insensitively
             for (let i = 0; i < deptSelect.options.length; i++) {
-                const optVal = deptSelect.options[i].value.trim().toLowerCase();
-                if (optVal === targetDept) {
+                if (deptSelect.options[i].value.trim().toLowerCase() === targetDept) {
                     deptSelect.selectedIndex = i;
-                    matched = true;
                     break;
                 }
             }
-
-            if (!matched) {
-                console.warn(`⚠️ Item department '${item.department}' is not an option in the #deptSelect dropdown.`);
-            }
-        } else if (!item.department) {
-            console.warn(`⚠️ Item '${item.item}' exists in lookup array but has no 'department' field attached.`);
         }
     }
+
+    if (dropdown) dropdown.classList.add('hidden');
 }
+
+// Event Listeners Initialization
+document.addEventListener('DOMContentLoaded', () => {
+    loadInventory();
+
+    const descInput = document.getElementById('itemDesc');
+    const dropdown = document.getElementById('inventoryDropdown');
+
+    if (descInput) {
+        descInput.addEventListener('input', (e) => renderInventorySearch(e.target.value));
+        descInput.addEventListener('focus', (e) => renderInventorySearch(e.target.value));
+    }
+
+    // Close dropdown on click outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#addChargeForm')) {
+            dropdown?.classList.add('hidden');
+        }
+    });
+});
+
+
 
 // --- PRINTING ---
 const printReceiptFromAccount = (receipt) => {
@@ -8343,7 +8455,6 @@ document.addEventListener('DOMContentLoaded', () => {
     await addCharge(description, number, department );
 };
 
-    document.getElementById('itemDesc').addEventListener('input', (e) => autoFillPrices(e.target.value));
     document.getElementById('postToRoomBtn').onclick = () => settleAccount('room');
   });
 

@@ -6059,37 +6059,43 @@ function getStartAndEndOfDayInUTC(dateString) {
 // --- INVENTORY HELPERS (CORRECTED) ---
 // This helper function correctly finds or creates today's inventory record.
 async function getTodayInventory(itemName, initialOpening = 0, hotelId) {
-  // 1. Validation: Ensure hotelId is present
   if (!hotelId) {
     throw new Error("hotelId is required to find or create inventory.");
   }
 
+  // Clean raw item name and generate case-insensitive, whitespace-insensitive Regex
+  const cleanName = String(itemName || '').replace(/\s*\(x\d+\)$/i, '').trim();
+  const escapedName = cleanName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const fuzzyRegex = new RegExp(`^\\s*${escapedName.replace(/\s+/g, '\\s*')}\\s*$`, 'i');
+
   initialOpening = Math.max(0, initialOpening);
   const { utcStart, utcEnd } = getStartAndEndOfDayInUTC(new Date().toISOString().slice(0, 10));
   
-  // 2. Find record for today - MUST filter by hotelId
+  // 1. Find record for today using fuzzy regex matching
   let record = await Inventory.findOne({ 
-    item: itemName, 
-    hotelId: hotelId, // Filter by hotel
+    item: fuzzyRegex, 
+    hotelId: hotelId,
     date: { $gte: utcStart, $lt: utcEnd } 
   });
 
   if (!record) {
-    // 3. Get the most recent record for this item FOR THIS HOTEL
+    // 2. Fall back to the most recent record matching fuzzy regex
     const latest = await Inventory.findOne({ 
-      item: itemName, 
-      hotelId: hotelId // Filter by hotel
+      item: fuzzyRegex, 
+      hotelId: hotelId 
     }).sort({ date: -1 });
     
+    // Store exact canonical name from existing record if found
+    const canonicalItemName = latest ? latest.item : cleanName;
     const opening = latest ? latest.closing : initialOpening;
     const trackInventory = latest ? latest.trackInventory : true;
     const buyingprice = latest ? latest.buyingprice : 0;
     const sellingprice = latest ? latest.sellingprice : 0;
     
-    // 4. Create the new record WITH hotelId
+    // 3. Create today's record under the canonical name
     record = await Inventory.create({
-      hotelId,        // <--- THIS WAS MISSING AND CAUSED THE 500 ERROR
-      item: itemName,
+      hotelId,
+      item: canonicalItemName,
       opening,
       purchases: 0,
       sales: 0,
@@ -6100,8 +6106,6 @@ async function getTodayInventory(itemName, initialOpening = 0, hotelId) {
       sellingprice,
       date: new Date()
     });
-    
-    console.log(`[Inventory] New daily record for ${itemName} at hotel ${hotelId}.`);
   }
 
   return record;
