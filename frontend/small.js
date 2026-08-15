@@ -3,7 +3,7 @@ let API_BASE_URL = '';
 // 1. Fetch backend configuration first
 async function initConfig() {
     try {
-        const res = await fetch('/.netlify/functions/get-config');
+        const res = await fetch('/.netlify/get-config');
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         
         const config = await res.json();
