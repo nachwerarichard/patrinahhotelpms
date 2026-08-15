@@ -7777,6 +7777,7 @@ const completeCurrentOrder = async () => {
         }
 
         showMessage('Success', 'Order completed and inventory updated!', false);
+        fetchSales();
 
         // 3. Update UI
         updateActiveAccountUI(currentActiveAccountData);
