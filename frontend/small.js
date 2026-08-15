@@ -1,25 +1,35 @@
 let API_BASE_URL = '';
+let configPromise = null; // Promise guard to block fetch calls until loaded
 
 // 1. Fetch backend configuration first
 async function initConfig() {
     try {
+        // FIX: Must include /functions/ in the Netlify path
         const res = await fetch('/.netlify/functions/get-config');
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         
         const config = await res.json();
-        API_BASE_URL = config.apiBaseUrl;
+        
+        // Strip trailing slash if present to avoid double slashes in routes
+        API_BASE_URL = (config.apiBaseUrl || '').replace(/\/$/, '');
         
         console.log('✅ API Base URL loaded:', API_BASE_URL);
         
-        // 2. Safely trigger data loads & setup event listeners AFTER API_BASE_URL is set
+        // 2. Start application initializations
         await startApp();
     } catch (err) {
         console.error('❌ Failed to load environment configuration:', err);
     }
 }
 
-// 3. Kick off initialization when DOM is ready
-document.addEventListener('DOMContentLoaded', initConfig);
+// Ensure initConfig runs once and store its Promise
+configPromise = initConfig();
+
+
+// 3. Kick off when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    configPromise;
+});
 // --- Data (will be fetched from backend) ---
 let rooms = [];
 let bookings = []; // This will now hold the currentAly displayed page's bookings or filtered bookings
