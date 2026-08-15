@@ -120,6 +120,12 @@ const CURRENT_CURRENCY = localStorage.getItem('hotelCurrency') || 'UGX';
 let API_BASE_URL = '';
 let configPromise = null;
 
+const DashboardState = {
+    currentRange: 'today',
+    isLoading: false,
+    abortController: null
+};
+
 // 1. Fetch Netlify environment configuration
 async function initConfig() {
     try {
@@ -13231,11 +13237,7 @@ document.addEventListener('DOMContentLoaded', fetchExecutiveDashboard);
  */
 
 // Global Dashboard State Controller
-const DashboardState = {
-    currentRange: 'today',
-    isLoading: false,
-    abortController: null
-};
+
 
 /**
  * Safe DOM Utilities
