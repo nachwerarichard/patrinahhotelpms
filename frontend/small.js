@@ -9340,11 +9340,6 @@ function renderSalesPagination(current, totalPages) {
         container.appendChild(btn);
     }
 }
-
-
-
-
-
 /**
  * Utility function to display the modal.
  * It removes the 'hidden' class and adds 'flex' to make it visible and centered.
@@ -9369,7 +9364,7 @@ function showModal(modalId) {
 function renderSalesTable(sales) {
     const tbody = document.querySelector('#sales-table tbody');
     const mobileGrid = document.getElementById('sales-mobile-grid');
-    
+
     if (tbody) tbody.innerHTML = '';
     if (mobileGrid) mobileGrid.innerHTML = '';
 
@@ -9380,13 +9375,15 @@ function renderSalesTable(sales) {
         return;
     }
 
-    // Role-based privacy calculation flags
+    // Role-based privacy & edit permission flags
     const hideSensitiveInfo = ['cashier', 'bar'].includes(currentUserRole);
-    const isAdmin = ['admin', 'super-admin'].includes(currentUserRole);
     
+    // UPDATED: Allow admin, super-admin, and manager (excludes bar and other roles)
+    const canEditOrDelete = ['admin', 'super-admin', 'manager'].includes(currentUserRole);
+
     let totalSellingPriceSum = 0;
     let totalProfitSum = 0; // Track overall profit
-    
+
     // Department object structure: { DeptName: { sales: X, profit: Y } }
     const departmentTotals = {}; 
 
@@ -9395,13 +9392,13 @@ function renderSalesTable(sales) {
         const sp = sale.sp || 0;
         const bp = sale.bp || 0;
         const totalSellingPrice = sp * qty;
-        
+
         // Calculate profit (use pre-calculated profit or derive)
         const profit = (typeof sale.profit === 'number') ? sale.profit : (sp - bp) * qty;
-        
+
         totalSellingPriceSum += totalSellingPrice;
         totalProfitSum += profit;
-        
+
         const dept = sale.department || 'General';
         if (!departmentTotals[dept]) {
             departmentTotals[dept] = { sales: 0, profit: 0 };
@@ -9412,7 +9409,7 @@ function renderSalesTable(sales) {
         // Structured formats for parsed financial outputs
         const bpDisplay = hideSensitiveInfo ? '***' : bp.toLocaleString();
         const spDisplay = sp.toLocaleString();
-        
+
         let profitDisplay = '---';
         let percentageDisplay = '---';
         let profitClass = 'text-slate-600';
@@ -9429,7 +9426,7 @@ function renderSalesTable(sales) {
         if (tbody) {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50/80 border-b border-slate-100 text-slate-600 text-sm transition-colors";
-            
+
             tr.innerHTML = `
                 <td class="px-6 py-4 font-medium text-slate-900">${dept}</td>
                 <td class="px-6 py-4 font-semibold text-slate-700">${sale.item}</td>
@@ -9443,7 +9440,7 @@ function renderSalesTable(sales) {
             `;
 
             const actionsCell = tr.querySelector('.actions-cell');
-            injectActionElements(actionsCell, isAdmin, sale);
+            injectActionElements(actionsCell, canEditOrDelete, sale);
             tbody.appendChild(tr);
         }
 
@@ -9451,7 +9448,7 @@ function renderSalesTable(sales) {
         if (mobileGrid) {
             const card = document.createElement('div');
             card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3 hover:border-slate-300 transition-all";
-            
+
             card.innerHTML = `
                 <div class="flex justify-between items-start">
                     <div>
@@ -9461,7 +9458,7 @@ function renderSalesTable(sales) {
                     </div>
                     <div class="mobile-actions-container"></div>
                 </div>
-                
+
                 <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-lg text-xs font-medium text-slate-600 border border-slate-100">
                     <div class="text-center border-r border-slate-200/60">
                         <span class="text-[9px] text-slate-400 block uppercase font-bold mb-0.5">Quantity</span>
@@ -9487,7 +9484,7 @@ function renderSalesTable(sales) {
             `;
 
             const mobileActionSlot = card.querySelector('.mobile-actions-container');
-            injectActionElements(mobileActionSlot, isAdmin, sale, true);
+            injectActionElements(mobileActionSlot, canEditOrDelete, sale, true);
             mobileGrid.appendChild(card);
         }
     });
@@ -9499,10 +9496,10 @@ function renderSalesTable(sales) {
 }
 
 // Helper utility targeting modular actions rendering matrix
-function injectActionElements(container, isAdmin, sale, isMobileVariant = false) {
+function injectActionElements(container, canEditOrDelete, sale, isMobileVariant = false) {
     if (!container) return;
 
-    if (isAdmin) {
+    if (canEditOrDelete) {
         const btnGroup = document.createElement('div');
         btnGroup.className = "flex gap-1.5 justify-end";
 
