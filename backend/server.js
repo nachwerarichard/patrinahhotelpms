@@ -6812,88 +6812,112 @@ app.post('/api/sales', auth, async (req, res) => {
     const username = req.user.username || req.body.recordedBy || 'Staff'; 
     const userRole = req.user.role || req.body.role || 'Staff'; 
 
-    // 1. Fetch Inventory record
-    const todayInventory = await getTodayInventory(item, 0, hotelId);
+    // --- FIX A: Clean item name by stripping trailing '(xN)' before inventory lookup ---
+    const cleanItemName = String(item || '').replace(/\s*\(x\d+\)$/i, '').trim();
+    const qty = Number(number) || 1;
+
+    // 1. Fetch Inventory record with clean item name
+    const todayInventory = await getTodayInventory(cleanItemName, 0, hotelId);
 
     // 2. Dynamic Inventory Logic (Stock Check)
     const currentAvailableStock = todayInventory.opening + todayInventory.purchases;
     const shouldTrackStock = todayInventory.trackInventory && department !== 'Restaurant';
 
-    if (shouldTrackStock && (todayInventory.sales + number) > currentAvailableStock) {
+    if (shouldTrackStock && (todayInventory.sales + qty) > currentAvailableStock) {
       await addAuditLog('Sale Failed: Insufficient Stock', username, hotelId, {
-        item,
+        item: cleanItemName,
         department,
-        requestedQuantity: number,
+        requestedQuantity: qty,
         availableStock: currentAvailableStock - todayInventory.sales,
         role: userRole
       });
 
       return res.status(400).json({ 
-        error: `Insufficient stock. Available: ${currentAvailableStock - todayInventory.sales}` 
+        error: `Insufficient stock for ${cleanItemName}. Available: ${currentAvailableStock - todayInventory.sales}` 
       });
     }
 
     // 3. Update Inventory
     if (department !== 'Restaurant') {
-      todayInventory.sales += number;
+      todayInventory.sales += qty;
       await todayInventory.save();
     }
 
-    // 4. Folio Charge Logic
+    // 4. Folio Charge Logic (Avoid Double Charging / Duplicate Items)
     let appliedToAccount = false;
     let updatedAccount = null;
-
     const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');
-    const validChargeType = ['Bar', 'Restaurant'].includes(department) ? department : 'Other';
-    const totalChargeAmount = sp * number;
 
-    // Attach charge to pre-existing ClientAccount
     if (accountId) {
-      updatedAccount = await AccountModel.findOneAndUpdate(
-        { _id: accountId, hotelId },
-        {
-          $push: { 
-            charges: { 
-              description: `${item} (x${number})`, 
-              amount: totalChargeAmount, 
-              type: validChargeType, 
-              date: new Date() 
-            }
-          },
-          $inc: { totalCharges: totalChargeAmount }
-        },
-        { new: true }
-      );
+      // Find the account and update existing draft items as committed instead of pushing a duplicate
+      updatedAccount = await AccountModel.findOne({ _id: accountId, hotelId });
 
       if (updatedAccount) {
         appliedToAccount = true;
+        
+        // Find matching draft charge and set committed status
+        const chargeIndex = updatedAccount.charges.findIndex(c => 
+          (c.item === cleanItemName || c.description === cleanItemName || c.item === item) && !c.committed
+        );
+
+        if (chargeIndex !== -1) {
+          updatedAccount.charges[chargeIndex].committed = true;
+          updatedAccount.charges[chargeIndex].status = 'Sent';
+        } else {
+          // Fallback: If not found as draft, push clean charge
+          const validChargeType = ['Bar', 'Restaurant'].includes(department) ? department : 'Other';
+          const totalChargeAmount = sp * qty;
+          
+          updatedAccount.charges.push({
+            item: cleanItemName,
+            description: cleanItemName,
+            quantity: qty,
+            number: qty,
+            sp,
+            bp,
+            amount: totalChargeAmount,
+            type: validChargeType,
+            department,
+            committed: true,
+            status: 'Sent',
+            date: new Date()
+          });
+          updatedAccount.totalCharges = (updatedAccount.totalCharges || 0) + totalChargeAmount;
+        }
+
+        await updatedAccount.save();
+
         await addAuditLog('Folio Charged via Sale', username, hotelId, {
           accountId: updatedAccount._id,
-          item,
-          totalCharge: totalChargeAmount,
+          item: cleanItemName,
+          quantity: qty,
+          totalCharge: sp * qty,
           department,
           role: userRole
         });
       }
     }
 
-    // 5. Create Sale Record
+    // 5. Create Sale Record with clean item name and parsed quantity
     const sale = await Sale.create({
       ...req.body,
+      item: cleanItemName,
+      number: qty,
+      quantity: qty,
       recordedBy: username, 
       accountId: accountId || null,
       hotelId,
-      profit: (sp - bp) * number,
+      profit: (sp - bp) * qty,
       percentageprofit: bp !== 0 ? ((sp - bp) / bp) * 100 : 0
     });
 
     // Audit Log
     await addAuditLog('Sale Created', username, hotelId, { 
       saleId: sale._id,
-      item: sale.item,
-      quantity: number,
+      item: cleanItemName,
+      quantity: qty,
       department,
-      totalRevenue: totalChargeAmount,
+      totalRevenue: sp * qty,
       folioCharged: appliedToAccount,
       role: userRole
     });

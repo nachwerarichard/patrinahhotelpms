@@ -7703,6 +7703,10 @@ const addCharge = async (description, number, department) => {
  * 2. COMPLETE ORDER (Commit Sales & Kitchen Orders)
  * Processes all uncommitted items from the folio and dispatches them to their respective endpoints.
  */
+/**
+ * 2. COMPLETE ORDER (Commit Sales & Kitchen Orders)
+ * Processes all uncommitted items from the folio and dispatches them to their respective endpoints.
+ */
 const completeCurrentOrder = async () => {
     if (!currentActiveAccountData || !currentActiveAccountData.charges || currentActiveAccountData.charges.length === 0) {
         return showMessage('No Items', 'There are no active items in this tab to complete.', true);
@@ -7730,9 +7734,14 @@ const completeCurrentOrder = async () => {
             const qty = Number(item.number || item.quantity || 1);
             const unitSp = item.sp ? Number(item.sp) : (item.amount ? Number(item.amount) / qty : 0);
 
+            // --- SANITIZE ITEM NAME: Strip any concatenated quantity strings ---
+            const rawName = item.item || item.description || '';
+            const cleanItemName = rawName.replace(/\s*\(x\d+\)$/i, '').trim();
+
             const payload = {
                 hotelId: hotelId,
-                item: item.item || item.description,
+                item: cleanItemName, // Clean name ensures stock lookup matches inventory DB
+                description: cleanItemName,
                 department: department,
                 number: qty,
                 quantity: qty,
@@ -7751,20 +7760,25 @@ const completeCurrentOrder = async () => {
 
             const endpoint = department === 'Restaurant' ? `${API_BASE_URL}/kitchen/order` : `${API_BASE_URL}/sales`;
 
-            await authenticatedFetch(endpoint, {
+            const res = await authenticatedFetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
-            // Mark local item as committed immediately so UI reflects it without duplicate rows
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || errData.message || 'Failed to dispatch charge');
+            }
+
+            // Mark local item as committed
             item.committed = true;
             item.status = 'Sent';
         }
 
-        showMessage('Success', 'Order completed!', false);
+        showMessage('Success', 'Order completed and inventory updated!', false);
 
-        // 3. Update UI directly from local state (No re-fetch = No duplicate rows!)
+        // 3. Update UI
         updateActiveAccountUI(currentActiveAccountData);
 
         // 4. Refresh auxiliary POS stats/tables
