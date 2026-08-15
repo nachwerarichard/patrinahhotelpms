@@ -146,14 +146,80 @@ const auditLogActionFilter = document.getElementById('auditLogActionFilter');
 const auditLogStartDateFilter = document.getElementById('auditLogStartDateFilter');
 const auditLogEndDateFilter = document.getElementById('auditLogEndDateFilter');
 const applyAuditLogFiltersBtn = document.getElementById('applyAuditLogFiltersBtn');
-  // Add this to the TOP of your scripts on the destination pages
-// At the top of script4.js
-
-
-
-
-
 const CURRENT_CURRENCY = localStorage.getItem('hotelCurrency') || 'UGX';
+
+let API_BASE_URL = '';
+let configPromise = null;
+
+// 1. Fetch Netlify environment configuration
+async function initConfig() {
+    try {
+        const res = await fetch('/.netlify/functions/get-config');
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+        const config = await res.json();
+        
+        // Strip trailing slash to avoid double slashes when joining routes
+        API_BASE_URL = (config.apiBaseUrl || '').replace(/\/$/, '');
+        console.log('✅ API Base URL loaded:', API_BASE_URL);
+    } catch (err) {
+        console.error('❌ Failed to load environment configuration:', err);
+    }
+}
+
+// 2. Initialize promise guard immediately so it starts fetching right away
+configPromise = initConfig();
+
+// 3. Multi-Tenant Authenticated Fetch Wrapper with API URL Resolution
+async function authenticatedFetch(endpoint, options = {}) {
+    // Wait for Netlify config to resolve before processing requests
+    if (!API_BASE_URL) {
+        await configPromise;
+    }
+
+    let token = localStorage.getItem('token');
+
+    if (!token) {
+        console.warn('No token found. Aborting authenticated request.');
+        return null;
+    }
+
+    // Smart URL formatting: prepends API_BASE_URL if relative path is passed
+    const formattedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const fullUrl = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${formattedEndpoint}`;
+
+    // Standard headers + Multi-Tenant Headers
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'x-hotel-id': localStorage.getItem('hotelId') || 'global',
+        'x-hotel-currency': localStorage.getItem('hotelCurrency') || 'UGX',
+        ...options.headers 
+    };
+
+    // Body formatting check
+    if (options.body instanceof FormData) {
+        delete headers['Content-Type']; 
+    } else if (options.body && !headers['Content-Type']) { 
+        headers['Content-Type'] = 'application/json';
+    }
+
+    try {
+        const response = await fetch(fullUrl, { ...options, headers });
+
+        // Session expiration handling
+        if (response.status === 401) {
+            console.warn('Session expired or unauthorized (401). Triggering logout...');
+            if (typeof logout === 'function') {
+                await logout();
+            }
+        }
+
+        return response;
+    } catch (error) {
+        console.error('Network request failed:', error);
+        throw error;
+    }
+}
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -338,47 +404,7 @@ const getHotelCurrency = () => {
     return localStorage.getItem('hotelCurrency') || 'UGX'; // Fallback default global currency code
 };
 
-async function authenticatedFetch(url, options = {}) {
-    let token = localStorage.getItem('token');
 
-    // 1. If no token, abort immediately without triggering logout routines
-    if (!token) {
-        console.warn('No token found. Aborting authenticated request.');
-        return null;
-    }
-
-    // 2. Standard headers + Automated Multi-Tenant Headers
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'x-hotel-id': localStorage.getItem('hotelId') || 'global',
-        'x-hotel-currency': localStorage.getItem('hotelCurrency') || 'UGX',
-        ...options.headers 
-    };
-
-    // 3. Smart Content-Type Assignment
-    if (options.body instanceof FormData) {
-        delete headers['Content-Type']; 
-    } else if (options.body && !headers['Content-Type']) { 
-        headers['Content-Type'] = 'application/json';
-    }
-
-    try {
-        const response = await fetch(url, { ...options, headers });
-
-        // 4. Handle expired/invalid token globally
-        if (response.status === 401) {
-            console.warn('Session expired or unauthorized (401). Triggering logout...');
-            if (typeof logout === 'function') {
-                await logout();
-            }
-        }
-
-        return response;
-    } catch (error) {
-        console.error('Network request failed:', error);
-        throw error;
-    }
-}
 
 function showMessage(title, message, isError = false) {
     const overlay = document.getElementById('messageBoxOverlay');
