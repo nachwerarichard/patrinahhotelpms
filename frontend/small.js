@@ -8170,7 +8170,6 @@ if (!res.ok) {
 }
 
 // Global inventory lookup cache
-let inventoryData = [];
 
 // Helper: Normalize strings for string matching (strip non-alphanumeric chars & casing)
 function normalizeStr(str) {
