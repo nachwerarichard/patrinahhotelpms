@@ -1,5 +1,22 @@
-const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
+//const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
+let API_BASE_URL = '';
 
+// Load environment config on startup
+async function initConfig() {
+    try {
+        // Netlify serves functions automatically at /.netlify/functions/<function-name>
+        const res = await fetch('/.netlify/get-config');
+        const config = await res.json();
+        
+        API_BASE_URL = config.apiBaseUrl;
+        console.log('API Base URL loaded successfully');
+        
+        // Initialize app functions that depend on the API URL
+        loadData();
+    } catch (err) {
+        console.error('Failed to load environment configuration:', err);
+    }
+}
 // --- Data (will be fetched from backend) ---
 let rooms = [];
 let bookings = []; // This will now hold the currentAly displayed page's bookings or filtered bookings
