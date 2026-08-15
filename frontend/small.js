@@ -1,22 +1,25 @@
-//const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
 let API_BASE_URL = '';
 
-// Load environment config on startup
+// 1. Fetch backend configuration first
 async function initConfig() {
     try {
-        // Netlify serves functions automatically at /.netlify/functions/<function-name>
-        const res = await fetch('/.netlify/get-config');
+        const res = await fetch('/.netlify/functions/get-config');
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        
         const config = await res.json();
-        
         API_BASE_URL = config.apiBaseUrl;
-        console.log('API Base URL loaded successfully');
         
-        // Initialize app functions that depend on the API URL
-        loadData();
+        console.log('✅ API Base URL loaded:', API_BASE_URL);
+        
+        // 2. Safely trigger data loads & setup event listeners AFTER API_BASE_URL is set
+        await startApp();
     } catch (err) {
-        console.error('Failed to load environment configuration:', err);
+        console.error('❌ Failed to load environment configuration:', err);
     }
 }
+
+// 3. Kick off initialization when DOM is ready
+document.addEventListener('DOMContentLoaded', initConfig);
 // --- Data (will be fetched from backend) ---
 let rooms = [];
 let bookings = []; // This will now hold the currentAly displayed page's bookings or filtered bookings
