@@ -1,4 +1,4 @@
-//const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api'; // Your Render backend URL
+const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
 
 // --- Data (will be fetched from backend) ---
 let rooms = [];
@@ -533,7 +533,6 @@ let currentHotel = userData ? userData.hotelName : 'Property Mnagement System';
 
 
 // --- 1. GLOBAL CONFIGURATION ---
-const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
 
 // --- 2. THE MISSING FETCH FUNCTION ---
 /**
@@ -5868,7 +5867,6 @@ function closeMessageBox() {
     document.getElementById('messageBox').classList.add('hidden');
 }
 
-                  //const API_BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
 
 /**
  * ROOM MANAGEMENT MODULE
@@ -7280,8 +7278,8 @@ window.onclick = function(event) {
  * POS MULTI-TENANT MODULE
  * Handles Guest Folios, Kitchen Orders, and Inventory Lookup
  */
-
-const BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
+const BASE_URL = `${API_BASE_URL}`;
+// const BASE_URL = 'https://patrinahhotelpms.onrender.com/api';
 let activeAccountId = null;
 let activeAccountData = null;
 let inventoryData = [];
@@ -8482,7 +8480,6 @@ document.getElementById('issueReceiptBtn').addEventListener('click', (e) => {
 
 
 // --- Initialization Variables ---
-//const API_BASE_URL = 'https://novouscloudpms-tz4s.onrender.com';
  
 let authToken = localStorage.getItem('authToken') || ''; // <-- Issue is here
 //let currentUsername = localStorage.getItem('username') || ''; 
@@ -11423,7 +11420,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-        const API_BASE = "https://patrinahhotelpms.onrender.com";
+        const API_BASE = `${API_BASE_URL}`;
 
 
 
@@ -11432,7 +11429,7 @@ let lastOrderCount = 0;
 async function loadOrders() {
     console.log("1. loadOrders started");
     try {
-        const res = await authenticatedFetch(`${API_BASE}/api/kitchen/Pending`, { method: 'GET' });
+        const res = await authenticatedFetch(`${API_BASE}/kitchen/Pending`, { method: 'GET' });
         
         if (!res || !res.ok) {
             console.error("2. API Error", res?.status);
@@ -15254,7 +15251,7 @@ window.addEventListener('click', function(event) {
     });
 });
 
-        const API_BASES = 'https://patrinahhotelpms.onrender.com/api/integrations';
+        const API_BASES = `${API_BASE_URL}/integrations`;
 
     document.addEventListener('DOMContentLoaded', () => {
     const providers = ['quickbooks', 'xero', 'zoho'];
@@ -15495,7 +15492,7 @@ if (!response) {
 });
 
 /* ---------- Config & State ---------- */
-const backendURL = 'https://patrinahhotelpms.onrender.com';
+const backendURL = `${API_BASE_URL}`;
 let allHousekeepingInventory = [];
 let housekeepingSearchDebounceTimeout = null;
 

@@ -5411,7 +5411,7 @@ housekeepingInventorySchema.index({ hotelId: 1, item: 1 }, { unique: true });
 const HousekeepingInventory = mongoose.model('HousekeepingInventory', housekeepingInventorySchema);
 
 // 1. Get Housekeeping Inventory Snapshot for a Specific Date
-app.get('/housekeepinginventory/snapshot/:date', auth, async (req, res) => {
+app.get('/api/housekeepinginventory/snapshot/:date', auth, async (req, res) => {
   try {
     const { date } = req.params;
     const startOfDay = new Date(date);
@@ -5464,7 +5464,7 @@ app.get('/housekeepinginventory/snapshot/:date', auth, async (req, res) => {
 });
 
 // 2. Add or Use Housekeeping Inventory
-app.post('/housekeepinginventory', auth, async (req, res) => {
+app.post('/api/housekeepinginventory', auth, async (req, res) => {
   const { item, quantity, action } = req.body;
   const tenantId = req.user.hotelId;
 
@@ -5527,7 +5527,7 @@ app.post('/housekeepinginventory', auth, async (req, res) => {
 });
 
 // 3. Get all housekeeping inventory items (Scoped to Tenant)
-app.get('/housekeepinginventory', auth, async (req, res) => {
+app.get('/api/housekeepinginventory', auth, async (req, res) => {
   try {
     const items = await HousekeepingInventory.find({ hotelId: req.user.hotelId }).sort({ item: 1 });
     res.status(200).json(items);
@@ -5538,7 +5538,7 @@ app.get('/housekeepinginventory', auth, async (req, res) => {
 });
 
 // 4. Update a housekeeping inventory item by ID
-app.put('/housekeepinginventory/:id', auth, async (req, res) => {
+app.put('/api/housekeepinginventory/:id', auth, async (req, res) => {
   try {
     const updated = await HousekeepingInventory.findOneAndUpdate(
       { _id: req.params.id, hotelId: req.user.hotelId }, 
@@ -5560,7 +5560,7 @@ app.put('/housekeepinginventory/:id', auth, async (req, res) => {
 });
 
 // 5. Delete a housekeeping inventory item by ID
-app.delete('/housekeepinginventory/:id', auth, async (req, res) => {
+app.delete('/api/housekeepinginventory/:id', auth, async (req, res) => {
   try {
     const deleted = await HousekeepingInventory.findOneAndDelete({ 
       _id: req.params.id, 
