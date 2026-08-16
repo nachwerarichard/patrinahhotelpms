@@ -888,19 +888,14 @@ async function showDashboard(username, role) {
 
     const loginContainer = document.getElementById('login-container');
     const mainContent = document.getElementById('main-content') || document.getElementById('dashboard-wrapper');
-
     if (loginContainer) loginContainer.style.display = 'none';
     if (mainContent) mainContent.style.display = 'flex';
-    
     // Apply granular role permissions to sidebar items
     applyRoleAccess(role);
-
     let initialSectionId = '';
     let initialNavLinkId = '';
-
     const dashboardSection = document.getElementById('dashboard');
     const metricCards = document.getElementById('metric-cards');
-
 
     if (role === 'admin' || role === 'super-admin') {
         initialSectionId = 'dashboard';
