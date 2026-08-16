@@ -8204,15 +8204,6 @@ if (!res.ok) {
     return;
 }
         inventoryData = await res.json();
-        
-        const list = document.getElementById('inventoryItems');
-        list.innerHTML = ''; 
-        inventoryData.forEach(itemRecord => {
-            const option = document.createElement('option');
-            option.value = itemRecord.item; 
-            option.label = `${CURRENT_CURRENCY} ${itemRecord.sellingprice.toLocaleString()}`;
-            list.appendChild(option);
-        });
     } catch (err) { console.error(err); }
 }
 
