@@ -899,6 +899,8 @@ async function showDashboard(username, role) {
     let initialNavLinkId = '';
 
     const dashboardSection = document.getElementById('dashboard');
+    const metricCards = document.getElementById('metric-cards');
+
 
     if (role === 'admin' || role === 'super-admin') {
         initialSectionId = 'dashboard';
@@ -913,11 +915,13 @@ async function showDashboard(username, role) {
         initialSectionId = 'kds';
         initialNavLinkId = 'nav-kds';
         if (dashboardSection) dashboardSection.style.display = 'none';
+        if (metricCards) metricCards.style.display = 'none';
     } 
     else if (role === 'bar') {
         initialSectionId = 'sale';
         initialNavLinkId = 'nav-sales';
         if (dashboardSection) dashboardSection.style.display = 'none';
+        if (metricCards) metricCards.style.display = 'none';
     }
     else if (role === 'front office') {
         initialSectionId = 'booking-management';
