@@ -914,7 +914,7 @@ async function showDashboard(username, role) {
         initialNavLinkId = 'nav-kds';
         if (dashboardSection) dashboardSection.style.display = 'none';
     } 
-    else if (role === 'cashier' || role === 'bar') {
+    else if (role === 'bar') {
         initialSectionId = 'sales';
         initialNavLinkId = 'nav-sales';
         if (dashboardSection) dashboardSection.style.display = 'none';
