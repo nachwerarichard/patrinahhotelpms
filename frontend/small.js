@@ -1210,10 +1210,9 @@ async function renderBookings(page = 1, searchTerm = '') {
     const nextPageBtn = document.getElementById("nextPageBtn");
 
     try {
-        const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-        const hotelId = sessionData?.hotelId;
-        const token = sessionData?.token;
-        const currentUserRole = sessionData?.role;
+        const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+        const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
+        const currentUserRole = sessionData?.role || localStorage.getItem('userRole');
 
         if (typeof renderHousekeepingRooms === 'function') {
             renderHousekeepingRooms();
@@ -1233,27 +1232,22 @@ async function renderBookings(page = 1, searchTerm = '') {
         currentPage = page;
         currentSearchTerm = searchTerm;
 
-        let currentBookings = [];
-        let totalPages = 1;
+        let queryPath = `/bookings?page=${currentPage}&limit=${recordsPerPage}&hotelId=${hotelId}`;
+        if (currentSearchTerm) queryPath += `&search=${encodeURIComponent(currentSearchTerm)}`;
 
-        let url = `${API_BASE_URL}/bookings?page=${currentPage}&limit=${recordsPerPage}&hotelId=${hotelId}`;
-        if (currentSearchTerm) url += `&search=${encodeURIComponent(currentSearchTerm)}`;
-
-        const response = await fetch(url, {
+        // ✅ Use authenticatedFetch instead of raw fetch
+        const response = await authenticatedFetch(queryPath, {
             method: 'GET',
-            signal: signal,
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-                'x-hotel-id': hotelId
-            }
+            signal: signal
         });
 
-        if (!response.ok) throw new Error(`HTTP fetch error Status code: ${response.status}`);
+        if (!response || !response.ok) {
+            throw new Error(`HTTP fetch error Status code: ${response?.status || 'Network error'}`);
+        }
 
         const data = await response.json();
-        currentBookings = data.bookings || [];
-        totalPages = data.totalPages || 1;
+        const currentBookings = data.bookings || [];
+        const totalPages = data.totalPages || 1;
 
         // Clear DOM
         if (tableBody) tableBody.innerHTML = '';
@@ -2287,139 +2281,6 @@ function closeBookingModal() {
     if (modalTitle) modalTitle.textContent = 'Add New Guest';
     if (form) form.reset();
     if (hiddenIdField) hiddenIdField.value = '';
-}
-async function SendConfirmEmail(bookingId) {
-    // 1. Role and Input Validation
-
-    let bookingToSend;
-    try {
-        const response = await fetch(`${API_BASE_URL}/bookings/id/${bookingId}`); // Fetch specific booking by ID
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        bookingToSend = await response.json();
-        if (!bookingToSend) {
-            showMessage('Error', 'Booking not found for email sending.', true);
-            return;
-        }
-    } catch (error) {
-        console.error('Error fetching booking for email:', error);
-        showMessage('Message', `Failed to retrieve booking details for email: ${error.message}`, true);
-        return;
-    }
-    const recipientEmail = bookingToSend.guestEmail ? bookingToSend.guestEmail.trim() : '';  // Use email from fetched booking
-    if (!recipientEmail) {
-        showMessage('Message', `Guest checkedout but no email address found for  "${bookingToSend.name}". Email not sent.`, true);
-        return;
-    }
-
-    if (!/\S+@\S+\.\S+/.test(recipientEmail)) {
-        showMessage('Error', `Invalid email format for guest "${bookingToSend.name}". Guest Checked but email not sent`, true);
-        return;
-    }
-
-    showMessage('Message', 'Attempting to send confirmation email...', false);
-
-    // 2. API Call and Robust Error Handling
-    try {
-        const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/send-email`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ recipientEmail })
-        });
-
-        // Check if the response is OK (status 2xx) AND if it's JSON
-        const contentType = response.headers.get("content-type");
-        if (!response.ok || !contentType || !contentType.includes("application/json")) {
-            let errorMessage = ' Guest checked out, but the  email was not sent (Connection Timeout)..';
-            let auditDetailsError = 'Unknown error or non-JSON response'; // Default for audit log
-
-    
-
-            showMessage('Message', errorMessage, true);
-
-            // Audit log for failed email sending due to unexpected response
-            await fetch(`${API_BASE_URL}/audit-log/action`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'Failed to Send Confirmation Email - Bad Server Response',
-                    user: currentUsername,
-                    details: {
-                        bookingId: bookingId,
-                        guestName: bookingToSend.name,
-                        roomNumber: bookingToSend.room,
-                        recipient: recipientEmail,
-                        status: response.status,
-                        statusText: response.statusText,
-                        errorDetails: auditDetailsError
-                    }
-                })
-            });
-            return; // Stop execution if response is not valid JSON or not OK
-        }
-
-        const data = await response.json(); // Safely parse JSON after checks
-
-        if (response.ok) {
-            showMessage('Message', data.message || 'Confirmation email sent successfully!', false);
-            // Audit log for successful email sending
-            await fetch(`${API_BASE_URL}/audit-log/action`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'Sent Confirmation Email',
-                    user: currentUsername,
-                    details: {
-                        bookingId: bookingId,
-                        guestName: bookingToSend.name,
-                        roomNumber: bookingToSend.room,
-                        recipient: recipientEmail
-                    }
-                })
-            });
-        } else {
-            // This block will now only be reached if response.ok is false but it *was* JSON
-            // (e.g., a server-side validation error that returns JSON with an error message)
-            showMessage('Email Sending Failed', data.message || 'Failed to send confirmation email. Please try again.', true);
-            // Audit log for failed email sending (server-side logic error, but still JSON)
-            await fetch(`${API_BASE_URL}/audit-log/action`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'Failed to Send Confirmation Email',
-                    user: currentUsername,
-                    details: {
-                        bookingId: bookingId,
-                        guestName: bookingToSend.name,
-                        roomNumber: bookingToSend.room,
-                        recipient: recipientEmail,
-                        error: data.message || 'Unknown error from server JSON response'
-                    }
-                })
-            });
-        }
-    } catch (error) {
-        // 3. Network and Client-Side Errors
-        console.error('Error sending confirmation email:', error);
-        showMessage('Network Error', 'Could not connect to the server to send email. Please check your internet connection and try again.', true);
-        // Audit log for network errors
-        await fetch(`${API_BASE_URL}/audit-log/action`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'Network Error Sending Confirmation Email',
-                user: currentUsername,
-                details: {
-                    bookingId: bookingId,
-                    recipient: recipientEmail, // Include recipient even if email wasn't found in initial booking search
-                    error: error.message || 'Unknown network error'
-                }
-            })
-        });
-    }
 }
 
 /**
