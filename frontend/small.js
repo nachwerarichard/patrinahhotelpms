@@ -896,7 +896,7 @@ async function showDashboard(username, role) {
         if (dashboardSection) dashboardSection.style.display = 'none';
     } 
     else if (role === 'cashier' || role === 'bar') {
-        initialSectionId = 'sales-records';
+        initialSectionId = 'sales';
         initialNavLinkId = 'nav-sales';
         if (dashboardSection) dashboardSection.style.display = 'none';
     }
@@ -4635,6 +4635,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (mainContent) mainContent.style.display = 'none';
     }
 });
+
 async function markNoShow(bookingId) {
     if (!confirm("Mark this booking as No Show?")) return;
 
