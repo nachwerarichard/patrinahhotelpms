@@ -915,7 +915,7 @@ async function showDashboard(username, role) {
         if (dashboardSection) dashboardSection.style.display = 'none';
     } 
     else if (role === 'bar') {
-        initialSectionId = 'sales';
+        initialSectionId = 'sale';
         initialNavLinkId = 'nav-sales';
         if (dashboardSection) dashboardSection.style.display = 'none';
     }
