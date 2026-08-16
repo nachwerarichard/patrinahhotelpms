@@ -250,25 +250,44 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             };
             localStorage.setItem('loggedInUser', JSON.stringify(targetUserObject));
 
+            // ==========================================
+            // FIX: UPDATE GLOBAL SCOPE & DOM IMMEDIATELY
+            // ==========================================
+            if (typeof currentUsername !== 'undefined') currentUsername = usernameVal;
+            if (typeof currentUserRole !== 'undefined') currentUserRole = role;
+
+            const displayName = document.getElementById('hotel-name-display');
+            if (displayName && hotelName) {
+                displayName.textContent = hotelName;
+            }
+
+            const displayrhName = document.getElementById('receipt-hotel-name');
+            if (displayrhName && hotelName) {
+                displayrhName.textContent = hotelName;
+            }
+            // ==========================================
+
             // Feedback UI
             btn.innerHTML = `<span class="flex items-center justify-center gap-2"><i class="fas fa-check"></i> Access Granted</span>`;
             btn.classList.replace('bg-slate-900', 'bg-emerald-600');
 
             // Hide Login Overlay & Reveal Dashboard
-            setTimeout(() => {
+            setTimeout(async () => {
                 const loginContainer = document.getElementById('login-container');
                 if (loginContainer) {
-                    loginContainer.style.display = 'none'; // Explicit inline style hide
+                    loginContainer.style.display = 'none'; 
                     loginContainer.classList.add('hidden');
                 }
 
-                const dashboardWrapper = document.getElementById('dashboard-wrapper');
+                const dashboardWrapper = document.getElementById('dashboard-wrapper') || document.getElementById('main-content');
                 if (dashboardWrapper) {
-                    dashboardWrapper.style.display = 'flex'; // Reveal main interface
+                    dashboardWrapper.style.display = 'flex'; 
                 }
 
-                // Boot Main Application Controller
-                if (typeof initDashboard === 'function') {
+                // Boot Main Application Controller & Views
+                if (typeof showDashboard === 'function') {
+                    await showDashboard(usernameVal, role);
+                } else if (typeof initDashboard === 'function') {
                     initDashboard();
                 }
             }, 600);
