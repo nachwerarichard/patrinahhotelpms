@@ -250,25 +250,44 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             };
             localStorage.setItem('loggedInUser', JSON.stringify(targetUserObject));
 
+            // ==========================================
+            // FIX: UPDATE GLOBAL SCOPE & DOM IMMEDIATELY
+            // ==========================================
+            if (typeof currentUsername !== 'undefined') currentUsername = usernameVal;
+            if (typeof currentUserRole !== 'undefined') currentUserRole = role;
+
+            const displayName = document.getElementById('hotel-name-display');
+            if (displayName && hotelName) {
+                displayName.textContent = hotelName;
+            }
+
+            const displayrhName = document.getElementById('receipt-hotel-name');
+            if (displayrhName && hotelName) {
+                displayrhName.textContent = hotelName;
+            }
+            // ==========================================
+
             // Feedback UI
             btn.innerHTML = `<span class="flex items-center justify-center gap-2"><i class="fas fa-check"></i> Access Granted</span>`;
             btn.classList.replace('bg-slate-900', 'bg-emerald-600');
 
             // Hide Login Overlay & Reveal Dashboard
-            setTimeout(() => {
+            setTimeout(async () => {
                 const loginContainer = document.getElementById('login-container');
                 if (loginContainer) {
-                    loginContainer.style.display = 'none'; // Explicit inline style hide
+                    loginContainer.style.display = 'none'; 
                     loginContainer.classList.add('hidden');
                 }
 
-                const dashboardWrapper = document.getElementById('dashboard-wrapper');
+                const dashboardWrapper = document.getElementById('dashboard-wrapper') || document.getElementById('main-content');
                 if (dashboardWrapper) {
-                    dashboardWrapper.style.display = 'flex'; // Reveal main interface
+                    dashboardWrapper.style.display = 'flex'; 
                 }
 
-                // Boot Main Application Controller
-                if (typeof initDashboard === 'function') {
+                // Boot Main Application Controller & Views
+                if (typeof showDashboard === 'function') {
+                    await showDashboard(usernameVal, role);
+                } else if (typeof initDashboard === 'function') {
                     initDashboard();
                 }
             }, 600);
@@ -869,17 +888,14 @@ async function showDashboard(username, role) {
 
     const loginContainer = document.getElementById('login-container');
     const mainContent = document.getElementById('main-content') || document.getElementById('dashboard-wrapper');
-
     if (loginContainer) loginContainer.style.display = 'none';
     if (mainContent) mainContent.style.display = 'flex';
-    
     // Apply granular role permissions to sidebar items
     applyRoleAccess(role);
-
     let initialSectionId = '';
     let initialNavLinkId = '';
-
     const dashboardSection = document.getElementById('dashboard');
+    const metricCards = document.getElementById('metric-cards');
 
     if (role === 'admin' || role === 'super-admin') {
         initialSectionId = 'dashboard';
@@ -894,11 +910,13 @@ async function showDashboard(username, role) {
         initialSectionId = 'kds';
         initialNavLinkId = 'nav-kds';
         if (dashboardSection) dashboardSection.style.display = 'none';
+        if (metricCards) metricCards.style.display = 'none';
     } 
-    else if (role === 'cashier' || role === 'bar') {
-        initialSectionId = 'sales-records';
+    else if (role === 'bar') {
+        initialSectionId = 'sale';
         initialNavLinkId = 'nav-sales';
         if (dashboardSection) dashboardSection.style.display = 'none';
+        if (metricCards) metricCards.style.display = 'none';
     }
     else if (role === 'front office') {
         initialSectionId = 'booking-management';
@@ -4635,6 +4653,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (mainContent) mainContent.style.display = 'none';
     }
 });
+
 async function markNoShow(bookingId) {
     if (!confirm("Mark this booking as No Show?")) return;
 
@@ -6976,7 +6995,6 @@ async function fetchUsers() {
                   class="text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition text-slate-700">
                     <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
                     <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
-                    <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
                     <option value="front office" ${user.role === 'front office' ? 'selected' : ''}>Front Office</option>
                     <option value="chef" ${user.role === 'chef' ? 'selected' : ''}>Chef</option>
                     <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>System Administrator</option>
