@@ -13263,6 +13263,10 @@ const DOM = {
     }
 };
 
+function setDashboardLoadingState(isLoading) {
+    DashboardState.isLoading = isLoading;
+    DOM.toggleClass('executive-dashboard-container', 'opacity-60', isLoading);
+}
 /**
  * Currency & Number Formatting Utility
  */
@@ -13507,10 +13511,7 @@ async function applyCustomDateRange(isAutoTrigger = false) {
 /**
  * Dynamic Loading Pulse Handler
  */
-function setDashboardLoadingState(isLoading) {
-    DashboardState.isLoading = isLoading;
-    DOM.toggleClass('executive-dashboard-container', 'opacity-60', isLoading);
-}
+
 
 /**
  * Lifecycle Event Listener Binding
