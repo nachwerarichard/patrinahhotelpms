@@ -6976,7 +6976,6 @@ async function fetchUsers() {
                   class="text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition text-slate-700">
                     <option value="housekeeper" ${user.role === 'housekeeper' ? 'selected' : ''}>Housekeeper</option>
                     <option value="bar" ${user.role === 'bar' ? 'selected' : ''}>Bar Staff</option>
-                    <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
                     <option value="front office" ${user.role === 'front office' ? 'selected' : ''}>Front Office</option>
                     <option value="chef" ${user.role === 'chef' ? 'selected' : ''}>Chef</option>
                     <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>System Administrator</option>
