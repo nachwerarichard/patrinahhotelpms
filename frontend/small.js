@@ -165,25 +165,24 @@ function setDashboardLoadingState(isLoading) {
     DOM.toggleClass('executive-dashboard-container', 'opacity-60', isLoading);
 }
 
-// 3. Multi-Tenant Authenticated Fetch Wrapper with API URL Resolution
+// ==========================================
+// 1. Multi-Tenant Authenticated Fetch Wrapper
+// ==========================================
 async function authenticatedFetch(endpoint, options = {}) {
-    // Wait for Netlify config to resolve before processing requests
     if (!API_BASE_URL) {
         await configPromise;
     }
 
-    let token = localStorage.getItem('token');
+    const token = localStorage.getItem('token');
 
     if (!token) {
         console.warn('No token found. Aborting authenticated request.');
         return null;
     }
 
-    // Smart URL formatting: prepends API_BASE_URL if relative path is passed
     const formattedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const fullUrl = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${formattedEndpoint}`;
 
-    // Standard headers + Multi-Tenant Headers
     const headers = {
         'Authorization': `Bearer ${token}`,
         'x-hotel-id': localStorage.getItem('hotelId') || 'global',
@@ -191,7 +190,6 @@ async function authenticatedFetch(endpoint, options = {}) {
         ...options.headers 
     };
 
-    // Body formatting check
     if (options.body instanceof FormData) {
         delete headers['Content-Type']; 
     } else if (options.body && !headers['Content-Type']) { 
@@ -201,7 +199,6 @@ async function authenticatedFetch(endpoint, options = {}) {
     try {
         const response = await fetch(fullUrl, { ...options, headers });
 
-        // Session expiration handling
         if (response.status === 401) {
             console.warn('Session expired or unauthorized (401). Triggering logout...');
             if (typeof logout === 'function') {
@@ -211,10 +208,17 @@ async function authenticatedFetch(endpoint, options = {}) {
 
         return response;
     } catch (error) {
+        // Silently re-throw AbortError without console.error spam
+        if (error.name === 'AbortError' || options.signal?.aborted) {
+            throw error;
+        }
+
         console.error('Network request failed:', error);
         throw error;
     }
 }
+
+
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -13385,19 +13389,23 @@ const Formatters = {
  * Main Data Fetching Engine
  * @param {string} queryParams - API search parameters
  */
+// ==========================================
+// 2. Executive Dashboard Loader
+// ==========================================
 async function fetchExecutiveDashboard(queryParams = 'range=today') {
-    // Abort active pending requests if user rapidly switches filters
+    // Abort active pending request if a new filter parameter is selected
     if (DashboardState.abortController) {
         DashboardState.abortController.abort();
     }
-    DashboardState.abortController = new AbortController();
+    const currentController = new AbortController();
+    DashboardState.abortController = currentController;
 
     setDashboardLoadingState(true);
 
     try {
         const response = await authenticatedFetch(
             `${API_BASE_URL}/dashboard/executive-flash?${queryParams}`, 
-            { signal: DashboardState.abortController.signal }
+            { signal: currentController.signal }
         );
 
         if (!response || !response.ok) {
@@ -13408,51 +13416,62 @@ async function fetchExecutiveDashboard(queryParams = 'range=today') {
         const curr = data.currency || localStorage.getItem('hotelCurrency') || 'UGX';
 
         // 1. Core KPIs
-        DOM.setText('val-capacity', data.capacity);
-        DOM.setText('val-occupancy', Formatters.percent(data.kpis?.occupancyRate));
-        DOM.setText('val-adr', Formatters.currency(data.kpis?.adr, curr));
-        DOM.setText('val-revpar', Formatters.currency(data.kpis?.revpar, curr));
-        DOM.setText('val-gross-revenue', Formatters.currency(data.kpis?.grossRevenue, curr));
-        DOM.setText('val-pos-profit', Formatters.currency(data.kpis?.posProfit, curr));
-        DOM.setText('val-noi', Formatters.currency(data.kpis?.noi, curr));
+        if (typeof DOM !== 'undefined') {
+            DOM.setText('val-capacity', data.capacity);
+            DOM.setText('val-occupancy', typeof Formatters !== 'undefined' ? Formatters.percent(data.kpis?.occupancyRate) : `${data.kpis?.occupancyRate || 0}%`);
+            DOM.setText('val-adr', typeof Formatters !== 'undefined' ? Formatters.currency(data.kpis?.adr, curr) : data.kpis?.adr);
+            DOM.setText('val-revpar', typeof Formatters !== 'undefined' ? Formatters.currency(data.kpis?.revpar, curr) : data.kpis?.revpar);
+            DOM.setText('val-gross-revenue', typeof Formatters !== 'undefined' ? Formatters.currency(data.kpis?.grossRevenue, curr) : data.kpis?.grossRevenue);
+            DOM.setText('val-pos-profit', typeof Formatters !== 'undefined' ? Formatters.currency(data.kpis?.posProfit, curr) : data.kpis?.posProfit);
+            DOM.setText('val-noi', typeof Formatters !== 'undefined' ? Formatters.currency(data.kpis?.noi, curr) : data.kpis?.noi);
 
-        // 2. Trend Badges & Occupancy Meter
-        renderTrendBadge('badge-revpar-trend', data.kpis?.revparTrend);
-        renderTrendBadge('badge-gross-trend', data.kpis?.grossRevenueTrend);
-        renderTrendBadge('badge-pos-profit-trend', data.kpis?.posProfitTrend);
-        renderTrendBadge('badge-noi-trend', data.kpis?.noiTrend);
+            // 2. Trend Badges & Occupancy Meter
+            if (typeof renderTrendBadge === 'function') {
+                renderTrendBadge('badge-revpar-trend', data.kpis?.revparTrend);
+                renderTrendBadge('badge-gross-trend', data.kpis?.grossRevenueTrend);
+                renderTrendBadge('badge-pos-profit-trend', data.kpis?.posProfitTrend);
+                renderTrendBadge('badge-noi-trend', data.kpis?.noiTrend);
+            }
 
-        const occupancyPct = Math.min(Math.max(data.kpis?.occupancyRate || 0, 0), 100);
-        DOM.setStyle('bar-occupancy', 'width', `${occupancyPct}%`);
+            const occupancyPct = Math.min(Math.max(data.kpis?.occupancyRate || 0, 0), 100);
+            DOM.setStyle('bar-occupancy', 'width', `${occupancyPct}%`);
 
-        // 3. Front Desk Operations
-        DOM.setText('fd-arrivals-pending', data.frontDesk?.arrivalsPending);
-        DOM.setText('fd-arrivals-done', data.frontDesk?.arrivalsCheckedIn);
-        DOM.setText('fd-deps-pending', data.frontDesk?.departuresPending);
-        DOM.setText('fd-deps-done', data.frontDesk?.departuresCheckedOut);
-        DOM.setText('fd-in-house', data.frontDesk?.inHouseGuests);
-        DOM.setText('fd-no-shows', data.frontDesk?.noShows);
+            // 3. Front Desk Operations
+            DOM.setText('fd-arrivals-pending', data.frontDesk?.arrivalsPending);
+            DOM.setText('fd-arrivals-done', data.frontDesk?.arrivalsCheckedIn);
+            DOM.setText('fd-deps-pending', data.frontDesk?.departuresPending);
+            DOM.setText('fd-deps-done', data.frontDesk?.departuresCheckedOut);
+            DOM.setText('fd-in-house', data.frontDesk?.inHouseGuests);
+            DOM.setText('fd-no-shows', data.frontDesk?.noShows);
 
-        // 4. Distribution Channel Mix Breakdown
-        renderChannelMix(data.channelMix || [], curr);
+            // 4. Distribution Channel Mix Breakdown
+            if (typeof renderChannelMix === 'function') {
+                renderChannelMix(data.channelMix || [], curr);
+            }
 
-        // 5. Financial Audit & Ledger Balance
-        DOM.setText('fin-room-rev', Formatters.currency(data.financials?.roomRevenue, curr));
-        DOM.setText('fin-pos-rev', Formatters.currency(data.financials?.posSales, curr));
-        DOM.setText('fin-pos-profit', Formatters.currency(data.financials?.posProfit, curr));
-        DOM.setText('fin-gross-profit', Formatters.currency(data.financials?.totalGrossProfit, curr));
-        DOM.setText('fin-collected', Formatters.currency(data.financials?.collectedCash, curr));
-        DOM.setText('fin-ledger-bal', Formatters.currency(data.financials?.cityLedgerBalance, curr));
-        DOM.setText('fin-expenses', Formatters.currency(data.financials?.expenses, curr));
+            // 5. Financial Audit & Ledger Balance
+            DOM.setText('fin-room-rev', typeof Formatters !== 'undefined' ? Formatters.currency(data.financials?.roomRevenue, curr) : data.financials?.roomRevenue);
+            DOM.setText('fin-pos-rev', typeof Formatters !== 'undefined' ? Formatters.currency(data.financials?.posSales, curr) : data.financials?.posSales);
+            DOM.setText('fin-pos-profit', typeof Formatters !== 'undefined' ? Formatters.currency(data.financials?.posProfit, curr) : data.financials?.posProfit);
+            DOM.setText('fin-gross-profit', typeof Formatters !== 'undefined' ? Formatters.currency(data.financials?.totalGrossProfit, curr) : data.financials?.totalGrossProfit);
+            DOM.setText('fin-collected', typeof Formatters !== 'undefined' ? Formatters.currency(data.financials?.collectedCash, curr) : data.financials?.collectedCash);
+            DOM.setText('fin-ledger-bal', typeof Formatters !== 'undefined' ? Formatters.currency(data.financials?.cityLedgerBalance, curr) : data.financials?.cityLedgerBalance);
+            DOM.setText('fin-expenses', typeof Formatters !== 'undefined' ? Formatters.currency(data.financials?.expenses, curr) : data.financials?.expenses);
+        }
 
     } catch (err) {
-        if (err.name === 'AbortError') return; // Ignore aborted requests
+        if (err.name === 'AbortError' || currentController.signal.aborted) {
+            return; // Ignore cancelled requests quietly
+        }
         console.error("❌ Failed to load Executive Flash Report:", err);
         if (typeof showMessage === 'function') {
             showMessage('Error', 'Failed to update executive dashboard metrics.', true);
         }
     } finally {
-        setDashboardLoadingState(false);
+        // Only turn off loading UI if this specific request wasn't overridden
+        if (DashboardState.abortController === currentController && !currentController.signal.aborted) {
+            setDashboardLoadingState(false);
+        }
     }
 }
 
