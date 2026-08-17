@@ -145,6 +145,26 @@ async function initConfig() {
 // 2. Initialize promise guard immediately so it starts fetching right away
 configPromise = initConfig();
 
+const DOM = {
+    setText: (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value !== undefined && value !== null ? value : '--';
+    },
+    setStyle: (id, property, value) => {
+        const el = document.getElementById(id);
+        if (el) el.style[property] = value;
+    },
+    toggleClass: (id, className, force) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle(className, force);
+    }
+};
+
+function setDashboardLoadingState(isLoading) {
+    DashboardState.isLoading = isLoading;
+    DOM.toggleClass('executive-dashboard-container', 'opacity-60', isLoading);
+}
+
 // 3. Multi-Tenant Authenticated Fetch Wrapper with API URL Resolution
 async function authenticatedFetch(endpoint, options = {}) {
     // Wait for Netlify config to resolve before processing requests
@@ -13341,25 +13361,7 @@ document.addEventListener('DOMContentLoaded', fetchExecutiveDashboard);
 /**
  * Safe DOM Utilities
  */
-const DOM = {
-    setText: (id, value) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = value !== undefined && value !== null ? value : '--';
-    },
-    setStyle: (id, property, value) => {
-        const el = document.getElementById(id);
-        if (el) el.style[property] = value;
-    },
-    toggleClass: (id, className, force) => {
-        const el = document.getElementById(id);
-        if (el) el.classList.toggle(className, force);
-    }
-};
 
-function setDashboardLoadingState(isLoading) {
-    DashboardState.isLoading = isLoading;
-    DOM.toggleClass('executive-dashboard-container', 'opacity-60', isLoading);
-}
 /**
  * Currency & Number Formatting Utility
  */
