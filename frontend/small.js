@@ -768,106 +768,106 @@ document.getElementById('checkIn').addEventListener('change', function () {
 
 
  async function populateRoomDropdown(selectedRoomNumber = null) {
-    // 1. Get auth data from localStorage
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const hotelId = sessionData?.hotelId;
-    const token = sessionData?.token;
-
-    // Safety check: if no hotelId, we shouldn't even try to fetch
-    if (!hotelId) {
-        console.error("No Hotel ID found in session.");
+    const roomSelect = document.getElementById('roomSelect') || document.getElementById('room');
+    if (!roomSelect) {
+        console.error("Room select dropdown element not found in DOM.");
         return;
     }
 
+    // Reset dropdown state
     roomSelect.innerHTML = '<option value="">Select a Room</option>';
-    
+
     try {
-        // 2. Add hotelId to URL and Token to Headers
-        const response = await fetch(`${API_BASE_URL}/rooms?hotelId=${hotelId}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',  
-                'x-hotel-id': sessionData?.hotelId 
-            }
+        const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+        const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
+
+        if (!hotelId) {
+            console.error("No Hotel ID found in session.");
+            return;
+        }
+
+        // 1. Fetch rooms using authenticatedFetch with explicit API_BASE_URL
+        const response = await authenticatedFetch(`${API_BASE_URL}/rooms?hotelId=${hotelId}`, {
+            method: 'GET'
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response || !response.ok) {
+            throw new Error(`HTTP error! status: ${response?.status || 'Network failure'}`);
         }
 
         const fetchedRooms = await response.json();
-        rooms = fetchedRooms; // Update local rooms array
+        rooms = Array.isArray(fetchedRooms) ? fetchedRooms : (fetchedRooms.rooms || []);
 
-        // Filter for clean rooms or the currently selected room (for editing)
-        const availableRooms = rooms.filter(room => room.status === 'clean' || room.number === selectedRoomNumber);
+        // 2. Filter for available/clean rooms or currently selected room
+        const availableRooms = rooms.filter(room => 
+            room.status === 'clean' || room.number === selectedRoomNumber
+        );
 
-        // Group rooms by type for better display
+        // 3. Group rooms by room type
         const roomTypes = {};
         availableRooms.forEach(room => {
-            
-            const typeName = room.roomTypeId?.name || "Unknown";
-
-if (!roomTypes[typeName]) {
-    roomTypes[typeName] = [];
-}
-
-roomTypes[typeName].push(room);
-
+            const typeName = room.roomTypeId?.name || "Standard";
+            if (!roomTypes[typeName]) {
+                roomTypes[typeName] = [];
+            }
+            roomTypes[typeName].push(room);
         });
 
+        // 4. Build and append optgroups
+        const fragment = document.createDocumentFragment();
         for (const type in roomTypes) {
             const optgroup = document.createElement('optgroup');
             optgroup.label = type;
-            roomTypes[type].sort((a, b) => parseInt(a.number) - parseInt(b.number)).forEach(room => {
-                const option = document.createElement('option');
-                option.value = room.number;
-                option.textContent = `Room ${room.number}`;
-                if (selectedRoomNumber && room.number === selectedRoomNumber) {
-                    option.selected = true;
+
+            roomTypes[type]
+                .sort((a, b) => parseInt(a.number, 10) - parseInt(b.number, 10))
+                .forEach(room => {
+                    const option = document.createElement('option');
+                    option.value = room.number;
+                    option.textContent = `Room ${room.number}`;
+                    if (selectedRoomNumber && room.number === selectedRoomNumber) {
+                        option.selected = true;
+                    }
+                    optgroup.appendChild(option);
+                });
+
+            fragment.appendChild(optgroup);
+        }
+
+        roomSelect.appendChild(fragment);
+
+        // 5. Attach change listener once (Remove existing listener to avoid stacking)
+        roomSelect.onchange = function () {
+            const selectedVal = this.value;
+            const checkInInput = document.getElementById('checkIn');
+            const checkInDate = checkInInput ? checkInInput.value : null;
+            const amtPerNightInput = document.getElementById('amtPerNight');
+
+            if (!selectedVal || !amtPerNightInput) return;
+
+            const selectedRoom = rooms.find(room => room.number === selectedVal);
+
+            if (selectedRoom && selectedRoom.roomTypeId) {
+                let rate;
+                if (checkInDate && typeof getApplicableRate === 'function') {
+                    rate = getApplicableRate(selectedRoom.roomTypeId, checkInDate);
+                } else {
+                    rate = selectedRoom.roomTypeId.basePrice || 0;
                 }
-                optgroup.appendChild(option);
-            });
-            roomSelect.addEventListener('change', function () {
-    const selectedRoomNumber = this.value;
-    const checkInDate = document.getElementById('checkIn').value;
+                amtPerNightInput.value = rate;
+            }
+        };
 
-    if (!selectedRoomNumber) return;
-
-    const selectedRoom = rooms.find(room => room.number === selectedRoomNumber);
-
-    if (selectedRoom && selectedRoom.roomTypeId) {
-
-        let rate;
-
-        if (checkInDate) {
-            rate = getApplicableRate(selectedRoom.roomTypeId, checkInDate);
-        } else {
-            rate = selectedRoom.roomTypeId.basePrice;
+        // Trigger change event manually if a default room was selected
+        if (selectedRoomNumber) {
+            roomSelect.dispatchEvent(new Event('change'));
         }
 
-        document.getElementById('amtPerNight').value = rate;
-    }
-});
-
-            roomSelect.appendChild(optgroup);
-            roomSelect.addEventListener('change', function () {
-    const selectedRoomNumber = this.value;
-
-    if (!selectedRoomNumber) return;
-
-    const selectedRoom = rooms.find(room => room.number === selectedRoomNumber);
-
-    if (selectedRoom && selectedRoom.roomTypeId) {
-        const basePrice = selectedRoom.roomTypeId.basePrice;
-        document.getElementById('amtPerNight').value = basePrice;
-    }
-});
-
-        }
     } catch (error) {
         console.error('Error populating room dropdown:', error);
-        showMessage('Error', 'Failed to load rooms for dropdown. Please try again.', true);
+        if (typeof showMessage === 'function') {
+            showMessage('Error', 'Failed to load rooms for dropdown. Please try again.', true);
+        }
     }
 }
      // 2. SAVE to LocalStorage
@@ -1971,87 +1971,86 @@ function closeVoidModal() {
 
 
 document.getElementById('confirmCancelBtn').addEventListener('click', async () => {
-    // 1. Get session data
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
     const currentUsername = sessionData?.username;
 
-    const reason = document.getElementById('cancelReasonInput').value;
-    if (!reason) return showMessage("Please provide a reason.");
+    const reasonInput = document.getElementById('cancelReasonInput');
+    const reason = reasonInput ? reasonInput.value.trim() : '';
+
+    if (!reason) {
+        return showMessage("Warning", "Please provide a reason.", true);
+    }
 
     try {
-        // 2. Add Authorization header and include hotelId in the payload
-        const response = await fetch(`${API_BASE_URL}/bookings/${bookingToCancel}/cancel`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/bookings/${bookingToCancel}/cancel`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`, // Pass the security token
-                    'x-hotel-id': sessionData?.hotelId
-
-            },
             body: JSON.stringify({ 
                 reason: reason,
                 username: currentUsername,
-                hotelId: hotelId // Ensure the backend validates this booking belongs to this hotel
+                hotelId: hotelId 
             })
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
+        if (!response || !response.ok) {
+            const errorData = response ? await response.json().catch(() => ({})) : {};
             throw new Error(errorData.message || 'Failed to cancel booking');
         }
 
         const data = await response.json();
-        closeCancelModal();
-        showMessage('Cancelled', data.message);
         
-        // Refresh the table to see the status change
-        renderBookings(currentPage, currentSearchTerm);
+        if (typeof closeCancelModal === 'function') closeCancelModal();
+        if (reasonInput) reasonInput.value = ''; // Reset input field
+        
+        showMessage('Cancelled', data.message || 'Booking cancelled successfully.');
+        
+        if (typeof renderBookings === 'function') {
+            renderBookings(currentPage, currentSearchTerm);
+        }
         
     } catch (error) {
         console.error('Cancellation error:', error);
         showMessage('Error', error.message, true);
     }
 });
+
 document.getElementById('confirmVoidBtn').addEventListener('click', async () => {
-    // 1. Get session data
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
     const currentUsername = sessionData?.username;
 
-    const reason = document.getElementById('voidReasonInput').value;
-    if (!reason) return showMessage("Please provide a reason.");
+    const reasonInput = document.getElementById('voidReasonInput');
+    const reason = reasonInput ? reasonInput.value.trim() : '';
+
+    if (!reason) {
+        return showMessage("Warning", "Please provide a reason.", true);
+    }
 
     try {
-        // 2. Add Authorization and hotelId validation
-        const response = await fetch(`${API_BASE_URL}/bookings/${bookingToVoid}/void`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/bookings/${bookingToVoid}/void`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` ,
-                    'x-hotel-id': sessionData?.hotelId
-
-            },
             body: JSON.stringify({ 
                 reason: reason,
                 username: currentUsername,
-                hotelId: hotelId // Crucial for multi-tenant data integrity
+                hotelId: hotelId 
             })
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
+        if (!response || !response.ok) {
+            const errorData = response ? await response.json().catch(() => ({})) : {};
             throw new Error(errorData.message || 'Failed to void booking');
         }
 
         const data = await response.json();
-        closeVoidModal();
-        showMessage('Voided', data.message);
         
-        // Refresh the table
-        renderBookings(currentPage, currentSearchTerm);
+        if (typeof closeVoidModal === 'function') closeVoidModal();
+        if (reasonInput) reasonInput.value = ''; // Reset input field
+
+        showMessage('Voided', data.message || 'Booking voided successfully.');
+        
+        if (typeof renderBookings === 'function') {
+            renderBookings(currentPage, currentSearchTerm);
+        }
     } catch (error) {
         console.error('Void error:', error);
         showMessage('Error', error.message, true);
@@ -2397,112 +2396,117 @@ function calculateBookingDetails() {
 bookingForm.addEventListener('submit', async function(event) {
     event.preventDefault();
 
-    // 1. Get session data for Multi-Tenancy and Security
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
+    // 1. Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
     const currentUsername = sessionData?.username;
 
-    const id = document.getElementById('bookingId').value; 
-    const name = document.getElementById('name').value;
-    const roomNumber = document.getElementById('room').value;
-    const checkIn = document.getElementById('checkIn').value;
-    const checkOut = document.getElementById('checkOut').value;
-    const nights = parseFloat(nightsInput.value);
-    const amtPerNight = parseFloat(amtPerNightInput.value);
-    const totalDue = parseFloat(totalDueInput.value); 
-    const amountPaid = parseFloat(amountPaidInput.value); 
-    const balance = parseFloat(balanceInput.value); 
-    const paymentStatus = document.getElementById('paymentStatus').value;
-    const paymentMethod = document.getElementById('paymentMethod').value;
-    const gueststatus = document.getElementById('gueststatus').value;
-    const guestsource = document.getElementById('guestsource').value;
+    if (!hotelId) {
+        return showMessage('Error', 'No hotel session found. Please log in again.', true);
+    }
 
-    const people = parseInt(document.getElementById('people').value);
-    const nationality = document.getElementById('nationality').value;
-    const address = document.getElementById('address').value;
-    const phoneNo = document.getElementById('phoneNo').value;
-    const guestEmail = document.getElementById('guestEmail').value;
-    const nationalIdNo = document.getElementById('nationalIdNo').value;
-    const occupation = document.getElementById('occupation').value;
-    const vehno = document.getElementById('vehno').value;
-    const destination = document.getElementById('destination').value;
-    const checkIntime = document.getElementById('checkIntime').value;
-    const checkOuttime = document.getElementById('checkOuttime').value;
-    const kin = document.getElementById('kin').value; 
-    const kintel = document.getElementById('kintel').value; 
-    const purpose = document.getElementById('purpose').value;
-    const declarations = document.getElementById('declarations').value;
-    const transactionid = document.getElementById('transactionid').value;
-    const extraperson = document.getElementById('extraperson').value;
+    // Safely extract input values
+    const getValue = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.value.trim() : '';
+    };
 
-    // 2. Attach hotelId and username to the booking payload
+    const getFloat = (id) => {
+        const el = document.getElementById(id);
+        return el ? parseFloat(el.value) || 0 : 0;
+    };
+
+    const getInt = (id) => {
+        const el = document.getElementById(id);
+        return el ? parseInt(el.value, 10) || 1 : 1;
+    };
+
+    const id = getValue('bookingId');
+    
+    // 2. Build Payload
     const bookingData = {
-        name, room: roomNumber, checkIn, checkOut, nights, amtPerNight, occupation, vehno, destination, checkIntime, checkOuttime, kin, kintel,
-        totalDue, amountPaid, balance, paymentStatus, paymentMethod, people, transactionid, extraperson, nationality, purpose, declarations, gueststatus, guestsource,
-        address, phoneNo, guestEmail, nationalIdNo,
-        hotelId: hotelId, // CRITICAL: This links the guest to the correct hotel
-        username: currentUsername 
+        name: getValue('name'),
+        room: getValue('room'),
+        checkIn: getValue('checkIn'),
+        checkOut: getValue('checkOut'),
+        nights: getFloat('nightsInput') || getFloat('nights'),
+        amtPerNight: getFloat('amtPerNightInput') || getFloat('amtPerNight'),
+        totalDue: getFloat('totalDueInput') || getFloat('totalDue'),
+        amountPaid: getFloat('amountPaidInput') || getFloat('amountPaid'),
+        balance: getFloat('balanceInput') || getFloat('balance'),
+        paymentStatus: getValue('paymentStatus'),
+        paymentMethod: getValue('paymentMethod'),
+        gueststatus: getValue('gueststatus'),
+        guestsource: getValue('guestsource'),
+        people: getInt('people'),
+        nationality: getValue('nationality'),
+        address: getValue('address'),
+        phoneNo: getValue('phoneNo'),
+        guestEmail: getValue('guestEmail'),
+        nationalIdNo: getValue('nationalIdNo'),
+        occupation: getValue('occupation'),
+        vehno: getValue('vehno'),
+        destination: getValue('destination'),
+        checkIntime: getValue('checkIntime'),
+        checkOuttime: getValue('checkOuttime'),
+        kin: getValue('kin'),
+        kintel: getValue('kintel'),
+        purpose: getValue('purpose'),
+        declarations: getValue('declarations'),
+        transactionid: getValue('transactionid'),
+        extraperson: getValue('extraperson'),
+        hotelId: hotelId,
+        username: currentUsername
     };
 
     const saveBtn = document.getElementById('saveBookingBtn');
+    const originalBtnText = saveBtn ? saveBtn.innerHTML : (id ? 'Update Booking' : 'Add Booking');
 
     try {
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = `
-            <span class="inline-flex items-center">
-                <svg class="animate-spin-slow h-4 w-4 mr-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Processing...
-            </span>
-        `;
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = `
+                <span class="inline-flex items-center">
+                    <svg class="animate-spin h-4 w-4 mr-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                </span>
+            `;
+        }
 
         let response;
         let message;
-        
-        // 3. Add Authorization header to both PUT and POST requests
-        const requestOptions = {
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` ,
-                'x-hotel-id': sessionData?.hotelId
-            },
+        const endpoint = id 
+            ? `${API_BASE_URL}/bookings/${id}` 
+            : `${API_BASE_URL}/bookings`;
+            
+        const method = id ? 'PUT' : 'POST';
+
+        // 3. Unified request through authenticatedFetch
+        response = await authenticatedFetch(endpoint, {
+            method: method,
             body: JSON.stringify(bookingData)
-        };
+        });
 
-        if (id) {
-            // Update existing booking
-            response = await authenticatedFetch(
-    `${API_BASE_URL}/bookings/${id}`,
-    {
-        method: 'PUT',
-        ...requestOptions
-    }
-);
-
-            message = 'Booking updated successfully!';
-        } else {
-            // Create new booking
-            response = await fetch(`${API_BASE_URL}/bookings`, {
-                method: 'POST',
-                ...requestOptions
-            });
-            message = 'New booking added successfully!';
+        if (!response || !response.ok) {
+            const errorData = response ? await response.json().catch(() => ({})) : {};
+            throw new Error(errorData.message || `HTTP error! status: ${response?.status || 'Network error'}`);
         }
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
-
+        message = id ? 'Booking updated successfully!' : 'New booking added successfully!';
         showMessage('Success', message);
         
-        // Refresh UI components
-        renderBookings(currentPage, currentSearchTerm);
-        renderHousekeepingRooms();
-        fetchExecutiveDashboard();
+        // Reset form on new booking creation
+        if (!id && typeof bookingForm.reset === 'function') {
+            bookingForm.reset();
+        }
+
+        // 4. Refresh UI state
+        if (typeof renderBookings === 'function') renderBookings(currentPage, currentSearchTerm);
+        if (typeof renderHousekeepingRooms === 'function') renderHousekeepingRooms();
+        if (typeof fetchExecutiveDashboard === 'function') fetchExecutiveDashboard();
         if (typeof renderCalendar === 'function') renderCalendar();
         if (typeof renderAuditLogs === 'function') renderAuditLogs();
 
@@ -2510,8 +2514,10 @@ bookingForm.addEventListener('submit', async function(event) {
         console.error('Error saving booking:', error);
         showMessage('Error', `Failed to save booking: ${error.message}`, true);
     } finally {
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = id ? 'Update Booking' : 'Add Booking';
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = id ? 'Update Booking' : 'Add Booking';
+        }
     }
 });
 
@@ -2521,86 +2527,106 @@ bookingForm.addEventListener('submit', async function(event) {
  */
 
 async function editBooking(id) {
-    // Get session data
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
+    if (!id) {
+        console.error("Booking ID is required for editing.");
+        return;
+    }
 
     try {
-       const response = await authenticatedFetch(
-    `${API_BASE_URL}/bookings/id/${id}`,
-    { method: 'GET' }
-);
+        // 1. Fetch booking data using authenticatedFetch
+        const response = await authenticatedFetch(`${API_BASE_URL}/bookings/id/${id}`, {
+            method: 'GET'
+        });
 
-        
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response || !response.ok) {
+            throw new Error(`HTTP error! status: ${response?.status || 'Network failure'}`);
+        }
+
         const booking = await response.json();
 
-        if (!booking) {
+        if (!booking || Object.keys(booking).length === 0) {
             showMessage('Error', 'Booking not found for editing.', true);
             return;
         }
 
-        // Enable inputs (in case they were disabled by viewBooking)
-        const inputs = bookingModal.querySelectorAll('input, select, textarea');
-        inputs.forEach(input => {
-            input.removeAttribute('readonly');
-            input.disabled = false;
-            input.style.backgroundColor = ''; // Reset background
-        });
+        // Helper function for safe DOM updates
+        const setVal = (elementId, val) => {
+            const el = document.getElementById(elementId);
+            if (el) el.value = val !== undefined && val !== null ? val : '';
+        };
 
-        document.getElementById('modalTitle').textContent = 'Edit Guest Details';
+        const bookingModal = document.getElementById('bookingModal');
+        if (bookingModal) {
+            // Enable inputs (in case they were disabled by viewBooking)
+            const inputs = bookingModal.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                input.removeAttribute('readonly');
+                input.disabled = false;
+                input.style.backgroundColor = '';
+            });
+        }
 
-        // --- Populate Fields ---
-        document.getElementById('bookingId').value = booking.id || '';
-        document.getElementById('name').value = booking.name || '';
-        document.getElementById('occupation').value = booking.occupation || '';
-        document.getElementById('nationality').value = booking.nationality || '';
-        document.getElementById('nationalIdNo').value = booking.nationalIdNo || '';
-        document.getElementById('address').value = booking.address || '';
-        document.getElementById('phoneNo').value = booking.phoneNo || '';
-        document.getElementById('guestEmail').value = booking.guestEmail || '';
+        const modalTitle = document.getElementById('modalTitle');
+        if (modalTitle) modalTitle.textContent = 'Edit Guest Details';
+
+        // --- Populate Guest Details ---
+        setVal('bookingId', booking.id || booking._id);
+        setVal('name', booking.name);
+        setVal('occupation', booking.occupation);
+        setVal('nationality', booking.nationality);
+        setVal('nationalIdNo', booking.nationalIdNo);
+        setVal('address', booking.address);
+        setVal('phoneNo', booking.phoneNo);
+        setVal('guestEmail', booking.guestEmail);
 
         // --- Room & Stay Details ---
-        await populateRoomDropdown(booking.room);
-        document.getElementById('room').value = booking.room || '';
-        document.getElementById('checkIn').value = booking.checkIn || '';
-        document.getElementById('checkIntime').value = booking.checkIntime || '';
-        document.getElementById('checkOut').value = booking.checkOut || '';
-        document.getElementById('checkOuttime').value = booking.checkOuttime || '';
-        document.getElementById('nights').value = booking.nights || 0;
-        document.getElementById('people').value = booking.people || 1;
-        document.getElementById('extraperson').value = booking.extraperson || '';
+        if (typeof populateRoomDropdown === 'function') {
+            await populateRoomDropdown(booking.room);
+        }
+        setVal('room', booking.room);
+        setVal('checkIn', booking.checkIn);
+        setVal('checkIntime', booking.checkIntime);
+        setVal('checkOut', booking.checkOut);
+        setVal('checkOuttime', booking.checkOuttime);
+        setVal('nights', booking.nights || 0);
+        setVal('people', booking.people || 1);
+        setVal('extraperson', booking.extraperson);
 
         // --- Financials ---
-        document.getElementById('amtPerNight').value = booking.amtPerNight || 0;
-        document.getElementById('totalDue').value = booking.totalDue || 0;
-        document.getElementById('amountPaid').value = booking.amountPaid || 0;
-        document.getElementById('balance').value = booking.balance || 0;
+        setVal('amtPerNight', booking.amtPerNight || 0);
+        setVal('totalDue', booking.totalDue || 0);
+        setVal('amountPaid', booking.amountPaid || 0);
+        setVal('balance', booking.balance || 0);
 
         // --- Status & Methods ---
-        document.getElementById('paymentStatus').value = booking.paymentStatus || 'Pending';
-        document.getElementById('paymentMethod').value = booking.paymentMethod || 'Cash';
-        document.getElementById('guestsource').value = booking.guestsource || 'Walk in';
-        document.getElementById('gueststatus').value = booking.gueststatus || 'confirmed';
-        document.getElementById('transactionid').value = booking.transactionid || '';
+        setVal('paymentStatus', booking.paymentStatus || 'Pending');
+        setVal('paymentMethod', booking.paymentMethod || 'Cash');
+        setVal('guestsource', booking.guestsource || 'Walk in');
+        setVal('gueststatus', booking.gueststatus || 'confirmed');
+        setVal('transactionid', booking.transactionid);
 
         // --- Logistics & Extras ---
-        document.getElementById('vehno').value = booking.vehno || '';
-        document.getElementById('destination').value = booking.destination || '';
-        document.getElementById('kin').value = booking.kin || '';
-        document.getElementById('kintel').value = booking.kintel || '';
-        document.getElementById('purpose').value = booking.purpose || '';
-        document.getElementById('declarations').value = booking.declarations || '';
+        setVal('vehno', booking.vehno);
+        setVal('destination', booking.destination);
+        setVal('kin', booking.kin);
+        setVal('kintel', booking.kintel);
+        setVal('purpose', booking.purpose);
+        setVal('declarations', booking.declarations);
 
-        const saveBtn = document.getElementById('saveBookingBtn'); 
+        // --- Action Buttons ---
+        const saveBtn = document.getElementById('saveBookingBtn');
         if (saveBtn) {
             saveBtn.style.display = 'flex';
-            saveBtn.textContent = 'Update';
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Update Booking';
         }
-// Change this line at the bottom of viewBooking and editBooking:
-          bookingModal.classList.remove('hidden');
-          bookingModal.classList.add('flex');
+
+        // Display Modal
+        if (bookingModal) {
+            bookingModal.classList.remove('hidden');
+            bookingModal.classList.add('flex');
+        }
+
     } catch (error) {
         console.error('Error fetching booking for edit:', error);
         showMessage('Error', `Failed to load booking for editing: ${error.message}`, true);
@@ -2612,44 +2638,57 @@ async function editBooking(id) {
  * @param {string} id - The custom ID of the booking to delete.
  */
 function confirmDeleteBooking(id) {
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
     const currentUsername = sessionData?.username;
 
+    if (!id) {
+        console.error("Booking ID is missing for deletion.");
+        return;
+    }
+
+    if (typeof openDeletionReasonModal !== 'function') {
+        console.error("openDeletionReasonModal callback is not defined.");
+        return;
+    }
+
     openDeletionReasonModal(async (reason) => {
+        if (!reason || !reason.trim()) {
+            return showMessage('Warning', 'A deletion reason is required.', true);
+        }
+
         try {
-            const response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
+            // Replaced raw fetch with authenticatedFetch
+            const response = await authenticatedFetch(`${API_BASE_URL}/bookings/${id}`, {
                 method: 'DELETE',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` ,
-                    'x-hotel-id': sessionData?.hotelId
-                },
                 body: JSON.stringify({ 
-                    reason, 
+                    reason: reason.trim(), 
                     username: currentUsername,
-                    hotelId: hotelId // Backend must verify this matches booking.hotelId
+                    hotelId: hotelId 
                 }) 
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            if (!response || !response.ok) {
+                const errorData = response ? await response.json().catch(() => ({})) : {};
+                throw new Error(errorData.message || `HTTP error! status: ${response?.status || 'Network error'}`);
             }
 
             showMessage('Success', 'Booking and associated charges deleted successfully!');
-            renderBookings(currentPage, currentSearchTerm);
-            renderHousekeepingRooms();
-            fetchExecutiveDashboard();
+            
+            // Refresh UI components safely
+            if (typeof renderBookings === 'function') renderBookings(currentPage, currentSearchTerm);
+            if (typeof renderHousekeepingRooms === 'function') renderHousekeepingRooms();
+            if (typeof fetchExecutiveDashboard === 'function') fetchExecutiveDashboard();
             if (typeof renderCalendar === 'function') renderCalendar();
             if (typeof renderAuditLogs === 'function') renderAuditLogs();
+
         } catch (error) {
             console.error('Error deleting booking:', error);
             showMessage('Error', `Failed to delete booking: ${error.message}`, true);
         }
     });
 }
+
 async function checkoutBooking(id) {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const currentUsername = sessionData?.username || 'Unknown User';
@@ -2791,73 +2830,111 @@ incidentalChargeForm.addEventListener('submit', async function(event) {
     event.preventDefault();
 
     // 1. Get session data
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
     const currentUsername = sessionData?.username;
 
-    const bookingCustomId = chargeBookingCustomIdInput.value;
-    const guestName = chargeGuestNameInput.value;
-    const roomNumber = chargeRoomNumberInput.value;
-    const type = chargeTypeSelect.value;
-    const description = chargeDescriptionInput.value;
-    const amount = parseFloat(chargeAmountInput.value);
+    if (!hotelId) {
+        return showMessage('Error', 'No hotel session found. Please log in again.', true);
+    }
+
+    // Safely retrieve input values
+    const getValue = (el) => el ? el.value.trim() : '';
+
+    const bookingCustomId = getValue(chargeBookingCustomIdInput);
+    const guestName = getValue(chargeGuestNameInput);
+    const roomNumber = getValue(chargeRoomNumberInput);
+    const type = getValue(chargeTypeSelect);
+    const description = getValue(chargeDescriptionInput);
+    const amount = chargeAmountInput ? parseFloat(chargeAmountInput.value) : 0;
 
     if (isNaN(amount) || amount <= 0) {
         showMessage('Error', 'Please enter a valid amount for the charge.', true);
         return;
     }
 
+    // Select submit button for loading state UI
+    const submitBtn = incidentalChargeForm.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn ? submitBtn.innerHTML : 'Add Charge';
+
     try {
-        // 2. Fetch booking with hotelId filter to ensure we don't charge the wrong hotel's guest
-        const bookingResponse = await fetch(`${API_BASE_URL}/bookings/id/${bookingCustomId}?hotelId=${hotelId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <span class="inline-flex items-center">
+                    <svg class="animate-spin h-4 w-4 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Adding...
+                </span>
+            `;
+        }
+
+        // 2. Fetch booking using authenticatedFetch
+        const bookingResponse = await authenticatedFetch(
+            `${API_BASE_URL}/bookings/id/${bookingCustomId}?hotelId=${hotelId}`, 
+            { method: 'GET' }
+        );
         
-        if (!bookingResponse.ok) throw new Error(`HTTP error! status: ${bookingResponse.status}`);
+        if (!bookingResponse || !bookingResponse.ok) {
+            throw new Error(`HTTP error! status: ${bookingResponse?.status || 'Network failure'}`);
+        }
+        
         const booking = await bookingResponse.json();
 
-        if (!booking) {
+        if (!booking || Object.keys(booking).length === 0) {
             showMessage('Error', 'Booking not found for adding charge.', true);
             return;
         }
 
-        // 3. Post charge with hotelId and Token
-        const response = await fetch(`${API_BASE_URL}/incidental-charges`, {
+        // 3. Post charge using authenticatedFetch
+        const response = await authenticatedFetch(`${API_BASE_URL}/incidental-charges`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                    'x-hotel-id': sessionData?.hotelId
-
-            },
             body: JSON.stringify({
-                bookingId: booking._id, 
+                bookingId: booking._id || booking.id, 
                 bookingCustomId,
                 guestName,
                 roomNumber, 
                 type,
                 description,
                 amount,
-                hotelId: hotelId, // Link charge to this hotel
+                hotelId: hotelId,
                 username: currentUsername 
             })
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        if (!response || !response.ok) {
+            const errorData = response ? await response.json().catch(() => ({})) : {};
+            throw new Error(errorData.message || `HTTP error! status: ${response?.status || 'Network failure'}`);
         }
 
         showMessage('Success', 'Incidental charge added successfully!');
-        closeIncidentalChargeModal();
+        
+        if (typeof incidentalChargeForm.reset === 'function') {
+            incidentalChargeForm.reset();
+        }
+        
+        if (typeof closeIncidentalChargeModal === 'function') {
+            closeIncidentalChargeModal();
+        }
+
+        // Refresh UI state
+        if (typeof renderBookings === 'function') renderBookings(currentPage, currentSearchTerm);
         if (typeof renderAuditLogs === 'function') renderAuditLogs();
+        if (typeof fetchExecutiveDashboard === 'function') fetchExecutiveDashboard();
         
     } catch (error) {
         console.error('Error adding incidental charge:', error);
         showMessage('Error', `Failed to add charge: ${error.message}`, true);
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+        }
     }
 });
+
 let currentBookingCustomId = null;
 
 // --- 1. VIEW INCIDENTAL CHARGES MODAL HANDLER ---
@@ -3115,31 +3192,54 @@ function closeViewChargesModal() {
 // --- Incidental Charge Actions ---
 
 function confirmDeleteIncidentalCharge(chargeId, bookingCustomId) {
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
     const currentUsername = sessionData?.username;
 
-    openDeletionReasonModal(async (reason) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/incidental-charges/${chargeId}`, {
-                method: 'DELETE',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` ,
-                        'x-hotel-id': sessionData?.hotelId
+    if (!chargeId) {
+        console.error("Charge ID is missing for deletion.");
+        return;
+    }
 
-                },
-                body: JSON.stringify({ reason, username: currentUsername, hotelId }) 
+    if (typeof openDeletionReasonModal !== 'function') {
+        console.error("openDeletionReasonModal callback is not defined.");
+        return;
+    }
+
+    openDeletionReasonModal(async (reason) => {
+        if (!reason || !reason.trim()) {
+            return showMessage('Warning', 'A deletion reason is required.', true);
+        }
+
+        try {
+            // Replaced raw fetch with authenticatedFetch
+            const response = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/${chargeId}`, {
+                method: 'DELETE',
+                body: JSON.stringify({ 
+                    reason: reason.trim(), 
+                    username: currentUsername, 
+                    hotelId: hotelId 
+                }) 
             });
 
-            if (!response.ok) throw new Error('Failed to delete charge');
+            if (!response || !response.ok) {
+                const errorData = response ? await response.json().catch(() => ({})) : {};
+                throw new Error(errorData.message || `HTTP error! status: ${response?.status || 'Network failure'}`);
+            }
 
             showMessage('Success', 'Incidental charge deleted successfully!');
-            viewCharges(bookingCustomId); 
+            
+            // Refresh views safely
+            if (typeof viewCharges === 'function' && bookingCustomId) {
+                viewCharges(bookingCustomId);
+            }
+            if (typeof renderBookings === 'function') renderBookings(currentPage, currentSearchTerm);
             if (typeof renderAuditLogs === 'function') renderAuditLogs();
+            if (typeof fetchExecutiveDashboard === 'function') fetchExecutiveDashboard();
+
         } catch (error) {
-            showMessage('Error', error.message, true);
+            console.error('Error deleting incidental charge:', error);
+            showMessage('Error', error.message || 'Failed to delete incidental charge.', true);
         }
     });
 }
@@ -3432,11 +3532,16 @@ let reportData = []; // Store rows for export
 
 async function generateReport() {
     // 1. Get session data
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
 
-    const selectedDateStr = reportDateInput.value;
+    if (!hotelId) {
+        return showMessage('Error', 'No active hotel session found. Please log in again.', true);
+    }
+
+    const reportDateInput = document.getElementById('reportDateInput');
+    const selectedDateStr = reportDateInput ? reportDateInput.value : '';
+
     if (!selectedDateStr) {
         showMessage('Error', 'Please select a date for the report.', true);
         return;
@@ -3446,17 +3551,15 @@ async function generateReport() {
     let rooms = [];
 
     try {
-        // 2. Fetch data filtered by hotelId and include Auth header
+        // 2. Fetch data in parallel using authenticatedFetch
         const [bookingsResponse, roomsResponse] = await Promise.all([
-            fetch(`${API_BASE_URL}/bookings/all?hotelId=${hotelId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            }),
-            fetch(`${API_BASE_URL}/rooms?hotelId=${hotelId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
+            authenticatedFetch(`${API_BASE_URL}/bookings/all?hotelId=${hotelId}`, { method: 'GET' }),
+            authenticatedFetch(`${API_BASE_URL}/rooms?hotelId=${hotelId}`, { method: 'GET' })
         ]);
 
-        if (!bookingsResponse.ok || !roomsResponse.ok) throw new Error('Data fetch failed');
+        if (!bookingsResponse?.ok || !roomsResponse?.ok) {
+            throw new Error('Data fetch failed');
+        }
 
         allBookings = await bookingsResponse.json();
         rooms = await roomsResponse.json();
@@ -3466,7 +3569,9 @@ async function generateReport() {
         return;
     }
 
-    const selectedDate = new Date(selectedDateStr);
+    // Process selected date string to eliminate time zone offset discrepancies
+    const [year, month, day] = selectedDateStr.split('-').map(Number);
+    const selectedDate = new Date(year, month - 1, day);
     selectedDate.setHours(0, 0, 0, 0);
 
     // Initialization
@@ -3476,23 +3581,27 @@ async function generateReport() {
         cash: 0, mtn: 0, airtel: 0, bank: 0
     };
     const roomTypeCounts = {};
-    reportData = [];
+    window.reportData = [];
 
     const tbody = document.querySelector('#roomRevenueTable tbody');
     if (tbody) tbody.innerHTML = ''; 
 
     allBookings.forEach(booking => {
-        const checkIn = new Date(booking.checkIn);
-        const checkOut = new Date(booking.checkOut);
-        checkIn.setHours(0, 0, 0, 0);
-        checkOut.setHours(0, 0, 0, 0);
+        if (!booking.checkIn || !booking.checkOut) return;
 
-        // Date Filtering Logic
+        // Strip time component for pure date range comparison
+        const [inYr, inMo, inDy] = booking.checkIn.split('T')[0].split('-').map(Number);
+        const [outYr, outMo, outDy] = booking.checkOut.split('T')[0].split('-').map(Number);
+        
+        const checkIn = new Date(inYr, inMo - 1, inDy);
+        const checkOut = new Date(outYr, outMo - 1, outDy);
+
+        // Date Filtering Logic (Active on selected date)
         if (selectedDate >= checkIn && selectedDate <= checkOut) {
-            const room = rooms.find(r => r.number === booking.room);
+            const room = rooms.find(r => String(r.number) === String(booking.room));
             const roomType = room ? room.type : 'Unknown';
             const revenue = parseFloat(booking.totalDue) || 0;
-            const balance = parseFloat(booking.balance) || 0; // Updated to match previous field names
+            const balance = parseFloat(booking.balance) || 0;
 
             // 1. Financial Stats
             stats.revenue += revenue;
@@ -3521,25 +3630,27 @@ async function generateReport() {
                 const tr = document.createElement('tr');
                 tr.className = "border-b border-gray-200 hover:bg-gray-100";
                 tr.innerHTML = `
-                    <td class="py-3 px-6">${booking.room}</td>
+                    <td class="py-3 px-6">${booking.room || 'N/A'}</td>
                     <td class="py-3 px-6">${roomType}</td>
-                    <td class="py-3 px-6">${booking.name}</td>
+                    <td class="py-3 px-6">${booking.name || 'Guest'}</td>
                     <td class="py-3 px-6 font-semibold">${revenue.toLocaleString()}</td>
                 `;
                 tbody.appendChild(tr);
             }
 
-            reportData.push({
-                'Room': booking.room,
+            window.reportData.push({
+                'Room': booking.room || 'N/A',
                 'Type': roomType,
-                'Guest': booking.name,
+                'Guest': booking.name || 'Guest',
                 'Revenue': revenue.toLocaleString()
             });
         }
     });
 
-    // 4. Update Summary Cards (Ensure these IDs exist in your HTML)
-    updateReportSummaryCards(stats);
+    // 4. Update Summary Cards
+    if (typeof updateReportSummaryCards === 'function') {
+        updateReportSummaryCards(stats);
+    }
 }
 
 function updateReportSummaryCards(stats, roomTypeCounts, selectedDateStr) {
@@ -3919,64 +4030,100 @@ function applyFiltersAndRender() {
 
 // Assign Housekeeper Handler
 async function assignHousekeeper(roomId, housekeeperId) {
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
+    if (!roomId) {
+        console.error("Room ID is required to assign a housekeeper.");
+        return;
+    }
+
+    // 1. Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
+
+    if (!hotelId) {
+        return showMessage('Error', 'No active hotel session found. Please log in again.', true);
+    }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
+        // 2. Replaced raw fetch with authenticatedFetch
+        const response = await authenticatedFetch(`${API_BASE_URL}/rooms/${roomId}`, {
             method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'x-hotel-id': hotelId
-            },
             body: JSON.stringify({ 
                 assignedTo: housekeeperId ? housekeeperId : null,
-                assignedAt: housekeeperId ? new Date() : null,
+                assignedAt: housekeeperId ? new Date().toISOString() : null,
                 hotelId: hotelId
             })
         });
 
-        if (!response.ok) throw new Error("Assignment failed");
+        if (!response || !response.ok) {
+            const errorData = response ? await response.json().catch(() => ({})) : {};
+            throw new Error(errorData.message || `HTTP error! status: ${response?.status || 'Network failure'}`);
+        }
 
-        showMessage('Success', housekeeperId ? 'Housekeeper assigned.' : 'Assignment cleared.');
+        showMessage('Success', housekeeperId ? 'Housekeeper assigned successfully.' : 'Assignment cleared successfully.');
         
-        // Re-fetch and re-render rooms
-        renderHousekeepingRooms();
+        // 3. Re-fetch and re-render views safely
+        if (typeof renderHousekeepingRooms === 'function') {
+            renderHousekeepingRooms();
+        }
+        if (typeof fetchExecutiveDashboard === 'function') {
+            fetchExecutiveDashboard();
+        }
+
     } catch (error) {
-        console.error("Assignment error:", error);
-        showMessage('Error', error.message, true);
+        console.error("Housekeeper assignment error:", error);
+        showMessage('Error', error.message || "Failed to update housekeeper assignment.", true);
     }
 }
 
 // Update Room Status Handler
 async function updateRoomStatus(roomMongoId, newStatus) {
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
+    if (!roomMongoId) {
+        console.error("Room Mongo ID is required to update status.");
+        return;
+    }
+
+    // 1. Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
+
+    if (!hotelId) {
+        return showMessage('Error', 'No active hotel session found. Please log in again.', true);
+    }
+
+    // Standardize status format
+    const formattedStatus = (newStatus || '').trim();
 
     try {
-        const response = await fetch(`${API_BASE_URL}/rooms/${roomMongoId}`, {
+        // 2. Replaced raw fetch with authenticatedFetch
+        const response = await authenticatedFetch(`${API_BASE_URL}/rooms/${roomMongoId}`, {
             method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'x-hotel-id': hotelId
-            },
             body: JSON.stringify({ 
-                status: newStatus, 
+                status: formattedStatus, 
                 hotelId: hotelId 
             })
         });
 
-        if (!response.ok) throw new Error("Update failed");
+        if (!response || !response.ok) {
+            const errorData = response ? await response.json().catch(() => ({})) : {};
+            throw new Error(errorData.message || `HTTP error! status: ${response?.status || 'Network failure'}`);
+        }
 
-        showMessage('Success', `Room status updated successfully.`);
-        renderHousekeepingRooms();
-        if (typeof renderCalendar === 'function') renderCalendar();
+        showMessage('Success', 'Room status updated successfully.');
+
+        // 3. Re-fetch and re-render views safely
+        if (typeof renderHousekeepingRooms === 'function') {
+            renderHousekeepingRooms();
+        }
+        if (typeof renderCalendar === 'function') {
+            renderCalendar();
+        }
+        if (typeof fetchExecutiveDashboard === 'function') {
+            fetchExecutiveDashboard();
+        }
+
     } catch (error) {
-        showMessage('Error', error.message, true);
+        console.error("Error updating room status:", error);
+        showMessage('Error', error.message || "Failed to update room status.", true);
     }
 }
 
@@ -4210,83 +4357,123 @@ const detailedReportTitle = document.getElementById('detailed-report-title');
 const serviceReportsTableBody = document.getElementById('serviceReportsTable').querySelector('tbody'); 
 
 async function renderServiceReports() {
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
+    // 1. Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
 
-    serviceReportsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Loading service reports...</td></tr>';
-    serviceReportsDetailsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Loading details...</td></tr>';
-    totalServiceRevenueSpan.textContent = '0';
-    totalDetailedServiceRevenueSpan.textContent = '0';
+    if (!hotelId) {
+        return showMessage('Error', 'No active hotel session found. Please log in again.', true);
+    }
 
-    serviceReportsDetailsTable.style.display = 'none';
-    exportServiceReportBtn.style.display = 'none';
-    detailedReportTitle.style.display = 'none';
+    // Helper for safe element selection
+    const getEl = (id) => document.getElementById(id);
 
-    const startDate = serviceReportStartDate.value;
-    const endDate = serviceReportEndDate.value;
+    const serviceReportsTableBody = getEl('serviceReportsTableBody');
+    const serviceReportsDetailsTableBody = getEl('serviceReportsDetailsTableBody');
+    const totalServiceRevenueSpan = getEl('totalServiceRevenueSpan');
+    const totalDetailedServiceRevenueSpan = getEl('totalDetailedServiceRevenueSpan');
+    const serviceReportsDetailsTable = getEl('serviceReportsDetailsTable');
+    const exportServiceReportBtn = getEl('exportServiceReportBtn');
+    const detailedReportTitle = getEl('detailedReportTitle');
+    const startDateInput = getEl('serviceReportStartDate');
+    const endDateInput = getEl('serviceReportEndDate');
+
+    // Safe resets
+    if (serviceReportsTableBody) {
+        serviceReportsTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4">Loading service reports...</td></tr>';
+    }
+    if (serviceReportsDetailsTableBody) {
+        serviceReportsDetailsTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4">Loading details...</td></tr>';
+    }
+    if (totalServiceRevenueSpan) totalServiceRevenueSpan.textContent = '0';
+    if (totalDetailedServiceRevenueSpan) totalDetailedServiceRevenueSpan.textContent = '0';
+
+    if (serviceReportsDetailsTable) serviceReportsDetailsTable.style.display = 'none';
+    if (exportServiceReportBtn) exportServiceReportBtn.style.display = 'none';
+    if (detailedReportTitle) detailedReportTitle.style.display = 'none';
+
+    const startDate = startDateInput ? startDateInput.value : '';
+    const endDate = endDateInput ? endDateInput.value : '';
 
     if (!startDate || !endDate) {
-        serviceReportsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: red;">Please select both start and end dates.</td></tr>';
+        if (serviceReportsTableBody) {
+            serviceReportsTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-red-500 font-semibold">Please select both start and end dates.</td></tr>';
+        }
         return;
     }
 
     try {
-        // Fetch scoped to hotelId with Authorization
-        const response = await fetch(`${API_BASE_URL}/reports/services?startDate=${startDate}&endDate=${endDate}&hotelId=${hotelId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        // 2. Fetch using authenticatedFetch
+        const response = await authenticatedFetch(
+            `${API_BASE_URL}/reports/services?startDate=${startDate}&endDate=${endDate}&hotelId=${hotelId}`, 
+            { method: 'GET' }
+        );
+
+        if (!response || !response.ok) {
+            const errorData = response ? await response.json().catch(() => ({})) : {};
+            throw new Error(errorData.message || `HTTP error! status: ${response?.status || 'Network failure'}`);
+        }
+
         const reports = await response.json();
 
-        serviceReportsTableBody.innerHTML = ''; 
-        serviceReportsDetailsTableBody.innerHTML = ''; 
+        if (serviceReportsTableBody) serviceReportsTableBody.innerHTML = ''; 
+        if (serviceReportsDetailsTableBody) serviceReportsDetailsTableBody.innerHTML = ''; 
 
         let grandTotalRevenue = 0;
         let detailedGrandTotalRevenue = 0;
-        
-        if (reports.length === 0) {
-            const noDataMsg = '<tr><td colspan="3" style="text-align: center;">No service charges found.</td></tr>';
-            serviceReportsTableBody.innerHTML = noDataMsg;
-            serviceReportsDetailsTableBody.innerHTML = noDataMsg;
-        } else {
-            // Render Summary
-            reports.forEach(report => {
-                const row = serviceReportsTableBody.insertRow();
-                row.innerHTML = `
-                    <td class="px-4 py-2">${report.serviceType}</td>
-                    <td class="px-4 py-2">${report.count}</td>
-                    <td class="px-4 py-2 font-bold">${Number(report.totalAmount).toLocaleString()}</td>
-                `;
-                grandTotalRevenue += report.totalAmount;
 
-                // Render Details
-                report.bookings.forEach(booking => {
-                    const dRow = serviceReportsDetailsTableBody.insertRow();
-                    dRow.innerHTML = `
-                        <td class="px-4 py-2">${booking.name}</td>
-                        <td class="px-4 py-2">${report.serviceType}</td>
-                        <td class="px-4 py-2">${Number(booking.amount).toLocaleString()}</td>
+        if (!Array.isArray(reports) || reports.length === 0) {
+            const noDataMsg = '<tr><td colspan="3" class="text-center py-4 text-gray-500">No service charges found for this period.</td></tr>';
+            if (serviceReportsTableBody) serviceReportsTableBody.innerHTML = noDataMsg;
+            if (serviceReportsDetailsTableBody) serviceReportsDetailsTableBody.innerHTML = noDataMsg;
+        } else {
+            // Render Summary & Details
+            reports.forEach(report => {
+                const totalAmt = parseFloat(report.totalAmount) || 0;
+                grandTotalRevenue += totalAmt;
+
+                if (serviceReportsTableBody) {
+                    const row = serviceReportsTableBody.insertRow();
+                    row.innerHTML = `
+                        <td class="px-4 py-2">${report.serviceType || 'Other'}</td>
+                        <td class="px-4 py-2">${report.count || 0}</td>
+                        <td class="px-4 py-2 font-bold">${totalAmt.toLocaleString()}</td>
                     `;
-                    detailedGrandTotalRevenue += booking.amount;
-                });
+                }
+
+                if (Array.isArray(report.bookings)) {
+                    report.bookings.forEach(booking => {
+                        const bookingAmt = parseFloat(booking.amount) || 0;
+                        detailedGrandTotalRevenue += bookingAmt;
+
+                        if (serviceReportsDetailsTableBody) {
+                            const dRow = serviceReportsDetailsTableBody.insertRow();
+                            dRow.innerHTML = `
+                                <td class="px-4 py-2">${booking.name || 'Guest'}</td>
+                                <td class="px-4 py-2">${report.serviceType || 'Other'}</td>
+                                <td class="px-4 py-2">${bookingAmt.toLocaleString()}</td>
+                            `;
+                        }
+                    });
+                }
             });
 
-            serviceReportsDetailsTable.style.display = 'table';
-            exportServiceReportBtn.style.display = 'inline-block';
-            detailedReportTitle.style.display = 'block';
+            if (serviceReportsDetailsTable) serviceReportsDetailsTable.style.display = 'table';
+            if (exportServiceReportBtn) exportServiceReportBtn.style.display = 'inline-block';
+            if (detailedReportTitle) detailedReportTitle.style.display = 'block';
         }
-        
-        totalServiceRevenueSpan.textContent = grandTotalRevenue.toLocaleString();
-        totalDetailedServiceRevenueSpan.textContent = detailedGrandTotalRevenue.toLocaleString();
+
+        if (totalServiceRevenueSpan) totalServiceRevenueSpan.textContent = grandTotalRevenue.toLocaleString();
+        if (totalDetailedServiceRevenueSpan) totalDetailedServiceRevenueSpan.textContent = detailedGrandTotalRevenue.toLocaleString();
 
     } catch (error) {
         console.error('Service Report Error:', error);
         showMessage('Error', `Failed to load reports: ${error.message}`, true);
+        if (serviceReportsTableBody) {
+            serviceReportsTableBody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-red-500">Error loading report data.</td></tr>`;
+        }
     }
 }
-
 function exportToExcel() {
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelName = sessionData?.hotelName || 'Hotel';
@@ -4383,50 +4570,74 @@ const auditModal = document.getElementById('auditLogModal');
 
 
 async function simulateChannelManagerSync() {
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const token = sessionData?.token;
-    const hotelId = sessionData?.hotelId;
+    // 1. Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
     const currentUsername = sessionData?.username;
+    const propertyName = sessionData?.hotelName || 'your property';
+
+    if (!hotelId) {
+        return showMessage('Error', 'No active hotel session found. Please log in again.', true);
+    }
+
+    // UI Feedback: Target trigger button if available to prevent double triggers
+    const syncBtn = document.getElementById('syncChannelManagerBtn') || document.querySelector('[data-action="sync-channel"]');
+    const originalBtnText = syncBtn ? syncBtn.innerHTML : '';
+
+    if (syncBtn) {
+        syncBtn.disabled = true;
+        syncBtn.innerHTML = `
+            <span class="inline-flex items-center">
+                <svg class="animate-spin h-4 w-4 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Syncing...
+            </span>
+        `;
+    }
 
     showMessage('Syncing...', 'Initiating sync with external booking engines (Booking.com, Expedia, etc.). Please wait...');
 
     try {
-        const response = await fetch(`${API_BASE_URL}/channel-manager/sync`, {
+        // 2. Fetch using authenticatedFetch
+        const response = await authenticatedFetch(`${API_BASE_URL}/channel-manager/sync`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                    'x-hotel-id': sessionData?.hotelId
-
-            },
             body: JSON.stringify({ 
                 username: currentUsername,
                 hotelId: hotelId 
             })
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `Sync failed with status: ${response.status}`);
+        if (!response || !response.ok) {
+            const errorData = response ? await response.json().catch(() => ({})) : {};
+            throw new Error(errorData.message || `Sync failed with status: ${response?.status || 'Network failure'}`);
         }
 
         const data = await response.json();
-        showMessage('Sync Complete', `${data.message} for ${sessionData?.hotelName || 'your property'}.`);
+        showMessage('Sync Complete', `${data.message || 'Synchronization completed successfully'} for ${propertyName}.`);
 
-        // Refresh all components to show updated availability/bookings
-        if (typeof renderBookings === 'function') renderBookings(currentPage, currentSearchTerm);
+        // 3. Refresh all application views to sync state across modules
+        if (typeof renderBookings === 'function') {
+            const page = typeof currentPage !== 'undefined' ? currentPage : 1;
+            const search = typeof currentSearchTerm !== 'undefined' ? currentSearchTerm : '';
+            renderBookings(page, search);
+        }
         if (typeof renderHousekeepingRooms === 'function') renderHousekeepingRooms();
         if (typeof renderCalendar === 'function') renderCalendar();
-        if (typeof renderAuditLogs === 'function') renderAuditLogs(); 
+        if (typeof renderAuditLogs === 'function') renderAuditLogs();
+        if (typeof fetchExecutiveDashboard === 'function') fetchExecutiveDashboard();
 
     } catch (error) {
         console.error('Channel manager sync error:', error);
         showMessage('Sync Failed', `Failed to sync: ${error.message}`, true);
+    } finally {
+        if (syncBtn) {
+            syncBtn.disabled = false;
+            syncBtn.innerHTML = originalBtnText;
+        }
     }
 }
-
-
-
 
 /**
  * Global helper to handle data clearing on error or manual logout
@@ -4516,83 +4727,104 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function markNoShow(bookingId) {
+    if (!bookingId) {
+        console.error("Booking ID is required to mark as No Show.");
+        return;
+    }
+
     if (!confirm("Mark this booking as No Show?")) return;
 
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const { token, hotelId } = sessionData;
+    // 1. Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
+    const currentUsername = sessionData?.username;
 
-    try {
-        const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/no-show`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`,
-                    'x-hotel-id': sessionData?.hotelId
-
-            },
-            body: JSON.stringify({
-                username: currentUsername,
-                hotelId: hotelId // Pass hotelId to ensure cross-property security
-            })
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || "Failed to update status");
-
-        showMessage("Success", data.message);
-        
-        // Refresh UI
-        renderBookings(currentPage, currentSearchTerm);
-        fetchExecutiveDashboard();
-        if (typeof generateReport === 'function') generateReport();
-        
-    } catch (err) {
-        console.error(err);
-        showMessage("Error", err.message, true);
+    if (!hotelId) {
+        return showMessage('Error', 'No active hotel session found. Please log in again.', true);
     }
-}
-
-async function Confirm(bookingId) {
-    if (!confirm("Are you sure you want to confirm this booking?")) return;
-
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser'));
-    const { token, hotelId } = sessionData;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/Confirm`, {
+        // 2. Fetch using authenticatedFetch
+        const response = await authenticatedFetch(`${API_BASE_URL}/bookings/${bookingId}/no-show`, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`,
-                    'x-hotel-id': sessionData?.hotelId
-
-            },
             body: JSON.stringify({
                 username: currentUsername,
                 hotelId: hotelId
             })
         });
 
+        if (!response || !response.ok) {
+            const errorData = response ? await response.json().catch(() => ({})) : {};
+            throw new Error(errorData.message || `HTTP error! status: ${response?.status || 'Network failure'}`);
+        }
+
         const data = await response.json();
-        if (!response.ok) throw new Error(data.message || "Failed to confirm");
-
-        showMessage("Success", data.message);
+        showMessage("Success", data.message || "Booking marked as No Show successfully.");
         
-        // Refresh UI
-        renderBookings(currentPage, currentSearchTerm);
-        if (typeof generateReport === 'function') generateReport();
+        // 3. Refresh UI views safely
+        const page = typeof currentPage !== 'undefined' ? currentPage : 1;
+        const search = typeof currentSearchTerm !== 'undefined' ? currentSearchTerm : '';
 
+        if (typeof renderBookings === 'function') renderBookings(page, search);
+        if (typeof fetchExecutiveDashboard === 'function') fetchExecutiveDashboard();
+        if (typeof generateReport === 'function') generateReport();
+        if (typeof renderCalendar === 'function') renderCalendar();
+        
     } catch (err) {
-        console.error(err);
-        showMessage("Error", err.message, true);
+        console.error('Error marking no-show:', err);
+        showMessage("Error", err.message || "Failed to mark booking as No Show.", true);
     }
 }
 
+async function Confirm(bookingId) {
+    if (!bookingId) {
+        console.error("Booking ID is required for confirmation.");
+        return;
+    }
 
-  
+    if (!confirm("Are you sure you want to confirm this booking?")) return;
 
+    // 1. Get session data
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
+    const currentUsername = sessionData?.username;
 
+    if (!hotelId) {
+        return showMessage('Error', 'No active hotel session found. Please log in again.', true);
+    }
 
+    try {
+        // 2. Fetch using authenticatedFetch
+        const response = await authenticatedFetch(`${API_BASE_URL}/bookings/${bookingId}/Confirm`, {
+            method: "PUT",
+            body: JSON.stringify({
+                username: currentUsername,
+                hotelId: hotelId
+            })
+        });
+
+        if (!response || !response.ok) {
+            const errorData = response ? await response.json().catch(() => ({})) : {};
+            throw new Error(errorData.message || `HTTP error! status: ${response?.status || 'Network failure'}`);
+        }
+
+        const data = await response.json();
+        showMessage("Success", data.message || "Booking confirmed successfully.");
+        
+        // 3. Refresh UI views safely
+        const page = typeof currentPage !== 'undefined' ? currentPage : 1;
+        const search = typeof currentSearchTerm !== 'undefined' ? currentSearchTerm : '';
+
+        if (typeof renderBookings === 'function') renderBookings(page, search);
+        if (typeof fetchExecutiveDashboard === 'function') fetchExecutiveDashboard();
+        if (typeof generateReport === 'function') generateReport();
+        if (typeof renderCalendar === 'function') renderCalendar();
+
+    } catch (err) {
+        console.error('Error confirming booking:', err);
+        showMessage("Error", err.message || "Failed to confirm booking.", true);
+    }
+}
 
 // 3. Updated Global listener
 document.addEventListener('click', (event) => {
