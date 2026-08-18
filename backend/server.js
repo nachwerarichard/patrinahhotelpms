@@ -8014,58 +8014,45 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
         const hotelObjId = new mongoose.Types.ObjectId(hotelId);
         const { range = 'today', startDate, endDate } = req.query;
 
-        // 1. Date Range Logic...
+        // 1. Precise Date Boundary Calculations
         let currStart, currEnd, prevStart, prevEnd;
         const now = new Date();
 
         if (range === 'today') {
             currStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             currEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-            prevStart = new Date(currStart);
-            prevStart.setDate(prevStart.getDate() - 1);
-            prevEnd = new Date(currStart);
-            prevEnd.setMilliseconds(-1);
         } else if (range === 'yesterday') {
             currStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
             currEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
-            prevStart = new Date(currStart);
-            prevStart.setDate(prevStart.getDate() - 1);
-            prevEnd = new Date(currStart);
-            prevEnd.setMilliseconds(-1);
         } else if (range === 'this_week') {
             const dayOfWeek = now.getDay();
             const distanceToMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
             currStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - distanceToMon);
             currEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-            
-            const durationMs = currEnd.getTime() - currStart.getTime();
-            prevStart = new Date(currStart.getTime() - durationMs);
-            prevEnd = new Date(currStart.getTime() - 1);
         } else if (range === 'this_month') {
             currStart = new Date(now.getFullYear(), now.getMonth(), 1);
             currEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-
-            const durationMs = currEnd.getTime() - currStart.getTime();
-            prevStart = new Date(currStart.getTime() - durationMs);
-            prevEnd = new Date(currStart.getTime() - 1);
         } else if (range === 'custom' && startDate && endDate) {
             currStart = new Date(startDate);
             currEnd = new Date(endDate);
             currEnd.setHours(23, 59, 59, 999);
-
-            const durationMs = currEnd.getTime() - currStart.getTime();
-            prevStart = new Date(currStart.getTime() - durationMs);
-            prevEnd = new Date(currStart.getTime() - 1);
         } else {
             return res.status(400).json({ error: "Invalid date range parameters" });
         }
+
+        const durationMs = currEnd.getTime() - currStart.getTime();
+        prevStart = new Date(currStart.getTime() - durationMs - 1);
+        prevEnd = new Date(currStart.getTime() - 1);
 
         const currStartStr = currStart.toISOString().split('T')[0];
         const currEndStr = currEnd.toISOString().split('T')[0];
         const prevStartStr = prevStart.toISOString().split('T')[0];
         const prevEndStr = prevEnd.toISOString().split('T')[0];
 
-        // 2. Parallel Database Queries (Added channelMixAggregation)
+        // Days in selected range (for room night capacity calculations)
+        const totalDays = Math.max(1, Math.round((currEnd.getTime() - currStart.getTime()) / (1000 * 60 * 60 * 24)));
+
+        // 2. Optimized Parallel Aggregations
         const [
             hotel,
             totalRooms,
@@ -8086,31 +8073,54 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
                 { $group: { _id: "$status", count: { $sum: 1 } } }
             ]),
             Booking.aggregate([
-    { $match: { hotelId: hotelObjId } },
-    {
-        $group: {
-            _id: null,
-            expectedArrivals: { $sum: { $cond: [{ $and: [{ $gte: ["$checkIn", currStartStr] }, { $lte: ["$checkIn", currEndStr] }] }, 1, 0] } },
-            actualArrivals: { $sum: { $cond: [{ $and: [{ $gte: ["$checkIn", currStartStr] }, { $lte: ["$checkIn", currEndStr] }, { $eq: ["$gueststatus", "checkedin"] }] }, 1, 0] } },
-            expectedDepartures: { $sum: { $cond: [{ $and: [{ $gte: ["$checkOut", currStartStr] }, { $lte: ["$checkOut", currEndStr] }] }, 1, 0] } },
-            actualDepartures: { $sum: { $cond: [{ $and: [{ $gte: ["$checkOut", currStartStr] }, { $lte: ["$checkOut", currEndStr] }, { $eq: ["$gueststatus", "checkedout"] }] }, 1, 0] } },
-            
-            // Track total guest headcount
-            inHouseHeadcount: { $sum: { $cond: [{ $eq: ["$gueststatus", "checkedin"] }, "$people", 0] } },
-            
-            // Track occupied rooms count for accurate ADR & Occupancy %
-            occupiedRooms: { $sum: { $cond: [{ $eq: ["$gueststatus", "checkedin"] }, 1, 0] } },
-            
-            noShows: { $sum: { $cond: [{ $and: [{ $gte: ["$checkIn", currStartStr] }, { $lte: ["$checkIn", currEndStr] }, { $eq: ["$gueststatus", "no show"] }] }, 1, 0] } }
-        }
-    }
-]),
+                { $match: { hotelId: hotelObjId, gueststatus: { $nin: ['cancelled', 'void'] } } },
+                {
+                    $group: {
+                        _id: null,
+                        expectedArrivals: { $sum: { $cond: [{ $and: [{ $gte: ["$checkIn", currStartStr] }, { $lte: ["$checkIn", currEndStr] }] }, 1, 0] } },
+                        actualArrivals: { $sum: { $cond: [{ $and: [{ $gte: ["$checkIn", currStartStr] }, { $lte: ["$checkIn", currEndStr] }, { $eq: ["$gueststatus", "checkedin"] }] }, 1, 0] } },
+                        expectedDepartures: { $sum: { $cond: [{ $and: [{ $gte: ["$checkOut", currStartStr] }, { $lte: ["$checkOut", currEndStr] }] }, 1, 0] } },
+                        actualDepartures: { $sum: { $cond: [{ $and: [{ $gte: ["$checkOut", currStartStr] }, { $lte: ["$checkOut", currEndStr] }, { $eq: ["$gueststatus", "checkedout"] }] }, 1, 0] } },
+                        inHouseHeadcount: { $sum: { $cond: [{ $eq: ["$gueststatus", "checkedin"] }, "$people", 0] } },
+                        
+                        // FIX: Count occupied room-nights bounded by date range overlap
+                        rangeOccupiedRooms: {
+                            $sum: {
+                                $cond: [
+                                    {
+                                        $and: [
+                                            { $lte: ["$checkIn", currEndStr] },
+                                            { $gte: ["$checkOut", currStartStr] },
+                                            { $in: ["$gueststatus", ["checkedin", "checkedout", "confirmed"]] }
+                                        ]
+                                    },
+                                    1,
+                                    0
+                                ]
+                            }
+                        },
+                        noShows: { $sum: { $cond: [{ $and: [{ $gte: ["$checkIn", currStartStr] }, { $lte: ["$checkIn", currEndStr] }, { $eq: ["$gueststatus", "no show"] }] }, 1, 0] } }
+                    }
+                }
+            ]),
             Booking.aggregate([
-                { $match: { hotelId: hotelObjId, checkIn: { $gte: currStartStr, $lte: currEndStr } } },
+                { 
+                    $match: { 
+                        hotelId: hotelObjId, 
+                        checkIn: { $gte: currStartStr, $lte: currEndStr },
+                        gueststatus: { $nin: ['cancelled', 'void'] }
+                    } 
+                },
                 { $group: { _id: null, roomRevenue: { $sum: "$totalDue" }, collected: { $sum: "$amountPaid" }, balance: { $sum: "$balance" } } }
             ]),
             Booking.aggregate([
-                { $match: { hotelId: hotelObjId, checkIn: { $gte: prevStartStr, $lte: prevEndStr } } },
+                { 
+                    $match: { 
+                        hotelId: hotelObjId, 
+                        checkIn: { $gte: prevStartStr, $lte: prevEndStr },
+                        gueststatus: { $nin: ['cancelled', 'void'] }
+                    } 
+                },
                 { $group: { _id: null, roomRevenue: { $sum: "$totalDue" } } }
             ]),
             Sale.aggregate([
@@ -8129,13 +8139,12 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
                 { $match: { hotelId: hotelObjId, date: { $gte: prevStart, $lte: prevEnd } } },
                 { $group: { _id: null, totalExpense: { $sum: "$amount" } } }
             ]),
-            // ➔ Distribution Channel Mix Aggregation
             Booking.aggregate([
                 { 
                     $match: { 
                         hotelId: hotelObjId, 
                         checkIn: { $gte: currStartStr, $lte: currEndStr },
-                        gueststatus: { $ne: 'cancelled' } 
+                        gueststatus: { $nin: ['cancelled', 'void'] } 
                     } 
                 },
                 { 
@@ -8149,14 +8158,22 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
         ]);
 
         const capacity = totalRooms > 0 ? totalRooms : 1;
-        const ops = dailyOps[0] || { expectedArrivals: 0, actualArrivals: 0, expectedDepartures: 0, actualDepartures: 0, inHouseHeadcount: 0, occupiedRooms: 0, noShows: 0 };        const finC = currFinance[0] || { roomRevenue: 0, collected: 0, balance: 0 };
+        const totalAvailableRoomNights = capacity * totalDays;
+        
+        const ops = dailyOps[0] || { expectedArrivals: 0, actualArrivals: 0, expectedDepartures: 0, actualDepartures: 0, inHouseHeadcount: 0, rangeOccupiedRooms: 0, noShows: 0 };
+        const finC = currFinance[0] || { roomRevenue: 0, collected: 0, balance: 0 };
         const finP = prevFinance[0] || { roomRevenue: 0 };
         const posC = currPos[0] || { posSales: 0, posProfit: 0 };
         const posP = prevPos[0] || { posSales: 0, posProfit: 0 };
         const expC = currExp[0] || { totalExpense: 0 };
         const expP = prevExp[0] || { totalExpense: 0 };
-        const currOccupancy = Number(((ops.occupiedRooms / capacity) * 100).toFixed(1));
-        const currAdr = ops.occupiedRooms > 0 ? Math.round(finC.roomRevenue / ops.occupiedRooms) : 0;        const currRevpar = Math.round(finC.roomRevenue / capacity);
+
+        // Real Date Range Dynamic KPIs
+        const occupiedCount = ops.rangeOccupiedRooms;
+        const currOccupancy = Number(((occupiedCount / totalAvailableRoomNights) * 100).toFixed(1));
+        const currAdr = occupiedCount > 0 ? Math.round(finC.roomRevenue / occupiedCount) : 0;
+        const currRevpar = Math.round(finC.roomRevenue / totalAvailableRoomNights);
+        
         const currGrossRev = finC.roomRevenue + posC.posSales;
         const currGrossProfit = finC.roomRevenue + posC.posProfit;
         const currNoi = currGrossRev - expC.totalExpense;
@@ -8175,9 +8192,7 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
             if (roomMatrix.hasOwnProperty(key)) roomMatrix[key] = item.count;
         });
 
-        // Calculate total bookings for percentage calculations
         const totalChannelBookings = channelMixRaw.reduce((sum, item) => sum + item.bookingsCount, 0);
-
         const channelMix = channelMixRaw.map(item => ({
             source: item._id || 'Unknown',
             count: item.bookingsCount,
@@ -8194,22 +8209,22 @@ app.get('/api/dashboard/executive-flash', auth, async (req, res) => {
                 revpar: currRevpar,
                 grossRevenue: currGrossRev,
                 grossRevenueTrend: calcTrend(currGrossRev, prevGrossRev),
-                revparTrend: calcTrend(currRevpar, Math.round(finP.roomRevenue / capacity)),
+                revparTrend: calcTrend(currRevpar, Math.round(finP.roomRevenue / totalAvailableRoomNights)),
                 posProfit: posC.posProfit,
                 posProfitTrend: calcTrend(posC.posProfit, posP.posProfit),
                 noi: currNoi,
                 noiTrend: calcTrend(currNoi, prevNoi)
             },
             frontDesk: {
-        arrivalsPending: ops.expectedArrivals - ops.actualArrivals,
-        arrivalsCheckedIn: ops.actualArrivals,
-        departuresPending: ops.expectedDepartures - ops.actualDepartures,
-        departuresCheckedOut: ops.actualDepartures,
-        inHouseGuests: ops.inHouseHeadcount, // Total guests from `people` field
-        noShows: ops.noShows
-    },
+                arrivalsPending: ops.expectedArrivals - ops.actualArrivals,
+                arrivalsCheckedIn: ops.actualArrivals,
+                departuresPending: ops.expectedDepartures - ops.actualDepartures,
+                departuresCheckedOut: ops.actualDepartures,
+                inHouseGuests: ops.inHouseHeadcount,
+                noShows: ops.noShows
+            },
             housekeeping: roomMatrix,
-            channelMix, // ➔ Returned array of channels
+            channelMix,
             financials: {
                 roomRevenue: finC.roomRevenue,
                 posSales: posC.posSales,
