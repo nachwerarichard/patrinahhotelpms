@@ -7550,7 +7550,37 @@ app.patch('/api/incidental-charges/:chargeId/pay', auth, async (req, res) => {
         res.status(500).json({ message: 'Failed to update payment status' });
     }
 });
+// PATCH: Mark an incidental charge as paid
+app.patch('/api/pos/incidental-charges/:id/mark-paid', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const hotelId = req.user.hotelId;
 
+        const updatedCharge = await IncidentalCharge.findOneAndUpdate(
+            { _id: id, hotelId: hotelId },
+            { 
+                $set: { 
+                    isPaid: true,
+                    updatedAt: new Date()
+                } 
+            },
+            { new: true }
+        );
+
+        if (!updatedCharge) {
+            return res.status(404).json({ message: 'Incidental charge record not found' });
+        }
+
+        res.status(200).json({ 
+            success: true, 
+            message: 'Charge marked as paid successfully', 
+            charge: updatedCharge 
+        });
+    } catch (error) {
+        console.error('Error updating incidental charge status:', error);
+        res.status(500).json({ message: 'Failed to update charge payment status' });
+    }
+});
 // PUT: Pay ALL incidental charges for a specific booking
 app.put('/api/incidental-charges/pay-all/:bookingId', auth, async (req, res) => {
     const { bookingId } = req.params;

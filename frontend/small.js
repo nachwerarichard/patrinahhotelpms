@@ -3152,52 +3152,35 @@ document.addEventListener('click', async (e) => {
         if (!confirm('Mark this incidental charge as paid?')) return;
 
         try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/${chargeId}/mark-paid`, { 
+            // Updated path to include /pos/
+            const response = await authenticatedFetch(`${API_BASE_URL}/pos/incidental-charges/${chargeId}/mark-paid`, { 
                 method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     username: JSON.parse(localStorage.getItem('loggedInUser'))?.username || 'FrontDesk' 
                 })
             });
 
             if (!response || !response.ok) {
-                const data = response ? await response.json() : {};
-                throw new Error(data.message || 'Failed to mark charge as paid');
+                // Safely handle non-JSON responses (e.g. 404 HTML fallback)
+                let errorMsg = 'Failed to mark charge as paid';
+                try {
+                    const data = await response.json();
+                    errorMsg = data.message || errorMsg;
+                } catch (_) {
+                    errorMsg = `Server error (${response.status})`;
+                }
+                throw new Error(errorMsg);
             }
 
             // Refresh modal UI to update indicators and recalculate totals
-            if (currentBookingCustomId) viewCharges(currentBookingCustomId);
+            if (typeof currentBookingCustomId !== 'undefined' && currentBookingCustomId) {
+                viewCharges(currentBookingCustomId);
+            }
             if (typeof renderAuditLogs === 'function') renderAuditLogs();
 
         } catch (err) {
             console.error('Error marking charge paid:', err);
-            if (typeof showMessage === 'function') showMessage('Error', err.message, true);
-        }
-    }
-
-    // B. DELETE CHARGE HANDLER
-    if (e.target.classList.contains('delete-charge-btn') || e.target.closest('.delete-charge-btn')) {
-        const btn = e.target.classList.contains('delete-charge-btn') ? e.target : e.target.closest('.delete-charge-btn');
-        const chargeId = btn.dataset.id;
-
-        if (!chargeId) return;
-        if (!confirm('Are you sure you want to permanently delete this charge?')) return;
-
-        try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/${chargeId}`, {
-                method: 'DELETE'
-            });
-
-            if (!response || !response.ok) {
-                const data = response ? await response.json() : {};
-                throw new Error(data.message || 'Failed to delete charge from server');
-            }
-
-            // Refresh modal UI instantly to recalculate total and update view
-            if (currentBookingCustomId) viewCharges(currentBookingCustomId);
-            if (typeof renderAuditLogs === 'function') renderAuditLogs();
-
-        } catch (err) {
-            console.error('Error deleting charge:', err);
             if (typeof showMessage === 'function') showMessage('Error', err.message, true);
         }
     }
