@@ -5109,24 +5109,73 @@ function debounce(func, timeout = 300) {
  * FETCH REPORT DATA
  * Filters bookings based on UI inputs and scoped by Hotel ID.
  */
+// --- 1. PRESET DATE FILTERS ---
+// --- 1. PRESET DATE FILTERS ---
+function setDateFilter(type) {
+    const customStart = document.getElementById('presetCustomStartDate');
+    const customEnd = document.getElementById('presetCustomEndDate');
+    const mainStart = document.getElementById('filterDate');
+    const mainEnd = document.getElementById('endDate');
+    const customContainer = document.getElementById('reportCustomDateContainer');
+
+    const formatDate = (dateObj) => {
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const now = new Date();
+
+    const setValues = (startVal, endVal) => {
+        if (customStart) customStart.value = startVal;
+        if (customEnd) customEnd.value = endVal;
+        if (mainStart) mainStart.value = startVal;
+        if (mainEnd) mainEnd.value = endVal;
+    };
+
+    if (type === 'today') {
+        const todayStr = formatDate(now);
+        setValues(todayStr, todayStr);
+    } 
+    else if (type === 'yesterday') {
+        const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        const yestStr = formatDate(yesterday);
+        setValues(yestStr, yestStr);
+    } 
+    else if (type === 'week') {
+        const dayOfWeek = now.getDay();
+        const distanceToMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - distanceToMon);
+        setValues(formatDate(monday), formatDate(now));
+    } 
+    else if (type === 'month') {
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        setValues(formatDate(firstDay), formatDate(lastDay));
+    }
+
+    fetchReport();
+}
+
+// --- 2. REPORT FETCHING LOGIC ---
 async function fetchReport() {
-    // 1. Get DOM Elements for display pipelines
     const tableBody = document.getElementById('tableBody');
     const mobileGrid = document.getElementById('reportsMobileGrid');
     const sumPaid = document.getElementById('sumPaid');
     const sumBalance = document.getElementById('sumBalance');
     const sumBookings = document.getElementById('sumBookings');
 
-    // 2. Capture Filter Values
     const search = document.getElementById('filterSearch')?.value.trim() || '';
     const paymentStatus = document.getElementById('filterPaymentStatus')?.value || '';
     const gueststatus = document.getElementById('filterGuestStatus')?.value || '';
     const paymentMethod = document.getElementById('filterPaymentMethod')?.value || '';
     const guestsource = document.getElementById('filterGuestSource')?.value || '';
-    const startDate = document.getElementById('filterDate')?.value || '';
-    const endDate = document.getElementById('endDate')?.value || '';
+    
+    // Check both unique input positions for start and end dates
+    const startDate = document.getElementById('presetCustomStartDate')?.value || document.getElementById('filterDate')?.value || '';
+    const endDate = document.getElementById('presetCustomEndDate')?.value || document.getElementById('endDate')?.value || '';
 
-    // 3. Multi-Tenant Context Retrieval
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelId = user ? user.hotelId : null;
 
@@ -5135,20 +5184,6 @@ async function fetchReport() {
         return;
     }
 
-    // 4. Reset counters if no filters are active
-    const hasActiveFilter = search || paymentStatus || gueststatus || 
-                            paymentMethod || guestsource || startDate || endDate;
-
-    if (!hasActiveFilter) {
-        if (tableBody) tableBody.innerHTML = '';
-        if (mobileGrid) mobileGrid.innerHTML = '';
-        if (sumBookings) sumBookings.textContent = '0';
-        if (sumPaid) sumPaid.textContent = `${CURRENT_CURRENCY} 0.00`;
-        if (sumBalance) sumBalance.textContent = `${CURRENT_CURRENCY} 0.00`;
-        return;
-    }
-
-    // 5. Build Parameters Query Object
     const queryParams = { hotelId };
     if (search) queryParams.search = search;
     if (paymentStatus) queryParams.paymentStatus = paymentStatus;
@@ -5170,9 +5205,8 @@ async function fetchReport() {
         if (tableBody) tableBody.innerHTML = `<tr><td colspan="10">${loadingIndicator}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = loadingIndicator;
 
-        // 6. Execute Request Context Pipeline
         const response = await authenticatedFetch(`${API_BASE_URL}/bookings?${params}`);
-        if (!response) throw new Error("No payload parsed back from execution environment.");
+        if (!response) throw new Error("No payload returned.");
         
         const data = await response.json();
         const bookings = Array.isArray(data) ? data : (data.bookings || []);
@@ -5181,15 +5215,57 @@ async function fetchReport() {
         renderTable(bookings);
 
     } catch (err) {
-        console.error("Fetch execution fault error reported:", err);
+        console.error("Fetch execution error:", err);
         const errorTemplate = `
             <div class="p-6 text-center text-red-500 font-semibold bg-red-50 rounded-lg">
-                <i class="fas fa-exclamation-triangle mr-2"></i> Error loading report structure. Check internet connectivity log.
+                <i class="fas fa-exclamation-triangle mr-2"></i> Error loading report structure.
             </div>`;
         if (tableBody) tableBody.innerHTML = `<tr><td colspan="10">${errorTemplate}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = errorTemplate;
     }
 }
+
+// --- 3. UNIFIED EVENT BINDING & SYNC ---
+document.addEventListener('DOMContentLoaded', () => {
+    const customStart = document.getElementById('presetCustomStartDate');
+    const customEnd = document.getElementById('presetCustomEndDate');
+    const mainStart = document.getElementById('filterDate');
+    const mainEnd = document.getElementById('endDate');
+
+    const syncInputs = (target) => {
+        const targetId = target.id;
+
+        // Mirror values reliably without wiping active user selections
+        if (targetId === 'presetCustomStartDate' && mainStart) mainStart.value = target.value;
+        if (targetId === 'presetCustomEndDate' && mainEnd) mainEnd.value = target.value;
+        if (targetId === 'filterDate' && customStart) customStart.value = target.value;
+        if (targetId === 'endDate' && customEnd) customEnd.value = target.value;
+    };
+
+    const runDebouncedFetch = debounce((e) => {
+        if (e && e.target) {
+            syncInputs(e.target);
+        }
+        fetchReport();
+    }, 300);
+
+    const filterInputs = [
+        'filterSearch', 'filterPaymentStatus', 'filterGuestStatus', 
+        'filterGuestSource', 'filterPaymentMethod',
+        'filterDate', 'endDate',
+        'presetCustomStartDate', 'presetCustomEndDate'
+    ];
+
+    filterInputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', runDebouncedFetch);
+            el.addEventListener('change', runDebouncedFetch);
+        }
+    });
+
+    fetchReport();
+});
 
 function renderTable(bookings) {
     const tbody = document.getElementById('tableBody');
@@ -5315,21 +5391,6 @@ function renderTable(bookings) {
     currentData = bookings;
 }
 
-// 2. AUTO-FILTER LOGIC (WITH DEBOUNCE)
-
-
-const filterInputs = [
-    'filterSearch', 'filterPaymentStatus', 'filterGuestStatus', 
-    'filterDate', 'endDate', 'filterGuestSource', 'filterPaymentMethod'
-];
-
-filterInputs.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-        el.addEventListener('input', debounce(() => fetchReport()));
-    }
-});
-
 // 3. EXPORT FUNCTIONS
 function exportToExcel() {
     if (currentData.length === 0) return showMessage("No data to export");
@@ -5359,25 +5420,7 @@ function exportToPDF() {
     doc.save("Hotel_Report.pdf");
 }
 
-// 4. PRESET DATE FILTERS
-function setDateFilter(type) {
-    const dateInput = document.getElementById('filterDate');
-    const endDateInput = document.getElementById('endDate');
-    const now = new Date();
-    
-    if (type === 'today') {
-        const todayStr = now.toISOString().split('T')[0];
-        dateInput.value = todayStr;
-        endDateInput.value = todayStr;
-    } else if (type === 'month') {
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-        dateInput.value = firstDay;
-        endDateInput.value = lastDay;
-    }
-    
-    fetchReport(); // Trigger search immediately
-}
+
 
 // 5. INITIALIZATION
 window.onload = () => {
@@ -8839,11 +8882,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (typeof fetchExpenses === 'function') fetchExpenses();
     if (typeof fetchSales === 'function') fetchSales();
 
-    if (typeof fetchStatusReports === 'function') {
-        fetchStatusReports();
-    } else if (typeof fetchReports === 'function') {
-        fetchReports();
-    }
 });
 
 async function deleteInventoryItem(id) {
@@ -12892,58 +12930,83 @@ async function markAsServed(orderId) {
     }
 }
    
+const guestInput = document.getElementById('guestname');
+const roomInput = document.getElementById('roomNumber');
+const guestBox = document.getElementById('guestSuggestions');
+const roomBox = document.getElementById('roomSuggestions');
 
-const suggestInput = document.getElementById('guestname');
-const suggestionBox = document.getElementById('bookingSuggestions');
-const roomInput = document.querySelector('input[name="roomNumber"]');
 let suggestTimer;
 
-suggestInput.addEventListener('input', () => {
-    clearTimeout(suggestTimer);
-    const val = suggestInput.value.trim();
+function setupBookingSuggestions(inputEl, targetBox) {
+    if (!inputEl || !targetBox) return;
 
-    if (val.length < 2) {
-        suggestionBox.classList.add('hidden');
-        return;
-    }
+    inputEl.addEventListener('input', () => {
+        clearTimeout(suggestTimer);
+        const val = inputEl.value.trim();
 
-    suggestTimer = setTimeout(async () => {
-        try {
-            const res = await authenticatedFetch(`${API_BASE_URL}/pos/suggestions/bookings?name=${val}`);
-            if (!res.ok) throw new Error(`Server responded with ${res.status}`);
-
-            const bookings = await res.json();
-            if (bookings.length > 0) {
-                suggestionBox.innerHTML = bookings.map(b => `
-                    <div class="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0"
-                         onclick="fillBooking('${b.name.replace(/'/g, "\\'")}', '${b.room}')">
-                        <p class="text-sm font-medium text-slate-700">${b.name}</p>
-                        <p class="text-xs text-slate-400">Room ${b.room}</p>
-                    </div>
-                `).join('');
-                suggestionBox.classList.remove('hidden');
-            } else {
-                suggestionBox.classList.add('hidden');
-            }
-        } catch (err) {
-            console.error('Suggestion fetch failed:', err);
+        if (val.length < 1) {
+            targetBox.classList.add('hidden');
+            return;
         }
-    }, 300);
-});
+
+        suggestTimer = setTimeout(async () => {
+            try {
+                const res = await authenticatedFetch(`${API_BASE_URL}/pos/suggestions/bookings?query=${encodeURIComponent(val)}`);
+                if (!res || !res.ok) throw new Error(`Status ${res?.status}`);
+
+                const bookings = await res.json();
+                
+                if (Array.isArray(bookings) && bookings.length > 0) {
+                    targetBox.innerHTML = bookings.map(b => {
+                        const safeName = (b.name || '').replace(/'/g, "\\'");
+                        const safeRoom = b.room ?? '';
+                        return `
+                            <div class="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0 flex justify-between items-center"
+                                 onclick="fillBooking('${safeName}', '${safeRoom}')">
+                                <div>
+                                    <p class="text-sm font-medium text-slate-700">${b.name}</p>
+                                    <p class="text-xs text-slate-400">Room: ${safeRoom || 'Unassigned'}</p>
+                                </div>
+                                <span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded font-semibold">
+                                    ${safeRoom ? `Room ${safeRoom}` : 'No Room'}
+                                </span>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    guestBox.classList.add('hidden');
+                    roomBox.classList.add('hidden');
+                    targetBox.classList.remove('hidden');
+                } else {
+                    targetBox.innerHTML = `
+                        <div class="p-3 text-xs text-slate-400 text-center">No active guests found</div>
+                    `;
+                    targetBox.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error('Suggestion fetch failed:', err);
+            }
+        }, 250);
+    });
+}
+
+// Initialize watchers
+setupBookingSuggestions(guestInput, guestBox);
+setupBookingSuggestions(roomInput, roomBox);
 
 window.fillBooking = (name, room) => {
-    suggestInput.value = name;
-    roomInput.value = room;
-    suggestionBox.classList.add('hidden');
+    if (guestInput) guestInput.value = name;
+    if (roomInput) roomInput.value = room;
+    if (guestBox) guestBox.classList.add('hidden');
+    if (roomBox) roomBox.classList.add('hidden');
 };
 
-// Close suggestions if user clicks outside
 document.addEventListener('click', (e) => {
-    // FIX: Use the correct IDs 'bookingSuggestions' and 'guestname'
-    if (suggestionBox && suggestInput) {
-        if (!suggestionBox.contains(e.target) && e.target !== suggestInput) {
-            suggestionBox.classList.add('hidden');
-        }
+    if (guestBox && !guestBox.contains(e.target) && e.target !== guestInput) {
+        guestBox.classList.add('hidden');
+    }
+    if (roomBox && !roomBox.contains(e.target) && e.target !== roomInput) {
+        roomBox.classList.add('hidden');
     }
 });
 
