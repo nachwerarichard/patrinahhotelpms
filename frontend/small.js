@@ -5421,6 +5421,47 @@ function setDateFilter(type) {
     fetchReport();
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+    const reportStart = document.getElementById('reportStartDate');
+    const reportEnd = document.getElementById('reportEndDate');
+    const mainStart = document.getElementById('filterDate');
+    const mainEnd = document.getElementById('endDate');
+
+    const syncAndFetch = (sourceStart, sourceEnd) => {
+        const startVal = sourceStart?.value || '';
+        const endVal = sourceEnd?.value || '';
+
+        // Keep values in sync across UI
+        if (mainStart && sourceStart !== mainStart) mainStart.value = startVal;
+        if (reportStart && sourceStart !== reportStart) reportStart.value = startVal;
+        if (mainEnd && sourceEnd !== mainEnd) mainEnd.value = endVal;
+        if (reportEnd && sourceEnd !== reportEnd) reportEnd.value = endVal;
+
+        // Block execution until both inputs are selected during custom range picks
+        if ((startVal && !endVal) || (!startVal && endVal)) {
+            return; 
+        }
+
+        fetchReport();
+    };
+
+    const runDebouncedSync = debounce((e) => {
+        const isStart = e.target.id === 'reportStartDate' || e.target.id === 'filterDate';
+        if (isStart) {
+            syncAndFetch(e.target, reportEnd || mainEnd);
+        } else {
+            syncAndFetch(reportStart || mainStart, e.target);
+        }
+    }, 300);
+
+    ['reportStartDate', 'reportEndDate', 'filterDate', 'endDate'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', runDebouncedSync);
+        }
+    });
+});
+
 // 5. INITIALIZATION
 window.onload = () => {
     fetchUsers();

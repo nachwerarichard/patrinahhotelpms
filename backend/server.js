@@ -2948,36 +2948,38 @@ app.get('/api/bookings', auth, async (req, res) => {
         const limit = parseInt(req.query.limit) || 500;
         const skip = (page - 1) * limit;
 
-        // Base tenant isolation query
+        // Base tenant isolation filter
         let query = { hotelId: req.user.hotelId };
 
-        // Search parameter filter
+        // 1. Text Search Matching (Wrapped to enforce tenant isolation)
         if (search) {
-            const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape regex special chars
-            query.$or = [
-                { name: new RegExp(safeSearch, 'i') },
-                { room: new RegExp(safeSearch, 'i') },
-                { phoneNo: new RegExp(safeSearch, 'i') }
+            const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            query.$and = [
+                { hotelId: req.user.hotelId },
+                {
+                    $or: [
+                        { name: new RegExp(safeSearch, 'i') },
+                        { room: new RegExp(safeSearch, 'i') },
+                        { phoneNo: new RegExp(safeSearch, 'i') },
+                        { guestEmail: new RegExp(safeSearch, 'i') },
+                        { id: new RegExp(safeSearch, 'i') },
+                        { nationalIdNo: new RegExp(safeSearch, 'i') }
+                    ]
+                }
             ];
         }
 
-        // Direct match filters
+        // 2. Direct Enum Matches
         if (gueststatus) query.gueststatus = gueststatus;
         if (paymentStatus) query.paymentStatus = paymentStatus;
         if (guestsource) query.guestsource = guestsource;
         if (paymentMethod) query.paymentMethod = paymentMethod;
 
-        // --- FIXED DATE RANGE FILTER LOGIC ---
+        // 3. Simplified Range Query (Inclusive Check-In Filtering)
         if (startDate || endDate) {
             query.checkIn = {};
-            if (startDate) {
-                // Includes bookings on or after start date
-                query.checkIn.$gte = startDate; 
-            }
-            if (endDate) {
-                // Includes bookings on or before end date
-                query.checkIn.$lte = endDate; 
-            }
+            if (startDate) query.checkIn.$gte = startDate;
+            if (endDate) query.checkIn.$lte = endDate;
         }
 
         const [bookings, totalCount] = await Promise.all([
@@ -2992,7 +2994,7 @@ app.get('/api/bookings', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Error fetching bookings report:", error);
+        console.error("Error executing report query:", error);
         res.status(500).json({ bookings: [], message: 'Server error', error: error.message });
     }
 });
