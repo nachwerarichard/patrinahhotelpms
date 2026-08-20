@@ -4901,7 +4901,7 @@ function openAddPaymentModal(bookingId, balance) {
 /**
  * CLOSE PAYMENT MODAL
  */
-function closeBookingPaymentModal() {
+function closeAddPaymentModal() {
     const modal = document.getElementById('addPaymentModal');
     if (modal) {
         modal.classList.add('hidden');
@@ -4916,7 +4916,7 @@ function closeBookingPaymentModal() {
 // 6. Bonus: Close modal when clicking the dark background (outside the form)
 document.getElementById('addPaymentModal')?.addEventListener('click', function(e) {
     if (e.target === this) {
-        closeBookingPaymentModal();
+        closeAddPaymentModal();
     }
 });
 /**
