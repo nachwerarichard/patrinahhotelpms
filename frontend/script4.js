@@ -3152,52 +3152,35 @@ document.addEventListener('click', async (e) => {
         if (!confirm('Mark this incidental charge as paid?')) return;
 
         try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/${chargeId}/mark-paid`, { 
+            // Updated path to include /pos/
+            const response = await authenticatedFetch(`${API_BASE_URL}/pos/incidental-charges/${chargeId}/mark-paid`, { 
                 method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     username: JSON.parse(localStorage.getItem('loggedInUser'))?.username || 'FrontDesk' 
                 })
             });
 
             if (!response || !response.ok) {
-                const data = response ? await response.json() : {};
-                throw new Error(data.message || 'Failed to mark charge as paid');
+                // Safely handle non-JSON responses (e.g. 404 HTML fallback)
+                let errorMsg = 'Failed to mark charge as paid';
+                try {
+                    const data = await response.json();
+                    errorMsg = data.message || errorMsg;
+                } catch (_) {
+                    errorMsg = `Server error (${response.status})`;
+                }
+                throw new Error(errorMsg);
             }
 
             // Refresh modal UI to update indicators and recalculate totals
-            if (currentBookingCustomId) viewCharges(currentBookingCustomId);
+            if (typeof currentBookingCustomId !== 'undefined' && currentBookingCustomId) {
+                viewCharges(currentBookingCustomId);
+            }
             if (typeof renderAuditLogs === 'function') renderAuditLogs();
 
         } catch (err) {
             console.error('Error marking charge paid:', err);
-            if (typeof showMessage === 'function') showMessage('Error', err.message, true);
-        }
-    }
-
-    // B. DELETE CHARGE HANDLER
-    if (e.target.classList.contains('delete-charge-btn') || e.target.closest('.delete-charge-btn')) {
-        const btn = e.target.classList.contains('delete-charge-btn') ? e.target : e.target.closest('.delete-charge-btn');
-        const chargeId = btn.dataset.id;
-
-        if (!chargeId) return;
-        if (!confirm('Are you sure you want to permanently delete this charge?')) return;
-
-        try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/incidental-charges/${chargeId}`, {
-                method: 'DELETE'
-            });
-
-            if (!response || !response.ok) {
-                const data = response ? await response.json() : {};
-                throw new Error(data.message || 'Failed to delete charge from server');
-            }
-
-            // Refresh modal UI instantly to recalculate total and update view
-            if (currentBookingCustomId) viewCharges(currentBookingCustomId);
-            if (typeof renderAuditLogs === 'function') renderAuditLogs();
-
-        } catch (err) {
-            console.error('Error deleting charge:', err);
             if (typeof showMessage === 'function') showMessage('Error', err.message, true);
         }
     }
@@ -4901,7 +4884,7 @@ function openAddPaymentModal(bookingId, balance) {
 /**
  * CLOSE PAYMENT MODAL
  */
-function closePaymentModal() {
+function closeAddPaymentModal() {
     const modal = document.getElementById('addPaymentModal');
     if (modal) {
         modal.classList.add('hidden');
@@ -4916,7 +4899,7 @@ function closePaymentModal() {
 // 6. Bonus: Close modal when clicking the dark background (outside the form)
 document.getElementById('addPaymentModal')?.addEventListener('click', function(e) {
     if (e.target === this) {
-        closePaymentModal();
+        closeAddPaymentModal();
     }
 });
 /**
@@ -5049,7 +5032,7 @@ async function submitPayment() {
             showMessage("Success", `Payment of ${currencySymbol} ${amount.toLocaleString()} recorded to ledger! ✅`);
             
             if (amountInput) amountInput.value = '';
-            if (typeof closePaymentModal === 'function') closePaymentModal();
+            if (typeof closeBookingPaymentModal === 'function') closeBookingPaymentModal();
             if (typeof refreshDashboardViews === 'function') refreshDashboardViews();
             
             // Release render concurrency lock and execute async re-render
@@ -7540,67 +7523,79 @@ const createAccount = async (guestName, roomNumber) => {
     } catch (err) { showMessage(err.message, 'error'); }
 };
 
-const searchAccounts = async (query) => {
-    const hotelId = getHotelId();
-    const searchResults = document.getElementById('searchResults');
-    
+let cachedInHouseGuests = [];
+
+// Fetch guest list once when 'Room Charge' option is selected
+async function fetchInHouseGuests() {
     try {
-        const res = await authenticatedFetch(
-    `${API_BASE_URL}/pos/search/in-house?query=${encodeURIComponent(query)}`,
-    {
-        method: 'GET'
-    }
-);
-
-if (!res) return; // in case redirect happened
-
+        const res = await authenticatedFetch(`${API_BASE_URL}/pos/in-house-guests`);
         const data = await res.json();
-        
-        searchResults.innerHTML = data.length ? '' : '<p class="text-xs text-center text-slate-400 py-4">No records found</p>';
-        
-        data.forEach(acc => {
-            const el = document.createElement('div');
-            el.className = 'p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-300 transition-all group';
-            el.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <div>
-                        <p class="text-sm font-bold text-slate-700">${acc.guestName}</p>
-                        <p class="text-[10px] uppercase font-bold text-slate-400">Room: ${acc.roomNumber || 'Walk-In'}</p>
-                    </div>
-                    <span class="text-xs font-black text-indigo-600 opacity-0 group-hover:opacity-100">SELECT →</span>
-                </div>`;
-            el.onclick = () => {
-                activeAccountId = acc._id;
-                activeAccountData = acc;
-                updateActiveAccountUI(acc);
-            };
-            searchResults.appendChild(el);
-        });
-    } catch (err) { showMessage(err.message, 'error'); }
-};
-
-
-
-
-// Add accountId as an explicit second argument
-// Add phone parameter to function definition signature
-window.togglePesapalFields = function(selectedMethod) {
-    const container = document.getElementById('pesapalPhoneContainer');
-    const phoneInput = document.getElementById('settlePesapalPhone');
-    
-    if (!container || !phoneInput) return;
-
-    if (selectedMethod === 'Pesapal') {
-        container.classList.remove('hidden');
-        phoneInput.required = true;
-    } else {
-        container.classList.add('hidden');
-        phoneInput.required = false;
-        phoneInput.value = '';
+        if (data.success) {
+            cachedInHouseGuests = data.bookings;
+        }
+    } catch (err) {
+        console.error("Failed to load in-house guests:", err);
     }
-};
+}
 
-const settleAccount = async (method, accountId, phone = '') => {
+// Update payment method change trigger
+async function handlePaymentMethodChange(method) {
+    const pesapalContainer = document.getElementById('pesapalPhoneContainer');
+    const roomContainer = document.getElementById('roomChargeContainer');
+
+    pesapalContainer.classList.toggle('hidden', method !== 'Pesapal');
+    roomContainer.classList.toggle('hidden', method !== 'Room Charge');
+
+    if (method === 'Room Charge') {
+        // Clear previous state
+        document.getElementById('roomSearchInput').value = '';
+        document.getElementById('targetBookingId').value = '';
+        await fetchInHouseGuests();
+    }
+}
+
+// Live filter list as cashier types
+function filterInHouseGuests(query) {
+    const resultsContainer = document.getElementById('roomSearchResults');
+    const cleanQuery = query.toLowerCase().trim();
+
+    if (!cleanQuery) {
+        resultsContainer.classList.add('hidden');
+        resultsContainer.innerHTML = '';
+        return;
+    }
+
+    const matches = cachedInHouseGuests.filter(b => 
+        (b.room && b.room.toLowerCase().includes(cleanQuery)) ||
+        (b.name && b.name.toLowerCase().includes(cleanQuery)) ||
+        (b.id && b.id.toLowerCase().includes(cleanQuery))
+    );
+
+    if (matches.length === 0) {
+        resultsContainer.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No matching active bookings</div>`;
+    } else {
+        resultsContainer.innerHTML = matches.map(b => `
+            <div 
+                onclick="selectInHouseGuest('${b._id}', '${b.room || 'N/A'}', '${b.name.replace(/'/g, "\\'")}')"
+                class="p-3 hover:bg-indigo-50 cursor-pointer flex justify-between items-center transition-colors"
+            >
+                <span class="text-xs font-bold text-slate-800">Room ${b.room || 'N/A'} - ${b.name}</span>
+                <span class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${b.id}</span>
+            </div>
+        `).join('');
+    }
+
+    resultsContainer.classList.remove('hidden');
+}
+
+// Handle selection click
+function selectInHouseGuest(bookingId, roomNumber, guestName) {
+    document.getElementById('targetBookingId').value = bookingId;
+    document.getElementById('roomSearchInput').value = `Room ${roomNumber} - ${guestName}`;
+    document.getElementById('roomSearchResults').classList.add('hidden');
+}
+
+const settleAccount = async (method, accountId, phone = '', passedBookingId = null) => {
     const targetId = accountId || activeAccountId;
     
     if (!targetId) {
@@ -7608,7 +7603,7 @@ const settleAccount = async (method, accountId, phone = '') => {
         return;
     }
 
-    // INTERCEPT METHOD FOR PESAPAL INTERACTION
+    // PESAPAL GATEWAY ROUTE
     if (method === 'Pesapal') {
         try {
             const res = await authenticatedFetch(
@@ -7616,24 +7611,19 @@ const settleAccount = async (method, accountId, phone = '') => {
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ phone: phone }) // Use phone variable directly passed from form input state
+                    body: JSON.stringify({ phone })
                 }
             );
 
             const data = await res.json();
-
             if (!res.ok || !data.success) {
-                console.error("Pesapal Init failed:", data.message);
                 showMessage('Pesapal Initialization Failed', data.message || 'Check gateway logs', true);
                 return;
             }
 
             showMessage('Redirecting', 'Opening secure Pesapal payment gateway...', false);
-            
-            // Redirect window environment frame context
             window.location.href = data.redirectUrl;
             return;
-
         } catch (err) {
             console.error(err);
             showMessage("Error", "Connection failure while establishing gateway connection.", true);
@@ -7641,13 +7631,27 @@ const settleAccount = async (method, accountId, phone = '') => {
         }
     }
 
-    // STANDARD LEGACY DOWNSTREAM METHOD FLOW (Cash, Card, MobileMoney, Room)
-    let payload = {};
-    if (method === 'room') {
-        payload = { roomPost: true };
-    } else {
-        payload = { paymentMethod: ['Cash', 'Card', 'MobileMoney'].includes(method) ? method : 'Cash' };
+    // CHECK IF METHOD IS ROOM CHARGE (Supports both 'room' and 'Room Charge')
+    const isRoomCharge = method === 'room' || method === 'Room Charge';
+
+    // RESOLVE TARGET BOOKING ID
+    const targetBookingId = isRoomCharge 
+        ? (passedBookingId 
+            || document.getElementById('paymentTargetBookingId')?.value 
+            || document.getElementById('targetBookingId')?.value 
+            || null)
+        : null;
+
+    if (isRoomCharge && !targetBookingId) {
+        showMessage('Select Room', 'Please search and select an in-house room to post this charge.', true);
+        return;
     }
+
+    const payload = {
+        roomPost: isRoomCharge,
+        targetBookingId: targetBookingId,
+        paymentMethod: ['Cash', 'MTN Momo', 'Airtel Pay', 'MobileMoney'].includes(method) ? method : 'Cash'
+    };
 
     try {
         const res = await authenticatedFetch(
@@ -7662,26 +7666,42 @@ const settleAccount = async (method, accountId, phone = '') => {
         const data = await res.json(); 
 
         if (!res.ok) {
-            console.error("Settle failed:", data.message);
             showMessage('Settlement failed', data.message || 'Check balance logs', true);
             return;
         }
 
-        if (method === 'room') {
-            showMessage('Success', 'Posted to room successfully! 📄✅', false);
-        
-            resetUI();
-        } else {
-            //showMessage('Success', 'Bill settled completely! 💵✅', false);
-            printReceipt(currentActiveAccountData, method, data);
-            resetUI();
-            if (typeof activeAccountId !== 'undefined') { activeAccountId = null; }
+        // ROOM CHARGE FLOW: Show notification ONLY, skip printReceipt()
+        if (isRoomCharge) {
+            showMessage('Success', 'Posted to guest folio successfully! 📄✅', false);
+            
+            if (typeof resetUI === 'function') resetUI();
+            if (typeof activeAccountId !== 'undefined') activeAccountId = null;
+            if (typeof targetAccountToSettle !== 'undefined') targetAccountToSettle = null;
+            return;
         }
+
+        // STANDARD FLOW: Print receipt for direct payment methods (Cash, Card, Mobile Money)
+        if (typeof printReceipt === 'function') {
+            printReceipt(currentActiveAccountData || targetAccountToSettle, method, data);
+        }
+        
+        if (typeof resetUI === 'function') resetUI();
+        if (typeof activeAccountId !== 'undefined') activeAccountId = null;
+        if (typeof targetAccountToSettle !== 'undefined') targetAccountToSettle = null;
+
     } catch (err) { 
         console.error(err);
         showMessage("Error", "Connection failure during settlement process.", true); 
     }
 };
+
+// Bind submit event
+document.getElementById('settleBillForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const method = document.getElementById('settlePaymentMethod').value;
+    const phone = document.getElementById('settlePesapalPhone').value;
+    settleAccount(method, activeAccountId, phone);
+});
 
 // Global scope tracker for currently active account data
 let currentActiveAccountData = null;
@@ -8616,6 +8636,45 @@ const printReceiptFromAccount = (receipt) => {
     `;
 
     window.print();
+};
+
+const searchAccounts = async (query) => {
+    const hotelId = getHotelId();
+    const searchResults = document.getElementById('searchResults');
+    
+    try {
+        const res = await authenticatedFetch(
+    `${API_BASE_URL}/pos/search/in-house?query=${encodeURIComponent(query)}`,
+    {
+        method: 'GET'
+    }
+);
+
+if (!res) return; // in case redirect happened
+
+        const data = await res.json();
+        
+        searchResults.innerHTML = data.length ? '' : '<p class="text-xs text-center text-slate-400 py-4">No records found</p>';
+        
+        data.forEach(acc => {
+            const el = document.createElement('div');
+            el.className = 'p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-300 transition-all group';
+            el.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-sm font-bold text-slate-700">${acc.guestName}</p>
+                        <p class="text-[10px] uppercase font-bold text-slate-400">Room: ${acc.roomNumber || 'Walk-In'}</p>
+                    </div>
+                    <span class="text-xs font-black text-indigo-600 opacity-0 group-hover:opacity-100">SELECT →</span>
+                </div>`;
+            el.onclick = () => {
+                activeAccountId = acc._id;
+                activeAccountData = acc;
+                updateActiveAccountUI(acc);
+            };
+            searchResults.appendChild(el);
+        });
+    } catch (err) { showMessage(err.message, 'error'); }
 };
 
 // --- INITIALIZATION & EVENTS ---
@@ -13378,12 +13437,19 @@ function filterActiveAccounts() {
         const matchesSearch = 
             (acc.guestName || '').toLowerCase().includes(searchTerm) ||
             (acc.roomNumber || '').toString().toLowerCase().includes(searchTerm) ||
+            (acc.bookingCustomId || '').toLowerCase().includes(searchTerm) ||
             (acc._id || '').toLowerCase().includes(searchTerm);
 
         let matchesType = true;
-        if (typeFilter === 'GUEST') matchesType = Boolean(acc.roomNumber) && !acc.isCorporate;
-        if (typeFilter === 'POS_TAB') matchesType = !acc.roomNumber && !acc.isCorporate;
-        if (typeFilter === 'CITY_LEDGER') matchesType = acc.accountType === 'CITY_LEDGER' || Boolean(acc.isCorporate);
+        
+        if (typeFilter === 'GUEST') {
+            // Includes in-house guests with active accounts or unpaid incidentals
+            matchesType = acc.isIncidental || (Boolean(acc.roomNumber) && acc.roomNumber !== 'N/A' && !acc.isCorporate);
+        } else if (typeFilter === 'POS_TAB') {
+            matchesType = (!acc.roomNumber || acc.roomNumber === 'N/A') && !acc.isCorporate && !acc.isIncidental;
+        } else if (typeFilter === 'CITY_LEDGER') {
+            matchesType = acc.accountType === 'CITY_LEDGER' || Boolean(acc.isCorporate);
+        }
 
         return matchesSearch && matchesType;
     });
@@ -16782,30 +16848,69 @@ function closeAccountDetailsModal() {
 /**
  * 3. Transfers data directly into your settleBillModal
  */
-function openSettlementFromDetails() {
-    if (!selectedAccountForSettlement) return;
-
-    closeAccountDetailsModal();
-
-    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
-    const total = Number(selectedAccountForSettlement.totalCharges || 0);
-
-    // Populate your existing settleBillModal elements
-    const guestLabel = document.getElementById('settleModalGuest');
-    const totalLabel = document.getElementById('settleModalTotal');
-
-    if (guestLabel) {
-        guestLabel.textContent = `${selectedAccountForSettlement.guestName}${selectedAccountForSettlement.roomNumber ? ` (Room ${selectedAccountForSettlement.roomNumber})` : ''}`;
-    }
-    if (totalLabel) {
-        totalLabel.textContent = `${currency} ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+async function openSettlementFromDetails() {
+    if (!selectedAccountForSettlement) {
+        console.error('No active account selected for settlement.');
+        return;
     }
 
-    // Show your existing Settle Modal
-    const settleModal = document.getElementById('settleBillModal');
-    if (settleModal) {
-        settleModal.classList.remove('hidden');
-        settleModal.classList.add('flex');
+    const btn = document.getElementById('proceedToSettleBtn');
+    const icon = document.getElementById('proceedToSettleIcon');
+    const text = document.getElementById('proceedToSettleText');
+
+    // 1. Show Spinner & Disable Button
+    if (btn) btn.disabled = true;
+    if (icon) icon.className = 'fas fa-circle-notch fa-spin';
+    if (text) text.textContent = 'Processing...';
+
+    try {
+        // Cache local reference
+        targetAccountToSettle = selectedAccountForSettlement;
+
+        // STEP 1: Close the Folio Details Modal
+        closeAccountDetailsModal();
+
+        // STEP 2: Populate the Standalone Payment Form
+        const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+        const totalAmount = Number(targetAccountToSettle.totalCharges || 0);
+        const guestIdentifier = `${targetAccountToSettle.guestName}${targetAccountToSettle.roomNumber ? ` (Room ${targetAccountToSettle.roomNumber})` : ''}`;
+
+        const guestLabelEl = document.getElementById('paymentGuestLabel');
+        const totalAmountEl = document.getElementById('paymentTotalAmount');
+        
+        if (guestLabelEl) guestLabelEl.textContent = guestIdentifier;
+        if (totalAmountEl) totalAmountEl.textContent = `${currency} ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        // STEP 3: Reset Form Controls & Room Search Fields
+        const paymentMethodSelect = document.getElementById('paymentMethodSelect');
+        if (paymentMethodSelect) paymentMethodSelect.value = 'Cash';
+
+        const roomSearchInput = document.getElementById('paymentRoomSearchInput');
+        const targetBookingId = document.getElementById('paymentTargetBookingId');
+        const roomSearchResults = document.getElementById('paymentRoomSearchResults');
+
+        if (roomSearchInput) roomSearchInput.value = '';
+        if (targetBookingId) targetBookingId.value = '';
+        if (roomSearchResults) roomSearchResults.classList.add('hidden');
+
+        // Reset container visibilities using updated standalone toggle handler
+        if (typeof toggleStandaloneFields === 'function') {
+            await toggleStandaloneFields('Cash');
+        }
+
+        // STEP 4: Open the Standalone Payment Form Modal
+        const paymentModal = document.getElementById('paymentSubmissionModal');
+        if (paymentModal) {
+            paymentModal.classList.remove('hidden');
+            paymentModal.classList.add('flex');
+        }
+    } catch (err) {
+        console.error('Error opening settlement modal:', err);
+    } finally {
+        // 2. Restore Button State
+        if (btn) btn.disabled = false;
+        if (icon) icon.className = 'fas fa-wallet';
+        if (text) text.textContent = 'Settle Account';
     }
 }
 
@@ -16826,67 +16931,150 @@ function closeAccountDetailsModal() {
  * 2. Triggered when 'Settle Account' is clicked inside the Details Modal.
  *    Closes the Details Modal & Opens the Payment Submission Form.
  */
-function openSettlementFromDetails() {
-    if (!selectedAccountForSettlement) {
-        console.error('No active account selected for settlement.');
+
+
+let standaloneInHouseGuests = [];
+
+/**
+ * 1. Toggle Fields & Load Guest Data
+ */
+async function toggleStandaloneFields(method) {
+    const phoneContainer = document.getElementById('paymentPhoneContainer');
+    const roomContainer = document.getElementById('paymentRoomSearchContainer');
+
+    // 1. Toggle Phone Container (Mobile Money / Pesapal)
+    if (phoneContainer) {
+        if (['Pesapal', 'MTN Momo', 'Airtel Pay'].includes(method)) {
+            phoneContainer.classList.remove('hidden');
+        } else {
+            phoneContainer.classList.add('hidden');
+        }
+    }
+
+    // 2. Toggle Room Search Container (Room Charge)
+    if (roomContainer) {
+        if (method === 'Room Charge') {
+            roomContainer.classList.remove('hidden');
+            // Reset search input states
+            const searchInput = document.getElementById('paymentRoomSearchInput');
+            const targetBookingId = document.getElementById('paymentTargetBookingId');
+            if (searchInput) searchInput.value = '';
+            if (targetBookingId) targetBookingId.value = '';
+            
+            // Pre-fetch checked-in guests list
+            if (typeof fetchStandaloneInHouseGuests === 'function') {
+                await fetchStandaloneInHouseGuests();
+            }
+        } else {
+            roomContainer.classList.add('hidden');
+        }
+    }
+}
+
+/**
+ * 2. Fetch Checked-In Guests from API
+ */
+
+// Array to store fetched active in-house guests locally
+let inHouseGuestsModalList = [];
+
+/**
+ * 1. Fetch checked-in guests from backend when Room Charge is selected
+ */
+async function fetchStandaloneInHouseGuests() {
+    try {
+        const res = await authenticatedFetch(`${API_BASE_URL}/pos/in-house-guests`);
+        const data = await res.json();
+        
+        if (data.success && Array.isArray(data.bookings)) {
+            inHouseGuestsModalList = data.bookings;
+        } else {
+            inHouseGuestsModalList = [];
+        }
+    } catch (err) {
+        console.error("Failed to fetch in-house guests for room search:", err);
+        inHouseGuestsModalList = [];
+    }
+}
+
+/**
+ * 2. Live filter input function called on input event (oninput="filterInHouseGuestsModal(this.value)")
+ */
+function filterInHouseGuestsModal(query) {
+    const resultsContainer = document.getElementById('paymentRoomSearchResults');
+    if (!resultsContainer) return;
+
+    const cleanQuery = (query || '').toLowerCase().trim();
+
+    // Hide dropdown if query is empty
+    if (!cleanQuery) {
+        resultsContainer.classList.add('hidden');
+        resultsContainer.innerHTML = '';
         return;
     }
 
-    // Cache local reference
-    targetAccountToSettle = selectedAccountForSettlement;
+    // Filter by room number, guest name, or booking custom ID
+    const matches = inHouseGuestsModalList.filter(b => 
+        (b.room && b.room.toString().toLowerCase().includes(cleanQuery)) ||
+        (b.name && b.name.toLowerCase().includes(cleanQuery)) ||
+        (b.id && b.id.toString().toLowerCase().includes(cleanQuery))
+    );
 
-    // STEP 1: Close the Folio Details Modal
-    closeAccountDetailsModal();
-
-    // STEP 2: Populate the Standalone Payment Form
-    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
-    const totalAmount = Number(targetAccountToSettle.totalCharges || 0);
-    const guestIdentifier = `${targetAccountToSettle.guestName}${targetAccountToSettle.roomNumber ? ` (Room ${targetAccountToSettle.roomNumber})` : ''}`;
-
-    document.getElementById('paymentGuestLabel').textContent = guestIdentifier;
-    document.getElementById('paymentTotalAmount').textContent = `${currency} ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-    // Reset phone container visibility
-    document.getElementById('paymentMethodSelect').value = 'Cash';
-    togglePesapalField('Cash');
-
-    // STEP 3: Open the Standalone Payment Form Modal
-    const paymentModal = document.getElementById('paymentSubmissionModal');
-    if (paymentModal) {
-        paymentModal.classList.remove('hidden');
-        paymentModal.classList.add('flex');
-    }
-}
-
-/**
- * 3. Closes the Standalone Payment Form Modal
- */
-function closePaymentModal() {
-    const modal = document.getElementById('paymentSubmissionModal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }
-    targetAccountToSettle = null;
-}
-
-/**
- * 4. Helper to toggle phone input for Pesapal or Mobile Money
- */
-function togglePesapalField(method) {
-    const phoneContainer = document.getElementById('paymentPhoneContainer');
-    if (!phoneContainer) return;
-
-    if (method === 'Pesapal' || method === 'MTN Momo' || method === 'Airtel Pay') {
-        phoneContainer.classList.remove('hidden');
+    if (matches.length === 0) {
+        resultsContainer.innerHTML = `
+            <div class="p-3 text-xs font-semibold text-slate-400 text-center">
+                No active in-house guests found
+            </div>`;
     } else {
-        phoneContainer.classList.add('hidden');
+        resultsContainer.innerHTML = matches.map(b => {
+            const escapedName = (b.name || '').replace(/'/g, "\\'");
+            const roomNum = b.room || 'N/A';
+            const bookingCustomId = b.id || '';
+
+            return `
+                <div 
+                    onclick="selectInHouseGuestModal('${b._id}', '${roomNum}', '${escapedName}')"
+                    class="p-3 hover:bg-indigo-50 cursor-pointer flex justify-between items-center transition-colors text-left"
+                >
+                    <div>
+                        <p class="text-xs font-bold text-slate-800">Room ${roomNum} - ${b.name}</p>
+                    </div>
+                    <span class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                        ${bookingCustomId}
+                    </span>
+                </div>
+            `;
+        }).join('');
     }
+
+    resultsContainer.classList.remove('hidden');
 }
 
 /**
- * 5. Handle Payment Submission
+ * 3. Assign selected guest to hidden ID input and update search input label
  */
+function selectInHouseGuestModal(bookingId, roomNumber, guestName) {
+    const hiddenIdInput = document.getElementById('paymentTargetBookingId');
+    const searchInput = document.getElementById('paymentRoomSearchInput');
+    const resultsContainer = document.getElementById('paymentRoomSearchResults');
+
+    if (hiddenIdInput) hiddenIdInput.value = bookingId;
+    if (searchInput) searchInput.value = `Room ${roomNumber} - ${guestName}`;
+    if (resultsContainer) resultsContainer.classList.add('hidden');
+}
+
+/**
+ * 4. Close dropdown when clicking outside the modal field area
+ */
+document.addEventListener('click', function(e) {
+    const roomContainer = document.getElementById('paymentRoomSearchContainer');
+    const resultsContainer = document.getElementById('paymentRoomSearchResults');
+    
+    if (roomContainer && resultsContainer && !roomContainer.contains(e.target)) {
+        resultsContainer.classList.add('hidden');
+    }
+});
+
 document.getElementById('standalonePaymentForm')?.addEventListener('submit', async function (e) {
     e.preventDefault();
 
@@ -16902,9 +17090,19 @@ document.getElementById('standalonePaymentForm')?.addEventListener('submit', asy
     const submitBtn = document.getElementById('submitPaymentBtn');
     const rawMethod = document.getElementById('paymentMethodSelect').value;
     const phoneNumber = document.getElementById('paymentPhoneNumber')?.value || '';
+    const targetBookingId = document.getElementById('paymentTargetBookingId')?.value || '';
     const accountId = targetAccountToSettle._id;
 
-    // Map UI select values to internal settleAccount parameters
+    // Validation for Room Charge selection
+    if (rawMethod === 'Room Charge' && !targetBookingId) {
+        if (typeof showMessage === 'function') {
+            showMessage('Select Room', 'Please search and select an in-house room to post this charge.', true);
+        } else {
+            alert('Please search and select an in-house room to post this charge.');
+        }
+        return;
+    }
+
     let settleMethod = rawMethod;
     if (rawMethod === 'MTN Momo' || rawMethod === 'Airtel Pay') {
         settleMethod = 'MobileMoney';
@@ -16913,25 +17111,20 @@ document.getElementById('standalonePaymentForm')?.addEventListener('submit', asy
     }
 
     try {
-        // 1. Show UI Loading State
         if (submitBtn) {
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Processing...`;
         }
 
-        // 2. Set global active account reference (required for receipt printing & fallbacks)
         if (typeof currentActiveAccountData !== 'undefined') {
             currentActiveAccountData = targetAccountToSettle;
         }
 
-        // 3. Delegate directly to core settleAccount function
-        await settleAccount(settleMethod, accountId, phoneNumber);
+        // Delegate to settleAccount function
+        await settleAccount(settleMethod, accountId, phoneNumber, targetBookingId);
 
-        // 4. Close the modal on success (if not redirected to Pesapal)
         if (settleMethod !== 'Pesapal') {
             closePaymentModal();
-
-            // Refresh account tables/grids
             if (typeof fetchActiveAccounts === 'function') {
                 fetchActiveAccounts();
             }
@@ -16945,7 +17138,6 @@ document.getElementById('standalonePaymentForm')?.addEventListener('submit', asy
             alert('An error occurred while processing settlement.');
         }
     } finally {
-        // Restore Submit Button
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.innerHTML = `<i class="fas fa-check-circle"></i> <span>Submit Payment</span>`;
@@ -16953,4 +17145,18 @@ document.getElementById('standalonePaymentForm')?.addEventListener('submit', asy
     }
 });
 
+/**
+ * 6. Closes Modal
+ */
+function closePaymentModal() {
+    const modal = document.getElementById('paymentSubmissionModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+    const searchResults = document.getElementById('standaloneRoomSearchResults');
+    if (searchResults) searchResults.classList.add('hidden');
+    
+    targetAccountToSettle = null;
+}
 

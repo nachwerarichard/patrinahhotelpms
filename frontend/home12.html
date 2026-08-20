@@ -1716,21 +1716,15 @@
 </div>
 
 <!-- Settle Bill Confirmation Modal -->
-<div
-    id="settleBillModal"
-    class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4 backdrop-blur-sm"
->
+<div id="settleBillModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4 backdrop-blur-sm">
     <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-md transform transition-all overflow-hidden border border-slate-100">
+        
         <!-- Header -->
         <div class="flex justify-between items-center border-b border-slate-100 px-8 py-5 bg-slate-50/50">
             <h2 class="text-base font-black text-slate-900 uppercase tracking-wider">
                 Settle Folio Bill
             </h2>
-            <button
-                type="button"
-                id="closeSettleModalBtn"
-                class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-xl text-2xl transition-colors leading-none"
-            >
+            <button type="button" id="closeSettleModalBtn" class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-xl text-2xl transition-colors leading-none">
                 &times;
             </button>
         </div>
@@ -1751,35 +1745,47 @@
             <!-- Payment Selection -->
             <div class="space-y-2">
                 <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Choose Payment Method</label>
-                <select
-                    id="settlePaymentMethod"
-                    required
-                    class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"
-                    onchange="togglePesapalFields(this.value)"
-                >
-                    <option value="Cash">Cash </option>
+                <select id="settlePaymentMethod" required class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700" onchange="handlePaymentMethodChange(this.value)">
+                    <option value="Cash">Cash</option>
                     <option value="MTN Momo">MTN Momo</option>
-                    <option value="Airtel Pay">Airtel Pay </option>
-                    <option value="Pesapal">Pesapal </option>
+                    <option value="Airtel Pay">Airtel Pay</option>
+                    <option value="Pesapal">Pesapal</option>
+                    <option value="Room Charge">Room Charge (Post to Guest Folio)</option>
                 </select>
             </div>
 
-            <!-- Conditionally Visible Pesapal Phone Input Container -->
+            <!-- Dynamic Room Selection Container -->
+            <!-- Searchable Room Selector Container -->
+<div id="roomChargeContainer" class="space-y-2 hidden relative">
+    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Search In-House Room or Guest</label>
+    
+    <input 
+        type="text" 
+        id="roomSearchInput" 
+        placeholder="Type room number or guest name..." 
+        autocomplete="off"
+        class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700"
+        oninput="filterInHouseGuests(this.value)"
+    />
+
+    <!-- Hidden Field to Hold the Selected Booking ID -->
+    <input type="hidden" id="targetBookingId" value="" />
+
+    <!-- Dropdown List Context -->
+    <div 
+        id="roomSearchResults" 
+        class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto z-50 divide-y divide-slate-100"
+    ></div>
+</div>
+
+            <!-- Pesapal Phone Input Container -->
             <div id="pesapalPhoneContainer" class="space-y-2 hidden">
                 <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Guest Phone Number (Required for Pesapal)</label>
-                <input 
-                    type="tel" 
-                    id="settlePesapalPhone" 
-                    placeholder="e.g. +256770000000"
-                    class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 font-semibold"
-                />
+                <input type="tel" id="settlePesapalPhone" placeholder="e.g. +256770000000" class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 font-semibold" />
             </div>
 
-            <!-- Action Buttons -->
-            <button
-                type="submit"
-                class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg transition-all uppercase tracking-widest text-sm"
-            >
+            <!-- Action Button -->
+            <button type="submit" class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg transition-all uppercase tracking-widest text-sm">
                 Confirm Settlement
             </button>
         </form>
@@ -4476,7 +4482,7 @@ Manage payment providers used for guest payments.            </p>
 
 
     <div class="flex justify-end gap-2 mt-6 border-t pt-4" id="modalActionButtons">
-      <button onclick="closePaymentModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors">
+      <button onclick="closeAddPaymentModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors">
         Cancel
       </button>
       <button id="submitPaymentBtn" onclick="submitPayment()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
@@ -4608,10 +4614,15 @@ Manage payment providers used for guest payments.            </p>
                 <button type="button" onclick="closeAccountDetailsModal()" class="flex-1 sm:flex-none px-5 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition-all uppercase tracking-wider">
                     Close
                 </button>
-                <button type="button" id="proceedToSettleBtn" onclick="openSettlementFromDetails()" class="flex-1 sm:flex-none px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs transition-all uppercase tracking-wider shadow-md flex items-center justify-center gap-2">
-                    <i class="fas fa-wallet"></i>
-                    <span>Settle Account</span>
-                </button>
+                <button 
+    type="button" 
+    id="proceedToSettleBtn" 
+    onclick="openSettlementFromDetails()" 
+    class="flex-1 sm:flex-none px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs transition-all uppercase tracking-wider shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+>
+    <i id="proceedToSettleIcon" class="fas fa-wallet"></i>
+    <span id="proceedToSettleText">Settle Account</span>
+</button>
             </div>
         </div>
 
@@ -4645,15 +4656,38 @@ Manage payment providers used for guest payments.            </p>
             </div>
 
             <!-- Settlement Method (Matches Mongoose Schema Enum) -->
-            <div class="space-y-1">
-                <label class="text-[10px] font-extrabold text-slate-500 uppercase ml-1">Payment / Settlement Method</label>
-                <select id="paymentMethodSelect" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-xs text-slate-800" onchange="togglePesapalField(this.value)">
-                    <option value="Cash">Cash Settlement</option>
-                    <option value="MTN Momo">MTN Mobile Money</option>
-                    <option value="Airtel Pay">Airtel Pay</option>
-                    <option value="Pesapal">Pesapal Gateway</option>
-                    <option value="Card">Credit / Debit Card</option>
-                </select>
+            <!-- Settlement Method (Matches Mongoose Schema Enum) -->
+<div class="space-y-1">
+    <label class="text-[10px] font-extrabold text-slate-500 uppercase ml-1">Payment / Settlement Method</label>
+    <select id="paymentMethodSelect" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-xs text-slate-800" onchange="toggleStandaloneFields(this.value)">
+        <option value="Cash">Cash Settlement</option>
+        <option value="MTN Momo">MTN Mobile Money</option>
+        <option value="Airtel Pay">Airtel Pay</option>
+        <option value="Pesapal">Pesapal Gateway</option>
+        <option value="Room Charge">Room Charge (Post to In-House Folio)</option>
+    </select>
+</div>
+
+            <!-- Searchable Room Selector Container (Hidden by default) -->
+            <div id="paymentRoomSearchContainer" class="space-y-1 hidden relative">
+                <label class="text-[10px] font-extrabold text-slate-500 uppercase ml-1">Search In-House Guest / Room</label>
+                <input 
+                    type="text" 
+                    id="paymentRoomSearchInput" 
+                    placeholder="Type room number or guest name..." 
+                    autocomplete="off"
+                    class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 font-bold text-xs"
+                    oninput="filterInHouseGuestsModal(this.value)"
+                />
+                
+                <!-- Hidden Field to Hold the Selected Booking ID -->
+                <input type="hidden" id="paymentTargetBookingId" value="" />
+
+                <!-- Dropdown Search Results -->
+                <div 
+                    id="paymentRoomSearchResults" 
+                    class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto z-50 divide-y divide-slate-100"
+                ></div>
             </div>
 
             <!-- Pesapal / Mobile Money Phone Input -->
@@ -4770,13 +4804,15 @@ Manage payment providers used for guest payments.            </p>
             <p id="statusMessage" class="text-center mt-4 font-bold text-blue-500"></p>
         </div>
     </div>
-</div> 
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="script4.js"></script>
+
 <script type="text/javascript"
 src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
 </script>
+
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </body>
 </html>
