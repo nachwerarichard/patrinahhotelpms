@@ -8638,6 +8638,45 @@ const printReceiptFromAccount = (receipt) => {
     window.print();
 };
 
+const searchAccounts = async (query) => {
+    const hotelId = getHotelId();
+    const searchResults = document.getElementById('searchResults');
+    
+    try {
+        const res = await authenticatedFetch(
+    `${API_BASE_URL}/pos/search/in-house?query=${encodeURIComponent(query)}`,
+    {
+        method: 'GET'
+    }
+);
+
+if (!res) return; // in case redirect happened
+
+        const data = await res.json();
+        
+        searchResults.innerHTML = data.length ? '' : '<p class="text-xs text-center text-slate-400 py-4">No records found</p>';
+        
+        data.forEach(acc => {
+            const el = document.createElement('div');
+            el.className = 'p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-300 transition-all group';
+            el.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-sm font-bold text-slate-700">${acc.guestName}</p>
+                        <p class="text-[10px] uppercase font-bold text-slate-400">Room: ${acc.roomNumber || 'Walk-In'}</p>
+                    </div>
+                    <span class="text-xs font-black text-indigo-600 opacity-0 group-hover:opacity-100">SELECT →</span>
+                </div>`;
+            el.onclick = () => {
+                activeAccountId = acc._id;
+                activeAccountData = acc;
+                updateActiveAccountUI(acc);
+            };
+            searchResults.appendChild(el);
+        });
+    } catch (err) { showMessage(err.message, 'error'); }
+};
+
 // --- INITIALIZATION & EVENTS ---
 document.addEventListener('DOMContentLoaded', () => {
     loadInventory();
