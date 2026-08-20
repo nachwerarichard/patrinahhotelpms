@@ -1755,12 +1755,28 @@
             </div>
 
             <!-- Dynamic Room Selection Container -->
-            <div id="roomChargeContainer" class="space-y-2 hidden">
-                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Select In-House Room & Guest</label>
-                <select id="targetBookingId" class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700">
-                    <option value="">-- Select Room --</option>
-                </select>
-            </div>
+            <!-- Searchable Room Selector Container -->
+<div id="roomChargeContainer" class="space-y-2 hidden relative">
+    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Search In-House Room or Guest</label>
+    
+    <input 
+        type="text" 
+        id="roomSearchInput" 
+        placeholder="Type room number or guest name..." 
+        autocomplete="off"
+        class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700"
+        oninput="filterInHouseGuests(this.value)"
+    />
+
+    <!-- Hidden Field to Hold the Selected Booking ID -->
+    <input type="hidden" id="targetBookingId" value="" />
+
+    <!-- Dropdown List Context -->
+    <div 
+        id="roomSearchResults" 
+        class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto z-50 divide-y divide-slate-100"
+    ></div>
+</div>
 
             <!-- Pesapal Phone Input Container -->
             <div id="pesapalPhoneContainer" class="space-y-2 hidden">

@@ -7540,47 +7540,22 @@ const createAccount = async (guestName, roomNumber) => {
     } catch (err) { showMessage(err.message, 'error'); }
 };
 
-const searchAccounts = async (query) => {
-    const hotelId = getHotelId();
-    const searchResults = document.getElementById('searchResults');
-    
+let cachedInHouseGuests = [];
+
+// Fetch guest list once when 'Room Charge' option is selected
+async function fetchInHouseGuests() {
     try {
-        const res = await authenticatedFetch(
-    `${API_BASE_URL}/pos/search/in-house?query=${encodeURIComponent(query)}`,
-    {
-        method: 'GET'
-    }
-);
-
-if (!res) return; // in case redirect happened
-
+        const res = await authenticatedFetch(`${API_BASE_URL}/pos/in-house-guests`);
         const data = await res.json();
-        
-        searchResults.innerHTML = data.length ? '' : '<p class="text-xs text-center text-slate-400 py-4">No records found</p>';
-        
-        data.forEach(acc => {
-            const el = document.createElement('div');
-            el.className = 'p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-300 transition-all group';
-            el.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <div>
-                        <p class="text-sm font-bold text-slate-700">${acc.guestName}</p>
-                        <p class="text-[10px] uppercase font-bold text-slate-400">Room: ${acc.roomNumber || 'Walk-In'}</p>
-                    </div>
-                    <span class="text-xs font-black text-indigo-600 opacity-0 group-hover:opacity-100">SELECT →</span>
-                </div>`;
-            el.onclick = () => {
-                activeAccountId = acc._id;
-                activeAccountData = acc;
-                updateActiveAccountUI(acc);
-            };
-            searchResults.appendChild(el);
-        });
-    } catch (err) { showMessage(err.message, 'error'); }
-};
+        if (data.success) {
+            cachedInHouseGuests = data.bookings;
+        }
+    } catch (err) {
+        console.error("Failed to load in-house guests:", err);
+    }
+}
 
-
-// Dynamic visibility handler for dropdown choices
+// Update payment method change trigger
 async function handlePaymentMethodChange(method) {
     const pesapalContainer = document.getElementById('pesapalPhoneContainer');
     const roomContainer = document.getElementById('roomChargeContainer');
@@ -7589,35 +7564,52 @@ async function handlePaymentMethodChange(method) {
     roomContainer.classList.toggle('hidden', method !== 'Room Charge');
 
     if (method === 'Room Charge') {
-        await populateInHouseGuestsDropdown();
+        // Clear previous state
+        document.getElementById('roomSearchInput').value = '';
+        document.getElementById('targetBookingId').value = '';
+        await fetchInHouseGuests();
     }
 }
 
-// Fetch in-house rooms and build UI selection list
-async function populateInHouseGuestsDropdown() {
-    const dropdown = document.getElementById('targetBookingId');
-    dropdown.innerHTML = '<option value="">Loading In-House Guests...</option>';
+// Live filter list as cashier types
+function filterInHouseGuests(query) {
+    const resultsContainer = document.getElementById('roomSearchResults');
+    const cleanQuery = query.toLowerCase().trim();
 
-    try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/pos/in-house-guests`);
-        const data = await res.json();
-
-        if (!data.success || !data.bookings.length) {
-            dropdown.innerHTML = '<option value="">No Active Checked-In Guests</option>';
-            return;
-        }
-
-        dropdown.innerHTML = '<option value="">-- Select Room / Guest --</option>' +
-            data.bookings.map(b => `
-                <option value="${b._id}">
-                    Room ${b.room || 'N/A'} - ${b.name} (${b.id})
-                </option>
-            `).join('');
-
-    } catch (err) {
-        console.error("Error loading checked-in guests:", err);
-        dropdown.innerHTML = '<option value="">Failed to load guest list</option>';
+    if (!cleanQuery) {
+        resultsContainer.classList.add('hidden');
+        resultsContainer.innerHTML = '';
+        return;
     }
+
+    const matches = cachedInHouseGuests.filter(b => 
+        (b.room && b.room.toLowerCase().includes(cleanQuery)) ||
+        (b.name && b.name.toLowerCase().includes(cleanQuery)) ||
+        (b.id && b.id.toLowerCase().includes(cleanQuery))
+    );
+
+    if (matches.length === 0) {
+        resultsContainer.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No matching active bookings</div>`;
+    } else {
+        resultsContainer.innerHTML = matches.map(b => `
+            <div 
+                onclick="selectInHouseGuest('${b._id}', '${b.room || 'N/A'}', '${b.name.replace(/'/g, "\\'")}')"
+                class="p-3 hover:bg-indigo-50 cursor-pointer flex justify-between items-center transition-colors"
+            >
+                <span class="text-xs font-bold text-slate-800">Room ${b.room || 'N/A'} - ${b.name}</span>
+                <span class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${b.id}</span>
+            </div>
+        `).join('');
+    }
+
+    resultsContainer.classList.remove('hidden');
+}
+
+// Handle selection click
+function selectInHouseGuest(bookingId, roomNumber, guestName) {
+    document.getElementById('targetBookingId').value = bookingId;
+    document.getElementById('roomSearchInput').value = `Room ${roomNumber} - ${guestName}`;
+    document.getElementById('roomSearchResults').classList.add('hidden');
 }
 
 // Updated Settlement Handler
