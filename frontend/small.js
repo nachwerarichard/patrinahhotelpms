@@ -7612,8 +7612,7 @@ function selectInHouseGuest(bookingId, roomNumber, guestName) {
     document.getElementById('roomSearchResults').classList.add('hidden');
 }
 
-// Updated Settlement Handler
-const settleAccount = async (method, accountId, phone = '') => {
+const settleAccount = async (method, accountId, phone = '', passedBookingId = null) => {
     const targetId = accountId || activeAccountId;
     
     if (!targetId) {
@@ -7649,19 +7648,26 @@ const settleAccount = async (method, accountId, phone = '') => {
         }
     }
 
-    // SETTLEMENT / ROOM POST ROUTE
-    const isRoomCharge = method === 'Room Charge';
-    const targetBookingId = isRoomCharge ? document.getElementById('targetBookingId').value : null;
+    // CHECK IF METHOD IS ROOM CHARGE (Supports both 'room' and 'Room Charge')
+    const isRoomCharge = method === 'room' || method === 'Room Charge';
+
+    // RESOLVE TARGET BOOKING ID
+    const targetBookingId = isRoomCharge 
+        ? (passedBookingId 
+            || document.getElementById('paymentTargetBookingId')?.value 
+            || document.getElementById('targetBookingId')?.value 
+            || null)
+        : null;
 
     if (isRoomCharge && !targetBookingId) {
-        showMessage('Select Room', 'Please select an in-house room to post this charge to.', true);
+        showMessage('Select Room', 'Please search and select an in-house room to post this charge.', true);
         return;
     }
 
     const payload = {
         roomPost: isRoomCharge,
         targetBookingId: targetBookingId,
-        paymentMethod: ['Cash', 'MTN Momo', 'Airtel Pay'].includes(method) ? method : 'Cash'
+        paymentMethod: ['Cash', 'MTN Momo', 'Airtel Pay', 'MobileMoney'].includes(method) ? method : 'Cash'
     };
 
     try {
@@ -7681,14 +7687,25 @@ const settleAccount = async (method, accountId, phone = '') => {
             return;
         }
 
+        // ROOM CHARGE FLOW: Show notification ONLY, skip printReceipt()
         if (isRoomCharge) {
             showMessage('Success', 'Posted to guest folio successfully! 📄✅', false);
-            resetUI();
-        } else {
-            printReceipt(currentActiveAccountData, method, data);
-            resetUI();
-            if (typeof activeAccountId !== 'undefined') { activeAccountId = null; }
+            
+            if (typeof resetUI === 'function') resetUI();
+            if (typeof activeAccountId !== 'undefined') activeAccountId = null;
+            if (typeof targetAccountToSettle !== 'undefined') targetAccountToSettle = null;
+            return;
         }
+
+        // STANDARD FLOW: Print receipt for direct payment methods (Cash, Card, Mobile Money)
+        if (typeof printReceipt === 'function') {
+            printReceipt(currentActiveAccountData || targetAccountToSettle, method, data);
+        }
+        
+        if (typeof resetUI === 'function') resetUI();
+        if (typeof activeAccountId !== 'undefined') activeAccountId = null;
+        if (typeof targetAccountToSettle !== 'undefined') targetAccountToSettle = null;
+
     } catch (err) { 
         console.error(err);
         showMessage("Error", "Connection failure during settlement process.", true); 
