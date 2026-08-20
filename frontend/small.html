@@ -1679,21 +1679,29 @@
             <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">New In-house guest</h2>
             
             <form id="createAccountForm" class="space-y-4">
-                <div class="relative">
-                    <input type="text" name="guestName" id="guestname" autocomplete="off" required 
-                           placeholder="Guest Full Name" 
-                           class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                    
-                    <div id="bookingSuggestions" 
-                         class="hidden absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                    </div>
-                </div>
+    <!-- Guest Name Input & Dropdown -->
+    <div class="relative">
+        <input type="text" name="guestName" id="guestname" autocomplete="off" required 
+               placeholder="Guest Full Name" 
+               class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+        
+        <div id="guestSuggestions" 
+             class="hidden absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+        </div>
+    </div>
 
-                <input type="text" name="roomNumber" id="roomNumber" placeholder="Room Number" 
-                       class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                
-                <button type="submit" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl text-sm">Open Account</button>
-            </form>
+    <!-- Room Number Input & Dropdown -->
+    <div class="relative">
+        <input type="text" name="roomNumber" id="roomNumber" autocomplete="off" placeholder="Room Number" 
+               class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+        
+        <div id="roomSuggestions" 
+             class="hidden absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+        </div>
+    </div>
+
+    <button type="submit" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl text-sm">Open Account</button>
+</form>
         </div>
 
         <div id="searchAccountSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
@@ -3050,11 +3058,14 @@
 
         <div class="bg-white p-4 rounded-xl shadow-sm mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             
-            <div class="sm:col-span-2 lg:col-span-4 flex items-center gap-2 border-b border-gray-100 pb-3">
-                <span class="text-xs font-bold text-gray-500 uppercase mr-2">Presets:</span>
-                <button onclick="setDateFilter('today')" class="bg-gray-100 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-200 transition-colors">Today</button>
-                <button onclick="setDateFilter('month')" class="bg-gray-100 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-200 transition-colors">This Month</button>
-            </div>
+        <div class="sm:col-span-2 lg:col-span-4 flex items-center gap-2 border-b border-gray-100 pb-3 flex-wrap">
+    <span class="text-xs font-bold text-gray-500 uppercase mr-2">Presets:</span>
+    <button onclick="setDateFilter('today')" class="bg-gray-100 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-200 transition-colors">Today</button>
+    <button onclick="setDateFilter('yesterday')" class="bg-gray-100 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-200 transition-colors">Yesterday</button>
+    <button onclick="setDateFilter('week')" class="bg-gray-100 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-200 transition-colors">This Week</button>
+    <button onclick="setDateFilter('month')" class="bg-gray-100 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-200 transition-colors">This Month</button>
+    <button onclick="setDateFilter('custom')" class="bg-gray-100 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-200 transition-colors">Custom Range</button>
+</div>
 
             <div class="flex flex-col">
                 <label class="text-[11px] font-bold text-gray-500 uppercase mb-1">Search Parameters</label>

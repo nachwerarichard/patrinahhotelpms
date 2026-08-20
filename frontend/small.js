@@ -5363,21 +5363,67 @@ function exportToPDF() {
 function setDateFilter(type) {
     const dateInput = document.getElementById('filterDate');
     const endDateInput = document.getElementById('endDate');
-    const now = new Date();
     
+    // Get local date standard formatted to YYYY-MM-DD (prevents timezone offset bugs)
+    const formatDate = (dateObj) => {
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const now = new Date();
+
     if (type === 'today') {
-        const todayStr = now.toISOString().split('T')[0];
+        const todayStr = formatDate(now);
         dateInput.value = todayStr;
         endDateInput.value = todayStr;
-    } else if (type === 'month') {
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-        dateInput.value = firstDay;
-        endDateInput.value = lastDay;
+    } 
+    else if (type === 'yesterday') {
+        const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        const yestStr = formatDate(yesterday);
+        dateInput.value = yestStr;
+        endDateInput.value = yestStr;
+    } 
+    else if (type === 'week') {
+        const dayOfWeek = now.getDay();
+        const distanceToMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Align to Monday
+        const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - distanceToMon);
+        
+        dateInput.value = formatDate(monday);
+        endDateInput.value = formatDate(now); // Up to today
+    } 
+    else if (type === 'month') {
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        
+        dateInput.value = formatDate(firstDay);
+        endDateInput.value = formatDate(lastDay);
+    } 
+    else if (type === 'custom') {
+        // Clear input values and focus start date input for manual user entry
+        dateInput.value = '';
+        endDateInput.value = '';
+        dateInput.focus();
+        return; // Exit early without calling fetchReport until user fills inputs
     }
-    
-    fetchReport(); // Trigger search immediately
+
+    fetchReport(); // Trigger search immediately for preset buttons
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const startDateInput = document.getElementById('filterDate');
+    const endDateInput = document.getElementById('endDate');
+
+    const handleCustomDateChange = () => {
+        if (startDateInput.value && endDateInput.value) {
+            fetchReport();
+        }
+    };
+
+    startDateInput?.addEventListener('change', handleCustomDateChange);
+    endDateInput?.addEventListener('change', handleCustomDateChange);
+});
 
 // 5. INITIALIZATION
 window.onload = () => {
@@ -12893,57 +12939,76 @@ async function markAsServed(orderId) {
 }
    
 
-const suggestInput = document.getElementById('guestname');
-const suggestionBox = document.getElementById('bookingSuggestions');
-const roomInput = document.querySelector('input[name="roomNumber"]');
+const guestInput = document.getElementById('guestname');
+const roomInput = document.getElementById('roomNumber');
+const guestBox = document.getElementById('guestSuggestions');
+const roomBox = document.getElementById('roomSuggestions');
+
 let suggestTimer;
 
-suggestInput.addEventListener('input', () => {
-    clearTimeout(suggestTimer);
-    const val = suggestInput.value.trim();
+// Unified fetch function for both input fields
+function setupBookingSuggestions(inputEl, targetBox) {
+    inputEl.addEventListener('input', () => {
+        clearTimeout(suggestTimer);
+        const val = inputEl.value.trim();
 
-    if (val.length < 2) {
-        suggestionBox.classList.add('hidden');
-        return;
-    }
-
-    suggestTimer = setTimeout(async () => {
-        try {
-            const res = await authenticatedFetch(`${API_BASE_URL}/pos/suggestions/bookings?name=${val}`);
-            if (!res.ok) throw new Error(`Server responded with ${res.status}`);
-
-            const bookings = await res.json();
-            if (bookings.length > 0) {
-                suggestionBox.innerHTML = bookings.map(b => `
-                    <div class="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0"
-                         onclick="fillBooking('${b.name.replace(/'/g, "\\'")}', '${b.room}')">
-                        <p class="text-sm font-medium text-slate-700">${b.name}</p>
-                        <p class="text-xs text-slate-400">Room ${b.room}</p>
-                    </div>
-                `).join('');
-                suggestionBox.classList.remove('hidden');
-            } else {
-                suggestionBox.classList.add('hidden');
-            }
-        } catch (err) {
-            console.error('Suggestion fetch failed:', err);
+        if (val.length < 1) {
+            targetBox.classList.add('hidden');
+            return;
         }
-    }, 300);
-});
 
+        suggestTimer = setTimeout(async () => {
+            try {
+                const res = await authenticatedFetch(`${API_BASE_URL}/pos/suggestions/bookings?query=${encodeURIComponent(val)}`);
+                if (!res.ok) throw new Error(`Status ${res.status}`);
+
+                const bookings = await res.json();
+                
+                if (bookings.length > 0) {
+                    targetBox.innerHTML = bookings.map(b => `
+                        <div class="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0 flex justify-between items-center"
+                             onclick="fillBooking('${b.name.replace(/'/g, "\\'")}', '${b.room}')">
+                            <div>
+                                <p class="text-sm font-medium text-slate-700">${b.name}</p>
+                                <p class="text-xs text-slate-400">Room ${b.room || 'N/A'}</p>
+                            </div>
+                            <span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded font-semibold">Room ${b.room}</span>
+                        </div>
+                    `).join('');
+                    
+                    // Hide the other suggestion box if open
+                    guestBox.classList.add('hidden');
+                    roomBox.classList.add('hidden');
+                    targetBox.classList.remove('hidden');
+                } else {
+                    targetBox.classList.add('hidden');
+                }
+            } catch (err) {
+                console.error('Suggestion fetch failed:', err);
+            }
+        }, 250);
+    });
+}
+
+// Bind listeners to both elements
+setupBookingSuggestions(guestInput, guestBox);
+setupBookingSuggestions(roomInput, roomBox);
+
+// Global selection handler (fills both fields and hides both dropdowns)
 window.fillBooking = (name, room) => {
-    suggestInput.value = name;
+    guestInput.value = name;
     roomInput.value = room;
-    suggestionBox.classList.add('hidden');
+    guestBox.classList.add('hidden');
+    roomBox.classList.add('hidden');
 };
 
-// Close suggestions if user clicks outside
+// Close dropdowns when clicking outside
 document.addEventListener('click', (e) => {
-    // FIX: Use the correct IDs 'bookingSuggestions' and 'guestname'
-    if (suggestionBox && suggestInput) {
-        if (!suggestionBox.contains(e.target) && e.target !== suggestInput) {
-            suggestionBox.classList.add('hidden');
-        }
+    if (guestBox && !guestBox.contains(e.target) && e.target !== guestInput) {
+        guestBox.classList.add('hidden');
+    }
+    if (roomBox && !roomBox.contains(e.target) && e.target !== roomInput) {
+        roomBox.classList.add('hidden');
     }
 });
 

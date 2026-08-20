@@ -1682,22 +1682,30 @@ app.get('/api/rooms/available', auth, async (req, res) => {
     }
 });
 
-// GET: Scoped search for active bookings (suggestions)
+// GET: Suggestions by guest name or room number
 app.get('/api/pos/suggestions/bookings', auth, async (req, res) => {
-    const { name } = req.query;
-    const hotelId = req.user.hotelId; // Current hotel
+    const searchVal = req.query.query || req.query.name;
+    const hotelId = req.user.hotelId;
+
     try {
-        if (!name || name.length < 2) return res.json([]);
+        if (!searchVal || searchVal.length < 1) return res.json([]);
+
+        const regex = new RegExp(searchVal, 'i');
 
         const suggestions = await Booking.find({
-            hotelId: hotelId, // CRITICAL: Only search this hotel's guests
-            name: new RegExp(name, 'i')
+            hotelId: hotelId,
+            gueststatus: { $nin: ['cancelled', 'void'] }, // Filter out inactive bookings
+            $or: [
+                { name: regex },
+                { room: regex }
+            ]
         })
         .select('name room')
-        .limit(5);
+        .limit(6);
 
         res.json(suggestions);
     } catch (error) {
+        console.error("Suggestions Fetch Error:", error);
         res.status(500).json({ message: 'Error fetching suggestions' });
     }
 });
