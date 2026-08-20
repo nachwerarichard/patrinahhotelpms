@@ -2948,34 +2948,36 @@ app.get('/api/bookings', auth, async (req, res) => {
         const limit = parseInt(req.query.limit) || 500;
         const skip = (page - 1) * limit;
 
-        // CRITICAL: Always start with the hotelId filter
+        // Base tenant isolation query
         let query = { hotelId: req.user.hotelId };
 
+        // Search parameter filter
         if (search) {
-            query.$and = [
-                { hotelId: req.user.hotelId },
-                { $or: [
-                    { name: new RegExp(search, 'i') },
-                    { room: new RegExp(search, 'i') },
-                    { phoneNo: new RegExp(search, 'i') }
-                ]}
+            const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape regex special chars
+            query.$or = [
+                { name: new RegExp(safeSearch, 'i') },
+                { room: new RegExp(safeSearch, 'i') },
+                { phoneNo: new RegExp(safeSearch, 'i') }
             ];
         }
 
+        // Direct match filters
         if (gueststatus) query.gueststatus = gueststatus;
         if (paymentStatus) query.paymentStatus = paymentStatus;
         if (guestsource) query.guestsource = guestsource;
         if (paymentMethod) query.paymentMethod = paymentMethod;
 
-        // --- UPDATED DATE FILTER LOGIC ---
-        // If user picks a startDate, query checkIn date
-        if (startDate) {
-            query.checkIn = startDate;
-        }
-
-        // If user picks an endDate (Checkout Date), query checkOut date independently
-        if (endDate) {
-            query.checkOut = endDate;
+        // --- FIXED DATE RANGE FILTER LOGIC ---
+        if (startDate || endDate) {
+            query.checkIn = {};
+            if (startDate) {
+                // Includes bookings on or after start date
+                query.checkIn.$gte = startDate; 
+            }
+            if (endDate) {
+                // Includes bookings on or before end date
+                query.checkIn.$lte = endDate; 
+            }
         }
 
         const [bookings, totalCount] = await Promise.all([
@@ -2986,8 +2988,11 @@ app.get('/api/bookings', auth, async (req, res) => {
         res.json({
             bookings: bookings || [],
             totalPages: Math.ceil(totalCount / limit),
+            totalCount
         });
+
     } catch (error) {
+        console.error("Error fetching bookings report:", error);
         res.status(500).json({ bookings: [], message: 'Server error', error: error.message });
     }
 });
