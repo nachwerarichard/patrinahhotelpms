@@ -5109,6 +5109,64 @@ function debounce(func, timeout = 300) {
  * FETCH REPORT DATA
  * Filters bookings based on UI inputs and scoped by Hotel ID.
  */
+// --- 1. PRESET DATE FILTERS ---
+function setDateFilter(type) {
+    const reportStart = document.getElementById('reportStartDate');
+    const reportEnd = document.getElementById('reportEndDate');
+    const mainStart = document.getElementById('filterDate');
+    const mainEnd = document.getElementById('endDate');
+    const customContainer = document.getElementById('reportCustomDateContainer');
+
+    const formatDate = (dateObj) => {
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const now = new Date();
+
+    const setValues = (startVal, endVal) => {
+        if (reportStart) reportStart.value = startVal;
+        if (reportEnd) reportEnd.value = endVal;
+        if (mainStart) mainStart.value = startVal;
+        if (mainEnd) mainEnd.value = endVal;
+    };
+
+    if (type === 'custom') {
+        if (customContainer) customContainer.classList.remove('hidden');
+        setValues('', '');
+        if (reportStart) reportStart.focus();
+        return; 
+    }
+
+    if (customContainer) customContainer.classList.add('hidden');
+
+    if (type === 'today') {
+        const todayStr = formatDate(now);
+        setValues(todayStr, todayStr);
+    } 
+    else if (type === 'yesterday') {
+        const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        const yestStr = formatDate(yesterday);
+        setValues(yestStr, yestStr);
+    } 
+    else if (type === 'week') {
+        const dayOfWeek = now.getDay();
+        const distanceToMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - distanceToMon);
+        setValues(formatDate(monday), formatDate(now));
+    } 
+    else if (type === 'month') {
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        setValues(formatDate(firstDay), formatDate(lastDay));
+    }
+
+    fetchReport();
+}
+
+// --- 2. REPORT FETCHING LOGIC ---
 async function fetchReport() {
     const tableBody = document.getElementById('tableBody');
     const mobileGrid = document.getElementById('reportsMobileGrid');
@@ -5116,7 +5174,6 @@ async function fetchReport() {
     const sumBalance = document.getElementById('sumBalance');
     const sumBookings = document.getElementById('sumBookings');
 
-    // Read values, favoring the preset inline dates if populated, falling back to lower input fields
     const search = document.getElementById('filterSearch')?.value.trim() || '';
     const paymentStatus = document.getElementById('filterPaymentStatus')?.value || '';
     const gueststatus = document.getElementById('filterGuestStatus')?.value || '';
@@ -5134,18 +5191,7 @@ async function fetchReport() {
         return;
     }
 
-    const hasActiveFilter = search || paymentStatus || gueststatus || 
-                            paymentMethod || guestsource || startDate || endDate;
-
-    if (!hasActiveFilter) {
-        if (tableBody) tableBody.innerHTML = '';
-        if (mobileGrid) mobileGrid.innerHTML = '';
-        if (sumBookings) sumBookings.textContent = '0';
-        if (sumPaid) sumPaid.textContent = `${CURRENT_CURRENCY} 0.00`;
-        if (sumBalance) sumBalance.textContent = `${CURRENT_CURRENCY} 0.00`;
-        return;
-    }
-
+    // Prepare query parameters
     const queryParams = { hotelId };
     if (search) queryParams.search = search;
     if (paymentStatus) queryParams.paymentStatus = paymentStatus;
@@ -5187,8 +5233,32 @@ async function fetchReport() {
     }
 }
 
+// --- 3. UNIFIED EVENT BINDING & SYNC ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Array with all input and select IDs
+    const reportStart = document.getElementById('reportStartDate');
+    const reportEnd = document.getElementById('reportEndDate');
+    const mainStart = document.getElementById('filterDate');
+    const mainEnd = document.getElementById('endDate');
+
+    const syncInputs = (target) => {
+        const isStart = target.id === 'reportStartDate' || target.id === 'filterDate';
+        const startVal = (isStart ? target.value : reportStart?.value || mainStart?.value) || '';
+        const endVal = (!isStart ? target.value : reportEnd?.value || mainEnd?.value) || '';
+
+        // Mirror choices between elements
+        if (mainStart) mainStart.value = startVal;
+        if (reportStart) reportStart.value = startVal;
+        if (mainEnd) mainEnd.value = endVal;
+        if (reportEnd) reportEnd.value = endVal;
+    };
+
+    const runDebouncedFetch = debounce((e) => {
+        if (e && e.target) {
+            syncInputs(e.target);
+        }
+        fetchReport();
+    }, 300);
+
     const filterInputs = [
         'filterSearch', 'filterPaymentStatus', 'filterGuestStatus', 
         'filterGuestSource', 'filterPaymentMethod',
@@ -5196,16 +5266,16 @@ document.addEventListener('DOMContentLoaded', () => {
         'reportStartDate', 'reportEndDate'
     ];
 
-    const runDebouncedFetch = debounce(() => fetchReport(), 300);
-
     filterInputs.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            // Watch 'input' for text searching and 'change' for pickers/dropdowns
             el.addEventListener('input', runDebouncedFetch);
             el.addEventListener('change', runDebouncedFetch);
         }
     });
+
+    // Run default search on load
+    fetchReport();
 });
 
 function renderTable(bookings) {
@@ -5361,106 +5431,7 @@ function exportToPDF() {
     doc.save("Hotel_Report.pdf");
 }
 
-// 4. PRESET DATE FILTERS
-function setDateFilter(type) {
-    const reportStart = document.getElementById('reportStartDate');
-    const reportEnd = document.getElementById('reportEndDate');
-    const mainStart = document.getElementById('filterDate');
-    const mainEnd = document.getElementById('endDate');
-    const customContainer = document.getElementById('reportCustomDateContainer');
 
-    const formatDate = (dateObj) => {
-        const year = dateObj.getFullYear();
-        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(dateObj.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    const now = new Date();
-
-    // Helper to mirror values to both input locations
-    const setValues = (startVal, endVal) => {
-        if (reportStart) reportStart.value = startVal;
-        if (reportEnd) reportEnd.value = endVal;
-        if (mainStart) mainStart.value = startVal;
-        if (mainEnd) mainEnd.value = endVal;
-    };
-
-    if (type === 'custom') {
-        if (customContainer) customContainer.classList.remove('hidden');
-        setValues('', '');
-        if (reportStart) reportStart.focus();
-        return; // Wait for user to pick dates
-    }
-
-    if (customContainer) customContainer.classList.add('hidden');
-
-    if (type === 'today') {
-        const todayStr = formatDate(now);
-        setValues(todayStr, todayStr);
-    } 
-    else if (type === 'yesterday') {
-        const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-        const yestStr = formatDate(yesterday);
-        setValues(yestStr, yestStr);
-    } 
-    else if (type === 'week') {
-        const dayOfWeek = now.getDay();
-        const distanceToMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - distanceToMon);
-        
-        setValues(formatDate(monday), formatDate(now));
-    } 
-    else if (type === 'month') {
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        
-        setValues(formatDate(firstDay), formatDate(lastDay));
-    }
-
-    fetchReport();
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const reportStart = document.getElementById('reportStartDate');
-    const reportEnd = document.getElementById('reportEndDate');
-    const mainStart = document.getElementById('filterDate');
-    const mainEnd = document.getElementById('endDate');
-
-    const syncAndFetch = (sourceStart, sourceEnd) => {
-        const startVal = sourceStart?.value || '';
-        const endVal = sourceEnd?.value || '';
-
-        // Keep values in sync across UI
-        if (mainStart && sourceStart !== mainStart) mainStart.value = startVal;
-        if (reportStart && sourceStart !== reportStart) reportStart.value = startVal;
-        if (mainEnd && sourceEnd !== mainEnd) mainEnd.value = endVal;
-        if (reportEnd && sourceEnd !== reportEnd) reportEnd.value = endVal;
-
-        // Block execution until both inputs are selected during custom range picks
-        if ((startVal && !endVal) || (!startVal && endVal)) {
-            return; 
-        }
-
-        fetchReport();
-    };
-
-    const runDebouncedSync = debounce((e) => {
-        const isStart = e.target.id === 'reportStartDate' || e.target.id === 'filterDate';
-        if (isStart) {
-            syncAndFetch(e.target, reportEnd || mainEnd);
-        } else {
-            syncAndFetch(reportStart || mainStart, e.target);
-        }
-    }, 300);
-
-    ['reportStartDate', 'reportEndDate', 'filterDate', 'endDate'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('change', runDebouncedSync);
-        }
-    });
-});
 
 // 5. INITIALIZATION
 window.onload = () => {
