@@ -13454,12 +13454,19 @@ function filterActiveAccounts() {
         const matchesSearch = 
             (acc.guestName || '').toLowerCase().includes(searchTerm) ||
             (acc.roomNumber || '').toString().toLowerCase().includes(searchTerm) ||
+            (acc.bookingCustomId || '').toLowerCase().includes(searchTerm) ||
             (acc._id || '').toLowerCase().includes(searchTerm);
 
         let matchesType = true;
-        if (typeFilter === 'GUEST') matchesType = Boolean(acc.roomNumber) && !acc.isCorporate;
-        if (typeFilter === 'POS_TAB') matchesType = !acc.roomNumber && !acc.isCorporate;
-        if (typeFilter === 'CITY_LEDGER') matchesType = acc.accountType === 'CITY_LEDGER' || Boolean(acc.isCorporate);
+        
+        if (typeFilter === 'GUEST') {
+            // Includes in-house guests with active accounts or unpaid incidentals
+            matchesType = acc.isIncidental || (Boolean(acc.roomNumber) && acc.roomNumber !== 'N/A' && !acc.isCorporate);
+        } else if (typeFilter === 'POS_TAB') {
+            matchesType = (!acc.roomNumber || acc.roomNumber === 'N/A') && !acc.isCorporate && !acc.isIncidental;
+        } else if (typeFilter === 'CITY_LEDGER') {
+            matchesType = acc.accountType === 'CITY_LEDGER' || Boolean(acc.isCorporate);
+        }
 
         return matchesSearch && matchesType;
     });

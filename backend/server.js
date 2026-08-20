@@ -1719,24 +1719,58 @@ app.get('/api/pos/suggestions/bookings', auth, async (req, res) => {
 app.get('/api/pos/accounts/active', auth, async (req, res) => {
     try {
         const hotelId = req.user.hotelId;
+
+        // 1. Fetch active client accounts
         const activeAccounts = await ClientAccount.find({ 
-            hotelId: hotelId, // CRITICAL: Isolation
+            hotelId: hotelId, 
             isClosed: false 
         });
 
+        // 2. Fetch unpaid incidental charges for in-house guests
+        const unpaidIncidentals = await IncidentalCharge.find({
+            hotelId: hotelId,
+            isPaid: false
+        });
+
+        // Map client accounts
         const validatedAccounts = activeAccounts.map(acc => {
             const actualTotal = acc.charges.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
             const lastUpdated = acc.updatedAt || (acc.charges.length > 0 ? acc.charges[acc.charges.length - 1].date : new Date());
             return {
                 ...acc._doc,
                 totalCharges: actualTotal,
-                lastUpdated: lastUpdated
+                lastUpdated: lastUpdated,
+                accountType: acc.accountType || 'POS_TAB'
             };
         });
 
-        validatedAccounts.sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated));
-        res.json(validatedAccounts);
+        // Map unpaid incidental charges as guest folios
+        const mappedIncidentals = unpaidIncidentals.map(inc => ({
+            _id: inc._id,
+            guestName: inc.guestName,
+            roomNumber: inc.roomNumber,
+            bookingId: inc.bookingId,
+            bookingCustomId: inc.bookingCustomId,
+            accountType: 'INCIDENTAL_UNPAID',
+            isIncidental: true,
+            totalCharges: Number(inc.amount) || 0,
+            charges: [{
+                description: `${inc.type} - ${inc.description}`,
+                amount: inc.amount,
+                date: inc.date
+            }],
+            lastUpdated: inc.updatedAt || inc.date
+        }));
+
+        // Merge both lists
+        const combinedList = [...validatedAccounts, ...mappedIncidentals];
+
+        // Sort by most recent update date
+        combinedList.sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated));
+
+        res.json(combinedList);
     } catch (error) {
+        console.error('Error fetching active accounts:', error);
         res.status(500).json({ message: 'Error fetching accounts' });
     }
 });
