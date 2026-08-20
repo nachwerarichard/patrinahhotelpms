@@ -5361,10 +5361,10 @@ function exportToPDF() {
 
 // 4. PRESET DATE FILTERS
 function setDateFilter(type) {
-    const dateInput = document.getElementById('filterDate');
-    const endDateInput = document.getElementById('endDate');
-    
-    // Get local date standard formatted to YYYY-MM-DD (prevents timezone offset bugs)
+    const dateInput = document.getElementById('reportStartDate');
+    const endDateInput = document.getElementById('reportEndDate');
+    const customContainer = document.getElementById('reportCustomDateContainer');
+
     const formatDate = (dateObj) => {
         const year = dateObj.getFullYear();
         const month = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -5373,6 +5373,17 @@ function setDateFilter(type) {
     };
 
     const now = new Date();
+
+    if (type === 'custom') {
+        customContainer.classList.remove('hidden');
+        dateInput.value = '';
+        endDateInput.value = '';
+        dateInput.focus();
+        return; // Exit without running fetchReport until dates are selected
+    }
+
+    // Hide custom input container for standard presets
+    customContainer.classList.add('hidden');
 
     if (type === 'today') {
         const todayStr = formatDate(now);
@@ -5387,11 +5398,11 @@ function setDateFilter(type) {
     } 
     else if (type === 'week') {
         const dayOfWeek = now.getDay();
-        const distanceToMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Align to Monday
+        const distanceToMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
         const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - distanceToMon);
         
         dateInput.value = formatDate(monday);
-        endDateInput.value = formatDate(now); // Up to today
+        endDateInput.value = formatDate(now);
     } 
     else if (type === 'month') {
         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -5399,24 +5410,17 @@ function setDateFilter(type) {
         
         dateInput.value = formatDate(firstDay);
         endDateInput.value = formatDate(lastDay);
-    } 
-    else if (type === 'custom') {
-        // Clear input values and focus start date input for manual user entry
-        dateInput.value = '';
-        endDateInput.value = '';
-        dateInput.focus();
-        return; // Exit early without calling fetchReport until user fills inputs
     }
 
-    fetchReport(); // Trigger search immediately for preset buttons
+    fetchReport();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const startDateInput = document.getElementById('filterDate');
-    const endDateInput = document.getElementById('endDate');
+    const startDateInput = document.getElementById('reportStartDate');
+    const endDateInput = document.getElementById('reportEndDate');
 
     const handleCustomDateChange = () => {
-        if (startDateInput.value && endDateInput.value) {
+        if (startDateInput?.value && endDateInput?.value) {
             fetchReport();
         }
     };
@@ -12938,7 +12942,6 @@ async function markAsServed(orderId) {
     }
 }
    
-
 const guestInput = document.getElementById('guestname');
 const roomInput = document.getElementById('roomNumber');
 const guestBox = document.getElementById('guestSuggestions');
@@ -12946,8 +12949,9 @@ const roomBox = document.getElementById('roomSuggestions');
 
 let suggestTimer;
 
-// Unified fetch function for both input fields
 function setupBookingSuggestions(inputEl, targetBox) {
+    if (!inputEl || !targetBox) return;
+
     inputEl.addEventListener('input', () => {
         clearTimeout(suggestTimer);
         const val = inputEl.value.trim();
@@ -12960,28 +12964,36 @@ function setupBookingSuggestions(inputEl, targetBox) {
         suggestTimer = setTimeout(async () => {
             try {
                 const res = await authenticatedFetch(`${API_BASE_URL}/pos/suggestions/bookings?query=${encodeURIComponent(val)}`);
-                if (!res.ok) throw new Error(`Status ${res.status}`);
+                if (!res || !res.ok) throw new Error(`Status ${res?.status}`);
 
                 const bookings = await res.json();
                 
-                if (bookings.length > 0) {
-                    targetBox.innerHTML = bookings.map(b => `
-                        <div class="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0 flex justify-between items-center"
-                             onclick="fillBooking('${b.name.replace(/'/g, "\\'")}', '${b.room}')">
-                            <div>
-                                <p class="text-sm font-medium text-slate-700">${b.name}</p>
-                                <p class="text-xs text-slate-400">Room ${b.room || 'N/A'}</p>
+                if (Array.isArray(bookings) && bookings.length > 0) {
+                    targetBox.innerHTML = bookings.map(b => {
+                        const safeName = (b.name || '').replace(/'/g, "\\'");
+                        const safeRoom = b.room ?? '';
+                        return `
+                            <div class="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0 flex justify-between items-center"
+                                 onclick="fillBooking('${safeName}', '${safeRoom}')">
+                                <div>
+                                    <p class="text-sm font-medium text-slate-700">${b.name}</p>
+                                    <p class="text-xs text-slate-400">Room: ${safeRoom || 'Unassigned'}</p>
+                                </div>
+                                <span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded font-semibold">
+                                    ${safeRoom ? `Room ${safeRoom}` : 'No Room'}
+                                </span>
                             </div>
-                            <span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded font-semibold">Room ${b.room}</span>
-                        </div>
-                    `).join('');
+                        `;
+                    }).join('');
                     
-                    // Hide the other suggestion box if open
                     guestBox.classList.add('hidden');
                     roomBox.classList.add('hidden');
                     targetBox.classList.remove('hidden');
                 } else {
-                    targetBox.classList.add('hidden');
+                    targetBox.innerHTML = `
+                        <div class="p-3 text-xs text-slate-400 text-center">No active guests found</div>
+                    `;
+                    targetBox.classList.remove('hidden');
                 }
             } catch (err) {
                 console.error('Suggestion fetch failed:', err);
@@ -12990,19 +13002,17 @@ function setupBookingSuggestions(inputEl, targetBox) {
     });
 }
 
-// Bind listeners to both elements
+// Initialize watchers
 setupBookingSuggestions(guestInput, guestBox);
 setupBookingSuggestions(roomInput, roomBox);
 
-// Global selection handler (fills both fields and hides both dropdowns)
 window.fillBooking = (name, room) => {
-    guestInput.value = name;
-    roomInput.value = room;
-    guestBox.classList.add('hidden');
-    roomBox.classList.add('hidden');
+    if (guestInput) guestInput.value = name;
+    if (roomInput) roomInput.value = room;
+    if (guestBox) guestBox.classList.add('hidden');
+    if (roomBox) roomBox.classList.add('hidden');
 };
 
-// Close dropdowns when clicking outside
 document.addEventListener('click', (e) => {
     if (guestBox && !guestBox.contains(e.target) && e.target !== guestInput) {
         guestBox.classList.add('hidden');

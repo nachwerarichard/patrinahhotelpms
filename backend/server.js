@@ -1682,26 +1682,31 @@ app.get('/api/rooms/available', auth, async (req, res) => {
     }
 });
 
-// GET: Suggestions by guest name or room number
 app.get('/api/pos/suggestions/bookings', auth, async (req, res) => {
     const searchVal = req.query.query || req.query.name;
     const hotelId = req.user.hotelId;
 
     try {
-        if (!searchVal || searchVal.length < 1) return res.json([]);
+        if (!searchVal || searchVal.trim().length < 1) return res.json([]);
 
-        const regex = new RegExp(searchVal, 'i');
+        const cleanVal = searchVal.trim();
+        const regex = new RegExp(cleanVal, 'i');
+        const hotelObjId = new mongoose.Types.ObjectId(hotelId);
 
         const suggestions = await Booking.find({
-            hotelId: hotelId,
-            gueststatus: { $nin: ['cancelled', 'void'] }, // Filter out inactive bookings
+            hotelId: hotelObjId,
+            // Filter to include active/checked-in/confirmed bookings
+            gueststatus: { $nin: ['cancelled', 'void', 'checkedout'] },
             $or: [
                 { name: regex },
-                { room: regex }
+                { room: regex },
+                // Fallback for numeric room fields converted to string on the fly
+                { $expr: { $regexMatch: { input: { $toString: "$room" }, regex: cleanVal, options: "i" } } }
             ]
         })
-        .select('name room')
-        .limit(6);
+        .select('name room gueststatus')
+        .limit(8)
+        .lean();
 
         res.json(suggestions);
     } catch (error) {
