@@ -16949,66 +16949,107 @@ async function toggleStandaloneFields(method) {
 /**
  * 2. Fetch Checked-In Guests from API
  */
+
+// Array to store fetched active in-house guests locally
+let inHouseGuestsModalList = [];
+
+/**
+ * 1. Fetch checked-in guests from backend when Room Charge is selected
+ */
 async function fetchStandaloneInHouseGuests() {
     try {
         const res = await authenticatedFetch(`${API_BASE_URL}/pos/in-house-guests`);
         const data = await res.json();
-        if (data.success) {
-            standaloneInHouseGuests = data.bookings;
+        
+        if (data.success && Array.isArray(data.bookings)) {
+            inHouseGuestsModalList = data.bookings;
+        } else {
+            inHouseGuestsModalList = [];
         }
     } catch (err) {
-        console.error("Failed to load in-house guests:", err);
+        console.error("Failed to fetch in-house guests for room search:", err);
+        inHouseGuestsModalList = [];
     }
 }
 
 /**
- * 3. Filter In-House Guest Results
+ * 2. Live filter input function called on input event (oninput="filterInHouseGuestsModal(this.value)")
  */
-function filterStandaloneInHouseGuests(query) {
-    const resultsContainer = document.getElementById('standaloneRoomSearchResults');
-    const cleanQuery = query.toLowerCase().trim();
+function filterInHouseGuestsModal(query) {
+    const resultsContainer = document.getElementById('paymentRoomSearchResults');
+    if (!resultsContainer) return;
 
+    const cleanQuery = (query || '').toLowerCase().trim();
+
+    // Hide dropdown if query is empty
     if (!cleanQuery) {
         resultsContainer.classList.add('hidden');
         resultsContainer.innerHTML = '';
         return;
     }
 
-    const matches = standaloneInHouseGuests.filter(b => 
-        (b.room && b.room.toLowerCase().includes(cleanQuery)) ||
+    // Filter by room number, guest name, or booking custom ID
+    const matches = inHouseGuestsModalList.filter(b => 
+        (b.room && b.room.toString().toLowerCase().includes(cleanQuery)) ||
         (b.name && b.name.toLowerCase().includes(cleanQuery)) ||
-        (b.id && b.id.toLowerCase().includes(cleanQuery))
+        (b.id && b.id.toString().toLowerCase().includes(cleanQuery))
     );
 
     if (matches.length === 0) {
-        resultsContainer.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No matching in-house bookings</div>`;
+        resultsContainer.innerHTML = `
+            <div class="p-3 text-xs font-semibold text-slate-400 text-center">
+                No active in-house guests found
+            </div>`;
     } else {
-        resultsContainer.innerHTML = matches.map(b => `
-            <div 
-                onclick="selectStandaloneGuest('${b._id}', '${b.room || 'N/A'}', '${b.name.replace(/'/g, "\\'")}')"
-                class="p-3 hover:bg-indigo-50 cursor-pointer flex justify-between items-center transition-colors"
-            >
-                <span class="text-xs font-bold text-slate-800">Room ${b.room || 'N/A'} - ${b.name}</span>
-                <span class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${b.id}</span>
-            </div>
-        `).join('');
+        resultsContainer.innerHTML = matches.map(b => {
+            const escapedName = (b.name || '').replace(/'/g, "\\'");
+            const roomNum = b.room || 'N/A';
+            const bookingCustomId = b.id || '';
+
+            return `
+                <div 
+                    onclick="selectInHouseGuestModal('${b._id}', '${roomNum}', '${escapedName}')"
+                    class="p-3 hover:bg-indigo-50 cursor-pointer flex justify-between items-center transition-colors text-left"
+                >
+                    <div>
+                        <p class="text-xs font-bold text-slate-800">Room ${roomNum} - ${b.name}</p>
+                    </div>
+                    <span class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                        ${bookingCustomId}
+                    </span>
+                </div>
+            `;
+        }).join('');
     }
 
     resultsContainer.classList.remove('hidden');
 }
 
 /**
- * 4. Assign Selected Room to Hidden Target Input
+ * 3. Assign selected guest to hidden ID input and update search input label
  */
-function selectStandaloneGuest(bookingId, roomNumber, guestName) {
-    document.getElementById('standaloneTargetBookingId').value = bookingId;
-    document.getElementById('standaloneRoomSearchInput').value = `Room ${roomNumber} - ${guestName}`;
-    document.getElementById('standaloneRoomSearchResults').classList.add('hidden');
+function selectInHouseGuestModal(bookingId, roomNumber, guestName) {
+    const hiddenIdInput = document.getElementById('paymentTargetBookingId');
+    const searchInput = document.getElementById('paymentRoomSearchInput');
+    const resultsContainer = document.getElementById('paymentRoomSearchResults');
+
+    if (hiddenIdInput) hiddenIdInput.value = bookingId;
+    if (searchInput) searchInput.value = `Room ${roomNumber} - ${guestName}`;
+    if (resultsContainer) resultsContainer.classList.add('hidden');
 }
 
 /**
- * 5. Handle Payment Submission
+ * 4. Close dropdown when clicking outside the modal field area
  */
+document.addEventListener('click', function(e) {
+    const roomContainer = document.getElementById('paymentRoomSearchContainer');
+    const resultsContainer = document.getElementById('paymentRoomSearchResults');
+    
+    if (roomContainer && resultsContainer && !roomContainer.contains(e.target)) {
+        resultsContainer.classList.add('hidden');
+    }
+});
+
 document.getElementById('standalonePaymentForm')?.addEventListener('submit', async function (e) {
     e.preventDefault();
 
@@ -17024,9 +17065,10 @@ document.getElementById('standalonePaymentForm')?.addEventListener('submit', asy
     const submitBtn = document.getElementById('submitPaymentBtn');
     const rawMethod = document.getElementById('paymentMethodSelect').value;
     const phoneNumber = document.getElementById('paymentPhoneNumber')?.value || '';
-    const targetBookingId = document.getElementById('standaloneTargetBookingId')?.value || null;
+    const targetBookingId = document.getElementById('paymentTargetBookingId')?.value || '';
     const accountId = targetAccountToSettle._id;
 
+    // Validation for Room Charge selection
     if (rawMethod === 'Room Charge' && !targetBookingId) {
         if (typeof showMessage === 'function') {
             showMessage('Select Room', 'Please search and select an in-house room to post this charge.', true);
@@ -17053,12 +17095,11 @@ document.getElementById('standalonePaymentForm')?.addEventListener('submit', asy
             currentActiveAccountData = targetAccountToSettle;
         }
 
-        // Send settlement payload including room charge booking reference
+        // Delegate to settleAccount function
         await settleAccount(settleMethod, accountId, phoneNumber, targetBookingId);
 
         if (settleMethod !== 'Pesapal') {
             closePaymentModal();
-
             if (typeof fetchActiveAccounts === 'function') {
                 fetchActiveAccounts();
             }
@@ -17078,6 +17119,7 @@ document.getElementById('standalonePaymentForm')?.addEventListener('submit', asy
         }
     }
 });
+
 
 /**
  * 6. Closes Modal
