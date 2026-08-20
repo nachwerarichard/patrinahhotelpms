@@ -5110,23 +5110,22 @@ function debounce(func, timeout = 300) {
  * Filters bookings based on UI inputs and scoped by Hotel ID.
  */
 async function fetchReport() {
-    // 1. Get DOM Elements for display pipelines
     const tableBody = document.getElementById('tableBody');
     const mobileGrid = document.getElementById('reportsMobileGrid');
     const sumPaid = document.getElementById('sumPaid');
     const sumBalance = document.getElementById('sumBalance');
     const sumBookings = document.getElementById('sumBookings');
 
-    // 2. Capture Filter Values
+    // Read values, favoring the preset inline dates if populated, falling back to lower input fields
     const search = document.getElementById('filterSearch')?.value.trim() || '';
     const paymentStatus = document.getElementById('filterPaymentStatus')?.value || '';
     const gueststatus = document.getElementById('filterGuestStatus')?.value || '';
     const paymentMethod = document.getElementById('filterPaymentMethod')?.value || '';
     const guestsource = document.getElementById('filterGuestSource')?.value || '';
-    const startDate = document.getElementById('filterDate')?.value || '';
-    const endDate = document.getElementById('endDate')?.value || '';
+    
+    const startDate = document.getElementById('reportStartDate')?.value || document.getElementById('filterDate')?.value || '';
+    const endDate = document.getElementById('reportEndDate')?.value || document.getElementById('endDate')?.value || '';
 
-    // 3. Multi-Tenant Context Retrieval
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelId = user ? user.hotelId : null;
 
@@ -5135,7 +5134,6 @@ async function fetchReport() {
         return;
     }
 
-    // 4. Reset counters if no filters are active
     const hasActiveFilter = search || paymentStatus || gueststatus || 
                             paymentMethod || guestsource || startDate || endDate;
 
@@ -5148,7 +5146,6 @@ async function fetchReport() {
         return;
     }
 
-    // 5. Build Parameters Query Object
     const queryParams = { hotelId };
     if (search) queryParams.search = search;
     if (paymentStatus) queryParams.paymentStatus = paymentStatus;
@@ -5170,9 +5167,8 @@ async function fetchReport() {
         if (tableBody) tableBody.innerHTML = `<tr><td colspan="10">${loadingIndicator}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = loadingIndicator;
 
-        // 6. Execute Request Context Pipeline
         const response = await authenticatedFetch(`${API_BASE_URL}/bookings?${params}`);
-        if (!response) throw new Error("No payload parsed back from execution environment.");
+        if (!response) throw new Error("No payload returned.");
         
         const data = await response.json();
         const bookings = Array.isArray(data) ? data : (data.bookings || []);
@@ -5181,15 +5177,36 @@ async function fetchReport() {
         renderTable(bookings);
 
     } catch (err) {
-        console.error("Fetch execution fault error reported:", err);
+        console.error("Fetch execution error:", err);
         const errorTemplate = `
             <div class="p-6 text-center text-red-500 font-semibold bg-red-50 rounded-lg">
-                <i class="fas fa-exclamation-triangle mr-2"></i> Error loading report structure. Check internet connectivity log.
+                <i class="fas fa-exclamation-triangle mr-2"></i> Error loading report structure.
             </div>`;
         if (tableBody) tableBody.innerHTML = `<tr><td colspan="10">${errorTemplate}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = errorTemplate;
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Array with all input and select IDs
+    const filterInputs = [
+        'filterSearch', 'filterPaymentStatus', 'filterGuestStatus', 
+        'filterGuestSource', 'filterPaymentMethod',
+        'filterDate', 'endDate',
+        'reportStartDate', 'reportEndDate'
+    ];
+
+    const runDebouncedFetch = debounce(() => fetchReport(), 300);
+
+    filterInputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            // Watch 'input' for text searching and 'change' for pickers/dropdowns
+            el.addEventListener('input', runDebouncedFetch);
+            el.addEventListener('change', runDebouncedFetch);
+        }
+    });
+});
 
 function renderTable(bookings) {
     const tbody = document.getElementById('tableBody');
@@ -5315,21 +5332,6 @@ function renderTable(bookings) {
     currentData = bookings;
 }
 
-// 2. AUTO-FILTER LOGIC (WITH DEBOUNCE)
-
-
-const filterInputs = [
-    'filterSearch', 'filterPaymentStatus', 'filterGuestStatus', 
-    'filterDate', 'endDate', 'filterGuestSource', 'filterPaymentMethod'
-];
-
-filterInputs.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-        el.addEventListener('input', debounce(() => fetchReport()));
-    }
-});
-
 // 3. EXPORT FUNCTIONS
 function exportToExcel() {
     if (currentData.length === 0) return showMessage("No data to export");
@@ -5361,8 +5363,10 @@ function exportToPDF() {
 
 // 4. PRESET DATE FILTERS
 function setDateFilter(type) {
-    const dateInput = document.getElementById('reportStartDate');
-    const endDateInput = document.getElementById('reportEndDate');
+    const reportStart = document.getElementById('reportStartDate');
+    const reportEnd = document.getElementById('reportEndDate');
+    const mainStart = document.getElementById('filterDate');
+    const mainEnd = document.getElementById('endDate');
     const customContainer = document.getElementById('reportCustomDateContainer');
 
     const formatDate = (dateObj) => {
@@ -5374,60 +5378,48 @@ function setDateFilter(type) {
 
     const now = new Date();
 
+    // Helper to mirror values to both input locations
+    const setValues = (startVal, endVal) => {
+        if (reportStart) reportStart.value = startVal;
+        if (reportEnd) reportEnd.value = endVal;
+        if (mainStart) mainStart.value = startVal;
+        if (mainEnd) mainEnd.value = endVal;
+    };
+
     if (type === 'custom') {
-        customContainer.classList.remove('hidden');
-        dateInput.value = '';
-        endDateInput.value = '';
-        dateInput.focus();
-        return; // Exit without running fetchReport until dates are selected
+        if (customContainer) customContainer.classList.remove('hidden');
+        setValues('', '');
+        if (reportStart) reportStart.focus();
+        return; // Wait for user to pick dates
     }
 
-    // Hide custom input container for standard presets
-    customContainer.classList.add('hidden');
+    if (customContainer) customContainer.classList.add('hidden');
 
     if (type === 'today') {
         const todayStr = formatDate(now);
-        dateInput.value = todayStr;
-        endDateInput.value = todayStr;
+        setValues(todayStr, todayStr);
     } 
     else if (type === 'yesterday') {
         const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
         const yestStr = formatDate(yesterday);
-        dateInput.value = yestStr;
-        endDateInput.value = yestStr;
+        setValues(yestStr, yestStr);
     } 
     else if (type === 'week') {
         const dayOfWeek = now.getDay();
         const distanceToMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
         const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - distanceToMon);
         
-        dateInput.value = formatDate(monday);
-        endDateInput.value = formatDate(now);
+        setValues(formatDate(monday), formatDate(now));
     } 
     else if (type === 'month') {
         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
         const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         
-        dateInput.value = formatDate(firstDay);
-        endDateInput.value = formatDate(lastDay);
+        setValues(formatDate(firstDay), formatDate(lastDay));
     }
 
     fetchReport();
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    const startDateInput = document.getElementById('reportStartDate');
-    const endDateInput = document.getElementById('reportEndDate');
-
-    const handleCustomDateChange = () => {
-        if (startDateInput?.value && endDateInput?.value) {
-            fetchReport();
-        }
-    };
-
-    startDateInput?.addEventListener('change', handleCustomDateChange);
-    endDateInput?.addEventListener('change', handleCustomDateChange);
-});
 
 // 5. INITIALIZATION
 window.onload = () => {
@@ -8891,8 +8883,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (typeof fetchStatusReports === 'function') {
         fetchStatusReports();
-    } else if (typeof fetchReports === 'function') {
-        fetchReports();
+    } else if (typeof fetchReport === 'function') {
+        fetchReport();
     }
 });
 
