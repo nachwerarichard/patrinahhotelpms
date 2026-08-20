@@ -5110,9 +5110,10 @@ function debounce(func, timeout = 300) {
  * Filters bookings based on UI inputs and scoped by Hotel ID.
  */
 // --- 1. PRESET DATE FILTERS ---
+// --- 1. PRESET DATE FILTERS ---
 function setDateFilter(type) {
-    const reportStart = document.getElementById('reportStartDate');
-    const reportEnd = document.getElementById('reportEndDate');
+    const customStart = document.getElementById('presetCustomStartDate');
+    const customEnd = document.getElementById('presetCustomEndDate');
     const mainStart = document.getElementById('filterDate');
     const mainEnd = document.getElementById('endDate');
     const customContainer = document.getElementById('reportCustomDateContainer');
@@ -5127,8 +5128,8 @@ function setDateFilter(type) {
     const now = new Date();
 
     const setValues = (startVal, endVal) => {
-        if (reportStart) reportStart.value = startVal;
-        if (reportEnd) reportEnd.value = endVal;
+        if (customStart) customStart.value = startVal;
+        if (customEnd) customEnd.value = endVal;
         if (mainStart) mainStart.value = startVal;
         if (mainEnd) mainEnd.value = endVal;
     };
@@ -5136,8 +5137,8 @@ function setDateFilter(type) {
     if (type === 'custom') {
         if (customContainer) customContainer.classList.remove('hidden');
         setValues('', '');
-        if (reportStart) reportStart.focus();
-        return; 
+        if (customStart) customStart.focus();
+        return; // User enters range manually; inputs fire fetch via event listeners below
     }
 
     if (customContainer) customContainer.classList.add('hidden');
@@ -5180,8 +5181,9 @@ async function fetchReport() {
     const paymentMethod = document.getElementById('filterPaymentMethod')?.value || '';
     const guestsource = document.getElementById('filterGuestSource')?.value || '';
     
-    const startDate = document.getElementById('reportStartDate')?.value || document.getElementById('filterDate')?.value || '';
-    const endDate = document.getElementById('reportEndDate')?.value || document.getElementById('endDate')?.value || '';
+    // Check both unique input positions for start and end dates
+    const startDate = document.getElementById('presetCustomStartDate')?.value || document.getElementById('filterDate')?.value || '';
+    const endDate = document.getElementById('presetCustomEndDate')?.value || document.getElementById('endDate')?.value || '';
 
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
     const hotelId = user ? user.hotelId : null;
@@ -5191,7 +5193,6 @@ async function fetchReport() {
         return;
     }
 
-    // Prepare query parameters
     const queryParams = { hotelId };
     if (search) queryParams.search = search;
     if (paymentStatus) queryParams.paymentStatus = paymentStatus;
@@ -5235,21 +5236,19 @@ async function fetchReport() {
 
 // --- 3. UNIFIED EVENT BINDING & SYNC ---
 document.addEventListener('DOMContentLoaded', () => {
-    const reportStart = document.getElementById('reportStartDate');
-    const reportEnd = document.getElementById('reportEndDate');
+    const customStart = document.getElementById('presetCustomStartDate');
+    const customEnd = document.getElementById('presetCustomEndDate');
     const mainStart = document.getElementById('filterDate');
     const mainEnd = document.getElementById('endDate');
 
     const syncInputs = (target) => {
-        const isStart = target.id === 'reportStartDate' || target.id === 'filterDate';
-        const startVal = (isStart ? target.value : reportStart?.value || mainStart?.value) || '';
-        const endVal = (!isStart ? target.value : reportEnd?.value || mainEnd?.value) || '';
+        const targetId = target.id;
 
-        // Mirror choices between elements
-        if (mainStart) mainStart.value = startVal;
-        if (reportStart) reportStart.value = startVal;
-        if (mainEnd) mainEnd.value = endVal;
-        if (reportEnd) reportEnd.value = endVal;
+        // Mirror values reliably without wiping active user selections
+        if (targetId === 'presetCustomStartDate' && mainStart) mainStart.value = target.value;
+        if (targetId === 'presetCustomEndDate' && mainEnd) mainEnd.value = target.value;
+        if (targetId === 'filterDate' && customStart) customStart.value = target.value;
+        if (targetId === 'endDate' && customEnd) customEnd.value = target.value;
     };
 
     const runDebouncedFetch = debounce((e) => {
@@ -5263,7 +5262,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'filterSearch', 'filterPaymentStatus', 'filterGuestStatus', 
         'filterGuestSource', 'filterPaymentMethod',
         'filterDate', 'endDate',
-        'reportStartDate', 'reportEndDate'
+        'presetCustomStartDate', 'presetCustomEndDate'
     ];
 
     filterInputs.forEach(id => {
@@ -5274,7 +5273,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Run default search on load
     fetchReport();
 });
 
