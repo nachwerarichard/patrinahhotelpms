@@ -2019,41 +2019,96 @@ app.get('/api/pos/client/accounts/closed', auth, async (req, res) => {
     const { startDate, endDate, search, method } = req.query;
 
     try {
-        // Base filter: always look for closed accounts under this hotel
-        let query = { hotelId, isClosed: true };
+        // -------------------------------------------------------------
+        // 1. Build Query for Closed Client Accounts
+        // -------------------------------------------------------------
+        let clientAccountQuery = { hotelId, isClosed: true };
 
-        // Date Range Filter
         if (startDate || endDate) {
-            query.settledAt = {};
-            if (startDate) query.settledAt.$gte = new Date(startDate);
+            clientAccountQuery.settledAt = {};
+            if (startDate) clientAccountQuery.settledAt.$gte = new Date(startDate);
             if (endDate) {
-                // Set end date to 23:59:59 to capture the entire day
                 const end = new Date(endDate);
                 end.setHours(23, 59, 59, 999);
-                query.settledAt.$lte = end;
+                clientAccountQuery.settledAt.$lte = end;
             }
         }
 
-        // Text Search Filter (Guest Name or Room Number)
         if (search && search.trim() !== "") {
             const searchRegex = new RegExp(search.trim(), 'i');
-            query.$or = [
+            clientAccountQuery.$or = [
                 { guestName: searchRegex },
                 { roomNumber: searchRegex }
             ];
         }
 
-        // Payment Method Filter
         if (method && method !== 'All') {
-            query.settledByMethod = method;
+            clientAccountQuery.settledByMethod = method;
         }
 
-        // Fetch accounts sorted by newest settlement first
-        const closedAccounts = await ClientAccount.find(query).sort({ settledAt: -1 });
-        
-        res.status(200).json(closedAccounts);
+        // Fetch closed client accounts if method filter allows
+        let closedAccounts = [];
+        if (!method || method === 'All' || method !== 'Room Charge') {
+            closedAccounts = await ClientAccount.find(clientAccountQuery).lean();
+        }
+
+        // -------------------------------------------------------------
+        // 2. Build Query for Paid Room Charges (IncidentalCharge)
+        // -------------------------------------------------------------
+        let paidRoomCharges = [];
+        if (!method || method === 'All' || method === 'Room Charge') {
+            let incidentalQuery = { hotelId, isPaid: true };
+
+            if (startDate || endDate) {
+                incidentalQuery.updatedAt = {};
+                if (startDate) incidentalQuery.updatedAt.$gte = new Date(startDate);
+                if (endDate) {
+                    const end = new Date(endDate);
+                    end.setHours(23, 59, 59, 999);
+                    incidentalQuery.updatedAt.$lte = end;
+                }
+            }
+
+            if (search && search.trim() !== "") {
+                const searchRegex = new RegExp(search.trim(), 'i');
+                incidentalQuery.$or = [
+                    { guestName: searchRegex },
+                    { roomNumber: searchRegex },
+                    { bookingCustomId: searchRegex }
+                ];
+            }
+
+            const rawIncidentals = await IncidentalCharge.find(incidentalQuery).lean();
+
+            // Format Incidental Charges to mirror ClientAccount shape
+            paidRoomCharges = rawIncidentals.map(inc => ({
+                _id: inc._id,
+                guestName: inc.guestName,
+                roomNumber: inc.roomNumber,
+                settledByMethod: 'Room Charge',
+                settledAt: inc.updatedAt || inc.date,
+                finalAmountPaid: inc.amount,
+                totalAmount: inc.amount,
+                totalCharges: inc.amount,
+                charges: [{
+                    description: `${inc.type} - ${inc.description}`,
+                    amount: inc.amount,
+                    type: inc.type,
+                    date: inc.date
+                }]
+            }));
+        }
+
+        // -------------------------------------------------------------
+        // 3. Combine and Sort Consolidated Payments
+        // -------------------------------------------------------------
+        const allPayments = [...closedAccounts, ...paidRoomCharges];
+        allPayments.sort((a, b) => new Date(b.settledAt) - new Date(a.settledAt));
+
+        res.status(200).json(allPayments);
+
     } catch (error) {
-        console.error("Error fetching closed accounts:", error);
+        console.error("Error fetching closed accounts and paid room charges:", error);
         res.status(500).json({ message: 'Failed to retrieve records', details: error.message });
     }
 });
