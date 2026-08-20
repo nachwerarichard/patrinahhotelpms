@@ -1855,9 +1855,25 @@ app.patch('/api/pos/client/account/:accountId/commit-charges', auth, async (req,
         res.status(500).json({ message: 'Error committing charges', error: error.message });
     }
 });
+
+// 1. GET IN-HOUSE GUESTS FOR POS SELECTOR DROPDOWN
+app.get('/api/pos/in-house-guests', auth, async (req, res) => {
+    try {
+        const bookings = await Booking.find({
+            hotelId: req.user.hotelId,
+            gueststatus: 'checkedin'
+        }).select('_id id name room').sort({ room: 1 });
+
+        res.json({ success: true, bookings });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Failed to fetch in-house guests' });
+    }
+});
+
+// 2. UPDATED SETTLEMENT ROUTE
 app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => {
     const { accountId } = req.params;
-    const { paymentMethod, roomPost } = req.body;
+    const { paymentMethod, roomPost, targetBookingId } = req.body;
     const hotelId = req.user.hotelId;
 
     try {
@@ -1867,37 +1883,36 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
         }
 
         const currentCharges = account.charges || [];
-
-        // --- Calculate exact total from charges array ---
         const calculatedTotal = currentCharges.reduce((sum, charge) => {
             const val = Number(charge.amount || charge.price || 0);
             return sum + (isNaN(val) ? 0 : val);
         }, 0);
 
-        if (roomPost && account.roomNumber) {
+        if (roomPost) {
+            if (!targetBookingId) {
+                return res.status(400).json({ message: 'No target in-house guest selected for room charge.' });
+            }
+
             const booking = await Booking.findOne({
-                room: { $regex: new RegExp(`^${account.roomNumber.trim()}$`, 'i') },
-                hotelId: hotelId,
+                _id: targetBookingId,
+                hotelId,
                 gueststatus: 'checkedin'
-            }).sort({ createdAt: -1 });
+            });
 
-            const accountName = (account.guestName || "").trim().toLowerCase();
-            const bookingName = (booking?.name || "").trim().toLowerCase();
-
-            if (!booking || !accountName.includes(bookingName.split(' ')[0])) { 
-                return res.status(400).json({ 
-                    message: `No active booking found for ${account.guestName} in Room ${account.roomNumber}` 
-                });
+            if (!booking) {
+                return res.status(400).json({ message: 'Selected guest is no longer checked in.' });
             }
 
             const newCharges = currentCharges.map(charge => ({
+                hotelId,
+                bookingId: booking._id,
+                bookingCustomId: booking.id,
+                guestName: booking.name,
+                roomNumber: booking.room || 'N/A',
                 description: charge.description,
                 amount: Number(charge.amount || charge.price || 0),
                 type: charge.type || 'Other',
-                hotelId,
-                bookingId: booking._id,
-                bookingCustomId: booking.id, 
-                guestName: account.guestName,
+                postedBy: req.user._id,
                 date: new Date()
             }));
 
@@ -1924,13 +1939,13 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
             });
 
             const walkInCharges = Object.values(consolidatedChargesMap).map((charge, index) => ({
-                hotelId: hotelId,
+                hotelId,
                 guestName: account.guestName,
                 type: charge.type,
                 description: charge.description,
                 amount: charge.amount,
                 receiptId: `POS-${hotelId.toString().slice(-3)}-${Date.now()}-${Math.floor(Math.random() * 1000)}-${index}`,
-                paymentMethod: paymentMethod,
+                paymentMethod,
                 isPaid: true,
                 date: new Date()
             }));
@@ -1940,27 +1955,23 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
             }
         }
 
-        // Close the folio account and save settled totals
+        // Close walk-in folio account
         account.isClosed = true;
         account.settledAt = new Date();
         account.settledByMethod = roomPost ? 'Room Charge' : paymentMethod;
-        
-        // Ensure finalAmountPaid is stored cleanly as a number
         account.finalAmountPaid = calculatedTotal;
-        account.totalAmount = calculatedTotal; // Fallback field key sync
+        account.totalAmount = calculatedTotal;
 
         await account.save();
 
-        const receiptData = {
-            guestName: account.guestName,
-            hotelId: hotelId,
-            charges: currentCharges,
-            total: calculatedTotal
-        };
-
         res.status(200).json({ 
-            message: 'Successfully settled', 
-            receipt: receiptData
+            message: roomPost ? 'Charges successfully posted to guest folio' : 'Successfully settled', 
+            receipt: {
+                guestName: account.guestName,
+                hotelId,
+                charges: currentCharges,
+                total: calculatedTotal
+            }
         });
 
     } catch (error) {

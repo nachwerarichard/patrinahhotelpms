@@ -1716,21 +1716,15 @@
 </div>
 
 <!-- Settle Bill Confirmation Modal -->
-<div
-    id="settleBillModal"
-    class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4 backdrop-blur-sm"
->
+<div id="settleBillModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4 backdrop-blur-sm">
     <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-md transform transition-all overflow-hidden border border-slate-100">
+        
         <!-- Header -->
         <div class="flex justify-between items-center border-b border-slate-100 px-8 py-5 bg-slate-50/50">
             <h2 class="text-base font-black text-slate-900 uppercase tracking-wider">
                 Settle Folio Bill
             </h2>
-            <button
-                type="button"
-                id="closeSettleModalBtn"
-                class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-xl text-2xl transition-colors leading-none"
-            >
+            <button type="button" id="closeSettleModalBtn" class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-xl text-2xl transition-colors leading-none">
                 &times;
             </button>
         </div>
@@ -1751,35 +1745,31 @@
             <!-- Payment Selection -->
             <div class="space-y-2">
                 <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Choose Payment Method</label>
-                <select
-                    id="settlePaymentMethod"
-                    required
-                    class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"
-                    onchange="togglePesapalFields(this.value)"
-                >
-                    <option value="Cash">Cash </option>
+                <select id="settlePaymentMethod" required class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700" onchange="handlePaymentMethodChange(this.value)">
+                    <option value="Cash">Cash</option>
                     <option value="MTN Momo">MTN Momo</option>
-                    <option value="Airtel Pay">Airtel Pay </option>
-                    <option value="Pesapal">Pesapal </option>
+                    <option value="Airtel Pay">Airtel Pay</option>
+                    <option value="Pesapal">Pesapal</option>
+                    <option value="Room Charge">Room Charge (Post to Guest Folio)</option>
                 </select>
             </div>
 
-            <!-- Conditionally Visible Pesapal Phone Input Container -->
-            <div id="pesapalPhoneContainer" class="space-y-2 hidden">
-                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Guest Phone Number (Required for Pesapal)</label>
-                <input 
-                    type="tel" 
-                    id="settlePesapalPhone" 
-                    placeholder="e.g. +256770000000"
-                    class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 font-semibold"
-                />
+            <!-- Dynamic Room Selection Container -->
+            <div id="roomChargeContainer" class="space-y-2 hidden">
+                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Select In-House Room & Guest</label>
+                <select id="targetBookingId" class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700">
+                    <option value="">-- Select Room --</option>
+                </select>
             </div>
 
-            <!-- Action Buttons -->
-            <button
-                type="submit"
-                class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg transition-all uppercase tracking-widest text-sm"
-            >
+            <!-- Pesapal Phone Input Container -->
+            <div id="pesapalPhoneContainer" class="space-y-2 hidden">
+                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Guest Phone Number (Required for Pesapal)</label>
+                <input type="tel" id="settlePesapalPhone" placeholder="e.g. +256770000000" class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 font-semibold" />
+            </div>
+
+            <!-- Action Button -->
+            <button type="submit" class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg transition-all uppercase tracking-widest text-sm">
                 Confirm Settlement
             </button>
         </form>

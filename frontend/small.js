@@ -7580,26 +7580,47 @@ if (!res) return; // in case redirect happened
 };
 
 
+// Dynamic visibility handler for dropdown choices
+async function handlePaymentMethodChange(method) {
+    const pesapalContainer = document.getElementById('pesapalPhoneContainer');
+    const roomContainer = document.getElementById('roomChargeContainer');
 
+    pesapalContainer.classList.toggle('hidden', method !== 'Pesapal');
+    roomContainer.classList.toggle('hidden', method !== 'Room Charge');
 
-// Add accountId as an explicit second argument
-// Add phone parameter to function definition signature
-window.togglePesapalFields = function(selectedMethod) {
-    const container = document.getElementById('pesapalPhoneContainer');
-    const phoneInput = document.getElementById('settlePesapalPhone');
-    
-    if (!container || !phoneInput) return;
-
-    if (selectedMethod === 'Pesapal') {
-        container.classList.remove('hidden');
-        phoneInput.required = true;
-    } else {
-        container.classList.add('hidden');
-        phoneInput.required = false;
-        phoneInput.value = '';
+    if (method === 'Room Charge') {
+        await populateInHouseGuestsDropdown();
     }
-};
+}
 
+// Fetch in-house rooms and build UI selection list
+async function populateInHouseGuestsDropdown() {
+    const dropdown = document.getElementById('targetBookingId');
+    dropdown.innerHTML = '<option value="">Loading In-House Guests...</option>';
+
+    try {
+        const res = await authenticatedFetch(`${API_BASE_URL}/pos/in-house-guests`);
+        const data = await res.json();
+
+        if (!data.success || !data.bookings.length) {
+            dropdown.innerHTML = '<option value="">No Active Checked-In Guests</option>';
+            return;
+        }
+
+        dropdown.innerHTML = '<option value="">-- Select Room / Guest --</option>' +
+            data.bookings.map(b => `
+                <option value="${b._id}">
+                    Room ${b.room || 'N/A'} - ${b.name} (${b.id})
+                </option>
+            `).join('');
+
+    } catch (err) {
+        console.error("Error loading checked-in guests:", err);
+        dropdown.innerHTML = '<option value="">Failed to load guest list</option>';
+    }
+}
+
+// Updated Settlement Handler
 const settleAccount = async (method, accountId, phone = '') => {
     const targetId = accountId || activeAccountId;
     
@@ -7608,7 +7629,7 @@ const settleAccount = async (method, accountId, phone = '') => {
         return;
     }
 
-    // INTERCEPT METHOD FOR PESAPAL INTERACTION
+    // PESAPAL GATEWAY ROUTE
     if (method === 'Pesapal') {
         try {
             const res = await authenticatedFetch(
@@ -7616,24 +7637,19 @@ const settleAccount = async (method, accountId, phone = '') => {
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ phone: phone }) // Use phone variable directly passed from form input state
+                    body: JSON.stringify({ phone })
                 }
             );
 
             const data = await res.json();
-
             if (!res.ok || !data.success) {
-                console.error("Pesapal Init failed:", data.message);
                 showMessage('Pesapal Initialization Failed', data.message || 'Check gateway logs', true);
                 return;
             }
 
             showMessage('Redirecting', 'Opening secure Pesapal payment gateway...', false);
-            
-            // Redirect window environment frame context
             window.location.href = data.redirectUrl;
             return;
-
         } catch (err) {
             console.error(err);
             showMessage("Error", "Connection failure while establishing gateway connection.", true);
@@ -7641,13 +7657,20 @@ const settleAccount = async (method, accountId, phone = '') => {
         }
     }
 
-    // STANDARD LEGACY DOWNSTREAM METHOD FLOW (Cash, Card, MobileMoney, Room)
-    let payload = {};
-    if (method === 'room') {
-        payload = { roomPost: true };
-    } else {
-        payload = { paymentMethod: ['Cash', 'Card', 'MobileMoney'].includes(method) ? method : 'Cash' };
+    // SETTLEMENT / ROOM POST ROUTE
+    const isRoomCharge = method === 'Room Charge';
+    const targetBookingId = isRoomCharge ? document.getElementById('targetBookingId').value : null;
+
+    if (isRoomCharge && !targetBookingId) {
+        showMessage('Select Room', 'Please select an in-house room to post this charge to.', true);
+        return;
     }
+
+    const payload = {
+        roomPost: isRoomCharge,
+        targetBookingId: targetBookingId,
+        paymentMethod: ['Cash', 'MTN Momo', 'Airtel Pay'].includes(method) ? method : 'Cash'
+    };
 
     try {
         const res = await authenticatedFetch(
@@ -7662,17 +7685,14 @@ const settleAccount = async (method, accountId, phone = '') => {
         const data = await res.json(); 
 
         if (!res.ok) {
-            console.error("Settle failed:", data.message);
             showMessage('Settlement failed', data.message || 'Check balance logs', true);
             return;
         }
 
-        if (method === 'room') {
-            showMessage('Success', 'Posted to room successfully! 📄✅', false);
-        
+        if (isRoomCharge) {
+            showMessage('Success', 'Posted to guest folio successfully! 📄✅', false);
             resetUI();
         } else {
-            //showMessage('Success', 'Bill settled completely! 💵✅', false);
             printReceipt(currentActiveAccountData, method, data);
             resetUI();
             if (typeof activeAccountId !== 'undefined') { activeAccountId = null; }
@@ -7682,6 +7702,14 @@ const settleAccount = async (method, accountId, phone = '') => {
         showMessage("Error", "Connection failure during settlement process.", true); 
     }
 };
+
+// Bind submit event
+document.getElementById('settleBillForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const method = document.getElementById('settlePaymentMethod').value;
+    const phone = document.getElementById('settlePesapalPhone').value;
+    settleAccount(method, activeAccountId, phone);
+});
 
 // Global scope tracker for currently active account data
 let currentActiveAccountData = null;
