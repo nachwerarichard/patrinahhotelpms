@@ -4659,7 +4659,30 @@ Manage payment providers used for guest payments.            </p>
                     <option value="Airtel Pay">Airtel Pay</option>
                     <option value="Pesapal">Pesapal Gateway</option>
                     <option value="Card">Credit / Debit Card</option>
+                    <option value="Room Charge">Room Charge (Post to In-House Folio)</option>
                 </select>
+            </div>
+
+            <!-- Searchable Room Selector Container (Hidden by default) -->
+            <div id="paymentRoomSearchContainer" class="space-y-1 hidden relative">
+                <label class="text-[10px] font-extrabold text-slate-500 uppercase ml-1">Search In-House Guest / Room</label>
+                <input 
+                    type="text" 
+                    id="paymentRoomSearchInput" 
+                    placeholder="Type room number or guest name..." 
+                    autocomplete="off"
+                    class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 font-bold text-xs"
+                    oninput="filterInHouseGuestsModal(this.value)"
+                />
+                
+                <!-- Hidden Field to Hold the Selected Booking ID -->
+                <input type="hidden" id="paymentTargetBookingId" value="" />
+
+                <!-- Dropdown Search Results -->
+                <div 
+                    id="paymentRoomSearchResults" 
+                    class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto z-50 divide-y divide-slate-100"
+                ></div>
             </div>
 
             <!-- Pesapal / Mobile Money Phone Input -->

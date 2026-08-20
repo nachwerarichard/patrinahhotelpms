@@ -16917,30 +16917,95 @@ function openSettlementFromDetails() {
     }
 }
 
+let standaloneInHouseGuests = [];
+
 /**
- * 3. Closes the Standalone Payment Form Modal
+ * 1. Toggle Fields & Load Guest Data
  */
-function closePaymentModal() {
-    const modal = document.getElementById('paymentSubmissionModal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
+async function toggleStandaloneFields(method) {
+    const phoneContainer = document.getElementById('paymentPhoneContainer');
+    const roomContainer = document.getElementById('standaloneRoomContainer');
+
+    // Phone visibility logic
+    if (phoneContainer) {
+        if (method === 'Pesapal' || method === 'MTN Momo' || method === 'Airtel Pay') {
+            phoneContainer.classList.remove('hidden');
+        } else {
+            phoneContainer.classList.add('hidden');
+        }
     }
-    targetAccountToSettle = null;
+
+    // Room charge visibility logic
+    if (roomContainer) {
+        if (method === 'Room Charge') {
+            roomContainer.classList.remove('hidden');
+            document.getElementById('standaloneRoomSearchInput').value = '';
+            document.getElementById('standaloneTargetBookingId').value = '';
+            await fetchStandaloneInHouseGuests();
+        } else {
+            roomContainer.classList.add('hidden');
+        }
+    }
 }
 
 /**
- * 4. Helper to toggle phone input for Pesapal or Mobile Money
+ * 2. Fetch Checked-In Guests from API
  */
-function togglePesapalField(method) {
-    const phoneContainer = document.getElementById('paymentPhoneContainer');
-    if (!phoneContainer) return;
-
-    if (method === 'Pesapal' || method === 'MTN Momo' || method === 'Airtel Pay') {
-        phoneContainer.classList.remove('hidden');
-    } else {
-        phoneContainer.classList.add('hidden');
+async function fetchStandaloneInHouseGuests() {
+    try {
+        const res = await authenticatedFetch(`${API_BASE_URL}/pos/in-house-guests`);
+        const data = await res.json();
+        if (data.success) {
+            standaloneInHouseGuests = data.bookings;
+        }
+    } catch (err) {
+        console.error("Failed to load in-house guests:", err);
     }
+}
+
+/**
+ * 3. Filter In-House Guest Results
+ */
+function filterStandaloneInHouseGuests(query) {
+    const resultsContainer = document.getElementById('standaloneRoomSearchResults');
+    const cleanQuery = query.toLowerCase().trim();
+
+    if (!cleanQuery) {
+        resultsContainer.classList.add('hidden');
+        resultsContainer.innerHTML = '';
+        return;
+    }
+
+    const matches = standaloneInHouseGuests.filter(b => 
+        (b.room && b.room.toLowerCase().includes(cleanQuery)) ||
+        (b.name && b.name.toLowerCase().includes(cleanQuery)) ||
+        (b.id && b.id.toLowerCase().includes(cleanQuery))
+    );
+
+    if (matches.length === 0) {
+        resultsContainer.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No matching in-house bookings</div>`;
+    } else {
+        resultsContainer.innerHTML = matches.map(b => `
+            <div 
+                onclick="selectStandaloneGuest('${b._id}', '${b.room || 'N/A'}', '${b.name.replace(/'/g, "\\'")}')"
+                class="p-3 hover:bg-indigo-50 cursor-pointer flex justify-between items-center transition-colors"
+            >
+                <span class="text-xs font-bold text-slate-800">Room ${b.room || 'N/A'} - ${b.name}</span>
+                <span class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${b.id}</span>
+            </div>
+        `).join('');
+    }
+
+    resultsContainer.classList.remove('hidden');
+}
+
+/**
+ * 4. Assign Selected Room to Hidden Target Input
+ */
+function selectStandaloneGuest(bookingId, roomNumber, guestName) {
+    document.getElementById('standaloneTargetBookingId').value = bookingId;
+    document.getElementById('standaloneRoomSearchInput').value = `Room ${roomNumber} - ${guestName}`;
+    document.getElementById('standaloneRoomSearchResults').classList.add('hidden');
 }
 
 /**
@@ -16961,9 +17026,18 @@ document.getElementById('standalonePaymentForm')?.addEventListener('submit', asy
     const submitBtn = document.getElementById('submitPaymentBtn');
     const rawMethod = document.getElementById('paymentMethodSelect').value;
     const phoneNumber = document.getElementById('paymentPhoneNumber')?.value || '';
+    const targetBookingId = document.getElementById('standaloneTargetBookingId')?.value || null;
     const accountId = targetAccountToSettle._id;
 
-    // Map UI select values to internal settleAccount parameters
+    if (rawMethod === 'Room Charge' && !targetBookingId) {
+        if (typeof showMessage === 'function') {
+            showMessage('Select Room', 'Please search and select an in-house room to post this charge.', true);
+        } else {
+            alert('Please search and select an in-house room to post this charge.');
+        }
+        return;
+    }
+
     let settleMethod = rawMethod;
     if (rawMethod === 'MTN Momo' || rawMethod === 'Airtel Pay') {
         settleMethod = 'MobileMoney';
@@ -16972,25 +17046,21 @@ document.getElementById('standalonePaymentForm')?.addEventListener('submit', asy
     }
 
     try {
-        // 1. Show UI Loading State
         if (submitBtn) {
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Processing...`;
         }
 
-        // 2. Set global active account reference (required for receipt printing & fallbacks)
         if (typeof currentActiveAccountData !== 'undefined') {
             currentActiveAccountData = targetAccountToSettle;
         }
 
-        // 3. Delegate directly to core settleAccount function
-        await settleAccount(settleMethod, accountId, phoneNumber);
+        // Send settlement payload including room charge booking reference
+        await settleAccount(settleMethod, accountId, phoneNumber, targetBookingId);
 
-        // 4. Close the modal on success (if not redirected to Pesapal)
         if (settleMethod !== 'Pesapal') {
             closePaymentModal();
 
-            // Refresh account tables/grids
             if (typeof fetchActiveAccounts === 'function') {
                 fetchActiveAccounts();
             }
@@ -17004,7 +17074,6 @@ document.getElementById('standalonePaymentForm')?.addEventListener('submit', asy
             alert('An error occurred while processing settlement.');
         }
     } finally {
-        // Restore Submit Button
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.innerHTML = `<i class="fas fa-check-circle"></i> <span>Submit Payment</span>`;
@@ -17012,4 +17081,18 @@ document.getElementById('standalonePaymentForm')?.addEventListener('submit', asy
     }
 });
 
+/**
+ * 6. Closes Modal
+ */
+function closePaymentModal() {
+    const modal = document.getElementById('paymentSubmissionModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+    const searchResults = document.getElementById('standaloneRoomSearchResults');
+    if (searchResults) searchResults.classList.add('hidden');
+    
+    targetAccountToSettle = null;
+}
 
