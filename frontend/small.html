@@ -4651,17 +4651,18 @@ Manage payment providers used for guest payments.            </p>
             </div>
 
             <!-- Settlement Method (Matches Mongoose Schema Enum) -->
-            <div class="space-y-1">
-                <label class="text-[10px] font-extrabold text-slate-500 uppercase ml-1">Payment / Settlement Method</label>
-                <select id="paymentMethodSelect" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-xs text-slate-800" onchange="togglePesapalField(this.value)">
-                    <option value="Cash">Cash Settlement</option>
-                    <option value="MTN Momo">MTN Mobile Money</option>
-                    <option value="Airtel Pay">Airtel Pay</option>
-                    <option value="Pesapal">Pesapal Gateway</option>
-                    <option value="Card">Credit / Debit Card</option>
-                    <option value="Room Charge">Room Charge (Post to In-House Folio)</option>
-                </select>
-            </div>
+            <!-- Settlement Method (Matches Mongoose Schema Enum) -->
+<div class="space-y-1">
+    <label class="text-[10px] font-extrabold text-slate-500 uppercase ml-1">Payment / Settlement Method</label>
+    <select id="paymentMethodSelect" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-xs text-slate-800" onchange="toggleStandaloneFields(this.value)">
+        <option value="Cash">Cash Settlement</option>
+        <option value="MTN Momo">MTN Mobile Money</option>
+        <option value="Airtel Pay">Airtel Pay</option>
+        <option value="Pesapal">Pesapal Gateway</option>
+        <option value="Card">Credit / Debit Card</option>
+        <option value="Room Charge">Room Charge (Post to In-House Folio)</option>
+    </select>
+</div>
 
             <!-- Searchable Room Selector Container (Hidden by default) -->
             <div id="paymentRoomSearchContainer" class="space-y-1 hidden relative">

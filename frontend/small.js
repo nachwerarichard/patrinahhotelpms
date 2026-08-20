@@ -16915,24 +16915,31 @@ let standaloneInHouseGuests = [];
  */
 async function toggleStandaloneFields(method) {
     const phoneContainer = document.getElementById('paymentPhoneContainer');
-    const roomContainer = document.getElementById('standaloneRoomContainer');
+    const roomContainer = document.getElementById('paymentRoomSearchContainer');
 
-    // Phone visibility logic
+    // 1. Toggle Phone Container (Mobile Money / Pesapal)
     if (phoneContainer) {
-        if (method === 'Pesapal' || method === 'MTN Momo' || method === 'Airtel Pay') {
+        if (['Pesapal', 'MTN Momo', 'Airtel Pay'].includes(method)) {
             phoneContainer.classList.remove('hidden');
         } else {
             phoneContainer.classList.add('hidden');
         }
     }
 
-    // Room charge visibility logic
+    // 2. Toggle Room Search Container (Room Charge)
     if (roomContainer) {
         if (method === 'Room Charge') {
             roomContainer.classList.remove('hidden');
-            document.getElementById('standaloneRoomSearchInput').value = '';
-            document.getElementById('standaloneTargetBookingId').value = '';
-            await fetchStandaloneInHouseGuests();
+            // Reset search input states
+            const searchInput = document.getElementById('paymentRoomSearchInput');
+            const targetBookingId = document.getElementById('paymentTargetBookingId');
+            if (searchInput) searchInput.value = '';
+            if (targetBookingId) targetBookingId.value = '';
+            
+            // Pre-fetch checked-in guests list
+            if (typeof fetchStandaloneInHouseGuests === 'function') {
+                await fetchStandaloneInHouseGuests();
+            }
         } else {
             roomContainer.classList.add('hidden');
         }
