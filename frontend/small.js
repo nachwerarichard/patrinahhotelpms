@@ -4901,7 +4901,7 @@ function openAddPaymentModal(bookingId, balance) {
 /**
  * CLOSE PAYMENT MODAL
  */
-function closePaymentModal() {
+function closeBookingPaymentModal() {
     const modal = document.getElementById('addPaymentModal');
     if (modal) {
         modal.classList.add('hidden');
@@ -4916,7 +4916,7 @@ function closePaymentModal() {
 // 6. Bonus: Close modal when clicking the dark background (outside the form)
 document.getElementById('addPaymentModal')?.addEventListener('click', function(e) {
     if (e.target === this) {
-        closePaymentModal();
+        closeBookingPaymentModal();
     }
 });
 /**
@@ -5049,7 +5049,7 @@ async function submitPayment() {
             showMessage("Success", `Payment of ${currencySymbol} ${amount.toLocaleString()} recorded to ledger! ✅`);
             
             if (amountInput) amountInput.value = '';
-            if (typeof closePaymentModal === 'function') closePaymentModal();
+            if (typeof closeBookingPaymentModal === 'function') closeBookingPaymentModal();
             if (typeof refreshDashboardViews === 'function') refreshDashboardViews();
             
             // Release render concurrency lock and execute async re-render
@@ -17154,7 +17154,6 @@ document.getElementById('standalonePaymentForm')?.addEventListener('submit', asy
         }
     }
 });
-
 
 /**
  * 6. Closes Modal
