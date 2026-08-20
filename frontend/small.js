@@ -5134,15 +5134,6 @@ function setDateFilter(type) {
         if (mainEnd) mainEnd.value = endVal;
     };
 
-    if (type === 'custom') {
-        if (customContainer) customContainer.classList.remove('hidden');
-        setValues('', '');
-        if (customStart) customStart.focus();
-        return; // User enters range manually; inputs fire fetch via event listeners below
-    }
-
-    if (customContainer) customContainer.classList.add('hidden');
-
     if (type === 'today') {
         const todayStr = formatDate(now);
         setValues(todayStr, todayStr);
@@ -8891,11 +8882,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (typeof fetchExpenses === 'function') fetchExpenses();
     if (typeof fetchSales === 'function') fetchSales();
 
-    if (typeof fetchStatusReports === 'function') {
-        fetchStatusReports();
-    } else if (typeof fetchReport === 'function') {
-        fetchReport();
-    }
 });
 
 async function deleteInventoryItem(id) {
