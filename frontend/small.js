@@ -16858,51 +16858,69 @@ function closeAccountDetailsModal() {
 /**
  * 3. Transfers data directly into your settleBillModal
  */
-function openSettlementFromDetails() {
+async function openSettlementFromDetails() {
     if (!selectedAccountForSettlement) {
         console.error('No active account selected for settlement.');
         return;
     }
 
-    // Cache local reference
-    targetAccountToSettle = selectedAccountForSettlement;
+    const btn = document.getElementById('proceedToSettleBtn');
+    const icon = document.getElementById('proceedToSettleIcon');
+    const text = document.getElementById('proceedToSettleText');
 
-    // STEP 1: Close the Folio Details Modal
-    closeAccountDetailsModal();
+    // 1. Show Spinner & Disable Button
+    if (btn) btn.disabled = true;
+    if (icon) icon.className = 'fas fa-circle-notch fa-spin';
+    if (text) text.textContent = 'Processing...';
 
-    // STEP 2: Populate the Standalone Payment Form
-    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
-    const totalAmount = Number(targetAccountToSettle.totalCharges || 0);
-    const guestIdentifier = `${targetAccountToSettle.guestName}${targetAccountToSettle.roomNumber ? ` (Room ${targetAccountToSettle.roomNumber})` : ''}`;
+    try {
+        // Cache local reference
+        targetAccountToSettle = selectedAccountForSettlement;
 
-    const guestLabelEl = document.getElementById('paymentGuestLabel');
-    const totalAmountEl = document.getElementById('paymentTotalAmount');
-    
-    if (guestLabelEl) guestLabelEl.textContent = guestIdentifier;
-    if (totalAmountEl) totalAmountEl.textContent = `${currency} ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        // STEP 1: Close the Folio Details Modal
+        closeAccountDetailsModal();
 
-    // STEP 3: Reset Form Controls & Room Search Fields
-    const paymentMethodSelect = document.getElementById('paymentMethodSelect');
-    if (paymentMethodSelect) paymentMethodSelect.value = 'Cash';
+        // STEP 2: Populate the Standalone Payment Form
+        const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+        const totalAmount = Number(targetAccountToSettle.totalCharges || 0);
+        const guestIdentifier = `${targetAccountToSettle.guestName}${targetAccountToSettle.roomNumber ? ` (Room ${targetAccountToSettle.roomNumber})` : ''}`;
 
-    const roomSearchInput = document.getElementById('standaloneRoomSearchInput');
-    const targetBookingId = document.getElementById('standaloneTargetBookingId');
-    const roomSearchResults = document.getElementById('standaloneRoomSearchResults');
+        const guestLabelEl = document.getElementById('paymentGuestLabel');
+        const totalAmountEl = document.getElementById('paymentTotalAmount');
+        
+        if (guestLabelEl) guestLabelEl.textContent = guestIdentifier;
+        if (totalAmountEl) totalAmountEl.textContent = `${currency} ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-    if (roomSearchInput) roomSearchInput.value = '';
-    if (targetBookingId) targetBookingId.value = '';
-    if (roomSearchResults) roomSearchResults.classList.add('hidden');
+        // STEP 3: Reset Form Controls & Room Search Fields
+        const paymentMethodSelect = document.getElementById('paymentMethodSelect');
+        if (paymentMethodSelect) paymentMethodSelect.value = 'Cash';
 
-    // Reset container visibilities using updated standalone toggle handler
-    if (typeof toggleStandaloneFields === 'function') {
-        toggleStandaloneFields('Cash');
-    }
+        const roomSearchInput = document.getElementById('paymentRoomSearchInput');
+        const targetBookingId = document.getElementById('paymentTargetBookingId');
+        const roomSearchResults = document.getElementById('paymentRoomSearchResults');
 
-    // STEP 4: Open the Standalone Payment Form Modal
-    const paymentModal = document.getElementById('paymentSubmissionModal');
-    if (paymentModal) {
-        paymentModal.classList.remove('hidden');
-        paymentModal.classList.add('flex');
+        if (roomSearchInput) roomSearchInput.value = '';
+        if (targetBookingId) targetBookingId.value = '';
+        if (roomSearchResults) roomSearchResults.classList.add('hidden');
+
+        // Reset container visibilities using updated standalone toggle handler
+        if (typeof toggleStandaloneFields === 'function') {
+            await toggleStandaloneFields('Cash');
+        }
+
+        // STEP 4: Open the Standalone Payment Form Modal
+        const paymentModal = document.getElementById('paymentSubmissionModal');
+        if (paymentModal) {
+            paymentModal.classList.remove('hidden');
+            paymentModal.classList.add('flex');
+        }
+    } catch (err) {
+        console.error('Error opening settlement modal:', err);
+    } finally {
+        // 2. Restore Button State
+        if (btn) btn.disabled = false;
+        if (icon) icon.className = 'fas fa-wallet';
+        if (text) text.textContent = 'Settle Account';
     }
 }
 

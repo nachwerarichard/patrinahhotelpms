@@ -4614,10 +4614,15 @@ Manage payment providers used for guest payments.            </p>
                 <button type="button" onclick="closeAccountDetailsModal()" class="flex-1 sm:flex-none px-5 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition-all uppercase tracking-wider">
                     Close
                 </button>
-                <button type="button" id="proceedToSettleBtn" onclick="openSettlementFromDetails()" class="flex-1 sm:flex-none px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs transition-all uppercase tracking-wider shadow-md flex items-center justify-center gap-2">
-                    <i class="fas fa-wallet"></i>
-                    <span>Settle Account</span>
-                </button>
+                <button 
+    type="button" 
+    id="proceedToSettleBtn" 
+    onclick="openSettlementFromDetails()" 
+    class="flex-1 sm:flex-none px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs transition-all uppercase tracking-wider shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+>
+    <i id="proceedToSettleIcon" class="fas fa-wallet"></i>
+    <span id="proceedToSettleText">Settle Account</span>
+</button>
             </div>
         </div>
 
