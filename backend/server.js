@@ -7,6 +7,8 @@ const nodemailer = require('nodemailer'); // Assuming you use Nodemailer
 const cloudinary = require('cloudinary').v2;
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const multer = require('multer');
+const crypto = require('crypto');
+const forge = require('node-forge');
 const { ical } = require('ical-generator');
 const { GoogleGenAI } = require("@google/genai");
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
@@ -124,9 +126,7 @@ const formatFileUrl = (file) => {
 // ==========================================
 
 // Serve static frontend assets (HTML, CSS, JS) from your public directory
-const crypto = require('crypto');
-const fs = require('fs');
-const forge = require('node-forge');
+
 
 /**
  * EFRIS Cryptography & Security Helper
