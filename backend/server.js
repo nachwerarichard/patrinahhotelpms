@@ -3302,7 +3302,6 @@ app.get('/api/bookings/:id/fiscal-receipt', auth, async (req, res) => {
 // Ensure a username is unique ONLY within the same hotel
 
 // --- New Hotel Schema ---
-const mongoose = require('mongoose');
 
 const hotelSchema = new mongoose.Schema({
     name: { type: String, required: true },
@@ -7126,7 +7125,6 @@ const KitchenOrderSchema = new mongoose.Schema({
 
 const KitchenOrder = mongoose.model('KitchenOrder', KitchenOrderSchema);
 
-const mongoose = require('mongoose');
 
 // ==========================================
 // 1. CASH JOURNAL SCHEMA
