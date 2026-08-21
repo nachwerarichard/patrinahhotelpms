@@ -17167,3 +17167,221 @@ function closePaymentModal() {
     targetAccountToSettle = null;
 }
 
+// public/js/efris-handler.js
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const efrisSection = document.getElementById('efris');
+  if (!efrisSection) return;
+
+  try {
+    // 1. Fetch current tenant configuration
+    const res = await authenticatedFetch(`${API_BASE_URL}/efris/config`, { method: 'GET' });
+    
+    if (!res || !res.ok) {
+      efrisSection.classList.add('hidden');
+      return;
+    }
+
+    const response = await res.json();
+
+    // Multi-tenant check: Non-UGX properties ignore EFRIS completely
+    if (!response || response.currency !== 'UGX') {
+      efrisSection.classList.add('hidden');
+      return;
+    }
+
+    // Unhide for UGX property
+    efrisSection.classList.remove('hidden');
+
+    if (response.efrisConfig) {
+      populateEfrisForm(response.efrisConfig);
+    }
+  } catch (err) {
+    // If network error, 403 Forbidden, or unhandled exception, keep component hidden
+    efrisSection.classList.add('hidden');
+  }
+
+  // Bind Event Handling
+  bindEfrisEvents();
+});
+
+function setInputValue(id, val, defaultVal = '') {
+  const el = document.getElementById(id);
+  if (el) el.value = val !== undefined && val !== null ? val : defaultVal;
+}
+
+function setCheckboxValue(id, checkedVal) {
+  const el = document.getElementById(id);
+  if (el) el.checked = !!checkedVal;
+}
+
+function populateEfrisForm(cfg) {
+  setCheckboxValue('efris-toggle-enable', cfg.enabled);
+
+  const envRadio = document.querySelector(`input[name="efris_environment"][value="${cfg.environment || 'SANDBOX'}"]`);
+  if (envRadio) envRadio.checked = true;
+
+  setInputValue('efris-tin', cfg.tin);
+  setInputValue('efris-device-no', cfg.deviceNo);
+  setInputValue('efris-fad-serial', cfg.fadSerial);
+  setInputValue('efris-app-id', cfg.appId);
+  setInputValue('efris-app-secret', cfg.appSecret);
+  setInputValue('efris-device-mac', cfg.deviceMac, 'FFFFFFFFFFFF');
+  setInputValue('efris-api-url', cfg.apiUrl);
+  setInputValue('efris-taxpayer-type', cfg.taxpayerType, '1');
+  setInputValue('efris-pfx-password', cfg.pfxPassword);
+  setInputValue('efris-tax-payer-name', cfg.taxPayerName);
+  setInputValue('efris-aes-key', cfg.aesKey);
+  setInputValue('efris-aes-iv', cfg.aesIv);
+  
+  setCheckboxValue('efris-auto-aes', cfg.autoAes !== false);
+  setCheckboxValue('efris-auto-stockin', cfg.autoStockIn !== false);
+  setCheckboxValue('efris-auto-usd-convert', cfg.autoUsdConvert !== false);
+
+  setInputValue('efris-branch-code', cfg.branchCode, '00');
+  setInputValue('efris-operator-code', cfg.operatorCode, 'SYSTEM');
+  setInputValue('efris-default-tax', cfg.defaultTaxCode, '101');
+  setInputValue('efris-lht-tax-code', cfg.lhtTaxCode, '103');
+  setInputValue('efris-service-charge-tax', cfg.serviceChargeTaxCode, '101');
+
+  setInputValue('efris-default-buyer-type', cfg.defaultBuyerType, '1');
+  setInputValue('efris-default-credit-reason', cfg.defaultCreditReason, '101');
+  setCheckboxValue('efris-enable-offline-queue', cfg.enableOfflineQueue !== false);
+
+  setInputValue('efris-unspsc-room', cfg.unspscRoom, '90111501');
+  setInputValue('efris-unspsc-fb', cfg.unspscFb, '90101501');
+
+  if (cfg.paymentMappings) {
+    setInputValue('efris-pay-cash', cfg.paymentMappings.cash, '101');
+    setInputValue('efris-pay-card', cfg.paymentMappings.card, '103');
+    setInputValue('efris-pay-momo', cfg.paymentMappings.momo, '104');
+  }
+
+  setCheckboxValue('efris-print-qr', cfg.printQr !== false);
+
+  // Status badges update
+  const statusEl = document.getElementById('cert-status');
+  if (statusEl && cfg.certStatus) {
+    statusEl.innerText = cfg.certStatus;
+    statusEl.className = cfg.certStatus === 'Active' ? 'text-emerald-600 font-bold' : 'text-amber-800 font-bold';
+  }
+
+  const expiryEl = document.getElementById('cert-expiry');
+  if (expiryEl && cfg.certExpiry) {
+    expiryEl.innerText = new Date(cfg.certExpiry).toLocaleDateString();
+  }
+}
+
+function bindEfrisEvents() {
+  const saveBtn = document.getElementById('btn-efris-save');
+  const pingBtn = document.getElementById('btn-efris-ping');
+
+  // Prevent multiple bindings if called more than once
+  if (saveBtn && !saveBtn.dataset.bound) {
+    saveBtn.dataset.bound = 'true';
+    saveBtn.addEventListener('click', async () => {
+      const formData = new FormData();
+
+      formData.append('enabled', document.getElementById('efris-toggle-enable')?.checked || false);
+      
+      const checkedEnv = document.querySelector('input[name="efris_environment"]:checked');
+      formData.append('environment', checkedEnv ? checkedEnv.value : 'SANDBOX');
+
+      formData.append('tin', document.getElementById('efris-tin')?.value || '');
+      formData.append('deviceNo', document.getElementById('efris-device-no')?.value || '');
+      formData.append('fadSerial', document.getElementById('efris-fad-serial')?.value || '');
+      formData.append('appId', document.getElementById('efris-app-id')?.value || '');
+      formData.append('appSecret', document.getElementById('efris-app-secret')?.value || '');
+      formData.append('deviceMac', document.getElementById('efris-device-mac')?.value || 'FFFFFFFFFFFF');
+      formData.append('apiUrl', document.getElementById('efris-api-url')?.value || '');
+      formData.append('taxpayerType', document.getElementById('efris-taxpayer-type')?.value || '1');
+
+      const pfxFileInput = document.getElementById('efris-pfx-file');
+      if (pfxFileInput && pfxFileInput.files[0]) {
+        formData.append('pfxFile', pfxFileInput.files[0]);
+      }
+
+      formData.append('pfxPassword', document.getElementById('efris-pfx-password')?.value || '');
+      formData.append('taxPayerName', document.getElementById('efris-tax-payer-name')?.value || '');
+      formData.append('aesKey', document.getElementById('efris-aes-key')?.value || '');
+      formData.append('aesIv', document.getElementById('efris-aes-iv')?.value || '');
+      formData.append('autoAes', document.getElementById('efris-auto-aes')?.checked || false);
+
+      formData.append('autoStockIn', document.getElementById('efris-auto-stockin')?.checked || false);
+      formData.append('autoUsdConvert', document.getElementById('efris-auto-usd-convert')?.checked || false);
+
+      formData.append('branchCode', document.getElementById('efris-branch-code')?.value || '00');
+      formData.append('operatorCode', document.getElementById('efris-operator-code')?.value || 'SYSTEM');
+      formData.append('defaultTaxCode', document.getElementById('efris-default-tax')?.value || '101');
+      formData.append('lhtTaxCode', document.getElementById('efris-lht-tax-code')?.value || '103');
+      formData.append('serviceChargeTaxCode', document.getElementById('efris-service-charge-tax')?.value || '101');
+
+      formData.append('defaultBuyerType', document.getElementById('efris-default-buyer-type')?.value || '1');
+      formData.append('defaultCreditReason', document.getElementById('efris-default-credit-reason')?.value || '101');
+      formData.append('enableOfflineQueue', document.getElementById('efris-enable-offline-queue')?.checked || false);
+
+      formData.append('unspscRoom', document.getElementById('efris-unspsc-room')?.value || '90111501');
+      formData.append('unspscFb', document.getElementById('efris-unspsc-fb')?.value || '90101501');
+
+      formData.append('payCash', document.getElementById('efris-pay-cash')?.value || '101');
+      formData.append('payCard', document.getElementById('efris-pay-card')?.value || '103');
+      formData.append('payMomo', document.getElementById('efris-pay-momo')?.value || '104');
+
+      formData.append('printQr', document.getElementById('efris-print-qr')?.checked || false);
+
+      try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/efris/config`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response) throw new Error('No response returned from server.');
+
+        const resData = await response.json();
+
+        if (response.ok && resData.success) {
+          alert('EFRIS configuration saved successfully.');
+          if (resData.efrisConfig) populateEfrisForm(resData.efrisConfig);
+        } else {
+          throw new Error(resData.message || 'Failed to save configuration.');
+        }
+      } catch (err) {
+        alert('Failed to save EFRIS configuration: ' + err.message);
+      }
+    });
+  }
+
+  if (pingBtn && !pingBtn.dataset.bound) {
+    pingBtn.dataset.bound = 'true';
+    pingBtn.addEventListener('click', async () => {
+      const statusIndicator = document.getElementById('efris-status-indicator');
+      const statusText = document.getElementById('efris-status-text');
+      const lastPing = document.getElementById('efris-last-ping');
+
+      if (statusText) statusText.innerText = 'Testing Connection...';
+      if (statusIndicator) statusIndicator.className = 'w-3 h-3 rounded-full bg-amber-400 animate-pulse';
+
+      try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/efris/ping`, {
+          method: 'POST'
+        });
+
+        if (!response) throw new Error('No response returned from server.');
+
+        const resData = await response.json();
+
+        if (response.ok && resData.success) {
+          if (statusIndicator) statusIndicator.className = 'w-3 h-3 rounded-full bg-emerald-500';
+          if (statusText) statusText.innerText = 'Status: Connected & Active';
+          if (lastPing) lastPing.innerText = `Last Ping: ${new Date().toLocaleTimeString()}`;
+        } else {
+          throw new Error(resData.message || 'Ping failed');
+        }
+      } catch (err) {
+        if (statusIndicator) statusIndicator.className = 'w-3 h-3 rounded-full bg-red-500';
+        if (statusText) statusText.innerText = 'Status: Connection Failed';
+        if (lastPing) lastPing.innerText = `Last Error: ${err.message}`;
+      }
+    });
+  }
+}

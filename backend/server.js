@@ -2187,6 +2187,184 @@ app.delete('/api/client-accounts/:accountId/charges/:chargeId', auth, async (req
     }
 });
 
+
+// ==========================================
+// 1. SCHEMAS & MODELS (Single File Setup)
+// ==========================================
+
+const efrisConfigSchema = new mongoose.Schema({
+  // Do NOT make hotelId required here; Mongoose subdocuments populate it automatically via pre-save
+  hotelId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Hotel'
+  },
+  enabled: { type: Boolean, default: false },
+  environment: { type: String, enum: ['SANDBOX', 'PRODUCTION'], default: 'SANDBOX' },
+  tin: { type: String, trim: true },
+  deviceNo: { type: String, trim: true },
+  fadSerial: { type: String, trim: true },
+  appId: { type: String, trim: true },
+  appSecret: { type: String, trim: true },
+  deviceMac: { type: String, default: 'FFFFFFFFFFFF' },
+  apiUrl: { type: String, default: 'https://efris.ura.go.ug/efris/ws/efrisws' },
+  taxpayerType: { type: String, default: '1' },
+  pfxFilePath: { type: String },
+  pfxPassword: { type: String },
+  taxPayerName: { type: String },
+  aesKey: { type: String },
+  aesIv: { type: String },
+  autoAes: { type: Boolean, default: true },
+  autoStockIn: { type: Boolean, default: true },
+  autoUsdConvert: { type: Boolean, default: true },
+  branchCode: { type: String, default: '00' },
+  operatorCode: { type: String, default: 'SYSTEM' },
+  defaultTaxCode: { type: String, default: '101' },
+  lhtTaxCode: { type: String, default: '103' },
+  serviceChargeTaxCode: { type: String, default: '101' },
+  defaultBuyerType: { type: String, default: '1' },
+  defaultCreditReason: { type: String, default: '101' },
+  enableOfflineQueue: { type: Boolean, default: true },
+  unspscRoom: { type: String, default: '90111501' },
+  unspscFb: { type: String, default: '90101501' },
+  paymentMappings: {
+    cash: { type: String, default: '101' },
+    card: { type: String, default: '103' },
+    momo: { type: String, default: '104' }
+  },
+  printQr: { type: Boolean, default: true },
+  certStatus: { type: String, default: 'Not Loaded' },
+  certExpiry: { type: Date }
+}, { _id: false });
+
+// ==========================================
+// 2. TENANT-ISOLATED CERTIFICATE STORAGE
+// ==========================================
+
+const efrisDiskStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const tenantId = req.user.hotelId.toString();
+    const dir = path.join(__dirname, 'uploads', 'efris', tenantId);
+
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.pfx';
+    cb(null, `cert-${Date.now()}${ext}`);
+  }
+});
+
+const uploadEfrisCert = multer({ storage: efrisDiskStorage });
+
+// ==========================================
+// 3. MIDDLEWARE & CONTROLLER ROUTINES
+// ==========================================
+
+// Middleware: Multi-Tenant UGX Currency Verification
+const verifyUgandanTenant = async (req, res, next) => {
+  try {
+    const hotelId = req.user?.hotelId;
+    if (!hotelId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized: Missing tenant context.' });
+    }
+
+    const hotel = await Hotel.findById(hotelId);
+    if (!hotel) {
+      return res.status(404).json({ success: false, message: 'Hotel tenant not found.' });
+    }
+
+    if (hotel.hotelCurrency !== 'UGX') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'EFRIS fiscalization is restricted to properties operating in UGX.' 
+      });
+    }
+
+    req.hotel = hotel;
+    next();
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET EFRIS Config Endpoint
+app.get('/api/efris/config', verifyUgandanTenant, async (req, res) => {
+  res.status(200).json({
+    success: true,
+    hotelId: req.hotel._id,
+    currency: req.hotel.hotelCurrency,
+    efrisConfig: req.hotel.efrisConfig
+  });
+});
+
+// SAVE EFRIS Config Endpoint
+app.post('/api/efris/config', verifyUgandanTenant, uploadEfrisCert.single('pfxFile'), async (req, res) => {
+  try {
+    const hotel = req.hotel;
+    const body = req.body;
+
+    const config = {
+      hotelId: hotel._id,
+      enabled: body.enabled === 'true' || body.enabled === true,
+      environment: body.environment || 'SANDBOX',
+      tin: body.tin,
+      deviceNo: body.deviceNo,
+      fadSerial: body.fadSerial,
+      appId: body.appId,
+      appSecret: body.appSecret,
+      deviceMac: body.deviceMac || 'FFFFFFFFFFFF',
+      apiUrl: body.apiUrl,
+      taxpayerType: body.taxpayerType || '1',
+      pfxPassword: body.pfxPassword,
+      taxPayerName: body.taxPayerName,
+      aesKey: body.aesKey,
+      aesIv: body.aesIv,
+      autoAes: body.autoAes === 'true' || body.autoAes === true,
+      autoStockIn: body.autoStockIn === 'true' || body.autoStockIn === true,
+      autoUsdConvert: body.autoUsdConvert === 'true' || body.autoUsdConvert === true,
+      branchCode: body.branchCode || '00',
+      operatorCode: body.operatorCode || 'SYSTEM',
+      defaultTaxCode: body.defaultTaxCode || '101',
+      lhtTaxCode: body.lhtTaxCode || '103',
+      serviceChargeTaxCode: body.serviceChargeTaxCode || '101',
+      defaultBuyerType: body.defaultBuyerType || '1',
+      defaultCreditReason: body.defaultCreditReason || '101',
+      enableOfflineQueue: body.enableOfflineQueue === 'true' || body.enableOfflineQueue === true,
+      unspscRoom: body.unspscRoom || '90111501',
+      unspscFb: body.unspscFb || '90101501',
+      paymentMappings: {
+        cash: body.payCash || '101',
+        card: body.payCard || '103',
+        momo: body.payMomo || '104'
+      },
+      printQr: body.printQr === 'true' || body.printQr === true
+    };
+
+    if (req.file) {
+      config.pfxFilePath = req.file.path;
+      config.certStatus = 'Active';
+      config.certExpiry = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    } else if (hotel.efrisConfig && hotel.efrisConfig.pfxFilePath) {
+      config.pfxFilePath = hotel.efrisConfig.pfxFilePath;
+      config.certStatus = hotel.efrisConfig.certStatus;
+      config.certExpiry = hotel.efrisConfig.certExpiry;
+    }
+
+    hotel.efrisConfig = config;
+    await hotel.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'EFRIS configuration updated successfully.',
+      efrisConfig: hotel.efrisConfig
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // Audit Log Schema
 
 // --- 6. Hardcoded Users for Authentication (Highly Insecure for Production!) ---
