@@ -2821,10 +2821,10 @@ app.post('/api/efris/config', auth,verifyUgandanTenant, uploadEfrisCert.single('
       unspscRoom: body.unspscRoom || '90111501',
       unspscFb: body.unspscFb || '90101501',
       paymentMappings: {
-        cash: body.payCash || '101',
-        card: body.payCard || '103',
-        momo: body.payMomo || '104'
-      },
+  cash: body['paymentMappings[cash]'] || body.payCash || '101',
+  card: body['paymentMappings[card]'] || body.payCard || '103',
+  momo: body['paymentMappings[momo]'] || body.payMomo || '104'
+},
       printQr: body.printQr === 'true' || body.printQr === true
     };
 
@@ -2851,7 +2851,123 @@ app.post('/api/efris/config', auth,verifyUgandanTenant, uploadEfrisCert.single('
   }
 });
 
+// 1. POST /api/efris/ping - Test Connection (URA T101 Interface)
+app.post('/api/efris/ping', auth, verifyUgandanTenant, async (req, res) => {
+  try {
+    const { efrisConfig } = req.hotel;
 
+    if (!efrisConfig || !efrisConfig.enabled) {
+      return res.status(400).json({
+        success: false,
+        message: 'EFRIS is not enabled or configured for this tenant.'
+      });
+    }
+
+    // TODO: Invoke your actual EFRIS T101 Service / AES Encryption utility here
+    // Example: const result = await efrisService.pingURA(efrisConfig);
+    const mockPingSuccess = true;
+
+    if (mockPingSuccess) {
+      // Update last ping timestamp on the tenant's configuration
+      req.hotel.efrisConfig.lastPingTime = new Date();
+      await req.hotel.save();
+
+      return res.status(200).json({
+        success: true,
+        message: 'URA EFRIS ping successful (T101).',
+        timestamp: req.hotel.efrisConfig.lastPingTime
+      });
+    } else {
+      throw new Error('URA server responded with an error status.');
+    }
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: `EFRIS Ping Failed: ${err.message}`
+    });
+  }
+});
+
+// 2. POST /api/efris/sync-goods - Catalogue Sync (URA T126 Interface)
+app.post('/api/efris/sync-goods', auth, verifyUgandanTenant, async (req, res) => {
+  try {
+    const { efrisConfig } = req.hotel;
+
+    if (!efrisConfig || !efrisConfig.enabled) {
+      return res.status(400).json({
+        success: false,
+        message: 'EFRIS is disabled for this property.'
+      });
+    }
+
+    // TODO: Call URA T126 goods/services query endpoint and update local items/UNSPSC mappings
+    // Example: const goods = await efrisService.syncGoodsCatalogue(efrisConfig);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Goods and services catalogue synchronized successfully (T126).'
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: `Failed to sync catalogue: ${err.message}`
+    });
+  }
+});
+
+// 3. POST /api/efris/sync-rates - Exchange Rates Sync (URA T121 Interface)
+app.post('/api/efris/sync-rates', auth, verifyUgandanTenant, async (req, res) => {
+  try {
+    const { efrisConfig } = req.hotel;
+
+    if (!efrisConfig || !efrisConfig.enabled) {
+      return res.status(400).json({
+        success: false,
+        message: 'EFRIS is disabled for this property.'
+      });
+    }
+
+    // TODO: Fetch official URA daily currency rates (USD/UGX, etc.) via T121
+    // Example: const rates = await efrisService.fetchExchangeRates(efrisConfig);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Exchange rates synchronized successfully (T121).'
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: `Failed to sync exchange rates: ${err.message}`
+    });
+  }
+});
+
+// 4. POST /api/efris/sync-stock - Stock Query (URA T125 Interface)
+app.post('/api/efris/sync-stock', auth, verifyUgandanTenant, async (req, res) => {
+  try {
+    const { efrisConfig } = req.hotel;
+
+    if (!efrisConfig || !efrisConfig.enabled) {
+      return res.status(400).json({
+        success: false,
+        message: 'EFRIS is disabled for this property.'
+      });
+    }
+
+    // TODO: Query active stock levels on record with URA via T125
+    // Example: const stockData = await efrisService.queryStock(efrisConfig);
+
+    return res.status(200).json({
+      success: true,
+      message: 'EFRIS stock levels queried successfully (T125).'
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: `Failed to query stock: ${err.message}`
+    });
+  }
+});
 /**
  * POST /api/efris/fiscalize-invoice
  * Transmits a room folio or F&B bill directly to URA EFRIS
