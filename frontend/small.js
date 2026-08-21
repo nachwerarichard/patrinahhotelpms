@@ -1222,10 +1222,6 @@ async function renderBookings(page = 1, searchTerm = '') {
     activeBookingsController = new AbortController();
     const { signal } = activeBookingsController;
 
-    // 2. Prevent overlapping execution
-    if (isBookingsRendering) return;
-    isBookingsRendering = true;
-
     // Safely query DOM element references locally
     const tableBody = document.querySelector("#bookingsTable tbody");
     const mobileGrid = document.getElementById("bookingsMobileGrid");
@@ -1259,7 +1255,7 @@ async function renderBookings(page = 1, searchTerm = '') {
         let queryPath = `/bookings?page=${currentPage}&limit=${recordsPerPage}&hotelId=${hotelId}`;
         if (currentSearchTerm) queryPath += `&search=${encodeURIComponent(currentSearchTerm)}`;
 
-        // ✅ Use authenticatedFetch instead of raw fetch
+        // Authenticated API request with AbortSignal
         const response = await authenticatedFetch(queryPath, {
             method: 'GET',
             signal: signal
@@ -1273,12 +1269,12 @@ async function renderBookings(page = 1, searchTerm = '') {
         const currentBookings = data.bookings || [];
         const totalPages = data.totalPages || 1;
 
-        // Clear DOM
+        // Clear DOM only after data arrives successfully
         if (tableBody) tableBody.innerHTML = '';
         if (mobileGrid) mobileGrid.innerHTML = '';
 
         if (currentBookings.length === 0) {
-            const emptyMsg = '<div class="text-center p-6 text-slate-400">No records tracked.</div>';
+            const emptyMsg = '<div class="text-center p-6 text-slate-400 font-semibold">No records tracked.</div>';
             if (tableBody) tableBody.innerHTML = `<tr><td colspan="8">${emptyMsg}</td></tr>`;
             if (mobileGrid) mobileGrid.innerHTML = emptyMsg;
         } else {
@@ -1346,6 +1342,19 @@ async function renderBookings(page = 1, searchTerm = '') {
                                     <i class="fas fa-print mr-1"></i> Print Receipt
                                 </button>
                             ` : ''}
+
+                            // Fiscalisation Action Buttons
+${booking.amountPaid > 0 ? `
+    ${booking.isFiscalized ? `
+        <button class="${baseBtn} bg-emerald-700 hover:bg-emerald-800" onclick="viewFiscalReceipt('${booking.id}')">
+            <i class="fa-solid fa-file-shield mr-1"></i> Fiscal Receipt
+        </button>
+    ` : `
+        <button class="${baseBtn} bg-blue-600 hover:bg-blue-700" onclick="fiscalizeBooking('${booking.id}')">
+            <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Fiscalise Invoice
+        </button>
+    `}
+` : ''}
 
                             <button class="${baseBtn} bg-slate-700 hover:bg-slate-800" onclick="viewBooking('${booking.id}')">
                                 <i class="fa-solid fa-eye mr-1"></i> View
@@ -1459,16 +1468,62 @@ async function renderBookings(page = 1, searchTerm = '') {
         if (pageInfoSpan) pageInfoSpan.textContent = `Page ${currentPage} of ${totalPages}`;
 
     } catch (error) {
+        // Silently ignore aborted fetches; log actual network or server errors
         if (error.name !== 'AbortError') {
             console.error('Error fetching bookings:', error);
+            const errorMsg = '<div class="text-center p-6 text-rose-500 font-bold">Failed to load bookings.</div>';
+            if (tableBody) tableBody.innerHTML = `<tr><td colspan="8">${errorMsg}</td></tr>`;
+            if (mobileGrid) mobileGrid.innerHTML = errorMsg;
         }
-    } finally {
-        isBookingsRendering = false;
     }
 }
 // 1. Trigger function attached to the UI button
 // 1. Asynchronous Fetcher with Parallel API Requests
 // 1. Asynchronous Fetcher with Parallel API Requests
+
+async function fiscalizeBooking(bookingId) {
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/bookings/${bookingId}/fiscalize`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response || !response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Fiscalisation request failed.');
+        }
+
+        const result = await response.json();
+        
+        // Refresh grid to reflect the updated status
+        if (typeof renderBookings === 'function') {
+            await renderBookings(currentPage, currentSearchTerm);
+        }
+
+        if (typeof showNotification === 'function') {
+            showNotification('Invoice successfully fiscalised!', 'success');
+        }
+
+        // 🔥 AUTO-OPEN & PRINT RECEIPT IMMEDIATELY AFTER FISCALIZATION
+        viewFiscalReceipt(bookingId);
+
+    } catch (err) {
+        console.error('Fiscalisation Error:', err);
+        if (typeof showNotification === 'function') {
+            showNotification(err.message || 'Failed to fiscalise invoice.', 'error');
+        } else {
+            alert(`Error: ${err.message || 'Failed to fiscalise invoice.'}`);
+        }
+    }
+}
+
+function viewFiscalReceipt(bookingId) {
+    const receiptUrl = `${API_BASE_URL}/bookings/${bookingId}/fiscal-receipt`;
+    window.open(receiptUrl, '_blank');
+}
+
 async function generateInvoice(bookingId) {
     try {
         // Parallel fetching for booking data and incidental charges
@@ -7792,62 +7847,295 @@ const updateActiveAccountUI = (account) => {
             scrollContainer.scrollTop = scrollContainer.scrollHeight;
         }
     }
-
     // WORKFLOW CONTROL
-    const hasUncommittedCharges = charges.some(item => !item.committed && item.status !== 'Sent' && item.status !== 'Completed');
-    const hasAnyCharges = charges.length > 0;
+const hasUncommittedCharges = charges.some(item => !item.committed && item.status !== 'Sent' && item.status !== 'Completed');
+const hasAnyCharges = charges.length > 0;
 
-    const completeOrderBtn = document.getElementById('completeOrderBtn');
-    const postToRoomBtn = document.getElementById('postToRoomBtn');
-    const issueReceiptBtn = document.getElementById('issueReceiptBtn');
+const completeOrderBtn = document.getElementById('completeOrderBtn');
+const postToRoomBtn = document.getElementById('postToRoomBtn');
+const issueReceiptBtn = document.getElementById('issueReceiptBtn');
+const efrisBtn = document.getElementById('efrisBtn');
+const efrisBtnText = document.getElementById('efrisBtnText');
 
-    if (completeOrderBtn) {
-        completeOrderBtn.classList.toggle('hidden', !hasUncommittedCharges);
+if (completeOrderBtn) {
+    completeOrderBtn.classList.toggle('hidden', !hasUncommittedCharges);
+}
+
+const canSettle = hasAnyCharges && !hasUncommittedCharges;
+
+if (postToRoomBtn) {
+    postToRoomBtn.classList.toggle('hidden', !(canSettle && account.roomNumber));
+}
+
+if (issueReceiptBtn) {
+    issueReceiptBtn.classList.toggle('hidden', !canSettle);
+}
+
+// EFRIS Button Control
+if (efrisBtn) {
+    efrisBtn.classList.toggle('hidden', !canSettle);
+    
+    // Toggle label/style if already fiscalized
+    if (account.isFiscalized) {
+        if (efrisBtnText) efrisBtnText.textContent = "EFRIS Receipt";
+        efrisBtn.classList.remove('bg-blue-50', 'text-blue-700', 'border-blue-600');
+        efrisBtn.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-600');
+    } else {
+        if (efrisBtnText) efrisBtnText.textContent = "EFRIS Invoice";
+        efrisBtn.classList.remove('bg-emerald-50', 'text-emerald-700', 'border-emerald-600');
+        efrisBtn.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-600');
+    }
+} 
+};
+
+// ==========================================
+// 1. THERMAL PRINT HANDLER FOR EFRIS RECEIPT
+// ==========================================
+/**
+ * Opens a dedicated popup window containing the formatted 80mm thermal receipt,
+ * waits for QR code rendering, and triggers window.print().
+ */
+const openPrintableThermalReceipt = (accountData) => {
+    const printWindow = window.open('', '_blank', 'width=400,height=700');
+    if (!printWindow) {
+        return showMessage('Print Blocked', 'Pop-up blocker prevented opening the printable receipt.', true);
     }
 
-    const canSettle = hasAnyCharges && !hasUncommittedCharges;
+    const { 
+        guestName = 'Walk-In Guest', 
+        roomNumber, 
+        fdin = 'N/A', 
+        invoiceNo = 'N/A', 
+        efrisVerificationUrl = '', 
+        tin = '1000000000', 
+        ninBrn = 'N/A',
+        charges = [], 
+        fiscalizedAt = new Date().toISOString() 
+    } = accountData;
 
-    if (postToRoomBtn) {
-        postToRoomBtn.classList.toggle('hidden', !(canSettle && account.roomNumber));
+    // Calculate subtotal, VAT (18%), and Grand Total
+    const grandTotal = charges.reduce((sum, item) => {
+        const qty = Number(item.quantity || item.number || 1);
+        return sum + (Number(item.amount) || (Number(item.sp || 0) * qty));
+    }, 0);
+
+    const netAmount = grandTotal / 1.18;
+    const vatAmount = grandTotal - netAmount;
+
+    // Build line items markup
+    const itemsHtml = charges.map(item => {
+        const qty = Number(item.quantity || item.number || 1);
+        const unitPrice = Number(item.sp || 0);
+        const lineTotal = Number(item.amount) || (unitPrice * qty);
+        return `
+            <div class="flex justify-between items-start text-xs my-1">
+                <div class="w-7/12 pr-1">
+                    <span class="font-bold block text-black">${item.item || item.description}</span>
+                    <span class="text-[10px] text-gray-600">${qty} x ${unitPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                </div>
+                <div class="w-5/12 text-right font-mono font-semibold text-black">
+                    ${lineTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Verification QR target URL
+    const qrTarget = efrisVerificationUrl || `https://efris.ura.go.ug/verify?fdin=${fdin}`;
+
+    // Thermal Receipt HTML Structure
+    const receiptHtml = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>EFRIS Thermal Fiscal Receipt</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <!-- QRCode.js Library for client-side rendering -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+        <style>
+            @media print {
+                @page {
+                    size: 80mm auto;
+                    margin: 0;
+                }
+                body {
+                    width: 80mm;
+                    margin: 0;
+                    padding: 8px;
+                }
+                .no-print { display: none !important; }
+            }
+            body {
+                font-family: 'Courier New', Courier, monospace;
+                width: 80mm;
+                margin: 0 auto;
+                background-color: #fff;
+                color: #000;
+            }
+        </style>
+    </head>
+    <body class="p-2 text-black">
+        <!-- Print Trigger Action Bar (Hidden on print output) -->
+        <div class="no-print bg-slate-100 p-2 mb-3 text-center border-b rounded">
+            <button onclick="window.print()" class="bg-emerald-600 text-white text-xs px-4 py-1.5 rounded font-bold shadow hover:bg-emerald-700">
+                <i class="fas fa-print mr-1"></i> Print Receipt
+            </button>
+            <button onclick="window.close()" class="bg-gray-400 text-white text-xs px-3 py-1.5 rounded font-bold ml-2">
+                Close
+            </button>
+        </div>
+
+        <div class="text-center border-b border-black pb-2 mb-2">
+            <h2 class="text-base font-black uppercase tracking-wider">Patrinah Hotel</h2>
+            <p class="text-[11px] leading-tight">Plot 12 Kampala Road, Uganda</p>
+            <p class="text-[11px]">TIN: ${tin}</p>
+            <p class="text-[11px]">TEL: +256 700 000 000</p>
+            <div class="mt-2 text-[10px] bg-black text-white py-0.5 font-bold uppercase tracking-widest">
+                EFRIS Fiscal Receipt
+            </div>
+        </div>
+
+        <!-- Meta Details -->
+        <div class="text-[11px] border-b border-dashed border-black pb-2 mb-2 leading-tight">
+            <div class="flex justify-between"><span>Date:</span><span>${new Date(fiscalizedAt).toLocaleString()}</span></div>
+            <div class="flex justify-between"><span>Guest:</span><span class="font-bold">${guestName}</span></div>
+            ${roomNumber ? `<div class="flex justify-between"><span>Room:</span><span class="font-bold">${roomNumber}</span></div>` : ''}
+            <div class="flex justify-between"><span>Buyer TIN/NIN:</span><span>${ninBrn}</span></div>
+            <div class="flex justify-between"><span>Invoice No:</span><span class="font-mono">${invoiceNo}</span></div>
+            <div class="flex justify-between"><span>FDIN:</span><span class="font-mono text-[10px] font-bold">${fdin}</span></div>
+        </div>
+
+        <!-- Line Items Header -->
+        <div class="border-b border-black pb-1 mb-1 font-bold text-[11px] flex justify-between">
+            <span>ITEM / QTY</span>
+            <span>AMOUNT (UGX)</span>
+        </div>
+
+        <!-- Line Items -->
+        <div class="border-b border-dashed border-black pb-2 mb-2">
+            ${itemsHtml}
+        </div>
+
+        <!-- Tax Breakdown -->
+        <div class="text-[11px] border-b border-black pb-2 mb-2 space-y-1">
+            <div class="flex justify-between">
+                <span>Net Amount (Taxable):</span>
+                <span class="font-mono">${netAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>VAT (18% Standard):</span>
+                <span class="font-mono">${vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            </div>
+            <div class="flex justify-between text-sm font-black pt-1 border-t border-dashed border-black">
+                <span>TOTAL AMOUNT:</span>
+                <span class="font-mono">UGX ${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            </div>
+        </div>
+
+        <!-- EFRIS Verification Footer -->
+        <div class="text-center pt-1">
+            <p class="text-[10px] font-bold uppercase mb-2">Scan to Verify with URA EFRIS</p>
+            <div id="qrcode" class="flex justify-center mb-2"></div>
+            <p class="text-[9px] font-mono break-all px-2">${fdin}</p>
+            <p class="text-[9px] italic mt-2">Thank you for visiting Patrinah Hotel!</p>
+        </div>
+
+        <script>
+            // Generate QR Code dynamically inside popup window
+            window.onload = function() {
+                new QRCode(document.getElementById("qrcode"), {
+                    text: "${qrTarget}",
+                    width: 100,
+                    height: 100,
+                    correctLevel : QRCode.CorrectLevel.M
+                });
+
+                // Auto-trigger print dialog after QR code renders
+                setTimeout(() => {
+                    window.print();
+                }, 500);
+            };
+        </script>
+    </body>
+    </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(receiptHtml);
+    printWindow.document.close();
+};
+
+
+// ==========================================
+// 2. UPDATED FISCALIZATION BUTTON HANDLER
+// ==========================================
+const handleEfrisFiscalization = async () => {
+    const targetId = activeAccountId || (currentActiveAccountData ? currentActiveAccountData._id : null);
+    
+    if (!targetId) {
+        return showMessage('Error', 'No active folio selected.', true);
     }
 
-    if (issueReceiptBtn) {
-        issueReceiptBtn.classList.toggle('hidden', !canSettle);
+    // SCENARIO 1: View/Print existing fiscal receipt if already processed
+    if (currentActiveAccountData && currentActiveAccountData.isFiscalized) {
+        openPrintableThermalReceipt(currentActiveAccountData);
+        return;
     }
 
-    document.getElementById('activeAccountSection')?.classList.remove('hidden');
+    const efrisBtn = document.getElementById('efrisBtn');
+    
+    try {
+        if (efrisBtn) {
+            efrisBtn.disabled = true;
+            efrisBtn.innerHTML = `
+                <i class="fas fa-spinner fa-spin mb-1 text-sm"></i>
+                <span class="text-[10px] font-extrabold uppercase tracking-tight">Fiscalizing...</span>
+            `;
+        }
 
-    // Settle Modal Trigger
-    const issueBtn = document.getElementById('issueReceiptBtn');
-    if (issueBtn) {
-        issueBtn.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+        const res = await authenticatedFetch(`${API_BASE_URL}/pos/client/account/${targetId}/fiscalize`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            throw new Error(data.message || 'EFRIS fiscalization failed.');
+        }
+
+        showMessage('Success', 'Invoice fiscalized with EFRIS successfully!', false);
+
+        // Update local state with returned EFRIS fields
+        if (currentActiveAccountData) {
+            currentActiveAccountData.isFiscalized = true;
+            currentActiveAccountData.fdin = data.data?.fdin || data.fdin;
+            currentActiveAccountData.invoiceNo = data.data?.invoiceNo || data.invoiceNo;
+            currentActiveAccountData.efrisVerificationUrl = data.data?.verificationUrl || '';
             
-            const settleForm = document.getElementById('settleBillForm');
-            if (settleForm) settleForm.setAttribute('data-account-id', activeAccountId);
+            updateActiveAccountUI(currentActiveAccountData);
 
-            const totalDisplay = document.getElementById('settleModalTotal');
-            if (totalDisplay) totalDisplay.textContent = `${typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX '}${liveTotal.toLocaleString()}`;
-            
-            const guestDisplay = document.getElementById('settleModalGuest');
-            if (guestDisplay) guestDisplay.textContent = `${account.guestName || 'Walk-In Guest'} (${account.roomNumber ? 'Room ' + account.roomNumber : 'Walk-In Guest'})`;
+            // SCENARIO 2: AUTO-PRINT IMMEDIATELY AFTER SUCCESSFUL FISCALIZATION
+            openPrintableThermalReceipt(currentActiveAccountData);
+        }
 
-            const settleModal = document.getElementById('settleBillModal');
-            settleModal?.classList.remove('hidden');
-            settleModal?.classList.add('flex');
-        };
+    } catch (err) {
+        console.error('EFRIS Error:', err);
+        showMessage('Fiscalization Error', err.message || 'Connection failure to EFRIS endpoint.', true);
+    } finally {
+        if (efrisBtn) {
+            efrisBtn.disabled = false;
+            efrisBtn.innerHTML = `
+                <i class="fas fa-file-invoice-dollar mb-1 text-sm group-hover:scale-110 transition-transform"></i>
+                <span class="text-[10px] font-extrabold uppercase tracking-tight" id="efrisBtnText">
+                    ${currentActiveAccountData?.isFiscalized ? 'EFRIS Receipt' : 'EFRIS Invoice'}
+                </span>
+            `;
+        }
     }
 };
 
-/**
- * 1. STAGE CHARGE TO TAB (Draft Mode)
- * Adds the item to the client account charges without committing sales or kitchen orders yet.
- */
-/**
- * 1. STAGE CHARGE TO TAB (Draft Mode)
- * Adds the item to the client account charges without committing sales or kitchen orders yet.
- */
 const addCharge = async (description, number, department) => {
     const hotelId = localStorage.getItem('hotelId') || (typeof getHotelId === 'function' ? getHotelId() : null);
     const submitBtn = document.getElementById('submitBtn');
@@ -17275,8 +17563,11 @@ function populateEfrisForm(cfg) {
 function bindEfrisEvents() {
   const saveBtn = document.getElementById('btn-efris-save');
   const pingBtn = document.getElementById('btn-efris-ping');
+  const syncGoodsBtn = document.getElementById('btn-efris-sync-goods');
+  const syncRatesBtn = document.getElementById('btn-efris-sync-rates');
+  const syncStockBtn = document.getElementById('btn-efris-sync-stock');
 
-  // Prevent multiple bindings if called more than once
+  // 1. SAVE CONFIGURATION
   if (saveBtn && !saveBtn.dataset.bound) {
     saveBtn.dataset.bound = 'true';
     saveBtn.addEventListener('click', async () => {
@@ -17323,9 +17614,10 @@ function bindEfrisEvents() {
       formData.append('unspscRoom', document.getElementById('efris-unspsc-room')?.value || '90111501');
       formData.append('unspscFb', document.getElementById('efris-unspsc-fb')?.value || '90101501');
 
-      formData.append('payCash', document.getElementById('efris-pay-cash')?.value || '101');
-      formData.append('payCard', document.getElementById('efris-pay-card')?.value || '103');
-      formData.append('payMomo', document.getElementById('efris-pay-momo')?.value || '104');
+      // Corrected structure to map directly into Mongoose paymentMappings schema
+      formData.append('paymentMappings[cash]', document.getElementById('efris-pay-cash')?.value || '101');
+      formData.append('paymentMappings[card]', document.getElementById('efris-pay-card')?.value || '103');
+      formData.append('paymentMappings[momo]', document.getElementById('efris-pay-momo')?.value || '104');
 
       formData.append('printQr', document.getElementById('efris-print-qr')?.checked || false);
 
@@ -17351,6 +17643,7 @@ function bindEfrisEvents() {
     });
   }
 
+  // 2. TEST URA PING (T101)
   if (pingBtn && !pingBtn.dataset.bound) {
     pingBtn.dataset.bound = 'true';
     pingBtn.addEventListener('click', async () => {
@@ -17362,10 +17655,7 @@ function bindEfrisEvents() {
       if (statusIndicator) statusIndicator.className = 'w-3 h-3 rounded-full bg-amber-400 animate-pulse';
 
       try {
-        const response = await authenticatedFetch(`${API_BASE_URL}/efris/ping`, {
-          method: 'POST'
-        });
-
+        const response = await authenticatedFetch(`${API_BASE_URL}/efris/ping`, { method: 'POST' });
         if (!response) throw new Error('No response returned from server.');
 
         const resData = await response.json();
@@ -17383,5 +17673,32 @@ function bindEfrisEvents() {
         if (lastPing) lastPing.innerText = `Last Error: ${err.message}`;
       }
     });
+  }
+
+  // 3. MANUAL SYNC BUTTON BINDINGS
+  const triggerManualAction = async (endpoint, actionLabel) => {
+    try {
+      const res = await authenticatedFetch(`${API_BASE_URL}/efris/${endpoint}`, { method: 'POST' });
+      if (!res || !res.ok) throw new Error(`Failed to execute ${actionLabel}`);
+      const data = await res.json();
+      alert(`${actionLabel} completed successfully.`);
+    } catch (err) {
+      alert(`Error during ${actionLabel}: ${err.message}`);
+    }
+  };
+
+  if (syncGoodsBtn && !syncGoodsBtn.dataset.bound) {
+    syncGoodsBtn.dataset.bound = 'true';
+    syncGoodsBtn.addEventListener('click', () => triggerManualAction('sync-goods', 'Catalogue Sync (T126)'));
+  }
+
+  if (syncRatesBtn && !syncRatesBtn.dataset.bound) {
+    syncRatesBtn.dataset.bound = 'true';
+    syncRatesBtn.addEventListener('click', () => triggerManualAction('sync-rates', 'Exchange Rates Sync (T121)'));
+  }
+
+  if (syncStockBtn && !syncStockBtn.dataset.bound) {
+    syncStockBtn.dataset.bound = 'true';
+    syncStockBtn.addEventListener('click', () => triggerManualAction('sync-stock', 'Stock Query (T125)'));
   }
 }

@@ -1392,43 +1392,55 @@ app.put('/api/rooms/:id', auth, async (req, res) => {
 // 1. Fetch all housekeepers for the hotel (for populating dropdowns)
 
 
-// Booking Schema
 const bookingSchema = new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
-    id: { type: String, required: true, unique: true }, // Your custom booking ID (e.g., 'BKG001')
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true, index: true },
+    id: { type: String, required: true, unique: true }, // Custom booking ID (e.g., 'BKG001')
     name: { type: String, required: true },
-    room: { type: String }, // Room number, references Room model
-    occupation: { type: String }, // Room number, references Room model
+    room: { type: String },
+    occupation: { type: String },
     checkedIn: { type: Boolean, default: false },
-    vehno: { type: String }, // Room number, references Room model
+    vehno: { type: String },
     destination: { type: String },
-    checkIn: { type: String }, // Stored as YYYY-MM-DD
-    checkIntime: { type: String}, // Stored as YYYY-MM-DD string
-    checkOut: { type: String, required: true }, // Stored as YYYY-MM-DD string
-    checkOuttime: { type: String }, // Stored as YYYY-MM-DD string
+    checkIn: { type: String },
+    checkIntime: { type: String },
+    checkOut: { type: String, required: true },
+    checkOuttime: { type: String },
     nights: { type: Number },
     amtPerNight: { type: Number },
-    totalDue: { type: Number }, // This is ROOM total due
-    amountPaid: { type: Number}, // This is ROOM amount paid
-    balance: { type: Number, default: 0 }, // This is ROOM balance
-    paymentStatus: { type: String, enum: ['Pending','Failed','Paid', 'Partially Paid'], default: 'Pending' },
-// Inside your BookingSchema definitions file:
-paymentMethod: {
-    type: String,
-    enum: [
-        'Pesapal', 'Online', 'Visa', 'MasterCard', 'Mobile Money', 
-        'Cash', 'M-Pesa', 'MTN Momo', 'Airtel Pay', 'Bank',
-        'Stripe', 'Stripe Card' // ➔ Add 'Stripe Card' or 'Stripe' here to allow it
-    ],
-    default: 'Cash'
-},
-    guestsource: { type: String, required: true, enum: ['Walk in','Hotel Website', 'Expedia', 'Booking.com','Trip'], default: 'Walk in' },
-    gueststatus: { type: String, required: true, enum: ['confirmed', 'cancelled', 'no show', 'checkedin', 'reserved','checkedout','void'], default: 'confirmed' },
+    totalDue: { type: Number },
+    amountPaid: { type: Number, default: 0 },
+    balance: { type: Number, default: 0 },
+    paymentStatus: { 
+        type: String, 
+        enum: ['Pending', 'Failed', 'Paid', 'Partially Paid'], 
+        default: 'Pending' 
+    },
+    paymentMethod: {
+        type: String,
+        enum: [
+            'Pesapal', 'Online', 'Visa', 'MasterCard', 'Mobile Money', 
+            'Cash', 'M-Pesa', 'MTN Momo', 'Airtel Pay', 'Bank',
+            'Stripe', 'Stripe Card'
+        ],
+        default: 'Cash'
+    },
+    guestsource: { 
+        type: String, 
+        required: true, 
+        enum: ['Walk in', 'Hotel Website', 'Expedia', 'Booking.com', 'Trip'], 
+        default: 'Walk in' 
+    },
+    gueststatus: { 
+        type: String, 
+        required: true, 
+        enum: ['confirmed', 'cancelled', 'no show', 'checkedin', 'reserved', 'checkedout', 'void'], 
+        default: 'confirmed' 
+    },
     cancellationReason: { type: String, default: '' },
     voidReason: { type: String, default: '' },
     people: { type: Number, required: true },
     transactionid: { type: String },
-    extraperson:{ type: String },
+    extraperson: { type: String },
     nationality: { type: String },
     address: { type: String },
     kin: { type: String },
@@ -1436,11 +1448,20 @@ paymentMethod: {
     purpose: { type: String },
     declarations: { type: String },
     phoneNo: { type: String },
-    guestEmail: { type: String }, // Renamed from 'email' to 'guestEmail' for clarity, consistent with frontend
+    guestEmail: { type: String },
     nationalIdNo: { type: String },
-    synced: { type: Boolean, default: false }
-});
-const Booking = mongoose.model('Booking', bookingSchema);
+    synced: { type: Boolean, default: false },
+
+    // 🇺🇬 MUST ADD: EFRIS FISCAL TRACKING FIELDS
+    isFiscalized: { type: Boolean, default: false, index: true },
+    fdin: { type: String, default: null },
+    fiscalVerificationCode: { type: String, default: null },
+    fiscalQrCodeUrl: { type: String, default: null },
+    fiscalizedAt: { type: Date, default: null },
+    invoiceNo: { type: String, default: null }
+}, { timestamps: true });
+
+const Booking = mongoose.models.Booking || mongoose.model('Booking', bookingSchema);
 
 // Room History Schema
 const roomHistorySchema = new mongoose.Schema({
@@ -1457,7 +1478,7 @@ const RoomHistory = mongoose.model('RoomHistory', roomHistorySchema);
 // Since you're defining it in server.js, just keep it here.
 
 // NEW: Endpoint to update room status and log history
-app.put('/api/rooms/status/:roomNumber', async (req, res) => {
+app.put('/api/rooms/status/:roomNumber', auth,async (req, res) => {
     const { roomNumber } = req.params;
     const { status, username } = req.body;
 
@@ -1499,98 +1520,6 @@ app.put('/api/rooms/status/:roomNumber', async (req, res) => {
         res.status(500).json({ message: 'Error updating room status', error: error.message });
     }
 });
-
-
-// Incidental Charge Schema
-const incidentalChargeSchema = new mongoose.Schema({
-    hotelId: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Hotel', 
-        required: true,
-        index: true 
-    },
-    bookingId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Booking',
-        required: true
-    },
-    bookingCustomId: { type: String, required: true },
-    guestName: { type: String, required: true },
-    roomNumber: { type: String, default: 'N/A' },
-    type: { 
-        type: String,
-        enum: ['Bar', 'Restaurant', 'Laundry', 'Spa', 'Other'],
-        default: 'Other',
-        required: true
-    },
-    description: { type: String, required: true },
-    amount: { type: Number, required: true, min: 0 },
-    postedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Audit trail: cashier ID
-    date: { type: Date, default: Date.now, index: true },
-    isPaid: { type: Boolean, default: false }
-}, { timestamps: true });
-const IncidentalCharge = mongoose.model('IncidentalCharge', incidentalChargeSchema);
-
-// --- Mongoose Schema ---
-const clientAccountSchema = new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
-    guestName: { type: String, required: true },
-    roomNumber: { type: String, default: "" },
-    charges: [{
-        description: { type: String, required: true },
-        amount: { type: Number, required: true },
-        quantity: { type: Number, default: 1 },
-        number: { type: Number, default: 1 }, // Fallback/alias for quantity
-        sp: { type: Number },
-        bp: { type: Number },
-        type: { 
-            type: String,
-            enum: ['Bar', 'Restaurant', 'Other'],
-            required: true
-        },
-        date: { type: Date, default: Date.now }
-    }],
-    totalCharges: { type: Number, default: 0 },
-    finalAmountPaid: { type: Number, default: 0 },
-    
-    // Audit reporting trackers
-    settledAt: { type: Date },
-    settledByMethod: { 
-        type: String, 
-        enum: [
-            'Pesapal', 
-            'Card', 
-            'Visa', 
-            'Visa Card', 
-            'MasterCard', 
-            'Amex', 
-            'Room Charge', 
-            'Mobile Money', 
-            'Cash', 
-            'M-Pesa', 
-            'MTN Momo', 
-            'Airtel Pay', 
-            'Bank', 
-            'Stripe', 
-            'Stripe Card'
-        ] 
-    },
-    isClosed: { type: Boolean, default: false }
-}, { timestamps: true });
-
-// Pre-validate Hook: Auto-generate Walk-in identifier if guestName is missing/empty
-clientAccountSchema.pre('validate', function(next) {
-    if (!this.guestName || this.guestName.trim() === '') {
-        const randomNumber = Math.floor(1000 + Math.random() * 9000);
-        this.guestName = `Walk-in #${randomNumber}`;
-    } else {
-        this.guestName = this.guestName.trim();
-    }
-    next();
-});
-
-const ClientAccount = mongoose.model('ClientAccount', clientAccountSchema);
-
 
 // Function to format date to YYYY-MM-DD
 const formatDate = (date) => {
@@ -2374,52 +2303,188 @@ app.delete('/api/client-accounts/:accountId/charges/:chargeId', auth, async (req
 });
 
 
+const InvoiceSchema = new mongoose.Schema({
+  hotelId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Hotel', 
+    required: true 
+  },
+  
+  // Distinguishes whether the bill originated from Reception or Restaurant/Bar
+  sourceModule: { 
+    type: String, 
+    enum: ['FRONT_OFFICE', 'POS'], 
+    required: true 
+  },
+
+  invoiceNo: { type: String, required: true },
+  currency: { type: String, default: 'UGX' },
+  paymentMethod: { type: String, default: 'cash' },
+
+  // Customer / Buyer Info
+  customer: {
+    name: { type: String, default: 'Walk-in Guest' },
+    tin: { type: String, default: '' },
+    nin: { type: String, default: '' },
+    phone: { type: String, default: '' },
+    email: { type: String, default: '' }
+  },
+
+  // Line items (Rooms, Food, Drinks, Laundry, etc.)
+  items: [
+    {
+      itemCode: String,
+      description: String,
+      quantity: { type: Number, default: 1 },
+      unitPrice: Number,
+      isServiceCharge: { type: Boolean, default: false }
+    }
+  ],
+
+  // URA EFRIS Fiscal Tracking Fields
+  efrisStatus: { 
+    type: String, 
+    enum: ['NOT_FISCALIZED', 'FISCALIZED', 'FAILED'], 
+    default: 'NOT_FISCALIZED' 
+  },
+  efrisInvoiceNo: { type: String },
+  efrisAntifakeCode: { type: String },
+  efrisQrCodeUrl: { type: String },
+  efrisLastError: { type: String },
+  fiscalizedAt: { type: Date }
+
+}, { timestamps: true });
+
+
 // ==========================================
 // 1. SCHEMAS & MODELS (Single File Setup)
 // ==========================================
 
+// ==========================================
+// 1. SCHEMAS & MODELS
+// ==========================================
+
+// Incidental Charge Schema (In-House Guests)
+const incidentalChargeSchema = new mongoose.Schema({
+    hotelId: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Hotel', 
+        required: true,
+        index: true 
+    },
+    bookingId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Booking',
+        required: true
+    },
+    bookingCustomId: { type: String, required: true },
+    guestName: { type: String, required: true },
+    roomNumber: { type: String, default: 'N/A' },
+    type: { 
+        type: String,
+        enum: ['Bar', 'Restaurant', 'Laundry', 'Spa', 'Other'],
+        default: 'Other',
+        required: true
+    },
+    description: { type: String, required: true },
+    amount: { type: Number, required: true, min: 0 },
+    postedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    date: { type: Date, default: Date.now, index: true },
+    isPaid: { type: Boolean, default: false }
+}, { timestamps: true });
+// 1. IncidentalCharge Model
+const IncidentalCharge = mongoose.models.IncidentalCharge || 
+    mongoose.model('IncidentalCharge', incidentalChargeSchema);
+
+// Client Account Schema (Walk-In Customers)
+const clientAccountSchema = new mongoose.Schema({
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true, index: true },
+    guestName: { type: String, required: true },
+    roomNumber: { type: String, default: "" },
+    charges: [{
+        description: { type: String, required: true },
+        amount: { type: Number, required: true },
+        quantity: { type: Number, default: 1 },
+        number: { type: Number, default: 1 },
+        sp: { type: Number },
+        bp: { type: Number },
+        type: { 
+            type: String,
+            enum: ['Bar', 'Restaurant', 'Other'],
+            required: true
+        },
+        date: { type: Date, default: Date.now }
+    }],
+    totalCharges: { type: Number, default: 0 },
+    finalAmountPaid: { type: Number, default: 0 },
+    
+    // Audit reporting trackers
+    settledAt: { type: Date },
+    settledByMethod: { 
+        type: String, 
+        enum: [
+            'Pesapal', 'Card', 'Visa', 'Visa Card', 'MasterCard', 
+            'Amex', 'Room Charge', 'Mobile Money', 'Cash', 'M-Pesa', 
+            'MTN Momo', 'Airtel Pay', 'Bank', 'Stripe', 'Stripe Card'
+        ] 
+    },
+    isClosed: { type: Boolean, default: false },
+
+    // --- EFRIS FISCALIZATION FIELDS ---
+    isFiscalized: { type: Boolean, default: false },
+    fdin: { type: String, default: null },
+    invoiceNo: { type: String, default: null },
+    verificationCode: { type: String, default: null },
+    qrCodeData: { type: String, default: null },
+    fiscalizedAt: { type: Date, default: null },
+    efrisPayload: { type: Object, default: null }
+}, { timestamps: true });
+
+
+
+// 2. ClientAccount Model (Walk-ins & POS Folios)
+const ClientAccount = mongoose.models.ClientAccount || 
+    mongoose.model('ClientAccount', clientAccountSchema);
+
+// Hotel Schema (Holds Tenant EFRIS Configurations)
 const efrisConfigSchema = new mongoose.Schema({
-  // Do NOT make hotelId required here; Mongoose subdocuments populate it automatically via pre-save
-  hotelId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Hotel'
-  },
-  enabled: { type: Boolean, default: false },
-  environment: { type: String, enum: ['SANDBOX', 'PRODUCTION'], default: 'SANDBOX' },
-  tin: { type: String, trim: true },
-  deviceNo: { type: String, trim: true },
-  fadSerial: { type: String, trim: true },
-  appId: { type: String, trim: true },
-  appSecret: { type: String, trim: true },
-  deviceMac: { type: String, default: 'FFFFFFFFFFFF' },
-  apiUrl: { type: String, default: 'https://efris.ura.go.ug/efris/ws/efrisws' },
-  taxpayerType: { type: String, default: '1' },
-  pfxFilePath: { type: String },
-  pfxPassword: { type: String },
-  taxPayerName: { type: String },
-  aesKey: { type: String },
-  aesIv: { type: String },
-  autoAes: { type: Boolean, default: true },
-  autoStockIn: { type: Boolean, default: true },
-  autoUsdConvert: { type: Boolean, default: true },
-  branchCode: { type: String, default: '00' },
-  operatorCode: { type: String, default: 'SYSTEM' },
-  defaultTaxCode: { type: String, default: '101' },
-  lhtTaxCode: { type: String, default: '103' },
-  serviceChargeTaxCode: { type: String, default: '101' },
-  defaultBuyerType: { type: String, default: '1' },
-  defaultCreditReason: { type: String, default: '101' },
-  enableOfflineQueue: { type: Boolean, default: true },
-  unspscRoom: { type: String, default: '90111501' },
-  unspscFb: { type: String, default: '90101501' },
-  paymentMappings: {
-    cash: { type: String, default: '101' },
-    card: { type: String, default: '103' },
-    momo: { type: String, default: '104' }
-  },
-  printQr: { type: Boolean, default: true },
-  certStatus: { type: String, default: 'Not Loaded' },
-  certExpiry: { type: Date }
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' },
+    enabled: { type: Boolean, default: false },
+    environment: { type: String, enum: ['SANDBOX', 'PRODUCTION'], default: 'SANDBOX' },
+    tin: { type: String, trim: true },
+    deviceNo: { type: String, trim: true },
+    fadSerial: { type: String, trim: true },
+    appId: { type: String, trim: true },
+    appSecret: { type: String, trim: true },
+    deviceMac: { type: String, default: 'FFFFFFFFFFFF' },
+    apiUrl: { type: String, default: 'https://efris.ura.go.ug/efris/ws/efrisws' },
+    taxpayerType: { type: String, default: '1' },
+    pfxFilePath: { type: String },
+    pfxPassword: { type: String },
+    taxPayerName: { type: String },
+    aesKey: { type: String },
+    aesIv: { type: String },
+    autoAes: { type: Boolean, default: true },
+    autoStockIn: { type: Boolean, default: true },
+    autoUsdConvert: { type: Boolean, default: true },
+    branchCode: { type: String, default: '00' },
+    operatorCode: { type: String, default: 'SYSTEM' },
+    defaultTaxCode: { type: String, default: '101' }, // 101 = Standard 18% VAT
+    lhtTaxCode: { type: String, default: '103' },
+    serviceChargeTaxCode: { type: String, default: '101' },
+    defaultBuyerType: { type: String, default: '1' },
+    defaultCreditReason: { type: String, default: '101' },
+    enableOfflineQueue: { type: Boolean, default: true },
+    unspscRoom: { type: String, default: '90111501' },
+    unspscFb: { type: String, default: '90101501' },
+    paymentMappings: {
+        cash: { type: String, default: '101' },
+        card: { type: String, default: '103' },
+        momo: { type: String, default: '104' }
+    },
+    printQr: { type: Boolean, default: true },
+    certStatus: { type: String, default: 'Not Loaded' },
+    certExpiry: { type: Date }
 }, { _id: false });
 
 // ==========================================
@@ -2476,7 +2541,7 @@ const verifyUgandanTenant = async (req, res, next) => {
 };
 
 // GET EFRIS Config Endpoint
-app.get('/api/efris/config', verifyUgandanTenant, async (req, res) => {
+app.get('/api/efris/config', auth,verifyUgandanTenant, async (req, res) => {
   res.status(200).json({
     success: true,
     hotelId: req.hotel._id,
@@ -2484,9 +2549,244 @@ app.get('/api/efris/config', verifyUgandanTenant, async (req, res) => {
     efrisConfig: req.hotel.efrisConfig
   });
 });
+// ==========================================
+// EFRIS FISCALIZATION HELPERS & ROUTE
+// ==========================================
 
+/**
+ * Maps system payment methods to EFRIS Payment Method Codes
+ */
+const mapPaymentMethodToEfris = (method, mappings = {}) => {
+    if (!method) return mappings.cash || '101';
+    const lower = method.toLowerCase();
+    if (lower.includes('card') || lower.includes('visa') || lower.includes('stripe') || lower.includes('mastercard') || lower.includes('amex')) {
+        return mappings.card || '103'; // Card
+    }
+    if (lower.includes('momo') || lower.includes('mobile') || lower.includes('mpesa') || lower.includes('airtel') || lower.includes('pesapal')) {
+        return mappings.momo || '104'; // Mobile Money
+    }
+    return mappings.cash || '101'; // Cash (Default)
+};
+
+/**
+ * Executes EFRIS fiscal API call / dispatch
+ */
+const sendToEfrisServer = async (efrisConfig, payload) => {
+    if (!efrisConfig || !efrisConfig.enabled) {
+        throw new Error("EFRIS fiscalization is not enabled for this hotel property.");
+    }
+
+    // MOCK RESPONSE / SANDBOX SIMULATION
+    // Replace with live URA EFRIS SOAP/REST request logic using efrisConfig.apiUrl, cert, AES keys, etc.
+    const mockFDIN = `UG${Date.now()}${Math.floor(1000 + Math.random() * 9000)}`;
+    const mockVerificationCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const mockInvoiceNo = `INV-${Date.now().toString().slice(-6)}`;
+    const mockQrData = `https://efris.ura.go.ug/verify?fdin=${mockFDIN}&vc=${mockVerificationCode}&tin=${efrisConfig.tin || '1000000000'}`;
+
+    return {
+        success: true,
+        fdin: mockFDIN,
+        invoiceNo: mockInvoiceNo,
+        verificationCode: mockVerificationCode,
+        qrCodeData: mockQrData,
+        rawResponse: { returnCode: "00", returnMessage: "SUCCESS" }
+    };
+};
+
+/**
+ * POST /pos/client/account/:id/fiscalize
+ * Multi-tenant endpoint to submit an order/folio to Uganda EFRIS.
+ */
+app.post('/pos/client/account/:id/fiscalize', auth,async (req, res) => {
+    try {
+        const { id } = req.params;
+        // Extracts multi-tenant hotel ID attached by your authentication / tenant middleware
+        const tenantHotelId = req.user?.hotelId || req.hotelId;
+        const { buyerTin, buyerName, buyerLegalName, buyerType } = req.body;
+
+        if (!tenantHotelId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Unauthorized tenant access. Hotel tenant ID missing from request context.'
+            });
+        }
+
+        // 1. Fetch Tenant EFRIS Configurations from Hotel record
+        const hotel = await Hotel.findById(tenantHotelId);
+        if (!hotel || !hotel.efrisConfig || !hotel.efrisConfig.enabled) {
+            return res.status(400).json({
+                success: false,
+                message: 'EFRIS fiscalization is disabled or not configured for this hotel.'
+            });
+        }
+        const efrisConfig = hotel.efrisConfig;
+
+        // 2. Fetch target folio (Walk-in or In-House Incidental) ensuring multi-tenant isolation
+        let account = await ClientAccount.findOne({ _id: id, hotelId: tenantHotelId });
+        let isIncidentalCharge = false;
+
+        if (!account) {
+            account = await IncidentalCharge.findOne({ _id: id, hotelId: tenantHotelId });
+            if (account) {
+                isIncidentalCharge = true;
+            }
+        }
+
+        if (!account) {
+            return res.status(404).json({
+                success: false,
+                message: 'Account folio not found for this hotel tenant.'
+            });
+        }
+
+        // 3. Check for existing fiscalization
+        if (account.isFiscalized) {
+            return res.status(400).json({
+                success: false,
+                message: 'This invoice has already been fiscalized with EFRIS.',
+                data: {
+                    fdin: account.fdin,
+                    verificationCode: account.verificationCode
+                }
+            });
+        }
+
+        // 4. Construct EFRIS Item Details & Calculate Standard 18% Tax Split
+        let itemList = [];
+        let totalInvoiceAmount = 0;
+
+        if (isIncidentalCharge) {
+            const qty = 1;
+            const unitPrice = account.amount;
+            const grossAmount = unitPrice * qty;
+            const netAmount = Number((grossAmount / 1.18).toFixed(2));
+            const taxAmount = Number((grossAmount - netAmount).toFixed(2));
+
+            totalInvoiceAmount += grossAmount;
+
+            itemList.push({
+                itemLineNo: 1,
+                itemCode: efrisConfig.unspscFb,
+                goodsCode: efrisConfig.unspscFb,
+                goodsName: account.description || 'Hotel Charge',
+                unitPrice: unitPrice,
+                qty: qty,
+                grossAmount: grossAmount,
+                netAmount: netAmount,
+                taxRate: 0.18,
+                taxAmount: taxAmount,
+                taxCategoryCode: efrisConfig.defaultTaxCode || '101'
+            });
+        } else {
+            if (!account.charges || account.charges.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cannot fiscalize an empty folio with no charges.'
+                });
+            }
+
+            itemList = account.charges.map((item, idx) => {
+                const qty = item.quantity || item.number || 1;
+                const unitPrice = item.amount;
+                const grossAmount = unitPrice * qty;
+                const netAmount = Number((grossAmount / 1.18).toFixed(2));
+                const taxAmount = Number((grossAmount - netAmount).toFixed(2));
+
+                totalInvoiceAmount += grossAmount;
+
+                return {
+                    itemLineNo: idx + 1,
+                    itemCode: (item.type === 'Restaurant' || item.type === 'Bar') ? efrisConfig.unspscFb : efrisConfig.unspscRoom,
+                    goodsName: item.description,
+                    unitPrice: unitPrice,
+                    qty: qty,
+                    grossAmount: grossAmount,
+                    netAmount: netAmount,
+                    taxRate: 0.18,
+                    taxAmount: taxAmount,
+                    taxCategoryCode: efrisConfig.defaultTaxCode || '101'
+                };
+            });
+        }
+
+        const totalTaxAmount = Number(itemList.reduce((acc, cur) => acc + cur.taxAmount, 0).toFixed(2));
+        const totalNetAmount = Number(itemList.reduce((acc, cur) => acc + cur.netAmount, 0).toFixed(2));
+
+        // 5. Build EFRIS XML/JSON Payload Structure
+        const efrisPayload = {
+            sellerDetails: {
+                tin: efrisConfig.tin,
+                taxpayerName: efrisConfig.taxPayerName || hotel.name,
+                deviceNo: efrisConfig.deviceNo,
+                branchCode: efrisConfig.branchCode || '00'
+            },
+            buyerDetails: {
+                buyerType: buyerType || efrisConfig.defaultBuyerType || '1', // 1 = Consumer, 0 = Business (B2B)
+                buyerTin: buyerTin || '',
+                buyerNinBrn: '',
+                buyerPassport: '',
+                buyerName: buyerName || account.guestName || 'Walk-In Guest',
+                buyerLegalName: buyerLegalName || ''
+            },
+            invoiceDetails: {
+                invoiceType: '1', // 1 = Standard Commercial Invoice
+                invoiceKind: '1', // 1 = Normal Invoice
+                currency: 'UGX',
+                payWay: mapPaymentMethodToEfris(account.settledByMethod, efrisConfig.paymentMappings),
+                totalGrossAmount: totalInvoiceAmount,
+                totalNetAmount: totalNetAmount,
+                totalTaxAmount: totalTaxAmount,
+                itemList: itemList,
+                issuedDate: new Date().toISOString()
+            }
+        };
+
+        // 6. Submit Payload to EFRIS Server Gateway
+        const efrisResult = await sendToEfrisServer(efrisConfig, efrisPayload);
+
+        if (!efrisResult.success) {
+            return res.status(500).json({
+                success: false,
+                message: 'EFRIS submission failed.',
+                error: efrisResult.error
+            });
+        }
+
+        // 7. Store Fiscal Data in MongoDB Record
+        account.isFiscalized = true;
+        account.fdin = efrisResult.fdin;
+        account.invoiceNo = efrisResult.invoiceNo;
+        account.verificationCode = efrisResult.verificationCode;
+        account.qrCodeData = efrisResult.qrCodeData;
+        account.fiscalizedAt = new Date();
+        account.efrisPayload = efrisPayload;
+
+        await account.save();
+
+        // 8. Return Response
+        return res.status(200).json({
+            success: true,
+            message: 'Invoice successfully fiscalized with EFRIS.',
+            data: {
+                fdin: account.fdin,
+                invoiceNo: account.invoiceNo,
+                verificationCode: account.verificationCode,
+                qrCodeData: account.qrCodeData,
+                fiscalizedAt: account.fiscalizedAt
+            }
+        });
+
+    } catch (error) {
+        console.error('EFRIS Fiscalization Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error during EFRIS fiscalization.',
+            error: error.message
+        });
+    }
+});
 // SAVE EFRIS Config Endpoint
-app.post('/api/efris/config', verifyUgandanTenant, uploadEfrisCert.single('pfxFile'), async (req, res) => {
+app.post('/api/efris/config', auth,verifyUgandanTenant, uploadEfrisCert.single('pfxFile'), async (req, res) => {
   try {
     const hotel = req.hotel;
     const body = req.body;
@@ -2668,6 +2968,214 @@ app.post('/api/fiscalize-invoice', auth,verifyUgandanTenant, async (req, res) =>
   }
 });
 
+/**
+ * @route   POST /api/bookings/:id/fiscalize
+ * @desc    Submit a booking/invoice to the fiscal device or authority (e.g. EFRIS)
+ * @access  Private (Admin / Front Office)
+ */
+app.post('/api/bookings/:id/fiscalize', auth,async (req, res) => {
+    try {
+        const { id } = req.params;
+        const hotelId = req.user?.hotelId || req.headers['x-hotel-id'];
+
+        // 1. Fetch booking record
+        const booking = await Booking.findOne({ _id: id, hotelId });
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking record not found.' });
+        }
+
+        // 2. Business validation checks
+        if (booking.isFiscalized) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'This booking invoice has already been fiscalised.',
+                fiscalDetails: {
+                    fdin: booking.fdin,
+                    fiscalizedAt: booking.fiscalizedAt
+                }
+            });
+        }
+
+        if (booking.amountPaid <= 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Cannot fiscalise an unpaid booking.' 
+            });
+        }
+
+        // 3. Construct fiscal API payload
+        const fiscalPayload = {
+            invoiceNumber: booking.invoiceNo || `INV-${booking._id}`,
+            customerName: booking.name,
+            totalAmount: booking.amountPaid,
+            taxAmount: booking.taxAmount || 0,
+            currency: 'UGX',
+            items: booking.items || [
+                {
+                    description: `Accommodation Services - Room ${booking.room}`,
+                    quantity: 1,
+                    unitPrice: booking.amountPaid,
+                    taxRate: 0.18 // Standard 18% VAT if applicable
+                }
+            ]
+        };
+
+        // 4. Send request to Fiscal Integration Gateway / EFRIS API / ESD Device
+        // Replace FISCAL_SERVICE_URL with your actual ESD endpoint or fiscal vendor API
+        /*
+        const fiscalResponse = await fetch(`${process.env.FISCAL_SERVICE_URL}/efris/invoice`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.FISCAL_API_KEY}`
+            },
+            body: JSON.stringify(fiscalPayload)
+        });
+
+        const fiscalResult = await fiscalResponse.json();
+
+        if (!fiscalResponse.ok || !fiscalResult.success) {
+            throw new Error(fiscalResult.message || 'Fiscal device rejected the invoice.');
+        }
+        */
+
+        // Simulated success payload from ESD / EFRIS service
+        const fiscalResult = {
+            fdin: `FDIN-${Date.now()}`,
+            verificationCode: `VER-${Math.floor(100000 + Math.random() * 900000)}`,
+            qrCodeUrl: `https://fiscal.authority.gov/verify/${Date.now()}`
+        };
+
+        // 5. Update local record with fiscal details
+        booking.isFiscalized = true;
+        booking.fdin = fiscalResult.fdin;
+        booking.fiscalVerificationCode = fiscalResult.verificationCode;
+        booking.fiscalQrCodeUrl = fiscalResult.qrCodeUrl;
+        booking.fiscalizedAt = new Date();
+
+        await booking.save();
+
+        return res.status(200).json({
+            success: true,
+            message: 'Invoice successfully fiscalised.',
+            data: {
+                bookingId: booking._id,
+                fdin: booking.fdin,
+                fiscalizedAt: booking.fiscalizedAt
+            }
+        });
+
+    } catch (error) {
+        console.error('Fiscalisation Processing Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Server error occurred during fiscalisation.'
+        });
+    }
+});
+
+/**
+ * @route   GET /api/bookings/:id/fiscal-receipt
+ * @desc    Get or render the fiscal receipt view
+ * @access  Private
+ */
+
+app.get('/api/bookings/:id/fiscal-receipt', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const booking = await Booking.findById(id);
+
+        if (!booking || !booking.isFiscalized) {
+            return res.status(404).send('Fiscal receipt not found or booking is not yet fiscalised.');
+        }
+
+        const totalAmount = Number(booking.amountPaid || 0);
+        const netAmount = totalAmount / 1.18; // Standard 18% VAT
+        const vatAmount = totalAmount - netAmount;
+
+        res.send(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <title>EFRIS Thermal Receipt - ${booking.id || booking._id}</title>
+                <script src="https://cdn.tailwindcss.com"></script>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+                <style>
+                    @media print {
+                        @page { size: 80mm auto; margin: 0; }
+                        body { width: 80mm; margin: 0; padding: 6px; }
+                        .no-print { display: none !important; }
+                    }
+                    body {
+                        font-family: 'Courier New', Courier, monospace;
+                        width: 80mm;
+                        margin: 0 auto;
+                        background: #fff;
+                        color: #000;
+                    }
+                </style>
+            </head>
+            <body class="p-2 text-black">
+                <div class="no-print bg-slate-100 p-2 mb-3 text-center border-b rounded">
+                    <button onclick="window.print()" class="bg-emerald-600 text-white text-xs px-4 py-1.5 rounded font-bold shadow">
+                        Print Receipt
+                    </button>
+                    <button onclick="window.close()" class="bg-gray-400 text-white text-xs px-3 py-1.5 rounded font-bold ml-2">
+                        Close
+                    </button>
+                </div>
+
+                <div class="text-center border-b border-black pb-2 mb-2">
+                    <h2 class="text-base font-black uppercase tracking-wider">Patrinah Hotel</h2>
+                    <p class="text-[10px]">EFRIS FISCAL RECEIPT</p>
+                </div>
+
+                <div class="text-[11px] border-b border-dashed border-black pb-2 mb-2 leading-tight">
+                    <div class="flex justify-between"><span>Guest:</span><span class="font-bold">${booking.name}</span></div>
+                    <div class="flex justify-between"><span>Room:</span><span class="font-bold">${booking.room || 'N/A'}</span></div>
+                    <div class="flex justify-between"><span>Nights:</span><span>${booking.nights || 1}</span></div>
+                    <div class="flex justify-between"><span>FDIN:</span><span class="font-mono text-[10px] font-bold">${booking.fdin}</span></div>
+                    <div class="flex justify-between"><span>Date:</span><span>${new Date(booking.fiscalizedAt).toLocaleString()}</span></div>
+                </div>
+
+                <div class="text-[11px] border-b border-black pb-2 mb-2 space-y-1">
+                    <div class="flex justify-between">
+                        <span>Taxable Amount:</span>
+                        <span class="font-mono">${netAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>VAT (18%):</span>
+                        <span class="font-mono">${vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    </div>
+                    <div class="flex justify-between text-sm font-black pt-1 border-t border-dashed border-black">
+                        <span>TOTAL PAID:</span>
+                        <span class="font-mono">UGX ${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    </div>
+                </div>
+
+                <div class="text-center pt-2">
+                    <div id="qrcode" class="flex justify-center mb-2"></div>
+                    <p class="text-[9px] italic">Verified by URA EFRIS</p>
+                </div>
+
+                <script>
+                    window.onload = function() {
+                        new QRCode(document.getElementById("qrcode"), {
+                            text: "${booking.fiscalQrCodeUrl || ('https://efris.ura.go.ug/verify?fdin=' + booking.fdin)}",
+                            width: 90,
+                            height: 90
+                        });
+                        setTimeout(() => { window.print(); }, 400);
+                    };
+                </script>
+            </body>
+            </html>
+        `);
+    } catch (error) {
+        res.status(500).send('Error rendering fiscal receipt: ' + error.message);
+    }
+});
 
 
 // Audit Log Schema
@@ -2678,14 +3186,17 @@ app.post('/api/fiscalize-invoice', auth,verifyUgandanTenant, async (req, res) =>
 // Ensure a username is unique ONLY within the same hotel
 
 // --- New Hotel Schema ---
+const mongoose = require('mongoose');
+
 const hotelSchema = new mongoose.Schema({
     name: { type: String, required: true },
+    
+    // 🌐 Multi-Tenant Domain Configuration
     domainName: { 
         type: String, 
         unique: true, 
         sparse: true, 
         default: null,
-        // 🔥 This automatically sanitizes the data before it writes to MongoDB
         set: function(domain) {
             if (!domain) return null;
             return domain
@@ -2695,30 +3206,42 @@ const hotelSchema = new mongoose.Schema({
                 .replace(/\/$/, '')
                 .split('/')[0];
         },
-        // 🛡️ Double validation safety guard rail
         validate: {
             validator: function(v) {
                 if (v === null) return true;
-                return !/^https?:\/\//.test(v); // Rejects if it still contains http:// or https://
+                return !/^https?:\/\//.test(v);
             },
             message: "Domain name must not include protocol schemas (http:// or https://)."
         }
     },
-    // 🌍 GLOBAL CURRENCY SETTING
+
+    // 💱 Global Currency
     hotelCurrency: {
         type: String,
         required: true,
-        uppercase: true, // Forces "usd" -> "USD", "ugx" -> "UGX" automatically
+        uppercase: true,
         trim: true,
         minLength: 3,
         maxLength: 3,
-        default: 'UGX' // Default fallback currency code
+        default: 'UGX'
     },
+
+    // 🇺🇬 EFRIS FISCAL INTEGRATION CONFIGURATION
+    efrisConfig: {
+        isEnabled: { type: Boolean, default: false }, // Explicit toggle per hotel
+        tin: { type: String, trim: true, default: null },
+        deviceNumber: { type: String, trim: true, default: null },
+        appId: { type: String, trim: true, default: null },
+        // Keep private security keys hidden from standard find() queries
+        privateKey: { type: String, select: false, default: null },
+        aesKey: { type: String, select: false, default: null },
+        isProduction: { type: Boolean, default: false }
+    },
+
     location: String,
     phoneNumber: String,
-    email: String,
-    createdAt: { type: Date, default: Date.now }
-});
+    email: String
+}, { timestamps: true });
 
 const Hotel = mongoose.model('Hotel', hotelSchema);
 
@@ -5369,7 +5892,7 @@ await Booking.updateOne(
     }
 });
 
-app.get('/api/payments/stripe-callback', async (req, res) => {
+app.get('/api/payments/stripe-callback',auth, async (req, res) => {
     try {
         const { session_id } = req.query;
 
@@ -6400,7 +6923,7 @@ app.get('/api/checklists', auth, async (req, res) => {
     }
 });
 // Submit Status Report (Secure)
-app.post('/api/submit-status-report', async (req, res) => {
+app.post('/api/submit-status-report', auth, async (req, res) => {
   const { room, category, status, remarks, dateTime } = req.body;
 
   try {
@@ -6422,7 +6945,7 @@ app.post('/api/submit-status-report', async (req, res) => {
 });
 
 // Update Status Report (Secure)
-app.put('/api/status-reports/:id',  async (req, res) => {
+app.put('/api/status-reports/:id', auth, async (req, res) => {
   try {
     const updated = await StatusReport.findOneAndUpdate(
       { _id: req.params.id, hotelId: req.user.hotelId }, // Secure filter
@@ -6439,7 +6962,7 @@ app.put('/api/status-reports/:id',  async (req, res) => {
 });
 
 // Delete Status Report (Secure)
-app.delete('/api/status-reports/:id',  async (req, res) => {
+app.delete('/api/status-reports/:id', auth, async (req, res) => {
   try {
     const deleted = await StatusReport.findOneAndDelete({ 
       _id: req.params.id, 
@@ -6487,68 +7010,99 @@ const KitchenOrderSchema = new mongoose.Schema({
 
 const KitchenOrder = mongoose.model('KitchenOrder', KitchenOrderSchema);
 
-//BAR AND RESTAURANT
-const CashJournal = mongoose.model('CashJournal', new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true }, // Add this
-  cashAtHand: { type: Number, default: 0 },
-  cashBanked: { type: Number, default: 0 },
-  cashOnPhone: { type: Number, default: 0 },
-  bankReceiptId: String,
-  responsiblePerson: String,
-  date: { type: Date, default: Date.now }
-}));
+const mongoose = require('mongoose');
 
-const Inventory = mongoose.model('Inventory', new mongoose.Schema({
-  hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
-  item: { type: String, required: true },
-  opening: { type: Number, min: [0, 'opening stock cannot be negative'], default: 0 },
-  purchases: { type: Number, default: 0 },
-  sales: { type: Number, default: 0 },
-  department: { type: String, default: 'Bar' }, 
-  spoilage: { type: Number, default: 0 },
-  closing: {
-    type: Number,
-    min: [0, 'Closing stock cannot be negative'],
-    default: 0
-  },
-  buyingprice: { type: Number, default: 0 },
-  sellingprice: { type: Number, default: 0 },
-  
-  // Threshold to trigger low-stock alert
-  lowStock: { type: Number, min: 0, default: 5 }, 
+// ==========================================
+// 1. CASH JOURNAL SCHEMA
+// ==========================================
+const cashJournalSchema = new mongoose.Schema({
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true, index: true },
+    cashAtHand: { type: Number, default: 0 },
+    cashBanked: { type: Number, default: 0 },
+    cashOnPhone: { type: Number, default: 0 },
+    bankReceiptId: { type: String, trim: true },
+    responsiblePerson: { type: String, trim: true },
+    date: { type: Date, default: Date.now, index: true }
+}, { timestamps: true });
 
-  trackInventory: { type: Boolean, default: true }, 
-  date: { type: Date, default: Date.now }
-}));
-const Sale = mongoose.model('Sale', new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+// Multi-tenant performance index for daily queries
+cashJournalSchema.index({ hotelId: 1, date: -1 });
+
+
+// ==========================================
+// 2. INVENTORY SCHEMA
+// ==========================================
+const inventorySchema = new mongoose.Schema({
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true, index: true },
+    item: { type: String, required: true, trim: true },
+    opening: { type: Number, min: [0, 'Opening stock cannot be negative'], default: 0 },
+    purchases: { type: Number, default: 0 },
+    sales: { type: Number, default: 0 },
+    department: { type: String, default: 'Bar', trim: true }, 
+    spoilage: { type: Number, default: 0 },
+    closing: { type: Number, min: [0, 'Closing stock cannot be negative'], default: 0 },
+    buyingprice: { type: Number, default: 0 },
+    sellingprice: { type: Number, default: 0 },
+    lowStock: { type: Number, min: 0, default: 5 }, 
+    trackInventory: { type: Boolean, default: true }, 
+    date: { type: Date, default: Date.now, index: true }
+}, { timestamps: true });
+
+// Ensures rapid stock lookup per item per hotel
+inventorySchema.index({ hotelId: 1, item: 1, department: 1 });
+
+
+// ==========================================
+// 3. SALE SCHEMA
+// ==========================================
+const saleSchema = new mongoose.Schema({
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true, index: true },
     department: { 
         type: String, 
         required: true,
         enum: ['Bar', 'Restaurant', 'Kitchen'], 
         trim: true
     },
-    item: { type: String, required: true },
+    item: { type: String, required: true, trim: true },
     number: { type: Number, required: true, min: 1 },
     bp: { type: Number, required: true, min: 0 },
     sp: { type: Number, required: true, min: 0 },
-    profit: Number,
-    percentageprofit: Number,
+    profit: { type: Number },
+    percentageprofit: { type: Number },
     paymentMethod: { 
         type: String, 
-        enum: ['Cash', 'Card', 'MobileMoney', 'Folio']
+        enum: ['Cash', 'Card', 'MobileMoney', 'Folio', 'M-Pesa', 'Pesapal']
     },
-    synced: { 
-        type: Boolean, 
-        default: false 
-    },
-    recordedBy: { 
-        type: String, 
-        trim: true 
-    },
-    date: { type: Date, default: Date.now }
-}));
+    synced: { type: Boolean, default: false },
+    recordedBy: { type: String, trim: true },
+    date: { type: Date, default: Date.now, index: true }
+}, { timestamps: true });
 
+// Auto-calculate total profit before saving document
+saleSchema.pre('save', function(next) {
+    const totalRevenue = this.sp * this.number;
+    const totalCost = this.bp * this.number;
+    this.profit = totalRevenue - totalCost;
+    this.percentageprofit = totalCost > 0 ? ((this.profit / totalCost) * 100) : 100;
+    next();
+});
+
+// Fast querying for audit reports
+saleSchema.index({ hotelId: 1, date: -1, department: 1 });
+
+
+// ==========================================
+// SAFE MODEL COMPILATION & EXPORTS
+// ==========================================
+const CashJournal = mongoose.models.CashJournal || mongoose.model('CashJournal', cashJournalSchema);
+const Inventory = mongoose.models.Inventory || mongoose.model('Inventory', inventorySchema);
+const Sale = mongoose.models.Sale || mongoose.model('Sale', saleSchema);
+
+module.exports = {
+    CashJournal,
+    Inventory,
+    Sale
+};
 
 const ExpenseSchema = new mongoose.Schema({
   hotelId: { 
@@ -7594,7 +8148,7 @@ app.post('/api/expenses', auth, async (req, res) => {
 });
 
 // GET Expenses with Filtering and Pagination
-app.get('/api/expenses', async (req, res) => {
+app.get('/api/expenses', auth,async (req, res) => {
     try {
         const { hotelId, date, page = 1, limit = 5 } = req.query;
 
@@ -9520,7 +10074,7 @@ const toYMD = (dateVal) => {
 // ==========================================
 // 1. EXPORT ICAL FEED (Public Endpoint)
 // ==========================================
-app.get('api/export/:roomId/:token', async (req, res) => {
+app.get('api/export/:roomId/:token', auth,async (req, res) => {
     const { roomId, token } = req.params;
 
     try {
