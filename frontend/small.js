@@ -1080,7 +1080,7 @@ function applyRoleAccess(role) {
         'nav-sales', 'nav-posinventory', 'nav-kds', 'nav-prep-list-section',
         'nav-housekeeping', 'nav-checklisttable', 'nav-checklistform', 'nav-missingitems', 'nav-housekeepingreports',
         'nav-payments', 'nav-receivables', 'nav-cash', 'nav-expenses', 'nav-posreports', 'nav-salereport', 'nav-expensereport',
-        'nav-staff', 'nav-paymentgateway', 'nav-integrations', 'nav-audit-logs'
+        'nav-staff', 'nav-paymentgateway', 'nav-integrations', 'nav-efris','nav-audit-logs'
     ];
 
     // Hide all navigation links first
@@ -5821,6 +5821,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const navHousekeeping = document.getElementById('nav-housekeeping');
       const navHousekeepingreports = document.getElementById('nav-housekeepingreports');
       const navIntegrations = document.getElementById('nav-integrations');
+            const navEfris = document.getElementById('nav-efris');
         const navRates = document.getElementById('nav-inventory');
         const navStaff = document.getElementById('nav-staff');
     const navKDS = document.getElementById('nav-kds');
@@ -5883,6 +5884,12 @@ if (navPayments) {
         navIntegrations.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
             showSection('integrations');
+        });
+    } 
+    if (navEfris) {
+        navEfris.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('efris');
         });
     }
 
