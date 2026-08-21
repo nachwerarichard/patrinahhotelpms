@@ -17702,3 +17702,62 @@ function bindEfrisEvents() {
     syncStockBtn.addEventListener('click', () => triggerManualAction('sync-stock', 'Stock Query (T125)'));
   }
 }
+
+
+// Fetch existing config and populate form on page load
+async function loadEfrisConfig() {
+  try {
+    const response = await authenticatedFetch(`${API_BASE_URL}/efris/config`);
+    if (!response || !response.ok) return;
+
+    const data = await response.json();
+    if (data.success && data.efrisConfig) {
+      populateEfrisForm(data.efrisConfig);
+    }
+  } catch (err) {
+    console.error('Failed to load EFRIS config:', err);
+  }
+}
+
+function populateEfrisForm(config) {
+  // Checkboxes / Toggles
+  document.getElementById('efris-toggle-enable').checked = !!config.enabled;
+  document.getElementById('efris-auto-aes').checked = !!config.autoAes;
+  document.getElementById('efris-auto-stockin').checked = !!config.autoStockIn;
+  document.getElementById('efris-auto-usd-convert').checked = !!config.autoUsdConvert;
+  document.getElementById('efris-enable-offline-queue').checked = !!config.enableOfflineQueue;
+  document.getElementById('efris-print-qr').checked = !!config.printQr;
+
+  // Environment Radio Buttons
+  const envRadio = document.querySelector(`input[name="efris_environment"][value="${config.environment || 'SANDBOX'}"]`);
+  if (envRadio) envRadio.checked = true;
+
+  // Text Inputs & Selects
+  document.getElementById('efris-tin').value = config.tin || '';
+  document.getElementById('efris-device-no').value = config.deviceNo || '';
+  document.getElementById('efris-fad-serial').value = config.fadSerial || '';
+  document.getElementById('efris-app-id').value = config.appId || '';
+  document.getElementById('efris-app-secret').value = config.appSecret || '';
+  document.getElementById('efris-device-mac').value = config.deviceMac || 'FFFFFFFFFFFF';
+  document.getElementById('efris-api-url').value = config.apiUrl || '';
+  document.getElementById('efris-taxpayer-type').value = config.taxpayerType || '1';
+  document.getElementById('efris-tax-payer-name').value = config.taxPayerName || '';
+  document.getElementById('efris-aes-key').value = config.aesKey || '';
+  document.getElementById('efris-aes-iv').value = config.aesIv || '';
+  document.getElementById('efris-branch-code').value = config.branchCode || '00';
+  document.getElementById('efris-operator-code').value = config.operatorCode || 'SYSTEM';
+  document.getElementById('efris-default-tax').value = config.defaultTaxCode || '101';
+  document.getElementById('efris-lht-tax-code').value = config.lhtTaxCode || '103';
+  document.getElementById('efris-service-charge-tax').value = config.serviceChargeTaxCode || '101';
+  document.getElementById('efris-default-buyer-type').value = config.defaultBuyerType || '1';
+  document.getElementById('efris-default-credit-reason').value = config.defaultCreditReason || '101';
+  document.getElementById('efris-unspsc-room').value = config.unspscRoom || '90111501';
+  document.getElementById('efris-unspscFb').value = config.unspscFb || '90101501';
+
+  // Nested Payment Mappings
+  if (config.paymentMappings) {
+    document.getElementById('efris-pay-cash').value = config.paymentMappings.cash || '101';
+    document.getElementById('efris-pay-card').value = config.paymentMappings.card || '103';
+    document.getElementById('efris-pay-momo').value = config.paymentMappings.momo || '104';
+  }
+}

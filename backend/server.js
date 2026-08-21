@@ -2828,6 +2828,7 @@ app.post('/api/efris/config', auth,verifyUgandanTenant, uploadEfrisCert.single('
       printQr: body.printQr === 'true' || body.printQr === true
     };
 
+
     if (req.file) {
       config.pfxFilePath = req.file.path;
       config.certStatus = 'Active';
