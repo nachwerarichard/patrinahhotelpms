@@ -124,7 +124,193 @@ const formatFileUrl = (file) => {
 // ==========================================
 
 // Serve static frontend assets (HTML, CSS, JS) from your public directory
+const crypto = require('crypto');
+const fs = require('fs');
+const forge = require('node-forge');
 
+/**
+ * EFRIS Cryptography & Security Helper
+ */
+class EfrisCrypto {
+  /**
+   * 1. AES-128-ECB Encryption
+   * Encrypts plain text (JSON string or XML) using the tenant's AES key.
+   * URA EFRIS uses AES-128-ECB with PKCS7 padding.
+   * 
+   * @param {string|object} data - Data to encrypt (Objects will be auto-stringified)
+   * @param {string} aesKey - 16-character / 128-bit key provided by URA
+   * @returns {string} Base64 encoded cipher text
+   */
+  static encryptAes(data, aesKey) {
+    if (!aesKey || aesKey.length !== 16) {
+      throw new Error('EFRIS AES Key must be exactly 16 characters (128 bits).');
+    }
+
+    const text = typeof data === 'object' ? JSON.stringify(data) : String(data);
+    const keyBuffer = Buffer.from(aesKey, 'utf8');
+
+    // Node.js crypto uses 'aes-128-ecb' with automatic PKCS7 padding by default
+    const cipher = crypto.createCipheriv('aes-128-ecb', keyBuffer, null);
+    cipher.setAutoPadding(true);
+
+    let encrypted = cipher.update(text, 'utf8', 'base64');
+    encrypted += cipher.final('base64');
+
+    return encrypted;
+  }
+
+  /**
+   * 2. AES-128-ECB Decryption
+   * Decrypts incoming Base64 encoded payload responses from URA.
+   * 
+   * @param {string} base64EncryptedData - Encrypted payload string from URA
+   * @param {string} aesKey - 16-character AES key
+   * @returns {string} Decrypted raw UTF-8 string (JSON/XML)
+   */
+  static decryptAes(base64EncryptedData, aesKey) {
+    if (!aesKey || aesKey.length !== 16) {
+      throw new Error('EFRIS AES Key must be exactly 16 characters (128 bits).');
+    }
+
+    const keyBuffer = Buffer.from(aesKey, 'utf8');
+    const decipher = crypto.createDecipheriv('aes-128-ecb', keyBuffer, null);
+    decipher.setAutoPadding(true);
+
+    let decrypted = decipher.update(base64EncryptedData, 'base64', 'utf8');
+    decrypted += decipher.final('utf8');
+
+    return decrypted;
+  }
+
+  /**
+   * 3. Load & Parse PFX/PKCS12 Certificate File
+   * Extracts Private Key and Client Certificate from tenant's .pfx file.
+   * 
+   * @param {string} pfxPath - Absolute path to the .pfx file on disk
+   * @param {string} pfxPassword - Password for the .pfx file
+   * @returns {{ privateKeyPem: string, certPem: string }} PEM formatted strings
+   */
+  static loadPfxCredentials(pfxPath, pfxPassword) {
+    if (!fs.existsSync(pfxPath)) {
+      throw new Error(`PFX certificate file not found at path: ${pfxPath}`);
+    }
+
+    const pfxBuffer = fs.readFileSync(pfxPath);
+    const pfxAsn1 = forge.asn1.fromDer(pfxBuffer.toString('binary'));
+    
+    // Parse PKCS#12 structure
+    const pfx = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, false, pfxPassword);
+
+    let privateKeyPem = null;
+    let certPem = null;
+
+    // Extract private key and certificate bags
+    pfx.bags[forge.pki.oids.pkcs8ShroudedKeyBag]?.forEach((bag) => {
+      if (bag.key) {
+        privateKeyPem = forge.pki.privateKeyToPem(bag.key);
+      }
+    });
+
+    pfx.bags[forge.pki.oids.certBag]?.forEach((bag) => {
+      if (bag.cert) {
+        certPem = forge.pki.certificateToPem(bag.cert);
+      }
+    });
+
+    if (!privateKeyPem || !certPem) {
+      throw new Error('Failed to extract RSA Private Key or Certificate from PFX file.');
+    }
+
+    return { privateKeyPem, certPem };
+  }
+
+  /**
+   * 4. RSA Digital Signature Generation
+   * Signs encrypted string payload or request digest using tenant's Private Key.
+   * 
+   * @param {string} dataToSign - The payload or canonicalized string to sign
+   * @param {string} privateKeyPem - Private Key in PEM format
+   * @param {string} [algorithm='RSA-SHA256'] - Hash algorithm ('RSA-SHA1' or 'RSA-SHA256')
+   * @returns {string} Base64 encoded digital signature
+   */
+  static signData(dataToSign, privateKeyPem, algorithm = 'RSA-SHA256') {
+    const signer = crypto.createSign(algorithm);
+    signer.update(dataToSign, 'utf8');
+    signer.end();
+
+    return signer.sign(privateKeyPem, 'base64');
+  }
+
+  /**
+   * 5. Verify RSA Digital Signature
+   * Verifies response signatures sent back from URA endpoints.
+   * 
+   * @param {string} data - Plain text data that was signed
+   * @param {string} signatureBase64 - Base64 signature received
+   * @param {string} certPem - URA or Client Certificate in PEM format
+   * @param {string} [algorithm='RSA-SHA256'] - Hash algorithm
+   * @returns {boolean} True if signature is valid
+   */
+  static verifySignature(data, signatureBase64, certPem, algorithm = 'RSA-SHA256') {
+    const verifier = crypto.createVerify(algorithm);
+    verifier.update(data, 'utf8');
+    verifier.end();
+
+    return verifier.verify(certPem, signatureBase64, 'base64');
+  }
+
+  /**
+   * 6. Generate Complete EFRIS Standard Envelope Data
+   * Packages data into standard URA Base64 encrypted + signed wrapper structure.
+   * 
+   * @param {object|string} rawPayload - Invoice or query object
+   * @param {object} config - Tenant efrisConfig object
+   * @returns {{ data: string, sign: string }} Sealed request fields
+   */
+  static prepareRequestEnvelope(rawPayload, config) {
+    // Step A: Encrypt raw payload with AES key
+    const encryptedData = this.encryptAes(rawPayload, config.aesKey);
+
+    // Step B: Load certificate details
+    const { privateKeyPem } = this.loadPfxCredentials(config.pfxFilePath, config.pfxPassword);
+
+    // Step C: Sign the encrypted string with Private Key
+    const signature = this.signData(encryptedData, privateKeyPem, 'RSA-SHA256');
+
+    return {
+      data: encryptedData,
+      sign: signature
+    };
+  }
+}
+
+// Sample execution with tenant configuration loaded from database
+async function testFiscalizePayload(tenantConfig) {
+  const invoicePayload = {
+    sellerDetails: { tin: tenantConfig.tin, deviceNo: tenantConfig.deviceNo },
+    goodsDetails: [
+      { itemCode: '90111501', unitPrice: 150000, qty: 1, taxRate: '0.18' }
+    ]
+  };
+
+  try {
+    // 1. Encrypt and Sign Request
+    const envelope = EfrisCrypto.prepareRequestEnvelope(invoicePayload, tenantConfig);
+
+    console.log('Encrypted Payload (data):', envelope.data);
+    console.log('Digital Signature (sign):', envelope.sign);
+
+    // 2. Transmit `envelope` to URA API via Axios/Fetch...
+    // const res = await axios.post(tenantConfig.apiUrl, envelope);
+
+    // 3. Decrypt Incoming URA Response
+    // const decryptedResponse = EfrisCrypto.decryptAes(res.data.content.data, tenantConfig.aesKey);
+    // console.log('Decrypted URA Response:', JSON.parse(decryptedResponse));
+
+  } catch (err) {
+    console.error('Cryptographic Operation Failed:', err.message);
+  }
+}
 const userSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' },
     username: { type: String, required: true }, // Removed unique: true
@@ -2364,6 +2550,125 @@ app.post('/api/efris/config', verifyUgandanTenant, uploadEfrisCert.single('pfxFi
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+
+/**
+ * POST /api/efris/fiscalize-invoice
+ * Transmits a room folio or F&B bill directly to URA EFRIS
+ */
+app.post('/api/fiscalize-invoice', auth,verifyUgandanTenant, async (req, res) => {
+  try {
+    const { invoiceId, exchangeRate } = req.body;
+    const hotel = req.hotel;
+    const config = hotel.efrisConfig;
+
+    if (!config || !config.enabled) {
+      return res.status(400).json({ success: false, message: 'EFRIS integration is disabled for this property.' });
+    }
+
+    // 1. Fetch Internal Invoice/Bill
+    const bill = await Invoice.findOne({ _id: invoiceId, hotelId: hotel._id });
+    if (!bill) {
+      return res.status(404).json({ success: false, message: 'Invoice record not found.' });
+    }
+
+    if (bill.efrisStatus === 'FISCALIZED') {
+      return res.status(400).json({ success: false, message: 'Invoice has already been fiscalized with URA.' });
+    }
+
+    // 2. Foreign Currency Conversion (e.g., USD -> UGX)
+    const conversionRate = bill.currency === 'USD' && config.autoUsdConvert ? (exchangeRate || 3700) : 1;
+
+    // 3. Map Internal Bill to EFRIS JSON Schema
+    const rawPayload = EfrisInvoiceMapper.buildInvoicePayload(bill, config, conversionRate);
+
+    // 4. Encrypt Payload & Generate PFX Digital Signature
+    const envelope = EfrisCrypto.prepareRequestEnvelope(rawPayload, config);
+
+    // 5. Construct URA Standard Request Package
+    const uraRequestPayload = {
+      data: {
+        content: envelope.data,
+        signature: envelope.sign,
+        dataExchangeId: `EX-${Date.now()}`,
+        deviceNo: config.deviceNo,
+        tin: config.tin,
+        appId: config.appId
+      }
+    };
+
+    // 6. Direct Online Transmission to URA EFRIS Endpoint
+    let uraResponse;
+    try {
+      uraResponse = await axios.post(config.apiUrl, uraRequestPayload, {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 12000 // 12-second online timeout
+      });
+    } catch (netErr) {
+      // Direct Online Error Reporting
+      bill.efrisStatus = 'FAILED';
+      bill.efrisLastError = `Network/Connection Error: ${netErr.message}`;
+      await bill.save();
+
+      return res.status(502).json({
+        success: false,
+        message: `Could not reach URA EFRIS servers: ${netErr.message}`
+      });
+    }
+
+    // 7. Parse & Decrypt Response
+    const responseContent = uraResponse.data?.data;
+    if (!responseContent || !responseContent.content) {
+      throw new Error('Invalid or empty response structure from URA EFRIS.');
+    }
+
+    const decryptedString = EfrisCrypto.decryptAes(responseContent.content, config.aesKey);
+    const parsedResult = JSON.parse(decryptedString);
+
+    // 8. Validate URA Return State Code ('00' = Success)
+    if (parsedResult.returnStateInfo?.returnCode === '00') {
+      const efrisData = parsedResult.basicInformation || {};
+
+      bill.efrisStatus = 'FISCALIZED';
+      bill.efrisInvoiceNo = efrisData.invoiceNo;
+      bill.efrisAntifakeCode = efrisData.antifakeCode;
+      bill.efrisQrCodeUrl = efrisData.qrCode;
+      bill.efrisLastError = null;
+      bill.fiscalizedAt = new Date();
+
+      await bill.save();
+
+      return res.status(200).json({
+        success: true,
+        message: 'Invoice successfully fiscalized with URA EFRIS.',
+        fiscalData: {
+          invoiceNo: bill.efrisInvoiceNo,
+          antifakeCode: bill.efrisAntifakeCode,
+          qrCodeUrl: bill.efrisQrCodeUrl
+        }
+      });
+    } else {
+      const errorMsg = parsedResult.returnStateInfo?.returnMessage || 'EFRIS fiscalization rejected.';
+      
+      bill.efrisStatus = 'FAILED';
+      bill.efrisLastError = errorMsg;
+      await bill.save();
+
+      return res.status(400).json({
+        success: false,
+        message: `EFRIS Fiscalization Failed: ${errorMsg}`
+      });
+    }
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: 'Fiscalization routine encountered an error: ' + err.message
+    });
+  }
+});
+
+
 
 // Audit Log Schema
 
