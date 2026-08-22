@@ -18016,31 +18016,46 @@ function handleRefundDatePresetChange() {
 /**
  * Filter Table Function (Search, Method, Status, and Date Ranges)
  */
+// 1. Declare the state variable at module scope level
+let globalRefundsData = [];
+
+// 2. Updated filter function matching your data array name
 function filterRefundsTable() {
-    // 1. Extract values from filters
-    const searchVal = document.getElementById('refundSearchInput').value.toLowerCase();
-    const statusVal = document.getElementById('refundStatusFilter').value;
-    const methodVal = document.getElementById('refundMethodFilter').value;
+    const searchInput = document.getElementById('refundSearchInput');
+    const statusSelect = document.getElementById('refundStatusFilter');
+    const methodSelect = document.getElementById('refundMethodFilter');
+
+    const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const statusVal = statusSelect ? statusSelect.value : 'ALL';
+    const methodVal = methodSelect ? methodSelect.value : 'ALL';
     
-    // 2. Filter your master data array
-    const filteredList = masterRefundsArray.filter(item => {
+    // Ensure array exists before filtering
+    const dataset = Array.isArray(globalRefundsData) ? globalRefundsData : [];
+
+    const filteredList = dataset.filter(item => {
+        // Safe check for string properties
+        const refundRef = String(item.id || item.refundRef || item._id || '').toLowerCase();
+        const guestName = String(item.guestName || item.guest || '').toLowerCase();
+        const bookingRef = String(item.bookingRef || item.bookingId || '').toLowerCase();
+
         const matchesSearch = !searchVal || 
-            item.id.toLowerCase().includes(searchVal) || 
-            item.guestName.toLowerCase().includes(searchVal) ||
-            item.bookingRef.toLowerCase().includes(searchVal);
+            refundRef.includes(searchVal) || 
+            guestName.includes(searchVal) ||
+            bookingRef.includes(searchVal);
 
-        const matchesStatus = (statusVal === 'ALL') || (item.status === statusVal);
-        const matchesMethod = (methodVal === 'ALL') || (item.method === methodVal);
+        const itemStatus = item.status || '';
+        const itemMethod = item.method || item.paymentMethod || '';
 
-        // Include date range checking logic here...
+        const matchesStatus = (statusVal === 'ALL') || (itemStatus.toLowerCase() === statusVal.toLowerCase());
+        const matchesMethod = (methodVal === 'ALL') || (itemMethod.toLowerCase() === methodVal.toLowerCase());
 
         return matchesSearch && matchesStatus && matchesMethod;
     });
 
-    // 3. UPDATE THE KPI CARDS HERE
-    updateRefundKPIs(filteredList);
+    // Recalculate and update cards dynamically from filtered output
+    updateRefundsKPIs(filteredList);
 
-    // 4. Render the filtered list to the table
+    // Render the filtered records to your HTML table
     renderRefundsTable(filteredList);
 }
 
@@ -18108,8 +18123,5 @@ function updateRefundKPIs(filteredData) {
     if (kpiPending) kpiPending.textContent = pendingCount;
     if (kpiMonth) kpiMonth.textContent = thisMonthCount;
 }
-// Auto-fetch on DOM Ready
-document.addEventListener('DOMContentLoaded', () => {
-    fetchRefunds();
-});
+
 
