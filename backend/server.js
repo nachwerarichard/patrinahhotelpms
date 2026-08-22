@@ -4052,23 +4052,32 @@ app.post('/api/bookings/:id/refund',auth, async (req, res) => {
         return res.status(500).json({ message: "Server error while processing refund.", error: error.message });
     }
 });
-
-app.get('/api/refunds',auth, async (req, res) => {
+app.get('/api/refunds', auth, async (req, res) => {
     try {
-        const { hotelId, status, method, search } = req.query;
+        // Extract hotelId from query params OR x-hotel-id request header OR authenticated user context
+        const rawHotelId = req.query.hotelId || req.headers['x-hotel-id'] || req.user?.hotelId;
+        const { status, method, search } = req.query;
 
-        // Build filter query
-        const query = {};
-        if (hotelId && mongoose.Types.ObjectId.isValid(hotelId)) {
-            query.hotelId = new mongoose.Types.ObjectId(hotelId);
+        // Build base query
+        const query = {
+            refunds: { $exists: true, $not: { $size: 0 } }
+        };
+
+        // Multi-tenant check: filter by valid hotelId if provided and not 'global'
+        if (rawHotelId && rawHotelId !== 'global') {
+            if (mongoose.Types.ObjectId.isValid(rawHotelId)) {
+                query.$or = [
+                    { hotelId: new mongoose.Types.ObjectId(rawHotelId) },
+                    { hotelId: rawHotelId }
+                ];
+            } else {
+                query.hotelId = rawHotelId;
+            }
         }
-
-        // Only retrieve bookings that have non-empty refunds array
-        query.refunds = { $exists: true, $not: { $size: 0 } };
 
         const bookings = await Booking.find(query).lean();
 
-        // Extract and flatten refunds across all matching bookings
+        // Extract and flatten refunds across matching bookings
         let allRefunds = [];
 
         bookings.forEach(booking => {
