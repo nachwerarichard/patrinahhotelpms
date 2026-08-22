@@ -1327,6 +1327,12 @@ async function renderBookings(page = 1, searchTerm = '') {
                                 </button>
                             ` : ''}
 
+                            ${booking.amountPaid > 0 ? `
+    <button class="${baseBtn} bg-rose-600 hover:bg-rose-700" onclick="openRefundModal('${booking.id}', ${booking.amountPaid})">
+        <i class="fa-solid fa-arrow-rotate-left mr-1"></i> Issue Refund
+    </button>
+` : ''}
+
                             ${!['checkedout', 'cancelled', 'void'].includes(booking.gueststatus) ? `
                                 <button class="${baseBtn} bg-indigo-700 hover:bg-indigo-800" onclick="viewCharges('${booking.id}')">
                                     <i class="fa-solid fa-receipt mr-1"></i> View Charges
@@ -5111,6 +5117,73 @@ async function submitPayment() {
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.innerHTML = 'Save Payment';
+        }
+    }
+}
+
+function openRefundModal(bookingId, maxAmount) {
+    document.getElementById('refundBookingId').value = bookingId;
+    document.getElementById('maxRefundableAmount').value = `UGX ${maxAmount.toLocaleString()}`;
+    document.getElementById('refundAmount').value = '';
+    document.getElementById('refundReason').value = '';
+    document.getElementById('refundModal').classList.remove('hidden');
+}
+
+function closeRefundModal() {
+    document.getElementById('refundModal').classList.add('hidden');
+}
+
+async function submitRefund() {
+    const bookingId = document.getElementById('refundBookingId')?.value;
+    const amountInput = document.getElementById('refundAmount');
+    const methodInput = document.getElementById('refundMethod');
+    const reasonInput = document.getElementById('refundReason');
+    const submitBtn = document.getElementById('submitRefundBtn');
+
+    const amount = parseFloat(amountInput?.value || 0);
+    const method = methodInput?.value;
+    const reason = reasonInput?.value.trim();
+
+    if (!bookingId) return showMessage("Error", "No booking context linked.", true);
+    if (!amount || amount <= 0) return showMessage("Error", "Please enter a valid refund amount.", true);
+    if (!method) return showMessage("Error", "Select a payout channel.", true);
+    if (!reason) return showMessage("Error", "Please state a reason for this refund.", true);
+
+    const user = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+
+    try {
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Processing...';
+        }
+
+        const response = await authenticatedFetch(`${API_BASE_URL}/bookings/${bookingId}/refund`, {
+            method: "POST",
+            body: JSON.stringify({
+                amount,
+                method,
+                reason,
+                hotelId: user?.hotelId,
+                recordedBy: user?.username || 'system'
+            })
+        });
+
+        if (!response || !response.ok) {
+            const errBody = await response.json().catch(() => ({ message: "Failed to process refund." }));
+            throw new Error(errBody.message || "Server error occurred.");
+        }
+
+        showMessage("Success", `Refund of UGX ${amount.toLocaleString()} logged successfully! ✅`);
+        closeRefundModal();
+        if (typeof renderBookings === 'function') renderBookings(currentPage, currentSearchTerm);
+
+    } catch (err) {
+        console.error("Refund Execution Error:", err);
+        showMessage("Error", err.message, true);
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Process Refund';
         }
     }
 }

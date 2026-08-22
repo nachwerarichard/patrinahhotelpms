@@ -4844,7 +4844,50 @@ Manage payment providers used for guest payments.            </p>
   </div>
 </div>
 
+<div id="refundModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl relative">
+        <h2 class="text-lg font-bold text-gray-800 mb-1">Issue Guest Refund</h2>
+        <p class="text-xs text-gray-500 mb-4">Record a payout or gateway reverse-charge for this booking.</p>
 
+        <input type="hidden" id="refundBookingId">
+
+        <div class="space-y-4">
+            <div>
+                <label class="text-xs font-semibold text-gray-500 block mb-1">Total Paid by Guest</label>
+                <input type="text" id="maxRefundableAmount" class="border p-2 w-full rounded bg-gray-100 font-mono text-gray-700 text-xs" disabled>
+            </div>
+
+            <div>
+                <label class="text-xs font-semibold text-gray-600 block mb-1">Refund Amount (UGX)</label>
+                <input type="number" id="refundAmount" class="border p-2 w-full rounded focus:ring-2 focus:ring-rose-500 outline-none text-sm" placeholder="Enter amount to refund">
+            </div>
+
+            <div>
+                <label class="text-xs font-semibold text-gray-600 block mb-1">Refund Channel / Route</label>
+                <select id="refundMethod" class="border p-2 w-full rounded bg-white focus:ring-2 focus:ring-rose-500 outline-none text-xs">
+                    <option value="">Select payout method</option>
+                    <option value="Cash Payout">Cash (From Till/Drawer)</option>
+                    <option value="Mobile Money Reverse">Mobile Money Transfer</option>
+                    <option value="Bank Transfer">Bank Wire Transfer</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="text-xs font-semibold text-gray-600 block mb-1">Reason for Refund</label>
+                <textarea id="refundReason" rows="2" class="border p-2 w-full rounded focus:ring-2 focus:ring-rose-500 outline-none text-xs" placeholder="e.g., Early checkout, duplicate payment, room downgrade..."></textarea>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-6 border-t pt-4">
+            <button onclick="closeRefundModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-medium transition-colors">
+                Cancel
+            </button>
+            <button id="submitRefundBtn" onclick="submitRefund()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-medium transition-colors">
+                Process Refund
+            </button>
+        </div>
+    </div>
+</div>
 <div id="configureGatewayModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
     <div class="bg-white w-full max-w-lg rounded-xl shadow-2xl p-6 transform transition-all">
         <div class="flex justify-between items-center mb-4 border-b pb-3">

@@ -1411,10 +1411,10 @@ const bookingSchema = new mongoose.Schema({
     amountPaid: { type: Number, default: 0 },
     balance: { type: Number, default: 0 },
     paymentStatus: { 
-        type: String, 
-        enum: ['Pending', 'Failed', 'Paid', 'Partially Paid'], 
-        default: 'Pending' 
-    },
+    type: String, 
+    enum: ['Pending', 'Failed', 'Paid', 'Partially Paid', 'Partially Refunded', 'Refunded'], 
+    default: 'Pending' 
+},
     paymentMethod: {
         type: String,
         enum: [
@@ -1452,6 +1452,14 @@ const bookingSchema = new mongoose.Schema({
     nationalIdNo: { type: String },
     synced: { type: Boolean, default: false },
 
+refunds: [{
+    refundId: { type: String, required: true }, // e.g., 'RFD-1724312860000'
+    amount: { type: Number, required: true },
+    method: { type: String, required: true },
+    reason: { type: String, required: true },
+    recordedBy: { type: String, required: true },
+    date: { type: Date, default: Date.now }
+}],
     // 🇺🇬 MUST ADD: EFRIS FISCAL TRACKING FIELDS
     isFiscalized: { type: Boolean, default: false, index: true },
     fdin: { type: String, default: null },
@@ -3945,6 +3953,106 @@ app.get('/api/rooms/report', auth, async (req, res) => {
     }
 });
 // --- Bookings API ---
+
+app.post('/api/bookings/:id/refund', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { amount, method, reason, recordedBy, hotelId } = req.body;
+
+        // Validation
+        const refundAmount = Number(amount);
+        if (!refundAmount || refundAmount <= 0) {
+            return res.status(400).json({ message: "Invalid refund amount." });
+        }
+
+        // Locate booking by custom 'id' (e.g. BKG001) or _id
+        const booking = await Booking.findOne({ 
+            $or: [{ id: id }, { _id: mongoose.Types.ObjectId.isValid(id) ? id : null }],
+            hotelId 
+        });
+
+        if (!booking) {
+            return res.status(404).json({ message: "Booking not found." });
+        }
+
+        if (refundAmount > booking.amountPaid) {
+            return res.status(400).json({ 
+                message: `Refund amount (UGX ${refundAmount.toLocaleString()}) cannot exceed total paid (UGX ${booking.amountPaid.toLocaleString()}).` 
+            });
+        }
+
+        // Keep track of financial snapshot prior to modification
+        const previousAmountPaid = booking.amountPaid;
+        const previousBalance = booking.balance;
+
+        // Deduct from paid balance & re-calculate balance due
+        booking.amountPaid = Math.max(0, booking.amountPaid - refundAmount);
+        booking.balance = Math.max(0, booking.totalDue - booking.amountPaid);
+
+        // Calculate dynamic payment status
+        if (booking.amountPaid === 0) {
+            booking.paymentStatus = 'Refunded';
+        } else {
+            booking.paymentStatus = 'Partially Refunded';
+        }
+
+        // Push entry to refunds audit trail
+        const refundRecord = {
+            refundId: `RFD-${Date.now()}`,
+            amount: refundAmount,
+            method,
+            reason,
+            recordedBy: recordedBy || 'system',
+            date: new Date()
+        };
+
+        booking.refunds.push(refundRecord);
+        booking.synced = false; // Flag for external integrations / EFRIS synchronization if needed
+
+        await booking.save();
+
+        // 📝 LOG AUDIT TRAIL
+        await addAuditLog(
+            'ISSUE_REFUND',
+            recordedBy || 'system',
+            booking.hotelId || hotelId,
+            {
+                bookingCustomId: booking.id,
+                bookingDbId: booking._id,
+                guestName: booking.name,
+                room: booking.room,
+                refundId: refundRecord.refundId,
+                refundAmount: refundAmount,
+                method: method,
+                reason: reason,
+                financialSnapshot: {
+                    previousAmountPaid,
+                    newAmountPaid: booking.amountPaid,
+                    previousBalance,
+                    newBalance: booking.balance,
+                    totalDue: booking.totalDue,
+                    paymentStatus: booking.paymentStatus
+                }
+            }
+        );
+
+        return res.status(200).json({
+            message: "Refund processed successfully.",
+            booking: {
+                id: booking.id,
+                amountPaid: booking.amountPaid,
+                balance: booking.balance,
+                paymentStatus: booking.paymentStatus,
+                refunds: booking.refunds
+            }
+        });
+
+    } catch (error) {
+        console.error("Refund Route Error:", error);
+        return res.status(500).json({ message: "Server error while processing refund.", error: error.message });
+    }
+});
+
 app.post('/api/bookings/:id/checkout', auth, async (req, res) => {
     const { id } = req.params;
     const { username } = req.body;
