@@ -17849,18 +17849,15 @@ let globalRefundsData = [];
  */
 async function fetchRefunds(hotelId = null) {
     try {
-        // Fallback to active hotel context if not provided
         const activeHotelId = hotelId || localStorage.getItem('hotelId');
         
-        // Build endpoint query string
+        // Pass endpoint relative to API_BASE_URL (use /refunds instead of /api/refunds)
         const endpoint = activeHotelId && activeHotelId !== 'global' 
-            ? `/api/refunds?hotelId=${activeHotelId}` 
-            : '/api/refunds';
+            ? `/refunds?hotelId=${activeHotelId}` 
+            : '/refunds';
 
-        // Execute authenticated request
         const response = await authenticatedFetch(endpoint);
 
-        // If null returned (e.g., missing token / unauthenticated session)
         if (!response) {
             console.warn('Unable to fetch refunds: No authentication token active.');
             return;
@@ -17882,14 +17879,12 @@ async function fetchRefunds(hotelId = null) {
         }
 
     } catch (err) {
-        // Ignore silent request aborts
         if (err.name === 'AbortError') return;
 
         console.error('Error requesting refunds:', err);
         showRefundsError('Error loading refunds data.');
     }
 }
-
 /**
  * Helper to display error state inside the refunds table UI
  */
