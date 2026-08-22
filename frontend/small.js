@@ -18017,70 +18017,31 @@ function handleRefundDatePresetChange() {
  * Filter Table Function (Search, Method, Status, and Date Ranges)
  */
 function filterRefundsTable() {
-    const searchVal = document.getElementById('refundSearchInput')?.value.toLowerCase() || '';
-    const methodVal = document.getElementById('refundMethodFilter')?.value || 'ALL';
-    const statusVal = document.getElementById('refundStatusFilter')?.value || 'ALL';
-    const datePreset = document.getElementById('refundDatePreset')?.value || 'ALL';
-
-    const now = new Date();
+    // 1. Extract values from filters
+    const searchVal = document.getElementById('refundSearchInput').value.toLowerCase();
+    const statusVal = document.getElementById('refundStatusFilter').value;
+    const methodVal = document.getElementById('refundMethodFilter').value;
     
-    // Date boundaries
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    // 2. Filter your master data array
+    const filteredList = masterRefundsArray.filter(item => {
+        const matchesSearch = !searchVal || 
+            item.id.toLowerCase().includes(searchVal) || 
+            item.guestName.toLowerCase().includes(searchVal) ||
+            item.bookingRef.toLowerCase().includes(searchVal);
 
-    const filtered = globalRefundsData.filter(item => {
-        // Search filter
-        const matchesSearch = (item.refundId || '').toLowerCase().includes(searchVal) ||
-                              (item.bookingId || '').toLowerCase().includes(searchVal) ||
-                              (item.guestName || '').toLowerCase().includes(searchVal);
+        const matchesStatus = (statusVal === 'ALL') || (item.status === statusVal);
+        const matchesMethod = (methodVal === 'ALL') || (item.method === methodVal);
 
-        // Method filter
-        const matchesMethod = methodVal === 'ALL' || (item.method || '').toLowerCase() === methodVal.toLowerCase();
+        // Include date range checking logic here...
 
-        // Status filter
-        const matchesStatus = statusVal === 'ALL' || (item.paymentStatus || '').toLowerCase() === statusVal.toLowerCase();
-
-        // Date Presets filter
-        let matchesDate = true;
-        const itemDate = new Date(item.date);
-
-        if (!isNaN(itemDate.getTime())) {
-            if (datePreset === 'TODAY') {
-                matchesDate = itemDate >= startOfToday && itemDate <= endOfToday;
-            } else if (datePreset === 'YESTERDAY') {
-                const startOfYesterday = new Date(startOfToday);
-                startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-                const endOfYesterday = new Date(endOfToday);
-                endOfYesterday.setDate(endOfYesterday.getDate() - 1);
-                matchesDate = itemDate >= startOfYesterday && itemDate <= endOfYesterday;
-            } else if (datePreset === 'THIS_WEEK') {
-                const dayOfWeek = startOfToday.getDay(); // 0 is Sunday
-                const startOfWeek = new Date(startOfToday);
-                startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
-                matchesDate = itemDate >= startOfWeek && itemDate <= endOfToday;
-            } else if (datePreset === 'THIS_MONTH') {
-                matchesDate = itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
-            } else if (datePreset === 'CUSTOM') {
-                const startDateVal = document.getElementById('refundStartDate')?.value;
-                const endDateVal = document.getElementById('refundEndDate')?.value;
-
-                if (startDateVal) {
-                    const customStart = new Date(startDateVal);
-                    customStart.setHours(0, 0, 0, 0);
-                    if (itemDate < customStart) matchesDate = false;
-                }
-                if (endDateVal) {
-                    const customEnd = new Date(endDateVal);
-                    customEnd.setHours(23, 59, 59, 999);
-                    if (itemDate > customEnd) matchesDate = false;
-                }
-            }
-        }
-
-        return matchesSearch && matchesMethod && matchesStatus && matchesDate;
+        return matchesSearch && matchesStatus && matchesMethod;
     });
 
-    renderRefundsTable(filtered);
+    // 3. UPDATE THE KPI CARDS HERE
+    updateRefundKPIs(filteredList);
+
+    // 4. Render the filtered list to the table
+    renderRefundsTable(filteredList);
 }
 
 /**
@@ -18098,7 +18059,53 @@ function resetRefundFilters() {
     renderRefundsTable(globalRefundsData);
 }
 
-// Auto-fetch on DOM Ready
-document.addEventListener('DOMContentLoaded', () => {
-    fetchRefunds();
-});
+
+
+/**
+ * Call this inside filterRefundsTable() after computing filtered list
+ * @param {Array} filteredData - Array of filtered refund objects
+ */
+function updateRefundKPIs(filteredData) {
+    let totalRefunded = 0;
+    let pendingCount = 0;
+    let thisMonthCount = 0;
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    filteredData.forEach(item => {
+        const amount = parseFloat(item.amount) || 0;
+        const status = (item.status || '').toLowerCase();
+        const dateObj = new Date(item.date);
+
+        // 1. Total Refunded (Completed / Processed payouts)
+        if (status === 'completed' || status === 'processed') {
+            totalRefunded += amount;
+        }
+
+        // 2. Pending Approval count
+        if (status === 'pending' || status === 'pending approval') {
+            pendingCount++;
+        }
+
+        // 3. Processed This Month count
+        if (
+            (status === 'completed' || status === 'processed') &&
+            dateObj.getFullYear() === currentYear &&
+            dateObj.getMonth() === currentMonth
+        ) {
+            thisMonthCount++;
+        }
+    });
+
+    // Update DOM Elements
+    const kpiTotal = document.getElementById('kpiTotalRefunded');
+    const kpiPending = document.getElementById('kpiPendingRefunds');
+    const kpiMonth = document.getElementById('kpiMonthRefunds');
+
+    if (kpiTotal) kpiTotal.textContent = `UGX ${totalRefunded.toLocaleString()}`;
+    if (kpiPending) kpiPending.textContent = pendingCount;
+    if (kpiMonth) kpiMonth.textContent = thisMonthCount;
+}
+
