@@ -4007,9 +4007,9 @@ app.post('/api/bookings/:id/refund', auth, async (req, res) => {
 
             // Update overall booking payment status based on new amountPaid
             if (booking.amountPaid === 0) {
-                booking.paymentStatus = 'Refunded';
+                booking.paymentStatus = 'Paid';
             } else {
-                booking.paymentStatus = 'Partially Refunded';
+                booking.paymentStatus = 'Paid';
             }
         }
 

@@ -18119,8 +18119,4 @@ function updateRefundKPIs(filteredData) {
     if (kpiMonth) kpiMonth.textContent = thisMonthCount;
 }
 
-// Auto-fetch on DOM Ready
-document.addEventListener('DOMContentLoaded', () => {
-    fetchRefunds();
-});
 
