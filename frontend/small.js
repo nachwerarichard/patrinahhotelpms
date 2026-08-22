@@ -1080,7 +1080,7 @@ function applyRoleAccess(role) {
         'nav-sales', 'nav-posinventory', 'nav-kds', 'nav-prep-list-section',
         'nav-housekeeping', 'nav-checklisttable', 'nav-checklistform', 'nav-missingitems', 'nav-housekeepingreports',
         'nav-payments', 'nav-receivables', 'nav-cash', 'nav-expenses', 'nav-posreports', 'nav-salereport', 'nav-expensereport',
-        'nav-staff', 'nav-paymentgateway', 'nav-integrations', 'nav-efris','nav-audit-logs'
+        'nav-staff', 'nav-paymentgateway', 'nav-integrations','nav-refunds', 'nav-efris','nav-audit-logs'
     ];
 
     // Hide all navigation links first
@@ -5960,6 +5960,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const navPaymentGateway = document.getElementById('nav-paymentgateway');
     const navPOSInventory = document.getElementById('nav-posinventory');
       const navCash = document.getElementById('nav-cash');
+    const navRefunds = document.getElementById('nav-refunds');
       const navInventory = document.getElementById('nav-inventory');
         const navExpense = document.getElementById('nav-expenses');
                 const navReceivables = document.getElementById('nav-receivables');
@@ -6024,6 +6025,13 @@ if (navPayments) {
         navCash.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
             showSection('cash');
+        });
+    }
+
+     if (navRefunds) {
+        navRefunds.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('refunds');
         });
     }
 
@@ -17833,3 +17841,185 @@ function populateEfrisForm(config) {
     document.getElementById('efris-pay-momo').value = config.paymentMappings.momo || '104';
   }
 }
+
+let globalRefundsData = [];
+
+/**
+ * Fetch refunds from backend API
+ */
+async function fetchRefunds(hotelId = null) {
+    try {
+        // Fallback to active hotel context if not provided
+        const activeHotelId = hotelId || localStorage.getItem('hotelId');
+        
+        // Build endpoint query string
+        const endpoint = activeHotelId && activeHotelId !== 'global' 
+            ? `/api/refunds?hotelId=${activeHotelId}` 
+            : '/api/refunds';
+
+        // Execute authenticated request
+        const response = await authenticatedFetch(endpoint);
+
+        // If null returned (e.g., missing token / unauthenticated session)
+        if (!response) {
+            console.warn('Unable to fetch refunds: No authentication token active.');
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(`Server returned HTTP status ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            globalRefundsData = data.refunds || [];
+            updateRefundsKPIs(globalRefundsData);
+            renderRefundsTable(globalRefundsData);
+        } else {
+            console.error('Failed to load refunds:', data.message);
+            showRefundsError(data.message || 'Failed to retrieve refunds.');
+        }
+
+    } catch (err) {
+        // Ignore silent request aborts
+        if (err.name === 'AbortError') return;
+
+        console.error('Error requesting refunds:', err);
+        showRefundsError('Error loading refunds data.');
+    }
+}
+
+/**
+ * Helper to display error state inside the refunds table UI
+ */
+function showRefundsError(message) {
+    const tbody = document.getElementById('refundsTableBody');
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="py-8 text-center text-rose-500 font-medium">
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> ${message}
+                </td>
+            </tr>`;
+    }
+}
+
+/**
+ * Update Top Stats Cards
+ */
+function updateRefundsKPIs(refunds) {
+    const totalAmount = refunds.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    
+    const now = new Date();
+    const thisMonthRefunds = refunds.filter(item => {
+        const itemDate = new Date(item.date);
+        return itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
+    });
+
+    const elTotal = document.getElementById('kpiTotalRefunded');
+    const elMonth = document.getElementById('kpiMonthRefunds');
+
+    if (elTotal) elTotal.innerText = `UGX ${totalAmount.toLocaleString()}`;
+    if (elMonth) elMonth.innerText = thisMonthRefunds.length.toString();
+}
+
+/**
+ * Render Table Rows
+ */
+function renderRefundsTable(refundList = []) {
+    const tbody = document.getElementById('refundsTableBody');
+    const paginationInfo = document.getElementById('refundsPaginationInfo');
+    if (!tbody) return;
+
+    if (!refundList.length) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="py-12 text-center text-slate-400">
+                    <i class="fa-solid fa-receipt text-3xl mb-2 block text-slate-300"></i>
+                    No refund transactions recorded yet.
+                </td>
+            </tr>`;
+        if (paginationInfo) paginationInfo.innerText = 'Showing 0 of 0 entries';
+        return;
+    }
+
+    tbody.innerHTML = refundList.map(item => `
+        <tr class="hover:bg-slate-50/80 transition-colors">
+            <td class="py-3 px-4 font-mono font-medium text-slate-900">
+                ${item.refundId}
+                <span class="block text-[10px] text-slate-400 font-sans">
+                    ${new Date(item.date).toLocaleDateString()} ${new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+            </td>
+            <td class="py-3 px-4">
+                <span class="font-semibold text-slate-800 block">${item.guestName}</span>
+                <span class="text-[11px] text-slate-500 font-mono">BKG: ${item.bookingId} (${item.room})</span>
+            </td>
+            <td class="py-3 px-4">
+                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
+                    <i class="fa-solid fa-wallet text-[10px] text-slate-500"></i> ${item.method || 'N/A'}
+                </span>
+            </td>
+            <td class="py-3 px-4 max-w-xs truncate text-slate-600" title="${item.reason}">
+                ${item.reason}
+            </td>
+            <td class="py-3 px-4 font-semibold text-slate-900">
+                UGX ${Number(item.amount).toLocaleString()}
+            </td>
+            <td class="py-3 px-4 text-slate-600">
+                <span class="block font-medium">${item.recordedBy}</span>
+                <span class="text-[10px] text-slate-400 uppercase">Authorized</span>
+            </td>
+            <td class="py-3 px-4">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+                    ● ${item.paymentStatus || 'Processed'}
+                </span>
+            </td>
+            <td class="py-3 px-4 text-right">
+                <button onclick="viewRefundDetails('${item.refundId}')" class="p-1.5 text-slate-400 hover:text-slate-700 transition-colors" title="View Details">
+                    <i class="fa-solid fa-eye"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+
+    if (paginationInfo) {
+        paginationInfo.innerText = `Showing ${refundList.length} of ${refundList.length} entries`;
+    }
+}
+
+/**
+ * Filter Table Function
+ */
+function filterRefundsTable() {
+    const searchVal = document.getElementById('refundSearchInput')?.value.toLowerCase() || '';
+    const methodVal = document.getElementById('refundMethodFilter')?.value || 'ALL';
+
+    const filtered = globalRefundsData.filter(item => {
+        const matchesSearch = item.refundId.toLowerCase().includes(searchVal) ||
+                              item.bookingId.toLowerCase().includes(searchVal) ||
+                              item.guestName.toLowerCase().includes(searchVal);
+
+        const matchesMethod = methodVal === 'ALL' || item.method.toLowerCase() === methodVal.toLowerCase();
+
+        return matchesSearch && matchesMethod;
+    });
+
+    renderRefundsTable(filtered);
+}
+
+/**
+ * Reset Filters
+ */
+function resetRefundFilters() {
+    if (document.getElementById('refundSearchInput')) document.getElementById('refundSearchInput').value = '';
+    if (document.getElementById('refundMethodFilter')) document.getElementById('refundMethodFilter').value = 'ALL';
+    if (document.getElementById('refundStatusFilter')) document.getElementById('refundStatusFilter').value = 'ALL';
+    renderRefundsTable(globalRefundsData);
+}
+
+// Auto-fetch on DOM Ready
+document.addEventListener('DOMContentLoaded', () => {
+    fetchRefunds();
+});

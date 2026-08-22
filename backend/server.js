@@ -3954,7 +3954,7 @@ app.get('/api/rooms/report', auth, async (req, res) => {
 });
 // --- Bookings API ---
 
-app.post('/api/bookings/:id/refund', async (req, res) => {
+app.post('/api/bookings/:id/refund',auth, async (req, res) => {
     try {
         const { id } = req.params;
         const { amount, method, reason, recordedBy, hotelId } = req.body;
@@ -4050,6 +4050,81 @@ app.post('/api/bookings/:id/refund', async (req, res) => {
     } catch (error) {
         console.error("Refund Route Error:", error);
         return res.status(500).json({ message: "Server error while processing refund.", error: error.message });
+    }
+});
+
+app.get('/api/refunds',auth, async (req, res) => {
+    try {
+        const { hotelId, status, method, search } = req.query;
+
+        // Build filter query
+        const query = {};
+        if (hotelId && mongoose.Types.ObjectId.isValid(hotelId)) {
+            query.hotelId = new mongoose.Types.ObjectId(hotelId);
+        }
+
+        // Only retrieve bookings that have non-empty refunds array
+        query.refunds = { $exists: true, $not: { $size: 0 } };
+
+        const bookings = await Booking.find(query).lean();
+
+        // Extract and flatten refunds across all matching bookings
+        let allRefunds = [];
+
+        bookings.forEach(booking => {
+            if (Array.isArray(booking.refunds)) {
+                booking.refunds.forEach(rf => {
+                    allRefunds.push({
+                        refundId: rf.refundId || `RFD-${new Date(rf.date).getTime()}`,
+                        bookingId: booking.id || booking._id.toString(),
+                        bookingDbId: booking._id,
+                        guestName: booking.name || 'Guest',
+                        room: booking.room || 'N/A',
+                        amount: rf.amount || 0,
+                        method: rf.method || 'N/A',
+                        reason: rf.reason || 'No reason provided',
+                        recordedBy: rf.recordedBy || 'system',
+                        date: rf.date || new Date(),
+                        paymentStatus: booking.paymentStatus,
+                        hotelId: booking.hotelId
+                    });
+                });
+            }
+        });
+
+        // Filter by Method if provided
+        if (method && method !== 'ALL') {
+            allRefunds = allRefunds.filter(rf => 
+                rf.method.toLowerCase() === method.toLowerCase()
+            );
+        }
+
+        // Search Filter (Refund ID, Booking ID, Guest Name)
+        if (search) {
+            const term = search.toLowerCase();
+            allRefunds = allRefunds.filter(rf => 
+                rf.refundId.toLowerCase().includes(term) ||
+                rf.bookingId.toLowerCase().includes(term) ||
+                rf.guestName.toLowerCase().includes(term)
+            );
+        }
+
+        // Sort newest first
+        allRefunds.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        return res.status(200).json({
+            success: true,
+            count: allRefunds.length,
+            refunds: allRefunds
+        });
+
+    } catch (error) {
+        console.error("Fetch Refunds Error:", error);
+        return res.status(500).json({ 
+            success: false, 
+            message: "Failed to retrieve refunds.", 
+            error: error.message 
+        });
     }
 });
 
