@@ -1458,6 +1458,11 @@ refunds: [{
     method: { type: String, required: true },
     reason: { type: String, required: true },
     recordedBy: { type: String, required: true },
+    status: { 
+        type: String, 
+        enum: ['Pending', 'Completed', 'Failed', 'Cancelled'], 
+        default: 'Completed' 
+    },
     date: { type: Date, default: Date.now }
 }],
     // 🇺🇬 MUST ADD: EFRIS FISCAL TRACKING FIELDS
@@ -3954,10 +3959,15 @@ app.get('/api/rooms/report', auth, async (req, res) => {
 });
 // --- Bookings API ---
 
-app.post('/api/bookings/:id/refund',auth, async (req, res) => {
+// 1. POST ROUTE: CREATING A REFUND RECORD
+app.post('/api/bookings/:id/refund', auth, async (req, res) => {
     try {
         const { id } = req.params;
-        const { amount, method, reason, recordedBy, hotelId } = req.body;
+        const { amount, method, reason, status } = req.body;
+        
+        // Extract multi-tenant metadata from body, auth user, or header
+        const hotelId = req.body.hotelId || req.headers['x-hotel-id'] || req.user?.hotelId;
+        const recordedBy = req.body.recordedBy || req.user?.name || req.user?.username || 'system';
 
         // Validation
         const refundAmount = Number(amount);
@@ -3965,7 +3975,7 @@ app.post('/api/bookings/:id/refund',auth, async (req, res) => {
             return res.status(400).json({ message: "Invalid refund amount." });
         }
 
-        // Locate booking by custom 'id' (e.g. BKG001) or _id
+        // Locate booking by custom 'id' (e.g. BKG001) or MongoDB _id
         const booking = await Booking.findOne({ 
             $or: [{ id: id }, { _id: mongoose.Types.ObjectId.isValid(id) ? id : null }],
             hotelId 
@@ -3981,7 +3991,7 @@ app.post('/api/bookings/:id/refund',auth, async (req, res) => {
             });
         }
 
-        // Keep track of financial snapshot prior to modification
+        // Financial snapshot prior to modification
         const previousAmountPaid = booking.amountPaid;
         const previousBalance = booking.balance;
 
@@ -3989,32 +3999,33 @@ app.post('/api/bookings/:id/refund',auth, async (req, res) => {
         booking.amountPaid = Math.max(0, booking.amountPaid - refundAmount);
         booking.balance = Math.max(0, booking.totalDue - booking.amountPaid);
 
-        // Calculate dynamic payment status
+        // Update overall booking payment status
         if (booking.amountPaid === 0) {
             booking.paymentStatus = 'Refunded';
         } else {
             booking.paymentStatus = 'Partially Refunded';
         }
 
-        // Push entry to refunds audit trail
+        // Construct new sub-document entry with refund status
         const refundRecord = {
             refundId: `RFD-${Date.now()}`,
             amount: refundAmount,
             method,
             reason,
-            recordedBy: recordedBy || 'system',
+            recordedBy,
+            status: status || 'Completed', // Defaults to Completed unless specified (e.g. 'Pending')
             date: new Date()
         };
 
         booking.refunds.push(refundRecord);
-        booking.synced = false; // Flag for external integrations / EFRIS synchronization if needed
+        booking.synced = false;
 
         await booking.save();
 
-        // 📝 LOG AUDIT TRAIL
+        // Audit Trail Logging
         await addAuditLog(
             'ISSUE_REFUND',
-            recordedBy || 'system',
+            recordedBy,
             booking.hotelId || hotelId,
             {
                 bookingCustomId: booking.id,
@@ -4022,9 +4033,10 @@ app.post('/api/bookings/:id/refund',auth, async (req, res) => {
                 guestName: booking.name,
                 room: booking.room,
                 refundId: refundRecord.refundId,
-                refundAmount: refundAmount,
-                method: method,
-                reason: reason,
+                refundAmount,
+                method,
+                reason,
+                refundStatus: refundRecord.status,
                 financialSnapshot: {
                     previousAmountPaid,
                     newAmountPaid: booking.amountPaid,
@@ -4052,18 +4064,20 @@ app.post('/api/bookings/:id/refund',auth, async (req, res) => {
         return res.status(500).json({ message: "Server error while processing refund.", error: error.message });
     }
 });
+
+
+// 2. GET ROUTE: RETRIEVING & FILTERING REFUNDS
 app.get('/api/refunds', auth, async (req, res) => {
     try {
-        // Extract hotelId from query params OR x-hotel-id request header OR authenticated user context
         const rawHotelId = req.query.hotelId || req.headers['x-hotel-id'] || req.user?.hotelId;
         const { status, method, search } = req.query;
 
-        // Build base query
+        // Base query for bookings that contain refunds
         const query = {
             refunds: { $exists: true, $not: { $size: 0 } }
         };
 
-        // Multi-tenant check: filter by valid hotelId if provided and not 'global'
+        // Multi-tenant isolation check
         if (rawHotelId && rawHotelId !== 'global') {
             if (mongoose.Types.ObjectId.isValid(rawHotelId)) {
                 query.$or = [
@@ -4077,7 +4091,6 @@ app.get('/api/refunds', auth, async (req, res) => {
 
         const bookings = await Booking.find(query).lean();
 
-        // Extract and flatten refunds across matching bookings
         let allRefunds = [];
 
         bookings.forEach(booking => {
@@ -4094,14 +4107,22 @@ app.get('/api/refunds', auth, async (req, res) => {
                         reason: rf.reason || 'No reason provided',
                         recordedBy: rf.recordedBy || 'system',
                         date: rf.date || new Date(),
-                        paymentStatus: booking.paymentStatus,
+                        status: rf.status || 'Completed',             // Sub-document Refund Status
+                        bookingPaymentStatus: booking.paymentStatus, // Parent Booking Payment Status
                         hotelId: booking.hotelId
                     });
                 });
             }
         });
 
-        // Filter by Method if provided
+        // Filter by Sub-document Refund Status if query provided (e.g. ?status=Completed)
+        if (status && status !== 'ALL') {
+            allRefunds = allRefunds.filter(rf => 
+                rf.status.toLowerCase() === status.toLowerCase()
+            );
+        }
+
+        // Filter by Payment Method if provided
         if (method && method !== 'ALL') {
             allRefunds = allRefunds.filter(rf => 
                 rf.method.toLowerCase() === method.toLowerCase()

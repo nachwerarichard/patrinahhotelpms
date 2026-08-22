@@ -17851,7 +17851,6 @@ async function fetchRefunds(hotelId = null) {
     try {
         const activeHotelId = hotelId || localStorage.getItem('hotelId');
         
-        // Pass endpoint relative to API_BASE_URL (use /refunds instead of /api/refunds)
         const endpoint = activeHotelId && activeHotelId !== 'global' 
             ? `/refunds?hotelId=${activeHotelId}` 
             : '/refunds';
@@ -17872,7 +17871,7 @@ async function fetchRefunds(hotelId = null) {
         if (data.success) {
             globalRefundsData = data.refunds || [];
             updateRefundsKPIs(globalRefundsData);
-            renderRefundsTable(globalRefundsData);
+            filterRefundsTable(); // Applies active filter presets
         } else {
             console.error('Failed to load refunds:', data.message);
             showRefundsError(data.message || 'Failed to retrieve refunds.');
@@ -17885,6 +17884,7 @@ async function fetchRefunds(hotelId = null) {
         showRefundsError('Error loading refunds data.');
     }
 }
+
 /**
  * Helper to display error state inside the refunds table UI
  */
@@ -17912,11 +17912,17 @@ function updateRefundsKPIs(refunds) {
         return itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
     });
 
+    const pendingRefunds = refunds.filter(item => 
+        (item.paymentStatus || '').toLowerCase() === 'pending'
+    );
+
     const elTotal = document.getElementById('kpiTotalRefunded');
     const elMonth = document.getElementById('kpiMonthRefunds');
+    const elPending = document.getElementById('kpiPendingRefunds');
 
     if (elTotal) elTotal.innerText = `UGX ${totalAmount.toLocaleString()}`;
     if (elMonth) elMonth.innerText = thisMonthRefunds.length.toString();
+    if (elPending) elPending.innerText = pendingRefunds.length.toString();
 }
 
 /**
@@ -17932,52 +17938,58 @@ function renderRefundsTable(refundList = []) {
             <tr>
                 <td colspan="8" class="py-12 text-center text-slate-400">
                     <i class="fa-solid fa-receipt text-3xl mb-2 block text-slate-300"></i>
-                    No refund transactions recorded yet.
+                    No refund transactions matching the current filters.
                 </td>
             </tr>`;
         if (paginationInfo) paginationInfo.innerText = 'Showing 0 of 0 entries';
         return;
     }
 
-    tbody.innerHTML = refundList.map(item => `
-        <tr class="hover:bg-slate-50/80 transition-colors">
-            <td class="py-3 px-4 font-mono font-medium text-slate-900">
-                ${item.refundId}
-                <span class="block text-[10px] text-slate-400 font-sans">
-                    ${new Date(item.date).toLocaleDateString()} ${new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-            </td>
-            <td class="py-3 px-4">
-                <span class="font-semibold text-slate-800 block">${item.guestName}</span>
-                <span class="text-[11px] text-slate-500 font-mono">BKG: ${item.bookingId} (${item.room})</span>
-            </td>
-            <td class="py-3 px-4">
-                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
-                    <i class="fa-solid fa-wallet text-[10px] text-slate-500"></i> ${item.method || 'N/A'}
-                </span>
-            </td>
-            <td class="py-3 px-4 max-w-xs truncate text-slate-600" title="${item.reason}">
-                ${item.reason}
-            </td>
-            <td class="py-3 px-4 font-semibold text-slate-900">
-                UGX ${Number(item.amount).toLocaleString()}
-            </td>
-            <td class="py-3 px-4 text-slate-600">
-                <span class="block font-medium">${item.recordedBy}</span>
-                <span class="text-[10px] text-slate-400 uppercase">Authorized</span>
-            </td>
-            <td class="py-3 px-4">
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
-                    ● ${item.paymentStatus || 'Processed'}
-                </span>
-            </td>
-            <td class="py-3 px-4 text-right">
-                <button onclick="viewRefundDetails('${item.refundId}')" class="p-1.5 text-slate-400 hover:text-slate-700 transition-colors" title="View Details">
-                    <i class="fa-solid fa-eye"></i>
-                </button>
-            </td>
-        </tr>
-    `).join('');
+    tbody.innerHTML = refundList.map(item => {
+        const dateObj = new Date(item.date);
+        const formattedDate = isNaN(dateObj) ? 'N/A' : dateObj.toLocaleDateString();
+        const formattedTime = isNaN(dateObj) ? '' : dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        return `
+            <tr class="hover:bg-slate-50/80 transition-colors">
+                <td class="py-3 px-4 font-mono font-medium text-slate-900">
+                    ${item.refundId || 'N/A'}
+                    <span class="block text-[10px] text-slate-400 font-sans">
+                        ${formattedDate} ${formattedTime}
+                    </span>
+                </td>
+                <td class="py-3 px-4">
+                    <span class="font-semibold text-slate-800 block">${item.guestName || 'Guest'}</span>
+                    <span class="text-[11px] text-slate-500 font-mono">BKG: ${item.bookingId || 'N/A'} (${item.room || 'N/A'})</span>
+                </td>
+                <td class="py-3 px-4">
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
+                        <i class="fa-solid fa-wallet text-[10px] text-slate-500"></i> ${item.method || 'N/A'}
+                    </span>
+                </td>
+                <td class="py-3 px-4 max-w-xs truncate text-slate-600" title="${item.reason || ''}">
+                    ${item.reason || 'N/A'}
+                </td>
+                <td class="py-3 px-4 font-semibold text-slate-900">
+                    UGX ${Number(item.amount || 0).toLocaleString()}
+                </td>
+                <td class="py-3 px-4 text-slate-600">
+                    <span class="block font-medium">${item.recordedBy || 'System'}</span>
+                    <span class="text-[10px] text-slate-400 uppercase">Authorized</span>
+                </td>
+                <td class="py-3 px-4">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+                        ● ${item.paymentStatus || 'Processed'}
+                    </span>
+                </td>
+                <td class="py-3 px-4 text-right">
+                    <button onclick="viewRefundDetails('${item.refundId}')" class="p-1.5 text-slate-400 hover:text-slate-700 transition-colors" title="View Details">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
 
     if (paginationInfo) {
         paginationInfo.innerText = `Showing ${refundList.length} of ${refundList.length} entries`;
@@ -17985,20 +17997,87 @@ function renderRefundsTable(refundList = []) {
 }
 
 /**
- * Filter Table Function
+ * Handle Preset Selection Toggle
+ */
+function handleRefundDatePresetChange() {
+    const preset = document.getElementById('refundDatePreset')?.value;
+    const customContainer = document.getElementById('refundCustomDateContainer');
+
+    if (preset === 'CUSTOM') {
+        customContainer?.classList.remove('hidden');
+    } else {
+        customContainer?.classList.add('hidden');
+        if (document.getElementById('refundStartDate')) document.getElementById('refundStartDate').value = '';
+        if (document.getElementById('refundEndDate')) document.getElementById('refundEndDate').value = '';
+        filterRefundsTable();
+    }
+}
+
+/**
+ * Filter Table Function (Search, Method, Status, and Date Ranges)
  */
 function filterRefundsTable() {
     const searchVal = document.getElementById('refundSearchInput')?.value.toLowerCase() || '';
     const methodVal = document.getElementById('refundMethodFilter')?.value || 'ALL';
+    const statusVal = document.getElementById('refundStatusFilter')?.value || 'ALL';
+    const datePreset = document.getElementById('refundDatePreset')?.value || 'ALL';
+
+    const now = new Date();
+    
+    // Date boundaries
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
     const filtered = globalRefundsData.filter(item => {
-        const matchesSearch = item.refundId.toLowerCase().includes(searchVal) ||
-                              item.bookingId.toLowerCase().includes(searchVal) ||
-                              item.guestName.toLowerCase().includes(searchVal);
+        // Search filter
+        const matchesSearch = (item.refundId || '').toLowerCase().includes(searchVal) ||
+                              (item.bookingId || '').toLowerCase().includes(searchVal) ||
+                              (item.guestName || '').toLowerCase().includes(searchVal);
 
-        const matchesMethod = methodVal === 'ALL' || item.method.toLowerCase() === methodVal.toLowerCase();
+        // Method filter
+        const matchesMethod = methodVal === 'ALL' || (item.method || '').toLowerCase() === methodVal.toLowerCase();
 
-        return matchesSearch && matchesMethod;
+        // Status filter
+        const matchesStatus = statusVal === 'ALL' || (item.paymentStatus || '').toLowerCase() === statusVal.toLowerCase();
+
+        // Date Presets filter
+        let matchesDate = true;
+        const itemDate = new Date(item.date);
+
+        if (!isNaN(itemDate.getTime())) {
+            if (datePreset === 'TODAY') {
+                matchesDate = itemDate >= startOfToday && itemDate <= endOfToday;
+            } else if (datePreset === 'YESTERDAY') {
+                const startOfYesterday = new Date(startOfToday);
+                startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+                const endOfYesterday = new Date(endOfToday);
+                endOfYesterday.setDate(endOfYesterday.getDate() - 1);
+                matchesDate = itemDate >= startOfYesterday && itemDate <= endOfYesterday;
+            } else if (datePreset === 'THIS_WEEK') {
+                const dayOfWeek = startOfToday.getDay(); // 0 is Sunday
+                const startOfWeek = new Date(startOfToday);
+                startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
+                matchesDate = itemDate >= startOfWeek && itemDate <= endOfToday;
+            } else if (datePreset === 'THIS_MONTH') {
+                matchesDate = itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
+            } else if (datePreset === 'CUSTOM') {
+                const startDateVal = document.getElementById('refundStartDate')?.value;
+                const endDateVal = document.getElementById('refundEndDate')?.value;
+
+                if (startDateVal) {
+                    const customStart = new Date(startDateVal);
+                    customStart.setHours(0, 0, 0, 0);
+                    if (itemDate < customStart) matchesDate = false;
+                }
+                if (endDateVal) {
+                    const customEnd = new Date(endDateVal);
+                    customEnd.setHours(23, 59, 59, 999);
+                    if (itemDate > customEnd) matchesDate = false;
+                }
+            }
+        }
+
+        return matchesSearch && matchesMethod && matchesStatus && matchesDate;
     });
 
     renderRefundsTable(filtered);
@@ -18011,6 +18090,11 @@ function resetRefundFilters() {
     if (document.getElementById('refundSearchInput')) document.getElementById('refundSearchInput').value = '';
     if (document.getElementById('refundMethodFilter')) document.getElementById('refundMethodFilter').value = 'ALL';
     if (document.getElementById('refundStatusFilter')) document.getElementById('refundStatusFilter').value = 'ALL';
+    if (document.getElementById('refundDatePreset')) document.getElementById('refundDatePreset').value = 'ALL';
+    if (document.getElementById('refundStartDate')) document.getElementById('refundStartDate').value = '';
+    if (document.getElementById('refundEndDate')) document.getElementById('refundEndDate').value = '';
+    
+    document.getElementById('refundCustomDateContainer')?.classList.add('hidden');
     renderRefundsTable(globalRefundsData);
 }
 
