@@ -3960,6 +3960,7 @@ app.get('/api/rooms/report', auth, async (req, res) => {
 // --- Bookings API ---
 
 // 1. POST ROUTE: CREATING A REFUND RECORD
+// 1. POST ROUTE: CREATING A REFUND RECORD
 app.post('/api/bookings/:id/refund', auth, async (req, res) => {
     try {
         const { id } = req.params;
@@ -3994,16 +3995,22 @@ app.post('/api/bookings/:id/refund', auth, async (req, res) => {
         // Financial snapshot prior to modification
         const previousAmountPaid = booking.amountPaid;
         const previousBalance = booking.balance;
+        const previousPaymentStatus = booking.paymentStatus;
 
-        // Deduct from paid balance & re-calculate balance due
-        booking.amountPaid = Math.max(0, booking.amountPaid - refundAmount);
-        booking.balance = Math.max(0, booking.totalDue - booking.amountPaid);
+        // Determine refund record status based on request or default
+        const refundStatus = status || 'Completed';
 
-        // Update overall booking payment status
-        if (booking.amountPaid === 0) {
-            booking.paymentStatus = 'Refunded';
-        } else {
-            booking.paymentStatus = 'Partially Refunded';
+        // Deduct from paid balance & re-calculate payment status ONLY if Completed
+        if (refundStatus === 'Completed') {
+            booking.amountPaid = Math.max(0, booking.amountPaid - refundAmount);
+            booking.balance = Math.max(0, booking.totalDue - booking.amountPaid);
+
+            // Update overall booking payment status based on new amountPaid
+            if (booking.amountPaid === 0) {
+                booking.paymentStatus = 'Refunded';
+            } else {
+                booking.paymentStatus = 'Partially Refunded';
+            }
         }
 
         // Construct new sub-document entry with refund status
@@ -4013,7 +4020,7 @@ app.post('/api/bookings/:id/refund', auth, async (req, res) => {
             method,
             reason,
             recordedBy,
-            status: status || 'Completed', // Defaults to Completed unless specified (e.g. 'Pending')
+            status: refundStatus, // 'Pending', 'Completed', 'Failed', 'Cancelled'
             date: new Date()
         };
 
@@ -4043,13 +4050,14 @@ app.post('/api/bookings/:id/refund', auth, async (req, res) => {
                     previousBalance,
                     newBalance: booking.balance,
                     totalDue: booking.totalDue,
-                    paymentStatus: booking.paymentStatus
+                    previousPaymentStatus,
+                    newPaymentStatus: booking.paymentStatus
                 }
             }
         );
 
         return res.status(200).json({
-            message: "Refund processed successfully.",
+            message: `Refund recorded with status: ${refundRecord.status}`,
             booking: {
                 id: booking.id,
                 amountPaid: booking.amountPaid,
