@@ -18013,11 +18013,6 @@ function handleRefundDatePresetChange() {
     }
 }
 
-/**
- * Filter Table Function (Search, Method, Status, and Date Ranges)
- */
-// 1. Declare the state variable at module scope level
-let globalRefundsData = [];
 
 // 2. Updated filter function matching your data array name
 function filterRefundsTable() {
