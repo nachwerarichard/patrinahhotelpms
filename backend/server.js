@@ -7363,6 +7363,7 @@ const cashJournalSchema = new mongoose.Schema({
 
 // Multi-tenant performance index for daily queries
 cashJournalSchema.index({ hotelId: 1, date: -1 });
+const CashJournal = mongoose.models.CashJournal || mongoose.model('CashJournal', cashJournalSchema);
 
 
 // ==========================================
@@ -7386,6 +7387,7 @@ const inventorySchema = new mongoose.Schema({
 
 // Ensures rapid stock lookup per item per hotel
 inventorySchema.index({ hotelId: 1, item: 1, department: 1 });
+const Inventory = mongoose.models.Inventory || mongoose.model('Inventory', inventorySchema);
 
 
 // ==========================================
@@ -7410,7 +7412,13 @@ const saleSchema = new mongoose.Schema({
         enum: ['Cash', 'Card', 'MobileMoney', 'Folio', 'M-Pesa', 'Pesapal']
     },
     synced: { type: Boolean, default: false },
-    recordedBy: { type: String, trim: true },
+    // Recommendation: Reference User object instead of plain string
+recordedBy: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true,
+    index: true 
+},
     date: { type: Date, default: Date.now, index: true }
 }, { timestamps: true });
 
@@ -7425,14 +7433,11 @@ saleSchema.pre('save', function(next) {
 
 // Fast querying for audit reports
 saleSchema.index({ hotelId: 1, date: -1, department: 1 });
-
+const Sale = mongoose.models.Sale || mongoose.model('Sale', saleSchema);
 
 // ==========================================
 // SAFE MODEL COMPILATION & EXPORTS
 // ==========================================
-const CashJournal = mongoose.models.CashJournal || mongoose.model('CashJournal', cashJournalSchema);
-const Inventory = mongoose.models.Inventory || mongoose.model('Inventory', inventorySchema);
-const Sale = mongoose.models.Sale || mongoose.model('Sale', saleSchema);
 
 module.exports = {
     CashJournal,
@@ -8258,34 +8263,53 @@ app.put('/api/sales/:id',auth,  async (req, res) => {
   }
 });
 
-app.get('/api/sales/by-date', auth,async (req, res) => {
+app.get('/api/sales/by-date', auth, async (req, res) => {
     try {
         const { hotelId, page = 1, limit = 15, department, date } = req.query;
         
         if (!hotelId) return res.status(400).json({ error: 'hotelId required' });
         if (!date) return res.status(400).json({ error: 'date parameter is required (YYYY-MM-DD)' });
 
-        const filter = { hotelId };
-        if (department) filter.department = department;
-
-        // Process the single date parameter into a 24-hour range
-        // Example: '2026-06-13' becomes 2026-06-13T00:00:00.000Z to 2026-06-13T23:59:59.999Z
-        filter.date = { 
-            $gte: new Date(`${date}T00:00:00.000Z`), 
-            $lte: new Date(`${date}T23:59:59.999Z`) 
+        const matchFilter = { 
+            hotelId: new mongoose.Types.ObjectId(hotelId),
+            date: { 
+                $gte: new Date(`${date}T00:00:00.000Z`), 
+                $lte: new Date(`${date}T23:59:59.999Z`) 
+            }
         };
 
+        if (department) matchFilter.department = department;
+
         const skip = (parseInt(page) - 1) * parseInt(limit);
-        
-        const sales = await Sale.find(filter)
-            .sort({ date: -1 })
-            .skip(skip)
-            .limit(parseInt(limit));
-            
-        const total = await Sale.countDocuments(filter);
+
+        // Run query and user sales aggregation concurrently
+        const [sales, total, userTotals] = await Promise.all([
+            Sale.find(matchFilter)
+                .sort({ date: -1 })
+                .skip(skip)
+                .limit(parseInt(limit)),
+                
+            Sale.countDocuments(matchFilter),
+
+            // Aggregate totals per individual for the day
+            Sale.aggregate([
+                { $match: matchFilter },
+                { 
+                    $group: {
+                        _id: "$recordedBy",
+                        totalSales: { $sum: { $multiply: ["$sp", "$number"] } },
+                        totalProfit: { $sum: "$profit" },
+                        itemCount: { $sum: "$number" },
+                        transactionCount: { $sum: 1 }
+                    }
+                },
+                { $sort: { totalSales: -1 } }
+            ])
+        ]);
 
         res.status(200).json({
             sales,
+            userTotals, // Total sales per staff member
             totalPages: Math.ceil(total / limit),
             totalItems: total,
             currentPage: parseInt(page)

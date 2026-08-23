@@ -9874,19 +9874,19 @@ async function fetchSales() {
 
         // Pointing to your brand new single-date endpoint
         let url = `${API_BASE_URL}/sales/by-date`; 
-        
+
         const params = new URLSearchParams();
-        
+
         // If a date exists, apply it to the parameters
         if (dateFilter) params.append('date', dateFilter); 
-        
+
         // Dynamically track active pagination variables safely
         const activeSalesPage = (typeof currentSalesPage !== 'undefined') ? currentSalesPage : 1;
         const activeSalesLimit = (typeof salesPerPage !== 'undefined') ? salesPerPage : 10;
-        
+
         params.append('page', activeSalesPage);
         params.append('limit', activeSalesLimit);
-        
+
         const hotelId = localStorage.getItem('hotelId'); 
         if (hotelId) params.append('hotelId', hotelId);
 
@@ -9897,31 +9897,41 @@ async function fetchSales() {
             updateSalesSearchButton('Search', 'fas fa-search');
             return;
         }
-
-        const result = await response.json();
         
+        const result = await response.json();
         const salesData = result.sales || result.items || result.data || [];
+        
+        // 1. EXTRACT userTotals from backend response
+        const userTotalsData = result.userTotals || [];
+        
+        // 2. DEFINE hideSensitiveInfo based on current user role
+        const hideSensitiveInfo = ['cashier', 'bar'].includes(currentUserRole);
+
         const totalPages = result.totalPages || 1;
         const currentPage = result.currentPage || 1;
 
         renderSalesTable(salesData); 
         
+        // 3. Render staff breakdown with defined variables
+        renderUserSalesSummary(userTotalsData, hideSensitiveInfo);
+
         if (typeof renderSalesPagination === 'function') {
             renderSalesPagination(currentPage, totalPages);
         }
 
         updateSalesSearchButton('Done', 'fas fa-check');
-
         setTimeout(() => {
             updateSalesSearchButton('Search', 'fas fa-search');
         }, 1500);
-        
+
     } catch (error) {
         console.error('Error fetching sales:', error);
         showMessage('Failed to fetch sales: ' + error.message, true);
         updateSalesSearchButton('Search', 'fas fa-search');
     }
 }
+
+
 function renderSalesPagination(current, totalPages) {
     const container = document.getElementById('sales-pagination');
     if (!container) return; // Exit if container not found
@@ -10214,6 +10224,43 @@ function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfi
             </div>
         `;
     }
+}
+
+// Render Staff Sales Breakdown
+function renderUserSalesSummary(userTotals, hideSensitiveInfo = false) {
+    const container = document.getElementById('user-sales-summary');
+    if (!container) return;
+
+    if (!userTotals || userTotals.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-400 italic">No individual staff records found.</div>`;
+        return;
+    }
+
+    const cardsHtml = userTotals.map(u => {
+        const staffName = u._id || 'Unassigned';
+        const salesText = `${CURRENT_CURRENCY} ${u.totalSales.toLocaleString()}`;
+        const profitText = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(u.totalProfit).toLocaleString()}`;
+
+        return `
+            <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-sm flex justify-between items-center">
+                <div>
+                    <span class="text-xs font-bold text-slate-800 block">${staffName}</span>
+                    <span class="text-[10px] text-slate-400">${u.transactionCount} transactions (${u.itemCount} items)</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs font-mono font-bold text-indigo-600 block">${salesText}</span>
+                    <span class="text-[10px] font-mono font-semibold text-emerald-600">${profitText}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <h4 class="text-xs font-bold uppercase text-slate-500 mb-2">Staff Sales Breakdown</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+            ${cardsHtml}
+        </div>
+    `;
 }
 
 async function createSale(saleData) {
