@@ -5359,6 +5359,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function renderTable(bookings) {
+    renderStaffBreakdown(bookings);
     const tbody = document.getElementById('tableBody');
     const mobileGrid = document.getElementById('reportsMobileGrid');
     const sumPaidDisplay = document.getElementById('sumPaid');
@@ -5481,6 +5482,130 @@ function renderTable(bookings) {
     
     currentData = bookings;
 }
+
+// Helper to extract staff name reliably from various backend schema formats
+function getRecordedBy(booking) {
+    return booking.recordedBy?.name || booking.createdBy?.name || booking.recordedBy || booking.createdBy || booking.staffName || 'System';
+}
+
+// Dynamically populates unique staff members into the select dropdown
+function populateStaffFilter(bookings) {
+    const staffSelect = document.getElementById('staffFilter');
+    if (!staffSelect) return;
+
+    // Save current selection if any
+    const currentValue = staffSelect.value;
+
+    // Extract unique non-empty staff names
+    const staffNames = [...new Set(bookings.map(getRecordedBy))].sort();
+
+    // Rebuild options list
+    staffSelect.innerHTML = '<option value="ALL">All Staff</option>';
+    staffNames.forEach(staff => {
+        const option = document.createElement('option');
+        option.value = staff;
+        option.textContent = staff;
+        staffSelect.appendChild(option);
+    });
+
+    // Restore selection if still valid
+    if (staffNames.includes(currentValue)) {
+        staffSelect.value = currentValue;
+    }
+}
+
+// Integrated Filter Routine
+function applyFilters() {
+    const searchTerm = document.getElementById('searchInput')?.value.toLowerCase().trim() || '';
+    const selectedStaff = document.getElementById('staffFilter')?.value || 'ALL';
+    // Add references to your other existing inputs (e.g., dateFrom, dateTo, statusFilter)
+
+    const filtered = rawBookingsData.filter(b => {
+        const staffName = getRecordedBy(b);
+        const guestName = (b.name || '').toLowerCase();
+        const roomNum = (b.room || '').toLowerCase();
+
+        // 1. Staff Filter Match
+        const matchesStaff = selectedStaff === 'ALL' || staffName === selectedStaff;
+
+        // 2. Search Term Match
+        const matchesSearch = !searchTerm || guestName.includes(searchTerm) || roomNum.includes(searchTerm) || staffName.toLowerCase().includes(searchTerm);
+
+        return matchesStaff && matchesSearch;
+    });
+
+    // Re-render table and summary indicators with filtered subset
+    renderTable(filtered);
+}
+
+// Call this function right after fetching/loading initial dataset
+function onBookingsDataLoaded(data) {
+    rawBookingsData = data;
+    populateStaffFilter(rawBookingsData);
+    applyFilters();
+}
+
+function renderStaffBreakdown(bookings) {
+    const container = document.getElementById('staffBreakdownCard');
+    const grid = document.getElementById('staffMetricsGrid');
+    const countBadge = document.getElementById('staffCountBadge');
+    
+    if (!container || !grid) return;
+
+    if (!bookings || bookings.length === 0) {
+        container.classList.add('hidden');
+        return;
+    }
+
+    // 1. Group totals by staff member
+    const summaryMap = bookings.reduce((acc, b) => {
+        const staff = getRecordedBy(b);
+        const paid = Number(b.amountPaid || 0);
+        const bal = Number(b.balance || 0);
+
+        if (!acc[staff]) {
+            acc[staff] = { count: 0, totalPaid: 0, totalBalance: 0 };
+        }
+
+        acc[staff].count += 1;
+        acc[staff].totalPaid += paid;
+        acc[staff].totalBalance += bal;
+        return acc;
+    }, {});
+
+    const staffList = Object.keys(summaryMap);
+    
+    if (countBadge) {
+        countBadge.textContent = `${staffList.length} ${staffList.length === 1 ? 'Staff Member' : 'Staff Members'}`;
+    }
+
+    // 2. Build breakdown cards HTML
+    grid.innerHTML = staffList.map(staff => {
+        const data = summaryMap[staff];
+        return `
+            <div class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-lg hover:border-indigo-300 transition-colors space-y-2">
+                <div class="flex justify-between items-center border-b border-slate-200/60 pb-2">
+                    <span class="font-bold text-gray-800 text-sm truncate" title="${staff}">${staff}</span>
+                    <span class="text-[11px] font-bold text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded-full">${data.count} ${data.count === 1 ? 'entry' : 'entries'}</span>
+                </div>
+                
+                <div class="space-y-1 text-xs">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500 font-medium">Collected:</span>
+                        <span class="text-green-700 font-bold font-mono text-sm">${CURRENT_CURRENCY} ${data.totalPaid.toLocaleString()}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500 font-medium">Balance Due:</span>
+                        <span class="text-red-600 font-bold font-mono">${CURRENT_CURRENCY} ${data.totalBalance.toLocaleString()}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.classList.remove('hidden');
+}
+
 // 3. EXPORT FUNCTIONS
 function exportToExcel() {
     if (currentData.length === 0) return showMessage("No data to export");
