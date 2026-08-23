@@ -7752,18 +7752,20 @@ app.patch('/api/kitchen/order/:id/ready', auth, async (req, res) => {
         }
 
         // 4. REAL SALES RECORDING (Saves to your 'Sale' collection)
-        const sale = await Sale.create({
-            hotelId,
-            item: order.item,
-            department: dept,
-            number: order.number,
-            bp: order.bp || 0,
-            sp: order.sp || 0,
-            date: new Date(),
-            accountId: order.accountId || null,
-            profit: ((order.sp || 0) - (order.bp || 0)) * order.number,
-            percentageprofit: order.bp && order.bp !== 0 ? (((order.sp - order.bp) / order.bp) * 100) : 0
-        });
+        // 4. REAL SALES RECORDING (Saves to your 'Sale' collection)
+const sale = await Sale.create({
+    hotelId,
+    item: order.item,
+    department: dept,
+    number: order.number,
+    bp: order.bp || 0,
+    sp: order.sp || 0,
+    date: new Date(),
+    accountId: order.accountId || null,
+    profit: ((order.sp || 0) - (order.bp || 0)) * order.number,
+    percentageprofit: order.bp && order.bp !== 0 ? (((order.sp - order.bp) / order.bp) * 100) : 0,
+    recordedBy: req.user.username || order.createdBy || 'Kitchen'
+});
 
         // 5. Update Kitchen Order Status to Ready
         order.status = 'Ready';

@@ -12179,26 +12179,31 @@ async function loadOrders() {
         // 3. LOAD ORDERS
 // 1. MUST BE OUTSIDE THE FUNCTION
 async function completeOrder(id) {
-            try {
-               const res = await authenticatedFetch(
-    `${API_BASE_URL}/kitchen/order/${id}/ready`,
-    { method: 'PATCH' }
-);
-if (res.ok) loadOrders();
-fetchActiveAccounts();
-fetchSales(); // Refresh sales data to reflect the completed order
-if (!res) return; // Redirect handled if token missing
-if (!res.ok) {
-    const error = await res.json();
-    console.error("Failed to mark order as ready:", error);
-    return;
-}
+    try {
+        const res = await authenticatedFetch(
+            `${API_BASE_URL}/kitchen/order/${id}/ready`,
+            { method: 'PATCH' }
+        );
 
-const data = await res.json();
-            } catch (err) {
-                console.error("Update Error:", err);
-            }
+        if (!res) return; // Redirected if token missing
+
+        if (!res.ok) {
+            const error = await res.json();
+            console.error("Failed to mark order as ready:", error);
+            return;
         }
+
+        const data = await res.json();
+        
+        // Refresh views upon successful response
+        if (typeof loadOrders === 'function') loadOrders();
+        if (typeof fetchActiveAccounts === 'function') fetchActiveAccounts();
+        if (typeof fetchSales === 'function') fetchSales();
+
+    } catch (err) {
+        console.error("Update Error:", err);
+    }
+}
 
 async function markAsPreparing(orderId) {
     try {
