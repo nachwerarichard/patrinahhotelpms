@@ -1464,20 +1464,30 @@ const bookingSchema = new mongoose.Schema({
     guestEmail: { type: String },
     nationalIdNo: { type: String },
     synced: { type: Boolean, default: false },
-
 refunds: [{
-    refundId: { type: String, required: true }, // e.g., 'RFD-1724312860000'
-    amount: { type: Number, required: true },
-    method: { type: String, required: true },
-    reason: { type: String, required: true },
-    recordedBy: { type: String, required: true },
-    status: { 
-        type: String, 
-        enum: ['Pending', 'Completed', 'Failed', 'Cancelled'], 
-        default: 'Completed' 
-    },
-    date: { type: Date, default: Date.now }
-}],
+        refundId: { type: String, required: true },
+        amount: { type: Number, required: true },
+        
+        // Method Enum defined directly in schema
+        method: { 
+            type: String, 
+            required: true,
+            enum: ['Cash', 'Mobile Money', 'Bank Transfer', 'Credit Card', 'Other']
+        },
+        
+        reason: { type: String, required: true },
+        recordedBy: { type: String, required: true },
+        
+        // Status Enum defined directly in schema
+        status: { 
+            type: String, 
+            required: true,
+            enum: ['Pending', 'Completed', 'Failed', 'Cancelled'], 
+            default: 'Completed' 
+        },
+        
+        date: { type: Date, default: Date.now }
+    }],
 // Add inside bookingSchema
 recordedBy: { type: String, required: true, index: true }, // Username/ID who created the booking
 updatedBy: { type: String, default: null },               // Username/ID who last modified it
@@ -3974,25 +3984,19 @@ app.get('/api/rooms/report', auth, async (req, res) => {
     }
 });
 // --- Bookings API ---
-
-// 1. POST ROUTE: CREATING A REFUND RECORD
-// 1. POST ROUTE: CREATING A REFUND RECORD
 app.post('/api/bookings/:id/refund', auth, async (req, res) => {
     try {
         const { id } = req.params;
         const { amount, method, reason, status } = req.body;
         
-        // Extract multi-tenant metadata from body, auth user, or header
         const hotelId = req.body.hotelId || req.headers['x-hotel-id'] || req.user?.hotelId;
         const recordedBy = req.body.recordedBy || req.user?.name || req.user?.username || 'system';
 
-        // Validation
         const refundAmount = Number(amount);
         if (!refundAmount || refundAmount <= 0) {
             return res.status(400).json({ message: "Invalid refund amount." });
         }
 
-        // Locate booking by custom 'id' (e.g. BKG001) or MongoDB _id
         const booking = await Booking.findOne({ 
             $or: [{ id: id }, { _id: mongoose.Types.ObjectId.isValid(id) ? id : null }],
             hotelId 
@@ -4008,44 +4012,34 @@ app.post('/api/bookings/:id/refund', auth, async (req, res) => {
             });
         }
 
-        // Financial snapshot prior to modification
         const previousAmountPaid = booking.amountPaid;
         const previousBalance = booking.balance;
         const previousPaymentStatus = booking.paymentStatus;
 
-        // Determine refund record status based on request or default
         const refundStatus = status || 'Completed';
 
-        // Deduct from paid balance & re-calculate payment status ONLY if Completed
+        // Deduct paid amount if refund is finalized
         if (refundStatus === 'Completed') {
             booking.amountPaid = Math.max(0, booking.amountPaid - refundAmount);
             booking.balance = Math.max(0, booking.totalDue - booking.amountPaid);
-
-            // Update overall booking payment status based on new amountPaid
-            if (booking.amountPaid === 0) {
-                booking.paymentStatus = 'Paid';
-            } else {
-                booking.paymentStatus = 'Paid';
-            }
         }
 
-        // Construct new sub-document entry with refund status
         const refundRecord = {
             refundId: `RFD-${Date.now()}`,
             amount: refundAmount,
-            method,
+            method,    // Validated against method enum on save
             reason,
             recordedBy,
-            status: refundStatus, // 'Pending', 'Completed', 'Failed', 'Cancelled'
+            status: refundStatus, // Validated against status enum on save
             date: new Date()
         };
 
         booking.refunds.push(refundRecord);
         booking.synced = false;
 
+        // Mongoose will automatically validate method and status against enums here
         await booking.save();
 
-        // Audit Trail Logging
         await addAuditLog(
             'ISSUE_REFUND',
             recordedBy,
@@ -4085,16 +4079,21 @@ app.post('/api/bookings/:id/refund', auth, async (req, res) => {
 
     } catch (error) {
         console.error("Refund Route Error:", error);
+        
+        // Handle Mongoose enum validation errors explicitly
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ message: "Invalid payment method or refund status provided.", error: error.message });
+        }
+
         return res.status(500).json({ message: "Server error while processing refund.", error: error.message });
     }
 });
-
 
 // 2. GET ROUTE: RETRIEVING & FILTERING REFUNDS
 app.get('/api/refunds', auth, async (req, res) => {
     try {
         const rawHotelId = req.query.hotelId || req.headers['x-hotel-id'] || req.user?.hotelId;
-        const { status, method, search } = req.query;
+        const { status, method, search, datePreset, startDate, endDate } = req.query;
 
         // Base query for bookings that contain refunds
         const query = {
@@ -4131,29 +4130,69 @@ app.get('/api/refunds', auth, async (req, res) => {
                         reason: rf.reason || 'No reason provided',
                         recordedBy: rf.recordedBy || 'system',
                         date: rf.date || new Date(),
-                        status: rf.status || 'Completed',             // Sub-document Refund Status
-                        bookingPaymentStatus: booking.paymentStatus, // Parent Booking Payment Status
+                        status: rf.status || 'Completed',
+                        bookingPaymentStatus: booking.paymentStatus,
                         hotelId: booking.hotelId
                     });
                 });
             }
         });
 
-        // Filter by Sub-document Refund Status if query provided (e.g. ?status=Completed)
+        // --- FILTER BY REFUND STATUS ---
         if (status && status !== 'ALL') {
             allRefunds = allRefunds.filter(rf => 
                 rf.status.toLowerCase() === status.toLowerCase()
             );
         }
 
-        // Filter by Payment Method if provided
+        // --- FILTER BY PAYMENT METHOD ---
         if (method && method !== 'ALL') {
             allRefunds = allRefunds.filter(rf => 
                 rf.method.toLowerCase() === method.toLowerCase()
             );
         }
 
-        // Search Filter (Refund ID, Booking ID, Guest Name)
+        // --- FILTER BY DATE PRESETS / CUSTOM RANGE ---
+        if (datePreset && datePreset !== 'ALL') {
+            const now = new Date();
+            let start = new Date();
+            let end = new Date();
+
+            if (datePreset === 'TODAY') {
+                start.setHours(0, 0, 0, 0);
+                end.setHours(23, 59, 59, 999);
+            } else if (datePreset === 'YESTERDAY') {
+                start.setDate(now.getDate() - 1);
+                start.setHours(0, 0, 0, 0);
+                end.setDate(now.getDate() - 1);
+                end.setHours(23, 59, 59, 999);
+            } else if (datePreset === 'THIS_WEEK') {
+                const day = now.getDay(); 
+                const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1);
+                start = new Date(now.setDate(diffToMonday));
+                start.setHours(0, 0, 0, 0);
+                end = new Date();
+                end.setHours(23, 59, 59, 999);
+            } else if (datePreset === 'THIS_MONTH') {
+                start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+                end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            } else if (datePreset === 'CUSTOM') {
+                if (startDate) start = new Date(startDate);
+                if (endDate) {
+                    end = new Date(endDate);
+                    end.setHours(23, 59, 59, 999);
+                }
+            }
+
+            if (datePreset !== 'CUSTOM' || (startDate || endDate)) {
+                allRefunds = allRefunds.filter(rf => {
+                    const itemDate = new Date(rf.date);
+                    return itemDate >= start && itemDate <= end;
+                });
+            }
+        }
+
+        // --- SEARCH FILTER ---
         if (search) {
             const term = search.toLowerCase();
             allRefunds = allRefunds.filter(rf => 

@@ -5064,11 +5064,14 @@ Manage payment providers used for guest payments.            </p>
 
             <div>
                 <label class="text-xs font-semibold text-gray-600 block mb-1">Refund Channel / Route</label>
+                <!-- Values strictly map to Mongoose Enum -->
                 <select id="refundMethod" class="border p-2 w-full rounded bg-white focus:ring-2 focus:ring-rose-500 outline-none text-xs">
                     <option value="">Select payout method</option>
-                    <option value="Cash Payout">Cash (From Till/Drawer)</option>
-                    <option value="Mobile Money Reverse">Mobile Money Transfer</option>
+                    <option value="Cash">Cash (From Till/Drawer)</option>
+                    <option value="Mobile Money">Mobile Money Transfer</option>
                     <option value="Bank Transfer">Bank Wire Transfer</option>
+                    <option value="Credit Card">Credit Card Reversal</option>
+                    <option value="Other">Other Channel</option>
                 </select>
             </div>
 

@@ -18013,11 +18013,13 @@ let globalRefundsData = [];
 async function fetchRefunds(hotelId = null) {
     try {
         const activeHotelId = hotelId || localStorage.getItem('hotelId');
-        
-        const endpoint = activeHotelId && activeHotelId !== 'global' 
-            ? `/refunds?hotelId=${activeHotelId}` 
-            : '/refunds';
+        const params = new URLSearchParams();
 
+        if (activeHotelId && activeHotelId !== 'global') {
+            params.append('hotelId', activeHotelId);
+        }
+
+        const endpoint = `/refunds${params.toString() ? '?' + params.toString() : ''}`;
         const response = await authenticatedFetch(endpoint);
 
         if (!response) {
@@ -18033,8 +18035,7 @@ async function fetchRefunds(hotelId = null) {
 
         if (data.success) {
             globalRefundsData = data.refunds || [];
-            updateRefundsKPIs(globalRefundsData);
-            filterRefundsTable(); // Applies active filter presets
+            filterRefundsTable(); // Computes KPIs & filters records
         } else {
             console.error('Failed to load refunds:', data.message);
             showRefundsError(data.message || 'Failed to retrieve refunds.');
@@ -18042,54 +18043,135 @@ async function fetchRefunds(hotelId = null) {
 
     } catch (err) {
         if (err.name === 'AbortError') return;
-
         console.error('Error requesting refunds:', err);
         showRefundsError('Error loading refunds data.');
     }
 }
 
 /**
- * Helper to display error state inside the refunds table UI
+ * Filter Table & Recalculate KPIs
  */
-function showRefundsError(message) {
-    const tbody = document.getElementById('refundsTableBody');
-    if (tbody) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="8" class="py-8 text-center text-rose-500 font-medium">
-                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> ${message}
-                </td>
-            </tr>`;
-    }
-}
+function filterRefundsTable() {
+    const searchInput = document.getElementById('refundSearchInput');
+    const statusSelect = document.getElementById('refundStatusFilter');
+    const methodSelect = document.getElementById('refundMethodFilter');
+    const presetSelect = document.getElementById('refundDatePreset');
+    const startDateInput = document.getElementById('refundStartDate');
+    const endDateInput = document.getElementById('refundEndDate');
 
-/**
- * Update Top Stats Cards
- */
-function updateRefundsKPIs(refunds) {
-    const totalAmount = refunds.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    
+    const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const statusVal = statusSelect ? statusSelect.value : 'ALL';
+    const methodVal = methodSelect ? methodSelect.value : 'ALL';
+    const presetVal = presetSelect ? presetSelect.value : 'ALL';
+
+    const dataset = Array.isArray(globalRefundsData) ? globalRefundsData : [];
+
+    // Date range calculations
+    let startDate = null;
+    let endDate = null;
     const now = new Date();
-    const thisMonthRefunds = refunds.filter(item => {
-        const itemDate = new Date(item.date);
-        return itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
+
+    if (presetVal === 'TODAY') {
+        startDate = new Date(now.setHours(0, 0, 0, 0));
+        endDate = new Date(now.setHours(23, 59, 59, 999));
+    } else if (presetVal === 'YESTERDAY') {
+        const yest = new Date();
+        yest.setDate(yest.getDate() - 1);
+        startDate = new Date(yest.setHours(0, 0, 0, 0));
+        endDate = new Date(yest.setHours(23, 59, 59, 999));
+    } else if (presetVal === 'THIS_WEEK') {
+        const day = now.getDay();
+        const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1);
+        startDate = new Date(now.setDate(diffToMonday));
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date();
+        endDate.setHours(23, 59, 59, 999);
+    } else if (presetVal === 'THIS_MONTH') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (presetVal === 'CUSTOM') {
+        if (startDateInput?.value) startDate = new Date(startDateInput.value);
+        if (endDateInput?.value) {
+            endDate = new Date(endDateInput.value);
+            endDate.setHours(23, 59, 59, 999);
+        }
+    }
+
+    const filteredList = dataset.filter(item => {
+        const refundRef = String(item.refundId || item._id || '').toLowerCase();
+        const guestName = String(item.guestName || '').toLowerCase();
+        const bookingRef = String(item.bookingId || '').toLowerCase();
+
+        const matchesSearch = !searchVal || 
+            refundRef.includes(searchVal) || 
+            guestName.includes(searchVal) ||
+            bookingRef.includes(searchVal);
+
+        const itemStatus = item.status || 'Completed';
+        const itemMethod = item.method || '';
+
+        const matchesStatus = (statusVal === 'ALL') || (itemStatus.toLowerCase() === statusVal.toLowerCase());
+        const matchesMethod = (methodVal === 'ALL') || (itemMethod.toLowerCase() === methodVal.toLowerCase());
+
+        let matchesDate = true;
+        if (startDate || endDate) {
+            const itemDate = new Date(item.date);
+            if (startDate && itemDate < startDate) matchesDate = false;
+            if (endDate && itemDate > endDate) matchesDate = false;
+        }
+
+        return matchesSearch && matchesStatus && matchesMethod && matchesDate;
     });
 
-    const pendingRefunds = refunds.filter(item => 
-        (item.paymentStatus || '').toLowerCase() === 'pending'
-    );
-
-    const elTotal = document.getElementById('kpiTotalRefunded');
-    const elMonth = document.getElementById('kpiMonthRefunds');
-    const elPending = document.getElementById('kpiPendingRefunds');
-
-    if (elTotal) elTotal.innerText = `UGX ${totalAmount.toLocaleString()}`;
-    if (elMonth) elMonth.innerText = thisMonthRefunds.length.toString();
-    if (elPending) elPending.innerText = pendingRefunds.length.toString();
+    updateRefundsKPIs(filteredList);
+    renderRefundsTable(filteredList);
 }
 
 /**
- * Render Table Rows
+ * Consolidated KPI Aggregator
+ */
+function updateRefundsKPIs(refunds) {
+    let totalRefunded = 0;
+    let pendingCount = 0;
+    let thisMonthCount = 0;
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    refunds.forEach(item => {
+        const amount = Number(item.amount || 0);
+        const status = (item.status || 'completed').toLowerCase();
+        const dateObj = new Date(item.date);
+
+        if (status === 'completed' || status === 'processed') {
+            totalRefunded += amount;
+        }
+
+        if (status === 'pending' || status === 'pending approval') {
+            pendingCount++;
+        }
+
+        if (
+            (status === 'completed' || status === 'processed') &&
+            dateObj.getFullYear() === currentYear &&
+            dateObj.getMonth() === currentMonth
+        ) {
+            thisMonthCount++;
+        }
+    });
+
+    const elTotal = document.getElementById('kpiTotalRefunded');
+    const elPending = document.getElementById('kpiPendingRefunds');
+    const elMonth = document.getElementById('kpiMonthRefunds');
+
+    if (elTotal) elTotal.innerText = `UGX ${totalRefunded.toLocaleString()}`;
+    if (elPending) elPending.innerText = pendingCount.toString();
+    if (elMonth) elMonth.innerText = thisMonthCount.toString();
+}
+
+/**
+ * Render Table Rows with correct property references
  */
 function renderRefundsTable(refundList = []) {
     const tbody = document.getElementById('refundsTableBody');
@@ -18112,6 +18194,10 @@ function renderRefundsTable(refundList = []) {
         const dateObj = new Date(item.date);
         const formattedDate = isNaN(dateObj) ? 'N/A' : dateObj.toLocaleDateString();
         const formattedTime = isNaN(dateObj) ? '' : dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const statusClass = (item.status || '').toLowerCase() === 'pending' 
+            ? 'bg-amber-100 text-amber-800' 
+            : 'bg-emerald-100 text-emerald-800';
 
         return `
             <tr class="hover:bg-slate-50/80 transition-colors">
@@ -18141,8 +18227,8 @@ function renderRefundsTable(refundList = []) {
                     <span class="text-[10px] text-slate-400 uppercase">Authorized</span>
                 </td>
                 <td class="py-3 px-4">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
-                        ● ${item.paymentStatus || 'Processed'}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusClass}">
+                        ● ${item.status || 'Completed'}
                     </span>
                 </td>
                 <td class="py-3 px-4 text-right">
@@ -18158,133 +18244,5 @@ function renderRefundsTable(refundList = []) {
         paginationInfo.innerText = `Showing ${refundList.length} of ${refundList.length} entries`;
     }
 }
-
-/**
- * Handle Preset Selection Toggle
- */
-function handleRefundDatePresetChange() {
-    const preset = document.getElementById('refundDatePreset')?.value;
-    const customContainer = document.getElementById('refundCustomDateContainer');
-
-    if (preset === 'CUSTOM') {
-        customContainer?.classList.remove('hidden');
-    } else {
-        customContainer?.classList.add('hidden');
-        if (document.getElementById('refundStartDate')) document.getElementById('refundStartDate').value = '';
-        if (document.getElementById('refundEndDate')) document.getElementById('refundEndDate').value = '';
-        filterRefundsTable();
-    }
-}
-
-
-// 2. Updated filter function matching your data array name
-function filterRefundsTable() {
-    const searchInput = document.getElementById('refundSearchInput');
-    const statusSelect = document.getElementById('refundStatusFilter');
-    const methodSelect = document.getElementById('refundMethodFilter');
-
-    const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
-    const statusVal = statusSelect ? statusSelect.value : 'ALL';
-    const methodVal = methodSelect ? methodSelect.value : 'ALL';
-    
-    // Ensure array exists before filtering
-    const dataset = Array.isArray(globalRefundsData) ? globalRefundsData : [];
-
-    const filteredList = dataset.filter(item => {
-        // Safe check for string properties
-        const refundRef = String(item.id || item.refundRef || item._id || '').toLowerCase();
-        const guestName = String(item.guestName || item.guest || '').toLowerCase();
-        const bookingRef = String(item.bookingRef || item.bookingId || '').toLowerCase();
-
-        const matchesSearch = !searchVal || 
-            refundRef.includes(searchVal) || 
-            guestName.includes(searchVal) ||
-            bookingRef.includes(searchVal);
-
-        const itemStatus = item.status || '';
-        const itemMethod = item.method || item.paymentMethod || '';
-
-        const matchesStatus = (statusVal === 'ALL') || (itemStatus.toLowerCase() === statusVal.toLowerCase());
-        const matchesMethod = (methodVal === 'ALL') || (itemMethod.toLowerCase() === methodVal.toLowerCase());
-
-        return matchesSearch && matchesStatus && matchesMethod;
-    });
-
-    // Recalculate and update cards dynamically from filtered output
-    updateRefundsKPIs(filteredList);
-
-    // Render the filtered records to your HTML table
-    renderRefundsTable(filteredList);
-}
-
-/**
- * Reset Filters
- */
-function resetRefundFilters() {
-    if (document.getElementById('refundSearchInput')) document.getElementById('refundSearchInput').value = '';
-    if (document.getElementById('refundMethodFilter')) document.getElementById('refundMethodFilter').value = 'ALL';
-    if (document.getElementById('refundStatusFilter')) document.getElementById('refundStatusFilter').value = 'ALL';
-    if (document.getElementById('refundDatePreset')) document.getElementById('refundDatePreset').value = 'ALL';
-    if (document.getElementById('refundStartDate')) document.getElementById('refundStartDate').value = '';
-    if (document.getElementById('refundEndDate')) document.getElementById('refundEndDate').value = '';
-    
-    document.getElementById('refundCustomDateContainer')?.classList.add('hidden');
-    renderRefundsTable(globalRefundsData);
-}
-
-
-
-/**
- * Call this inside filterRefundsTable() after computing filtered list
- * @param {Array} filteredData - Array of filtered refund objects
- */
-function updateRefundKPIs(filteredData) {
-    let totalRefunded = 0;
-    let pendingCount = 0;
-    let thisMonthCount = 0;
-
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
-
-    filteredData.forEach(item => {
-        const amount = parseFloat(item.amount) || 0;
-        const status = (item.status || '').toLowerCase();
-        const dateObj = new Date(item.date);
-
-        // 1. Total Refunded (Completed / Processed payouts)
-        if (status === 'completed' || status === 'processed') {
-            totalRefunded += amount;
-        }
-
-        // 2. Pending Approval count
-        if (status === 'pending' || status === 'pending approval') {
-            pendingCount++;
-        }
-
-        // 3. Processed This Month count
-        if (
-            (status === 'completed' || status === 'processed') &&
-            dateObj.getFullYear() === currentYear &&
-            dateObj.getMonth() === currentMonth
-        ) {
-            thisMonthCount++;
-        }
-    });
-
-    // Update DOM Elements
-    const kpiTotal = document.getElementById('kpiTotalRefunded');
-    const kpiPending = document.getElementById('kpiPendingRefunds');
-    const kpiMonth = document.getElementById('kpiMonthRefunds');
-
-    if (kpiTotal) kpiTotal.textContent = `UGX ${totalRefunded.toLocaleString()}`;
-    if (kpiPending) kpiPending.textContent = pendingCount;
-    if (kpiMonth) kpiMonth.textContent = thisMonthCount;
-}
-
-// Auto-fetch on DOM Ready
-document.addEventListener('DOMContentLoaded', () => {
-    fetchRefunds();
-});
 
 
