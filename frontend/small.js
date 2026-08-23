@@ -10004,7 +10004,7 @@ function renderSalesTable(sales, grandSalesTotal = 0, grandProfitTotal = 0) {
 
     if (sales.length === 0) {
         const emptyStateHtml = `<div class="py-10 text-center text-slate-400 font-medium text-sm italic">No sales records found for this date.</div>`;
-        if (tbody) tbody.innerHTML = `<tr><td colspan="9">${emptyStateHtml}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="10">${emptyStateHtml}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = emptyStateHtml;
         return;
     }
@@ -10042,6 +10042,7 @@ function renderSalesTable(sales, grandSalesTotal = 0, grandProfitTotal = 0) {
         }
 
         const formattedDate = new Date(sale.date).toLocaleDateString();
+        const staffName = sale.recordedBy || sale.createdBy || 'Staff';
 
         // Desktop Row
         if (tbody) {
@@ -10056,6 +10057,7 @@ function renderSalesTable(sales, grandSalesTotal = 0, grandProfitTotal = 0) {
                 <td class="px-6 py-4 font-mono text-indigo-600 font-semibold">${spDisplay}</td>
                 <td class="px-6 py-4 font-mono ${profitClass}">${profitDisplay}</td>
                 <td class="px-6 py-4 font-mono text-xs text-slate-500">${percentageDisplay}</td>
+                <td class="px-6 py-4 text-xs font-bold text-slate-700">${staffName}</td>
                 <td class="px-6 py-4 text-xs whitespace-nowrap text-slate-400">${formattedDate}</td>
                 <td class="px-6 py-4 text-right whitespace-nowrap actions-cell"></td>
             `;
@@ -10073,7 +10075,12 @@ function renderSalesTable(sales, grandSalesTotal = 0, grandProfitTotal = 0) {
             card.innerHTML = `
                 <div class="flex justify-between items-start">
                     <div>
-                        <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase tracking-wider mb-1 inline-block">${dept}</span>
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase tracking-wider inline-block">${dept}</span>
+                            <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[10px] font-bold uppercase tracking-wider inline-block">
+                                <i class="fas fa-user text-[9px] mr-1"></i>${staffName}
+                            </span>
+                        </div>
                         <h4 class="text-base font-bold text-slate-900">${sale.item}</h4>
                         <p class="text-[11px] text-slate-400 font-medium mt-0.5"><i class="far fa-calendar mr-1"></i> ${formattedDate}</p>
                     </div>
@@ -10110,7 +10117,6 @@ function renderSalesTable(sales, grandSalesTotal = 0, grandProfitTotal = 0) {
         }
     });
 
-    // Pass the actual daily totals into renderSalesSummary
     if (typeof renderSalesSummary === 'function') {
         renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfitTotal, hideSensitiveInfo);
     }

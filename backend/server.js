@@ -8276,7 +8276,7 @@ app.put('/api/sales/:id',auth,  async (req, res) => {
 app.get('/api/sales/by-date', auth, async (req, res) => {
     try {
         const { hotelId, page = 1, limit = 15, department, date } = req.query;
-        
+
         if (!hotelId) {
             return res.status(400).json({ error: 'hotelId is required' });
         }
@@ -8292,7 +8292,7 @@ app.get('/api/sales/by-date', auth, async (req, res) => {
             ? { $in: [new mongoose.Types.ObjectId(hotelId), String(hotelId)] }
             : String(hotelId);
 
-        const matchFilter = { 
+        const matchFilter = {
             hotelId: hotelIdFilter,
             date: { $gte: startDate, $lte: endDate }
         };
@@ -8302,27 +8302,39 @@ app.get('/api/sales/by-date', auth, async (req, res) => {
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const [sales, total, userTotals] = await Promise.all([
+            // 1. Fetch paginated sales list
             Sale.find(matchFilter)
                 .sort({ date: -1 })
                 .skip(skip)
                 .limit(parseInt(limit)),
-                
+
+            // 2. Count matching sales for pagination
             Sale.countDocuments(matchFilter),
 
+            // 3. Aggregate totals per user across ALL pages for the day
             Sale.aggregate([
                 { $match: matchFilter },
-                { 
+                {
                     $group: {
-                        _id: "$recordedBy",
-                        totalSales: { $sum: { $multiply: ["$sp", "$number"] } },
-                        totalProfit: { 
+                        // Fallback order: recordedBy -> createdBy -> "Staff"
+                        _id: { $ifNull: ["$recordedBy", { $ifNull: ["$createdBy", "Staff"] }] },
+                        
+                        // Use stored 'amount' first, fallback to (sp * number)
+                        totalSales: { 
                             $sum: { 
+                                $ifNull: ["$amount", { $multiply: ["$sp", "$number"] }] 
+                            } 
+                        },
+
+                        // Profit calculation fallback handling
+                        totalProfit: {
+                            $sum: {
                                 $cond: [
                                     { $ifNull: ["$profit", false] },
                                     "$profit",
                                     { $multiply: [{ $subtract: ["$sp", "$bp"] }, "$number"] }
                                 ]
-                            } 
+                            }
                         },
                         itemCount: { $sum: "$number" },
                         transactionCount: { $sum: 1 }
@@ -8335,10 +8347,11 @@ app.get('/api/sales/by-date', auth, async (req, res) => {
         res.status(200).json({
             sales,
             userTotals,
-            totalPages: Math.ceil(total / limit) || 1,
+            totalPages: Math.ceil(total / parseInt(limit)) || 1,
             totalItems: total,
             currentPage: parseInt(page)
         });
+
     } catch (error) {
         console.error('API Error:', error);
         res.status(500).json({ error: error.message });
