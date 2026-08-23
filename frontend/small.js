@@ -10088,164 +10088,126 @@ function renderSalesTable(sales, grandSalesTotal = 0, grandProfitTotal = 0) {
     }
 }
 
-// Helper utility targeting modular actions rendering matrix
 function injectActionElements(container, canEditOrDelete, sale, isMobileVariant = false) {
     if (!container) return;
 
+    // Reset container safely
+    container.innerHTML = '';
+
     if (canEditOrDelete) {
         const btnGroup = document.createElement('div');
-        btnGroup.className = "flex gap-1.5 justify-end";
+        btnGroup.className = "flex gap-1.5 justify-end items-center";
 
+        // Edit Action Button
         const editBtn = document.createElement('button');
-        editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+        editBtn.type = 'button';
+        editBtn.innerHTML = '<i class="fas fa-pen-to-square"></i>';
         editBtn.title = "Edit Sale Record";
         editBtn.className = isMobileVariant 
-            ? 'p-2 text-indigo-600 bg-indigo-50 active:bg-indigo-100 rounded-lg text-xs transition-colors'
+            ? 'p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 rounded-lg text-xs transition-colors'
             : 'p-1.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors';
-        editBtn.addEventListener('click', () => populateSaleForm(sale));
+            
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (typeof populateSaleForm === 'function') {
+                populateSaleForm(sale);
+            }
+        });
 
+        // Delete Action Button
         const delBtn = document.createElement('button');
+        delBtn.type = 'button';
         delBtn.innerHTML = '<i class="fas fa-trash-can"></i>';
         delBtn.title = "Delete Sale Record";
         delBtn.className = isMobileVariant 
-            ? 'p-2 text-rose-600 bg-rose-50 active:bg-rose-100 rounded-lg text-xs transition-colors'
+            ? 'p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 rounded-lg text-xs transition-colors'
             : 'p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors';
-        delBtn.addEventListener('click', () => deleteSale(sale._id));
+            
+        delBtn.dataset.saleId = sale._id || sale.id;
+        delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const saleId = e.currentTarget.dataset.saleId;
+            if (typeof deleteSale === 'function') {
+                deleteSale(saleId);
+            }
+        });
 
         btnGroup.appendChild(editBtn);
         btnGroup.appendChild(delBtn);
         container.appendChild(btnGroup);
     } else {
-        container.innerHTML = `<span class="text-xs text-slate-400 tracking-wide font-medium ${isMobileVariant ? 'bg-slate-100 px-2 py-1 rounded text-[10px]' : 'italic'}">View Only</span>`;
+        const badge = document.createElement('span');
+        badge.className = isMobileVariant 
+            ? 'bg-slate-100 px-2 py-1 rounded text-[10px] text-slate-400 tracking-wide font-medium'
+            : 'text-xs text-slate-400 tracking-wide font-medium italic';
+        badge.textContent = 'View Only';
+        container.appendChild(badge);
     }
 }
+function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfitTotal, hideSensitiveInfo) {
+    if (!tbody) return;
 
-function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfitTotal, hideSensitiveInfo = false) {
-    // --- 1. DESKTOP VIEWPORT PROCESSING (TABLE ROWS) ---
-    if (tbody) {
-        // Clean up previously appended summary rows
-        const existingSummaries = tbody.querySelectorAll('.summary-row');
-        existingSummaries.forEach(el => el.remove());
+    const summaryTr = document.createElement('tr');
+    summaryTr.className = "bg-slate-100/80 font-bold border-t-2 border-slate-300 text-slate-800 text-sm";
 
-        // Spacer Row across all 9 columns
-        const spacer = tbody.insertRow();
-        spacer.className = "summary-row border-none";
-        spacer.innerHTML = `<td colspan="9" class="h-4 bg-white"></td>`;
+    const profitDisplay = hideSensitiveInfo ? '***' : Math.round(grandProfitTotal).toLocaleString();
+    const profitClass = (grandProfitTotal >= 0) ? 'text-emerald-700' : 'text-rose-700';
 
-        // Departmental Sub-totals Loop
-        for (const [dept, metrics] of Object.entries(departmentTotals)) {
-            const row = tbody.insertRow();
-            row.className = "summary-row bg-slate-100/90 text-slate-800 font-bold border-t border-b border-slate-300";
-            
-            const profitDisplay = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(metrics.profit).toLocaleString()}`;
+    summaryTr.innerHTML = `
+        <td class="px-6 py-4 text-slate-900 uppercase tracking-wider text-xs">Total Day Sales</td>
+        <td class="px-6 py-4">--</td>
+        <td class="px-6 py-4">--</td>
+        <td class="px-6 py-4 font-mono text-xs text-slate-500">${hideSensitiveInfo ? '***' : '--'}</td>
+        <td class="px-6 py-4 font-mono text-indigo-700 text-base">${grandSalesTotal.toLocaleString()}</td>
+        <td class="px-6 py-4 font-mono text-base ${profitClass}">${profitDisplay}</td>
+        <td class="px-6 py-4">--</td>
+        <td class="px-6 py-4">--</td>
+        <td class="px-6 py-4"></td>
+    `;
 
-            row.innerHTML = `
-                <td colspan="4" class="text-right py-3 px-6 text-xs uppercase tracking-wider font-extrabold text-slate-700">${dept} Subtotal:</td>
-                <td class="px-6 py-3 font-mono font-bold text-indigo-700 whitespace-nowrap">${CURRENT_CURRENCY} ${metrics.sales.toLocaleString()}</td>
-                <td class="px-6 py-3 font-mono font-bold text-emerald-700 whitespace-nowrap">${profitDisplay}</td>
-                <td colspan="3"></td>
-            `;
-        }
-
-        // --- HIGH-CONTRAST GRAND TOTAL ROW ---
-        const grandRow = tbody.insertRow();
-        grandRow.className = "summary-row text-white font-extrabold shadow-md";
-        // Applying inline style to guarantee background priority over parent CSS overrides
-        grandRow.style.backgroundColor = "#1e293b"; // Solid Slate 800
-
-        const grandProfitDisplay = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(grandProfitTotal).toLocaleString()}`;
-
-        grandRow.innerHTML = `
-            <td colspan="4" class="text-right py-3.5 px-6 text-xs uppercase tracking-widest font-black text-slate-100" style="color: #f8fafc !important;">GRAND TOTAL:</td>
-            <td class="px-6 py-3.5 text-sm font-mono font-black whitespace-nowrap" style="color: #818cf8 !important;">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</td>
-            <td class="px-6 py-3.5 text-sm font-mono font-black whitespace-nowrap" style="color: #34d399 !important;">${grandProfitDisplay}</td>
-            <td colspan="3" style="background-color: #1e293b;"></td>
-        `;
-    }
-
-    // --- 2. MOBILE VIEWPORT PROCESSING ---
-    const summaryContainer = document.getElementById('sales-summary');
-    if (summaryContainer) {
-        const mobileDeptRowsHtml = Object.entries(departmentTotals)
-            .map(([dept, metrics]) => {
-                const profitText = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(metrics.profit).toLocaleString()}`;
-                return `
-                    <div class="py-2 border-b border-amber-200/60 last:border-0 text-xs space-y-1">
-                        <div class="flex justify-between items-center">
-                            <span class="text-slate-700 font-semibold">${dept} Sales</span>
-                            <span class="font-mono font-bold text-slate-900">${CURRENT_CURRENCY} ${metrics.sales.toLocaleString()}</span>
-                        </div>
-                        <div class="flex justify-between items-center text-[11px]">
-                            <span class="text-slate-600 font-semibold">${dept} Profit</span>
-                            <span class="font-mono font-bold text-emerald-700">${profitText}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-        const totalProfitText = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(grandProfitTotal).toLocaleString()}`;
-
-        summaryContainer.innerHTML = `
-            <div class="space-y-3">
-                <div class="flex items-center gap-2 pb-2 border-b border-amber-200 text-amber-900">
-                    <i class="fa-solid fa-calculator text-base"></i>
-                    <h4 class="font-bold uppercase tracking-wider text-xs">Financial Overview Summary</h4>
-                </div>
-                
-                <div class="divide-y divide-amber-200/30">
-                    ${mobileDeptRowsHtml || '<div class="text-xs text-slate-500 italic py-1">No departmental records calculated.</div>'}
-                </div>
-
-                <div class="mt-3 p-3 bg-slate-900 text-white rounded-xl space-y-2 shadow-md">
-                    <div class="flex justify-between items-center">
-                        <span class="text-[10px] uppercase tracking-widest font-black text-slate-200">Grand Total Sales</span>
-                        <span class="text-base font-mono font-black text-indigo-300">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</span>
-                    </div>
-                    <div class="flex justify-between items-center pt-2 border-t border-slate-700">
-                        <span class="text-[10px] uppercase tracking-widest font-black text-slate-200">Grand Total Profit</span>
-                        <span class="text-base font-mono font-black text-emerald-400">${totalProfitText}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
+    tbody.appendChild(summaryTr);
 }
-
-// Render Staff Sales Breakdown
-function renderUserSalesSummary(userTotals, hideSensitiveInfo = false) {
-    const container = document.getElementById('user-sales-summary');
+function renderUserSalesSummary(userTotalsData, hideSensitiveInfo) {
+    const container = document.getElementById('user-sales-summary-grid');
     if (!container) return;
 
-    if (!userTotals || userTotals.length === 0) {
-        container.innerHTML = `<div class="text-xs text-slate-400 italic">No individual staff records found.</div>`;
+    container.innerHTML = '';
+
+    if (!userTotalsData || userTotalsData.length === 0) {
+        container.innerHTML = `<div class="col-span-full py-4 text-center text-xs text-slate-400 italic">No staff activity logged for this date.</div>`;
         return;
     }
 
-    const cardsHtml = userTotals.map(u => {
-        const staffName = u._id || 'Unassigned';
-        const salesText = `${CURRENT_CURRENCY} ${u.totalSales.toLocaleString()}`;
-        const profitText = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(u.totalProfit).toLocaleString()}`;
+    userTotalsData.forEach(user => {
+        const username = user._id || 'Unknown Staff';
+        const totalSales = user.totalSales || 0;
+        const totalProfit = user.totalProfit || 0;
+        const itemCount = user.itemCount || 0;
 
-        return `
-            <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-sm flex justify-between items-center">
-                <div>
-                    <span class="text-xs font-bold text-slate-800 block">${staffName}</span>
-                    <span class="text-[10px] text-slate-400">${u.transactionCount} transactions (${u.itemCount} items)</span>
+        const profitDisplay = hideSensitiveInfo ? '***' : Math.round(totalProfit).toLocaleString();
+
+        const card = document.createElement('div');
+        card.className = "p-3 bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col justify-between";
+
+        card.innerHTML = `
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-bold text-slate-800"><i class="fas fa-user-circle mr-1.5 text-indigo-500"></i>${username}</span>
+                <span class="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-semibold">${itemCount} items</span>
+            </div>
+            <div class="space-y-1 text-xs">
+                <div class="flex justify-between text-slate-500">
+                    <span>Revenue:</span>
+                    <span class="font-mono font-bold text-slate-900">${totalSales.toLocaleString()}</span>
                 </div>
-                <div class="text-right">
-                    <span class="text-xs font-mono font-bold text-indigo-600 block">${salesText}</span>
-                    <span class="text-[10px] font-mono font-semibold text-emerald-600">${profitText}</span>
+                <div class="flex justify-between text-slate-500">
+                    <span>Profit:</span>
+                    <span class="font-mono font-semibold ${totalProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}">${profitDisplay}</span>
                 </div>
             </div>
         `;
-    }).join('');
 
-    container.innerHTML = `
-        <h4 class="text-xs font-bold uppercase text-slate-500 mb-2">Staff Sales Breakdown</h4>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-            ${cardsHtml}
-        </div>
-    `;
+        container.appendChild(card);
+    });
 }
 
 async function createSale(saleData) {
